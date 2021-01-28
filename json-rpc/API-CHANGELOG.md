@@ -12,6 +12,12 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+## 2021-05-07 Add support for secondary signers in `TransactionDataView`
+
+With the introduction of multi-agent transactions, multiple accounts are now able to
+participate in and sign a transaction. Therefore, we have added four new fields,
+`secondary_signers`, `secondary_signature_schemes`, `secondary_signatures`,
+and `secondary_public_keys`, to support this new feature.
 
 ## 2021-04-21 Add `bytes` field to `unknown` event
 

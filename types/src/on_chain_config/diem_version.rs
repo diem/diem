@@ -14,11 +14,15 @@ impl OnChainConfig for DiemVersion {
     const IDENTIFIER: &'static str = "DiemVersion";
 }
 
-// NOTE: version number for the next release of Diem (as of Mar-05, 2021)
+// NOTE: version number for release 1.2 Diem
 // Items gated by this version number include:
 //  - the ScriptFunction payload type
-// TODO: expand the list if more features are gated
 pub const DIEM_VERSION_2: DiemVersion = DiemVersion { major: 2 };
 
+// NOTE: version number for release 1.3 of Diem
+// Items gated by this version number include:
+//  - Multi-agent transactions
+pub const DIEM_VERSION_3: DiemVersion = DiemVersion { major: 3 };
+
 // Maximum current known version
-pub const DIEM_MAX_KNOWN_VERSION: DiemVersion = DIEM_VERSION_2;
+pub const DIEM_MAX_KNOWN_VERSION: DiemVersion = DIEM_VERSION_3;

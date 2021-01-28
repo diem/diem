@@ -69,22 +69,26 @@ A Diem network transaction that modifies storage data directly. Currently, no de
 
 User submitted transaction.
 
-| Name                      | Type                   | Description                                                           |
-|---------------------------|------------------------|-----------------------------------------------------------------------|
-| type                      | string                 | constant of string "user"                                             |
-| sender                    | string                 | Hex-encoded account address of the sender                             |
-| signature_scheme          | string                 | Signature scheme used to sign this transaction                        |
-| signature                 | string                 | Hex-encoded signature of this transaction                             |
-| public_key                | string                 | Hex-encoded public key of the transaction sender                      |
-| sequence_number           | unsigned int64         | Sequence number of this transaction corresponding to sender's account |
-| chain_id                  | unsigned int8          | Chain ID of the Diem network this transaction is intended for        |
-| max_gas_amount            | unsigned int64         | Maximum amount of gas that can be spent for this transaction          |
-| gas_unit_price            | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
-| gas_currency              | string                 | Gas price currency code                                               |
-| expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
-| script_hash               | string                 | Hex-encoded sha3 256 hash of the script binary code bytes used in this transaction |
-| script_bytes              | string                 | Hex-encoded string of BCS bytes of the script, decode it to get back transaction script arguments |
-| script                    | [Script](#type-script) | The transaction script and arguments of this transaction, you can decode `script_bytes` by BCS to get same data. |
+| Name                        | Type                   | Description                                                           |
+|-----------------------------|------------------------|-----------------------------------------------------------------------|
+| type                        | string                 | constant of string "user"                                             |
+| sender                      | string                 | Hex-encoded account address of the sender                             |
+| signature_scheme            | string                 | Signature scheme used by the sender to sign this transaction          |
+| signature                   | string                 | Hex-encoded signature of this transaction signed by the sender        |
+| public_key                  | string                 | Hex-encoded public key of the transaction sender                      |
+| secondary_signers           | List<string>           | Hex-encoded account addresses of the secondary signers                |
+| secondary_signature_schemes | List<string>           | Signature schemes used by the secondary signers to sign this transaction |
+| secondary_signatures        | List<string>           | Hex-encoded signatures of this transaction signed by the primary signers |
+| secondary_public_keys       | List<string>           | Hex-encoded public keys of the secondary signers                      |
+| sequence_number             | unsigned int64         | Sequence number of this transaction corresponding to sender's account |
+| chain_id                    | unsigned int8          | Chain ID of the Diem network this transaction is intended for        |
+| max_gas_amount              | unsigned int64         | Maximum amount of gas that can be spent for this transaction          |
+| gas_unit_price              | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
+| gas_currency                | string                 | Gas price currency code                                               |
+| expiration_timestamp_secs   | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
+| script_hash                 | string                 | Hex-encoded sha3 256 hash of the script binary code bytes used in this transaction |
+| script_bytes                | string                 | Hex-encoded string of BCS bytes of the script, decode it to get back transaction script arguments |
+| script                      | [Script](#type-script) | The transaction script and arguments of this transaction, you can decode `script_bytes` by BCS to get same data. |
 
 Note: script_hash is not hash of the script_bytes, it's hash of the script binary code bytes. More specifically, you can get same hash string by the following steps:
 

@@ -6,7 +6,7 @@ use language_e2e_tests::account::Account;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::TypeTag,
-    parser::{parse_transaction_arguments, parse_type_tags},
+    parser::{parse_string_list, parse_transaction_arguments, parse_type_tags},
     transaction_argument::TransactionArgument,
 };
 use std::{collections::BTreeSet, str::FromStr};
@@ -22,6 +22,7 @@ pub enum Argument {
 pub enum Entry {
     DisableStages(Vec<Stage>),
     Sender(String),
+    SecondarySigners(Vec<String>),
     TypeArguments(Vec<TypeTag>),
     Arguments(Vec<Argument>),
     MaxGas(u64),
@@ -50,6 +51,9 @@ impl FromStr for Entry {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
             return Ok(Entry::Sender(s.to_ascii_lowercase()));
+        }
+        if let Some(s) = s.strip_prefix("secondary-signers:") {
+            return Ok(Entry::SecondarySigners(parse_string_list(s)?));
         }
         if let Some(s) = s.strip_prefix("type-args:") {
             return Ok(Entry::TypeArguments(parse_type_tags(s)?));
@@ -132,6 +136,7 @@ impl Entry {
 pub struct Config<'a> {
     pub disabled_stages: BTreeSet<Stage>,
     pub sender: &'a Account,
+    pub secondary_signers: Vec<&'a Account>,
     pub ty_args: Vec<TypeTag>,
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
@@ -150,6 +155,7 @@ impl<'a> Config<'a> {
     pub fn build(config: &'a GlobalConfig, entries: &[Entry]) -> Result<Self> {
         let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
+        let mut secondary_signers = None;
         let mut ty_args = None;
         let mut args = None;
         let mut max_gas = None;
@@ -167,6 +173,16 @@ impl<'a> Config<'a> {
                 Entry::Sender(name) => match sender {
                     None => sender = Some(config.get_account_for_name(name)?),
                     _ => return Err(ErrorKind::Other("sender already set".to_string()).into()),
+                },
+                Entry::SecondarySigners(secondary_signer_names) => match secondary_signers {
+                    None => {
+                        let secondary_accounts = secondary_signer_names
+                            .iter()
+                            .map(|name| config.get_account_for_name(name))
+                            .collect::<Result<Vec<&Account>>>()?;
+                        secondary_signers = Some(secondary_accounts);
+                    }
+                    _ => bail!("transaction type arguments already set"),
                 },
                 Entry::TypeArguments(ty_args_) => match ty_args {
                     None => {
@@ -270,10 +286,10 @@ impl<'a> Config<'a> {
                 },
             }
         }
-
         Ok(Self {
             disabled_stages,
             sender: sender.unwrap_or_else(|| config.accounts.get("default").unwrap().account()),
+            secondary_signers: secondary_signers.unwrap_or_else(Vec::new),
             ty_args: ty_args.unwrap_or_else(Vec::new),
             args: args.unwrap_or_else(Vec::new),
             max_gas,

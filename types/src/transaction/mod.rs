@@ -10,7 +10,7 @@ use crate::{
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
-    transaction::authenticator::TransactionAuthenticator,
+    transaction::authenticator::{AccountAuthenticator, TransactionAuthenticator},
     vm_status::{DiscardedVMStatus, KeptVMStatus, StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
@@ -49,7 +49,7 @@ pub use script::{
     TypeArgumentABI,
 };
 
-use std::ops::Deref;
+use std::{collections::BTreeSet, ops::Deref};
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
@@ -269,6 +269,50 @@ impl RawTransaction {
         )))
     }
 
+    /// Signs the given multi-agent `RawTransaction`, which is a transaction with secondary
+    /// signers in addition to a sender. The private keys of the sender and the
+    /// secondary signers are used to sign the transaction.
+    ///
+    /// The order and length of the secondary keys provided here have to match the order and
+    /// length of the `secondary_signers`.
+    pub fn sign_multi_agent(
+        self,
+        sender_private_key: &Ed25519PrivateKey,
+        secondary_signers: Vec<AccountAddress>,
+        secondary_private_keys: Vec<&Ed25519PrivateKey>,
+    ) -> Result<SignatureCheckedTransaction> {
+        let message =
+            RawTransactionWithData::new_multi_agent(self.clone(), secondary_signers.clone());
+        let sender_signature = sender_private_key.sign(&message);
+        let sender_authenticator = AccountAuthenticator::ed25519(
+            Ed25519PublicKey::from(sender_private_key),
+            sender_signature,
+        );
+
+        if secondary_private_keys.len() != secondary_signers.len() {
+            return Err(format_err!(
+                "number of secondary private keys and number of secondary signers don't match"
+            ));
+        }
+        let mut secondary_authenticators = vec![];
+        for priv_key in secondary_private_keys {
+            let signature = priv_key.sign(&message);
+            secondary_authenticators.push(AccountAuthenticator::ed25519(
+                Ed25519PublicKey::from(priv_key),
+                signature,
+            ));
+        }
+
+        Ok(SignatureCheckedTransaction(
+            SignedTransaction::new_multi_agent(
+                self,
+                sender_authenticator,
+                secondary_signers,
+                secondary_authenticators,
+            ),
+        ))
+    }
+
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn multi_sign_for_testing(
         self,
@@ -331,6 +375,28 @@ impl RawTransaction {
     /// Return the sender of this transaction.
     pub fn sender(&self) -> AccountAddress {
         self.sender
+    }
+}
+
+#[derive(
+    Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash,
+)]
+pub enum RawTransactionWithData {
+    MultiAgent {
+        raw_txn: RawTransaction,
+        secondary_signer_addresses: Vec<AccountAddress>,
+    },
+}
+
+impl RawTransactionWithData {
+    pub fn new_multi_agent(
+        raw_txn: RawTransaction,
+        secondary_signer_addresses: Vec<AccountAddress>,
+    ) -> Self {
+        Self::MultiAgent {
+            raw_txn,
+            secondary_signer_addresses,
+        }
     }
 }
 
@@ -467,6 +533,22 @@ impl SignedTransaction {
         }
     }
 
+    pub fn new_multi_agent(
+        raw_txn: RawTransaction,
+        sender: AccountAuthenticator,
+        secondary_signer_addresses: Vec<AccountAddress>,
+        secondary_signers: Vec<AccountAuthenticator>,
+    ) -> Self {
+        SignedTransaction {
+            raw_txn,
+            authenticator: TransactionAuthenticator::multi_agent(
+                sender,
+                secondary_signer_addresses,
+                secondary_signers,
+            ),
+        }
+    }
+
     pub fn authenticator(&self) -> TransactionAuthenticator {
         self.authenticator.clone()
     }
@@ -520,6 +602,13 @@ impl SignedTransaction {
         Ok(SignatureCheckedTransaction(self))
     }
 
+    pub fn contains_duplicate_signers(&self) -> bool {
+        let mut all_signer_addresses = self.authenticator.secondary_signer_addreses();
+        all_signer_addresses.push(self.sender());
+        let mut s = BTreeSet::new();
+        all_signer_addresses.iter().any(|a| !s.insert(*a))
+    }
+
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
         format!(
             "SignedTransaction {{ \n \
@@ -528,6 +617,13 @@ impl SignedTransaction {
              }}",
             self.raw_txn.format_for_client(get_transaction_name),
             self.authenticator
+        )
+    }
+
+    pub fn is_multi_agent(&self) -> bool {
+        matches!(
+            self.authenticator,
+            TransactionAuthenticator::MultiAgent { .. }
         )
     }
 }
@@ -735,6 +831,14 @@ impl VMValidatorResult {
             status: vm_status,
             score,
             governance_role,
+        }
+    }
+
+    pub fn error(vm_status: DiscardedVMStatus) -> Self {
+        Self {
+            status: Some(vm_status),
+            score: 0,
+            governance_role: GovernanceRole::NonGovernanceRole,
         }
     }
 

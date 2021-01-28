@@ -274,6 +274,11 @@ message TransactionData {
   // hex-encoded bytes
   string script_bytes = 14 [json_name="script_bytes"];
   Script script = 15;
+  // secondary signers
+  repeated string secondary_signers = 16 [json_name="secondary_signers"];
+  repeated string secondary_signature_schemes = 17 [json_name="secondary_signature_schemes"];
+  repeated string secondary_signatures = 18 [json_name="secondary_signatures"];
+  repeated string secondary_public_keys = 19 [json_name="secondary_public_keys"];
 }
 
 message Script {

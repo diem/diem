@@ -20,6 +20,7 @@ use diem_types::{
 use std::{convert::TryInto, ops::Deref};
 
 use diem_json_rpc_types::views::EventView;
+use diem_transaction_builder::stdlib::encode_rotate_authentication_key_with_nonce_script_function;
 
 mod node;
 mod testing;
@@ -113,7 +114,7 @@ fn create_test_cases() -> Vec<Test> {
                 // list of allowed scripts and publishing off
                 assert_ne!(metadata["script_hash_allow_list"], json!([]));
                 assert_eq!(metadata["module_publishing_allowed"], false);
-                assert_eq!(metadata["diem_version"], 2);
+                assert_eq!(metadata["diem_version"], 3);
                 assert_eq!(metadata["dual_attestation_limit"], 1000000000);
                 assert_ne!(diem_ledger_timestampusec, 0);
                 assert_ne!(diem_ledger_version, 0);
@@ -494,6 +495,10 @@ fn create_test_cases() -> Vec<Test> {
                             "gas_unit_price": 0,
                             "max_gas_amount": 1000000,
                             "public_key": sender.public_key.to_string(),
+                            "secondary_signers": [],
+                            "secondary_signature_schemes": [],
+                            "secondary_signatures": [],
+                            "secondary_public_keys": [],
                             "script": {
                                 "type": "peer_to_peer_with_metadata",
                                 "type_arguments": [
@@ -516,7 +521,7 @@ fn create_test_cases() -> Vec<Test> {
                             "script_hash": script_hash,
                             "sender": format!("{:x}", &sender.address),
                             "sequence_number": 0,
-                            "signature": hex::encode(txn.authenticator().signature_bytes()),
+                            "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
                             "signature_scheme": "Scheme::Ed25519",
                             "type": "user"
                         },
@@ -1213,6 +1218,64 @@ fn create_test_cases() -> Vec<Test> {
                 }
 
                 assert_eq!(events.len(),3);
+            },
+        },
+        Test {
+            name: "multi-agent rotate_authentication_key_with_nonce_admin transaction",
+            run: |env: &mut testing::Env| {
+                let root = env.root.clone();
+                let account = env.vasps[0].children[0].clone();
+                let private_key = generate_key::generate_key();
+                let public_key: diem_crypto::ed25519::Ed25519PublicKey = (&private_key).into();
+                let txn = env.create_multi_agent_txn(
+                    &root,
+                    vec![&account],
+                    encode_rotate_authentication_key_with_nonce_script_function(
+                        0, public_key.to_bytes().to_vec()),
+                );
+                env.submit_and_wait(txn.clone());
+                let resp = env.send(
+                    "get_account_transaction",
+                    json!([root.address.to_string(), 3, true]),
+                );
+                let result = resp.result.unwrap();
+                let script = match txn.payload() {
+                    TransactionPayload::ScriptFunction(s) => s,
+                    _ => unreachable!(),
+                };
+                let script_hash = diem_crypto::HashValue::zero().to_hex();
+                let script_bytes = hex::encode(bcs::to_bytes(script).unwrap());
+
+                assert_eq!(
+                    result["transaction"],
+                    json!({
+                        "type": "user",
+                        "sender": format!("{:x}", &root.address),
+                        "signature_scheme": "Scheme::Ed25519",
+                        "signature": hex::encode(txn.authenticator().sender().signature_bytes()),
+                        "public_key": root.public_key.to_string(),
+                        "secondary_signers": [ format!("{:x}", &account.address) ],
+                        "secondary_signature_schemes": [ "Scheme::Ed25519" ],
+                        "secondary_signatures": [ hex::encode(txn.authenticator().secondary_signers()[0].signature_bytes())],
+                        "secondary_public_keys": [ account.public_key.to_string() ],
+                        "sequence_number": 3,
+                        "chain_id": 4,
+                        "max_gas_amount": 1000000,
+                        "gas_unit_price": 0,
+                        "gas_currency": "XUS",
+                        "expiration_timestamp_secs": txn.expiration_timestamp_secs(),
+                        "script_hash": script_hash,
+                        "script_bytes": script_bytes,
+                        "script": {
+                            "type": "script_function",
+                            "arguments_bcs": vec![ "0000000000000000", &hex::encode(bcs::to_bytes(&public_key).unwrap())],
+                            "type_arguments": [],
+                            "module_address": "00000000000000000000000000000001",
+                            "module_name": "AccountAdministrationScripts",
+                            "function_name": "rotate_authentication_key_with_nonce"
+                        },
+                    }),
+                );
             },
         },
         // no test after this one, as your scripts may not in allow list.

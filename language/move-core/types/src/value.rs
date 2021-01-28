@@ -52,6 +52,10 @@ impl MoveValue {
     pub fn vector_u8(v: Vec<u8>) -> Self {
         MoveValue::Vector(v.into_iter().map(MoveValue::U8).collect())
     }
+
+    pub fn vector_address(v: Vec<AccountAddress>) -> Self {
+        MoveValue::Vector(v.into_iter().map(MoveValue::Address).collect())
+    }
 }
 
 pub fn serialize_values<'a, I>(vals: I) -> Vec<Vec<u8>>

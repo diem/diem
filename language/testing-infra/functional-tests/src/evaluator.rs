@@ -19,7 +19,8 @@ use diem_types::{
     on_chain_config::VMPublishingOption,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript, ScriptFunction,
-        SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionStatus,
+        SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionPayload,
+        TransactionStatus,
     },
     vm_status::{KeptVMStatus, StatusCode},
 };
@@ -303,8 +304,11 @@ pub fn verify_module(
 /// A set of common parameters required to create transactions.
 struct TransactionParameters<'a> {
     pub sender_addr: AccountAddress,
+    pub secondary_signer_addresses: Vec<AccountAddress>,
     pub pubkey: &'a Ed25519PublicKey,
     pub privkey: &'a Ed25519PrivateKey,
+    pub secondary_pubkeys: Vec<Ed25519PublicKey>,
+    pub secondary_privkeys: Vec<&'a Ed25519PrivateKey>,
     pub sequence_number: u64,
     pub max_gas_amount: u64,
     pub gas_unit_price: u64,
@@ -348,8 +352,23 @@ fn get_transaction_parameters<'a>(
 
     TransactionParameters {
         sender_addr: *config.sender.address(),
+        secondary_signer_addresses: config
+            .secondary_signers
+            .iter()
+            .map(|signer| *signer.address())
+            .collect(),
         pubkey: &config.sender.pubkey,
         privkey: &config.sender.privkey,
+        secondary_pubkeys: config
+            .secondary_signers
+            .iter()
+            .map(|signer| signer.pubkey.clone())
+            .collect(),
+        secondary_privkeys: config
+            .secondary_signers
+            .iter()
+            .map(|signer| &signer.privkey)
+            .collect(),
         sequence_number: config
             .sequence_number
             .unwrap_or_else(|| account_resource.sequence_number()),
@@ -378,7 +397,8 @@ fn make_script_transaction(
             execute_as,
             ChainId::test(),
         )
-    } else {
+        .sign(params.privkey, params.pubkey.clone())?
+    } else if config.secondary_signers.is_empty() {
         RawTransaction::new_script(
             params.sender_addr,
             params.sequence_number,
@@ -389,8 +409,24 @@ fn make_script_transaction(
             params.expiration_timestamp_secs,
             ChainId::test(),
         )
+        .sign(params.privkey, params.pubkey.clone())?
+    } else {
+        RawTransaction::new(
+            params.sender_addr,
+            params.sequence_number,
+            TransactionPayload::Script(script),
+            params.max_gas_amount,
+            params.gas_unit_price,
+            params.gas_currency_code,
+            params.expiration_timestamp_secs,
+            ChainId::test(),
+        )
+        .sign_multi_agent(
+            params.privkey,
+            params.secondary_signer_addresses,
+            params.secondary_privkeys,
+        )?
     }
-    .sign(params.privkey, params.pubkey.clone())?
     .into_inner())
 }
 

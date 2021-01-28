@@ -157,6 +157,41 @@ impl Env {
         )
     }
 
+    pub fn create_multi_agent_txn(
+        &self,
+        sender: &Account,
+        secondary_signers: Vec<&Account>,
+        payload: diem_types::transaction::TransactionPayload,
+    ) -> SignedTransaction {
+        let seq = self
+            .get_account_sequence(sender.address.to_string())
+            .expect("account should exist onchain for create transaction");
+        let raw_txn = diem_types::transaction::helpers::create_unsigned_txn(
+            payload,
+            sender.address,
+            seq,
+            1_000_000,
+            0,
+            XUS_NAME.to_owned(),
+            30,
+            ChainId::test(),
+        );
+        raw_txn
+            .sign_multi_agent(
+                &sender.private_key,
+                secondary_signers
+                    .iter()
+                    .map(|signer| signer.address)
+                    .collect(),
+                secondary_signers
+                    .iter()
+                    .map(|signer| &signer.private_key)
+                    .collect(),
+            )
+            .unwrap()
+            .into_inner()
+    }
+
     pub fn create_txn_by_payload(
         &self,
         account: &Account,

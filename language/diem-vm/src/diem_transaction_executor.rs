@@ -21,6 +21,7 @@ use diem_state_view::StateView;
 use diem_types::{
     account_config,
     block_metadata::BlockMetadata,
+    on_chain_config::DIEM_VERSION_3,
     transaction::{
         ChangeSet, Module, SignatureCheckedTransaction, Transaction, TransactionOutput,
         TransactionPayload, TransactionStatus, WriteSetPayload,
@@ -181,6 +182,10 @@ impl DiemVM {
                         } else {
                             script_to_script_function::remapping(script.code())
                         };
+                    let mut senders = vec![txn_data.sender()];
+                    if diem_version >= DIEM_VERSION_3 {
+                        senders.extend(txn_data.secondary_signers());
+                    }
                     match remapped_script {
                         // We are in this case before VERSION_2
                         // or if there is no remapping for the script
@@ -188,7 +193,7 @@ impl DiemVM {
                             script.code().to_vec(),
                             script.ty_args().to_vec(),
                             convert_txn_args(script.args()),
-                            vec![txn_data.sender()],
+                            senders,
                             gas_status,
                             log_context,
                         ),
@@ -197,7 +202,7 @@ impl DiemVM {
                             function,
                             script.ty_args().to_vec(),
                             convert_txn_args(script.args()),
-                            vec![txn_data.sender()],
+                            senders,
                             gas_status,
                             log_context,
                         ),

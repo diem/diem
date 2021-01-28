@@ -69,7 +69,7 @@ impl ReadWriteSetAnalysis {
                     &signers,
                     &serialize_values(&vec![
                         MoveValue::U64(tx.sequence_number()),
-                        MoveValue::vector_u8(tx.authenticator().public_key_bytes()),
+                        MoveValue::vector_u8(tx.authenticator().sender().public_key_bytes()),
                         MoveValue::U64(tx.gas_unit_price()),
                         MoveValue::U64(tx.max_gas_amount()),
                         MoveValue::U64(tx.expiration_timestamp_secs()),

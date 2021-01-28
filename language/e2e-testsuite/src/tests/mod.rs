@@ -21,6 +21,7 @@ mod genesis;
 mod genesis_initializations;
 mod mint;
 mod module_publishing;
+mod multi_agent;
 mod on_chain_configs;
 mod peer_to_peer;
 mod preburn_queue;

@@ -11,7 +11,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, RoleId, XUS_NAME,
+        BalanceResource, RoleId, XDX_NAME, XUS_NAME,
     },
     chain_id::ChainId,
     event::EventHandle,
@@ -36,6 +36,10 @@ pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
 
 pub fn xus_currency_code() -> Identifier {
     from_currency_code_string(XUS_NAME).unwrap()
+}
+
+pub fn xdx_currency_code() -> Identifier {
+    from_currency_code_string(XDX_NAME).unwrap()
 }
 
 pub fn currency_code(code: &str) -> Identifier {
@@ -202,6 +206,7 @@ impl Default for Account {
 
 pub struct TransactionBuilder {
     pub sender: Account,
+    pub secondary_signers: Vec<Account>,
     pub sequence_number: Option<u64>,
     pub program: Option<TransactionPayload>,
     pub max_gas_amount: Option<u64>,
@@ -215,6 +220,7 @@ impl TransactionBuilder {
     pub fn new(sender: Account) -> Self {
         Self {
             sender,
+            secondary_signers: Vec::new(),
             sequence_number: None,
             program: None,
             max_gas_amount: None,
@@ -223,6 +229,11 @@ impl TransactionBuilder {
             chain_id: None,
             ttl: None,
         }
+    }
+
+    pub fn secondary_signers(mut self, secondary_signers: Vec<Account>) -> Self {
+        self.secondary_signers = secondary_signers;
+        self
     }
 
     pub fn sequence_number(mut self, sequence_number: u64) -> Self {
@@ -307,6 +318,37 @@ impl TransactionBuilder {
             self.chain_id.unwrap_or_else(ChainId::test),
         )
         .sign(&self.sender.privkey, self.sender.pubkey)
+        .unwrap()
+        .into_inner()
+    }
+
+    pub fn sign_multi_agent(self) -> SignedTransaction {
+        let secondary_signer_addresses: Vec<AccountAddress> = self
+            .secondary_signers
+            .iter()
+            .map(|signer| *signer.address())
+            .collect();
+        let secondary_private_keys = self
+            .secondary_signers
+            .iter()
+            .map(|signer| &signer.privkey)
+            .collect();
+        RawTransaction::new(
+            *self.sender.address(),
+            self.sequence_number.expect("sequence number not set"),
+            self.program.expect("transaction payload not set"),
+            self.max_gas_amount.unwrap_or(gas_costs::TXN_RESERVED),
+            self.gas_unit_price.unwrap_or(0),
+            self.gas_currency_code
+                .unwrap_or_else(|| XUS_NAME.to_owned()),
+            self.ttl.unwrap_or(DEFAULT_EXPIRATION_TIME),
+            ChainId::test(),
+        )
+        .sign_multi_agent(
+            &self.sender.privkey,
+            secondary_signer_addresses,
+            secondary_private_keys,
+        )
         .unwrap()
         .into_inner()
     }
@@ -512,6 +554,19 @@ impl AccountData {
             Account::new_from_seed(seed),
             balance,
             xus_currency_code(),
+            sequence_number,
+            AccountRoleSpecifier::ParentVASP,
+        )
+    }
+
+    /// Creates a new `AccountData` with a new account, with XDX balance.
+    ///
+    /// Most tests will want to use this constructor.
+    pub fn new_xdx_from_seed(seed: &mut KeyGen, balance: u64, sequence_number: u64) -> Self {
+        Self::with_account(
+            Account::new_from_seed(seed),
+            balance,
+            xdx_currency_code(),
             sequence_number,
             AccountRoleSpecifier::ParentVASP,
         )

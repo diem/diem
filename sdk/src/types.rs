@@ -60,6 +60,34 @@ impl LocalAccount {
         self.sign_transaction(raw_txn)
     }
 
+    pub fn sign_multi_agent_with_transaction_builder(
+        &mut self,
+        secondary_signers: Vec<&Self>,
+        builder: TransactionBuilder,
+    ) -> SignedTransaction {
+        let secondary_signer_addresses = secondary_signers
+            .iter()
+            .map(|signer| signer.address())
+            .collect();
+        let secondary_signer_privkeys = secondary_signers
+            .iter()
+            .map(|signer| signer.private_key())
+            .collect();
+        let raw_txn = builder
+            .sender(self.address())
+            .sequence_number(self.sequence_number())
+            .build();
+        *self.sequence_number_mut() += 1;
+        raw_txn
+            .sign_multi_agent(
+                self.private_key(),
+                secondary_signer_addresses,
+                secondary_signer_privkeys,
+            )
+            .expect("Signing multi agent txn failed")
+            .into_inner()
+    }
+
     pub fn address(&self) -> AccountAddress {
         self.address
     }

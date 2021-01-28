@@ -459,6 +459,11 @@ pub enum StatusCode {
     BAD_TRANSACTION_FEE_CURRENCY = 25,
     // The feature requested is intended for a future Diem version instead of the current one
     FEATURE_UNDER_GATING = 26,
+    // The number of secondary signer addresses is different from the number of secondary
+    // public keys provided.
+    SECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH = 27,
+    // There are duplicates among signers, including the sender and all the secondary signers
+    SIGNERS_CONTAIN_DUPLICATES = 28,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.

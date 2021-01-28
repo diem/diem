@@ -10,7 +10,7 @@ use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{self, CurrencyInfoResource, RoleId},
-    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_2},
+    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_2, DIEM_VERSION_3},
     transaction::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
         VMValidatorResult,
@@ -76,11 +76,7 @@ impl VMValidator for DiemVMValidator {
         let txn = if let Ok(t) = transaction.check_signature() {
             t
         } else {
-            return VMValidatorResult::new(
-                Some(StatusCode::INVALID_SIGNATURE),
-                0,
-                GovernanceRole::NonGovernanceRole,
-            );
+            return VMValidatorResult::error(StatusCode::INVALID_SIGNATURE);
         };
 
         let remote_cache = StateViewCache::new(state_view);
@@ -130,6 +126,15 @@ pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     allow_too_new: bool,
     log_context: &impl LogContext,
 ) -> Result<(u64, Identifier), VMStatus> {
+    if transaction.is_multi_agent() && vm.get_diem_version()? < DIEM_VERSION_3 {
+        // Multi agent is not allowed under this version
+        return Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING));
+    }
+
+    if transaction.contains_duplicate_signers() {
+        return Err(VMStatus::Error(StatusCode::SIGNERS_CONTAIN_DUPLICATES));
+    }
+
     let gas_price = transaction.gas_unit_price();
     let currency_code_string = transaction.gas_currency_code();
     let currency_code = match account_config::from_currency_code_string(currency_code_string) {

@@ -9,13 +9,16 @@ use crate::{
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
+use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
 use diem_types::{
     account_config,
     contract_event::ContractEvent,
     event::EventKey,
-    on_chain_config::{ConfigStorage, DiemVersion, OnChainConfig, VMConfig, VMPublishingOption},
+    on_chain_config::{
+        ConfigStorage, DiemVersion, OnChainConfig, VMConfig, VMPublishingOption, DIEM_VERSION_3,
+    },
     transaction::{TransactionOutput, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -203,8 +206,8 @@ impl DiemVMImpl {
         Ok(())
     }
 
-    /// Run the prologue of a transaction by calling into `SCRIPT_PROLOGUE_NAME` function stored
-    /// in the `ACCOUNT_MODULE` on chain.
+    /// Run the prologue of a transaction by calling into either `SCRIPT_PROLOGUE_NAME` function
+    /// or `MULTI_AGENT_SCRIPT_PROLOGUE_NAME` function stored in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_script_prologue<S: MoveStorage>(
         &self,
         session: &mut Session<S>,
@@ -221,21 +224,49 @@ impl DiemVMImpl {
         let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
         let chain_id = txn_data.chain_id();
         let mut gas_status = GasStatus::new_unmetered();
+        let secondary_public_key_hashes: Vec<MoveValue> = txn_data
+            .secondary_authentication_key_preimages
+            .iter()
+            .map(|preimage| {
+                MoveValue::vector_u8(HashValue::sha3_256_of(&preimage.to_vec()).to_vec())
+            })
+            .collect();
+        let args = if self.get_diem_version()? >= DIEM_VERSION_3 && txn_data.is_multi_agent() {
+            vec![
+                MoveValue::Signer(txn_data.sender),
+                MoveValue::U64(txn_sequence_number),
+                MoveValue::vector_u8(txn_public_key),
+                MoveValue::vector_address(txn_data.secondary_signers()),
+                MoveValue::Vector(secondary_public_key_hashes),
+                MoveValue::U64(txn_gas_price),
+                MoveValue::U64(txn_max_gas_units),
+                MoveValue::U64(txn_expiration_timestamp_secs),
+                MoveValue::U8(chain_id.id()),
+            ]
+        } else {
+            vec![
+                MoveValue::Signer(txn_data.sender),
+                MoveValue::U64(txn_sequence_number),
+                MoveValue::vector_u8(txn_public_key),
+                MoveValue::U64(txn_gas_price),
+                MoveValue::U64(txn_max_gas_units),
+                MoveValue::U64(txn_expiration_timestamp_secs),
+                MoveValue::U8(chain_id.id()),
+                MoveValue::vector_u8(txn_data.script_hash.clone()),
+            ]
+        };
+        let prologue_function_name =
+            if self.get_diem_version()? >= DIEM_VERSION_3 && txn_data.is_multi_agent() {
+                &MULTI_AGENT_SCRIPT_PROLOGUE_NAME
+            } else {
+                &SCRIPT_PROLOGUE_NAME
+            };
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
-                &SCRIPT_PROLOGUE_NAME,
+                prologue_function_name,
                 vec![gas_currency_ty],
-                serialize_values(&vec![
-                    MoveValue::Signer(txn_data.sender),
-                    MoveValue::U64(txn_sequence_number),
-                    MoveValue::vector_u8(txn_public_key),
-                    MoveValue::U64(txn_gas_price),
-                    MoveValue::U64(txn_max_gas_units),
-                    MoveValue::U64(txn_expiration_timestamp_secs),
-                    MoveValue::U8(chain_id.id()),
-                    MoveValue::vector_u8(txn_data.script_hash.clone()),
-                ]),
+                serialize_values(&args),
                 &mut gas_status,
                 log_context,
             )

@@ -5,7 +5,10 @@ use crate::{
     account_address::AccountAddress,
     account_config::XUS_NAME,
     chain_id::ChainId,
-    transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
+    transaction::{
+        authenticator::AccountAuthenticator, Module, RawTransaction, RawTransactionWithData,
+        Script, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
+    },
     write_set::WriteSet,
 };
 use diem_crypto::{ed25519::*, traits::*};
@@ -173,6 +176,52 @@ pub fn get_test_unchecked_txn(
         TEST_GAS_PRICE,
         XUS_NAME.to_owned(),
         None,
+    )
+}
+
+pub fn get_test_unchecked_multi_agent_txn(
+    sender: AccountAddress,
+    secondary_signers: Vec<AccountAddress>,
+    sequence_number: u64,
+    sender_private_key: &Ed25519PrivateKey,
+    sender_public_key: Ed25519PublicKey,
+    secondary_private_keys: Vec<&Ed25519PrivateKey>,
+    secondary_public_keys: Vec<Ed25519PublicKey>,
+    script: Option<Script>,
+) -> SignedTransaction {
+    let expiration_time = expiration_time(10);
+    let raw_txn = RawTransaction::new(
+        sender,
+        sequence_number,
+        TransactionPayload::Script(
+            script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
+        ),
+        MAX_GAS_AMOUNT,
+        TEST_GAS_PRICE,
+        XUS_NAME.to_owned(),
+        expiration_time,
+        ChainId::test(),
+    );
+    let message =
+        RawTransactionWithData::new_multi_agent(raw_txn.clone(), secondary_signers.clone());
+
+    let sender_signature = sender_private_key.sign(&message);
+    let sender_authenticator = AccountAuthenticator::ed25519(sender_public_key, sender_signature);
+
+    let mut secondary_authenticators = vec![];
+    for i in 0..secondary_public_keys.len() {
+        let signature = secondary_private_keys[i].sign(&message);
+        secondary_authenticators.push(AccountAuthenticator::ed25519(
+            secondary_public_keys[i].clone(),
+            signature,
+        ));
+    }
+
+    SignedTransaction::new_multi_agent(
+        raw_txn,
+        sender_authenticator,
+        secondary_signers,
+        secondary_authenticators,
     )
 }
 

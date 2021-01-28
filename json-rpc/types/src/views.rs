@@ -687,6 +687,14 @@ pub enum TransactionDataView {
         signature_scheme: String,
         signature: BytesView,
         public_key: BytesView,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        secondary_signers: Option<Vec<AccountAddress>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        secondary_signature_schemes: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        secondary_signatures: Option<Vec<BytesView>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        secondary_public_keys: Option<Vec<BytesView>>,
         sequence_number: u64,
         chain_id: u8,
         max_gas_amount: u64,

@@ -943,6 +943,7 @@ dependencies = [
  "itertools 0.10.0",
  "k8s-openapi",
  "kube",
+ "language-e2e-tests",
  "move-core-types",
  "network",
  "network-builder",
@@ -4051,6 +4052,7 @@ dependencies = [
 name = "jsonrpc-types-proto"
 version = "0.0.0"
 dependencies = [
+ "diem-crypto",
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",

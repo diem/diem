@@ -197,6 +197,7 @@ module DiemAccount {
     const PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 1010;
     const PROLOGUE_ESEQUENCE_NUMBER_TOO_BIG: u64 = 1011;
     const PROLOGUE_EBAD_TRANSACTION_FEE_CURRENCY: u64 = 1012;
+    const PROLOGUE_ESECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH: u64 = 1013;
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -1702,6 +1703,100 @@ module DiemAccount {
             transaction_sender,
             max_transaction_fee: 0,
         };
+    }
+
+    /// The prologue for multi-agent user transactions
+    fun multi_agent_script_prologue<Token: store>(
+        sender: signer,
+        txn_sequence_number: u64,
+        txn_sender_public_key: vector<u8>,
+        secondary_signer_addresses: vector<address>,
+        secondary_signer_public_key_hashes: vector<vector<u8>>,
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        txn_expiration_time: u64,
+        chain_id: u8,
+    ) acquires DiemAccount, Balance {
+
+        let num_secondary_signers = Vector::length(&secondary_signer_addresses);
+
+        // Number of public key hashes must match the number of secondary signers.
+        assert(
+            Vector::length(&secondary_signer_public_key_hashes) == num_secondary_signers,
+            Errors::invalid_argument(PROLOGUE_ESECONDARY_KEYS_ADDRESSES_COUNT_MISMATCH),
+        );
+
+        let i = 0;
+        while ({
+            spec {
+                assert forall j in 0..i: exists_at(secondary_signer_addresses[j]);
+                assert forall j in 0..i: secondary_signer_public_key_hashes[j]
+                    == global<DiemAccount>(secondary_signer_addresses[j]).authentication_key;
+            };
+            (i < num_secondary_signers)
+        })
+        {
+            // Check that all secondary signers have accounts.
+            let secondary_address = *Vector::borrow(&secondary_signer_addresses, i);
+            assert(exists_at(secondary_address), Errors::invalid_argument(PROLOGUE_EACCOUNT_DNE));
+
+            // Check that for each secondary signer, the provided public key hash
+            // is equal to the authentication key stored on-chain.
+            let signer_account = borrow_global<DiemAccount>(secondary_address);
+            let signer_public_key_hash = *Vector::borrow(&secondary_signer_public_key_hashes, i);
+            assert(
+                signer_public_key_hash == *&signer_account.authentication_key,
+                Errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
+            );
+            i = i + 1;
+        };
+
+        spec {
+            assert forall j in 0..num_secondary_signers: exists_at(secondary_signer_addresses[j]);
+            assert forall j in 0..num_secondary_signers: secondary_signer_public_key_hashes[j]
+                == global<DiemAccount>(secondary_signer_addresses[j]).authentication_key;
+        };
+
+        prologue_common<Token>(
+            &sender,
+            txn_sequence_number,
+            txn_sender_public_key,
+            txn_gas_price,
+            txn_max_gas_units,
+            txn_expiration_time,
+            chain_id,
+        )
+    }
+
+    spec multi_agent_script_prologue {
+        let transaction_sender = Signer::spec_address_of(sender);
+        let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+        include MultiAgentScriptPrologueAbortsIf<Token>{
+            max_transaction_fee,
+            txn_expiration_time_seconds: txn_expiration_time,
+        };
+        ensures prologue_guarantees(sender);
+    }
+
+    spec schema MultiAgentScriptPrologueAbortsIf<Token> {
+        sender: signer;
+        txn_sequence_number: u64;
+        txn_sender_public_key: vector<u8>;
+        secondary_signer_addresses: vector<address>;
+        secondary_signer_public_key_hashes: vector<vector<u8>>;
+        chain_id: u8;
+        max_transaction_fee: u128;
+        txn_expiration_time_seconds: u64;
+        let transaction_sender = Signer::spec_address_of(sender);
+        include PrologueCommonAbortsIf<Token> {transaction_sender, txn_public_key: txn_sender_public_key};
+        aborts_if len(secondary_signer_addresses) != len(secondary_signer_public_key_hashes)
+            with Errors::INVALID_ARGUMENT;
+        let num_secondary_signers = len(secondary_signer_addresses);
+        aborts_if exists i in 0..num_secondary_signers: !exists_at(secondary_signer_addresses[i])
+            with Errors::INVALID_ARGUMENT;
+        aborts_if exists i in 0..num_secondary_signers:
+            secondary_signer_public_key_hashes[i] != global<DiemAccount>(secondary_signer_addresses[i]).authentication_key
+        with Errors::INVALID_ARGUMENT;
     }
 
     /// The common prologue is invoked at the beginning of every transaction
