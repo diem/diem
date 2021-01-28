@@ -31,7 +31,10 @@ use crate::{
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
-use diem_config::{config::PeerSet, network_id::NetworkContext};
+use diem_config::{
+    config::{PeerRole, PeerSet},
+    network_id::NetworkContext,
+};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
@@ -161,6 +164,7 @@ impl DiscoveredPeerSet {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
 struct DiscoveredPeer {
+    role: PeerRole,
     addrs: Addresses,
     keys: PublicKeys,
 }
@@ -589,7 +593,16 @@ where
                 continue;
             }
 
-            let peer = self.discovered_peers.0.entry(peer_id).or_default();
+            // Create the new `DiscoveredPeer`, role is set when a `Peer` is first discovered
+            let peer = self
+                .discovered_peers
+                .0
+                .entry(peer_id)
+                .or_insert(DiscoveredPeer {
+                    role: discovered_peer.role,
+                    addrs: Addresses::default(),
+                    keys: PublicKeys::default(),
+                });
             let mut peer_updated = false;
             // Update peer's pubkeys
             if peer.keys.update(src, discovered_peer.keys) {
