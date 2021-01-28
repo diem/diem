@@ -453,15 +453,13 @@ pub fun TestPackUnpack::call_private_violating_invariant($t0|r: TestPackUnpack::
   8: write_ref($t1, $t5)
   9: $t6 := 1
  10: $t7 := borrow_field<TestPackUnpack::S>.value($t1)
- 11: unpack_ref($t7)
- 12: write_ref($t7, $t6)
- 13: pack_ref($t7)
- 14: write_back[Reference($t1)]($t7)
- 15: pack_ref($t1)
- 16: write_back[Reference($t3)]($t1)
- 17: pack_ref($t3)
- 18: write_back[LocalRoot($t2)]($t3)
- 19: return $t2
+ 11: write_ref($t7, $t6)
+ 12: write_back[Reference($t1)]($t7)
+ 13: pack_ref($t1)
+ 14: write_back[Reference($t3)]($t1)
+ 15: pack_ref($t3)
+ 16: write_back[LocalRoot($t2)]($t3)
+ 17: return $t2
 }
 
 
@@ -481,13 +479,13 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: TestPac
   4: unpack_ref($t1)
   5: $t4 := 0
   6: $t5 := read_ref($t1)
-  7: $t5 := TestPackUnpack::public_update_value($t5, $t4)
-  8: write_ref($t1, $t5)
-  9: $t6 := 1
- 10: $t7 := borrow_field<TestPackUnpack::S>.value($t1)
- 11: unpack_ref($t7)
- 12: write_ref($t7, $t6)
- 13: pack_ref($t7)
+  7: pack_ref($t5)
+  8: $t5 := TestPackUnpack::public_update_value($t5, $t4)
+  9: unpack_ref($t5)
+ 10: write_ref($t1, $t5)
+ 11: $t6 := 1
+ 12: $t7 := borrow_field<TestPackUnpack::S>.value($t1)
+ 13: write_ref($t7, $t6)
  14: write_back[Reference($t1)]($t7)
  15: pack_ref($t1)
  16: write_back[Reference($t3)]($t1)
@@ -538,13 +536,11 @@ pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUn
   5: $t6 := borrow_local($t1)
   6: unpack_ref($t6)
   7: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
-  8: unpack_ref($t7)
-  9: write_ref($t7, $t5)
- 10: pack_ref($t7)
- 11: write_back[Reference($t6)]($t7)
- 12: pack_ref($t6)
- 13: write_back[LocalRoot($t1)]($t6)
- 14: return $t1
+  8: write_ref($t7, $t5)
+  9: write_back[Reference($t6)]($t7)
+ 10: pack_ref($t6)
+ 11: write_back[LocalRoot($t1)]($t6)
+ 12: return $t1
 }
 
 
@@ -596,27 +592,23 @@ pub fun TestPackUnpack::move_ref_unchanged($t0|r1: TestPackUnpack::R, $t1|r2: Te
  13: $t13 := borrow_field<TestPackUnpack::R>.nested($t5)
  14: unpack_ref($t13)
  15: $t14 := borrow_field<TestPackUnpack::S>.value($t13)
- 16: unpack_ref($t14)
- 17: write_ref($t14, $t12)
- 18: pack_ref($t14)
- 19: write_back[Reference($t13)]($t14)
- 20: pack_ref($t13)
- 21: write_back[Reference($t5)]($t13)
- 22: pack_ref($t5)
- 23: write_back[LocalRoot($t3)]($t5)
- 24: $t15 := 1
- 25: $t16 := borrow_field<TestPackUnpack::R>.nested($t4)
- 26: unpack_ref($t16)
- 27: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
- 28: unpack_ref($t17)
- 29: write_ref($t17, $t15)
- 30: pack_ref($t17)
- 31: write_back[Reference($t16)]($t17)
- 32: pack_ref($t16)
- 33: write_back[Reference($t4)]($t16)
- 34: pack_ref($t4)
- 35: write_back[LocalRoot($t2)]($t4)
- 36: return ($t2, $t3)
+ 16: write_ref($t14, $t12)
+ 17: write_back[Reference($t13)]($t14)
+ 18: pack_ref($t13)
+ 19: write_back[Reference($t5)]($t13)
+ 20: pack_ref($t5)
+ 21: write_back[LocalRoot($t3)]($t5)
+ 22: $t15 := 1
+ 23: $t16 := borrow_field<TestPackUnpack::R>.nested($t4)
+ 24: unpack_ref($t16)
+ 25: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
+ 26: write_ref($t17, $t15)
+ 27: write_back[Reference($t16)]($t17)
+ 28: pack_ref($t16)
+ 29: write_back[Reference($t4)]($t16)
+ 30: pack_ref($t4)
+ 31: write_back[LocalRoot($t2)]($t4)
+ 32: return ($t2, $t3)
 }
 
 
@@ -650,27 +642,23 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: TestPackU
  11: $t11 := borrow_field<TestPackUnpack::R>.nested($t5)
  12: unpack_ref($t11)
  13: $t12 := borrow_field<TestPackUnpack::S>.value($t11)
- 14: unpack_ref($t12)
- 15: write_ref($t12, $t10)
- 16: pack_ref($t12)
- 17: write_back[Reference($t11)]($t12)
- 18: pack_ref($t11)
- 19: write_back[Reference($t5)]($t11)
- 20: pack_ref($t5)
- 21: write_back[LocalRoot($t3)]($t5)
- 22: $t13 := 0
- 23: $t14 := borrow_field<TestPackUnpack::R>.nested($t4)
- 24: unpack_ref($t14)
- 25: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
- 26: unpack_ref($t15)
- 27: write_ref($t15, $t13)
- 28: pack_ref($t15)
- 29: write_back[Reference($t14)]($t15)
- 30: pack_ref($t14)
- 31: write_back[Reference($t4)]($t14)
- 32: pack_ref($t4)
- 33: write_back[LocalRoot($t2)]($t4)
- 34: return ($t2, $t3)
+ 14: write_ref($t12, $t10)
+ 15: write_back[Reference($t11)]($t12)
+ 16: pack_ref($t11)
+ 17: write_back[Reference($t5)]($t11)
+ 18: pack_ref($t5)
+ 19: write_back[LocalRoot($t3)]($t5)
+ 20: $t13 := 0
+ 21: $t14 := borrow_field<TestPackUnpack::R>.nested($t4)
+ 22: unpack_ref($t14)
+ 23: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
+ 24: write_ref($t15, $t13)
+ 25: write_back[Reference($t14)]($t15)
+ 26: pack_ref($t14)
+ 27: write_back[Reference($t4)]($t14)
+ 28: pack_ref($t4)
+ 29: write_back[LocalRoot($t2)]($t4)
+ 30: return ($t2, $t3)
 }
 
 
@@ -730,13 +718,11 @@ pub fun TestPackUnpack::public_update_value($t0|s: TestPackUnpack::S, $t1|v: u64
   2: $t4 := borrow_local($t2)
   3: unpack_ref($t4)
   4: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
-  5: unpack_ref($t5)
-  6: write_ref($t5, $t3)
-  7: pack_ref($t5)
-  8: write_back[Reference($t4)]($t5)
-  9: pack_ref($t4)
- 10: write_back[LocalRoot($t2)]($t4)
- 11: return $t2
+  5: write_ref($t5, $t3)
+  6: write_back[Reference($t4)]($t5)
+  7: pack_ref($t4)
+  8: write_back[LocalRoot($t2)]($t4)
+  9: return $t2
 }
 
 
@@ -785,17 +771,15 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: TestPa
   4: unpack_ref($t1)
   5: $t4 := 0
   6: $t5 := borrow_field<TestPackUnpack::S>.value($t1)
-  7: unpack_ref($t5)
-  8: write_ref($t5, $t4)
-  9: pack_ref($t5)
- 10: write_back[Reference($t1)]($t5)
- 11: $t6 := read_ref($t1)
- 12: pack_ref($t1)
- 13: write_back[Reference($t3)]($t1)
- 14: pack_ref($t3)
- 15: write_back[LocalRoot($t2)]($t3)
- 16: $t7 := TestPackUnpack::read_S_from_immutable($t6)
- 17: return ($t7, $t2)
+  7: write_ref($t5, $t4)
+  8: write_back[Reference($t1)]($t5)
+  9: $t6 := read_ref($t1)
+ 10: pack_ref($t1)
+ 11: write_back[Reference($t3)]($t1)
+ 12: pack_ref($t3)
+ 13: write_back[LocalRoot($t2)]($t3)
+ 14: $t7 := TestPackUnpack::read_S_from_immutable($t6)
+ 15: return ($t7, $t2)
 }
 
 
@@ -819,16 +803,14 @@ pub fun TestPackUnpack::update_ref_changed($t0|r: TestPackUnpack::R): (u64, Test
   6: $t6 := 2
   7: $t7 := +($t5, $t6)
   8: $t8 := borrow_field<TestPackUnpack::S>.value($t1)
-  9: unpack_ref($t8)
- 10: write_ref($t8, $t7)
- 11: pack_ref($t8)
- 12: write_back[Reference($t1)]($t8)
- 13: $t9 := get_field<TestPackUnpack::S>.value($t1)
- 14: pack_ref($t1)
- 15: write_back[Reference($t4)]($t1)
- 16: pack_ref($t4)
- 17: write_back[LocalRoot($t3)]($t4)
- 18: return ($t9, $t3)
+  9: write_ref($t8, $t7)
+ 10: write_back[Reference($t1)]($t8)
+ 11: $t9 := get_field<TestPackUnpack::S>.value($t1)
+ 12: pack_ref($t1)
+ 13: write_back[Reference($t4)]($t1)
+ 14: pack_ref($t4)
+ 15: write_back[LocalRoot($t3)]($t4)
+ 16: return ($t9, $t3)
 }
 
 

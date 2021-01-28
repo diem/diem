@@ -546,13 +546,14 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
             writeln!(f)?;
         }
         let mut loc_vc_shown = BTreeSet::new();
+        let label_offsets = Bytecode::label_offsets(self.get_bytecode());
         for (offset, code) in self.get_bytecode().iter().enumerate() {
             let annotations = self
                 .annotation_formatters
                 .borrow()
                 .iter()
                 .filter_map(|f| f(self, offset as CodeOffset))
-                .map(|s| format!("     // {}", s.replace("\n", "\n     // ")))
+                .map(|s| format!("     // {}", s.replace("\n", "\n     // ").trim()))
                 .join("\n");
             if !annotations.is_empty() {
                 writeln!(f, "{}", annotations)?;
@@ -564,7 +565,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                     }
                 }
             }
-            writeln!(f, "{:>3}: {}", offset, code.display(self))?;
+            writeln!(f, "{:>3}: {}", offset, code.display(self, &label_offsets))?;
         }
         writeln!(f, "}}")?;
         Ok(())

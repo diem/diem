@@ -466,10 +466,12 @@ impl Bytecode {
     pub fn display<'env>(
         &'env self,
         func_target: &'env FunctionTarget<'env>,
+        label_offsets: &'env BTreeMap<Label, CodeOffset>,
     ) -> BytecodeDisplay<'env> {
         BytecodeDisplay {
             bytecode: self,
             func_target,
+            label_offsets,
         }
     }
 }
@@ -478,6 +480,7 @@ impl Bytecode {
 pub struct BytecodeDisplay<'env> {
     bytecode: &'env Bytecode,
     func_target: &'env FunctionTarget<'env>,
+    label_offsets: &'env BTreeMap<Label, CodeOffset>,
 }
 
 impl<'env> fmt::Display for BytecodeDisplay<'env> {
@@ -518,20 +521,25 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Branch(_, then_label, else_label, src) => {
                 write!(
                     f,
-                    "if ({}) goto L{} else goto L{}",
+                    "if ({}) goto {} else goto {}",
                     self.lstr(*src),
-                    then_label.as_usize(),
-                    else_label.as_usize()
+                    self.label_str(*then_label),
+                    self.label_str(*else_label),
                 )?;
             }
             OnAbort(_, label, code) => {
-                write!(f, "on_abort(L{}, {})", label.as_usize(), self.lstr(*code))?;
+                write!(
+                    f,
+                    "on_abort goto {} code := {}",
+                    self.label_str(*label),
+                    self.lstr(*code)
+                )?;
             }
             Jump(_, label) => {
-                write!(f, "goto L{}", label.as_usize())?;
+                write!(f, "goto {}", self.label_str(*label))?;
             }
             Label(_, label) => {
-                write!(f, "L{}:", label.as_usize(),)?;
+                write!(f, "label L{}", label.as_usize())?;
             }
             Abort(_, src) => {
                 write!(f, "abort({})", self.lstr(*src))?;
@@ -599,6 +607,13 @@ impl<'env> BytecodeDisplay<'env> {
 
     fn lstr(&self, idx: TempIndex) -> String {
         format!("$t{}", idx)
+    }
+
+    fn label_str(&self, label: Label) -> String {
+        self.label_offsets
+            .get(&label)
+            .map(|offs| offs.to_string())
+            .unwrap_or_else(|| format!("L{}", label.as_usize()))
     }
 }
 

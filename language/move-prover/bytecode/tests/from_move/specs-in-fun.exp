@@ -10,22 +10,22 @@ fun TestSpecBlock::looping($t0|x: u64): u64 {
      var $t6: u64
      var $t7: u64
   0: assume Le($t0, 10)
-  1: goto L3
-  2: L3:
+  1: goto 2
+  2: label L3
   3: $t1 := copy($t0)
   4: $t2 := 10
   5: $t3 := <($t1, $t2)
-  6: if ($t3) goto L0 else goto L1
-  7: L1:
-  8: goto L2
-  9: L0:
+  6: if ($t3) goto 9 else goto 7
+  7: label L1
+  8: goto 16
+  9: label L0
  10: assume Lt($t0, 10)
  11: $t4 := copy($t0)
  12: $t5 := 1
  13: $t6 := +($t4, $t5)
  14: $t0 := $t6
- 15: goto L3
- 16: L2:
+ 15: goto 2
+ 16: label L2
  17: assert Eq<u64>($t0, 10)
  18: $t7 := copy($t0)
  19: return $t7
@@ -43,13 +43,13 @@ fun TestSpecBlock::simple1($t0|x: u64, $t1|y: u64) {
   1: $t3 := copy($t1)
   2: $t4 := >($t2, $t3)
   3: $t5 := !($t4)
-  4: if ($t5) goto L0 else goto L1
-  5: L1:
-  6: goto L2
-  7: L0:
+  4: if ($t5) goto 7 else goto 5
+  5: label L1
+  6: goto 10
+  7: label L0
   8: $t6 := 1
   9: abort($t6)
- 10: L2:
+ 10: label L2
  11: assert Gt($t0, $t1)
  12: return ()
 }

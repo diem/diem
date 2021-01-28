@@ -32,13 +32,13 @@ fun SmokeTest::arithmetic_ops($t0|a: u64): (u64, u64) {
   2: $t3 := copy($t1)
   3: $t4 := 2
   4: $t5 := !=($t3, $t4)
-  5: if ($t5) goto L0 else goto L1
-  6: L1:
-  7: goto L2
-  8: L0:
+  5: if ($t5) goto 8 else goto 6
+  6: label L1
+  7: goto 11
+  8: label L0
   9: $t6 := 42
  10: abort($t6)
- 11: L2:
+ 11: label L2
  12: $t7 := copy($t1)
  13: $t8 := copy($t0)
  14: return ($t7, $t8)
@@ -77,52 +77,52 @@ fun SmokeTest::bool_ops($t0|a: u64, $t1|b: u64): (bool, bool) {
   0: $t6 := copy($t0)
   1: $t7 := copy($t1)
   2: $t8 := >($t6, $t7)
-  3: if ($t8) goto L0 else goto L1
-  4: L1:
-  5: goto L2
-  6: L0:
+  3: if ($t8) goto 6 else goto 4
+  4: label L1
+  5: goto 12
+  6: label L0
   7: $t9 := copy($t0)
   8: $t10 := copy($t1)
   9: $t11 := >=($t9, $t10)
  10: $t4 := $t11
- 11: goto L3
- 12: L2:
+ 11: goto 16
+ 12: label L2
  13: $t12 := false
  14: $t4 := $t12
- 15: goto L3
- 16: L3:
+ 15: goto 16
+ 16: label L3
  17: $t13 := move($t4)
  18: $t2 := $t13
  19: $t14 := copy($t0)
  20: $t15 := copy($t1)
  21: $t16 := <($t14, $t15)
- 22: if ($t16) goto L4 else goto L5
- 23: L5:
- 24: goto L6
- 25: L4:
+ 22: if ($t16) goto 25 else goto 23
+ 23: label L5
+ 24: goto 29
+ 25: label L4
  26: $t17 := true
  27: $t5 := $t17
- 28: goto L7
- 29: L6:
+ 28: goto 35
+ 29: label L6
  30: $t18 := copy($t0)
  31: $t19 := copy($t1)
  32: $t20 := <=($t18, $t19)
  33: $t5 := $t20
- 34: goto L7
- 35: L7:
+ 34: goto 35
+ 35: label L7
  36: $t21 := move($t5)
  37: $t3 := $t21
  38: $t22 := copy($t2)
  39: $t23 := copy($t3)
  40: $t24 := !=($t22, $t23)
  41: $t25 := !($t24)
- 42: if ($t25) goto L8 else goto L9
- 43: L9:
- 44: goto L10
- 45: L8:
+ 42: if ($t25) goto 45 else goto 43
+ 43: label L9
+ 44: goto 48
+ 45: label L8
  46: $t26 := 42
  47: abort($t26)
- 48: L10:
+ 48: label L10
  49: $t27 := copy($t2)
  50: $t28 := copy($t3)
  51: return ($t27, $t28)
@@ -339,22 +339,22 @@ fun SmokeTest::ref_A($t0|a: address, $t1|b: bool): SmokeTest::A {
      var $t23: u64
      var $t24: SmokeTest::A
   0: $t7 := copy($t1)
-  1: if ($t7) goto L0 else goto L1
-  2: L1:
-  3: goto L2
-  4: L0:
+  1: if ($t7) goto 4 else goto 2
+  2: label L1
+  3: goto 10
+  4: label L0
   5: $t8 := copy($t0)
   6: $t9 := 1
   7: $t10 := pack SmokeTest::A($t8, $t9)
   8: $t4 := $t10
-  9: goto L3
- 10: L2:
+  9: goto 16
+ 10: label L2
  11: $t11 := copy($t0)
  12: $t12 := 42
  13: $t13 := pack SmokeTest::A($t11, $t12)
  14: $t4 := $t13
- 15: goto L3
- 16: L3:
+ 15: goto 16
+ 16: label L3
  17: $t14 := move($t4)
  18: $t5 := $t14
  19: $t15 := borrow_local($t5)
@@ -368,13 +368,13 @@ fun SmokeTest::ref_A($t0|a: address, $t1|b: bool): SmokeTest::A {
  27: $t20 := copy($t3)
  28: $t21 := 42
  29: $t22 := !=($t20, $t21)
- 30: if ($t22) goto L4 else goto L5
- 31: L5:
- 32: goto L6
- 33: L4:
+ 30: if ($t22) goto 33 else goto 31
+ 31: label L5
+ 32: goto 36
+ 33: label L4
  34: $t23 := 42
  35: abort($t23)
- 36: L6:
+ 36: label L6
  37: $t24 := move($t5)
  38: return $t24
 }

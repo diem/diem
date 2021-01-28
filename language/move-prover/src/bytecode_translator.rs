@@ -942,7 +942,11 @@ impl<'env> ModuleTranslator<'env> {
         // Set location of this code in the CodeWriter.
         let loc = func_target.get_bytecode_loc(bytecode.get_attr_id());
         self.writer.set_location(&loc);
-        emitln!(self.writer, "// {}", bytecode.display(func_target));
+        emitln!(
+            self.writer,
+            "// {}",
+            bytecode.display(func_target, &BTreeMap::default())
+        );
 
         // Helper function to get an Rc<String> for a local.
         let str_local = |idx: usize| {

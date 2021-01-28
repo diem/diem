@@ -13,21 +13,21 @@ pub fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
      var $t10: vector<#0>
   0: $t2 := borrow_local($t1)
   1: Vector::reverse<#0>($t2)
-  2: goto L3
-  3: L3:
+  2: goto 3
+  3: label L3
   4: $t3 := borrow_local($t1)
   5: $t4 := Vector::is_empty<#0>($t3)
   6: $t5 := !($t4)
-  7: if ($t5) goto L0 else goto L1
-  8: L1:
-  9: goto L2
- 10: L0:
+  7: if ($t5) goto 10 else goto 8
+  8: label L1
+  9: goto 16
+ 10: label L0
  11: $t6 := copy($t0)
  12: $t7 := borrow_local($t1)
  13: $t8 := Vector::pop_back<#0>($t7)
  14: Vector::push_back<#0>($t6, $t8)
- 15: goto L3
- 16: L2:
+ 15: goto 3
+ 16: label L2
  17: $t9 := move($t0)
  18: destroy($t9)
  19: $t10 := move($t1)
@@ -75,37 +75,37 @@ pub fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
   2: $t5 := copy($t0)
   3: $t6 := Vector::length<#0>($t5)
   4: $t3 := $t6
-  5: goto L6
-  6: L6:
+  5: goto 6
+  6: label L6
   7: $t7 := copy($t2)
   8: $t8 := copy($t3)
   9: $t9 := <($t7, $t8)
- 10: if ($t9) goto L0 else goto L1
- 11: L1:
- 12: goto L2
- 13: L0:
+ 10: if ($t9) goto 13 else goto 11
+ 11: label L1
+ 12: goto 35
+ 13: label L0
  14: $t10 := copy($t0)
  15: $t11 := copy($t2)
  16: $t12 := Vector::borrow<#0>($t10, $t11)
  17: $t13 := copy($t1)
  18: $t14 := ==($t12, $t13)
- 19: if ($t14) goto L3 else goto L4
- 20: L4:
- 21: goto L5
- 22: L3:
+ 19: if ($t14) goto 22 else goto 20
+ 20: label L4
+ 21: goto 29
+ 22: label L3
  23: $t15 := move($t0)
  24: destroy($t15)
  25: $t16 := move($t1)
  26: destroy($t16)
  27: $t17 := true
  28: return $t17
- 29: L5:
+ 29: label L5
  30: $t18 := copy($t2)
  31: $t19 := 1
  32: $t20 := +($t18, $t19)
  33: $t2 := $t20
- 34: goto L6
- 35: L2:
+ 34: goto 6
+ 35: label L2
  36: $t21 := move($t0)
  37: destroy($t21)
  38: $t22 := move($t1)
@@ -156,24 +156,24 @@ pub fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
   2: $t5 := copy($t0)
   3: $t6 := Vector::length<#0>($t5)
   4: $t3 := $t6
-  5: goto L6
-  6: L6:
+  5: goto 6
+  6: label L6
   7: $t7 := copy($t2)
   8: $t8 := copy($t3)
   9: $t9 := <($t7, $t8)
- 10: if ($t9) goto L0 else goto L1
- 11: L1:
- 12: goto L2
- 13: L0:
+ 10: if ($t9) goto 13 else goto 11
+ 11: label L1
+ 12: goto 36
+ 13: label L0
  14: $t10 := copy($t0)
  15: $t11 := copy($t2)
  16: $t12 := Vector::borrow<#0>($t10, $t11)
  17: $t13 := copy($t1)
  18: $t14 := ==($t12, $t13)
- 19: if ($t14) goto L3 else goto L4
- 20: L4:
- 21: goto L5
- 22: L3:
+ 19: if ($t14) goto 22 else goto 20
+ 20: label L4
+ 21: goto 30
+ 22: label L3
  23: $t15 := move($t0)
  24: destroy($t15)
  25: $t16 := move($t1)
@@ -181,13 +181,13 @@ pub fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
  27: $t17 := true
  28: $t18 := copy($t2)
  29: return ($t17, $t18)
- 30: L5:
+ 30: label L5
  31: $t19 := copy($t2)
  32: $t20 := 1
  33: $t21 := +($t19, $t20)
  34: $t2 := $t21
- 35: goto L6
- 36: L2:
+ 35: goto 6
+ 36: label L2
  37: $t22 := move($t0)
  38: destroy($t22)
  39: $t23 := move($t1)
@@ -263,28 +263,28 @@ pub fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
   4: $t8 := copy($t1)
   5: $t9 := copy($t2)
   6: $t10 := >=($t8, $t9)
-  7: if ($t10) goto L0 else goto L1
-  8: L1:
-  9: goto L2
- 10: L0:
+  7: if ($t10) goto 10 else goto 8
+  8: label L1
+  9: goto 15
+ 10: label L0
  11: $t11 := move($t0)
  12: destroy($t11)
  13: $t12 := 0
  14: abort($t12)
- 15: L2:
+ 15: label L2
  16: $t13 := copy($t2)
  17: $t14 := 1
  18: $t15 := -($t13, $t14)
  19: $t2 := $t15
- 20: goto L6
- 21: L6:
+ 20: goto 21
+ 21: label L6
  22: $t16 := copy($t1)
  23: $t17 := copy($t2)
  24: $t18 := <($t16, $t17)
- 25: if ($t18) goto L3 else goto L4
- 26: L4:
- 27: goto L5
- 28: L3:
+ 25: if ($t18) goto 28 else goto 26
+ 26: label L4
+ 27: goto 42
+ 28: label L3
  29: $t19 := copy($t0)
  30: $t4 := $t19
  31: $t20 := copy($t1)
@@ -297,8 +297,8 @@ pub fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
  38: $t25 := move($t3)
  39: $t26 := copy($t1)
  40: Vector::swap<#0>($t24, $t25, $t26)
- 41: goto L6
- 42: L5:
+ 41: goto 21
+ 42: label L5
  43: $t27 := move($t0)
  44: $t28 := Vector::pop_back<#0>($t27)
  45: return $t28
@@ -341,29 +341,29 @@ pub fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
   4: $t7 := copy($t3)
   5: $t8 := 0
   6: $t9 := ==($t7, $t8)
-  7: if ($t9) goto L0 else goto L1
-  8: L1:
-  9: goto L2
- 10: L0:
+  7: if ($t9) goto 10 else goto 8
+  8: label L1
+  9: goto 14
+ 10: label L0
  11: $t10 := move($t0)
  12: destroy($t10)
  13: return ()
- 14: L2:
+ 14: label L2
  15: $t11 := 0
  16: $t2 := $t11
  17: $t12 := copy($t3)
  18: $t13 := 1
  19: $t14 := -($t12, $t13)
  20: $t1 := $t14
- 21: goto L6
- 22: L6:
+ 21: goto 22
+ 22: label L6
  23: $t15 := copy($t2)
  24: $t16 := copy($t1)
  25: $t17 := <($t15, $t16)
- 26: if ($t17) goto L3 else goto L4
- 27: L4:
- 28: goto L5
- 29: L3:
+ 26: if ($t17) goto 29 else goto 27
+ 27: label L4
+ 28: goto 43
+ 29: label L3
  30: $t18 := copy($t0)
  31: $t19 := copy($t2)
  32: $t20 := copy($t1)
@@ -376,8 +376,8 @@ pub fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
  39: $t25 := 1
  40: $t26 := -($t24, $t25)
  41: $t1 := $t26
- 42: goto L6
- 43: L5:
+ 42: goto 22
+ 43: label L5
  44: $t27 := move($t0)
  45: destroy($t27)
  46: return ()

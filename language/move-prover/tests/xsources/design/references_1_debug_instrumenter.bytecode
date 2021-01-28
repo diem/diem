@@ -1,0 +1,70 @@
+============ after processor `debug_instrumenter` ================
+
+[variant baseline]
+pub fun Trafo::incr_ref($t0|r: &mut u64) {
+     var $t1: &mut u64
+     var $t2: u64
+     var $t3: u64
+     var $t4: u64
+     var $t5: &mut u64
+  0: trace_local[r]($t0)
+  1: $t1 := copy($t0)
+  2: $t2 := read_ref($t1)
+  3: $t3 := 1
+  4: $t4 := +($t2, $t3)
+  5: $t5 := move($t0)
+  6: write_ref($t5, $t4)
+  7: return ()
+}
+
+
+[variant baseline]
+pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
+     var $t1|r1: Trafo::R
+     var $t2|r2: Trafo::R
+     var $t3|r_ref: &mut Trafo::R
+     var $t4|tmp#$4: &mut Trafo::R
+     var $t5: u64
+     var $t6: Trafo::R
+     var $t7: u64
+     var $t8: Trafo::R
+     var $t9: bool
+     var $t10: &mut Trafo::R
+     var $t11: &mut Trafo::R
+     var $t12: &mut Trafo::R
+     var $t13: &mut Trafo::R
+     var $t14: &mut u64
+     var $t15: Trafo::R
+  0: trace_local[b]($t0)
+  1: $t5 := 1
+  2: $t6 := pack Trafo::R($t5)
+  3: $t1 := $t6
+  4: trace_local[r1]($t1)
+  5: $t7 := 2
+  6: $t8 := pack Trafo::R($t7)
+  7: $t2 := $t8
+  8: trace_local[r2]($t2)
+  9: $t9 := copy($t0)
+ 10: if ($t9) goto 13 else goto 11
+ 11: label L1
+ 12: goto 18
+ 13: label L0
+ 14: $t10 := borrow_local($t1)
+ 15: $t4 := $t10
+ 16: trace_local[tmp#$4]($t4)
+ 17: goto 22
+ 18: label L2
+ 19: $t11 := borrow_local($t2)
+ 20: $t4 := $t11
+ 21: trace_local[tmp#$4]($t4)
+ 22: label L3
+ 23: $t12 := move($t4)
+ 24: $t3 := $t12
+ 25: trace_local[r_ref]($t3)
+ 26: $t13 := move($t3)
+ 27: $t14 := borrow_field<Trafo::R>.x($t13)
+ 28: Trafo::incr_ref($t14)
+ 29: $t15 := move($t2)
+ 30: trace_return[0]($t15)
+ 31: return $t15
+}

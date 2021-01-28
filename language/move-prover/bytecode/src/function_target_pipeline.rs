@@ -251,9 +251,10 @@ impl FunctionTargetPipeline {
             if let Some(base_name) = &dump_to_file {
                 let dump =
                     print_targets_for_test(env, &format!("after processor `{}`", name), targets);
+                let trimmed = format!("{}\n", dump.trim());
                 let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, name);
                 debug!("dumping bytecode to `{}`", file_name);
-                fs::write(&file_name, &dump).expect("dumping bytecode");
+                fs::write(&file_name, &trimmed).expect("dumping bytecode");
             }
         };
         dump_to_file(0, "stackless", targets);

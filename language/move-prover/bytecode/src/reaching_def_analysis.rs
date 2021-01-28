@@ -97,17 +97,16 @@ impl ReachingDefProcessor {
         res
     }
 
-    /// Compute the set of locals which are borrowed from. We can't alias such locals
-    /// to other locals because of reference semantics.
+    /// Compute the set of locals which are borrowed from or which are otherwise used to refer to.
+    /// We can't alias such locals to other locals because of reference semantics.
     fn borrowed_locals(&self, code: &[Bytecode]) -> BTreeSet<TempIndex> {
         use Bytecode::*;
         code.iter()
-            .filter_map(|bc| {
-                if let Call(_, _, Operation::BorrowLoc, srcs) = bc {
-                    Some(srcs[0])
-                } else {
-                    None
-                }
+            .filter_map(|bc| match bc {
+                Call(_, _, Operation::BorrowLoc, srcs) => Some(srcs[0]),
+                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src)), _) => Some(*src),
+                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src)), _) => Some(*src),
+                _ => None,
             })
             .collect()
     }

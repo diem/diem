@@ -143,16 +143,16 @@ fun TestBorrow::test7($t0|b: bool) {
   6: $t8 := borrow_local($t1)
   7: $t3 := $t8
   8: $t9 := copy($t0)
-  9: if ($t9) goto L0 else goto L1
- 10: L1:
- 11: goto L2
- 12: L0:
+  9: if ($t9) goto 12 else goto 10
+ 10: label L1
+ 11: goto 18
+ 12: label L0
  13: $t10 := move($t3)
  14: destroy($t10)
  15: $t11 := borrow_local($t2)
  16: $t3 := $t11
- 17: goto L2
- 18: L2:
+ 17: goto 18
+ 18: label L2
  19: $t12 := move($t3)
  20: $t13 := 0
  21: TestBorrow::test3($t12, $t13)
@@ -199,15 +199,15 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
   5: $t4 := $t9
   6: $t10 := borrow_local($t4)
   7: $t5 := $t10
-  8: goto L7
-  9: L7:
+  8: goto 9
+  9: label L7
  10: $t11 := 0
  11: $t12 := copy($t1)
  12: $t13 := <($t11, $t12)
- 13: if ($t13) goto L0 else goto L1
- 14: L1:
- 15: goto L2
- 16: L0:
+ 13: if ($t13) goto 16 else goto 14
+ 14: label L1
+ 15: goto 41
+ 16: label L0
  17: $t14 := move($t5)
  18: destroy($t14)
  19: $t15 := copy($t1)
@@ -215,43 +215,43 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: &mut TestBorrow::R) {
  21: $t17 := /($t15, $t16)
  22: $t18 := 0
  23: $t19 := ==($t17, $t18)
- 24: if ($t19) goto L3 else goto L4
- 25: L4:
- 26: goto L5
- 27: L3:
+ 24: if ($t19) goto 27 else goto 25
+ 25: label L4
+ 26: goto 31
+ 27: label L3
  28: $t20 := borrow_local($t3)
  29: $t5 := $t20
- 30: goto L6
- 31: L5:
+ 30: goto 35
+ 31: label L5
  32: $t21 := borrow_local($t4)
  33: $t5 := $t21
- 34: goto L6
- 35: L6:
+ 34: goto 35
+ 35: label L6
  36: $t22 := copy($t1)
  37: $t23 := 1
  38: $t24 := -($t22, $t23)
  39: $t1 := $t24
- 40: goto L7
- 41: L2:
+ 40: goto 9
+ 41: label L2
  42: $t25 := copy($t0)
- 43: if ($t25) goto L8 else goto L9
- 44: L9:
- 45: goto L10
- 46: L8:
+ 43: if ($t25) goto 46 else goto 44
+ 44: label L9
+ 45: goto 53
+ 46: label L8
  47: $t26 := move($t5)
  48: destroy($t26)
  49: $t27 := move($t2)
  50: $t28 := 0
  51: TestBorrow::test3($t27, $t28)
- 52: goto L11
- 53: L10:
+ 52: goto 60
+ 53: label L10
  54: $t29 := move($t2)
  55: destroy($t29)
  56: $t30 := move($t5)
  57: $t31 := 0
  58: TestBorrow::test3($t30, $t31)
- 59: goto L11
- 60: L11:
+ 59: goto 60
+ 60: label L11
  61: return ()
 }
 
@@ -525,22 +525,22 @@ fun TestBorrow::test7($t0|b: bool) {
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1)}
-  6: if ($t4) goto L0 else goto L1
+  6: if ($t4) goto 9 else goto 7
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1)}
-  7: L1:
+  7: label L1
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1)}
-  8: goto L2
+  8: goto 13
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1)}
-  9: L0:
+  9: label L0
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}
@@ -555,12 +555,12 @@ fun TestBorrow::test7($t0|b: bool) {
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
- 12: goto L2
+ 12: goto 13
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
      // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
- 13: L2:
+ 13: label L2
      // live_nodes: LocalRoot($t4), Reference($t3)
      // moved_nodes: LocalRoot($t0)
      // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
@@ -660,13 +660,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
-  9: goto L7
+  9: goto 10
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 10: L7:
+ 10: label L7
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -684,25 +684,25 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 13: if ($t13) goto L0 else goto L1
+ 13: if ($t13) goto 16 else goto 14
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 14: L1:
+ 14: label L1
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 15: goto L2
+ 15: goto 35
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 16: L0:
+ 16: label L0
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -738,25 +738,25 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 22: if ($t17) goto L3 else goto L4
+ 22: if ($t17) goto 25 else goto 23
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 23: L4:
+ 23: label L4
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 24: goto L5
+ 24: goto 28
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 25: L3:
+ 25: label L3
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -768,13 +768,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 27: goto L6
+ 27: goto 31
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 28: L5:
+ 28: label L5
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -786,13 +786,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 30: goto L6
+ 30: goto 31
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 31: L6:
+ 31: label L6
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -810,37 +810,37 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 34: goto L7
+ 34: goto 10
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 35: L2:
+ 35: label L2
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 36: if ($t6) goto L8 else goto L9
+ 36: if ($t6) goto 39 else goto 37
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 37: L9:
+ 37: label L9
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 38: goto L10
+ 38: goto 46
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 39: L8:
+ 39: label L8
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -876,13 +876,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 45: goto L11
+ 45: goto 53
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 46: L10:
+ 46: label L10
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8), Reference($t5), Reference($t9)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
@@ -918,13 +918,13 @@ fun TestBorrow::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestBorrow::R): TestBo
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 52: goto L11
+ 52: goto 53
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)
      // borrowed_by: LocalRoot($t3) -> {Reference($t5)}, LocalRoot($t4) -> {Reference($t5)}, LocalRoot($t8) -> {Reference($t9)}
      // borrows_from: Reference($t5) -> {LocalRoot($t3), LocalRoot($t4)}, Reference($t9) -> {LocalRoot($t8)}
- 53: L11:
+ 53: label L11
      // live_nodes: LocalRoot($t6), LocalRoot($t7), LocalRoot($t8)
      // unchecked_nodes: LocalRoot($t8), Reference($t9)
      // moved_nodes: LocalRoot($t0), LocalRoot($t1), LocalRoot($t2)

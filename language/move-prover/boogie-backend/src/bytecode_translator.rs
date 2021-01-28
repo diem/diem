@@ -478,7 +478,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(
             self.writer,
             "// {} {}",
-            bytecode.display(func_target),
+            bytecode.display(func_target, &BTreeMap::default()),
             loc.display(self.module_env.env)
         );
 

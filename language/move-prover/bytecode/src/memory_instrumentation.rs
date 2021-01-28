@@ -12,8 +12,9 @@ use crate::{
     },
 };
 use move_model::{
-    ast::TempIndex,
-    model::{FunctionEnv, Loc},
+    ast::{ConditionKind, TempIndex},
+    model::{FunctionEnv, Loc, StructEnv},
+    ty::Type,
 };
 use std::collections::BTreeMap;
 use vm::file_format::CodeOffset;
@@ -120,7 +121,7 @@ impl<'a> Instrumenter<'a> {
             if callee_env.is_public() {
                 let pack_refs: Vec<&TempIndex> = srcs
                     .iter()
-                    .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
+                    .filter(|idx| self.is_pack_ref_ty(self.func_target.get_local_type(**idx)))
                     .collect();
                 before.append(
                     &mut pack_refs
@@ -151,6 +152,27 @@ impl<'a> Instrumenter<'a> {
             }
         }
         (before, after)
+    }
+
+    /// Determines whether the type needs a pack ref.
+    fn is_pack_ref_ty(&self, ty: &Type) -> bool {
+        let env = self.func_target.global_env();
+        if let Some((struct_env, _)) = ty.skip_reference().get_struct(env) {
+            self.is_pack_ref_struct(&struct_env)
+        } else {
+            // TODO: vectors
+            false
+        }
+    }
+
+    /// Determines whether the struct needs a pack ref.
+    fn is_pack_ref_struct(&self, struct_env: &StructEnv<'_>) -> bool {
+        use ConditionKind::*;
+        struct_env.get_spec().any(|c| matches!(c.kind, VarUpdate(..)|VarPack(..)|Invariant))
+        // If any of the fields has it, it inherits to the struct.
+        ||  struct_env
+            .get_fields()
+            .any(|fe| self.is_pack_ref_ty(&fe.get_type()))
     }
 
     fn new_attr_id(&mut self, loc: Loc) -> AttrId {
@@ -184,8 +206,12 @@ impl<'a> Instrumenter<'a> {
             use Operation::*;
             match op {
                 BorrowLoc | BorrowField(..) | BorrowGlobal(..) => {
+                    let ty = self.func_target.get_local_type(dests[0]);
                     let node = BorrowNode::Reference(dests[0]);
-                    if after.is_in_use(&node) && !after.is_unchecked(&node) {
+                    if self.is_pack_ref_ty(ty)
+                        && after.is_in_use(&node)
+                        && !after.is_unchecked(&node)
+                    {
                         instrumented_bytecodes.push(Bytecode::Call(
                             self.clone_attr(*attr_id),
                             vec![],
@@ -206,24 +232,27 @@ impl<'a> Instrumenter<'a> {
         let attr_id = bytecode.get_attr_id();
         for node in before.dying_nodes(after) {
             if let BorrowNode::Reference(idx) = &node {
-                // Generate a pack_ref for this reference, unless: (a) the node is marked
-                // as unchecked (b) the node is marked as having been moved to somewhere else.
-                if !before.is_unchecked(&node) && !before.is_moved(&node) {
-                    instrumented_bytecodes.push(Bytecode::Call(
-                        self.clone_attr(attr_id),
-                        vec![],
-                        if before.is_spliced(&node) {
-                            // If this node has been spliced, we need to perform a deep pack.
-                            // A spliced node is one which has a child at some unknown,
-                            // dynamically defined path, derived by some function from the parent.
-                            // The nodes on this path have not been packed yet, and we therefore
-                            // need to do a deep pack.
-                            Operation::PackRefDeep
-                        } else {
-                            Operation::PackRef
-                        },
-                        vec![*idx],
-                    ));
+                let ty = self.func_target.get_local_type(*idx);
+                if self.is_pack_ref_ty(ty) {
+                    // Generate a pack_ref for this reference, unless: (a) the node is marked
+                    // as unchecked (b) the node is marked as having been moved to somewhere else.
+                    if !before.is_unchecked(&node) && !before.is_moved(&node) {
+                        instrumented_bytecodes.push(Bytecode::Call(
+                            self.clone_attr(attr_id),
+                            vec![],
+                            if before.is_spliced(&node) {
+                                // If this node has been spliced, we need to perform a deep pack.
+                                // A spliced node is one which has a child at some unknown,
+                                // dynamically defined path, derived by some function from the parent.
+                                // The nodes on this path have not been packed yet, and we therefore
+                                // need to do a deep pack.
+                                Operation::PackRefDeep
+                            } else {
+                                Operation::PackRef
+                            },
+                            vec![*idx],
+                        ));
+                    }
                 }
                 // Generate write_back for this reference.
                 for parent in before.get_parents(&node) {
