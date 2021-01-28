@@ -470,7 +470,7 @@ async fn test_update_last_known_state() {
 }
 
 #[tokio::test]
-async fn test_submit_method_returns_stale_response() {
+async fn test_retry_stale_response_on_submit_method() {
     let client = setup_multi_requests(vec![
         (
             ("get_metadata", json!([])),
@@ -480,11 +480,20 @@ async fn test_submit_method_returns_stale_response() {
             ("submit", json!([signed_txn_hex_sample()])),
             new_response_with_version(json!(null), 1),
         ),
+        (
+            ("submit", json!([signed_txn_hex_sample()])),
+            new_response_with_version(json!(null), 3),
+        ),
     ]);
 
+    // first call to setup known version
     client.get_metadata().await.expect("some");
+
+    let now = std::time::Instant::now();
     let ret = client.submit(&signed_txn_sample()).await;
-    assert_err!(ret, Error::StaleResponseError{..}, false);
+    assert!(ret.is_ok());
+    assert!(now.elapsed() > Duration::from_millis(10));
+    assert_eq!(client.last_known_state().unwrap(), state_for_version(3))
 }
 
 #[tokio::test]

@@ -207,8 +207,8 @@ impl<R: RetryStrategy> Client<R> {
     }
 
     pub async fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>, Error> {
-        let req = Request::submit(txn).map_err(Error::unexpected_bcs_error)?;
-        let resp = self.http_client.single_request(&req).await?;
+        let request = Request::submit(txn).map_err(Error::unexpected_bcs_error)?;
+        let resp = self.send_with_retry(&request, &self.retry).await?;
         Ok(Response {
             result: (),
             state: State::from_response(&resp),
