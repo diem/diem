@@ -34,13 +34,13 @@ impl PendingLedgerInfos {
     }
 
     /// Adds `new_li` to the queue of pending LI's
-    pub(crate) fn add_li(&mut self, new_li: LedgerInfoWithSignatures) {
+    pub(crate) fn add_li(&mut self, new_ledger_info: LedgerInfoWithSignatures) {
         if self.pending_li_queue.len() >= self.max_pending_li_limit {
             warn!(
                 LogSchema::new(LogEntry::ProcessChunkResponse),
                 "pending LI store reached max capacity {}, failed to add LI {}",
                 self.max_pending_li_limit,
-                new_li
+                new_ledger_info
             );
             return;
         }
@@ -50,9 +50,9 @@ impl PendingLedgerInfos {
             .target_li
             .as_ref()
             .map_or(0, |li| li.ledger_info().version());
-        if new_li.ledger_info().version() > target_version {
-            self.pending_li_queue
-                .insert(new_li.ledger_info().version(), new_li);
+        let new_version = new_ledger_info.ledger_info().version();
+        if new_version > target_version {
+            self.pending_li_queue.insert(new_version, new_ledger_info);
         }
     }
 

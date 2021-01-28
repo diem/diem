@@ -263,7 +263,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 
     /// Sync up coordinator state with the local storage
-    /// and updatesp the pending ledger info accordingly
+    /// and updates the pending ledger info accordingly
     fn sync_state_with_local_storage(&mut self) -> Result<()> {
         let new_state = self.executor_proxy.get_local_storage_state().map_err(|e| {
             counters::STORAGE_READ_FAIL_COUNT.inc();
@@ -304,8 +304,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     /// modifying storage, i.e., consensus is not trying to commit transactions concurrently.
     fn process_sync_request(&mut self, request: SyncRequest) -> Result<(), Error> {
         fail_point!("state_sync::process_sync_request_message", |_| {
-            Err(anyhow::anyhow!(
-                "Injected error in process_sync_request_message"
+            Err(crate::error::Error::UnexpectedError(
+                "Injected error in process_sync_request_message".into(),
             ))
         });
 
@@ -483,15 +483,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         committed_transactions: Vec<Transaction>,
     ) -> Result<(), Error> {
         // Get all user transactions from committed transactions
-        let mut user_transactions = vec![];
-        for transaction in committed_transactions {
-            if let Transaction::UserTransaction(signed_txn) = transaction {
-                user_transactions.push(CommittedTransaction {
+        let user_transactions = committed_transactions
+            .iter()
+            .filter_map(|transaction| match transaction {
+                Transaction::UserTransaction(signed_txn) => Some(CommittedTransaction {
                     sender: signed_txn.sender(),
                     sequence_number: signed_txn.sequence_number(),
-                });
-            }
-        }
+                }),
+                _ => None,
+            })
+            .collect();
 
         // Create commit notification of user transactions for mempool
         let (callback_sender, callback_receiver) = oneshot::channel();
@@ -1333,9 +1334,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 
     fn send_initialization_callback(callback: oneshot::Sender<Result<()>>) -> Result<(), Error> {
-        let callback_message = Ok(());
-
-        match callback.send(callback_message) {
+        match callback.send(Ok(())) {
             Err(error) => {
                 counters::FAILED_CHANNEL_SEND
                     .with_label_values(&[counters::WAYPOINT_INIT_CALLBACK])
@@ -1393,14 +1392,17 @@ mod tests {
 
         // Verify coordinator won't process sync requests as it's not yet initialized
         let (sync_request, mut callback_receiver) = create_sync_request_at_version(10);
-        match coordinator.process_sync_request(sync_request) {
-            Err(Error::UninitializedError(..)) => { /* Expected */ }
-            result => panic!("Expected an uninitialized error, but got: {:?}", result),
-        };
-        match callback_receiver.try_recv() {
-            Err(_) => { /* Expected */ }
-            result => panic!("Expected error but got: {:?}", result),
-        };
+        let process_result = coordinator.process_sync_request(sync_request);
+        if !matches!(process_result, Err(Error::UninitializedError(..))) {
+            panic!(
+                "Expected an uninitialized error, but got: {:?}",
+                process_result
+            );
+        }
+        let callback_result = callback_receiver.try_recv();
+        if !matches!(callback_result, Err(_)) {
+            panic!("Expected error but got: {:?}", callback_result);
+        }
 
         // TODO(joshlind): add a check for syncing to old versions once we support storage
         // modifications in unit tests.
@@ -1417,14 +1419,14 @@ mod tests {
             Ok(Some(sync_state)) => {
                 assert_eq!(sync_state.committed_version(), 0);
             }
-            _ => panic!("Expected error!"),
+            result => panic!("Expected okay but got: {:?}", result),
         };
 
         // Drop the callback receiver and verify error
         let (callback_sender, _) = oneshot::channel();
-        match coordinator.get_sync_state(callback_sender) {
-            Err(Error::CallbackSendFailed(_)) => { /* Expected */ }
-            result => panic!("Expected error but got: {:?}", result),
+        let sync_state_result = coordinator.get_sync_state(callback_sender);
+        if !matches!(sync_state_result, Err(Error::CallbackSendFailed(..))) {
+            panic!("Expected error but got: {:?}", sync_state_result);
         }
     }
 
@@ -1446,9 +1448,9 @@ mod tests {
 
         // Drop the callback receiver and verify error
         let (callback_sender, _) = oneshot::channel();
-        match coordinator.wait_for_initialization(callback_sender) {
-            Err(Error::CallbackSendFailed(_)) => { /* Expected */ }
-            result => panic!("Expected error but got: {:?}", result),
+        let initialization_result = coordinator.wait_for_initialization(callback_sender);
+        if !matches!(initialization_result, Err(Error::CallbackSendFailed(..))) {
+            panic!("Expected error but got: {:?}", initialization_result);
         }
 
         // Set the waypoint version higher than storage
@@ -1461,10 +1463,10 @@ mod tests {
         coordinator
             .wait_for_initialization(callback_sender)
             .unwrap();
-        match callback_receiver.try_recv() {
-            Ok(None) => { /* Expected */ }
-            result => panic!("Expected none but got: {:?}", result),
-        };
+        let callback_result = callback_receiver.try_recv();
+        if !matches!(callback_result, Ok(None)) {
+            panic!("Expected none but got: {:?}", callback_result);
+        }
 
         // TODO(joshlind): add a check that verifies the callback is executed once we can
         // update storage in the unit tests.
@@ -1486,10 +1488,10 @@ mod tests {
             None,
         ))
         .unwrap();
-        match callback_receiver.try_recv() {
-            Ok(Some(Ok(_))) => { /* Expected */ }
-            result => panic!("Expected an okay result but got: {:?}", result),
-        };
+        let callback_result = callback_receiver.try_recv();
+        if !matches!(callback_result, Ok(Some(Ok(..)))) {
+            panic!("Expected an okay result but got: {:?}", callback_result);
+        }
 
         // TODO(joshlind): verify that mempool is sent the correct transactions!
         let (callback_sender, _callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
