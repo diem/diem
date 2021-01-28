@@ -12,24 +12,33 @@ type Map<K, V> = BTreeMap<K, V>;
 type Set<V> = BTreeSet<V>;
 pub type BlockId = CodeOffset;
 
-struct BasicBlock {
-    lower: CodeOffset,
-    upper: CodeOffset,
+struct Block {
     successors: Vec<BlockId>,
+    content: BlockContent,
+}
+
+#[derive(Copy, Clone)]
+pub enum BlockContent {
+    Basic {
+        lower: CodeOffset,
+        upper: CodeOffset,
+    },
+    Dummy,
 }
 
 pub struct StacklessControlFlowGraph {
-    entry_block_ids: Vec<BlockId>,
-    blocks: Map<BlockId, BasicBlock>,
+    entry_block_id: BlockId,
+    blocks: Map<BlockId, Block>,
     backward: bool,
 }
 
-const ENTRY_BLOCK_ID: BlockId = 0;
+const DUMMY_ENTRACE: BlockId = 0;
+const DUMMY_EXIT: BlockId = 1;
 
 impl StacklessControlFlowGraph {
     pub fn new_forward(code: &[Bytecode]) -> Self {
         Self {
-            entry_block_ids: vec![ENTRY_BLOCK_ID],
+            entry_block_id: DUMMY_ENTRACE,
             blocks: Self::collect_blocks(code),
             backward: false,
         }
@@ -46,26 +55,15 @@ impl StacklessControlFlowGraph {
             }
         }
         Self {
-            entry_block_ids: blocks
-                .iter()
-                .map(|(block_id, block)| {
-                    if code[block.upper as usize].is_exit() {
-                        Some(*block_id)
-                    } else {
-                        None
-                    }
-                })
-                .flatten()
-                .collect(),
+            entry_block_id: DUMMY_EXIT,
             blocks: block_id_to_predecessors
                 .into_iter()
                 .map(|(block_id, predecessors)| {
                     (
                         block_id,
-                        BasicBlock {
-                            lower: blocks[&block_id].lower,
-                            upper: blocks[&block_id].upper,
+                        Block {
                             successors: predecessors,
+                            content: blocks[&block_id].content,
                         },
                     )
                 })
@@ -74,38 +72,79 @@ impl StacklessControlFlowGraph {
         }
     }
 
-    fn collect_blocks(code: &[Bytecode]) -> Map<BlockId, BasicBlock> {
-        // First go through and collect block ids, i.e., offsets that begin basic blocks.
+    fn collect_blocks(code: &[Bytecode]) -> Map<BlockId, Block> {
+        // First go through and collect basic block offsets.
         // Need to do this first in order to handle backwards edges.
         let label_offsets = Bytecode::label_offsets(code);
-        let mut block_ids = Set::new();
-        block_ids.insert(ENTRY_BLOCK_ID);
+        let mut bb_offsets = Set::new();
+        bb_offsets.insert(0);
         for pc in 0..code.len() {
             StacklessControlFlowGraph::record_block_ids(
                 pc as CodeOffset,
                 code,
-                &mut block_ids,
+                &mut bb_offsets,
                 &label_offsets,
             );
         }
         // Now construct blocks
         let mut blocks = Map::new();
-        let mut entry = 0;
+        // Maps basic block entry offsets to their key in blocks
+        let mut offset_to_key = Map::new();
+        // Block counter starts at 2 because entry and exit will be block 0 and 1
+        let mut bcounter = 2;
+        let mut block_entry = 0;
         for pc in 0..code.len() {
             let co_pc: CodeOffset = pc as CodeOffset;
             // Create a basic block
-            if StacklessControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = Bytecode::get_successors(co_pc, code, &label_offsets);
-                let bb = BasicBlock {
-                    lower: entry,
+            if StacklessControlFlowGraph::is_end_of_block(co_pc, code, &bb_offsets) {
+                let mut successors = Bytecode::get_successors(co_pc, code, &label_offsets);
+                for successors in successors.iter_mut() {
+                    if offset_to_key.contains_key(&successors.clone()) {
+                        *successors = *offset_to_key.get(&successors.clone()).unwrap();
+                    } else {
+                        offset_to_key.insert(successors.clone(), bcounter);
+                        *successors = bcounter;
+                        bcounter = bcounter + 1;
+                    }
+                }
+                if code[co_pc as usize].is_exit() {
+                    successors.push(DUMMY_EXIT);
+                }
+                let bb = BlockContent::Basic {
+                    lower: block_entry,
                     upper: co_pc,
-                    successors,
                 };
-                blocks.insert(entry, bb);
-                entry = co_pc + 1;
+                if !(offset_to_key.contains_key(&block_entry)) {
+                    offset_to_key.insert(block_entry, bcounter);
+                    bcounter = bcounter + 1;
+                }
+                let key = *offset_to_key.get(&block_entry).unwrap();
+                blocks.insert(
+                    key,
+                    Block {
+                        successors,
+                        content: bb,
+                    },
+                );
+                block_entry = co_pc + 1;
             }
         }
-        assert_eq!(entry, code.len() as CodeOffset);
+        assert_eq!(block_entry, code.len() as CodeOffset);
+        let entry_bb = *offset_to_key.get(&0).unwrap();
+        blocks.insert(
+            DUMMY_ENTRACE,
+            Block {
+                successors: vec![entry_bb],
+                content: BlockContent::Dummy,
+            },
+        );
+        blocks.insert(
+            DUMMY_EXIT,
+            Block {
+                successors: Vec::new(),
+                content: BlockContent::Dummy,
+            },
+        );
         blocks
     }
 
@@ -132,51 +171,48 @@ impl StacklessControlFlowGraph {
 }
 
 impl StacklessControlFlowGraph {
-    pub fn block_start(&self, block_id: BlockId) -> CodeOffset {
-        self.blocks[&block_id].lower
-    }
-
-    pub fn block_end(&self, block_id: BlockId) -> CodeOffset {
-        self.blocks[&block_id].upper
-    }
-
     pub fn successors(&self, block_id: BlockId) -> &Vec<BlockId> {
         &self.blocks[&block_id].successors
+    }
+
+    pub fn content(&self, block_id: BlockId) -> &BlockContent {
+        &self.blocks[&block_id].content
     }
 
     pub fn blocks(&self) -> Vec<BlockId> {
         self.blocks.keys().cloned().collect()
     }
 
-    pub fn entry_blocks(&self) -> Vec<BlockId> {
-        self.entry_block_ids.clone()
+    pub fn entry_block(&self) -> BlockId {
+        self.entry_block_id.clone()
     }
 
-    pub fn exit_blocks(&self, code: &[Bytecode]) -> Vec<BlockId> {
+    pub fn exit_block(&self) -> BlockId {
         if self.backward {
-            vec![ENTRY_BLOCK_ID]
+            DUMMY_ENTRACE
         } else {
-            self.blocks
-                .iter()
-                .filter_map(|(block_id, block)| {
-                    if code[block.upper as usize].is_exit() {
-                        Some(*block_id)
-                    } else {
-                        None
-                    }
-                })
-                .collect()
+            DUMMY_EXIT
         }
     }
 
     pub fn instr_indexes(
         &self,
         block_id: BlockId,
-    ) -> Box<dyn DoubleEndedIterator<Item = CodeOffset>> {
-        Box::new(self.block_start(block_id)..=self.block_end(block_id))
+    ) -> Option<Box<dyn DoubleEndedIterator<Item = CodeOffset>>> {
+        match self.blocks[&block_id].content {
+            BlockContent::Basic { lower, upper } => Some(Box::new(lower..=upper)),
+            BlockContent::Dummy => None,
+        }
     }
 
     pub fn num_blocks(&self) -> u16 {
         self.blocks.len() as u16
+    }
+
+    pub fn is_dummmy(&self, block_id: BlockId) -> bool {
+        match self.blocks[&block_id].content {
+            BlockContent::Dummy => true,
+            _ => false,
+        }
     }
 }

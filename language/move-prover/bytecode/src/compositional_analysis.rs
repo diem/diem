@@ -82,17 +82,8 @@ where
             };
             let instrs = &data.code;
             let state_map = self.analyze_function(initial_state, instrs, &cfg);
-            let exit_states: Vec<Self::State> = cfg
-                .exit_blocks(instrs)
-                .iter()
-                .map(|block_id| state_map[block_id].post.clone())
-                .collect();
-            // Join exit states to create summary
-            let mut acc = exit_states[0].clone();
-            for exit_state in exit_states.iter().skip(1) {
-                acc.join(&exit_state);
-            }
-            data.annotations.set(self.to_summary(acc))
+            let exit_state = state_map[&cfg.exit_block()].post.clone();
+            data.annotations.set(self.to_summary(exit_state))
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives

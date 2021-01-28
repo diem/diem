@@ -131,7 +131,7 @@ impl BytecodeContext {
     fn collect_loop_targets(func_target: &FunctionTarget<'_>) -> BTreeMap<Label, BTreeSet<usize>> {
         let code = func_target.get_bytecode();
         let cfg = StacklessControlFlowGraph::new_forward(code);
-        let entry = cfg.entry_blocks()[0];
+        let entry = cfg.entry_block();
         let nodes = cfg.blocks();
         let edges: Vec<(BlockId, BlockId)> = nodes
             .iter()
@@ -152,11 +152,17 @@ impl BytecodeContext {
         {
             let block_id_to_label: BTreeMap<BlockId, Label> = loop_headers
                 .iter()
-                .map(|x| {
-                    if let Label(_, label) = code[cfg.block_start(*x) as usize] {
-                        Some((*x, label))
-                    } else {
-                        None
+                .map(|x| match cfg.content(*x) {
+                    bytecode::stackless_control_flow_graph::BlockContent::Dummy => None,
+                    bytecode::stackless_control_flow_graph::BlockContent::Basic {
+                        lower,
+                        upper: _,
+                    } => {
+                        if let Label(_, label) = code[*lower as usize] {
+                            Some((*x, label))
+                        } else {
+                            None
+                        }
                     }
                 })
                 .flatten()
@@ -168,11 +174,14 @@ impl BytecodeContext {
                     .or_insert_with(BTreeSet::new);
                 let natural_loop_targets = natural_loop
                     .iter()
-                    .map(|block_id| {
-                        cfg.instr_indexes(*block_id)
+                    .map(|block_id| match cfg.is_dummmy(*block_id) {
+                        true => BTreeSet::new(),
+                        false => cfg
+                            .instr_indexes(*block_id)
+                            .unwrap()
                             .map(|x| Self::targets(&code[x as usize]))
                             .flatten()
-                            .collect::<BTreeSet<usize>>()
+                            .collect::<BTreeSet<usize>>(),
                     })
                     .flatten()
                     .collect::<BTreeSet<usize>>();
