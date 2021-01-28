@@ -15,10 +15,7 @@ fun main() {
     assert(DiemTimestamp::now_microseconds() == 1000000, 78);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: alice
 //! block-time: 1000000
-
-// check: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION

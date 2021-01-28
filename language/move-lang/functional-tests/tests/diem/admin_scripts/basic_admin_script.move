@@ -10,7 +10,6 @@ fun main(dr: &signer, bob: &signer) {
     assert(Signer::address_of(bob) == {{bob}}, 1);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -23,4 +22,3 @@ fun main(dr: &signer, bob: &signer) {
     assert(Signer::address_of(bob) == {{bob}}, 1);
 }
 }
-// check: REJECTED_WRITE_SET
