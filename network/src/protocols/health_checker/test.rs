@@ -15,22 +15,23 @@ use crate::{
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::RoleType, network_id::NetworkId};
-use futures::sink::SinkExt;
+use diem_time_service::{MockTimeService, TimeService};
 use tokio::runtime::Runtime;
 
+const PING_INTERVAL: Duration = Duration::from_secs(1);
 const PING_TIMEOUT: Duration = Duration::from_millis(500);
 
 fn setup_permissive_health_checker(
     rt: &mut Runtime,
     ping_failures_tolerated: u64,
 ) -> (
+    MockTimeService,
     diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
-    channel::Sender<()>,
 ) {
-    let (ticker_tx, ticker_rx) = channel::new_test(0);
+    let mock_time = TimeService::mock();
 
     let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
     let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
@@ -46,30 +47,31 @@ fn setup_permissive_health_checker(
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::ZERO);
     let health_checker = HealthChecker::new(
         Arc::new(network_context),
-        ticker_rx,
+        mock_time.clone(),
         hc_network_tx,
         hc_network_rx,
+        PING_INTERVAL,
         PING_TIMEOUT,
         ping_failures_tolerated,
     );
     rt.spawn(health_checker.start());
     (
+        mock_time.into_mock(),
         peer_mgr_reqs_rx,
         network_notifs_tx,
         connection_reqs_rx,
         connection_notifs_tx,
-        ticker_tx,
     )
 }
 
 fn setup_strict_health_checker(
     rt: &mut Runtime,
 ) -> (
+    MockTimeService,
     diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
-    channel::Sender<()>,
 ) {
     setup_permissive_health_checker(rt, 0 /* ping_failures_tolerated */)
 }
@@ -109,14 +111,6 @@ async fn expect_ping_send_notok(
     let (_ping_msg, res_tx) = expect_ping(network_reqs_rx).await;
     // This mock ping request must fail.
     res_tx.send(Err(RpcError::TimedOut)).unwrap();
-}
-
-async fn expect_ping_timeout(
-    network_reqs_rx: &mut diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-) {
-    let (_ping_msg, _res_tx) = expect_ping(network_reqs_rx).await;
-    // Sleep for ping timeout plus a little bit.
-    std::thread::sleep(PING_TIMEOUT + Duration::from_millis(100));
 }
 
 async fn send_inbound_ping(
@@ -187,19 +181,19 @@ async fn send_new_peer_notification(
 fn outbound() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, _, mut connection_notifs_tx, mut ticker_tx) =
+    let (mock_time, mut network_reqs_rx, _, _, mut connection_notifs_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
         // Trigger ping to a peer. This should do nothing.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
 
         // Health Checker should attempt to ping the new peer.
         expect_ping_send_ok(&mut network_reqs_rx).await;
@@ -211,7 +205,7 @@ fn outbound() {
 fn inbound() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (_network_reqs_rx, mut network_notifs_tx, _, mut connection_notifs_tx, _ticker_tx) =
+    let (_mock_time, _network_reqs_rx, mut network_notifs_tx, _, mut connection_notifs_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -233,12 +227,12 @@ fn outbound_failure_permissive() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
-    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
+    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
         // Trigger ping to a peer. This should do nothing.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
@@ -247,7 +241,7 @@ fn outbound_failure_permissive() {
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
         for _ in 0..=ping_failures_tolerated {
-            ticker_tx.send(()).await.unwrap();
+            mock_time.advance_async(PING_INTERVAL).await;
             // Health checker should send a ping request which fails.
             expect_ping_send_notok(&mut network_reqs_rx).await;
         }
@@ -264,12 +258,13 @@ fn ping_success_resets_fail_counter() {
     let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
-    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
+    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
         // Trigger ping to a peer. This should do nothing.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
+
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
@@ -277,23 +272,22 @@ fn ping_success_resets_fail_counter() {
         // it.
         {
             for _ in 0..failures_triggered {
-                ticker_tx.send(()).await.unwrap();
+                mock_time.advance_async(PING_INTERVAL).await;
                 // Health checker should send a ping request which fails.
                 expect_ping_send_notok(&mut network_reqs_rx).await;
             }
         }
         // Trigger successful ping. This should reset the counter of ping failures.
         {
-            ticker_tx.send(()).await.unwrap();
+            mock_time.advance_async(PING_INTERVAL).await;
             // Health checker should send a ping request which succeeds
             expect_ping_send_ok(&mut network_reqs_rx).await;
         }
         // We would then need to fail for more than `ping_failures_tolerated` times before
         // triggering disconnect.
         {
-            for i in 0..=ping_failures_tolerated {
-                info!("i: {}", i);
-                ticker_tx.send(()).await.unwrap();
+            for _ in 0..=ping_failures_tolerated {
+                mock_time.advance_async(PING_INTERVAL).await;
                 // Health checker should send a ping request which fails.
                 expect_ping_send_notok(&mut network_reqs_rx).await;
             }
@@ -308,49 +302,22 @@ fn ping_success_resets_fail_counter() {
 fn outbound_failure_strict() {
     ::diem_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
+    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
         // Trigger ping to a peer. This should do nothing.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
-        ticker_tx.send(()).await.unwrap();
+        mock_time.advance_async(PING_INTERVAL).await;
 
         // Health checker should send a ping request which fails.
         expect_ping_send_notok(&mut network_reqs_rx).await;
-
-        // Health checker should disconnect from peer.
-        expect_disconnect(peer_id, &mut connection_reqs_rx).await;
-    };
-    rt.block_on(events_f);
-}
-
-#[test]
-fn ping_timeout() {
-    ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
-        setup_strict_health_checker(&mut rt);
-
-    let events_f = async move {
-        // Trigger ping to a peer. This should do nothing.
-        ticker_tx.send(()).await.unwrap();
-
-        // Notify HealthChecker of new connected node.
-        let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
-
-        // Trigger ping to a peer. This should ping the newly added peer.
-        ticker_tx.send(()).await.unwrap();
-
-        // Health checker should send a ping request which fails.
-        expect_ping_timeout(&mut network_reqs_rx).await;
 
         // Health checker should disconnect from peer.
         expect_disconnect(peer_id, &mut connection_reqs_rx).await;

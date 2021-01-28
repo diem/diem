@@ -34,10 +34,11 @@ use channel::message_queues::QueueStyle;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
+use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::PeerId;
 use futures::{
     channel::oneshot,
-    stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
+    stream::{FuturesUnordered, StreamExt},
 };
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -132,11 +133,10 @@ pub struct Ping(u32);
 pub struct Pong(u32);
 
 /// The actor performing health checks by running the Ping protocol
-pub struct HealthChecker<TTicker> {
+pub struct HealthChecker {
     network_context: Arc<NetworkContext>,
-    /// Ticker to trigger ping to a random peer. In production, the ticker is likely to be
-    /// fixed duration interval timer.
-    ticker: TTicker,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// Channel to send requests to Network layer.
     network_tx: HealthCheckerNetworkSender,
     /// Channel to receive notifications from Network layer about new/lost connections.
@@ -146,7 +146,9 @@ pub struct HealthChecker<TTicker> {
     connected: HashMap<PeerId, (u64, u64)>,
     /// Random-number generator.
     rng: SmallRng,
-    /// Ping timmeout duration.
+    /// Time we wait between each set of pings.
+    ping_interval: Duration,
+    /// Ping timeout duration.
     ping_timeout: Duration,
     /// Number of successive ping failures we tolerate before declaring a node as unhealthy and
     /// disconnecting from it. In the future, this can be replaced with a more general failure
@@ -156,26 +158,25 @@ pub struct HealthChecker<TTicker> {
     round: u64,
 }
 
-impl<TTicker> HealthChecker<TTicker>
-where
-    TTicker: Stream + FusedStream + Unpin,
-{
+impl HealthChecker {
     /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
         network_context: Arc<NetworkContext>,
-        ticker: TTicker,
+        time_service: TimeService,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
+        ping_interval: Duration,
         ping_timeout: Duration,
         ping_failures_tolerated: u64,
     ) -> Self {
         HealthChecker {
             network_context,
-            ticker,
+            time_service,
             network_tx,
             network_rx,
             connected: HashMap::new(),
             rng: SmallRng::from_entropy(),
+            ping_interval,
             ping_timeout,
             ping_failures_tolerated,
             round: 0,
@@ -188,6 +189,10 @@ where
             NetworkSchema::new(&self.network_context),
             "{} Health checker actor started", self.network_context
         );
+
+        let ticker = self.time_service.interval(self.ping_interval);
+        tokio::pin!(ticker);
+
         loop {
             futures::select! {
                 event = self.network_rx.select_next_some() => {
@@ -226,7 +231,7 @@ where
                         }
                     }
                 }
-                _ = self.ticker.select_next_some() => {
+                _ = ticker.select_next_some() => {
                     self.round += 1;
 
                     if self.connected.is_empty() {

@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Sleep, SleepTrait, ZERO_DURATION};
-use futures::{future::Future, ready, stream::Stream};
+use futures::{
+    future::Future,
+    ready,
+    stream::{FusedStream, Stream},
+};
 use pin_project::pin_project;
 use std::{
     pin::Pin,
@@ -43,5 +47,16 @@ impl Stream for Interval {
         this.delay.reset(*this.period);
 
         Poll::Ready(Some(()))
+    }
+}
+
+impl FusedStream for Interval {
+    /// We implement [`FusedStream`] here to make it more convenient for API
+    /// consumers when using an [`Interval`] inside a `futures::select!`.
+    ///
+    /// Note: an [`Interval`] stream never ends, so this function always returns
+    /// `false`.
+    fn is_terminated(&self) -> bool {
+        false
     }
 }

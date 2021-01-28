@@ -5,15 +5,14 @@ use crate::protocols::health_checker::{
     HealthChecker, HealthCheckerNetworkEvents, HealthCheckerNetworkSender,
 };
 use diem_config::network_id::NetworkContext;
-use futures::stream::StreamExt;
-use futures_util::stream::Fuse;
+use diem_time_service::TimeService;
 use std::{sync::Arc, time::Duration};
-use tokio::{runtime::Handle, time::interval};
-use tokio_stream::wrappers::IntervalStream;
+use tokio::runtime::Handle;
 
 /// Configuration for a HealthCheckerBuilder.
 struct HealthCheckerBuilderConfig {
     network_context: Arc<NetworkContext>,
+    time_service: TimeService,
     ping_interval_ms: u64,
     ping_timeout_ms: u64,
     ping_failures_tolerated: u64,
@@ -21,31 +20,9 @@ struct HealthCheckerBuilderConfig {
     network_rx: HealthCheckerNetworkEvents,
 }
 
-impl HealthCheckerBuilderConfig {
-    fn new(
-        network_context: Arc<NetworkContext>,
-        ping_interval_ms: u64,
-        ping_timeout_ms: u64,
-        ping_failures_tolerated: u64,
-        network_tx: HealthCheckerNetworkSender,
-        network_rx: HealthCheckerNetworkEvents,
-    ) -> Self {
-        Self {
-            network_context,
-            ping_interval_ms,
-            ping_timeout_ms,
-            ping_failures_tolerated,
-            network_tx,
-            network_rx,
-        }
-    }
-}
-
-pub type HealthCheckerService = HealthChecker<Fuse<IntervalStream>>;
-
 pub struct HealthCheckerBuilder {
     config: Option<HealthCheckerBuilderConfig>,
-    service: Option<HealthCheckerService>,
+    service: Option<HealthChecker>,
     built: bool,
     started: bool,
 }
@@ -62,20 +39,22 @@ impl HealthCheckerBuilder {
 
     pub fn create(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         ping_interval_ms: u64,
         ping_timeout_ms: u64,
         ping_failures_tolerated: u64,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
     ) -> Self {
-        HealthCheckerBuilder::new(HealthCheckerBuilderConfig::new(
+        HealthCheckerBuilder::new(HealthCheckerBuilderConfig {
             network_context,
+            time_service,
             ping_interval_ms,
             ping_timeout_ms,
             ping_failures_tolerated,
             network_tx,
             network_rx,
-        ))
+        })
     }
 
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
@@ -87,10 +66,10 @@ impl HealthCheckerBuilder {
             let _guard = executor.enter();
             let service = HealthChecker::new(
                 config.network_context,
-                IntervalStream::new(interval(Duration::from_millis(config.ping_interval_ms)))
-                    .fuse(),
+                config.time_service,
                 config.network_tx,
                 config.network_rx,
+                Duration::from_millis(config.ping_interval_ms),
                 Duration::from_millis(config.ping_timeout_ms),
                 config.ping_failures_tolerated,
             );
