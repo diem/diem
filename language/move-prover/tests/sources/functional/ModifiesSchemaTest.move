@@ -1,9 +1,9 @@
+// flag: --v2
 address 0x0 {
 module A {
     resource struct S {
         x: u64
     }
-
     spec schema ModifiesSchema {
         addr: address;
         modifies global<S>(addr);
@@ -14,7 +14,7 @@ module A {
         s.x = 2;
     }
     spec fun mutate_at {
-        pragma opaque = true;
+        //pragma opaque = true;
         include ModifiesSchema;
     }
 
@@ -28,7 +28,7 @@ module A {
 
     public fun mutate_at_wrapper2(addr1: address, addr2: address) acquires S {
         mutate_at(addr1);
-        mutate_at(addr2)
+        mutate_at(addr2)  // TODO(wrwg): the source position of those calls in the bytecode is broken
     }
     spec fun mutate_at_wrapper2 {
         pragma opaque = true;

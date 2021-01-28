@@ -1,0 +1,599 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun A::mutate_at($t0|addr: address) {
+     var $t1|s: &mut A::S
+     var $t2: address
+     var $t3: &mut A::S
+     var $t4: u64
+     var $t5: &mut A::S
+     var $t6: &mut u64
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<A::S>($t2)
+  2: $t1 := $t3
+  3: $t4 := 2
+  4: $t5 := move($t1)
+  5: $t6 := borrow_field<A::S>.x($t5)
+  6: write_ref($t6, $t4)
+  7: return ()
+}
+
+
+[variant baseline]
+pub fun A::read_at($t0|addr: address): u64 {
+     var $t1|s: &A::S
+     var $t2: address
+     var $t3: &A::S
+     var $t4: &A::S
+     var $t5: &u64
+     var $t6: u64
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<A::S>($t2)
+  2: $t1 := $t3
+  3: $t4 := move($t1)
+  4: $t5 := borrow_field<A::S>.x($t4)
+  5: $t6 := read_ref($t5)
+  6: return $t6
+}
+
+
+[variant baseline]
+pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
+     var $t2|v: B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: address
+     var $t6: u64
+     var $t7: address
+     var $t8: B::T
+     var $t9: address
+     var $t10: u64
+     var $t11: B::T
+  0: $t5 := copy($t1)
+  1: $t6 := A::read_at($t5)
+  2: $t3 := $t6
+  3: $t7 := copy($t0)
+  4: $t8 := move_from<B::T>($t7)
+  5: $t2 := $t8
+  6: $t9 := copy($t1)
+  7: $t10 := A::read_at($t9)
+  8: $t4 := $t10
+  9: assert Eq<u64>($t3, $t4)
+ 10: $t11 := move($t2)
+ 11: return $t11
+}
+
+
+[variant baseline]
+pub fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: address
+     var $t5: u64
+     var $t6: &signer
+     var $t7: u64
+     var $t8: B::T
+     var $t9: address
+     var $t10: u64
+  0: $t4 := copy($t1)
+  1: $t5 := A::read_at($t4)
+  2: $t2 := $t5
+  3: $t6 := move($t0)
+  4: $t7 := 2
+  5: $t8 := pack B::T($t7)
+  6: move_to<B::T>($t8, $t6)
+  7: $t9 := copy($t1)
+  8: $t10 := A::read_at($t9)
+  9: $t3 := $t10
+ 10: assert Eq<u64>($t2, $t3)
+ 11: return ()
+}
+
+
+[variant baseline]
+pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: address
+     var $t5: u64
+     var $t6: address
+     var $t7: address
+     var $t8: u64
+  0: $t4 := copy($t1)
+  1: $t5 := A::read_at($t4)
+  2: $t2 := $t5
+  3: $t6 := copy($t0)
+  4: A::mutate_at($t6)
+  5: $t7 := copy($t1)
+  6: $t8 := A::read_at($t7)
+  7: $t3 := $t8
+  8: assert Eq<u64>($t2, $t3)
+  9: return ()
+}
+
+
+[variant baseline]
+pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
+     var $t1|x0: u64
+     var $t2|x1: u64
+     var $t3: address
+     var $t4: u64
+     var $t5: address
+     var $t6: address
+     var $t7: u64
+  0: $t3 := copy($t0)
+  1: $t4 := A::read_at($t3)
+  2: $t1 := $t4
+  3: $t5 := copy($t0)
+  4: A::mutate_at($t5)
+  5: $t6 := copy($t0)
+  6: $t7 := A::read_at($t6)
+  7: $t2 := $t7
+  8: assert Eq<u64>($t1, $t2)
+  9: return ()
+}
+
+
+[variant baseline]
+pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|t: &mut B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: address
+     var $t6: u64
+     var $t7: address
+     var $t8: &mut B::T
+     var $t9: u64
+     var $t10: &mut B::T
+     var $t11: &mut u64
+     var $t12: address
+     var $t13: u64
+  0: $t5 := copy($t1)
+  1: $t6 := A::read_at($t5)
+  2: $t3 := $t6
+  3: $t7 := copy($t0)
+  4: $t8 := borrow_global<B::T>($t7)
+  5: $t2 := $t8
+  6: $t9 := 2
+  7: $t10 := move($t2)
+  8: $t11 := borrow_field<B::T>.x($t10)
+  9: write_ref($t11, $t9)
+ 10: $t12 := copy($t1)
+ 11: $t13 := A::read_at($t12)
+ 12: $t4 := $t13
+ 13: assert Eq<u64>($t3, $t4)
+ 14: return ()
+}
+
+============ after pipeline `spec_instrumentation` ================
+
+[variant baseline]
+pub fun A::mutate_at($t0|addr: address) {
+     var $t1|s: &mut A::S
+     var $t2: num
+     var $t3: u64
+     var $t4: &mut u64
+  0: $t1 := borrow_global<A::S>($t0)
+  1: on_abort(L2, $t2)
+  2: unpack_ref($t1)
+  3: $t3 := 2
+  4: $t4 := borrow_field<A::S>.x($t1)
+  5: unpack_ref($t4)
+  6: write_ref($t4, $t3)
+  7: pack_ref($t4)
+  8: write_back[Reference($t1)]($t4)
+  9: pack_ref($t1)
+ 10: write_back[A::S]($t1)
+ 11: L1:
+ 12: return ()
+ 13: L2:
+ 14: abort($t2)
+}
+
+
+[variant verification]
+pub fun A::mutate_at($t0|addr: address) {
+     var $t1|s: &mut A::S
+     var $t2: num
+     var $t3: u64
+     var $t4: &mut u64
+  0: @2 := save_mem(A::S)
+     // VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:18:17+17
+  1: assert CanModify<A::S>($t0)
+  2: $t1 := borrow_global<A::S>($t0)
+  3: on_abort(L2, $t2)
+  4: unpack_ref($t1)
+  5: $t3 := 2
+  6: $t4 := borrow_field<A::S>.x($t1)
+  7: unpack_ref($t4)
+  8: write_ref($t4, $t3)
+  9: pack_ref($t4)
+ 10: write_back[Reference($t1)]($t4)
+ 11: pack_ref($t1)
+ 12: write_back[A::S]($t1)
+ 13: L1:
+     // VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:24:9+27
+ 14: assert Not(Not(exists[@2]<A::S>($t0)))
+     // VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:23:9+31
+ 15: assert Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 16: return ()
+ 17: L2:
+     // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:17:5+115
+ 18: assert Not(exists[@2]<A::S>($t0))
+ 19: abort($t2)
+}
+
+
+[variant baseline]
+pub fun A::read_at($t0|addr: address): u64 {
+     var $t1|s: A::S
+     var $t2: num
+     var $t3: u64
+  0: $t1 := get_global<A::S>($t0)
+  1: on_abort(L2, $t2)
+  2: $t3 := get_field<A::S>.x($t1)
+  3: L1:
+  4: return $t3
+  5: L2:
+  6: abort($t2)
+}
+
+
+[variant verification]
+pub fun A::read_at($t0|addr: address): u64 {
+     var $t1|s: A::S
+     var $t2: num
+     var $t3: u64
+  0: @0 := save_mem(A::S)
+  1: $t1 := get_global<A::S>($t0)
+  2: on_abort(L2, $t2)
+  3: $t3 := get_field<A::S>.x($t1)
+  4: L1:
+     // VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:13:9+27
+  5: assert Not(Not(exists[@0]<A::S>($t0)))
+     // VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:14:9+36
+  6: assert Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
+  7: return $t3
+  8: L2:
+     // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:7:5+109
+  9: assert Not(exists[@0]<A::S>($t0))
+ 10: abort($t2)
+}
+
+
+[variant baseline]
+pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
+     var $t2|v: B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: bool
+     var $t6: num
+     var $t7: bool
+  0: @14 := save_mem(A::S)
+  1: assume Eq($t5, Not(exists[@14]<A::S>($t1)))
+  2: if ($t5) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+  5: $t2 := move_from<B::T>($t0)
+  6: on_abort(L2, $t6)
+  7: @15 := save_mem(A::S)
+  8: assume Eq($t7, Not(exists[@15]<A::S>($t1)))
+  9: if ($t7) goto L2 else goto L4
+ 10: L4:
+ 11: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 12: assert Eq<u64>($t3, $t4)
+ 13: L1:
+ 14: return $t2
+ 15: L2:
+ 16: abort($t6)
+}
+
+
+[variant verification]
+pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
+     var $t2|v: B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: bool
+     var $t6: num
+     var $t7: bool
+  0: @12 := save_mem(A::S)
+  1: assume Eq($t5, Not(exists[@12]<A::S>($t1)))
+  2: if ($t5) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+     // VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:65:17+9
+  5: assert CanModify<B::T>($t0)
+  6: $t2 := move_from<B::T>($t0)
+  7: on_abort(L2, $t6)
+  8: @13 := save_mem(A::S)
+  9: assume Eq($t7, Not(exists[@13]<A::S>($t1)))
+ 10: if ($t7) goto L2 else goto L4
+ 11: L4:
+ 12: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 13: assert Eq<u64>($t3, $t4)
+ 14: L1:
+ 15: return $t2
+ 16: L2:
+ 17: abort($t6)
+}
+
+
+[variant baseline]
+pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: bool
+     var $t5: u64
+     var $t6: B::T
+     var $t7: num
+     var $t8: bool
+  0: @10 := save_mem(A::S)
+  1: assume Eq($t4, Not(exists[@10]<A::S>($t1)))
+  2: if ($t4) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
+  5: $t5 := 2
+  6: $t6 := pack B::T($t5)
+  7: move_to<B::T>($t6, $t0)
+  8: on_abort(L2, $t7)
+  9: @11 := save_mem(A::S)
+ 10: assume Eq($t8, Not(exists[@11]<A::S>($t1)))
+ 11: if ($t8) goto L2 else goto L4
+ 12: L4:
+ 13: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+ 14: assert Eq<u64>($t2, $t3)
+ 15: L1:
+ 16: return ()
+ 17: L2:
+ 18: abort($t7)
+}
+
+
+[variant verification]
+pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: bool
+     var $t5: u64
+     var $t6: B::T
+     var $t7: num
+     var $t8: bool
+  0: @8 := save_mem(A::S)
+  1: assume Eq($t4, Not(exists[@8]<A::S>($t1)))
+  2: if ($t4) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
+  5: $t5 := 2
+  6: $t6 := pack B::T($t5)
+     // VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:52:9+7
+  7: assert CanModify<B::T>($t0)
+  8: move_to<B::T>($t6, $t0)
+  9: on_abort(L2, $t7)
+ 10: @9 := save_mem(A::S)
+ 11: assume Eq($t8, Not(exists[@9]<A::S>($t1)))
+ 12: if ($t8) goto L2 else goto L4
+ 13: L4:
+ 14: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+ 15: assert Eq<u64>($t2, $t3)
+ 16: L1:
+ 17: return ()
+ 18: L2:
+ 19: abort($t7)
+}
+
+
+[variant baseline]
+pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: bool
+     var $t5: bool
+     var $t6: bool
+     var $t7: num
+  0: assume Neq<address>($t0, $t1)
+  1: @25 := save_mem(A::S)
+  2: assume Eq($t4, Not(exists[@25]<A::S>($t1)))
+  3: if ($t4) goto L2 else goto L3
+  4: L3:
+  5: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
+  6: @26 := save_mem(A::S)
+     // VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:79:12+9
+  7: modifies global<A::S>($t0)
+  8: assume Eq($t5, Not(exists[@26]<A::S>($t0)))
+  9: if ($t5) goto L2 else goto L4
+ 10: L4:
+ 11: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 12: @27 := save_mem(A::S)
+ 13: assume Eq($t6, Not(exists[@27]<A::S>($t1)))
+ 14: if ($t6) goto L2 else goto L5
+ 15: L5:
+ 16: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+ 17: assert Eq<u64>($t2, $t3)
+ 18: L1:
+ 19: return ()
+ 20: L2:
+ 21: abort($t7)
+}
+
+
+[variant verification]
+pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|x0: u64
+     var $t3|x1: u64
+     var $t4: bool
+     var $t5: bool
+     var $t6: bool
+     var $t7: num
+  0: assume Neq<address>($t0, $t1)
+  1: @22 := save_mem(A::S)
+  2: assume Eq($t4, Not(exists[@22]<A::S>($t1)))
+  3: if ($t4) goto L2 else goto L3
+  4: L3:
+  5: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
+     // VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:79:12+9
+  6: assert CanModify<A::S>($t0)
+  7: @23 := save_mem(A::S)
+  8: modifies global<A::S>($t0)
+  9: assume Eq($t5, Not(exists[@23]<A::S>($t0)))
+ 10: if ($t5) goto L2 else goto L4
+ 11: L4:
+ 12: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 13: @24 := save_mem(A::S)
+ 14: assume Eq($t6, Not(exists[@24]<A::S>($t1)))
+ 15: if ($t6) goto L2 else goto L5
+ 16: L5:
+ 17: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+ 18: assert Eq<u64>($t2, $t3)
+ 19: L1:
+ 20: return ()
+ 21: L2:
+ 22: abort($t7)
+}
+
+
+[variant baseline]
+pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
+     var $t1|x0: u64
+     var $t2|x1: u64
+     var $t3: bool
+     var $t4: bool
+     var $t5: bool
+     var $t6: num
+  0: @19 := save_mem(A::S)
+  1: assume Eq($t3, Not(exists[@19]<A::S>($t0)))
+  2: if ($t3) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t1, select A::S.x(global<A::S>($t0)))
+  5: @20 := save_mem(A::S)
+     // VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:92:12+9
+  6: modifies global<A::S>($t0)
+  7: assume Eq($t4, Not(exists[@20]<A::S>($t0)))
+  8: if ($t4) goto L2 else goto L4
+  9: L4:
+ 10: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 11: @21 := save_mem(A::S)
+ 12: assume Eq($t5, Not(exists[@21]<A::S>($t0)))
+ 13: if ($t5) goto L2 else goto L5
+ 14: L5:
+ 15: assume Eq<u64>($t2, select A::S.x(global<A::S>($t0)))
+ 16: assert Eq<u64>($t1, $t2)
+ 17: L1:
+ 18: return ()
+ 19: L2:
+ 20: abort($t6)
+}
+
+
+[variant verification]
+pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
+     var $t1|x0: u64
+     var $t2|x1: u64
+     var $t3: bool
+     var $t4: bool
+     var $t5: bool
+     var $t6: num
+  0: @16 := save_mem(A::S)
+  1: assume Eq($t3, Not(exists[@16]<A::S>($t0)))
+  2: if ($t3) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t1, select A::S.x(global<A::S>($t0)))
+     // VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:92:12+9
+  5: assert CanModify<A::S>($t0)
+  6: @17 := save_mem(A::S)
+  7: modifies global<A::S>($t0)
+  8: assume Eq($t4, Not(exists[@17]<A::S>($t0)))
+  9: if ($t4) goto L2 else goto L4
+ 10: L4:
+ 11: assume Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 12: @18 := save_mem(A::S)
+ 13: assume Eq($t5, Not(exists[@18]<A::S>($t0)))
+ 14: if ($t5) goto L2 else goto L5
+ 15: L5:
+ 16: assume Eq<u64>($t2, select A::S.x(global<A::S>($t0)))
+ 17: assert Eq<u64>($t1, $t2)
+ 18: L1:
+ 19: return ()
+ 20: L2:
+ 21: abort($t6)
+}
+
+
+[variant baseline]
+pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|t: &mut B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: bool
+     var $t6: num
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: bool
+  0: @6 := save_mem(A::S)
+  1: assume Eq($t5, Not(exists[@6]<A::S>($t1)))
+  2: if ($t5) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+  5: $t2 := borrow_global<B::T>($t0)
+  6: on_abort(L2, $t6)
+  7: unpack_ref($t2)
+  8: $t7 := 2
+  9: $t8 := borrow_field<B::T>.x($t2)
+ 10: unpack_ref($t8)
+ 11: write_ref($t8, $t7)
+ 12: pack_ref($t8)
+ 13: write_back[Reference($t2)]($t8)
+ 14: pack_ref($t2)
+ 15: write_back[B::T]($t2)
+ 16: @7 := save_mem(A::S)
+ 17: assume Eq($t9, Not(exists[@7]<A::S>($t1)))
+ 18: if ($t9) goto L2 else goto L4
+ 19: L4:
+ 20: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 21: assert Eq<u64>($t3, $t4)
+ 22: L1:
+ 23: return ()
+ 24: L2:
+ 25: abort($t6)
+}
+
+
+[variant verification]
+pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
+     var $t2|t: &mut B::T
+     var $t3|x0: u64
+     var $t4|x1: u64
+     var $t5: bool
+     var $t6: num
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: bool
+  0: @4 := save_mem(A::S)
+  1: assume Eq($t5, Not(exists[@4]<A::S>($t1)))
+  2: if ($t5) goto L2 else goto L3
+  3: L3:
+  4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+     // VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:38:17+17
+  5: assert CanModify<B::T>($t0)
+  6: $t2 := borrow_global<B::T>($t0)
+  7: on_abort(L2, $t6)
+  8: unpack_ref($t2)
+  9: $t7 := 2
+ 10: $t8 := borrow_field<B::T>.x($t2)
+ 11: unpack_ref($t8)
+ 12: write_ref($t8, $t7)
+ 13: pack_ref($t8)
+ 14: write_back[Reference($t2)]($t8)
+ 15: pack_ref($t2)
+ 16: write_back[B::T]($t2)
+ 17: @5 := save_mem(A::S)
+ 18: assume Eq($t9, Not(exists[@5]<A::S>($t1)))
+ 19: if ($t9) goto L2 else goto L4
+ 20: L4:
+ 21: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 22: assert Eq<u64>($t3, $t4)
+ 23: L1:
+ 24: return ()
+ 25: L2:
+ 26: abort($t6)
+}

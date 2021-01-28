@@ -26,10 +26,9 @@ use vm::file_format::CodeOffset;
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_caller_resource_memory_domain_name,
-        boogie_debug_track_abort_via_attrib, boogie_debug_track_local_via_attrib,
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_resource_memory_name,
-        boogie_self_resource_memory_domain_name, boogie_struct_name, boogie_type_value,
+        boogie_byte_blob, boogie_debug_track_abort_via_attrib, boogie_debug_track_local_via_attrib,
+        boogie_field_name, boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
+        boogie_resource_memory_name, boogie_struct_name, boogie_type_value,
         boogie_type_value_array, boogie_type_value_array_from_strings, boogie_type_values,
         boogie_well_formed_check,
     },
@@ -269,13 +268,6 @@ impl<'env> ModuleTranslator<'env> {
                 };
                 format!("{}t{}: {}", prefix, i, boogie_local_type(ty))
             }))
-            .chain(func_target.get_modify_targets().keys().map(|ty| {
-                format!(
-                    "{}: {}",
-                    boogie_caller_resource_memory_domain_name(func_target.global_env(), *ty),
-                    "[$TypeValueArray, int]bool"
-                )
-            }))
             .join(", ");
         let rets = func_target
             .get_return_types()
@@ -317,7 +309,7 @@ impl<'env> ModuleTranslator<'env> {
             emitln!(
                 self.writer,
                 "var {}: {}",
-                boogie_self_resource_memory_domain_name(func_target.global_env(), *ty),
+                boogie_modifies_memory_name(func_target.global_env(), *ty),
                 "[$TypeValueArray, int]bool;"
             );
         });
@@ -414,6 +406,9 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
+        // Initialize modify permissions.
+        self.initialize_modifies_permissions(func_target);
+
         // Assume used memory to be wellformed.
         let used_mem = usage_analysis::get_used_memory(&func_target);
         let env = self.module_env.env;
@@ -442,6 +437,30 @@ impl<'env> ModuleTranslator<'env> {
             );
             self.writer.unindent();
             emitln!(self.writer, ");");
+        }
+    }
+
+    /// Initializes modifies permissions.
+    fn initialize_modifies_permissions(&self, func_target: &FunctionTarget<'_>) {
+        let env = func_target.global_env();
+        for (ty, targets) in func_target.get_modify_targets() {
+            emit!(
+                self.writer,
+                "{} := {}",
+                boogie_modifies_memory_name(func_target.global_env(), *ty),
+                "$ConstMemoryDomain(false)"
+            );
+            for target in targets {
+                let node_id = target.node_id();
+                let args = target.call_args();
+                let rty = &env.get_node_instantiation(node_id)[0];
+                let (_, _, targs) = rty.require_struct();
+                let type_args = boogie_type_value_array(env, targs);
+                emit!(self.writer, "[{}, a#$Address(", type_args);
+                self.spec_translator.translate_exp(&args[0]);
+                emit!(self.writer, ") := true]");
+            }
+            emitln!(self.writer, ";");
         }
     }
 
@@ -490,7 +509,20 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, ");");
                 }
                 PropKind::Modifies => {
-                    unimplemented!()
+                    let ty = self.module_env.env.get_node_type(exp.node_id());
+                    let (mid, sid, type_args) = ty.require_struct();
+                    let boogie_mem =
+                        boogie_resource_memory_name(self.module_env.env, mid.qualified(sid), &None);
+                    let boogie_type_args = boogie_type_value_array(self.module_env.env, type_args);
+                    emit!(
+                        self.writer,
+                        "call {} := $Modifies({}, {}, a#$Address(",
+                        boogie_mem,
+                        boogie_mem,
+                        boogie_type_args
+                    );
+                    self.spec_translator.translate_exp(&exp.call_args()[0]);
+                    emitln!(self.writer, "));");
                 }
             },
             Label(_, label) => {

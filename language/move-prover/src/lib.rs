@@ -23,7 +23,6 @@ use bytecode::{
     packed_types_analysis::PackedTypesProcessor,
     reaching_def_analysis::ReachingDefProcessor,
     spec_instrumentation::SpecInstrumenter,
-    stackless_bytecode::{Bytecode, Operation},
     usage_analysis::{self, UsageProcessor},
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
@@ -272,31 +271,33 @@ fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
 }
 
 /// Check modifies annotations
+/// TODO(wrwg): this should not live here but perhaps be part of the bytecode processing
+/// pipeline.
 fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
-    use Bytecode::*;
-    use Operation::*;
-
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
             let caller_func_target = targets.get_annotated_target(&func_env);
-            for code in caller_func_target.get_bytecode() {
-                if let Call(_, _, oper, _) = code {
-                    if let Function(mid, fid, _) = oper {
-                        let callee = mid.qualified(*fid);
-                        let callee_func_env = env.get_function(callee);
-                        let callee_func_target = targets.get_annotated_target(&callee_func_env);
-                        let callee_modified_memory =
-                            usage_analysis::get_modified_memory(&callee_func_target);
-                        caller_func_target.get_modify_targets().keys().for_each(|target| {
-                                if callee_modified_memory.contains(target) && callee_func_target.get_modify_targets_for_type(target).is_none() {
-                                    let loc = caller_func_target.get_bytecode_loc(code.get_attr_id());
-                                    env.error(&loc, &format!(
-                                                        "caller `{}` specifies modify targets for `{}::{}` but callee does not",
-                                                        env.symbol_pool().string(caller_func_target.get_name()),
-                                                        env.get_module(target.module_id).get_name().display(env.symbol_pool()),
-                                                        env.symbol_pool().string(target.id.symbol())));
-                                }
-                            });
+            for callee in func_env.get_called_functions() {
+                let callee_func_env = env.get_function(callee);
+                let callee_func_target = targets.get_annotated_target(&callee_func_env);
+                let callee_modified_memory =
+                    usage_analysis::get_modified_memory(&callee_func_target);
+                for target in caller_func_target.get_modify_targets().keys() {
+                    if callee_modified_memory.contains(target)
+                        && callee_func_target
+                            .get_modify_targets_for_type(target)
+                            .is_none()
+                    {
+                        let loc = caller_func_target.get_loc();
+                        env.error(
+                                &loc,
+                                &format!(
+                            "caller `{}` specifies modify targets for `{}::{}` but callee `{}` does not",
+                            env.symbol_pool().string(caller_func_target.get_name()),
+                            env.get_module(target.module_id).get_name().display(env.symbol_pool()),
+                            env.symbol_pool().string(target.id.symbol()),
+                                env.symbol_pool().string(callee_func_target.get_name())
+                            ));
                     }
                 }
             }

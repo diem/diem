@@ -509,31 +509,33 @@ fun Test::resource_with_old($t0|val: u64) {
  11: goto L4
  12: L2:
  13: $t7 := 0x0
- 14: $t1 := borrow_global<Test::R>($t7)
- 15: on_abort(L4, $t6)
- 16: unpack_ref($t1)
- 17: $t8 := get_field<Test::R>.v($t1)
- 18: $t9 := +($t8, $t0)
- 19: on_abort(L4, $t6)
- 20: $t10 := borrow_field<Test::R>.v($t1)
- 21: unpack_ref($t10)
- 22: write_ref($t10, $t9)
- 23: pack_ref($t10)
- 24: write_back[Reference($t1)]($t10)
- 25: pack_ref($t1)
- 26: write_back[Test::R]($t1)
- 27: L3:
+     // VC: `caller does not have permission to modify `Test::R` at given address` at tests/spec_instrumentation/fun_spec.move:36:14+17
+ 14: assert CanModify<Test::R>($t7)
+ 15: $t1 := borrow_global<Test::R>($t7)
+ 16: on_abort(L4, $t6)
+ 17: unpack_ref($t1)
+ 18: $t8 := get_field<Test::R>.v($t1)
+ 19: $t9 := +($t8, $t0)
+ 20: on_abort(L4, $t6)
+ 21: $t10 := borrow_field<Test::R>.v($t1)
+ 22: unpack_ref($t10)
+ 23: write_ref($t10, $t9)
+ 24: pack_ref($t10)
+ 25: write_back[Reference($t1)]($t10)
+ 26: pack_ref($t1)
+ 27: write_back[Test::R]($t1)
+ 28: L3:
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:41:6+34
- 28: assert Not(Not(exists[@0]<Test::R>(0)))
+ 29: assert Not(Not(exists[@0]<Test::R>(0)))
      // VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:42:6+57
- 29: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
+ 30: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      // VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:43:6+56
- 30: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
- 31: return ()
- 32: L4:
+ 31: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
+ 32: return ()
+ 33: L4:
      // VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:34:2+145
- 33: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
+ 34: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
      // VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:41:37+2
- 34: assert Implies(Not(exists[@0]<Test::R>(0)), Eq($t6, 33))
- 35: abort($t6)
+ 35: assert Implies(Not(exists[@0]<Test::R>(0)), Eq($t6, 33))
+ 36: abort($t6)
 }

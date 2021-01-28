@@ -1,9 +1,9 @@
+// flag: --v2
 address 0x0 {
 module A {
     resource struct S {
         x: u64
     }
-
     public fun read_at(addr: address): u64 acquires S {
         let s = borrow_global<S>(addr);
         s.x

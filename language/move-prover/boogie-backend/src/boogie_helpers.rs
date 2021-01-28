@@ -140,24 +140,11 @@ pub fn boogie_struct_type_value(
     )
 }
 
-/// Creates the name of the resource memory domain for the caller of any function for the given struct.
-/// This variable represents an input parameter of the Boogie translation of this function.
-pub fn boogie_caller_resource_memory_domain_name(
-    env: &GlobalEnv,
-    memory: QualifiedId<StructId>,
-) -> String {
-    let struct_env = env.get_module(memory.module_id).into_struct(memory.id);
-    format!("{}_$CallerDomain", boogie_struct_name(&struct_env))
-}
-
 /// Creates the name of the resource memory domain for any function for the given struct.
 /// This variable represents a local variable of the Boogie translation of this function.
-pub fn boogie_self_resource_memory_domain_name(
-    env: &GlobalEnv,
-    memory: QualifiedId<StructId>,
-) -> String {
+pub fn boogie_modifies_memory_name(env: &GlobalEnv, memory: QualifiedId<StructId>) -> String {
     let struct_env = env.get_module(memory.module_id).into_struct(memory.id);
-    format!("{}_$SelfDomain", boogie_struct_name(&struct_env))
+    format!("{}_$Modifies", boogie_struct_name(&struct_env))
 }
 
 /// Creates the name of the resource memory for the given struct.

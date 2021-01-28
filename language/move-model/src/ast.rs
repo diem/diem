@@ -549,6 +549,7 @@ pub enum Operation {
     TypeDomain,
     Global(Option<MemoryLabel>),
     Exists(Option<MemoryLabel>),
+    CanModify,
     Old,
     Trace,
     Empty,

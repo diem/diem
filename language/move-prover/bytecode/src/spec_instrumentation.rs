@@ -16,10 +16,13 @@ use itertools::Itertools;
 use move_model::{
     ast,
     ast::{ConditionKind, Exp, LocalVarDecl, MemoryLabel, TempIndex},
-    model::{ConditionTag, FunId, FunctionEnv, Loc, ModuleId, QualifiedId, SpecVarId, StructId},
+    model::{
+        ConditionTag, FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, SpecVarId,
+        StructId,
+    },
     pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA},
     symbol::Symbol,
-    ty::NUM_TYPE,
+    ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -30,6 +33,38 @@ const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` cla
 const WRONG_ABORTS_CODE: &str = "function aborts under this condition but with the wrong code";
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
+
+fn modify_check_fails_message(
+    env: &GlobalEnv,
+    mem: QualifiedId<StructId>,
+    targs: &[Type],
+) -> String {
+    let targs_str = if targs.is_empty() {
+        "".to_string()
+    } else {
+        let tctx = TypeDisplayContext::WithEnv {
+            env,
+            type_param_names: None,
+        };
+        format!(
+            "<{}>",
+            targs
+                .iter()
+                .map(|ty| ty.display(&tctx).to_string())
+                .join(", ")
+        )
+    };
+    let module_env = env.get_module(mem.module_id);
+    format!(
+        "caller does not have permission to modify `{}::{}{}` at given address",
+        module_env.get_name().display(env.symbol_pool()),
+        module_env
+            .get_struct(mem.id)
+            .get_name()
+            .display(env.symbol_pool()),
+        targs_str
+    )
+}
 
 pub struct SpecInstrumenter {}
 
@@ -202,6 +237,32 @@ impl<'a> Instrumenter<'a> {
     fn instrument_bytecode(&mut self, bc: Bytecode) {
         use Bytecode::*;
         use Operation::*;
+        // Prefix with modifies checks for builtin memory modifiers. Notice that we assume
+        // the BorrowGlobal at this point represents a mutation and immutable references have
+        // been removed.
+        match &bc {
+            Call(id, _, BorrowGlobal(mid, sid, targs), srcs)
+            | Call(id, _, MoveFrom(mid, sid, targs), srcs) => {
+                let addr_exp = self.builder.mk_local(srcs[0]);
+                self.generate_modifies_check(
+                    &self.builder.get_loc(*id),
+                    mid.qualified(*sid),
+                    targs,
+                    &addr_exp,
+                );
+            }
+            Call(id, _, MoveTo(mid, sid, targs), srcs) => {
+                let addr_exp = self.builder.mk_local(srcs[1]);
+                self.generate_modifies_check(
+                    &self.builder.get_loc(*id),
+                    mid.qualified(*sid),
+                    targs,
+                    &addr_exp,
+                );
+            }
+            _ => {}
+        }
+        // Instrument bytecode.
         match bc {
             Ret(id, results) => {
                 self.builder.set_loc_from_attr(id);
@@ -222,8 +283,8 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| Jump(id, abort_label));
                 self.can_abort = true;
             }
-            Call(id, dests, Function(mid, sid, _), srcs) if self.is_opaque_fun(mid, sid) => {
-                self.generate_opaque_call(id, dests, mid, sid, srcs);
+            Call(id, dests, Function(mid, fid, targs), srcs) => {
+                self.generate_call(id, dests, mid, fid, targs, srcs);
             }
             Call(id, dests, oper, srcs) if oper.can_abort() => {
                 self.builder.emit(Call(id, dests, oper, srcs));
@@ -238,64 +299,103 @@ impl<'a> Instrumenter<'a> {
         }
     }
 
-    fn is_opaque_fun(&self, mid: ModuleId, fid: FunId) -> bool {
-        let fun_env = self.builder.global_env().get_module(mid).into_function(fid);
-        fun_env.is_opaque()
-    }
-
-    fn generate_opaque_call(
+    fn generate_call(
         &mut self,
         id: AttrId,
         dests: Vec<TempIndex>,
         mid: ModuleId,
         fid: FunId,
+        targs: Vec<Type>,
         srcs: Vec<TempIndex>,
     ) {
         use Bytecode::*;
         use PropKind::*;
 
-        let fun_env = self.builder.global_env().get_module(mid).into_function(fid);
-        let mut spec = SpecTranslator::translate(&mut self.builder, &fun_env, Some(&srcs), &dests);
+        let env = self.builder.global_env();
+
+        let callee_env = env.get_module(mid).into_function(fid);
+        let callee_opaque = callee_env.is_opaque();
+        let mut callee_spec =
+            SpecTranslator::translate(&mut self.builder, &callee_env, Some(&srcs), &dests);
 
         self.builder.set_loc_from_attr(id);
 
-        // Emit pre conditions as assertions.
-        for (loc, cond) in std::mem::take(&mut spec.pre) {
+        // Emit pre conditions if this is the verification variant or if the callee
+        // is opaque. For inlined callees outside of verification entry points, we skip
+        // emitting any pre-conditions because they are assumed already at entry into the
+        // function.
+        if self.variant == FunctionVariant::Verification || callee_opaque {
+            for (loc, cond) in std::mem::take(&mut callee_spec.pre) {
+                // Determine whether we want to emit this as an assertion or an assumption.
+                let prop_kind = match self.variant {
+                    FunctionVariant::Verification => {
+                        self.builder.set_loc_and_vc_info(
+                            loc,
+                            ConditionTag::Requires,
+                            REQUIRES_FAILS_MESSAGE,
+                        );
+                        Assert
+                    }
+                    FunctionVariant::Baseline => Assume,
+                };
+                self.builder.emit_with(|id| Prop(id, prop_kind, cond));
+            }
+        }
+
+        // Emit modify permissions as assertions if this is the verification variant. For
+        // non-verification variants, we don't need to do this because they are independently
+        // verified.
+        if self.variant == FunctionVariant::Verification {
+            let loc = self.builder.get_loc(id);
+            for (_, cond) in &callee_spec.modifies {
+                let env = self.builder.global_env();
+                let rty = &env.get_node_instantiation(cond.node_id())[0];
+                let (mid, sid, targs) = rty.require_struct();
+                self.generate_modifies_check(&loc, mid.qualified(sid), targs, &cond.call_args()[0]);
+            }
+        }
+
+        // From here on code differs depending on whether the callee is opaque or not.
+        if !callee_env.is_opaque() {
             self.builder
-                .set_loc_and_vc_info(loc, ConditionTag::Requires, REQUIRES_FAILS_MESSAGE);
-            self.builder.emit_with(|id| Prop(id, Assert, cond));
-        }
-
-        // Emit all necessary state saves
-        for (mem, label) in std::mem::take(&mut spec.saved_memory) {
-            self.builder.emit_with(|id| SaveMem(id, label, mem));
-        }
-        for (var, label) in std::mem::take(&mut spec.saved_spec_vars) {
-            self.builder.emit_with(|id| SaveSpecVar(id, label, var));
-        }
-
-        // Emit modifies
-        for (_, modifies) in std::mem::take(&mut spec.modifies) {
-            self.builder.emit_with(|id| Prop(id, Modifies, modifies));
-        }
-
-        // Translate the abort condition. We generate:
-        //
-        //   assume <temp> == <abort_cond>
-        //   if <temp> goto abort_label
-        //
-        if let Some(abort_cond_temp) = self.generate_abort_opaque_cond(&spec) {
+                .emit(Call(id, dests, Operation::Function(mid, fid, targs), srcs));
             let abort_label = self.abort_label;
-            let no_abort_label = self.builder.new_label();
+            let abort_local = self.abort_local;
             self.builder
-                .emit_with(|id| Branch(id, abort_label, no_abort_label, abort_cond_temp));
-            self.builder.emit_with(|id| Label(id, no_abort_label));
+                .emit_with(|id| OnAbort(id, abort_label, abort_local));
             self.can_abort = true;
-        }
+        } else {
+            // Emit all necessary state saves
+            for (mem, label) in std::mem::take(&mut callee_spec.saved_memory) {
+                self.builder.emit_with(|id| SaveMem(id, label, mem));
+            }
+            for (var, label) in std::mem::take(&mut callee_spec.saved_spec_vars) {
+                self.builder.emit_with(|id| SaveSpecVar(id, label, var));
+            }
 
-        // Emit post conditions as assumptions.
-        for (_, cond) in std::mem::take(&mut spec.post) {
-            self.builder.emit_with(|id| Prop(id, Assume, cond));
+            // Emit modifies properties which havoc memory at the modified location.
+            for (_, modifies) in std::mem::take(&mut callee_spec.modifies) {
+                self.builder.emit_with(|id| Prop(id, Modifies, modifies));
+            }
+
+            // Translate the abort condition. We generate:
+            //
+            //   assume <temp> == <abort_cond>
+            //   if <temp> goto abort_label
+            //
+            if let Some(abort_cond_temp) = self.generate_abort_opaque_cond(&callee_spec) {
+                let abort_label = self.abort_label;
+                let no_abort_label = self.builder.new_label();
+                self.builder
+                    .emit_with(|id| Branch(id, abort_label, no_abort_label, abort_cond_temp));
+                self.builder.emit_with(|id| Label(id, no_abort_label));
+                self.can_abort = true;
+            }
+
+            // Emit post conditions as assumptions.
+            for (_, cond) in std::mem::take(&mut callee_spec.post) {
+                self.builder.emit_with(|id| Prop(id, Assume, cond));
+            }
         }
     }
 
@@ -503,6 +603,34 @@ impl<'a> Instrumenter<'a> {
         // Emit return
         let ret_locals = self.ret_locals.clone();
         self.builder.emit_with(move |id| Ret(id, ret_locals))
+    }
+
+    /// Generate a check whether the target can modify the given memory provided
+    /// (a) the target constraints the given memory (b) the target is the verification variant.
+    fn generate_modifies_check(
+        &mut self,
+        loc: &Loc,
+        memory: QualifiedId<StructId>,
+        type_args: &[Type],
+        addr: &Exp,
+    ) {
+        let target = self.builder.get_target();
+        if self.variant == FunctionVariant::Verification
+            && target.get_modify_targets_for_type(&memory).is_some()
+        {
+            let env = self.builder.global_env();
+            self.builder.set_loc_and_vc_info(
+                loc.clone(),
+                ConditionTag::Requires,
+                &modify_check_fails_message(env, memory, type_args),
+            );
+            let node_id = env.new_node(loc.clone(), BOOL_TYPE.clone());
+            let rty = Type::Struct(memory.module_id, memory.id, type_args.to_vec());
+            env.set_node_instantiation(node_id, vec![rty]);
+            let can_modify = Exp::Call(node_id, ast::Operation::CanModify, vec![addr.clone()]);
+            self.builder
+                .emit_with(|id| Bytecode::Prop(id, PropKind::Assert, can_modify));
+        }
     }
 }
 

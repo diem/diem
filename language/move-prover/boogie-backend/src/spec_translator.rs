@@ -24,8 +24,9 @@ use move_model::{
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-        boogie_local_type, boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
-        boogie_struct_name, boogie_type_value, boogie_type_value_array, boogie_well_formed_expr,
+        boogie_local_type, boogie_modifies_memory_name, boogie_resource_memory_name,
+        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type_value,
+        boogie_type_value_array, boogie_well_formed_expr,
     },
     options::BoogieOptions,
 };
@@ -521,6 +522,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(memory_label) => {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
+            Operation::CanModify => self.translate_can_modify(node_id, args),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
             Operation::TypeValue => self.translate_type_value(node_id),
             Operation::TypeDomain => self.error(
@@ -699,6 +701,22 @@ impl<'env> SpecTranslator<'env> {
             self.translate_exp(&args[0]);
             emit!(self.writer, ")");
         });
+    }
+
+    fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {
+        let env = self.env;
+        let rty = &self.env.get_node_instantiation(node_id)[0];
+        let (mid, sid, targs) = rty.require_struct();
+        let resource_name = boogie_modifies_memory_name(self.env, mid.qualified(sid));
+        let type_args = boogie_type_value_array(env, targs);
+        emit!(
+            self.writer,
+            "$Boolean({}[{}, a#$Address(",
+            resource_name,
+            type_args
+        );
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ")])");
     }
 
     fn translate_quant(

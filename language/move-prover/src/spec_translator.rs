@@ -2026,7 +2026,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::MaxU8 => emit!(self.writer, "$Integer($MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "$Integer($MAX_U64)"),
             Operation::MaxU128 => emit!(self.writer, "$Integer($MAX_U128)"),
-            Operation::AbortCode | Operation::AbortFlag => unimplemented!(),
+            Operation::CanModify | Operation::AbortCode | Operation::AbortFlag => unimplemented!(),
             Operation::NoOp => { /* do nothing. */ }
         }
     }

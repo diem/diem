@@ -567,6 +567,15 @@ const $EmptyMemory: $Memory;
 axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
 axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent($DefaultValue());
 
+// Returns a new memory which is identical than the given memory except at (type_args, addr) which
+// is arbitrary.
+procedure {:inline 1} $Modifies(m: $Memory, type_args: $TypeValueArray, addr: int) returns (m': $Memory) {
+    m' := $Memory(
+        domain#$Memory(m)[type_args, addr := domain#$Memory(m')[type_args, addr]],
+        contents#$Memory(m)[type_args, addr := contents#$Memory(m')[type_args, addr]]
+    );
+}
+
 // ============================================================================================
 // EventStore
 
