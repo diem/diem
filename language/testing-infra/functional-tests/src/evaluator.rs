@@ -538,7 +538,6 @@ fn eval_transaction<TComp: Compiler>(
     global_config: &GlobalConfig,
     compiler: &mut TComp,
     exec: &mut FakeExecutor,
-    idx: usize,
     transaction: &Transaction,
     log: &mut EvaluationLog,
 ) -> Result<Status> {
@@ -558,8 +557,6 @@ fn eval_transaction<TComp: Compiler>(
     let sender_addr = *transaction.config.sender.address();
 
     // Start processing a new transaction.
-    log.append(EvaluationOutput::Transaction(idx));
-
     // stage 1: Compile the script/module
     if transaction.config.is_stage_disabled(Stage::Compiler) {
         return Ok(Status::Success);
@@ -748,10 +745,11 @@ pub fn eval<TComp: Compiler>(
     }
 
     for (idx, command) in commands.iter().enumerate() {
+        log.append(EvaluationOutput::Transaction(idx));
         match command {
             Command::Transaction(transaction) => {
                 let status =
-                    eval_transaction(config, &mut compiler, &mut exec, idx, transaction, &mut log)?;
+                    eval_transaction(config, &mut compiler, &mut exec, transaction, &mut log)?;
                 if !config.exp_mode {
                     log.append(EvaluationOutput::Status(status));
                 }
