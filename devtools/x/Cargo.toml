@@ -27,4 +27,3 @@ rayon = "1.5.0"
 indexmap = "1.6.1"
 x-core = { version = "0.1.0", path = "../x-core" }
 x-lint = { version = "0.1.0", path = "../x-lint" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

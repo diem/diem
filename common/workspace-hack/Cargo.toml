@@ -11,7 +11,6 @@ edition = "2018"
 
 ### BEGIN HAKARI SECTION
 [target.x86_64-unknown-linux-gnu.dependencies]
-bstr = { version = "0.2.14", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
@@ -39,12 +38,10 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std", "unbounded_depth"] }
+serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
@@ -54,7 +51,6 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-unknown-linux-gnu.build-dependencies]
-bstr = { version = "0.2.14", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 cc = { version = "1.0.66", default-features = false, features = ["jobserver", "parallel"] }
@@ -85,12 +81,10 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std", "unbounded_depth"] }
+serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
@@ -102,7 +96,6 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-apple-darwin.dependencies]
-bstr = { version = "0.2.14", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
@@ -130,12 +123,10 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std", "unbounded_depth"] }
+serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
@@ -145,7 +136,6 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-apple-darwin.build-dependencies]
-bstr = { version = "0.2.14", features = ["default", "lazy_static", "regex-automata", "serde", "serde1", "serde1-nostd", "std", "unicode"] }
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 cc = { version = "1.0.66", default-features = false, features = ["jobserver", "parallel"] }
@@ -176,12 +166,10 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std", "unbounded_depth"] }
+serde_json = { version = "1.0.61", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }

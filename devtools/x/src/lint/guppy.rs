@@ -4,7 +4,9 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
+use anyhow::anyhow;
 use guppy::{graph::feature::FeatureFilterFn, Version};
+use hakari::summaries::HakariBuilderSummary;
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
@@ -188,47 +190,6 @@ impl PackageLinter for CrateNamesPaths {
     }
 }
 
-/// Ensure diem-workspace-hack is a dependency
-#[derive(Debug)]
-pub struct WorkspaceHack;
-
-impl Linter for WorkspaceHack {
-    fn name(&self) -> &'static str {
-        "workspace-hack"
-    }
-}
-
-impl PackageLinter for WorkspaceHack {
-    fn run<'l>(
-        &self,
-        ctx: &PackageContext<'l>,
-        out: &mut LintFormatter<'l, '_>,
-    ) -> Result<RunStatus<'l>> {
-        let package = ctx.metadata();
-        let pkg_graph = ctx.package_graph();
-        let workspace_hack_id = pkg_graph
-            .workspace()
-            .member_by_name("diem-workspace-hack")
-            .expect("can't find diem-workspace-hack package")
-            .id();
-
-        // diem-workspace-hack does not need to depend on itself
-        if package.id() == workspace_hack_id {
-            return Ok(RunStatus::Executed);
-        }
-
-        let has_links = package.direct_links().next().is_some();
-        let has_hack_dep = pkg_graph
-            .directly_depends_on(package.id(), workspace_hack_id)
-            .expect("valid package ID");
-        if has_links && !has_hack_dep {
-            out.write(LintLevel::Error, "missing diem-workspace-hack dependency");
-        }
-
-        Ok(RunStatus::Executed)
-    }
-}
-
 /// Ensure that any workspace packages with build dependencies also have a build script.
 #[derive(Debug)]
 pub struct IrrelevantBuildDeps;
@@ -261,15 +222,27 @@ impl PackageLinter for IrrelevantBuildDeps {
 
 /// Ensure that packages within the workspace only depend on one version of a third-party crate.
 #[derive(Debug)]
-pub struct DirectDepDups;
+pub struct DirectDepDups<'cfg> {
+    hakari_package: &'cfg str,
+}
 
-impl Linter for DirectDepDups {
+impl<'cfg> DirectDepDups<'cfg> {
+    pub fn new(hakari_config: &'cfg HakariBuilderSummary) -> crate::Result<Self> {
+        let hakari_package = hakari_config
+            .hakari_package
+            .as_deref()
+            .ok_or_else(|| anyhow!("hakari.hakari-package not defined in x.toml"))?;
+        Ok(Self { hakari_package })
+    }
+}
+
+impl<'cfg> Linter for DirectDepDups<'cfg> {
     fn name(&self) -> &'static str {
         "direct-dep-dups"
     }
 }
 
-impl ProjectLinter for DirectDepDups {
+impl<'cfg> ProjectLinter for DirectDepDups<'cfg> {
     fn run<'l>(
         &self,
         ctx: &ProjectContext<'l>,
@@ -282,7 +255,7 @@ impl ProjectLinter for DirectDepDups {
         package_graph.query_workspace().resolve_with_fn(|_, link| {
             // Collect direct dependencies of workspace packages.
             let (from, to) = link.endpoints();
-            if ctx.core().config().hakari.hakari_package.as_deref() == Some(from.name()) {
+            if from.name() == self.hakari_package {
                 // Skip the workspace hack package.
                 return false;
             }

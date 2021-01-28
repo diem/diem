@@ -73,6 +73,22 @@ name = "diem-crypto-derive"
 version = "0.1.0"
 workspace-path = "crypto/crypto-derive"
 
+# Also exclude the devtools packages since they get compiled with a different set of options.
+[[hakari.omitted-packages]]
+name = "x"
+version = "0.1.0"
+workspace-path = "devtools/x"
+
+[[hakari.omitted-packages]]
+name = "x-core"
+version = "0.1.0"
+workspace-path = "devtools/x-core"
+
+[[hakari.omitted-packages]]
+name = "x-lint"
+version = "0.1.0"
+workspace-path = "devtools/x-lint"
+
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
 version = "v2"

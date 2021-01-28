@@ -2375,7 +2375,6 @@ dependencies = [
 name = "diem-workspace-hack"
 version = "0.1.0"
 dependencies = [
- "bstr",
  "byteorder",
  "bytes 1.0.1",
  "cc",
@@ -2406,8 +2405,6 @@ dependencies = [
  "prost",
  "quote 0.6.13",
  "rand 0.7.3",
- "regex",
- "regex-syntax",
  "reqwest",
  "rusty-fork",
  "serde",
@@ -7939,7 +7936,6 @@ dependencies = [
  "chrono",
  "colored-diff",
  "determinator",
- "diem-workspace-hack",
  "env_logger 0.8.2",
  "globset",
  "guppy",
@@ -7962,7 +7958,6 @@ name = "x-core"
 version = "0.1.0"
 dependencies = [
  "determinator",
- "diem-workspace-hack",
  "guppy",
  "hakari",
  "hex",
@@ -7978,7 +7973,6 @@ dependencies = [
 name = "x-lint"
 version = "0.1.0"
 dependencies = [
- "diem-workspace-hack",
  "guppy",
  "hakari",
  "once_cell",
