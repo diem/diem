@@ -28,18 +28,13 @@ RUN ./docker/build-common.sh
 FROM debian-base AS pre-test
 
 # TODO: Unsure which of these are needed exactly for client
-RUN apt-get update && apt-get install -y libssl1.1 python3-pip nano net-tools tcpdump iproute2 netcat \
+RUN apt-get update && apt-get install -y libssl1.1 nano net-tools tcpdump iproute2 netcat \
     && apt-get clean && rm -r /var/lib/apt/lists/*
-
-# RUN apt-get install python3
-COPY docker/mint/requirements.txt /diem/docker/mint/requirements.txt
-RUN pip3 install -r /diem/docker/mint/requirements.txt
 
 RUN mkdir -p /opt/diem/bin  /diem/client/data/wallet/
 
 COPY --from=builder /diem/target/release/cli /opt/diem/bin
 COPY --from=builder /diem/target/release/diem-faucet /opt/diem/bin
-COPY docker/mint/server.py /opt/diem/bin
 
 # Test the docker container before shipping.
 FROM pre-test AS test
