@@ -20,12 +20,7 @@ use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::{StructType, Type},
 };
-use std::{
-    collections::{btree_map, BTreeMap, HashMap},
-    fmt::Debug,
-    hash::Hash,
-    sync::Arc,
-};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMError, VMResult},
@@ -635,18 +630,13 @@ impl Loader {
             self.load_dependencies_expect_no_missing_dependencies(deps, data_store, log_context)?
         };
 
-        self.verify_module_dependencies(
-            module,
-            loaded_imm_deps,
-            self.get_all_module_dependencies(module),
-        )
+        self.verify_module_dependencies(module, loaded_imm_deps)
     }
 
     fn verify_module_dependencies(
         &self,
         module: &CompiledModule,
         imm_dependencies: Vec<Arc<Module>>,
-        all_dependencies: BTreeMap<ModuleId, Arc<Module>>,
     ) -> VMResult<()> {
         let imm_deps: Vec<_> = imm_dependencies
             .iter()
@@ -654,37 +644,14 @@ impl Loader {
             .collect();
         DependencyChecker::verify_module(module, imm_deps)?;
 
-        let all_deps = all_dependencies
-            .iter()
-            .map(|(module_id, module)| (module_id.clone(), module.module()))
-            .collect();
-        CyclicModuleDependencyChecker::verify_module(module, all_deps)
-    }
-
-    fn get_all_module_dependencies(
-        &self,
-        module: &CompiledModule,
-    ) -> BTreeMap<ModuleId, Arc<Module>> {
-        fn get_all_module_dependencies_recursive(
-            all_deps: &mut BTreeMap<ModuleId, Arc<Module>>,
-            module_id: ModuleId,
-            loader: &Loader,
-        ) {
-            if let btree_map::Entry::Vacant(entry) = all_deps.entry(module_id) {
-                let module = loader.get_module(entry.key());
-                let next_deps = module.module().immediate_module_dependencies();
-                entry.insert(module);
-                for next in next_deps {
-                    get_all_module_dependencies_recursive(all_deps, next, loader);
-                }
-            }
-        }
-
-        let mut all_deps = BTreeMap::new();
-        for dep in module.immediate_module_dependencies() {
-            get_all_module_dependencies_recursive(&mut all_deps, dep, self);
-        }
-        all_deps
+        let module_cache = self.module_cache.lock();
+        CyclicModuleDependencyChecker::verify_module(module, |module_id| {
+            module_cache
+                .modules
+                .get(module_id)
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                .map(|m| m.module().immediate_module_dependencies())
+        })
     }
 
     // All native functions must be known to the loader
