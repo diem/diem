@@ -1,0 +1,30 @@
+error: 
+
+   ┌── tests/move_check/typing/bad_type_argument_arity_struct_pack.move:7:9 ───
+   │
+ 7 │         S<> { f: 0 };
+   │         ^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 0
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/bad_type_argument_arity_struct_pack.move:7:9 ───
+   │
+ 7 │         S<> { f: 0 };
+   │         ^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   ·
+ 7 │         S<> { f: 0 };
+   │         ------------ The type: '0x42::M::S<_>'
+   ·
+ 4 │     struct S<T> { f: T }
+   │              - Is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/bad_type_argument_arity_struct_pack.move:8:9 ───
+   │
+ 8 │         S<u64, u64> { f: 0 };
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid instantiation of '0x42::M::S'. Expected 1 type argument(s) but got 2
+   │
+

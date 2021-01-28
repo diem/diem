@@ -217,10 +217,13 @@ impl Context {
 
     fn resolve_struct_name(
         &mut self,
+        loc: Loc,
         verb: &str,
-        sp!(loc, ma_): E::ModuleAccess,
-    ) -> Option<(ModuleIdent, StructName)> {
+        sp!(nloc, ma_): E::ModuleAccess,
+        etys_opt: Option<Vec<E::Type>>,
+    ) -> Option<(ModuleIdent, StructName, Option<Vec<N::Type>>)> {
         use E::ModuleAccess_ as EA;
+
         match ma_ {
             EA::Name(n) => match self.resolve_unscoped_type(&n) {
                 None => {
@@ -229,18 +232,25 @@ impl Context {
                 }
                 Some(rt) => {
                     self.error(vec![
-                        (loc, format!("Invalid {}. Expected a struct name", verb)),
+                        (nloc, format!("Invalid {}. Expected a struct name", verb)),
                         rt.error_msg(&n),
                     ]);
                     None
                 }
             },
-            EA::ModuleAccess(m, n) => match self.resolve_module_type(loc, &m, &n) {
+            EA::ModuleAccess(m, n) => match self.resolve_module_type(nloc, &m, &n) {
                 None => {
                     assert!(self.has_errors());
                     None
                 }
-                Some(_) => Some((m, StructName(n))),
+                Some((_, _, _, arity)) => {
+                    let tys_opt = etys_opt.map(|etys| {
+                        let tys = types(self, etys);
+                        let name_f = || format!("{}::{}", &m, &n);
+                        check_type_argument_arity(self, loc, name_f, tys, arity)
+                    });
+                    Some((m, StructName(n), tys_opt))
+                }
             },
         }
     }
@@ -825,18 +835,20 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::UnaryExp(uop, e) => NE::UnaryExp(uop, exp(context, *e)),
         EE::BinopExp(e1, bop, e2) => NE::BinopExp(exp(context, *e1), bop, exp(context, *e2)),
 
-        EE::Pack(tn, tys_opt, efields) => match context.resolve_struct_name("construction", tn) {
-            None => {
-                assert!(context.has_errors());
-                NE::UnresolvedError
+        EE::Pack(tn, etys_opt, efields) => {
+            match context.resolve_struct_name(eloc, "construction", tn, etys_opt) {
+                None => {
+                    assert!(context.has_errors());
+                    NE::UnresolvedError
+                }
+                Some((m, sn, tys_opt)) => NE::Pack(
+                    m,
+                    sn,
+                    tys_opt,
+                    efields.map(|_, (idx, e)| (idx, exp_(context, e))),
+                ),
             }
-            Some((m, sn)) => NE::Pack(
-                m,
-                sn,
-                tys_opt.map(|tys| types(context, tys)),
-                efields.map(|_, (idx, e)| (idx, exp_(context, e))),
-            ),
-        },
+        }
         EE::ExpList(es) => {
             assert!(es.len() > 1);
             NE::ExpList(exps(context, es))
@@ -959,12 +971,12 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
                 NL::Var(v)
             }
         }
-        EL::Unpack(tn, tys_opt, efields) => {
+        EL::Unpack(tn, etys_opt, efields) => {
             let msg = match case {
                 C::Bind => "deconstructing binding",
                 C::Assign => "deconstructing assignment",
             };
-            let (m, sn) = context.resolve_struct_name(msg, tn)?;
+            let (m, sn, tys_opt) = context.resolve_struct_name(loc, msg, tn, etys_opt)?;
             let nfields = UniqueMap::maybe_from_opt_iter(
                 efields
                     .into_iter()
@@ -973,7 +985,7 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
             NL::Unpack(
                 m,
                 sn,
-                tys_opt.map(|tys| types(context, tys)),
+                tys_opt,
                 nfields.expect("ICE fields were already unique"),
             )
         }
