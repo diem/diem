@@ -472,8 +472,7 @@ module Roles {
     /// # Helper Functions and Schemas
 
     spec module {
-        define spec_get_role_id(account: signer): u64 {
-            let addr = Signer::spec_address_of(account);
+        define spec_get_role_id(addr: address): u64 {
             global<RoleId>(addr).role_id
         }
 

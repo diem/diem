@@ -137,6 +137,7 @@ module DualAttestation {
     spec fun rotate_base_url {
         include RotateBaseUrlAbortsIf;
         include RotateBaseUrlEnsures;
+        include RotateBaseUrlEmits;
     }
     spec schema RotateBaseUrlAbortsIf {
         account: signer;
@@ -161,6 +162,17 @@ module DualAttestation {
         ensures forall addr1:address where addr1 != sender:
             global<Credential>(addr1).base_url == old(global<Credential>(addr1).base_url);
     }
+    spec schema RotateBaseUrlEmits {
+        account: signer;
+        new_url: vector<u8>;
+        let sender = Signer::spec_address_of(account);
+        let handle = global<Credential>(sender).base_url_rotation_events;
+        let msg = BaseUrlRotationEvent {
+            new_base_url: new_url,
+            time_rotated_seconds: DiemTimestamp::spec_now_seconds(),
+        };
+        emits msg to handle;
+    }
 
     /// Rotate the compliance public key for `account` to `new_key`.
     public fun rotate_compliance_public_key(
@@ -181,6 +193,7 @@ module DualAttestation {
     spec fun rotate_compliance_public_key {
         include RotateCompliancePublicKeyAbortsIf;
         include RotateCompliancePublicKeyEnsures;
+        include RotateCompliancePublicKeyEmits;
     }
     spec schema RotateCompliancePublicKeyAbortsIf {
         account: signer;
@@ -202,6 +215,17 @@ module DualAttestation {
         /// The sender only rotates its own compliance_public_key [[H16]][PERMISSION].
         ensures forall addr1: address where addr1 != sender:
             global<Credential>(addr1).compliance_public_key == old(global<Credential>(addr1).compliance_public_key);
+    }
+    spec schema RotateCompliancePublicKeyEmits {
+        account: signer;
+        new_key: vector<u8>;
+        let sender = Signer::spec_address_of(account);
+        let handle = global<Credential>(sender).compliance_key_rotation_events;
+        let msg = ComplianceKeyRotationEvent {
+            new_compliance_public_key: new_key,
+            time_rotated_seconds: DiemTimestamp::spec_now_seconds(),
+        };
+        emits msg to handle;
     }
 
     /// Return the human-readable name for the VASP account.

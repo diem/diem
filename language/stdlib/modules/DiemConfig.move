@@ -380,6 +380,14 @@ module DiemConfig {
             },
         );
     }
+    spec fun emit_genesis_reconfiguration_event {
+        let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let handle = config.events;
+        let msg = NewEpochEvent {
+                epoch: config.epoch,
+        };
+        emits msg to handle;
+    }
 
     // =================================================================
     // Module Specification

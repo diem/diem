@@ -431,6 +431,7 @@ module Diem {
     spec fun preburn_with_resource {
         include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
         include PreburnEnsures<CoinType>{amount: coin.value};
+        include PreburnWithResourceEmits<CoinType>;
     }
     spec schema PreburnWithResourceAbortsIf<CoinType> {
         amount: u64;
@@ -448,6 +449,19 @@ module Diem {
         preburn: Preburn<CoinType>;
         ensures spec_currency_info<CoinType>().preburn_value
                     == old(spec_currency_info<CoinType>().preburn_value) + amount;
+    }
+    spec schema PreburnWithResourceEmits<CoinType> {
+        coin: Diem<CoinType>;
+        preburn_address: address;
+        let info = spec_currency_info<CoinType>();
+        let currency_code = spec_currency_code<CoinType>();
+        let handle = info.preburn_events;
+        let msg = PreburnEvent {
+            amount: coin.value,
+            currency_code,
+            preburn_address,
+        };
+        emits msg to handle if !info.is_synthetic;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -595,8 +609,8 @@ module Diem {
     spec fun burn_with_resource_cap {
         include BurnWithResourceCapAbortsIf<CoinType>;
         include BurnWithResourceCapEnsures<CoinType>;
+        include BurnWithResourceCapEmits<CoinType>;
     }
-
     spec schema BurnWithResourceCapAbortsIf<CoinType> {
         preburn: Preburn<CoinType>;
         include AbortsIfNoCurrency<CoinType>;
@@ -606,13 +620,25 @@ module Diem {
         aborts_if info.total_value < to_burn with Errors::LIMIT_EXCEEDED;
         aborts_if info.preburn_value < to_burn with Errors::LIMIT_EXCEEDED;
     }
-
     spec schema BurnWithResourceCapEnsures<CoinType> {
         preburn: Preburn<CoinType>;
         ensures spec_currency_info<CoinType>().total_value
                 == old(spec_currency_info<CoinType>().total_value) - old(preburn.to_burn.value);
         ensures spec_currency_info<CoinType>().preburn_value
                 == old(spec_currency_info<CoinType>().preburn_value) - old(preburn.to_burn.value);
+    }
+    spec schema BurnWithResourceCapEmits<CoinType> {
+        preburn: Preburn<CoinType>;
+        preburn_address: address;
+        let info = spec_currency_info<CoinType>();
+        let currency_code = spec_currency_code<CoinType>();
+        let handle = info.burn_events;
+        emits BurnEvent {
+                amount: old(preburn.to_burn.value),
+                currency_code,
+                preburn_address,
+            }
+            to handle if !info.is_synthetic;
     }
 
     /// Cancels the burn request in the `Preburn` resource stored at `preburn_address` and
@@ -649,12 +675,11 @@ module Diem {
 
         coin
     }
-
     spec fun cancel_burn_with_capability {
         include CancelBurnWithCapAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
+        include CancelBurnWithCapEmits<CoinType>;
     }
-
     spec schema CancelBurnWithCapAbortsIf<CoinType> {
         preburn_address: address;
         let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -663,7 +688,6 @@ module Diem {
         include AbortsIfNoCurrency<CoinType>;
         aborts_if info.preburn_value < amount with Errors::LIMIT_EXCEEDED;
     }
-
     spec schema CancelBurnWithCapEnsures<CoinType> {
         preburn_address: address;
         let preburn_value = global<Preburn<CoinType>>(preburn_address).to_burn.value;
@@ -671,6 +695,18 @@ module Diem {
             global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value;
         ensures preburn_value == 0;
         ensures total_preburn_value == old(total_preburn_value) - old(preburn_value);
+    }
+    spec schema CancelBurnWithCapEmits<CoinType> {
+        preburn_address: address;
+        let info = spec_currency_info<CoinType>();
+        let currency_code = spec_currency_code<CoinType>();
+        let handle = info.cancel_burn_events;
+        emits CancelBurnEvent {
+               amount: old(global<Preburn<CoinType>>(preburn_address).to_burn.value),
+               currency_code,
+               preburn_address,
+           }
+           to handle if !info.is_synthetic;
     }
 
     /// A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is
@@ -1059,7 +1095,10 @@ module Diem {
     spec fun currency_code {
         pragma opaque;
         include AbortsIfNoCurrency<CoinType>;
-        ensures result == spec_currency_info<CoinType>().currency_code;
+        ensures result == spec_currency_code<CoinType>();
+    }
+    spec define spec_currency_code<CoinType>(): vector<u8> {
+        spec_currency_info<CoinType>().currency_code
     }
 
     /// Updates the `to_xdx_exchange_rate` held in the `CurrencyInfo` for

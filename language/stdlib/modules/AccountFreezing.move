@@ -107,6 +107,17 @@ module AccountFreezing {
         aborts_if frozen_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() with Errors::INVALID_ARGUMENT;
         aborts_if !exists<FreezingBit>(frozen_address) with Errors::NOT_PUBLISHED;
         ensures spec_account_is_frozen(frozen_address);
+        include FreezeAccountEmits;
+    }
+    spec schema FreezeAccountEmits {
+        account: &signer;
+        frozen_address: address;
+        let handle = global<FreezeEventsHolder>(CoreAddresses::DIEM_ROOT_ADDRESS()).freeze_event_handle;
+        let msg = FreezeAccountEvent {
+            initiator_address: Signer::spec_address_of(account),
+            frozen_address
+        };
+        emits msg to handle;
     }
 
     /// Unfreeze the account at `addr`.
@@ -133,6 +144,17 @@ module AccountFreezing {
         include Roles::AbortsIfNotTreasuryCompliance;
         aborts_if !exists<FreezingBit>(unfrozen_address) with Errors::NOT_PUBLISHED;
         ensures !spec_account_is_frozen(unfrozen_address);
+        include UnfreezeAccountEmits;
+    }
+    spec schema UnfreezeAccountEmits {
+        account: &signer;
+        unfrozen_address: address;
+        let handle = global<FreezeEventsHolder>(CoreAddresses::DIEM_ROOT_ADDRESS()).unfreeze_event_handle;
+        let msg = UnfreezeAccountEvent {
+            initiator_address: Signer::spec_address_of(account),
+            unfrozen_address
+        };
+        emits msg to handle;
     }
 
     /// Returns if the account at `addr` is frozen.

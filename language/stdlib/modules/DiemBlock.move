@@ -100,6 +100,21 @@ module DiemBlock {
 
         /// The below counter overflow is assumed to be excluded from verification of callers.
         aborts_if [assume] get_current_block_height() + 1 > MAX_U64 with EXECUTION_FAILURE;
+        include BlockPrologueEmits;
+    }
+    spec schema BlockPrologueEmits {
+        round: u64;
+        timestamp: u64;
+        previous_block_votes: vector<address>;
+        proposer: address;
+        let handle = global<BlockMetadata>(CoreAddresses::DIEM_ROOT_ADDRESS()).new_block_events;
+        let msg = NewBlockEvent {
+            round,
+            proposer,
+            previous_block_votes,
+            time_microseconds: timestamp,
+        };
+        emits msg to handle;
     }
 
     /// Get the current block height

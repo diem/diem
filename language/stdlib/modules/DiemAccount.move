@@ -342,9 +342,11 @@ module DiemAccount {
         ensures exists<Balance<Token>>(payee);
         ensures global<DiemAccount>(payee).withdraw_capability
             == old(global<DiemAccount>(payee).withdraw_capability);
-        include DepositAbortsIf<Token>{amount: to_deposit.value};
-        include DepositOverflowAbortsIf<Token>{amount: to_deposit.value};
-        include DepositEnsures<Token>{amount: to_deposit.value};
+        let amount = to_deposit.value;
+        include DepositAbortsIf<Token>{amount: amount};
+        include DepositOverflowAbortsIf<Token>{amount: amount};
+        include DepositEnsures<Token>{amount: amount};
+        include DepositEmits<Token>{amount: amount};
     }
     spec schema DepositAbortsIf<Token> {
         payer: address;
@@ -386,6 +388,20 @@ module DiemAccount {
         payee: address;
         amount: u64;
         ensures balance<Token>(payee) == old(balance<Token>(payee)) + amount;
+    }
+    spec schema DepositEmits<Token> {
+        payer: address;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+        let handle = global<DiemAccount>(payee).received_events;
+        let msg = ReceivedPaymentEvent {
+            amount,
+            currency_code: Diem::spec_currency_code<Token>(),
+            payer,
+            metadata
+        };
+        emits msg to handle;
     }
 
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
@@ -561,7 +577,6 @@ module DiemAccount {
         );
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
-
     spec fun withdraw_from {
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
@@ -572,8 +587,8 @@ module DiemAccount {
         include WithdrawFromAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>{balance: global<Balance<Token>>(payer)};
         include WithdrawOnlyFromCapAddress<Token>;
+        include WithdrawFromEmits<Token>;
     }
-
     spec schema WithdrawFromAbortsIf<Token> {
         cap: WithdrawCapability;
         payee: address;
@@ -585,13 +600,27 @@ module DiemAccount {
         aborts_if !exists_at(payer) with Errors::NOT_PUBLISHED;
         aborts_if !exists<Balance<Token>>(payer) with Errors::NOT_PUBLISHED;
     }
-
     /// # Access Control
     spec schema WithdrawOnlyFromCapAddress<Token> {
         cap: WithdrawCapability;
         /// Can only withdraw from the balances of cap.account_address [[H18]][PERMISSION].
         ensures forall addr: address where old(exists<Balance<Token>>(addr)) && addr != cap.account_address:
             balance<Token>(addr) == old(balance<Token>(addr));
+    }
+    spec schema WithdrawFromEmits<Token> {
+        cap: WithdrawCapability;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+        let payer = cap.account_address;
+        let handle = global<DiemAccount>(payer).sent_events;
+        let msg = SentPaymentEvent {
+            amount,
+            currency_code: Diem::spec_currency_code<Token>(),
+            payee,
+            metadata
+        };
+        emits msg to handle;
     }
 
     /// Withdraw `amount` `Diem<Token>`'s from `cap.address` and send them to the `Preburn`
@@ -957,7 +986,6 @@ module DiemAccount {
         );
         destroy_signer(new_account);
     }
-
     spec fun make_account {
         pragma opaque;
         let new_account_addr = Signer::address_of(new_account);
@@ -974,6 +1002,7 @@ module DiemAccount {
         ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
         ensures spec_holds_own_key_rotation_cap(new_account_addr);
         ensures spec_holds_own_withdraw_cap(new_account_addr);
+        include MakeAccountEmits;
     }
     spec schema MakeAccountAbortsIf {
         addr: address;
@@ -989,6 +1018,16 @@ module DiemAccount {
         include CreateAuthenticationKeyAbortsIf;
         // We do not need to specify aborts_if if account already exists, because make_account will
         // abort because of a published FreezingBit, first.
+    }
+    spec schema MakeAccountEmits {
+        new_account: signer;
+        let new_account_addr = Signer::spec_address_of(new_account);
+        let handle = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events;
+        let msg = CreateAccountEvent {
+            created: new_account_addr,
+            role_id: Roles::spec_get_role_id(new_account_addr)
+        };
+        emits msg to handle;
     }
 
     /// Construct an authentication key, aborting if the prefix is not valid.
@@ -1813,6 +1852,16 @@ module DiemAccount {
         // Currency code don't matter here as it won't be charged anyway.
         epilogue<XUS>(dr_account, txn_sequence_number, 0, 0, 0);
         if (should_trigger_reconfiguration) DiemConfig::reconfigure(dr_account)
+    }
+    spec fun writeset_epilogue {
+        include WritesetEpiloguEmits;
+    }
+    spec schema WritesetEpiloguEmits {
+        let handle = global<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()).upgrade_events;
+        let msg = AdminTransactionEvent {
+            committed_timestamp_secs: DiemTimestamp::spec_now_seconds()
+        };
+        emits msg to handle;
     }
 
     /// Create a Validator account
