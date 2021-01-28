@@ -8,8 +8,7 @@ Mempool is a memory-buffer that holds the transactions that are waiting to be ex
 
 ## Overview
 
-Refer to the [mempool specifications](../specifications/mempool/README.md) for a
-high-level overview.
+Refer to the [mempool specifications](../specifications/mempool/README.md) for a high-level overview.
 
 The JSON-RPC server sends to mempool transactions it received from its client. Mempool holds the transactions for a period of time, before consensus commits them. When a new transaction is added, mempool shares this transaction with other validators (validator nodes) in the system. Mempool is a “shared mempool,” as transactions between mempools are shared with other validators. This helps maintain a pseudo-global ordering.
 
