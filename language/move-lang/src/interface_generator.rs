@@ -60,7 +60,10 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
     let mut public_funs = module
         .function_defs()
         .iter()
-        .filter(|fdef| matches!(fdef.visibility, Visibility::Public))
+        .filter(|fdef| match fdef.visibility {
+            Visibility::Public => true,
+            Visibility::Private => false,
+        })
         .peekable();
     if public_funs.peek().is_some() {
         members.push(format!("    {}", DISCLAIMER));
