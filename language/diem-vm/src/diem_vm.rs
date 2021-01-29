@@ -23,7 +23,7 @@ use diem_types::{
 use fail::fail_point;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits, InternalGasUnits},
     identifier::IdentStr,
     value::{serialize_values, MoveValue},
 };
@@ -159,7 +159,8 @@ impl DiemVMImpl {
         // The submitted transactions max gas units needs to be at least enough to cover the
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
-        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
+        let min_txn_fee =
+            gas_constants.to_external_units(calculate_intrinsic_gas(raw_bytes_len, gas_constants));
         if txn_data.max_gas_amount().get() < min_txn_fee.get() {
             warn!(
                 *log_context,
@@ -533,7 +534,7 @@ pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
             )
             .get();
     cost_strategy
-        .deduct_gas(GasUnits::new(total_cost))
+        .deduct_gas(InternalGasUnits::new(total_cost))
         .map_err(|p_err| p_err.finish(Location::Undefined).into_vm_status())
 }
 

@@ -223,6 +223,8 @@ fn verify_simple_payment() {
     // We test these in the reverse order that they appear in verify_transaction, and build up
     // the errors one-by-one to make sure that we are both catching all of them, and
     // that we are doing so in the specified order.
+    let gas_constants = &GasConstants::default();
+
     let txn = sender
         .account()
         .transaction()
@@ -232,7 +234,7 @@ fn verify_simple_payment() {
             args.clone(),
         ))
         .sequence_number(10)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get() + 1)
         .max_gas_amount(1_000_000)
         .sign();
     assert_prologue_parity!(
@@ -241,35 +243,36 @@ fn verify_simple_payment() {
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 
+    // Test for a max_gas_amount that is insufficient to pay the minimum fee.
+    // Find the minimum transaction gas units and subtract 1.
+    let mut gas_limit = gas_constants
+        .to_external_units(gas_constants.min_transaction_gas_units)
+        .get();
+    if gas_limit > 0 {
+        gas_limit -= 1;
+    }
+    // Calculate how many extra bytes of transaction arguments to add to ensure
+    // that the minimum transaction gas gets rounded up when scaling to the
+    // external gas units. (Ignore the size of the script itself for simplicity.)
+    let extra_txn_bytes = if gas_constants.gas_unit_scaling_factor
+        > gas_constants.min_transaction_gas_units.get()
+    {
+        gas_constants.large_transaction_cutoff.get()
+            + (gas_constants.gas_unit_scaling_factor / gas_constants.intrinsic_gas_per_byte.get())
+    } else {
+        0
+    };
     let txn = sender
         .account()
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
             vec![account_config::xus_tag()],
-            args.clone(),
+            vec![TransactionArgument::U8(42); extra_txn_bytes as usize],
         ))
         .sequence_number(10)
-        .max_gas_amount(1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
-        .sign();
-    assert_prologue_parity!(
-        executor.verify_transaction(txn.clone()).status(),
-        executor.execute_transaction(txn).status(),
-        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
-    );
-
-    let txn = sender
-        .account()
-        .transaction()
-        .script(Script::new(
-            p2p_script.clone(),
-            vec![account_config::xus_tag()],
-            args.clone(),
-        ))
-        .sequence_number(10)
-        .max_gas_amount(GasConstants::default().min_transaction_gas_units.get() - 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_limit)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -286,8 +289,8 @@ fn verify_simple_payment() {
             args,
         ))
         .sequence_number(10)
-        .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_constants.maximum_number_of_gas_units.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -301,11 +304,11 @@ fn verify_simple_payment() {
         .script(Script::new(
             p2p_script.clone(),
             vec![account_config::xus_tag()],
-            vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
+            vec![TransactionArgument::U8(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
         ))
         .sequence_number(10)
-        .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_constants.maximum_number_of_gas_units.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),

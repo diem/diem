@@ -5,8 +5,8 @@ use crate::natives::function::NativeResult;
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{
-        AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, MIN_EXISTS_DATA_SIZE,
-        REFERENCE_SIZE, STRUCT_SIZE,
+        AbstractMemorySize, GasAlgebra, GasCarrier, InternalGasUnits, CONST_SIZE,
+        MIN_EXISTS_DATA_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
     },
     value::{MoveStructLayout, MoveTypeLayout},
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
@@ -1619,7 +1619,7 @@ impl VectorRef {
     pub fn borrow_elem(
         &self,
         idx: usize,
-        cost: GasUnits<GasCarrier>,
+        cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
@@ -1636,7 +1636,7 @@ impl VectorRef {
 
     pub fn pop(
         &self,
-        cost: GasUnits<GasCarrier>,
+        cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
@@ -1688,7 +1688,7 @@ impl VectorRef {
         &self,
         idx1: usize,
         idx2: usize,
-        cost: GasUnits<GasCarrier>,
+        cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
@@ -1724,7 +1724,7 @@ impl VectorRef {
 
 impl Vector {
     pub fn empty(
-        cost: GasUnits<GasCarrier>,
+        cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
         _context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {
@@ -1754,7 +1754,7 @@ impl Vector {
 
     pub fn destroy_empty(
         self,
-        cost: GasUnits<GasCarrier>,
+        cost: InternalGasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
     ) -> PartialVMResult<NativeResult> {

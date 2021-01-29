@@ -13,7 +13,7 @@ use diem_types::{
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
-use move_core_types::gas_schedule::MAX_TRANSACTION_SIZE_IN_BYTES;
+use move_core_types::gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES};
 use rand::SeedableRng;
 use std::u64;
 use storage_interface::DbReaderWriter;
@@ -169,16 +169,22 @@ fn test_validate_max_gas_units_below_min() {
     let vm_validator = TestValidator::new();
 
     let address = account_config::diem_root_address();
+    // Calculate a size for the transaction script that will ensure
+    // that the minimum transaction gas is at least 1 after scaling to the
+    // external gas units.
+    let gas_constants = &GasConstants::default();
+    let txn_bytes = gas_constants.large_transaction_cutoff.get()
+        + (gas_constants.gas_unit_scaling_factor / gas_constants.intrinsic_gas_per_byte.get());
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
         &vm_genesis::GENESIS_KEYPAIR.0,
         vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        None,
+        Some(Script::new(vec![42; txn_bytes as usize], vec![], vec![])),
         0,
         0,                   /* max gas price */
         XUS_NAME.to_owned(), /* gas currency code */
-        Some(1),             // Max gas units
+        Some(0),             // Max gas units
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(

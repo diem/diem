@@ -179,7 +179,16 @@ Next, there are a series of checks related to the transaction size and gas param
 
 * If the `max_gas_amount` field in the `RawTransaction` is larger than the `maximum_number_of_gas_units` field of `GasConstants`, then validation fails with a status code of `MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND`.
 
-* There is also a minimum gas amount based on the transaction size. The `GasConstants` structure specifies a `min_transaction_gas_units` value that is charged for all transactions regardless of their size. If the transaction size in bytes is larger than the `large_transaction_cutoff` value, then the minimum gas amount is increased by `instrinsic_gas_per_byte` for every byte in excess of `large_transaction_cutoff`. If the `max_gas_amount` for the transaction is less than this minimum requirement, validation fails with a status code of `MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS`.
+* There is also a minimum gas amount based on the transaction size.
+The minimum charge is calculated in terms of internal gas units that are scaled up by
+the `gas_unit_scaling_factor` field of `GasConstants` to allow more fine grained
+accounting. First, the `GasConstants` structure specifies a `min_transaction_gas_units`
+value that is charged for all transactions regardless of their size. Next, if the
+transaction size in bytes is larger than the `large_transaction_cutoff` value, then
+the minimum gas amount is increased by `intrinsic_gas_per_byte` for every byte in
+excess of `large_transaction_cutoff`. The resulting value is divided by the
+`gas_unit_scaling_factor` to obtain the minimum gas amount.
+If the `max_gas_amount` for the transaction is less than this minimum requirement, validation fails with a status code of `MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS`.
 
 * The `gas_unit_price` from the `RawTransaction` must be within the range specified by the `GasConstants`. If the price is less than `min_price_per_gas_unit`, validation fails with a status code of `GAS_UNIT_PRICE_BELOW_MIN_BOUND`. If the price is more than `max_price_per_gas_unit`, validation fails with a status code of `GAS_UNIT_PRICE_ABOVE_MAX_BOUND`.
 
