@@ -1091,13 +1091,15 @@ fn load_field_instantiations(
 fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<FunctionDefinition> {
     let function = load_function_handle_index(cursor)?;
 
-    let flags = cursor.read_u8().map_err(|_| {
+    let mut flags = cursor.read_u8().map_err(|_| {
         PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
     })?;
 
-    let (visibility, extra_flags) = match cursor.version() {
+    let (visibility, mut extra_flags) = match cursor.version() {
         VERSION_1 => {
-            let vis = if (flags & Visibility::Public as u8) != 0 {
+            let is_public_bit = Visibility::Public as u8;
+            let vis = if (flags & is_public_bit) != 0 {
+                flags ^= is_public_bit;
                 Visibility::Public
             } else {
                 Visibility::Private
@@ -1120,15 +1122,26 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
             })?;
             (vis, extra_flags)
         }
-        _ => unreachable!("Invalid bytecode version"),
+        _ => {
+            return Err(PartialVMError::new(StatusCode::UNREACHABLE)
+                .with_message(String::from("Invalid bytecode version")))
+        }
     };
 
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
     let code_unit = if (extra_flags & FunctionDefinition::NATIVE) != 0 {
+        extra_flags ^= FunctionDefinition::NATIVE;
         None
     } else {
         Some(load_code_unit(cursor)?)
     };
+
+    // check that the bits unused in the flags are not set, otherwise it might cause some trouble
+    // if later we decide to assign meaning to these bits.
+    if extra_flags != 0 {
+        return Err(PartialVMError::new(StatusCode::INVALID_FLAG_BITS));
+    }
+
     Ok(FunctionDefinition {
         function,
         visibility,
