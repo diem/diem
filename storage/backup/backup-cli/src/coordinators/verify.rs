@@ -13,7 +13,7 @@ use crate::{
         VERIFY_COORDINATOR_FAIL_TS, VERIFY_COORDINATOR_START_TS, VERIFY_COORDINATOR_SUCC_TS,
     },
     storage::BackupStorage,
-    utils::{unix_timestamp_sec, GlobalRestoreOptions, RestoreRunMode},
+    utils::{unix_timestamp_sec, GlobalRestoreOptions, RestoreRunMode, TrustedWaypointOpt},
 };
 use anyhow::Result;
 use diem_logger::prelude::*;
@@ -23,16 +23,19 @@ use std::sync::Arc;
 pub struct VerifyCoordinator {
     storage: Arc<dyn BackupStorage>,
     metadata_cache_opt: MetadataCacheOpt,
+    trusted_waypoints_opt: TrustedWaypointOpt,
 }
 
 impl VerifyCoordinator {
     pub fn new(
         storage: Arc<dyn BackupStorage>,
         metadata_cache_opt: MetadataCacheOpt,
+        trusted_waypoints_opt: TrustedWaypointOpt,
     ) -> Result<Self> {
         Ok(Self {
             storage,
             metadata_cache_opt,
+            trusted_waypoints_opt,
         })
     }
 
@@ -67,7 +70,7 @@ impl VerifyCoordinator {
 
         let global_opt = GlobalRestoreOptions {
             target_version: ver_max,
-            trusted_waypoints: Default::default(),
+            trusted_waypoints: Arc::new(self.trusted_waypoints_opt.verify()?),
             run_mode: Arc::new(RestoreRunMode::Verify),
         };
 

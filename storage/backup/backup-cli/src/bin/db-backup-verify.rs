@@ -3,7 +3,8 @@
 
 use anyhow::Result;
 use backup_cli::{
-    coordinators::verify::VerifyCoordinator, metadata::cache::MetadataCacheOpt, storage::StorageOpt,
+    coordinators::verify::VerifyCoordinator, metadata::cache::MetadataCacheOpt,
+    storage::StorageOpt, utils::TrustedWaypointOpt,
 };
 use diem_logger::{prelude::*, Level, Logger};
 use diem_secure_push_metrics::MetricsPusher;
@@ -13,6 +14,8 @@ use structopt::StructOpt;
 struct Opt {
     #[structopt(flatten)]
     metadata_cache_opt: MetadataCacheOpt,
+    #[structopt(flatten)]
+    trusted_waypoints_opt: TrustedWaypointOpt,
     #[structopt(subcommand)]
     storage: StorageOpt,
 }
@@ -30,7 +33,11 @@ async fn main_impl() -> Result<()> {
     let _mp = MetricsPusher::start();
 
     let opt = Opt::from_args();
-    VerifyCoordinator::new(opt.storage.init_storage().await?, opt.metadata_cache_opt)?
-        .run()
-        .await
+    VerifyCoordinator::new(
+        opt.storage.init_storage().await?,
+        opt.metadata_cache_opt,
+        opt.trusted_waypoints_opt,
+    )?
+    .run()
+    .await
 }
