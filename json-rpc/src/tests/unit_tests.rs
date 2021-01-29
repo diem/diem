@@ -3,6 +3,7 @@
 
 use crate::{
     errors::{JsonRpcError, ServerCode},
+    runtime::check_latest_ledger_info_timestamp,
     tests::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockDiemDB},
@@ -55,8 +56,10 @@ use std::{
     cmp::{max, min},
     collections::HashMap,
     convert::TryFrom,
+    ops::Sub,
     str::FromStr,
     sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use storage_interface::DbReader;
 use tokio::runtime::Runtime;
@@ -1583,6 +1586,52 @@ fn test_get_network_status() {
     } else {
         panic!("did not receive expected json rpc response");
     }
+}
+
+#[test]
+fn test_health_check() {
+    let (_mock_db, _runtime, url, _) = create_db_and_runtime();
+
+    let client = reqwest::blocking::Client::new();
+    let healthy_url = format!("{}/-/healthy", url);
+    let resp = client.get(&healthy_url).send().unwrap();
+    assert_eq!(resp.status(), 200);
+
+    let healthy_url = format!(
+        "{}/-/healthy?duration={}",
+        url,
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    );
+    let resp = client.get(&healthy_url).send().unwrap();
+    assert_eq!(resp.status(), 200);
+}
+
+#[test]
+fn test_check_latest_ledger_info_timestamp() {
+    let now = SystemTime::now();
+    let ledger_latest_timestamp_lack = 10;
+
+    let ledger_latest_timestamp = now
+        .sub(Duration::from_secs(ledger_latest_timestamp_lack))
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_micros() as u64;
+
+    assert!(check_latest_ledger_info_timestamp(
+        ledger_latest_timestamp_lack - 1,
+        ledger_latest_timestamp,
+        now
+    )
+    .is_err());
+    assert!(check_latest_ledger_info_timestamp(
+        ledger_latest_timestamp_lack + 1,
+        ledger_latest_timestamp,
+        now
+    )
+    .is_ok());
 }
 
 /// Creates and returns a MockDiemDB, JsonRpcAsyncClient and corresponding server Runtime tuple for
