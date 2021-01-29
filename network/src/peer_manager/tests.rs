@@ -19,7 +19,10 @@ use crate::{
 use anyhow::anyhow;
 use bytes::Bytes;
 use channel::{diem_channel, message_queues::QueueStyle};
-use diem_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
+use diem_config::{
+    config::{PeerRole, MAX_INBOUND_CONNECTIONS},
+    network_id::NetworkContext,
+};
 use diem_network_address::NetworkAddress;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_time_service::TimeService;
@@ -56,6 +59,7 @@ pub fn build_test_transport(
                     MessagingProtocolVersion::V1,
                     [TEST_PROTOCOL].iter().into(),
                     TrustLevel::Untrusted,
+                    PeerRole::Unknown,
                 ),
             })
         })
@@ -236,6 +240,7 @@ fn create_connection<TSocket: transport::TSocket>(
             MessagingProtocolVersion::V1,
             [TEST_PROTOCOL].iter().into(),
             TrustLevel::Untrusted,
+            PeerRole::Unknown,
         ),
     }
 }
@@ -561,6 +566,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
                 TrustLevel::Untrusted,
+                PeerRole::Unknown,
             ),
             DisconnectReason::ConnectionLost,
         );
@@ -616,6 +622,7 @@ fn test_dial_disconnect() {
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
                 TrustLevel::Untrusted,
+                PeerRole::Unknown,
             ),
             DisconnectReason::Requested,
         );

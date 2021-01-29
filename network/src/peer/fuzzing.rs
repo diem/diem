@@ -13,7 +13,7 @@ use crate::{
     ProtocolId,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
-use diem_config::network_id::NetworkContext;
+use diem_config::{config::PeerRole, network_id::NetworkContext};
 use diem_network_address::NetworkAddress;
 use diem_proptest_helpers::ValueGenerator;
 use diem_time_service::TimeService;
@@ -96,6 +96,7 @@ pub fn fuzz(data: &[u8]) {
             .iter(),
         ),
         TrustLevel::Untrusted,
+        PeerRole::Unknown,
     );
     let connection = Connection { socket, metadata };
 

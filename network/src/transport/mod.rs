@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use diem_config::{
-    config::HANDSHAKE_VERSION,
+    config::{PeerRole, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::x25519;
@@ -110,6 +110,7 @@ pub struct ConnectionMetadata {
     pub messaging_protocol: MessagingProtocolVersion,
     pub application_protocols: SupportedProtocols,
     pub trust_level: TrustLevel,
+    pub role: PeerRole,
 }
 
 impl ConnectionMetadata {
@@ -121,6 +122,7 @@ impl ConnectionMetadata {
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
         trust_level: TrustLevel,
+        role: PeerRole,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
             remote_peer_id,
@@ -130,6 +132,7 @@ impl ConnectionMetadata {
             messaging_protocol,
             application_protocols,
             trust_level,
+            role,
         }
     }
 
@@ -143,6 +146,7 @@ impl ConnectionMetadata {
             messaging_protocol: MessagingProtocolVersion::V1,
             application_protocols: [].iter().into(),
             trust_level: TrustLevel::Untrusted,
+            role: PeerRole::Unknown,
         }
     }
 }
@@ -157,12 +161,13 @@ impl fmt::Display for ConnectionMetadata {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "[{},{},{},{},{:?}]",
+            "[{},{},{},{},{:?},{:?}]",
             self.remote_peer_id,
             self.addr,
             self.origin,
             self.messaging_protocol,
-            self.application_protocols
+            self.application_protocols,
+            self.role
         )
     }
 }
@@ -298,6 +303,8 @@ async fn upgrade_inbound<T: TSocket>(
             messaging_protocol,
             application_protocols,
             trust_level,
+            // TODO: Load correct role
+            PeerRole::Unknown,
         ),
     })
 }
@@ -368,6 +375,8 @@ async fn upgrade_outbound<T: TSocket>(
             messaging_protocol,
             application_protocols,
             TrustLevel::Trusted,
+            // TODO: Fix role
+            PeerRole::Unknown,
         ),
     })
 }
