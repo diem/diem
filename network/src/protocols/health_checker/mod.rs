@@ -195,7 +195,16 @@ impl HealthChecker {
 
         loop {
             futures::select! {
-                event = self.network_rx.select_next_some() => {
+                maybe_event = self.network_rx.next() => {
+                    trace!("maybe_event: {:?}", maybe_event);
+
+                    // Shutdown the HealthChecker when this network instance shuts
+                    // down. This happens when the `PeerManager` drops.
+                    let event = match maybe_event {
+                        Some(event) => event,
+                        None => break,
+                    };
+
                     match event {
                         Event::NewPeer(peer_id, _origin) => {
                             self.connected.insert(peer_id, (self.round, 0));
@@ -271,9 +280,6 @@ impl HealthChecker {
                 res = tick_handlers.select_next_some() => {
                     let (peer_id, round, nonce, ping_result) = res;
                     self.handle_ping_response(peer_id, round, nonce, ping_result).await;
-                }
-                complete => {
-                    break;
                 }
             }
         }

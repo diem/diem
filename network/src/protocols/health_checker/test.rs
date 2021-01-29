@@ -16,15 +16,15 @@ use crate::{
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::RoleType, network_id::NetworkId};
 use diem_time_service::{MockTimeService, TimeService};
-use tokio::runtime::Runtime;
+use futures::{executor::block_on, future};
 
 const PING_INTERVAL: Duration = Duration::from_secs(1);
 const PING_TIMEOUT: Duration = Duration::from_millis(500);
 
 fn setup_permissive_health_checker(
-    rt: &mut Runtime,
     ping_failures_tolerated: u64,
 ) -> (
+    HealthChecker,
     MockTimeService,
     diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
@@ -54,8 +54,8 @@ fn setup_permissive_health_checker(
         PING_TIMEOUT,
         ping_failures_tolerated,
     );
-    rt.spawn(health_checker.start());
     (
+        health_checker,
         mock_time.into_mock(),
         peer_mgr_reqs_rx,
         network_notifs_tx,
@@ -64,16 +64,15 @@ fn setup_permissive_health_checker(
     )
 }
 
-fn setup_strict_health_checker(
-    rt: &mut Runtime,
-) -> (
+fn setup_strict_health_checker() -> (
+    HealthChecker,
     MockTimeService,
     diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
     diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
 ) {
-    setup_permissive_health_checker(rt, 0 /* ping_failures_tolerated */)
+    setup_permissive_health_checker(0 /* ping_failures_tolerated */)
 }
 
 async fn expect_ping(
@@ -180,11 +179,16 @@ async fn send_new_peer_notification(
 #[test]
 fn outbound() {
     ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
-    let (mock_time, mut network_reqs_rx, _, _, mut connection_notifs_tx) =
-        setup_strict_health_checker(&mut rt);
+    let (
+        health_checker,
+        mock_time,
+        mut network_reqs_rx,
+        network_notifs_tx,
+        _,
+        mut connection_notifs_tx,
+    ) = setup_strict_health_checker();
 
-    let events_f = async move {
+    let test = async move {
         // Trigger ping to a peer. This should do nothing.
         mock_time.advance_async(PING_INTERVAL).await;
 
@@ -197,18 +201,27 @@ fn outbound() {
 
         // Health Checker should attempt to ping the new peer.
         expect_ping_send_ok(&mut network_reqs_rx).await;
+
+        // Shutdown Health Checker.
+        drop(network_notifs_tx);
+        drop(connection_notifs_tx);
     };
-    rt.block_on(events_f);
+    block_on(future::join(health_checker.start(), test));
 }
 
 #[test]
 fn inbound() {
     ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
-    let (_mock_time, _network_reqs_rx, mut network_notifs_tx, _, mut connection_notifs_tx) =
-        setup_strict_health_checker(&mut rt);
+    let (
+        health_checker,
+        _mock_time,
+        _network_reqs_rx,
+        mut network_notifs_tx,
+        _,
+        mut connection_notifs_tx,
+    ) = setup_strict_health_checker();
 
-    let events_f = async move {
+    let test = async move {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
@@ -218,19 +231,28 @@ fn inbound() {
 
         // HealthChecker should respond with a pong.
         expect_pong(res_rx).await;
+
+        // Shutdown Health Checker.
+        drop(network_notifs_tx);
+        drop(connection_notifs_tx);
     };
-    rt.block_on(events_f);
+    block_on(future::join(health_checker.start(), test));
 }
 
 #[test]
 fn outbound_failure_permissive() {
     ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
-    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
-        setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
+    let (
+        health_checker,
+        mock_time,
+        mut network_reqs_rx,
+        network_notifs_tx,
+        mut connection_reqs_rx,
+        mut connection_notifs_tx,
+    ) = setup_permissive_health_checker(ping_failures_tolerated);
 
-    let events_f = async move {
+    let test = async move {
         // Trigger ping to a peer. This should do nothing.
         mock_time.advance_async(PING_INTERVAL).await;
 
@@ -248,26 +270,36 @@ fn outbound_failure_permissive() {
 
         // Health checker should disconnect from peer after tolerated number of failures
         expect_disconnect(peer_id, &mut connection_reqs_rx).await;
+
+        // Shutdown Health Checker.
+        drop(network_notifs_tx);
+        drop(connection_notifs_tx);
     };
-    rt.block_on(events_f);
+    block_on(future::join(health_checker.start(), test));
 }
 
 #[test]
 fn ping_success_resets_fail_counter() {
     ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
-    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
-        setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
+    let (
+        health_checker,
+        mock_time,
+        mut network_reqs_rx,
+        network_notifs_tx,
+        mut connection_reqs_rx,
+        mut connection_notifs_tx,
+    ) = setup_permissive_health_checker(ping_failures_tolerated);
 
-    let events_f = async move {
+    let test = async move {
         // Trigger ping to a peer. This should do nothing.
         mock_time.advance_async(PING_INTERVAL).await;
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
         send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
+
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
         {
@@ -277,12 +309,14 @@ fn ping_success_resets_fail_counter() {
                 expect_ping_send_notok(&mut network_reqs_rx).await;
             }
         }
+
         // Trigger successful ping. This should reset the counter of ping failures.
         {
             mock_time.advance_async(PING_INTERVAL).await;
             // Health checker should send a ping request which succeeds
             expect_ping_send_ok(&mut network_reqs_rx).await;
         }
+
         // We would then need to fail for more than `ping_failures_tolerated` times before
         // triggering disconnect.
         {
@@ -292,20 +326,30 @@ fn ping_success_resets_fail_counter() {
                 expect_ping_send_notok(&mut network_reqs_rx).await;
             }
         }
+
         // Health checker should disconnect from peer after tolerated number of failures
         expect_disconnect(peer_id, &mut connection_reqs_rx).await;
+
+        // Shutdown Health Checker.
+        drop(network_notifs_tx);
+        drop(connection_notifs_tx);
     };
-    rt.block_on(events_f);
+    block_on(future::join(health_checker.start(), test));
 }
 
 #[test]
 fn outbound_failure_strict() {
     ::diem_logger::Logger::init_for_testing();
-    let mut rt = Runtime::new().unwrap();
-    let (mock_time, mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx) =
-        setup_strict_health_checker(&mut rt);
+    let (
+        health_checker,
+        mock_time,
+        mut network_reqs_rx,
+        network_notifs_tx,
+        mut connection_reqs_rx,
+        mut connection_notifs_tx,
+    ) = setup_strict_health_checker();
 
-    let events_f = async move {
+    let test = async move {
         // Trigger ping to a peer. This should do nothing.
         mock_time.advance_async(PING_INTERVAL).await;
 
@@ -321,6 +365,10 @@ fn outbound_failure_strict() {
 
         // Health checker should disconnect from peer.
         expect_disconnect(peer_id, &mut connection_reqs_rx).await;
+
+        // Shutdown Health Checker.
+        drop(network_notifs_tx);
+        drop(connection_notifs_tx);
     };
-    rt.block_on(events_f);
+    block_on(future::join(health_checker.start(), test));
 }
