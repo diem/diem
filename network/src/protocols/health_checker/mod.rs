@@ -196,8 +196,6 @@ impl HealthChecker {
         loop {
             futures::select! {
                 maybe_event = self.network_rx.next() => {
-                    trace!("maybe_event: {:?}", maybe_event);
-
                     // Shutdown the HealthChecker when this network instance shuts
                     // down. This happens when the `PeerManager` drops.
                     let event = match maybe_event {
@@ -224,6 +222,7 @@ impl HealthChecker {
                                         self.network_context,
                                         peer_id
                                     );
+                                    debug_assert!(false, "Unexpected rpc request");
                                 }
                             };
                         }
@@ -254,9 +253,8 @@ impl HealthChecker {
                         continue
                     }
 
-                    let peers: Vec<_> = self.connected.keys().cloned().collect();
-                    for peer_id in peers {
-                        let nonce = self.nonce();
+                    for &peer_id in self.connected.keys() {
+                        let nonce = self.rng.gen::<u32>();
                         trace!(
                             NetworkSchema::new(&self.network_context),
                             round = self.round,
@@ -433,9 +431,5 @@ impl HealthChecker {
                 _ => Err(RpcError::InvalidRpcResponse),
             });
         (peer_id, round, nonce, res_pong_msg)
-    }
-
-    fn nonce(&mut self) -> u32 {
-        self.rng.gen::<u32>()
     }
 }
