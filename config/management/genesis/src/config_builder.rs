@@ -296,7 +296,7 @@ impl FullnodeBuilder {
         let fn_vfn = &mut full_node_config
             .full_node_networks
             .iter_mut()
-            .find(|n| matches!(n.network_id, NetworkId::Private(_)))
+            .find(|n| n.network_id.is_vfn_network())
             .expect("vfn missing vfn full node network in config");
         fn_vfn.seeds = seeds;
 

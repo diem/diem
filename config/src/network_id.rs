@@ -135,10 +135,16 @@ impl fmt::Display for NetworkId {
     }
 }
 
+const VFN_NETWORK: &str = "vfn";
+
 impl NetworkId {
     /// Convenience function to specify the VFN network
     pub fn vfn_network() -> NetworkId {
-        NetworkId::Private("vfn".to_string())
+        NetworkId::Private(VFN_NETWORK.to_string())
+    }
+
+    pub fn is_vfn_network(&self) -> bool {
+        matches!(self, NetworkId::Private(network) if network == VFN_NETWORK)
     }
 
     pub fn as_str(&self) -> &str {
@@ -169,7 +175,7 @@ mod test {
 
     #[test]
     fn test_serialization() {
-        let id = NetworkId::Private("fooo".to_string());
+        let id = NetworkId::vfn_network();
         let encoded = serde_yaml::to_string(&id).unwrap();
         let decoded: NetworkId = serde_yaml::from_str(encoded.as_str()).unwrap();
         assert_eq!(id, decoded);
@@ -188,13 +194,12 @@ mod test {
 
     #[test]
     fn test_network_context_serialization() {
-        let network_name = "Awesome".to_string();
         let role = RoleType::Validator;
         let peer_id = PeerId::random();
-        let context = NetworkContext::new(NetworkId::Private(network_name.clone()), role, peer_id);
+        let context = NetworkContext::new(NetworkId::vfn_network(), role, peer_id);
         let expected = format!(
             "---\nnetwork_id: {}\nrole: {}\npeer_id: {}",
-            network_name, role, peer_id
+            VFN_NETWORK, role, peer_id
         );
         assert_eq!(expected, serde_yaml::to_string(&context).unwrap());
     }

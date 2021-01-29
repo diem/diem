@@ -76,7 +76,7 @@ use vm_genesis::GENESIS_KEYPAIR;
 
 // Networks for validators and fullnodes.
 pub static VALIDATOR_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Validator);
-pub static VFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("VFN".into()));
+pub static VFN_NETWORK: Lazy<NetworkId> = Lazy::new(NetworkId::vfn_network);
 pub static VFN_NETWORK_2: Lazy<NetworkId> = Lazy::new(|| NetworkId::Private("Second VFN".into()));
 pub static PFN_NETWORK: Lazy<NetworkId> = Lazy::new(|| NetworkId::Public);
 
