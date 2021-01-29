@@ -163,10 +163,10 @@ fn test_genesis_transaction_flow() {
     insert_waypoint(&mut node_config, waypoint);
     save_node_config(&mut node_config, &env.validator_swarm, 0);
     env.validator_swarm.add_node(0).unwrap();
+    assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
     let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
-    client_proxy_0.create_next_account(false).unwrap();
-    client_proxy_1
+    client_proxy_0
         .mint_coins(&["mintb", "1", "10", "XUS"], true)
         .unwrap();
 }
