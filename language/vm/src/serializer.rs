@@ -158,7 +158,7 @@ impl CompiledScriptMut {
     /// [`CompiledScript::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ScriptSerializer::new(1);
+        let mut ser = ScriptSerializer::new(VERSION_MAX);
         let mut temp = BinaryData::new();
 
         ser.common.serialize_common_tables(&mut temp, self)?;
@@ -196,7 +196,7 @@ impl CompiledModuleMut {
     /// [`CompiledModule::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ModuleSerializer::new(1);
+        let mut ser = ModuleSerializer::new(VERSION_MAX);
         let mut temp = BinaryData::new();
         ser.serialize_tables(&mut temp, self)?;
         if temp.len() > u32::max_value() as usize {
@@ -521,7 +521,10 @@ fn serialize_field_definition(
 ///
 /// A `FunctionDefinition` gets serialized as follows:
 /// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
+/// - `FunctionDefinition.visibility` 1 byte for the visibility modifier of the function
 /// - `FunctionDefinition.flags` 1 byte for the flags of the function
+///   The flags now has only one bit used:
+///   - bit 0x2: native indicator, indicates whether the function is a native function.
 /// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
 fn serialize_function_definition(
     binary: &mut BinaryData,
@@ -529,17 +532,13 @@ fn serialize_function_definition(
 ) -> Result<()> {
     serialize_function_handle_index(binary, &function_definition.function)?;
 
-    let is_public = if function_definition.is_public() {
-        FunctionDefinition::PUBLIC
-    } else {
-        0
-    };
+    binary.push(function_definition.visibility as u8)?;
     let is_native = if function_definition.is_native() {
         FunctionDefinition::NATIVE
     } else {
         0
     };
-    binary.push(is_public | is_native)?;
+    binary.push(is_native)?;
 
     serialize_acquires(binary, &function_definition.acquires_global_resources)?;
     if let Some(code) = &function_definition.code {

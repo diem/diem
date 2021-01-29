@@ -8,7 +8,7 @@ use move_vm::{
     access::ModuleAccess,
     file_format::{
         CompiledModule, FunctionDefinition, Kind, SignatureToken, StructDefinition,
-        StructFieldInformation, StructHandleIndex, TypeParameterIndex,
+        StructFieldInformation, StructHandleIndex, TypeParameterIndex, Visibility,
     },
 };
 use std::{collections::BTreeMap, fs};
@@ -60,7 +60,7 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
     let mut public_funs = module
         .function_defs()
         .iter()
-        .filter(|fdef| fdef.is_public)
+        .filter(|fdef| matches!(fdef.visibility, Visibility::Public))
         .peekable();
     if public_funs.peek().is_some() {
         members.push(format!("    {}", DISCLAIMER));

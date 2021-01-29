@@ -11,7 +11,7 @@ use vm::{
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, CompiledScript, FunctionHandleIndex, ModuleHandleIndex, SignatureToken,
-        StructHandleIndex, TableIndex,
+        StructHandleIndex, TableIndex, Visibility,
     },
     IndexKind,
 };
@@ -71,7 +71,7 @@ impl<'a, 'b> Context<'a, 'b> {
             }
             // Module::FuncName -> def handle idx
             for func_def in module.function_defs() {
-                if !func_def.is_public {
+                if !matches!(func_def.visibility, Visibility::Public) {
                     continue;
                 }
                 let func_handle = module.function_handle_at(func_def.function);

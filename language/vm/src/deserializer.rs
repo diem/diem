@@ -802,10 +802,7 @@ fn load_signature_tokens(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Vec
 pub fn load_signature_token_test_entry(
     cursor: std::io::Cursor<&[u8]>,
 ) -> BinaryLoaderResult<SignatureToken> {
-    load_signature_token(&mut VersionedCursor::new_for_test(
-        versioned_data::MAX_VERSION,
-        cursor,
-    ))
+    load_signature_token(&mut VersionedCursor::new_for_test(VERSION_MAX, cursor))
 }
 
 /// Deserializes a `SignatureToken`.
@@ -1097,16 +1094,44 @@ fn load_function_def(cursor: &mut VersionedCursor) -> BinaryLoaderResult<Functio
     let flags = cursor.read_u8().map_err(|_| {
         PartialVMError::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
     })?;
-    let is_public = (flags & FunctionDefinition::PUBLIC) != 0;
+
+    let (visibility, extra_flags) = match cursor.version() {
+        VERSION_1 => {
+            let vis = if (flags & Visibility::Public as u8) != 0 {
+                Visibility::Public
+            } else {
+                Visibility::Private
+            };
+            (vis, flags)
+        }
+        VERSION_2 => {
+            // NOTE: changes compared with VERSION_1
+            // - in VERSION_1: the flags is a byte compositing both the visibility info and whether
+            //                 the function is a native function
+            // - in VERSION_2: the flags only represent the visibility info and we need to advance
+            //                 the cursor to read up the next byte as flags
+            let vis = flags.try_into().map_err(|_| {
+                PartialVMError::new(StatusCode::MALFORMED)
+                    .with_message("Invalid visibility byte".to_string())
+            })?;
+            let extra_flags = cursor.read_u8().map_err(|_| {
+                PartialVMError::new(StatusCode::MALFORMED)
+                    .with_message("Unexpected EOF".to_string())
+            })?;
+            (vis, extra_flags)
+        }
+        _ => unreachable!("Invalid bytecode version"),
+    };
+
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
-    let code_unit = if (flags & FunctionDefinition::NATIVE) != 0 {
+    let code_unit = if (extra_flags & FunctionDefinition::NATIVE) != 0 {
         None
     } else {
         Some(load_code_unit(cursor)?)
     };
     Ok(FunctionDefinition {
         function,
-        is_public,
+        visibility,
         acquires_global_resources,
         code: code_unit,
     })

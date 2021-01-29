@@ -120,10 +120,10 @@ fn make_module() -> CompiledModuleMut {
             },
         ],
         function_defs: vec![
-            // fun fn() { return; }
+            // public fun fn() { return; }
             FunctionDefinition {
                 function: FunctionHandleIndex(0),
-                is_public: true,
+                visibility: Visibility::Public,
                 acquires_global_resources: vec![],
                 code: Some(CodeUnit {
                     locals: SignatureIndex(0),
@@ -133,7 +133,7 @@ fn make_module() -> CompiledModuleMut {
             // fun g_fn<T>() { return; }
             FunctionDefinition {
                 function: FunctionHandleIndex(1),
-                is_public: false,
+                visibility: Visibility::Private,
                 acquires_global_resources: vec![],
                 code: Some(CodeUnit {
                     locals: SignatureIndex(0),
@@ -143,7 +143,7 @@ fn make_module() -> CompiledModuleMut {
             // fun test_fn() { ... } - tests will fill up the code
             FunctionDefinition {
                 function: FunctionHandleIndex(2),
-                is_public: false,
+                visibility: Visibility::Private,
                 acquires_global_resources: vec![],
                 code: Some(CodeUnit {
                     locals: SignatureIndex(0),

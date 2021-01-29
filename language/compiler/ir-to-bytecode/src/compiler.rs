@@ -27,7 +27,7 @@ use vm::{
         Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
         CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition, FunctionSignature, Kind,
         Signature, SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature,
+        StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature, Visibility,
     },
 };
 
@@ -909,9 +909,9 @@ fn compile_function(
 
     let ast_function = ast_function.value;
 
-    let is_public = match ast_function.visibility {
-        FunctionVisibility::Internal => false,
-        FunctionVisibility::Public => true,
+    let visibility = match ast_function.visibility {
+        FunctionVisibility::Internal => Visibility::Private,
+        FunctionVisibility::Public => Visibility::Public,
     };
     let acquires_global_resources = ast_function
         .acquires
@@ -923,7 +923,7 @@ fn compile_function(
 
     Ok(FunctionDefinition {
         function: fh_idx,
-        is_public,
+        visibility,
         acquires_global_resources,
         code,
     })

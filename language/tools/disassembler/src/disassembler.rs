@@ -15,7 +15,7 @@ use vm::{
     file_format::{
         Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex,
         Kind, Signature, SignatureIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, TableIndex, TypeSignature,
+        StructFieldInformation, TableIndex, TypeSignature, Visibility,
     },
 };
 
@@ -853,14 +853,17 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_map
             .get_function_source_map(function_definition_index)?;
 
-        if self.options.only_public && !function_definition.is_public() {
+        if self.options.only_public && !matches!(function_definition.visibility, Visibility::Public)
+        {
             return Ok("".to_string());
         }
 
-        let visibility_modifier = if function_definition.is_native() {
+        let visibility_modifier = match function_definition.visibility {
+            Visibility::Private => "",
+            Visibility::Public => "public ",
+        };
+        let native_modifier = if function_definition.is_native() {
             "native "
-        } else if function_definition.is_public() {
-            "public "
         } else {
             ""
         };
@@ -916,8 +919,9 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Ok(self.format_function_coverage(
             name,
             format!(
-                "{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
+                "{visibility_modifier}{native_modifier}{name}{ty_params}({params}){ret_type}{body}",
                 visibility_modifier = visibility_modifier,
+                native_modifier = native_modifier,
                 name = name,
                 ty_params = ty_params,
                 params = &parameters.join(", "),
