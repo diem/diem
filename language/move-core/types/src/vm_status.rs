@@ -607,6 +607,7 @@ pub enum StatusCode {
     VALUE_SERIALIZATION_ERROR = 3022,
     VALUE_DESERIALIZATION_ERROR = 3023,
     CODE_DESERIALIZATION_ERROR = 3024,
+    INVALID_FLAG_BITS = 3025,
 
     // Errors that can arise at runtime
     // Runtime Errors: 4000-4999
