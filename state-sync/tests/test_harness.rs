@@ -4,7 +4,7 @@
 use anyhow::{bail, format_err, Result};
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::{NodeConfig, RoleType, TrustedPeer, HANDSHAKE_VERSION},
+    config::{NodeConfig, Peer, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_crypto::{
@@ -382,7 +382,7 @@ impl StateSyncEnvironment {
                 .iter()
                 .map(|peer| {
                     let peer = peer.borrow();
-                    (peer.peer_id, TrustedPeer::from(peer.network_addr.clone()))
+                    (peer.peer_id, Peer::from(peer.network_addr.clone()))
                 })
                 .collect();
             let trusted_peers = Arc::new(RwLock::new(HashMap::new()));

@@ -10,7 +10,7 @@ use crate::{
 use channel::{diem_channel, message_queues::QueueStyle, Sender};
 use core::str::FromStr;
 use diem_config::{
-    config::{RoleType, TrustedPeer, TrustedPeerSet},
+    config::{Peer, PeerSet, RoleType},
     network_id::NetworkId,
 };
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
@@ -38,7 +38,7 @@ fn setup_conn_mgr(
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::random());
 
     // Fills in the gaps for eligible peers.  Eligible peers in tests aren't always the seeds
-    let seeds: TrustedPeerSet = eligible_peers
+    let seeds: PeerSet = eligible_peers
         .into_iter()
         .map(|peer_id| {
             let addrs: Vec<NetworkAddress> = seed_addrs
@@ -46,7 +46,7 @@ fn setup_conn_mgr(
                 .map_or_else(Vec::new, |addr| addr.clone());
             let mut pubkeys = HashSet::new();
             pubkeys.insert(x25519::PrivateKey::generate_for_testing().public_key());
-            (peer_id, TrustedPeer::new(addrs, pubkeys))
+            (peer_id, Peer::new(addrs, pubkeys))
         })
         .collect();
 
@@ -56,7 +56,7 @@ fn setup_conn_mgr(
 fn setup_conn_mgr_with_context(
     network_context: NetworkContext,
     rt: &mut Runtime,
-    seeds: &TrustedPeerSet,
+    seeds: &PeerSet,
 ) -> (
     diem_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
@@ -266,7 +266,7 @@ async fn expect_num_dials(
 async fn send_update_discovered_peers(
     conn_mgr_reqs_tx: &mut Sender<ConnectivityRequest>,
     src: DiscoverySource,
-    peers: TrustedPeerSet,
+    peers: PeerSet,
 ) -> Result<(), SendError> {
     conn_mgr_reqs_tx
         .send(ConnectivityRequest::UpdateDiscoveredPeers(src, peers))
@@ -283,7 +283,7 @@ async fn send_update_addresses(
         src,
         peer_addresses
             .into_iter()
-            .map(|(peer_id, addresses)| (peer_id, TrustedPeer::from(addresses)))
+            .map(|(peer_id, addresses)| (peer_id, Peer::from(addresses)))
             .collect(),
     )
     .await
@@ -606,10 +606,10 @@ fn disconnect() {
     let events_f = async move {
         info!("Sending pubkey & address of other peer");
 
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+            Peer::new(vec![other_addr.clone()], other_pubkeys),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -633,10 +633,10 @@ fn disconnect() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+            Peer::new(vec![other_addr.clone()], HashSet::new()),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -677,10 +677,10 @@ fn retry_on_failure() {
 
     let events_f = async move {
         info!("Sending pubkey set and addr of other peer");
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+            Peer::new(vec![other_addr.clone()], other_pubkeys),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -722,10 +722,10 @@ fn retry_on_failure() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+            Peer::new(vec![other_addr.clone()], HashSet::new()),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -785,10 +785,10 @@ fn no_op_requests() {
 
     let events_f = async move {
         info!("Sending pubkey set and addr of other peer");
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], other_pubkeys),
+            Peer::new(vec![other_addr.clone()], other_pubkeys),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -826,10 +826,10 @@ fn no_op_requests() {
 
         // Send request to make other peer ineligible.
         info!("Sending request to make other peer ineligible");
-        let mut peers = TrustedPeerSet::new();
+        let mut peers = PeerSet::new();
         peers.insert(
             other_peer_id,
-            TrustedPeer::new(vec![other_addr.clone()], HashSet::new()),
+            Peer::new(vec![other_addr.clone()], HashSet::new()),
         );
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
@@ -883,15 +883,9 @@ fn backoff_on_failure() {
         let (peer_b, _, peer_b_keys, peer_b_addr) = gen_peer();
 
         info!("Sending pubkey set and addr of peers");
-        let mut peers = TrustedPeerSet::new();
-        peers.insert(
-            peer_a,
-            TrustedPeer::new(vec![peer_a_addr.clone()], peer_a_keys),
-        );
-        peers.insert(
-            peer_b,
-            TrustedPeer::new(vec![peer_b_addr.clone()], peer_b_keys),
-        );
+        let mut peers = PeerSet::new();
+        peers.insert(peer_a, Peer::new(vec![peer_a_addr.clone()], peer_a_keys));
+        peers.insert(peer_b, Peer::new(vec![peer_b_addr.clone()], peer_b_keys));
         send_update_discovered_peers(&mut conn_mgr_reqs_tx, DiscoverySource::OnChain, peers)
             .await
             .unwrap();
@@ -1196,7 +1190,7 @@ fn public_connection_limit() {
     let seeds = (0..MAX_TEST_CONNECTIONS + 1)
         .map(|_| {
             let (peer_id, _, pubkeys, addr) = gen_peer();
-            (peer_id, TrustedPeer::new(vec![addr], pubkeys))
+            (peer_id, Peer::new(vec![addr], pubkeys))
         })
         .collect();
 
@@ -1250,7 +1244,7 @@ fn basic_update_discovered_peers() {
     let (_conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (_ticker_tx, ticker_rx) = channel::new_test::<()>(0);
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
-    let seeds = TrustedPeerSet::new();
+    let seeds = PeerSet::new();
     let mut rng = StdRng::from_seed(TEST_SEED);
 
     let mut conn_mgr = ConnectivityManager::new(
@@ -1279,10 +1273,10 @@ fn basic_update_discovered_peers() {
     let pubkeys_2: HashSet<_> = vec![pubkey_2].into_iter().collect();
     let pubkeys_1_2: HashSet<_, _> = vec![pubkey_1, pubkey_2].into_iter().collect();
 
-    let peer_a1 = TrustedPeer::new(vec![addr_a.clone()], pubkeys_1.clone());
-    let peer_a2 = TrustedPeer::new(vec![addr_a.clone()], pubkeys_2);
-    let peer_b1 = TrustedPeer::new(vec![addr_b], pubkeys_1.clone());
-    let peer_a_1_2 = TrustedPeer::new(vec![addr_a], pubkeys_1_2.clone());
+    let peer_a1 = Peer::new(vec![addr_a.clone()], pubkeys_1.clone());
+    let peer_a2 = Peer::new(vec![addr_a.clone()], pubkeys_2);
+    let peer_b1 = Peer::new(vec![addr_b], pubkeys_1.clone());
+    let peer_a_1_2 = Peer::new(vec![addr_a], pubkeys_1_2.clone());
 
     let pubkeys_map_empty = HashMap::new();
     let pubkeys_map_1: HashMap<_, _> = vec![(peer_id_a, pubkeys_1.clone())].into_iter().collect();
@@ -1290,11 +1284,11 @@ fn basic_update_discovered_peers() {
         .into_iter()
         .collect();
 
-    let peers_1: TrustedPeerSet = vec![(peer_id_a, peer_a1)].into_iter().collect();
-    let peers_2: TrustedPeerSet = vec![(peer_id_a, peer_a2), (peer_id_b, peer_b1.clone())]
+    let peers_1: PeerSet = vec![(peer_id_a, peer_a1)].into_iter().collect();
+    let peers_2: PeerSet = vec![(peer_id_a, peer_a2), (peer_id_b, peer_b1.clone())]
         .into_iter()
         .collect();
-    let peers_1_2: TrustedPeerSet = vec![(peer_id_a, peer_a_1_2), (peer_id_b, peer_b1)]
+    let peers_1_2: PeerSet = vec![(peer_id_a, peer_a_1_2), (peer_id_b, peer_b1)]
         .into_iter()
         .collect();
 
@@ -1307,7 +1301,7 @@ fn basic_update_discovered_peers() {
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
 
     // reset
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, TrustedPeerSet::new());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // basic union across multiple sources
@@ -1323,14 +1317,14 @@ fn basic_update_discovered_peers() {
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, TrustedPeerSet::new());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
 
     // reset
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, TrustedPeerSet::new());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 
     // empty update again does nothing
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, TrustedPeerSet::new());
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
     assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
 }

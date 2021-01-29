@@ -74,7 +74,7 @@ pub struct NetworkConfig {
     // trusted peers set.  TODO: Replace usage in configs with `seeds` this is for backwards compatibility
     pub seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
     // The initial peers to connect to prior to onchain discovery
-    pub seeds: TrustedPeerSet,
+    pub seeds: PeerSet,
     // The maximum size of an inbound or outbound request frame
     pub max_frame_size: usize,
     // Enables proxy protocol on incoming connections to get original source addresses
@@ -111,7 +111,7 @@ impl NetworkConfig {
             network_address_key_backend: None,
             network_id,
             seed_addrs: HashMap::new(),
-            seeds: TrustedPeerSet::default(),
+            seeds: PeerSet::default(),
             max_frame_size: MAX_FRAME_SIZE,
             enable_proxy_protocol: false,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
@@ -340,56 +340,53 @@ impl Default for RateLimitConfig {
     }
 }
 
-pub type TrustedPeerSet = HashMap<PeerId, TrustedPeer>;
+pub type PeerSet = HashMap<PeerId, Peer>;
 
 /// Represents a single seed configuration for a seed peer
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
-pub struct TrustedPeer {
-    pub keys: HashSet<x25519::PublicKey>,
+pub struct Peer {
     pub addresses: Vec<NetworkAddress>,
+    pub keys: HashSet<x25519::PublicKey>,
 }
 
-impl TrustedPeer {
+impl Peer {
     /// Combines `Vec<NetworkAddress>` keys with the `HashSet` given
-    pub fn new(
-        addresses: Vec<NetworkAddress>,
-        mut keys: HashSet<x25519::PublicKey>,
-    ) -> TrustedPeer {
+    pub fn new(addresses: Vec<NetworkAddress>, mut keys: HashSet<x25519::PublicKey>) -> Peer {
         let addr_keys = addresses
             .iter()
             .filter_map(NetworkAddress::find_noise_proto);
         keys.extend(addr_keys);
-        TrustedPeer { addresses, keys }
+        Peer { addresses, keys }
     }
 
-    /// Combines two `TrustedPeer`.  Note: Does not merge duplicate addresses
-    pub fn extend(&mut self, other: TrustedPeer) {
+    /// Combines two `Peer`.  Note: Does not merge duplicate addresses
+    pub fn extend(&mut self, other: Peer) {
         self.addresses.extend(other.addresses);
         self.keys.extend(other.keys);
     }
 }
 
-impl From<Vec<NetworkAddress>> for TrustedPeer {
-    /// Converts a `Vec<NetworkAddress>` to a `TrustedPeer`s by extracting the `x25519::PublicKey`s from the address
-    fn from(addresses: Vec<NetworkAddress>) -> TrustedPeer {
+impl From<Vec<NetworkAddress>> for Peer {
+    /// Converts a `Vec<NetworkAddress>` to a `Peer`s by extracting the `x25519::PublicKey`s from the address
+    fn from(addresses: Vec<NetworkAddress>) -> Peer {
         let keys: HashSet<x25519::PublicKey> = addresses
             .iter()
             .filter_map(NetworkAddress::find_noise_proto)
             .collect();
-        TrustedPeer { addresses, keys }
+        Peer { addresses, keys }
     }
 }
 
-impl From<NetworkAddress> for TrustedPeer {
-    fn from(address: NetworkAddress) -> TrustedPeer {
-        TrustedPeer::from(vec![address])
+impl From<NetworkAddress> for Peer {
+    fn from(address: NetworkAddress) -> Peer {
+        Peer::from(vec![address])
     }
 }
 
-impl From<HashSet<x25519::PublicKey>> for TrustedPeer {
-    fn from(keys: HashSet<x25519::PublicKey>) -> TrustedPeer {
-        TrustedPeer {
+impl From<HashSet<x25519::PublicKey>> for Peer {
+    fn from(keys: HashSet<x25519::PublicKey>) -> Peer {
+        Peer {
             addresses: Vec::new(),
             keys,
         }

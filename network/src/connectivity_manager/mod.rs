@@ -31,7 +31,7 @@ use crate::{
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
-use diem_config::{config::TrustedPeerSet, network_id::NetworkContext};
+use diem_config::{config::PeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
@@ -130,7 +130,7 @@ impl fmt::Display for DiscoverySource {
 #[derive(Debug, Serialize)]
 pub enum ConnectivityRequest {
     /// Update set of discovered peers and associated info
-    UpdateDiscoveredPeers(DiscoverySource, TrustedPeerSet),
+    UpdateDiscoveredPeers(DiscoverySource, PeerSet),
     /// Gets current size of connected peers. This is useful in tests.
     #[serde(skip)]
     GetConnectedSize(oneshot::Sender<usize>),
@@ -206,7 +206,7 @@ where
     pub fn new(
         network_context: Arc<NetworkContext>,
         eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-        seeds: &TrustedPeerSet,
+        seeds: &PeerSet,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_notifs_channel::Receiver,
@@ -549,7 +549,7 @@ where
     fn handle_update_discovered_peers(
         &mut self,
         src: DiscoverySource,
-        new_discovered_peers: TrustedPeerSet,
+        new_discovered_peers: PeerSet,
     ) {
         let self_peer_id = self.network_context.peer_id();
         let mut keys_updated = false;

@@ -12,7 +12,7 @@
 use channel::{self, message_queues::QueueStyle};
 use diem_config::{
     config::{
-        DiscoveryMethod, NetworkConfig, RateLimitConfig, RoleType, TrustedPeer, TrustedPeerSet,
+        DiscoveryMethod, NetworkConfig, Peer, PeerSet, RateLimitConfig, RoleType,
         CONNECTION_BACKOFF_BASE, CONNECTIVITY_CHECK_INTERVAL_MS, MAX_CONCURRENT_NETWORK_REQS,
         MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
         MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
@@ -125,7 +125,7 @@ impl NetworkBuilder {
 
     pub fn new_for_test(
         chain_id: ChainId,
-        seeds: &TrustedPeerSet,
+        seeds: &PeerSet,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
@@ -224,7 +224,7 @@ impl NetworkBuilder {
             config
                 .seed_addrs
                 .iter()
-                .map(|(peer_id, addrs)| (peer_id, TrustedPeer::from(addrs.clone())))
+                .map(|(peer_id, addrs)| (peer_id, Peer::from(addrs.clone())))
                 .for_each(|(peer_id, peer)| {
                     let seed = seeds.entry(*peer_id).or_default();
                     seed.extend(peer)
@@ -318,7 +318,7 @@ impl NetworkBuilder {
     /// permissioned.
     pub fn add_connectivity_manager(
         &mut self,
-        seeds: &TrustedPeerSet,
+        seeds: &PeerSet,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         max_outbound_connections: usize,
         connection_backoff_base: u64,
@@ -336,7 +336,7 @@ impl NetworkBuilder {
         // Merge pubkeys that may be in the seed addresses
         let mut seeds = seeds.clone();
         seeds.values_mut().for_each(
-            |TrustedPeer {
+            |Peer {
                  addresses, keys, ..
              }| {
                 addresses

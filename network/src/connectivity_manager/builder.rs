@@ -6,7 +6,7 @@ use crate::{
     counters,
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
-use diem_config::{config::TrustedPeerSet, network_id::NetworkContext};
+use diem_config::{config::PeerSet, network_id::NetworkContext};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_types::PeerId;
@@ -27,7 +27,7 @@ pub type ConnectivityManagerService = ConnectivityManager<Fuse<IntervalStream>, 
 struct ConnectivityManagerBuilderConfig {
     network_context: Arc<NetworkContext>,
     eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-    seeds: TrustedPeerSet,
+    seeds: PeerSet,
     connectivity_check_interval_ms: u64,
     backoff_base: u64,
     max_connection_delay_ms: u64,
@@ -55,7 +55,7 @@ impl ConnectivityManagerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
         eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-        seeds: TrustedPeerSet,
+        seeds: PeerSet,
         connectivity_check_interval_ms: u64,
         backoff_base: u64,
         max_connection_delay_ms: u64,
