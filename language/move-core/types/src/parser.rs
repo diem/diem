@@ -3,7 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
-    identifier::Identifier,
+    identifier::{self, Identifier},
     language_storage::{StructTag, TypeTag},
     transaction_argument::TransactionArgument,
 };
@@ -18,6 +18,7 @@ enum Token {
     BoolType,
     AddressType,
     VectorType,
+    SignerType,
     Whitespace(String),
     Name(String),
     Address(String),
@@ -50,6 +51,7 @@ fn name_token(s: String) -> Token {
         "vector" => Token::VectorType,
         "true" => Token::True,
         "false" => Token::False,
+        "signer" => Token::SignerType,
         _ => Token::Name(s),
     }
 }
@@ -165,7 +167,7 @@ fn next_token(s: &str) -> Result<Option<(Token, usize)>> {
                 let mut r = String::new();
                 r.push(c);
                 for c in it {
-                    if c.is_ascii_alphanumeric() {
+                    if identifier::is_valid_identifier_char(c) {
                         r.push(c);
                     } else {
                         break;
@@ -251,6 +253,7 @@ impl<I: Iterator<Item = Token>> Parser<I> {
             Token::U128Type => TypeTag::U128,
             Token::BoolType => TypeTag::Bool,
             Token::AddressType => TypeTag::Address,
+            Token::SignerType => TypeTag::Signer,
             Token::VectorType => {
                 self.consume(Token::Lt)?;
                 let ty = self.parse_type_tag()?;
@@ -420,5 +423,29 @@ fn tests_parse_transaction_argument_negative() {
         "",
     ] {
         assert!(parse_transaction_argument(s).is_err())
+    }
+}
+
+#[test]
+fn test_type_tag() {
+    for s in &[
+        "u64",
+        "bool",
+        "vector<u8>",
+        "vector<vector<u64>>",
+        "signer",
+        "0x1::M::S",
+        "0x2::M::S_",
+        "0x3::M_::S",
+        "0x4::M_::S_",
+        "0x00000000004::M::S",
+        "0x1::M::S<u64>",
+        "0x1::M::S<0x2::P::Q>",
+        "vector<0x1::M::S>",
+        "vector<0x1::M_::S_>",
+        "vector<vector<0x1::M_::S_>>",
+        "0x1::M::S<vector<u8>>",
+    ] {
+        assert!(parse_type_tag(s).is_ok(), "Failed to parse tag {}", s);
     }
 }
