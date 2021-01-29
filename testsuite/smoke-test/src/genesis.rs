@@ -3,6 +3,7 @@
 
 use crate::{
     smoke_test_environment::SmokeTestEnvironment,
+    storage::{db_backup, db_restore},
     test_utils::diem_swarm_utils::{
         get_op_tool, insert_waypoint, load_diem_root_storage, load_node_config, save_node_config,
     },
@@ -31,6 +32,10 @@ use transaction_builder::encode_remove_validator_and_reconfigure_script;
 /// 4. Test a node lagging behind can sync to the waypoint
 fn test_genesis_transaction_flow() {
     let db_bootstrapper = workspace_builder::get_bin("db-bootstrapper");
+    // prebuild tools.
+    workspace_builder::get_bin("db-backup");
+    workspace_builder::get_bin("db-restore");
+    workspace_builder::get_bin("db-backup-verify");
 
     let num_nodes = 4;
     let mut env = SmokeTestEnvironment::new(num_nodes);
@@ -148,6 +153,31 @@ fn test_genesis_transaction_flow() {
         .wait_for_transaction(treasury_compliance_account_address(), 0)
         .unwrap();
 
+    // Create a new epoch to make things more complicated
+    client_proxy_1
+        .change_diem_version(&["change_diem_version", "12345"], true)
+        .unwrap();
+
+    // Make full DB backup for later use. The backup crosses the new genesis.
+    let epoch = client_proxy_1
+        .latest_epoch_change_li()
+        .unwrap()
+        .ledger_info()
+        .next_block_epoch();
+    let version = client_proxy_1.get_latest_version();
+    let backup_path = db_backup(
+        load_node_config(&env.validator_swarm, 1)
+            .0
+            .storage
+            .backup_service_address
+            .port(),
+        epoch.checked_sub(1).unwrap(), // target epoch: most recently closed epoch
+        version,                       // target version
+        version as usize,              // txn batch size (version 0 is in its own batch)
+        version as usize,              // state snapshot interval
+        &[waypoint],
+    );
+
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
     let op_tool = get_op_tool(&env.validator_swarm, 1);
     let _ = op_tool
@@ -168,6 +198,21 @@ fn test_genesis_transaction_flow() {
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_0
         .mint_coins(&["mintb", "1", "10", "XUS"], true)
+        .unwrap();
+
+    println!("10. nuke DB on node 0, and run db-restore, test if it rejoins the network okay.");
+    env.validator_swarm.kill_node(0);
+    let db_dir = node_config.storage.dir();
+    fs::remove_dir_all(&db_dir).unwrap();
+    db_restore(backup_path.path(), db_dir.as_path(), &[waypoint]);
+    env.validator_swarm.add_node(0).unwrap();
+    assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
+
+    let mut client = env.get_validator_client(0, Some(waypoint));
+    client.set_accounts(client_proxy_0.copy_all_accounts());
+    let acc = client.create_next_account(false).unwrap();
+    client
+        .mint_coins(&["mintb", &acc.index.to_string(), "10", "XUS"], true)
         .unwrap();
 }
 

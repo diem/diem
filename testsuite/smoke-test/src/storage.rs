@@ -14,7 +14,7 @@ use anyhow::{bail, Result};
 use backup_cli::metadata::view::BackupStorageState;
 use cli::client_proxy::ClientProxy;
 use diem_temppath::TempPath;
-use diem_types::transaction::Version;
+use diem_types::{transaction::Version, waypoint::Waypoint};
 use rand::random;
 use std::{
     fs,
@@ -68,7 +68,14 @@ fn test_db_restore() {
 
     // make a backup from node 1
     let (node1_config, _) = load_node_config(&env.validator_swarm, 1);
-    let backup_path = db_backup(node1_config.storage.backup_service_address.port(), 1, 50);
+    let backup_path = db_backup(
+        node1_config.storage.backup_service_address.port(),
+        1,
+        50,
+        20,
+        40,
+        &[],
+    );
 
     // take down node 0
     env.validator_swarm.kill_node(0);
@@ -83,7 +90,7 @@ fn test_db_restore() {
     fs::remove_dir_all(db_dir.join("consensusdb")).unwrap();
 
     // restore db from backup
-    db_restore(backup_path.path(), db_dir.as_path());
+    db_restore(backup_path.path(), db_dir.as_path(), &[]);
 
     // start node 0 on top of restored db
     // (add_node() waits for it to connect to peers)
@@ -103,15 +110,21 @@ fn test_db_restore() {
     ));
 }
 
-fn db_backup_verify(backup_path: &Path) {
+fn db_backup_verify(backup_path: &Path, trusted_waypoints: &[Waypoint]) {
     let now = Instant::now();
     let bin_path = workspace_builder::get_bin("db-backup-verify");
     let metadata_cache_path = TempPath::new();
 
     metadata_cache_path.create_as_dir().unwrap();
 
-    let output = Command::new(bin_path.as_path())
-        .current_dir(workspace_root())
+    let mut cmd = Command::new(bin_path.as_path());
+
+    trusted_waypoints.iter().for_each(|w| {
+        cmd.arg("--trust-waypoint");
+        cmd.arg(&w.to_string());
+    });
+
+    let output = cmd
         .args(&[
             "--metadata-cache-dir",
             metadata_cache_path.path().to_str().unwrap(),
@@ -119,6 +132,7 @@ fn db_backup_verify(backup_path: &Path) {
             "--dir",
             backup_path.to_str().unwrap(),
         ])
+        .current_dir(workspace_root())
         .output()
         .unwrap();
     if !output.status.success() {
@@ -134,10 +148,11 @@ fn wait_for_backups(
     bin_path: &Path,
     metadata_cache_path: &Path,
     backup_path: &Path,
+    trusted_waypoints: &[Waypoint],
 ) -> Result<()> {
     for _ in 0..60 {
         // the verify should always succeed.
-        db_backup_verify(backup_path);
+        db_backup_verify(backup_path, trusted_waypoints);
 
         let output = Command::new(bin_path)
             .current_dir(workspace_root())
@@ -170,7 +185,14 @@ fn wait_for_backups(
     bail!("Failed to create backup.");
 }
 
-fn db_backup(backup_service_port: u16, target_epoch: u64, target_version: Version) -> TempPath {
+pub(crate) fn db_backup(
+    backup_service_port: u16,
+    target_epoch: u64,
+    target_version: Version,
+    transaction_batch_size: usize,
+    state_snapshot_interval: usize,
+    trusted_waypoints: &[Waypoint],
+) -> TempPath {
     let now = Instant::now();
     let bin_path = workspace_builder::get_bin("db-backup");
     let metadata_cache_path1 = TempPath::new();
@@ -190,9 +212,9 @@ fn db_backup(backup_service_port: u16, target_epoch: u64, target_version: Versio
             "--backup-service-address",
             &format!("http://localhost:{}", backup_service_port),
             "--transaction-batch-size",
-            "20",
+            &transaction_batch_size.to_string(),
             "--state-snapshot-interval",
-            "40",
+            &state_snapshot_interval.to_string(),
             "--metadata-cache-dir",
             metadata_cache_path1.path().to_str().unwrap(),
             "local-fs",
@@ -210,21 +232,27 @@ fn db_backup(backup_service_port: u16, target_epoch: u64, target_version: Versio
         bin_path.as_path(),
         metadata_cache_path2.path(),
         backup_path.path(),
+        trusted_waypoints,
     );
     backup_coordinator.kill().unwrap();
     wait_res.unwrap();
     backup_path
 }
 
-fn db_restore(backup_path: &Path, db_path: &Path) {
+pub(crate) fn db_restore(backup_path: &Path, db_path: &Path, trusted_waypoints: &[Waypoint]) {
     let now = Instant::now();
     let bin_path = workspace_builder::get_bin("db-restore");
     let metadata_cache_path = TempPath::new();
 
     metadata_cache_path.create_as_dir().unwrap();
 
-    let output = Command::new(bin_path.as_path())
-        .current_dir(workspace_root())
+    let mut cmd = Command::new(bin_path.as_path());
+    trusted_waypoints.iter().for_each(|w| {
+        cmd.arg("--trust-waypoint");
+        cmd.arg(&w.to_string());
+    });
+
+    let output = cmd
         .args(&[
             "--target-db-dir",
             db_path.to_str().unwrap(),
@@ -235,6 +263,7 @@ fn db_restore(backup_path: &Path, db_path: &Path) {
             "--dir",
             backup_path.to_str().unwrap(),
         ])
+        .current_dir(workspace_root())
         .output()
         .unwrap();
     if !output.status.success() {
