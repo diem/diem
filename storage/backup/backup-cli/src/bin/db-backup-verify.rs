@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
 }
 
 async fn main_impl() -> Result<()> {
-    Logger::new().level(Level::Info).init();
+    Logger::new().level(Level::Info).read_env().init();
     let _mp = MetricsPusher::start();
 
     let opt = Opt::from_args();
