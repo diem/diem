@@ -989,7 +989,7 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
                 nfields.expect("ICE fields were already unique"),
             )
         }
-        EL::Var(..) => panic!("unexpected specification construct"),
+        EL::Var(_, _) => panic!("unexpected specification construct"),
     };
     Some(sp(loc, nl_))
 }

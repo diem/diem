@@ -1809,7 +1809,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         _ => Err(unexpected_token_error(
             tokens,
             "one of `assert`, `assume`, `decreases`, `aborts_if`, `aborts_with`, `succeeds_if`, \
-            `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name",
+             `modifies`, `emits`, `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, \
+             or a name",
         )),
     }
 }

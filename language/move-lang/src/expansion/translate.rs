@@ -1272,6 +1272,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         }
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
+        PE::Spec(_) if context.in_spec_context => {
+            context.error(vec![(
+                loc,
+                "'spec' blocks cannot be used inside of a spec context",
+            )]);
+            EE::UnresolvedError
+        }
         PE::Spec(spec_block) => {
             let (spec_id, unbound_names) = context.bind_exp_spec(spec_block);
             EE::Spec(spec_id, unbound_names)
@@ -1427,21 +1434,53 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
     use E::LValue_ as EL;
     use P::Exp_ as PE;
     let a_ = match e_ {
-        PE::Name(sp!(_, P::ModuleAccess_::ModuleAccess(..)), _)
-        | PE::Name(sp!(_, P::ModuleAccess_::QualifiedModuleAccess(..)), _)
-        | PE::Name(_, Some(_))
-            if !context.require_spec_context(
-                loc,
-                "only simple names allowed in assignment outside of specifications",
-            ) =>
+        PE::Name(n @ sp!(_, P::ModuleAccess_::ModuleAccess(_, _)), _)
+        | PE::Name(n @ sp!(_, P::ModuleAccess_::QualifiedModuleAccess(_, _)), _)
+            if !context.in_spec_context =>
         {
-            assert!(context.has_errors());
+            let msg = format!(
+                "Unexpected assignment of module access without fields outside of a spec \
+                 context.\nIf you are trying to unpack a struct, try adding fields, e.g. '{} {{}}'",
+                n
+            );
+            context.error(vec![(loc, msg)]);
+
+            // For unused alias warnings and unbound modules
+            module_access(context, Access::Term, n);
+
+            return None;
+        }
+        PE::Name(n, Some(_)) if !context.in_spec_context => {
+            let msg = format!(
+                "Unexpected assignment of instantiated type without fields outside of a spec \
+                 context.\nIf you are trying to unpack a struct, try adding fields, e.g. '{} {{}}'",
+                n
+            );
+            context.error(vec![(loc, msg)]);
+
+            // For unused alias warnings and unbound modules
+            module_access(context, Access::Term, n);
+
             return None;
         }
         PE::Name(pn, ptys_opt) => {
             let en = module_access(context, Access::Term, pn)?;
-            let tys_opt = optional_types(context, ptys_opt);
-            EL::Var(en, tys_opt)
+            match &en.value {
+                E::ModuleAccess_::ModuleAccess(m, n) if !context.in_spec_context => {
+                    let msg = format!(
+                        "Unexpected assignment of module access without fields outside of a spec \
+                         context.\nIf you are trying to unpack a struct, try adding fields, e.g. \
+                         '{}::{} {{}}'",
+                        m, n,
+                    );
+                    context.error(vec![(loc, msg)]);
+                    return None;
+                }
+                _ => {
+                    let tys_opt = optional_types(context, ptys_opt);
+                    EL::Var(en, tys_opt)
+                }
+            }
         }
         PE::Pack(pn, ptys_opt, pfields) => {
             let en = module_access(context, Access::ApplyNamed, pn)?;
@@ -1680,7 +1719,8 @@ fn check_valid_local_name(context: &mut Context, v: &Var) {
     }
     if !is_valid(v.value()) {
         let msg = format!(
-            "Invalid local name '{}'. Local names must start with 'a'..'z' (or '_')",
+            "Invalid local variable name '{}'. Local variable names must start with 'a'..'z' (or \
+             '_')",
             v,
         );
         context.error(vec![(v.loc(), msg)])

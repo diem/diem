@@ -296,9 +296,9 @@ mod last_usage {
                         DisplayVar::Orig(v_str) => {
                             if !v.starts_with_underscore() {
                                 let msg = format!(
-                                    "Unused assignment or binding for local '{}'. \
-                                    Consider removing, replacing with '_', \
-                                    or prefixing with '_' (e.g., '_{}')",
+                                    "Unused assignment or binding for local '{}'. Consider \
+                                     removing, replacing with '_', or prefixing with '_' (e.g., \
+                                     '_{}')",
                                     v_str, v_str
                                 );
                                 context.error(vec![(l.loc, msg)]);

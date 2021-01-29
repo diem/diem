@@ -324,9 +324,9 @@ pub enum InvariantKind {
 pub enum ModuleAccess_ {
     // N
     Name(Name),
-    // M.S
+    // M::S
     ModuleAccess(ModuleName, Name),
-    // OxADDR.M.S
+    // OxADDR::M::S
     QualifiedModuleAccess(ModuleIdent, Name),
 }
 pub type ModuleAccess = Spanned<ModuleAccess_>;
@@ -740,6 +740,16 @@ impl BinOp_ {
 impl fmt::Display for ModuleIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}::{}", self.0.value.address, &self.0.value.name)
+    }
+}
+
+impl fmt::Display for ModuleAccess_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ModuleAccess_::Name(n) => write!(f, "{}", n),
+            ModuleAccess_::ModuleAccess(m, n) => write!(f, "{}::{}", m, n),
+            ModuleAccess_::QualifiedModuleAccess(m, n) => write!(f, "{}::{}", m, n),
+        }
     }
 }
 
@@ -1229,11 +1239,7 @@ impl AstDebug for Vec<Type> {
 
 impl AstDebug for ModuleAccess_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.write(&match self {
-            ModuleAccess_::Name(n) => format!("{}", n),
-            ModuleAccess_::ModuleAccess(m, n) => format!("{}::{}", m, n),
-            ModuleAccess_::QualifiedModuleAccess(m, n) => format!("{}::{}", m, n),
-        })
+        w.write(&format!("{}", self))
     }
 }
 
