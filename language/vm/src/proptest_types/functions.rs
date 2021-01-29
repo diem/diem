@@ -8,7 +8,7 @@ use crate::{
         FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex, IdentifierIndex,
         Kind, LocalIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiation, StructDefInstantiationIndex, StructDefinition,
-        StructDefinitionIndex, StructHandle, TableIndex,
+        StructDefinitionIndex, StructHandle, TableIndex, Visibility,
     },
     proptest_types::{
         signature::{KindGen, SignatureGen, SignatureTokenGen},
@@ -339,7 +339,7 @@ pub struct FunctionDefinitionGen {
     name: PropIndex,
     parameters: SignatureGen,
     return_: SignatureGen,
-    is_public: bool,
+    visibility: Visibility,
     acquires: Vec<PropIndex>,
     code: CodeUnitGen,
 }
@@ -358,16 +358,16 @@ impl FunctionDefinitionGen {
             any::<PropIndex>(),
             SignatureGen::strategy(arg_count.clone()),
             SignatureGen::strategy(return_count),
-            any::<bool>(),
+            any::<Visibility>(),
             vec(any::<PropIndex>(), acquires_count.into()),
             CodeUnitGen::strategy(arg_count, code_len),
         )
             .prop_map(
-                |(name, parameters, return_, is_public, acquires, code)| Self {
+                |(name, parameters, return_, visibility, acquires, code)| Self {
                     name,
                     parameters,
                     return_,
-                    is_public,
+                    visibility,
                     acquires,
                     code,
                 },
@@ -410,7 +410,7 @@ impl FunctionDefinitionGen {
         // TODO: consider generating native functions?
         Some(FunctionDefinition {
             function: function_handle,
-            is_public: self.is_public,
+            visibility: self.visibility,
             acquires_global_resources,
             code: Some(self.code.materialize(state)),
         })

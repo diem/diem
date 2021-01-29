@@ -5,7 +5,7 @@ use crate::{
     access::ModuleAccess,
     file_format::{
         CompiledModule, FieldDefinition, FunctionHandle, Kind, SignatureToken, StructDefinition,
-        StructFieldInformation, TypeParameterIndex,
+        StructFieldInformation, TypeParameterIndex, Visibility,
     },
 };
 use move_core_types::{
@@ -93,12 +93,11 @@ impl Module {
         let public_functions = m
             .function_defs()
             .iter()
-            .filter_map(|f| {
-                if f.is_public {
+            .filter_map(|f| match f.visibility {
+                Visibility::Public => {
                     Some(FunctionSignature::new(m, m.function_handle_at(f.function)))
-                } else {
-                    None
                 }
+                Visibility::Private => None,
             })
             .collect();
         Self {

@@ -363,6 +363,21 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     bail!("invalid ULEB128 repr for usize");
 }
 
+//
+// Bytecode evolution
+//
+
+/// Version 1: the initial version
+pub const VERSION_1: u32 = 1u32;
+
+/// Version 2: changes compared with version 1
+///  + function visibility stored in separate byte before the flags byte
+///  + the flags byte now contains only the is_native information (at bit 0x2)
+pub const VERSION_2: u32 = 2u32;
+
+// Mark which version is the latest version
+pub const VERSION_MAX: u32 = VERSION_2;
+
 pub(crate) mod versioned_data {
     use crate::{errors::*, file_format_common::*};
     use move_core_types::vm_status::StatusCode;
@@ -376,8 +391,6 @@ pub(crate) mod versioned_data {
         version: u32,
         cursor: Cursor<&'a [u8]>,
     }
-
-    pub const MAX_VERSION: u32 = 1u32;
 
     impl<'a> VersionedBinary<'a> {
         fn new(binary: &'a [u8]) -> BinaryLoaderResult<(Self, Cursor<&'a [u8]>)> {
@@ -399,7 +412,7 @@ pub(crate) mod versioned_data {
                         .with_message("Bad binary header".to_string()));
                 }
             };
-            if version == 0 || version > MAX_VERSION {
+            if version == 0 || version > VERSION_MAX {
                 return Err(PartialVMError::new(StatusCode::UNKNOWN_VERSION));
             }
             Ok((Self { version, binary }, cursor))

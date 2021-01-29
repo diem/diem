@@ -374,17 +374,47 @@ pub struct FieldDefinition {
     pub signature: TypeSignature,
 }
 
+/// `Visibility` restricts the accessibility of the associated entity.
+/// - For function visibility, it restricts who may call into the associated function.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+#[repr(u8)]
+pub enum Visibility {
+    /// Accessible within its defining module only.
+    Private = 0x0,
+    /// Accessible by any module or script outside of its declaring module.
+    Public = 0x1,
+}
+
+impl Default for Visibility {
+    fn default() -> Self {
+        Visibility::Private
+    }
+}
+
+impl std::convert::TryFrom<u8> for Visibility {
+    type Error = ();
+
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            x if x == Visibility::Private as u8 => Ok(Visibility::Private),
+            x if x == Visibility::Public as u8 => Ok(Visibility::Public),
+            _ => Err(()),
+        }
+    }
+}
+
 /// A `FunctionDefinition` is the implementation of a function. It defines
 /// the *prototype* of the function and the function body.
-
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
 pub struct FunctionDefinition {
     /// The prototype of the function (module, name, signature).
     pub function: FunctionHandleIndex,
-    /// Flag to indicate if this function is public.
-    pub is_public: bool,
+    /// The visibility of this function.
+    pub visibility: Visibility,
     /// List of nominal resources (declared in this module) that the procedure might access
     /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
     /// This list of acquires grants the borrow checker the ability to statically verify the safety
@@ -404,17 +434,11 @@ pub struct FunctionDefinition {
 }
 
 impl FunctionDefinition {
-    /// Returns whether the FunctionDefinition is public.
-    pub fn is_public(&self) -> bool {
-        self.is_public
-    }
     /// Returns whether the FunctionDefinition is native.
     pub fn is_native(&self) -> bool {
         self.code.is_none()
     }
 
-    /// Function can be invoked outside of its declaring module.
-    pub const PUBLIC: u8 = 0x1;
     /// A native function implemented in Rust.
     pub const NATIVE: u8 = 0x2;
 }
@@ -1532,7 +1556,7 @@ impl CompiledScriptMut {
         // Create a function definition for the main function.
         let main_def = FunctionDefinition {
             function: main_handle_idx,
-            is_public: true,
+            visibility: Visibility::Public,
             acquires_global_resources: vec![],
             code: Some(self.code),
         };
@@ -1888,7 +1912,7 @@ pub fn basic_test_module() -> CompiledModuleMut {
 
     m.function_defs.push(FunctionDefinition {
         function: FunctionHandleIndex(0),
-        is_public: false,
+        visibility: Visibility::Private,
         acquires_global_resources: vec![],
         code: Some(CodeUnit {
             locals: SignatureIndex(0),

@@ -100,7 +100,7 @@ fn no_verify_locals_good() {
         function_defs: vec![
             FunctionDefinition {
                 function: FunctionHandleIndex(0),
-                is_public: true,
+                visibility: Visibility::Public,
                 acquires_global_resources: vec![],
                 code: Some(CodeUnit {
                     locals: SignatureIndex(0),
@@ -109,7 +109,7 @@ fn no_verify_locals_good() {
             },
             FunctionDefinition {
                 function: FunctionHandleIndex(1),
-                is_public: true,
+                visibility: Visibility::Public,
                 acquires_global_resources: vec![],
                 code: Some(CodeUnit {
                     locals: SignatureIndex(1),

@@ -7,75 +7,10 @@ use crate::{
 };
 use move_core_types::vm_status::StatusCode;
 
-#[test]
-#[allow(clippy::same_item_push)]
-fn malformed_simple() {
-    // empty binary
-    let mut binary = vec![];
-    let mut res = CompiledScript::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected malformed binary").major_status(),
-        StatusCode::BAD_MAGIC
-    );
-
-    // under-sized binary
-    binary = vec![0u8, 0u8, 0u8];
-    res = CompiledScript::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected malformed binary").major_status(),
-        StatusCode::BAD_MAGIC
-    );
-
-    // bad magic
-    binary = vec![0u8; 4];
-    res = CompiledScript::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected bad magic").major_status(),
-        StatusCode::BAD_MAGIC
-    );
-
-    // only magic
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    res = CompiledScript::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected malformed binary").major_status(),
-        StatusCode::MALFORMED
-    );
-
-    // bad version
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(2); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
-    binary.push(10); // table count
-    binary.push(0); // rest of binary
-    res = CompiledScript::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected unknown version").major_status(),
-        StatusCode::UNKNOWN_VERSION
-    );
-
-    // bad version
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(2); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
-    binary.push(10); // table count
-    binary.push(0); // rest of binary
-    let res = CompiledModule::deserialize(&binary);
-    assert_eq!(
-        res.expect_err("Expected unknown version").major_status(),
-        StatusCode::UNKNOWN_VERSION
-    );
-
+fn malformed_simple_versioned_test(version: u32) {
     // bad uleb (more than allowed for table count)
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(150); // table count (high bit 1)
     binary.push(150); // table count (high bit 1)
     binary.push(1);
@@ -86,11 +21,8 @@ fn malformed_simple() {
     );
 
     // bad uleb (too big)
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(150); // table count (high bit 1)
     binary.push(150); // table count again (high bit 1)
     binary.push(150); // table count again (high bit 1)
@@ -110,11 +42,8 @@ fn malformed_simple() {
     );
 
     // no tables
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(0); // table count
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
@@ -123,11 +52,8 @@ fn malformed_simple() {
     );
 
     // missing tables
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(10); // table count
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
@@ -136,11 +62,8 @@ fn malformed_simple() {
     );
 
     // missing table content
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -152,11 +75,8 @@ fn malformed_simple() {
     );
 
     // bad table header (bad offset)
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(100); // bad table offset
@@ -168,11 +88,8 @@ fn malformed_simple() {
     );
 
     // bad table header (bad offset)
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(2); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -180,9 +97,7 @@ fn malformed_simple() {
     binary.push(2); // table type
     binary.push(100); // bad table offset
     binary.push(10); // table length
-    for _ in 0..5000 {
-        binary.push(0);
-    }
+    binary.resize(binary.len() + 5000, 0);
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected bad table offset").major_status(),
@@ -190,18 +105,13 @@ fn malformed_simple() {
     );
 
     // incomplete table
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
     binary.push(10); // table length
-    for _ in 0..5 {
-        binary.push(0);
-    }
+    binary.resize(binary.len() + 5, 0);
     let res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected bad table content").major_status(),
@@ -209,18 +119,13 @@ fn malformed_simple() {
     );
 
     // unknown table
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(100); // table type
     binary.push(0); // table offset
     binary.push(10); // table length
-    for _ in 0..10 {
-        binary.push(0);
-    }
+    binary.resize(binary.len() + 10, 0);
     let res = CompiledModule::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected unknown table").major_status(),
@@ -228,11 +133,8 @@ fn malformed_simple() {
     );
 
     // duplicate table
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(3); // table count
     binary.push(1); // table type
     binary.push(0); // table offset
@@ -243,9 +145,7 @@ fn malformed_simple() {
     binary.push(1); // table type
     binary.push(20); // table offset
     binary.push(10); // table length
-    for _ in 0..5000 {
-        binary.push(0);
-    }
+    binary.resize(binary.len() + 5000, 0);
     let res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected table offset overflow")
@@ -254,24 +154,71 @@ fn malformed_simple() {
     );
 
     // bad table in script
-    binary = BinaryConstants::DIEM_MAGIC.to_vec();
-    binary.push(1); // version
-    binary.push(0);
-    binary.push(0);
-    binary.push(0);
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&version.to_le_bytes()); // version
     binary.push(1); // table count
     binary.push(0xD); // table type - FieldHandle not good for script
     binary.push(0); // table offset
     binary.push(10); // table length
-    for _ in 0..5000 {
-        binary.push(0);
-    }
+    binary.resize(binary.len() + 5000, 0);
     let res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected table offset overflow")
             .major_status(),
         StatusCode::MALFORMED
     );
+}
+
+#[test]
+#[allow(clippy::same_item_push)]
+fn malformed_simple() {
+    // empty binary
+    let binary = vec![];
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected malformed binary").major_status(),
+        StatusCode::BAD_MAGIC
+    );
+
+    // under-sized binary
+    let binary = vec![0u8, 0u8, 0u8];
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected malformed binary").major_status(),
+        StatusCode::BAD_MAGIC
+    );
+
+    // bad magic
+    let binary = vec![0u8; 4];
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad magic").major_status(),
+        StatusCode::BAD_MAGIC
+    );
+
+    // only magic
+    let binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected malformed binary").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // bad version
+    let mut binary = BinaryConstants::DIEM_MAGIC.to_vec();
+    binary.extend(&(VERSION_MAX.checked_add(1).unwrap()).to_le_bytes()); // version
+    binary.push(10); // table count
+    binary.push(0); // rest of binary
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected unknown version").major_status(),
+        StatusCode::UNKNOWN_VERSION
+    );
+
+    // versioned tests
+    for version in &[VERSION_1, VERSION_2] {
+        malformed_simple_versioned_test(*version);
+    }
 }
 
 // Ensure that we can deserialize a script from disk

@@ -477,7 +477,7 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
     }
 
     pub fn is_public(&self) -> bool {
-        self.function_def.is_public()
+        matches!(self.function_def.visibility, Visibility::Public)
     }
 
     pub fn is_native(&self) -> bool {
