@@ -71,7 +71,11 @@ impl<'a, 'b> Context<'a, 'b> {
             }
             // Module::FuncName -> def handle idx
             for func_def in module.function_defs() {
-                if !matches!(func_def.visibility, Visibility::Public) {
+                let may_be_called = match func_def.visibility {
+                    Visibility::Public => true,
+                    Visibility::Private => false,
+                };
+                if !may_be_called {
                     continue;
                 }
                 let func_handle = module.function_handle_at(func_def.function);

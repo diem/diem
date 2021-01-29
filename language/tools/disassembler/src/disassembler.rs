@@ -853,8 +853,10 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_map
             .get_function_source_map(function_definition_index)?;
 
-        if self.options.only_public && !matches!(function_definition.visibility, Visibility::Public)
-        {
+        if match function_definition.visibility {
+            Visibility::Public => false,
+            Visibility::Private => self.options.only_public,
+        } {
             return Ok("".to_string());
         }
 

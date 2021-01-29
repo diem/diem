@@ -45,7 +45,7 @@ use vm::{
     file_format::{
         AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -2345,10 +2345,12 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns true if this function is public.
     pub fn is_public(&self) -> bool {
-        let view = self.definition_view();
-        view.is_public()
-            // The main function of a script is implicitly public
-            || self.module_env.is_script_module()
+        // The main function of a script is implicitly public
+        self.module_env.is_script_module()
+            || match self.definition_view().visibility() {
+                Visibility::Public => true,
+                Visibility::Private => false,
+            }
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).
