@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-flate2 = { version = "1.0.19", features = ["rust_backend"], default-features = false }
+flate2 = { version = "1.0.20", features = ["rust_backend"], default-features = false }
 hex = "0.4.2"
 itertools = "0.10.0"
 once_cell = "1.4.1"
