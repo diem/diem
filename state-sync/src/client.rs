@@ -18,8 +18,8 @@ use tokio::time::timeout;
 /// A sync request for a specified target ledger info.
 pub struct SyncRequest {
     pub callback: oneshot::Sender<Result<()>>,
+    pub last_commit_timestamp: SystemTime,
     pub target: LedgerInfoWithSignatures,
-    pub last_progress_tst: SystemTime,
 }
 
 /// A commit notification to notify state sync of new commits.
@@ -58,7 +58,7 @@ impl StateSyncClient {
         let request = SyncRequest {
             callback: cb_sender,
             target,
-            last_progress_tst: SystemTime::now(),
+            last_commit_timestamp: SystemTime::now(),
         };
 
         async move {

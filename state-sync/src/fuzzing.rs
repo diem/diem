@@ -27,7 +27,7 @@ use proptest::{
 };
 
 static STATE_SYNC_COORDINATOR: Lazy<Mutex<StateSyncCoordinator<ExecutorProxy>>> =
-    Lazy::new(|| Mutex::new(test_utils::create_state_sync_coordinator_for_tests()));
+    Lazy::new(|| Mutex::new(test_utils::create_validator_coordinator()));
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

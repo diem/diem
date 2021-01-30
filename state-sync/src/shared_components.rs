@@ -172,7 +172,7 @@ pub(crate) mod test_utils {
 
     use channel::{diem_channel, message_queues::QueueStyle};
     use diem_config::{
-        config::NodeConfig,
+        config::{NodeConfig, RoleType},
         network_id::{NetworkId, NodeNetworkId},
     };
     use diem_types::transaction::{Transaction, WriteSetPayload};
@@ -188,7 +188,33 @@ pub(crate) mod test_utils {
     use std::collections::HashMap;
     use storage_interface::DbReaderWriter;
 
-    pub(crate) fn create_state_sync_coordinator_for_tests() -> StateSyncCoordinator<ExecutorProxy> {
+    #[cfg(test)]
+    pub(crate) fn create_coordinator_with_config_and_waypoint(
+        node_config: NodeConfig,
+        waypoint: Waypoint,
+    ) -> StateSyncCoordinator<ExecutorProxy> {
+        create_state_sync_coordinator_for_tests(node_config, waypoint)
+    }
+
+    pub(crate) fn create_validator_coordinator() -> StateSyncCoordinator<ExecutorProxy> {
+        let mut node_config = NodeConfig::default();
+        node_config.base.role = RoleType::Validator;
+
+        create_state_sync_coordinator_for_tests(node_config, Waypoint::default())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn create_full_node_coordinator() -> StateSyncCoordinator<ExecutorProxy> {
+        let mut node_config = NodeConfig::default();
+        node_config.base.role = RoleType::FullNode;
+
+        create_state_sync_coordinator_for_tests(node_config, Waypoint::default())
+    }
+
+    fn create_state_sync_coordinator_for_tests(
+        node_config: NodeConfig,
+        waypoint: Waypoint,
+    ) -> StateSyncCoordinator<ExecutorProxy> {
         // Generate a genesis change set
         let (genesis, _) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
 
@@ -229,8 +255,8 @@ pub(crate) mod test_utils {
             coordinator_receiver,
             mempool_sender,
             network_senders,
-            &NodeConfig::default(),
-            Waypoint::default(),
+            &node_config,
+            waypoint,
             executor_proxy,
             initial_state,
         )

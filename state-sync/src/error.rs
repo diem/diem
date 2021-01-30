@@ -10,6 +10,14 @@ use thiserror::Error;
 pub enum Error {
     #[error("Failed to send callback: {0}")]
     CallbackSendFailed(String),
+    #[error("Consensus is executing. There is no need for state sync to drive synchronization.")]
+    ConsensusIsExecuting,
+    #[error("A sync request was sent to a full node, but this isn't supported.")]
+    FullNodeSyncRequest,
+    #[error("An integer overflow has occurred: {0}")]
+    IntegerOverflow(String),
+    #[error("No peers are currently available!")]
+    NoAvailablePeers,
     #[error("No transactions were committed, but received a commit notification!")]
     NoTransactionsCommitted,
     #[error("Received an old sync request for version {0}, but our known version is: {1}")]

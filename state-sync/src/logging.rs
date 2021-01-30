@@ -104,6 +104,7 @@ pub enum LogEntry {
     CommitFlow,
     Multicast,
     SubscriptionDeliveryFail,
+    ProgressCheck,
 }
 
 #[derive(Clone, Copy, Serialize)]

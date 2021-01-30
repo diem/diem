@@ -432,8 +432,8 @@ impl RequestManager {
     }
 
     /// Checks whether the request sent with known_version = `version` has timed out
-    /// Returns true if such a request timed out or does not exist, else false
-    pub fn check_timeout(&mut self, version: u64) -> Result<bool> {
+    /// Returns true if such a request timed out (or does not exist), else false.
+    pub fn check_request_timeout(&mut self, version: u64) -> Result<bool> {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
         let timeout = is_timeout(last_request_time, self.request_timeout);
@@ -590,7 +590,7 @@ mod tests {
         // Process multiple request timeouts from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
             request_manager.add_request(1, validator_0.clone());
-            assert!(request_manager.check_timeout(1).unwrap());
+            assert!(request_manager.check_request_timeout(1).unwrap());
         }
 
         // Verify validator 0 is chosen less often than the other validators

@@ -6,10 +6,7 @@ use crate::{
     chunk_response::{GetChunkResponse, ResponseLedgerInfo},
     client::{CoordinatorMessage, SyncRequest},
     counters,
-    error::{
-        Error,
-        Error::{CallbackSendFailed, OldSyncRequestVersion, UninitializedError},
-    },
+    error::Error,
     executor_proxy::ExecutorProxyTrait,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSyncEvents, StateSyncMessage, StateSyncSender},
@@ -201,7 +198,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                         Event::NewPeer(peer_id, origin) => {
                             let peer = PeerNetworkId(network_id, peer_id);
                             self.request_manager.enable_peer(peer, origin);
-                            self.check_progress();
+                            let _ = self.check_progress();
                         }
                         Event::LostPeer(peer_id, origin) => {
                             let peer = PeerNetworkId(network_id, peer_id);
@@ -216,7 +213,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     }
                 },
                 _ = interval.select_next_some() => {
-                    self.check_progress();
+                    match self.check_progress() {
+                        Ok(()) => {},
+                        Err(Error::ConsensusIsExecuting) => { /* Don't log to avoid spamming logs! */ },
+                        Err(error) => {
+                            error!(LogSchema::event_log(LogEntry::ProgressCheck, LogEvent::Fail).error(&error.into()));
+                        }
+                    }
                 }
             }
         }
@@ -313,6 +316,11 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             ))
         });
 
+        // Full nodes don't support sync requests
+        if self.role == RoleType::FullNode {
+            return Err(Error::FullNodeSyncRequest);
+        }
+
         let local_li_version = self.local_state.committed_version();
         let target_version = request.target.ledger_info().version();
         debug!(
@@ -323,7 +331,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         self.sync_state_with_local_storage()?;
         if !self.is_initialized() {
-            return Err(UninitializedError(
+            return Err(Error::UninitializedError(
                 "Unable to process sync request message!".into(),
             ));
         }
@@ -333,7 +341,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         }
         if target_version < local_li_version {
             Self::send_sync_req_callback(request, Err(format_err!("Sync request to old version")))?;
-            return Err(OldSyncRequestVersion(target_version, local_li_version));
+            return Err(Error::OldSyncRequestVersion(
+                target_version,
+                local_li_version,
+            ));
         }
 
         self.sync_request = Some(request);
@@ -401,7 +412,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             error!(LogSchema::new(LogEntry::CommitFlow).error(&error.into()),);
         }
 
-        // Check long poll subscriptions, update peer requests and sync request timestamp
+        // Check long poll subscriptions, update peer requests and sync request last progress
+        // timestamp.
         self.check_subscriptions();
         let synced_version = self.local_state.synced_version();
         self.request_manager.remove_requests(synced_version);
@@ -409,7 +421,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             self.request_manager.process_success_response(peer);
         }
         if let Some(mut req) = self.sync_request.as_mut() {
-            req.last_progress_tst = SystemTime::now();
+            req.last_commit_timestamp = SystemTime::now();
         }
 
         // Check if we're now initialized or if we hit the sync request target
@@ -573,7 +585,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     fn get_sync_state(&mut self, callback: oneshot::Sender<SyncState>) -> Result<(), Error> {
         self.sync_state_with_local_storage()?;
         match callback.send(self.local_state.clone()) {
-            Err(error) => Err(CallbackSendFailed(format!(
+            Err(error) => Err(Error::CallbackSendFailed(format!(
                 "Failed to get sync state! Error: {:?}",
                 error
             ))),
@@ -1146,62 +1158,55 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     }
 
     /// Ensures that state sync is making progress:
-    /// * kick-starts initial sync process (= initialization syncing to waypoint)
-    /// * issue a new request if too much time passed since requesting highest_synced_version + 1.
-    fn check_progress(&mut self) {
-        if self.request_manager.no_available_peers() {
-            return;
-        }
-
+    /// * Kick starts the initial sync process (e.g., syncing to a waypoint or target).
+    /// * Issues a new request if too much time has passed since the last request was sent.
+    fn check_progress(&mut self) -> Result<(), Error> {
         if self.is_consensus_executing() {
-            return; // No need to send out chunk requests: consensus is executing.
+            return Err(Error::ConsensusIsExecuting);
         }
 
-        // check that we made progress in fulfilling consensus sync request
-        let sync_request_expired = self.sync_request.as_ref().map_or(false, |req| {
-            let default_timeout = Duration::from_millis(self.config.sync_request_timeout_ms);
-            if let Some(tst) = req.last_progress_tst.checked_add(default_timeout) {
-                return SystemTime::now().duration_since(tst).is_ok();
-            }
-            false
-        });
-        // notify consensus if sync request timed out
-        if sync_request_expired {
-            counters::SYNC_REQUEST_RESULT
-                .with_label_values(&[counters::TIMEOUT_LABEL])
-                .inc();
-            warn!(LogSchema::event_log(
-                LogEntry::SyncRequest,
-                LogEvent::Timeout
-            ));
+        // Check if the sync request has timed out (i.e., if we aren't committing fast enough)
+        if let Some(sync_request) = self.sync_request.as_ref() {
+            let timeout_between_commits =
+                Duration::from_millis(self.config.sync_request_timeout_ms);
+            let commit_deadline = sync_request
+                .last_commit_timestamp
+                .checked_add(timeout_between_commits)
+                .ok_or_else(|| {
+                    Error::IntegerOverflow("The commit deadline timestamp has overflown!".into())
+                })?;
+            if SystemTime::now().duration_since(commit_deadline).is_ok() {
+                // Timeout exceeded!
+                counters::SYNC_REQUEST_RESULT
+                    .with_label_values(&[counters::TIMEOUT_LABEL])
+                    .inc();
+                warn!(LogSchema::event_log(
+                    LogEntry::SyncRequest,
+                    LogEvent::Timeout
+                ));
 
-            if let Some(sync_request) = self.sync_request.take() {
-                if let Err(e) = Self::send_sync_req_callback(
-                    sync_request,
-                    Err(format_err!("request timed out")),
-                ) {
-                    error!(
-                        LogSchema::event_log(LogEntry::SyncRequest, LogEvent::CallbackFail)
-                            .error(&e)
-                    );
+                if let Some(sync_request) = self.sync_request.take() {
+                    if let Err(e) = Self::send_sync_req_callback(
+                        sync_request,
+                        Err(format_err!("Sync request timed out!")), // TODO(joshlind): fix these callback return messages!
+                    ) {
+                        error!(
+                            LogSchema::event_log(LogEntry::SyncRequest, LogEvent::CallbackFail)
+                                .error(&e)
+                        );
+                    }
                 }
             }
         }
 
+        // If the coordinator didn't make progress by the expected time or did not
+        // send a request for the current local synced version, issue a new request.
         let known_version = self.local_state.synced_version();
-
-        // if coordinator didn't make progress by expected time or did not send a request for current
-        // local synced version, issue new request
-        if self
-            .request_manager
-            .check_timeout(known_version)
-            .unwrap_or(false)
-        {
-            // log and count timeout
+        let trusted_epoch = self.local_state.trusted_epoch();
+        if self.request_manager.check_request_timeout(known_version)? {
             counters::TIMEOUT.inc();
             warn!(LogSchema::new(LogEntry::Timeout).version(known_version));
-            if let Err(e) = self.send_chunk_request(known_version, self.local_state.trusted_epoch())
-            {
+            if let Err(e) = self.send_chunk_request(known_version, trusted_epoch) {
                 error!(
                     LogSchema::event_log(LogEntry::Timeout, LogEvent::SendChunkRequestFail)
                         .version(known_version)
@@ -1209,6 +1214,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 );
             }
         }
+
+        Ok(())
     }
 
     /// Sends a chunk request with a given `known_version` and `known_epoch`
@@ -1356,8 +1363,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{client::SyncRequest, error::Error, shared_components::test_utils};
+    use crate::{
+        client::SyncRequest,
+        error::Error,
+        shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
+    };
     use anyhow::Result;
+    use diem_config::config::{NodeConfig, RoleType};
     use diem_crypto::{
         ed25519::{Ed25519PrivateKey, Ed25519Signature},
         HashValue, PrivateKey, Uniform,
@@ -1378,11 +1390,27 @@ mod tests {
 
     #[test]
     fn test_process_sync_request() {
-        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+        // Create a coordinator for a full node
+        let mut full_node_coordinator = test_utils::create_full_node_coordinator();
+
+        // Verify that fullnodes can't process sync requests
+        let (sync_request, _) = create_sync_request_at_version(0);
+        let process_result = full_node_coordinator.process_sync_request(sync_request);
+        if !matches!(process_result, Err(Error::FullNodeSyncRequest)) {
+            panic!(
+                "Expected an full node sync request error, but got: {:?}",
+                process_result
+            );
+        }
+
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Perform sync request for version that matches initial waypoint version
         let (sync_request, mut callback_receiver) = create_sync_request_at_version(0);
-        coordinator.process_sync_request(sync_request).unwrap();
+        validator_coordinator
+            .process_sync_request(sync_request)
+            .unwrap();
         match callback_receiver.try_recv() {
             Ok(Some(result)) => {
                 assert!(result.is_ok())
@@ -1390,14 +1418,16 @@ mod tests {
             result => panic!("Expected okay but got: {:?}", result),
         };
 
-        // Set coordinator waypoint to version higher than storage
+        // Create validator coordinator with waypoint higher than 0
         let waypoint_version = 10;
         let waypoint_ledger_info = create_ledger_info_at_version(waypoint_version);
-        coordinator.waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+        let waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+        let mut validator_coordinator =
+            create_coordinator_with_config_and_waypoint(NodeConfig::default(), waypoint);
 
         // Verify coordinator won't process sync requests as it's not yet initialized
         let (sync_request, mut callback_receiver) = create_sync_request_at_version(10);
-        let process_result = coordinator.process_sync_request(sync_request);
+        let process_result = validator_coordinator.process_sync_request(sync_request);
         if !matches!(process_result, Err(Error::UninitializedError(..))) {
             panic!(
                 "Expected an uninitialized error, but got: {:?}",
@@ -1415,11 +1445,14 @@ mod tests {
 
     #[test]
     fn test_get_sync_state() {
-        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Get the sync state from state sync
         let (callback_sender, mut callback_receiver) = oneshot::channel();
-        coordinator.get_sync_state(callback_sender).unwrap();
+        validator_coordinator
+            .get_sync_state(callback_sender)
+            .unwrap();
         match callback_receiver.try_recv() {
             Ok(Some(sync_state)) => {
                 assert_eq!(sync_state.committed_version(), 0);
@@ -1429,7 +1462,7 @@ mod tests {
 
         // Drop the callback receiver and verify error
         let (callback_sender, _) = oneshot::channel();
-        let sync_state_result = coordinator.get_sync_state(callback_sender);
+        let sync_state_result = validator_coordinator.get_sync_state(callback_sender);
         if !matches!(sync_state_result, Err(Error::CallbackSendFailed(..))) {
             panic!("Expected error but got: {:?}", sync_state_result);
         }
@@ -1437,11 +1470,12 @@ mod tests {
 
     #[test]
     fn test_wait_for_initialization() {
-        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Check already initialized returns immediately
         let (callback_sender, mut callback_receiver) = oneshot::channel();
-        coordinator
+        validator_coordinator
             .wait_for_initialization(callback_sender)
             .unwrap();
         match callback_receiver.try_recv() {
@@ -1453,19 +1487,21 @@ mod tests {
 
         // Drop the callback receiver and verify error
         let (callback_sender, _) = oneshot::channel();
-        let initialization_result = coordinator.wait_for_initialization(callback_sender);
+        let initialization_result = validator_coordinator.wait_for_initialization(callback_sender);
         if !matches!(initialization_result, Err(Error::CallbackSendFailed(..))) {
             panic!("Expected error but got: {:?}", initialization_result);
         }
 
-        // Set the waypoint version higher than storage
+        // Create a coordinator with the waypoint version higher than 0
         let waypoint_version = 10;
         let waypoint_ledger_info = create_ledger_info_at_version(waypoint_version);
-        coordinator.waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+        let waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+        let mut validator_coordinator =
+            create_coordinator_with_config_and_waypoint(NodeConfig::default(), waypoint);
 
         // Verify callback is not executed as state sync is not yet initialized
         let (callback_sender, mut callback_receiver) = oneshot::channel();
-        coordinator
+        validator_coordinator
             .wait_for_initialization(callback_sender)
             .unwrap();
         let callback_result = callback_receiver.try_recv();
@@ -1479,14 +1515,16 @@ mod tests {
 
     #[test]
     fn test_process_commit_notification() {
-        let mut coordinator = test_utils::create_state_sync_coordinator_for_tests();
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
 
         // Verify that a commit notification with no transactions doesn't error!
-        block_on(coordinator.process_commit_notification(vec![], None, vec![], None)).unwrap();
+        block_on(validator_coordinator.process_commit_notification(vec![], None, vec![], None))
+            .unwrap();
 
         // Verify that consensus is sent a commit ack when everything works
         let (callback_sender, mut callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
-        block_on(coordinator.process_commit_notification(
+        block_on(validator_coordinator.process_commit_notification(
             vec![],
             Some(callback_sender),
             vec![],
@@ -1501,7 +1539,7 @@ mod tests {
         // TODO(joshlind): verify that mempool is sent the correct transactions!
         let (callback_sender, _callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
         let committed_transactions = vec![create_test_transaction()];
-        block_on(coordinator.process_commit_notification(
+        block_on(validator_coordinator.process_commit_notification(
             committed_transactions,
             Some(callback_sender),
             vec![],
@@ -1520,6 +1558,47 @@ mod tests {
 
         // TODO(joshlind): test that reconfiguration events are handled appropriately
         // and listeners are notified.
+    }
+
+    #[test]
+    fn test_check_progress() {
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
+
+        // Verify error is returned when consensus is running
+        assert_eq!(
+            validator_coordinator.check_progress(),
+            Err(Error::ConsensusIsExecuting)
+        );
+
+        // Send a sync request to state sync (to mark that consensus is no longer running)
+        let (sync_request, _) = create_sync_request_at_version(1);
+        let _ = validator_coordinator.process_sync_request(sync_request);
+
+        // Verify error is no longer returned (as consensus isn't running)
+        validator_coordinator.check_progress().unwrap();
+
+        // Create validator coordinator with tiny state sync timeout
+        let mut node_config = NodeConfig::default();
+        node_config.base.role = RoleType::Validator;
+        node_config.state_sync.sync_request_timeout_ms = 0;
+        let mut validator_coordinator =
+            create_coordinator_with_config_and_waypoint(node_config, Waypoint::default());
+
+        // Set a new sync request
+        let (sync_request, mut callback_receiver) = create_sync_request_at_version(1);
+        let _ = validator_coordinator.process_sync_request(sync_request);
+
+        // Verify sync request timeout notifies the callback
+        validator_coordinator.check_progress().unwrap();
+        let callback_result = callback_receiver.try_recv();
+        if !matches!(callback_result, Ok(Some(Err(..)))) {
+            panic!("Expected an err result but got: {:?}", callback_result);
+        }
+
+        // TODO(joshlind): check request resend after timeout.
+
+        // TODO(joshlind): check overflow error returns.
     }
 
     fn create_test_transaction() -> Transaction {
@@ -1564,7 +1643,7 @@ mod tests {
         let sync_request = SyncRequest {
             callback: callback_sender,
             target: ledger_info,
-            last_progress_tst: SystemTime::now(),
+            last_commit_timestamp: SystemTime::now(),
         };
 
         (sync_request, callback_receiver)

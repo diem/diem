@@ -21,7 +21,8 @@ pub struct StateSyncConfig {
     // if no progress is made by sending chunk requests to a number of networks,
     // the next sync request will be multicasted, i.e. sent to more networks
     pub multicast_timeout_ms: u64,
-    // default timeout for sync request
+    // The timeout for ensuring sync requests are making progress (i.e., the maximum time between
+    // commits when processing a sync request).
     pub sync_request_timeout_ms: u64,
     // interval used for checking state synchronization progress
     pub tick_interval_ms: u64,
