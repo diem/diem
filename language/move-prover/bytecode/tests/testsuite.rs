@@ -6,6 +6,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
+use bytecode::options::ProverOptions;
 use bytecode::{
     borrow_analysis::BorrowAnalysisProcessor,
     clean_and_optimize::CleanAndOptimizeProcessor,
