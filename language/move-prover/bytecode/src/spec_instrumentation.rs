@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-// Transformation injection specifications into the bytecode.
+// Transformation which injects specifications (Move function spec blocks) into the bytecode.
 
 use crate::{
     function_data_builder::FunctionDataBuilder,
@@ -103,6 +103,7 @@ impl FunctionTargetProcessor for SpecInstrumenter {
             let mut verification_data = data.clone();
             verification_data.annotations = annotations;
             verification_data = Instrumenter::run(
+                options,
                 targets,
                 fun_env,
                 FunctionVariant::Verification,
@@ -116,7 +117,7 @@ impl FunctionTargetProcessor for SpecInstrumenter {
         }
 
         // Instrument baseline variant.
-        Instrumenter::run(targets, fun_env, FunctionVariant::Baseline, data)
+        Instrumenter::run(options, targets, fun_env, FunctionVariant::Baseline, data)
     }
 
     fn name(&self) -> String {
@@ -125,6 +126,7 @@ impl FunctionTargetProcessor for SpecInstrumenter {
 }
 
 struct Instrumenter<'a> {
+    options: &'a ProverOptions,
     variant: FunctionVariant,
     builder: FunctionDataBuilder<'a>,
     spec: TranslatedSpec,
@@ -138,6 +140,7 @@ struct Instrumenter<'a> {
 
 impl<'a> Instrumenter<'a> {
     fn run(
+        options: &'a ProverOptions,
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'a>,
         variant: FunctionVariant,
@@ -169,6 +172,7 @@ impl<'a> Instrumenter<'a> {
 
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
+            options,
             variant,
             builder,
             spec,
@@ -319,6 +323,21 @@ impl<'a> Instrumenter<'a> {
             SpecTranslator::translate(&mut self.builder, &callee_env, Some(&srcs), &dests);
 
         self.builder.set_loc_from_attr(id);
+
+        if callee_opaque && (self.options.dump_bytecode || self.options.stable_test_output) {
+            // Add a debug comment about the original function call to easier identify
+            // the opaque call in dumped bytecode.
+            let bc = Call(
+                id,
+                dests.clone(),
+                Operation::Function(mid, fid, targs.clone()),
+                srcs.clone(),
+            );
+            self.builder.set_next_debug_comment(format!(
+                "original call of opaque function: {}",
+                bc.display(&self.builder.get_target(), &Default::default())
+            ))
+        }
 
         // Emit pre conditions if this is the verification variant or if the callee
         // is opaque. For inlined callees outside of verification entry points, we skip

@@ -7,40 +7,40 @@ pub fun Trafo::incr_ref($t0|r: u64): u64 {
      var $t3: u64
      var $t4: u64
      var $t5: u64
-     // live_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t0)
   0: $t1 := move($t0)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   1: $t2 := borrow_local($t1)
-     // live_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1), Reference($t2)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   2: trace_local[r]($t2)
-     // live_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1), Reference($t2)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   3: $t3 := read_ref($t2)
-     // live_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1), Reference($t2)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   4: $t4 := 1
-     // live_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1), Reference($t2)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   5: $t5 := +($t3, $t4)
-     // live_nodes: LocalRoot($t1), Reference($t2)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1), Reference($t2)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   6: write_ref($t2, $t5)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t2)}
-     // borrows_from: Reference($t2) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t2)}
+     # borrows_from: Reference($t2) -> {LocalRoot($t1)}
   7: return $t1
 }
 
@@ -58,118 +58,118 @@ pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
      var $t9: &mut Trafo::R
      var $t10: &mut u64
      var $t11: u64
-     // live_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t0)
   0: $t5 := move($t0)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   1: trace_local[b]($t5)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   2: $t6 := 1
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   3: $t1 := pack Trafo::R($t6)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   4: trace_local[r1]($t1)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   5: $t7 := 2
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   6: $t2 := pack Trafo::R($t7)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   7: trace_local[r2]($t2)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   8: if ($t5) goto 11 else goto 9
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
   9: label L1
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
  10: goto 16
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
  11: label L0
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
  12: $t8 := borrow_local($t1)
-     // live_nodes: LocalRoot($t5), Reference($t8)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t8)}
-     // borrows_from: Reference($t8) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t5), Reference($t8)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t8)}
+     # borrows_from: Reference($t8) -> {LocalRoot($t1)}
  13: $t4 := $t8
-     // live_nodes: LocalRoot($t5), Reference($t4)
-     // moved_nodes: LocalRoot($t0), Reference($t8)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t5), Reference($t4)
+     # moved_nodes: LocalRoot($t0), Reference($t8)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t4)}
+     # borrows_from: Reference($t4) -> {LocalRoot($t1)}
  14: trace_local[tmp#$4]($t8)
-     // live_nodes: LocalRoot($t5), Reference($t4)
-     // moved_nodes: LocalRoot($t0), Reference($t8)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot($t1)}
+     # live_nodes: LocalRoot($t5), Reference($t4)
+     # moved_nodes: LocalRoot($t0), Reference($t8)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t4)}
+     # borrows_from: Reference($t4) -> {LocalRoot($t1)}
  15: goto 20
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
  16: label L2
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0)
  17: $t9 := borrow_local($t2)
-     // live_nodes: LocalRoot($t5), Reference($t9)
-     // moved_nodes: LocalRoot($t0)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t9)}
-     // borrows_from: Reference($t9) -> {LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t9)
+     # moved_nodes: LocalRoot($t0)
+     # borrowed_by: LocalRoot($t2) -> {Reference($t9)}
+     # borrows_from: Reference($t9) -> {LocalRoot($t2)}
  18: $t4 := $t9
-     // live_nodes: LocalRoot($t5), Reference($t4)
-     // moved_nodes: LocalRoot($t0), Reference($t9)
-     // borrowed_by: LocalRoot($t2) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t4)
+     # moved_nodes: LocalRoot($t0), Reference($t9)
+     # borrowed_by: LocalRoot($t2) -> {Reference($t4)}
+     # borrows_from: Reference($t4) -> {LocalRoot($t2)}
  19: trace_local[tmp#$4]($t9)
-     // live_nodes: LocalRoot($t5), Reference($t4)
-     // moved_nodes: LocalRoot($t0), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t4)}, LocalRoot($t2) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot($t1), LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t4)
+     # moved_nodes: LocalRoot($t0), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t4)}, LocalRoot($t2) -> {Reference($t4)}
+     # borrows_from: Reference($t4) -> {LocalRoot($t1), LocalRoot($t2)}
  20: label L3
-     // live_nodes: LocalRoot($t5), Reference($t4)
-     // moved_nodes: LocalRoot($t0), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t4)}, LocalRoot($t2) -> {Reference($t4)}
-     // borrows_from: Reference($t4) -> {LocalRoot($t1), LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t4)
+     # moved_nodes: LocalRoot($t0), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t4)}, LocalRoot($t2) -> {Reference($t4)}
+     # borrows_from: Reference($t4) -> {LocalRoot($t1), LocalRoot($t2)}
  21: $t3 := $t4
-     // live_nodes: LocalRoot($t5), Reference($t3)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t3)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
  22: trace_local[r_ref]($t3)
-     // live_nodes: LocalRoot($t5), Reference($t3)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
+     # live_nodes: LocalRoot($t5), Reference($t3)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}
  23: $t10 := borrow_field<Trafo::R>.x($t3)
-     // live_nodes: LocalRoot($t5), Reference($t10)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
+     # live_nodes: LocalRoot($t5), Reference($t10)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
  24: $t11 := read_ref($t10)
-     // live_nodes: LocalRoot($t5), Reference($t10)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
+     # live_nodes: LocalRoot($t5), Reference($t10)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
  25: $t11 := Trafo::incr_ref($t11)
-     // live_nodes: LocalRoot($t5), Reference($t10)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
+     # live_nodes: LocalRoot($t5), Reference($t10)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
  26: write_ref($t10, $t11)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
  27: trace_return[0]($t2)
-     // live_nodes: LocalRoot($t5)
-     // moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
-     // borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
-     // borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
+     # live_nodes: LocalRoot($t5)
+     # moved_nodes: LocalRoot($t0), Reference($t4), Reference($t8), Reference($t9)
+     # borrowed_by: LocalRoot($t1) -> {Reference($t3)}, LocalRoot($t2) -> {Reference($t3)}, Reference($t3) -> {Reference($t10)}
+     # borrows_from: Reference($t3) -> {LocalRoot($t1), LocalRoot($t2)}, Reference($t10) -> {Reference($t3)}
  28: return $t2
 }

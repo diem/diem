@@ -1,0 +1,42 @@
+============ after processor `eliminate_imm_refs` ================
+
+[variant baseline]
+pub fun Trafo::opaque_caller($t0|addr: address) {
+     var $t1: address
+     var $t2: address
+  0: trace_local[addr]($t0)
+  1: $t1 := copy($t0)
+  2: Trafo::opaque_decr($t1)
+  3: $t2 := copy($t0)
+  4: Trafo::opaque_decr($t2)
+  5: return ()
+}
+
+
+[variant baseline]
+pub fun Trafo::opaque_decr($t0|addr: address) {
+     var $t1|r: &mut Trafo::R
+     var $t2: address
+     var $t3: &mut Trafo::R
+     var $t4: &mut Trafo::R
+     var $t5: u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: &mut Trafo::R
+     var $t10: &mut u64
+  0: trace_local[addr]($t0)
+  1: $t2 := copy($t0)
+  2: $t3 := borrow_global<Trafo::R>($t2)
+  3: $t1 := $t3
+  4: trace_local[r]($t1)
+  5: $t4 := copy($t1)
+  6: $t5 := get_field<Trafo::R>.x($t4)
+  7: $t6 := move($t5)
+  8: $t7 := 1
+  9: $t8 := -($t6, $t7)
+ 10: $t9 := move($t1)
+ 11: $t10 := borrow_field<Trafo::R>.x($t9)
+ 12: write_ref($t10, $t8)
+ 13: return ()
+}

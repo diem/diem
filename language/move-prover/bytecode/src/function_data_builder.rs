@@ -25,6 +25,7 @@ pub struct FunctionDataBuilder<'env> {
     next_free_attr_index: usize,
     next_free_label_index: usize,
     current_loc: Loc,
+    next_debug_comment: Option<String>,
 }
 
 impl<'env> FunctionDataBuilder<'env> {}
@@ -40,6 +41,7 @@ impl<'env> FunctionDataBuilder<'env> {
             next_free_attr_index,
             next_free_label_index,
             current_loc: fun_env.get_loc(),
+            next_debug_comment: None,
         }
     }
 
@@ -228,7 +230,21 @@ impl<'env> FunctionDataBuilder<'env> {
         F: FnOnce(AttrId) -> Bytecode,
     {
         let attr_id = self.new_attr();
+        if let Some(comment) = std::mem::take(&mut self.next_debug_comment) {
+            self.data.debug_comments.insert(attr_id, comment);
+        }
         self.emit(f(attr_id))
+    }
+
+    /// Sets the debug comment which should be associated with the next instruction
+    /// emitted with `self.emit_with(|id| ..)`.
+    pub fn set_next_debug_comment(&mut self, comment: String) {
+        self.next_debug_comment = Some(comment);
+    }
+
+    /// This will clear the state that the next `self.emit_with(..)` will add a debug comment.
+    pub fn clear_next_debug_comment(&mut self) {
+        self.next_debug_comment = None;
     }
 
     /// Emits a let: this creates a new temporary and emits an assumption that this temporary

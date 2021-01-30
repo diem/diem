@@ -5,22 +5,22 @@ pub fun Trafo::opaque_caller($t0|x: u64): u64 {
      var $t1: u64
      var $t2: u64
      var $t3: u64
-     // live_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t0)
   0: $t1 := move($t0)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   1: trace_local[x]($t1)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   2: $t2 := Trafo::opaque_decr($t1)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   3: $t3 := Trafo::opaque_decr($t2)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   4: trace_return[0]($t3)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   5: return $t3
 }
 
@@ -30,21 +30,21 @@ pub fun Trafo::opaque_decr($t0|x: u64): u64 {
      var $t1: u64
      var $t2: u64
      var $t3: u64
-     // live_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t0)
   0: $t1 := move($t0)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   1: trace_local[x]($t1)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   2: $t2 := 1
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   3: $t3 := -($t1, $t2)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   4: trace_return[0]($t3)
-     // live_nodes: LocalRoot($t1)
-     // moved_nodes: LocalRoot($t0)
+     # live_nodes: LocalRoot($t1)
+     # moved_nodes: LocalRoot($t0)
   5: return $t3
 }

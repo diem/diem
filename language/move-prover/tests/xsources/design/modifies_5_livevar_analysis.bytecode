@@ -1,0 +1,47 @@
+============ after processor `livevar_analysis` ================
+
+[variant baseline]
+pub fun Trafo::opaque_caller($t0|addr: address) {
+     var $t1: address
+     # live vars: addr
+  0: $t1 := move($t0)
+     # live vars: $t1
+  1: trace_local[addr]($t1)
+     # live vars: $t1
+  2: Trafo::opaque_decr($t1)
+     # live vars: $t1
+  3: Trafo::opaque_decr($t1)
+     # live vars:
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Trafo::opaque_decr($t0|addr: address) {
+     var $t1|r: &mut Trafo::R
+     var $t2: address
+     var $t3: u64
+     var $t4: u64
+     var $t5: u64
+     var $t6: &mut u64
+     # live vars: addr
+  0: $t2 := move($t0)
+     # live vars: $t2
+  1: trace_local[addr]($t2)
+     # live vars: $t2
+  2: $t1 := borrow_global<Trafo::R>($t2)
+     # live vars: r
+  3: trace_local[r]($t1)
+     # live vars: r
+  4: $t3 := get_field<Trafo::R>.x($t1)
+     # live vars: r, $t3
+  5: $t4 := 1
+     # live vars: r, $t3, $t4
+  6: $t5 := -($t3, $t4)
+     # live vars: r, $t5
+  7: $t6 := borrow_field<Trafo::R>.x($t1)
+     # live vars: $t5, $t6
+  8: write_ref($t6, $t5)
+     # live vars:
+  9: return ()
+}

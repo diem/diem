@@ -530,7 +530,7 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             OnAbort(_, label, code) => {
                 write!(
                     f,
-                    "on_abort goto {} code := {}",
+                    "on_abort goto {} with {}",
                     self.label_str(*label),
                     self.lstr(*code)
                 )?;

@@ -14,6 +14,7 @@ use bytecode::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
+    options::ProverOptions,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
     spec_instrumentation::SpecInstrumenter,
@@ -105,12 +106,15 @@ fn get_tested_transformation_pipeline(
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let env: GlobalEnv = run_model_builder(sources, vec![], Some("0x2345467"))?;
+    let mut env: GlobalEnv = run_model_builder(sources, vec![], Some("0x2345467"))?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
         env.report_errors(&mut error_writer);
         String::from_utf8_lossy(&error_writer.into_inner()).to_string()
     } else {
+        let mut options = ProverOptions::default();
+        options.stable_test_output = true;
+        env.set_extension(options);
         let dir_name = path
             .parent()
             .and_then(|p| p.file_name())

@@ -14,7 +14,7 @@ pub fun Trafo::incr_ref($t0|r: u64): u64 {
   3: $t3 := read_ref($t2)
   4: $t4 := 1
   5: $t5 := +($t3, $t4)
-  6: on_abort goto 11 code := $t6
+  6: on_abort goto 11 with $t6
   7: write_ref($t2, $t5)
   8: write_back[LocalRoot($t1)]($t2)
   9: label L1
@@ -38,11 +38,11 @@ pub fun Trafo::incr_ref($t0|r: u64): u64 {
   3: $t3 := read_ref($t2)
   4: $t4 := 1
   5: $t5 := +($t3, $t4)
-  6: on_abort goto 12 code := $t6
+  6: on_abort goto 12 with $t6
   7: write_ref($t2, $t5)
   8: write_back[LocalRoot($t1)]($t2)
   9: label L1
-     // VC: `post-condition does not hold` at references.move:12:5+24
+     # VC: `post-condition does not hold` at references.move:12:5+24
  10: assert Eq<u64>($t1, Add($t0, 1))
  11: return $t1
  12: label L2
@@ -88,7 +88,7 @@ pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
  22: $t9 := borrow_field<Trafo::R>.x($t3)
  23: $t10 := read_ref($t9)
  24: $t10 := Trafo::incr_ref($t10)
- 25: on_abort goto 33 code := $t11
+ 25: on_abort goto 33 with $t11
  26: write_ref($t9, $t10)
  27: write_back[Reference($t3)]($t9)
  28: write_back[LocalRoot($t1)]($t3)
@@ -139,16 +139,16 @@ pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
  22: $t9 := borrow_field<Trafo::R>.x($t3)
  23: $t10 := read_ref($t9)
  24: $t10 := Trafo::incr_ref($t10)
- 25: on_abort goto 35 code := $t11
+ 25: on_abort goto 35 with $t11
  26: write_ref($t9, $t10)
  27: write_back[Reference($t3)]($t9)
  28: write_back[LocalRoot($t1)]($t3)
  29: write_back[LocalRoot($t2)]($t3)
  30: trace_return[0]($t2)
  31: label L4
-     // VC: `post-condition does not hold` at references.move:23:7+31
+     # VC: `post-condition does not hold` at references.move:23:7+31
  32: assert Implies($t0, Eq<Trafo::R>($t2, pack Trafo::R(2)))
-     // VC: `post-condition does not hold` at references.move:24:7+32
+     # VC: `post-condition does not hold` at references.move:24:7+32
  33: assert Implies(Not($t0), Eq<Trafo::R>($t2, pack Trafo::R(3)))
  34: return $t2
  35: label L5

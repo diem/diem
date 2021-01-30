@@ -1,10 +1,11 @@
 A set of examples for illustrating how the bytecode transformation pipeline works.
 
-Run as in:
+This directory contains the bytecode dump of each of the Move
+examples. You can run an individual example as in:
 
 ```
 mvp -k --v2 --dump-bytecode <example>.move
 ```
 
-The current directory will contain bytecode dumps for each phase in `<example>_*.bytecode`,
-as well as `output.bpl` with the Boogie code.
+The `-k` option will also let the Move prover leave the generated Boogie output
+in `output.bpl`.
