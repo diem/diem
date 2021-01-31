@@ -1392,6 +1392,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "diem-json-rpc-types",
+ "diem-types",
+ "diem-workspace-hack",
+ "hex",
+ "proxy",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "ureq",
+]
+
+[[package]]
 name = "diem-config"
 version = "0.1.0"
 dependencies = [
