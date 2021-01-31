@@ -405,8 +405,5 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
 }
 
 fn feature_str(feature: Option<&str>) -> &str {
-    match feature {
-        Some(feature) => feature,
-        None => "[base]",
-    }
+    feature.unwrap_or("[base]")
 }

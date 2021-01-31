@@ -155,7 +155,7 @@ proptest! {
         // Check the cofactored equation (modulo 8) before conversion to dalek formats //
         /////////////////////////////////////////////////////////////////////////////////
         let mut eight_scalar_bytes = [0u8;32];
-        eight_scalar_bytes[..8].copy_from_slice(&(8 as usize).to_le_bytes());
+        eight_scalar_bytes[..8].copy_from_slice(&(8_usize).to_le_bytes());
         let eight_scalar = curve25519_dalek::scalar::Scalar::from_bits(eight_scalar_bytes);
 
         let r_candidate_point = curve25519_dalek::edwards::EdwardsPoint::vartime_double_scalar_mul_basepoint(&k, &(mixed_pub_point.neg().mul_by_cofactor()), &(s * eight_scalar));

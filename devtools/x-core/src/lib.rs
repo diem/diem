@@ -96,7 +96,7 @@ impl XCoreContext {
     }
 
     /// Returns information about the subsets for this workspace.
-    pub fn subsets<'a>(&'a self) -> Result<&'a WorkspaceSubsets<'a>> {
+    pub fn subsets(&self) -> Result<&WorkspaceSubsets> {
         Ok(self.package_graph_plus()?.suffix())
     }
 

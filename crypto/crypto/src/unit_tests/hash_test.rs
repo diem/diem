@@ -35,12 +35,12 @@ fn test_primitive_type() {
     wtr.extend_from_slice(&x.to_le_bytes());
     assert_eq!(x.test_only_hash(), HashValue::sha3_256_of(&wtr[..]));
 
-    let x = 0x_ff001234_u32;
+    let x = 0xff00_1234_u32;
     let mut wtr: Vec<u8> = vec![];
     wtr.extend_from_slice(&x.to_le_bytes());
     assert_eq!(x.test_only_hash(), HashValue::sha3_256_of(&wtr[..]));
 
-    let x = 0x_89abcdef_01234567_u64;
+    let x = 0x89ab_cdef_0123_4567_u64;
     let mut wtr: Vec<u8> = vec![];
     wtr.extend_from_slice(&x.to_le_bytes());
     assert_eq!(x.test_only_hash(), HashValue::sha3_256_of(&wtr[..]));

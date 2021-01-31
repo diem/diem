@@ -636,10 +636,7 @@ impl NoiseSession {
 
     /// encrypts a message for the other peers (post-handshake)
     /// the function encrypts in place, and returns the authentication tag as result
-    pub fn write_message_in_place<'a>(
-        &mut self,
-        message: &'a mut [u8],
-    ) -> Result<Vec<u8>, NoiseError> {
+    pub fn write_message_in_place(&mut self, message: &mut [u8]) -> Result<Vec<u8>, NoiseError> {
         // checks
         if !self.valid {
             return Err(NoiseError::SessionClosed);
