@@ -6,8 +6,8 @@
 use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
 use debug_interface::AsyncNodeDebugClient;
+use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
-use diem_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{
@@ -239,7 +239,7 @@ impl Instance {
     }
 
     pub async fn try_json_rpc(&self) -> Result<()> {
-        self.json_rpc_client().execute(JsonRpcBatch::new()).await?;
+        self.json_rpc_client().batch(Vec::new()).await?;
         Ok(())
     }
 
@@ -284,8 +284,8 @@ impl Instance {
         self.debug_interface_port
     }
 
-    pub fn json_rpc_client(&self) -> JsonRpcAsyncClient {
-        JsonRpcAsyncClient::new_with_client(self.http_client.clone(), self.json_rpc_url())
+    pub fn json_rpc_client(&self) -> JsonRpcClient {
+        JsonRpcClient::new(self.json_rpc_url().to_string())
     }
 
     pub async fn stop(&self) -> Result<()> {

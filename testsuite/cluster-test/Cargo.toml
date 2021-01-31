@@ -31,7 +31,7 @@ chrono = "0.4.19"
 toml = { version = "0.5.8", default-features = false }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
-diem-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
+diem-client = { path = "../../sdk/client", version = "0.1.0"}
 diem-retrier = { path = "../../common/retrier", version = "0.1.0" }
 num_cpus = "1.13.0"
 

@@ -34,7 +34,7 @@ use rand::{
 };
 use tokio::runtime::Handle;
 
-use diem_json_rpc_client::{views::AmountView, JsonRpcAsyncClient};
+use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address},
     transaction::SignedTransaction,
@@ -207,7 +207,7 @@ impl TxEmitter {
             .expect("Instances can not be empty")
     }
 
-    fn pick_mint_client(&self, instances: &[Instance]) -> JsonRpcAsyncClient {
+    fn pick_mint_client(&self, instances: &[Instance]) -> JsonRpcClient {
         self.pick_mint_instance(instances).json_rpc_client()
     }
 
@@ -220,7 +220,7 @@ impl TxEmitter {
     ) -> Result<Instant> {
         let client = instance.json_rpc_client();
         client
-            .submit_transaction(gen_transfer_txn_request(
+            .submit(&gen_transfer_txn_request(
                 sender,
                 receiver,
                 num_coins,
@@ -303,7 +303,7 @@ impl TxEmitter {
 
     async fn load_account_with_mint_key(
         &self,
-        client: &JsonRpcAsyncClient,
+        client: &JsonRpcClient,
         address: AccountAddress,
     ) -> Result<AccountData> {
         let sequence_number = query_sequence_numbers(&client, &[address])
@@ -323,22 +323,22 @@ impl TxEmitter {
         })
     }
 
-    pub async fn load_diem_root_account(&self, client: &JsonRpcAsyncClient) -> Result<AccountData> {
+    pub async fn load_diem_root_account(&self, client: &JsonRpcClient) -> Result<AccountData> {
         self.load_account_with_mint_key(client, diem_root_address())
             .await
     }
 
-    pub async fn load_faucet_account(&self, client: &JsonRpcAsyncClient) -> Result<AccountData> {
+    pub async fn load_faucet_account(&self, client: &JsonRpcClient) -> Result<AccountData> {
         self.load_account_with_mint_key(client, testnet_dd_account_address())
             .await
     }
 
-    pub async fn load_tc_account(&self, client: &JsonRpcAsyncClient) -> Result<AccountData> {
+    pub async fn load_tc_account(&self, client: &JsonRpcClient) -> Result<AccountData> {
         self.load_account_with_mint_key(client, treasury_compliance_account_address())
             .await
     }
 
-    pub async fn load_dd_account(&self, client: &JsonRpcAsyncClient) -> Result<AccountData> {
+    pub async fn load_dd_account(&self, client: &JsonRpcClient) -> Result<AccountData> {
         let mint_key: Ed25519PrivateKey = generate_key::load_key(DD_KEY);
         let mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> = KeyPair::from(mint_key);
         let address = diem_types::account_address::from_public_key(&mint_key_pair.public_key);
@@ -360,7 +360,7 @@ impl TxEmitter {
 
     pub async fn load_vasp_account(
         &self,
-        client: &JsonRpcAsyncClient,
+        client: &JsonRpcClient,
         index: usize,
     ) -> Result<AccountData> {
         let file = "vasp".to_owned() + index.to_string().as_str() + ".key";
@@ -591,10 +591,11 @@ impl TxEmitter {
     ) -> Result<u64> {
         let client = instance.json_rpc_client();
         let resp = client
-            .get_accounts(slice::from_ref(address))
+            .get_account(*address)
             .await
-            .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
-        Ok(resp[0]
+            .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?
+            .into_inner();
+        Ok(resp
             .as_ref()
             .ok_or_else(|| format_err!("account does not exist"))?
             .sequence_number)
@@ -607,7 +608,7 @@ struct Worker {
 
 struct SubmissionWorker {
     accounts: Vec<AccountData>,
-    client: JsonRpcAsyncClient,
+    client: JsonRpcClient,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
@@ -667,7 +668,7 @@ impl SubmissionWorker {
                 let cur_time = Instant::now();
                 tx_offset_time += (cur_time - start_time).as_millis() as u64;
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
-                let resp = self.client.submit_transaction(request).await;
+                let resp = self.client.submit(&request).await;
                 if let Err(e) = resp {
                     warn!("[{:?}] Failed to submit request: {:?}", self.client, e);
                 }
@@ -763,7 +764,7 @@ impl SubmissionWorker {
 }
 
 async fn wait_for_accounts_sequence(
-    client: &JsonRpcAsyncClient,
+    client: &JsonRpcClient,
     accounts: &mut [AccountData],
 ) -> Result<(), Vec<(AccountAddress, u64)>> {
     let deadline = Instant::now() + TXN_MAX_WAIT;
@@ -809,14 +810,23 @@ fn is_sequence_equal(accounts: &[AccountData], sequence_numbers: &[u64]) -> bool
 }
 
 async fn query_sequence_numbers(
-    client: &JsonRpcAsyncClient,
+    client: &JsonRpcClient,
     addresses: &[AccountAddress],
 ) -> Result<Vec<u64>> {
     let mut result = vec![];
     for addresses_batch in addresses.chunks(20) {
         let resp = client
-            .get_accounts(addresses_batch)
-            .await
+            .batch(
+                addresses_batch
+                    .iter()
+                    .map(|a| MethodRequest::get_account(*a))
+                    .collect(),
+            )
+            .await?
+            .into_iter()
+            .map(|r| r.map_err(anyhow::Error::new))
+            .map(|r| r.map(|response| response.into_inner().unwrap_get_account()))
+            .collect::<Result<Vec<_>>>()
             .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
 
         for item in resp.into_iter() {
@@ -837,15 +847,15 @@ const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
 
 async fn retrieve_account_balance(
-    client: &JsonRpcAsyncClient,
+    client: &JsonRpcClient,
     address: AccountAddress,
 ) -> Result<Vec<AmountView>> {
     let resp = client
-        .get_accounts(&[address])
+        .get_account(address)
         .await
-        .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
-    Ok(resp[0]
-        .clone()
+        .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?
+        .into_inner();
+    Ok(resp
         .ok_or_else(|| format_err!("account does not exist"))?
         .balances)
 }
@@ -1007,10 +1017,7 @@ fn gen_rng_for_reusable_account(count: usize) -> Vec<StdRng> {
     rngs
 }
 
-async fn gen_reusable_account(
-    client: &JsonRpcAsyncClient,
-    rng: &mut StdRng,
-) -> Result<AccountData> {
+async fn gen_reusable_account(client: &JsonRpcClient, rng: &mut StdRng) -> Result<AccountData> {
     let mint_key_pair = KeyPair::generate(rng);
     let address = diem_types::account_address::from_public_key(&mint_key_pair.public_key);
     let sequence_number = match query_sequence_numbers(&client, &[address]).await {
@@ -1025,7 +1032,7 @@ async fn gen_reusable_account(
 }
 
 async fn gen_reusable_accounts(
-    client: &JsonRpcAsyncClient,
+    client: &JsonRpcClient,
     num_accounts: usize,
     rng: &mut StdRng,
 ) -> Result<Vec<AccountData>> {
@@ -1089,7 +1096,7 @@ fn gen_mint_txn_requests(
 }
 
 pub async fn execute_and_wait_transactions(
-    client: &mut JsonRpcAsyncClient,
+    client: &mut JsonRpcClient,
     account: &mut AccountData,
     txn: Vec<SignedTransaction>,
 ) -> Result<()> {
@@ -1108,7 +1115,7 @@ pub async fn execute_and_wait_transactions(
             Box::pin(async move {
                 let txn_str = format!("{}::{}", request.sender(), request.sequence_number());
                 debug!("Submitting txn {}", txn_str);
-                let resp = c.submit_transaction(request).await;
+                let resp = c.submit(&request).await;
                 debug!("txn {} status: {:?}", txn_str, resp);
 
                 resp.map_err(|e| format_err!("[{}] Failed to submit request: {:?}", client_name, e))
@@ -1133,7 +1140,7 @@ async fn create_new_accounts(
     num_new_accounts: usize,
     diem_per_new_account: u64,
     max_num_accounts_per_batch: u64,
-    mut client: JsonRpcAsyncClient,
+    mut client: JsonRpcClient,
     chain_id: ChainId,
     reuse_account: bool,
     mut rng: StdRng,
@@ -1169,7 +1176,7 @@ async fn create_seed_accounts(
     creation_account: &mut AccountData,
     num_new_accounts: usize,
     max_num_accounts_per_batch: u64,
-    mut client: JsonRpcAsyncClient,
+    mut client: JsonRpcClient,
     chain_id: ChainId,
 ) -> Result<Vec<AccountData>> {
     let mut i = 0;
@@ -1193,7 +1200,7 @@ async fn mint_to_new_accounts(
     accounts: &[AccountData],
     diem_per_new_account: u64,
     max_num_accounts_per_batch: u64,
-    mut client: JsonRpcAsyncClient,
+    mut client: JsonRpcClient,
     chain_id: ChainId,
 ) -> Result<()> {
     let mut left = accounts;
