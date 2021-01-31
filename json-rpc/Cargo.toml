@@ -49,7 +49,7 @@ rand = { version = "0.7.3" }
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
 diemdb = { path = "../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
 diem-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
-diem-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0" }
+diem-client = { path = "../sdk/client", version = "0.1.0" }
 diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers" }
 diem-temppath = { path = "../common/temppath", version = "0.1.0" }

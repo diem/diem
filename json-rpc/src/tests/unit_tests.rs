@@ -2,22 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{JsonRpcError, ServerCode},
+    errors::ServerCode,
     runtime::check_latest_ledger_info_timestamp,
     tests::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockDiemDB},
     },
 };
+use diem_client::{
+    views::{BytesView, TransactionDataView, VMStatusView},
+    BlockingClient, MethodRequest,
+};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
 use diem_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
-use diem_json_rpc_client::{
-    views::{
-        AccountStateWithProofView, AccountView, BytesView, EventView, MetadataView, StateProofView,
-        TransactionDataView, TransactionView, VMStatusView,
-    },
-    JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
-};
 use diem_mempool::SubmissionStatus;
 use diem_metrics::get_all_metrics;
 use diem_proptest_helpers::ValueGenerator;
@@ -57,7 +54,6 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     ops::Sub,
-    str::FromStr,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -1084,10 +1080,7 @@ fn test_transaction_submission() {
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
     let runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
-    let client = JsonRpcAsyncClient::new(
-        reqwest::Url::from_str(format!("http://{}:{}/v1", "127.0.0.1", port).as_str())
-            .expect("invalid url"),
-    );
+    let client = BlockingClient::new(format!("http://127.0.0.1:{}/v1", port));
 
     // future that mocks shared mempool execution
     runtime.spawn(async move {
@@ -1107,46 +1100,37 @@ fn test_transaction_submission() {
     let txn_submission = move |sender| {
         let privkey = Ed25519PrivateKey::generate_for_testing();
         let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
-        let mut batch = JsonRpcBatch::default();
-        batch.add_submit_request(txn).unwrap();
-        runtime.block_on(client.execute(batch)).unwrap()
+        client.submit(&txn)
     };
 
     // check successful submission
     let sender = AccountAddress::new([9; AccountAddress::LENGTH]);
-    assert!(txn_submission(sender)[0].as_ref().unwrap() == &JsonRpcResponse::SubmissionResponse);
+    txn_submission(sender).unwrap();
 
     // check vm error submission
     let sender = AccountAddress::new([0; AccountAddress::LENGTH]);
-    let response = &txn_submission(sender)[0];
+    let response = txn_submission(sender);
 
-    if let Err(e) = response {
-        if let Some(error) = e.downcast_ref::<JsonRpcError>() {
-            assert_eq!(error.code, ServerCode::VmValidationError as i16);
-            let status_code: StatusCode = error.as_status_code().unwrap();
-            assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
-        } else {
-            panic!("unexpected error format");
-        }
-    } else {
-        panic!("expected error");
-    }
+    let error = response.unwrap_err();
+    let error = error.json_rpc_error().unwrap();
+    assert_eq!(error.code, ServerCode::VmValidationError as i16);
+    let status_code: StatusCode = error.as_status_code().unwrap();
+    assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
 }
 
 #[test]
 fn test_get_account() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     // test case 1: single call
     let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
     let expected_resource = AccountState::try_from(blob).unwrap();
 
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_account_request(*first_account);
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-    let account = AccountView::optional_from_response(result)
+    let account = client
+        .get_account(*first_account)
         .unwrap()
-        .expect("account does not exist");
+        .into_inner()
+        .unwrap();
     let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
     let expected_resource_balances: Vec<_> = expected_resource
         .get_balance_resources(&[from_currency_code_string(XUS_NAME).unwrap()])
@@ -1169,7 +1153,7 @@ fn test_get_account() {
     );
 
     // test case 2: batch call
-    let mut batch = JsonRpcBatch::default();
+    let mut batch = Vec::new();
     let mut states = vec![];
 
     for (account, blob) in mock_db.all_accounts.iter() {
@@ -1177,16 +1161,14 @@ fn test_get_account() {
             continue;
         }
         states.push(AccountState::try_from(blob).unwrap());
-        batch.add_get_account_request(*account);
+        batch.push(MethodRequest::get_account(*account));
     }
 
-    let responses = runtime.block_on(client.execute(batch)).unwrap();
+    let responses = client.batch(batch).unwrap();
     assert_eq!(responses.len(), states.len());
 
     for (idx, response) in responses.into_iter().enumerate() {
-        let account = AccountView::optional_from_response(response.expect("error in response"))
-            .unwrap()
-            .expect("account does not exist");
+        let account = response.unwrap().into_inner().unwrap_get_account().unwrap();
         let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
         let expected_resource_balances: Vec<_> = states[idx]
             .get_balance_resources(&[from_currency_code_string(XUS_NAME).unwrap()])
@@ -1208,98 +1190,82 @@ fn test_get_account() {
 
 #[test]
 fn test_get_metadata_latest() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let (actual_version, actual_timestamp) = mock_db.get_latest_commit_metadata().unwrap();
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_metadata_request(None);
 
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-
-    let result_view = MetadataView::from_response(result).unwrap();
-    assert_eq!(result_view.version, actual_version);
-    assert_eq!(result_view.timestamp, actual_timestamp);
+    let metadata = client.get_metadata().unwrap().into_inner();
+    assert_eq!(metadata.version, actual_version);
+    assert_eq!(metadata.timestamp, actual_timestamp);
 }
 
 #[test]
 fn test_get_metadata() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_metadata_request(Some(1));
-
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-
-    let result_view = MetadataView::from_response(result).unwrap();
-    assert_eq!(result_view.version, 1);
-    assert_eq!(result_view.timestamp, mock_db.timestamps[1]);
+    let metadata = client.get_metadata_by_version(1).unwrap().into_inner();
+    assert_eq!(metadata.version, 1);
+    assert_eq!(metadata.timestamp, mock_db.timestamps[1]);
 }
 
 #[test]
 fn test_limit_batch_size() {
-    let (_, client, runtime) = create_database_client_and_runtime();
+    let (_, client, _runtime) = create_database_client_and_runtime();
 
-    let mut batch = JsonRpcBatch::default();
+    let mut batch = Vec::new();
 
     for i in 0..21 {
-        batch.add_get_metadata_request(Some(i));
+        batch.push(MethodRequest::get_metadata_by_version(i));
     }
 
-    let ret = runtime.block_on(client.execute(batch));
-    assert!(ret.is_err());
-    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request: batch size = 21, exceed limit 20\", data: None }";
-    assert_eq!(ret.unwrap_err().to_string(), expected)
+    let ret = client.batch(batch).unwrap_err();
+
+    let error = ret.json_rpc_error().unwrap();
+    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: batch size = 21, exceed limit 20\", data: None }";
+    assert_eq!(format!("{:?}", error), expected)
 }
 
 #[test]
 fn test_get_events_page_limit() {
-    let (_, client, runtime) = create_database_client_and_runtime();
+    let (_, client, _runtime) = create_database_client_and_runtime();
 
-    let mut batch = JsonRpcBatch::default();
+    let ret = client
+        .get_events("13000000000000000000000000000000000000000a550c18", 0, 1001)
+        .unwrap_err();
 
-    batch.add_get_events_request(
-        "13000000000000000000000000000000000000000a550c18".to_string(),
-        0,
-        1001,
-    );
-
-    let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
-    assert!(ret.is_err());
+    let error = ret.json_rpc_error().unwrap();
     let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
-    assert_eq!(ret.unwrap_err().to_string(), expected)
+    assert_eq!(format!("{:?}", error), expected)
 }
 
 #[test]
 fn test_get_transactions_page_limit() {
-    let (_, client, runtime) = create_database_client_and_runtime();
+    let (_, client, _runtime) = create_database_client_and_runtime();
 
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_transactions_request(0, 1001, false);
-
-    let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
-    assert!(ret.is_err());
+    let ret = client.get_transactions(0, 1001, false).unwrap_err();
+    let error = ret.json_rpc_error().unwrap();
     let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
-    assert_eq!(ret.unwrap_err().to_string(), expected)
+    assert_eq!(format!("{:?}", error), expected)
 }
 
 #[test]
 fn test_get_events() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let event_index = 0;
     let mock_db_events = mock_db.events;
     let (first_event_version, first_event) = mock_db_events[event_index].clone();
     let event_key = hex::encode(first_event.key().as_bytes());
 
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_events_request(
-        event_key,
-        first_event.sequence_number(),
-        first_event.sequence_number() + 10,
-    );
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
+    let events = client
+        .get_events(
+            &event_key,
+            first_event.sequence_number(),
+            first_event.sequence_number() + 10,
+        )
+        .unwrap()
+        .into_inner();
 
-    let events = EventView::vec_from_response(result).unwrap();
     let fetched_event = &events[event_index];
     assert_eq!(
         fetched_event.sequence_number,
@@ -1314,7 +1280,7 @@ fn test_get_events() {
 
 #[test]
 fn test_get_transactions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let version = mock_db.get_latest_version().unwrap();
     let page = 800usize;
@@ -1325,10 +1291,10 @@ fn test_get_transactions() {
         .collect::<Vec<_>>()
         .into_iter()
     {
-        let mut batch = JsonRpcBatch::default();
-        batch.add_get_transactions_request(base_version, page as u64, true);
-        let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-        let txns = TransactionView::vec_from_response(result).unwrap();
+        let txns = client
+            .get_transactions(base_version, page as u64, true)
+            .unwrap()
+            .into_inner();
 
         for (i, view) in txns.iter().enumerate() {
             let version = base_version + i as u64;
@@ -1398,18 +1364,16 @@ fn test_get_transactions() {
 
 #[test]
 fn test_get_account_transaction() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     for (acc, blob) in mock_db.all_accounts.iter() {
         let ar = AccountResource::try_from(blob).unwrap();
         for seq in 1..ar.sequence_number() {
-            let mut batch = JsonRpcBatch::default();
-            batch.add_get_account_transaction_request(*acc, seq, true);
-
-            let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-            let tx_view = TransactionView::optional_from_response(result)
+            let tx_view = client
+                .get_account_transaction(*acc, seq, true)
                 .unwrap()
-                .expect("Transaction didn't exists!");
+                .into_inner()
+                .unwrap();
 
             let (expected_tx, expected_status) = mock_db
                 .all_txns
@@ -1477,16 +1441,15 @@ fn test_get_account_transaction() {
 
 #[test]
 fn test_get_account_transactions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     for (acc, blob) in mock_db.all_accounts.iter() {
         let total = AccountResource::try_from(blob).unwrap().sequence_number();
 
-        let mut batch = JsonRpcBatch::default();
-        batch.add_get_account_transactions_request(*acc, 0, max(1, min(1000, total * 2)), true);
-
-        let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-        let tx_views = TransactionView::vec_from_response(result).unwrap();
+        let tx_views = client
+            .get_account_transactions(*acc, 0, max(1, min(1000, total * 2)), true)
+            .unwrap()
+            .into_inner();
         assert_eq!(tx_views.len() as u64, total);
     }
 }
@@ -1494,15 +1457,13 @@ fn test_get_account_transactions() {
 // Check that if version and ledger_version parameters are None, then the server returns the latest
 // known state.
 fn test_get_account_state_with_proof_null_versions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let account = get_first_account_from_mock_db(&mock_db);
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_account_state_with_proof_request(account, None, None);
-
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-
-    let received_proof = AccountStateWithProofView::from_response(result).unwrap();
+    let received_proof = client
+        .get_account_state_with_proof(account, None, None)
+        .unwrap()
+        .into_inner();
     let expected_proof = get_first_state_proof_from_mock_db(&mock_db);
 
     // Check latest version returned, when no version specified
@@ -1511,15 +1472,14 @@ fn test_get_account_state_with_proof_null_versions() {
 
 #[test]
 fn test_get_account_state_with_proof() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let account = get_first_account_from_mock_db(&mock_db);
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_account_state_with_proof_request(account, Some(0), Some(0));
 
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-
-    let received_proof = AccountStateWithProofView::from_response(result).unwrap();
+    let received_proof = client
+        .get_account_state_with_proof(account, Some(0), Some(0))
+        .unwrap()
+        .into_inner();
     let expected_proof = get_first_state_proof_from_mock_db(&mock_db);
     let expected_blob = expected_proof.blob.as_ref().unwrap();
     let expected_sm_proof = expected_proof.proof.transaction_info_to_account_proof();
@@ -1559,13 +1519,10 @@ fn test_get_account_state_with_proof() {
 
 #[test]
 fn test_get_state_proof() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (mock_db, client, _runtime) = create_database_client_and_runtime();
 
     let version = mock_db.version;
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_state_proof_request(version);
-    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-    let proof = StateProofView::from_response(result).unwrap();
+    let proof = client.get_state_proof(version).unwrap().into_inner();
     let li: LedgerInfoWithSignatures =
         bcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes().unwrap()).unwrap();
     assert_eq!(li.ledger_info().version(), version);
@@ -1573,19 +1530,11 @@ fn test_get_state_proof() {
 
 #[test]
 fn test_get_network_status() {
-    let (_mock_db, client, mut runtime) = create_database_client_and_runtime();
+    let (_mock_db, client, _runtime) = create_database_client_and_runtime();
 
-    let mut batch = JsonRpcBatch::default();
-    batch.add_get_network_status_request();
-
-    if let JsonRpcResponse::NetworkStatusResponse(connected_peers) =
-        execute_batch_and_get_first_response(&client, &mut runtime, batch)
-    {
-        // expect no connected peers when no network is running
-        assert_eq!(connected_peers.as_u64().unwrap(), 0);
-    } else {
-        panic!("did not receive expected json rpc response");
-    }
+    let connected_peers = client.get_network_status().unwrap().into_inner();
+    // expect no connected peers when no network is running
+    assert_eq!(connected_peers, 0);
 }
 
 #[test]
@@ -1636,10 +1585,9 @@ fn test_check_latest_ledger_info_timestamp() {
 
 /// Creates and returns a MockDiemDB, JsonRpcAsyncClient and corresponding server Runtime tuple for
 /// testing. The given channel_buffer specifies the buffer size of the mempool client sender channel.
-fn create_database_client_and_runtime() -> (MockDiemDB, JsonRpcAsyncClient, Runtime) {
+fn create_database_client_and_runtime() -> (MockDiemDB, BlockingClient, Runtime) {
     let (mock_db, runtime, url, _) = create_db_and_runtime();
-    let client =
-        JsonRpcAsyncClient::new(reqwest::Url::from_str(url.as_str()).expect("invalid url"));
+    let client = BlockingClient::new(url);
 
     (mock_db, client, runtime)
 }
@@ -1684,20 +1632,6 @@ fn get_first_state_proof_from_mock_db(mock_db: &MockDiemDB) -> AccountStateWithP
         .get(0)
         .expect("mock DB missing account state with proof")
         .clone()
-}
-
-/// Executes the given JsonRPCBatch using the specified JsonRpcAsyncClient and Runtime, and returns
-/// the first JsonRpcResponse produced for the batch.
-fn execute_batch_and_get_first_response(
-    client: &JsonRpcAsyncClient,
-    runtime: &mut Runtime,
-    batch: JsonRpcBatch,
-) -> JsonRpcResponse {
-    runtime
-        .block_on(client.execute(batch))
-        .unwrap()
-        .remove(0)
-        .unwrap()
 }
 
 fn gen_string(len: usize) -> String {
