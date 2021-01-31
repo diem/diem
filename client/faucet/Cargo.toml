@@ -23,7 +23,7 @@ generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto/", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-json-rpc-client = { path = "../json-rpc", version = "0.1.0" }
+diem-client = { path = "../../sdk/client", version = "0.1.0" }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

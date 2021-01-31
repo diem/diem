@@ -1540,10 +1540,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "diem-client",
  "diem-config",
  "diem-crypto",
  "diem-infallible",
- "diem-json-rpc-client",
  "diem-logger",
  "diem-types",
  "diem-workspace-hack",
