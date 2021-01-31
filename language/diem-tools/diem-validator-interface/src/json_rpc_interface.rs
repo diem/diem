@@ -2,35 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::DiemValidatorInterface;
-use anyhow::{bail, Result};
-use diem_json_rpc_client::{JsonRpcBatch, JsonRpcClient, JsonRpcResponse};
+use anyhow::Result;
+use diem_client::BlockingClient;
 use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     transaction::{Transaction, Version},
 };
-use reqwest::Url;
 use std::convert::TryFrom;
 
 pub struct JsonRpcDebuggerInterface {
-    client: JsonRpcClient,
+    client: BlockingClient,
 }
 
 impl JsonRpcDebuggerInterface {
     pub fn new(url: &str) -> Result<Self> {
-        let url = Url::parse(url)?;
         Ok(Self {
-            client: JsonRpcClient::new(url)?,
+            client: BlockingClient::new(url),
         })
-    }
-
-    fn execute_single_command(&self, cmd: JsonRpcBatch) -> Result<JsonRpcResponse> {
-        let mut ret = self.client.execute(cmd)?;
-        if ret.len() != 1 {
-            bail!("Unexpected response length")
-        }
-        ret.pop().unwrap()
     }
 }
 
@@ -40,51 +30,38 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
         account: AccountAddress,
         version: Version,
     ) -> Result<Option<AccountState>> {
-        let mut batch = JsonRpcBatch::new();
-        batch.add_get_account_state_with_proof_request(account, Some(version), None);
+        let account_state = self
+            .client
+            .get_account_state_with_proof(account, Some(version), None)?
+            .into_inner();
 
-        let resp = self.execute_single_command(batch)?;
-        if let JsonRpcResponse::AccountStateWithProofResponse(account_state) = resp {
-            Ok(match account_state.blob {
-                Some(bytes) => {
-                    let account_state_blob =
-                        bcs::from_bytes::<AccountStateBlob>(&bytes.into_bytes()?)?;
-                    Some(AccountState::try_from(&account_state_blob)?)
-                }
-                None => None,
-            })
-        } else {
-            bail!("Unexpected response type");
-        }
+        Ok(match account_state.blob {
+            Some(bytes) => {
+                let account_state_blob = bcs::from_bytes::<AccountStateBlob>(&bytes.into_bytes()?)?;
+                Some(AccountState::try_from(&account_state_blob)?)
+            }
+            None => None,
+        })
     }
 
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {
-        let mut batch = JsonRpcBatch::new();
-        batch.add_get_transactions_request(start, limit, false);
+        let txns = self
+            .client
+            .get_transactions(start, limit, false)?
+            .into_inner();
 
-        let resp = self.execute_single_command(batch)?;
-        if let JsonRpcResponse::TransactionsResponse(txns) = resp {
-            let mut output = vec![];
-            for txn in txns.into_iter() {
-                let raw_bytes = txn.bytes.into_bytes()?;
-                output.push(bcs::from_bytes(&raw_bytes)?);
-            }
-            Ok(output)
-        } else {
-            bail!("Unexpected response type");
+        let mut output = vec![];
+        for txn in txns.into_iter() {
+            let raw_bytes = txn.bytes.into_bytes()?;
+            output.push(bcs::from_bytes(&raw_bytes)?);
         }
+        Ok(output)
     }
 
     fn get_latest_version(&self) -> Result<Version> {
-        let mut batch = JsonRpcBatch::new();
-        batch.add_get_metadata_request(None);
+        let metadata = self.client.get_metadata()?.into_inner();
 
-        let resp = self.execute_single_command(batch)?;
-        if let JsonRpcResponse::MetadataViewResponse(metadata) = resp {
-            Ok(metadata.version)
-        } else {
-            bail!("Unexpected response type");
-        }
+        Ok(metadata.version)
     }
 
     fn get_version_by_account_sequence(
@@ -92,14 +69,11 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
         account: AccountAddress,
         seq: u64,
     ) -> Result<Option<Version>> {
-        let mut batch = JsonRpcBatch::new();
-        batch.add_get_account_transaction_request(account, seq, false);
+        let txn = self
+            .client
+            .get_account_transaction(account, seq, false)?
+            .into_inner();
 
-        let resp = self.execute_single_command(batch)?;
-        if let JsonRpcResponse::AccountTransactionResponse(metadata) = resp {
-            Ok(metadata.map(|txn| txn.version))
-        } else {
-            bail!("Unexpected response type");
-        }
+        Ok(txn.map(|txn| txn.version))
     }
 }

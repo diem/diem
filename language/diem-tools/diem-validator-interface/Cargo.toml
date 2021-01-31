@@ -9,13 +9,10 @@ license = "Apache-2.0"
 publish = false
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-reqwest = { version = "0.11.0", features = ["blocking", "json"] }
 anyhow = "1.0.38"
 diem-config = { path = "../../../config", version = "0.1.0" }
-diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
+diem-client = { path = "../../../sdk/client", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }
 diemdb = { path = "../../../storage/diemdb", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
