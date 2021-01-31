@@ -9,9 +9,9 @@ use crate::{
     instance::Instance,
     tx_emitter::{execute_and_wait_transactions, gen_submit_transaction_request, EmitJobRequest},
 };
-use anyhow::{bail, ensure};
+use anyhow::ensure;
 use async_trait::async_trait;
-use diem_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse};
+use diem_client::Client;
 use diem_logger::prelude::*;
 use diem_operational_tool::json_rpc::JsonRpcClientWrapper;
 use diem_types::{
@@ -68,17 +68,11 @@ impl ExperimentParam for ReconfigurationParams {
 }
 
 async fn expect_epoch(
-    client: &JsonRpcAsyncClient,
+    client: &Client,
     known_version: u64,
     expected_epoch: u64,
 ) -> anyhow::Result<u64> {
-    let mut batch = JsonRpcBatch::new();
-    batch.add_get_state_proof_request(known_version);
-    let resp = client.execute(batch).await?.pop().unwrap()?;
-    let state_proof = match resp {
-        JsonRpcResponse::StateProofResponse(state_proof) => state_proof,
-        _ => bail!("unexpected response"),
-    };
+    let state_proof = client.get_state_proof(known_version).await?.into_inner();
     let li: LedgerInfoWithSignatures =
         bcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
     let epoch = li.ledger_info().next_block_epoch();
