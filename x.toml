@@ -120,6 +120,7 @@ members = [
     "diem-documentation-tool",
     "diem-fuzz",
     "diem-fuzzer",
+    "diem-json-rpc-client",
     "diem-proptest-helpers",
     "diem-retrier",
     "diem-smoke-test-attribute",
