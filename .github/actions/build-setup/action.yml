@@ -64,6 +64,3 @@ runs:
         echo 'CARGO='$(rustup which cargo --toolchain "$(cat cargo-toolchain)") | tee -a $GITHUB_ENV
         # Pin the version of RUSTC used for all invocations of cargo
         echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) | tee -a $GITHUB_ENV
-
-        # Disable sccache from being used till https://github.com/mozilla/sccache/issues/804 is fixed
-        echo 'SKIP_SCCACHE=1' | tee -a $GITHUB_ENV
