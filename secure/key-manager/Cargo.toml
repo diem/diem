@@ -32,7 +32,7 @@ transaction-builder-generated = { path = "../../client/transaction-builder", ver
 anyhow = "1.0.38"
 futures = "0.3.12"
 rand = "0.7.3"
-tokio = { version = "1.1.0", features = ["full"] }
+tokio = { version = "1.1.1", features = ["full"] }
 
 executor = { path = "../../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../../execution/executor-test-helpers", version = "0.1.0" }

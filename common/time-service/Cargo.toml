@@ -14,7 +14,7 @@ enum_dispatch = "0.3.5"
 futures = { version = "0.3.12", optional = true }
 pin-project = { version = "1.0.4", optional = true }
 thiserror = "1.0.23"
-tokio = { version = "1.1.0", features = ["macros", "rt-multi-thread", "time"], optional = true }
+tokio = { version = "1.1.1", features = ["macros", "rt-multi-thread", "time"], optional = true }
 
 diem-infallible = { path = "../infallible", version = "0.1.0" }
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
@@ -22,7 +22,7 @@ diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 [dev-dependencies]
 futures = "0.3.12"
 pin-project = "1.0.4"
-tokio = { version = "1.1.0", features = ["macros", "rt-multi-thread", "time"] }
+tokio = { version = "1.1.1", features = ["macros", "rt-multi-thread", "time"] }
 tokio-test = "0.4.0"
 
 [features]
