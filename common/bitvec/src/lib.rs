@@ -212,7 +212,11 @@ mod test {
         p5.set(10);
         assert!(p5.is_set(10));
         assert_eq!(p5.last_set_bit(), Some(10));
-        assert_eq!(p5.inner, vec![0b0000_0001, 0b0110_0000])
+        assert_eq!(p5.inner, vec![0b0000_0001, 0b0110_0000]);
+
+        let p6 = BitVec { inner: vec![128u8] };
+        assert_eq!(p6.inner.len(), 1);
+        assert_eq!(p6.last_set_bit(), Some(0));
     }
 
     #[test]
