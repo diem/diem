@@ -385,6 +385,8 @@ pub enum Visibility {
     Private = 0x0,
     /// Accessible by any module or script outside of its declaring module.
     Public = 0x1,
+    /// Accessible by any script or other `Script` functions from any module
+    Script = 0x2,
 }
 
 impl Default for Visibility {
@@ -400,6 +402,7 @@ impl std::convert::TryFrom<u8> for Visibility {
         match v {
             x if x == Visibility::Private as u8 => Ok(Visibility::Private),
             x if x == Visibility::Public as u8 => Ok(Visibility::Public),
+            x if x == Visibility::Script as u8 => Ok(Visibility::Script),
             _ => Err(()),
         }
     }

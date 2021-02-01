@@ -564,6 +564,7 @@ pub enum StatusCode {
     INVALID_PARAM_TYPE_FOR_DESERIALIZATION = 1099,
     FAILED_TO_DESERIALIZE_ARGUMENT = 1100,
     NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH = 1101,
+    CALLED_SCRIPT_VISIBLE_FROM_NON_SCRIPT_VISIBLE = 1102,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

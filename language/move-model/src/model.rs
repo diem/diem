@@ -2349,6 +2349,7 @@ impl<'env> FunctionEnv<'env> {
         self.module_env.is_script_module()
             || match self.definition_view().visibility() {
                 Visibility::Public => true,
+                Visibility::Script => panic!("Script visibility not yet supported"),
                 Visibility::Private => false,
             }
     }

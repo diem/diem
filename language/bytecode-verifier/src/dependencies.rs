@@ -7,11 +7,12 @@ use diem_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use std::collections::{BTreeMap, HashMap};
 use vm::{
-    access::ModuleAccess,
+    access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        CompiledModule, CompiledScript, FunctionHandleIndex, ModuleHandleIndex, SignatureToken,
-        StructHandleIndex, TableIndex, Visibility,
+        Bytecode, CodeOffset, CompiledModule, CompiledScript, FunctionDefinitionIndex,
+        FunctionHandleIndex, ModuleHandleIndex, SignatureToken, StructHandleIndex, TableIndex,
+        Visibility,
     },
     IndexKind,
 };
@@ -24,6 +25,8 @@ struct Context<'a, 'b> {
     struct_id_to_handle_map: HashMap<(ModuleId, Identifier), StructHandleIndex>,
     // (Module::FunctionName -> handle) for all non-private functions of all dependencies
     func_id_to_handle_map: HashMap<(ModuleId, Identifier), FunctionHandleIndex>,
+    // (handle -> visibility) for all function handles found in the module being checked
+    function_visibilities: HashMap<FunctionHandleIndex, Visibility>,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
@@ -46,6 +49,12 @@ impl<'a, 'b> Context<'a, 'b> {
         dependencies: impl IntoIterator<Item = &'b CompiledModule>,
     ) -> Self {
         let self_module = resolver.self_id();
+        let self_module_idx = resolver.self_handle_idx();
+        let empty_defs = &vec![];
+        let self_function_defs = match &resolver {
+            BinaryIndexedView::Module(m) => m.function_defs(),
+            BinaryIndexedView::Script(_) => empty_defs,
+        };
         let dependency_map = dependencies
             .into_iter()
             .filter(|d| Some(d.self_id()) != self_module)
@@ -57,8 +66,10 @@ impl<'a, 'b> Context<'a, 'b> {
             dependency_map,
             struct_id_to_handle_map: HashMap::new(),
             func_id_to_handle_map: HashMap::new(),
+            function_visibilities: HashMap::new(),
         };
 
+        let mut dependency_visibilities = HashMap::new();
         for (module_id, module) in &context.dependency_map {
             // Module::StructName -> def handle idx
             for struct_def in module.struct_defs() {
@@ -71,20 +82,49 @@ impl<'a, 'b> Context<'a, 'b> {
             }
             // Module::FuncName -> def handle idx
             for func_def in module.function_defs() {
-                let may_be_called = match func_def.visibility {
-                    Visibility::Public => true,
-                    Visibility::Private => false,
-                };
-                if !may_be_called {
-                    continue;
-                }
                 let func_handle = module.function_handle_at(func_def.function);
                 let func_name = module.identifier_at(func_handle.name);
-                context
-                    .func_id_to_handle_map
-                    .insert((module_id.clone(), func_name.to_owned()), func_def.function);
+                dependency_visibilities.insert(
+                    (module_id.clone(), func_name.to_owned()),
+                    func_def.visibility,
+                );
+                match func_def.visibility {
+                    Visibility::Private => continue,
+                    Visibility::Public | Visibility::Script => {
+                        context
+                            .func_id_to_handle_map
+                            .insert((module_id.clone(), func_name.to_owned()), func_def.function);
+                    }
+                }
             }
         }
+
+        for function_def in self_function_defs {
+            let visibility = function_def.visibility;
+            context
+                .function_visibilities
+                .insert(function_def.function, visibility);
+        }
+        for (idx, function_handle) in context.resolver.function_handles().iter().enumerate() {
+            if Some(function_handle.module) == self_module_idx {
+                continue;
+            }
+            let owner_module_id = context
+                .resolver
+                .module_id_for_handle(context.resolver.module_handle_at(function_handle.module));
+            let function_name = context.resolver.identifier_at(function_handle.name);
+            let visibility =
+                match dependency_visibilities.get(&(owner_module_id, function_name.to_owned())) {
+                    // The visibility does not need to be set here. If the function does not
+                    // link, it will be reported by verify_imported_functions
+                    None => continue,
+                    Some(vis) => *vis,
+                };
+            context
+                .function_visibilities
+                .insert(FunctionHandleIndex(idx as TableIndex), visibility);
+        }
+
         context
     }
 }
@@ -105,7 +145,8 @@ fn verify_module_impl<'a>(
 
     verify_imported_modules(context)?;
     verify_imported_structs(context)?;
-    verify_imported_functions(context)
+    verify_imported_functions(context)?;
+    verify_all_script_visibility_usage(context)
 }
 
 pub fn verify_script<'a>(
@@ -123,7 +164,8 @@ pub fn verify_script_impl<'a>(
 
     verify_imported_modules(context)?;
     verify_imported_structs(context)?;
-    verify_imported_functions(context)
+    verify_imported_functions(context)?;
+    verify_all_script_visibility_usage(context)
 }
 
 fn verify_imported_modules(context: &Context) -> PartialVMResult<()> {
@@ -342,4 +384,68 @@ fn compare_structs(
     } else {
         Ok(())
     }
+}
+
+fn verify_all_script_visibility_usage(context: &Context) -> PartialVMResult<()> {
+    match &context.resolver {
+        BinaryIndexedView::Module(m) => {
+            for (idx, fdef) in m.function_defs().iter().enumerate() {
+                let code = match &fdef.code {
+                    None => continue,
+                    Some(code) => &code.code,
+                };
+                verify_script_visibility_usage(
+                    context,
+                    fdef.visibility,
+                    FunctionDefinitionIndex(idx as TableIndex),
+                    code,
+                )?
+            }
+            Ok(())
+        }
+        BinaryIndexedView::Script(s) => verify_script_visibility_usage(
+            context,
+            Visibility::Script,
+            FunctionDefinitionIndex(0),
+            &s.code().code,
+        ),
+    }
+}
+
+fn verify_script_visibility_usage(
+    context: &Context,
+    current_visibility: Visibility,
+    fdef_idx: FunctionDefinitionIndex,
+    code: &[Bytecode],
+) -> PartialVMResult<()> {
+    for (idx, instr) in code.iter().enumerate() {
+        let idx = idx as CodeOffset;
+        let fhandle_idx = match instr {
+            Bytecode::Call(fhandle_idx) => fhandle_idx,
+            Bytecode::CallGeneric(finst_idx) => {
+                &context
+                    .resolver
+                    .function_instantiation_at(*finst_idx)
+                    .handle
+            }
+            _ => continue,
+        };
+        let fhandle_vis = context.function_visibilities[fhandle_idx];
+        match (current_visibility, fhandle_vis) {
+            (Visibility::Script, Visibility::Script) => (),
+            (_, Visibility::Script) => {
+                return Err(PartialVMError::new(
+                    StatusCode::CALLED_SCRIPT_VISIBLE_FROM_NON_SCRIPT_VISIBLE,
+                )
+                .at_code_offset(fdef_idx, idx)
+                .with_message(
+                    "script-visible functions can only be called from scripts or other \
+                    script-visibile functions"
+                        .to_string(),
+                ));
+            }
+            _ => (),
+        }
+    }
+    Ok(())
 }

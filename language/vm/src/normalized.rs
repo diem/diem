@@ -81,7 +81,7 @@ pub struct Module {
     pub address: AccountAddress,
     pub name: Identifier,
     pub structs: Vec<Struct>,
-    pub public_functions: Vec<FunctionSignature>,
+    pub externally_visible_functions: Vec<(Visibility, FunctionSignature)>,
 }
 
 impl Module {
@@ -90,13 +90,14 @@ impl Module {
     /// normalized representation of a module that won't verify (since it can't be published).
     pub fn new(m: &CompiledModule) -> Self {
         let structs = m.struct_defs().iter().map(|d| Struct::new(m, d)).collect();
-        let public_functions = m
+        let externally_visible_functions = m
             .function_defs()
             .iter()
             .filter_map(|f| match f.visibility {
-                Visibility::Public => {
-                    Some(FunctionSignature::new(m, m.function_handle_at(f.function)))
-                }
+                v @ Visibility::Public | v @ Visibility::Script => Some((
+                    v,
+                    FunctionSignature::new(m, m.function_handle_at(f.function)),
+                )),
                 Visibility::Private => None,
             })
             .collect();
@@ -104,7 +105,7 @@ impl Module {
             address: *m.address(),
             name: m.name().to_owned(),
             structs,
-            public_functions,
+            externally_visible_functions,
         }
     }
 }

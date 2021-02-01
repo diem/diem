@@ -22,8 +22,8 @@ use vm::{
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default)]
 pub struct DisassemblerOptions {
-    /// Only print public functions
-    pub only_public: bool,
+    /// Only print non-private functions
+    pub only_externally_visible: bool,
 
     /// Print the bytecode for the instructions within the function.
     pub print_code: bool,
@@ -38,7 +38,7 @@ pub struct DisassemblerOptions {
 impl DisassemblerOptions {
     pub fn new() -> Self {
         Self {
-            only_public: false,
+            only_externally_visible: false,
             print_code: false,
             print_basic_blocks: false,
             print_locals: false,
@@ -854,14 +854,15 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .get_function_source_map(function_definition_index)?;
 
         if match function_definition.visibility {
-            Visibility::Public => false,
-            Visibility::Private => self.options.only_public,
+            Visibility::Script | Visibility::Public => false,
+            Visibility::Private => self.options.only_externally_visible,
         } {
             return Ok("".to_string());
         }
 
         let visibility_modifier = match function_definition.visibility {
             Visibility::Private => "",
+            Visibility::Script => "public(script) ",
             Visibility::Public => "public ",
         };
         let native_modifier = if function_definition.is_native() {

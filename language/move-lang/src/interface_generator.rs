@@ -57,19 +57,19 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
         members.push("".to_string());
     }
 
-    let mut public_funs = module
+    let mut externally_visible_funs = module
         .function_defs()
         .iter()
         .filter(|fdef| match fdef.visibility {
-            Visibility::Public => true,
+            Visibility::Public | Visibility::Script => true,
             Visibility::Private => false,
         })
         .peekable();
-    if public_funs.peek().is_some() {
+    if externally_visible_funs.peek().is_some() {
         members.push(format!("    {}", DISCLAIMER));
     }
-    for public_fdef in public_funs {
-        members.push(write_function_def(&mut context, public_fdef));
+    for fdef in externally_visible_funs {
+        members.push(write_function_def(&mut context, fdef));
     }
     if !members.is_empty() {
         members.push("".to_string());
@@ -176,12 +176,21 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
     let parameters = &ctx.module.signature_at(fhandle.parameters).0;
     let return_ = &ctx.module.signature_at(fhandle.return_).0;
     format!(
-        "    native public fun {}{}({}){};",
+        "    native {}fun {}{}({}){};",
+        write_visibility(fdef.visibility),
         ctx.module.identifier_at(fhandle.name),
         write_type_paramters(&fhandle.type_parameters),
         write_parameters(ctx, parameters),
         write_return_type(ctx, return_)
     )
+}
+
+fn write_visibility(visibility: Visibility) -> String {
+    match visibility {
+        Visibility::Public => "public ".to_string(),
+        Visibility::Script => "public(script) ".to_string(),
+        Visibility::Private => "".to_string(),
+    }
 }
 
 fn write_type_paramters(tps: &[Kind]) -> String {

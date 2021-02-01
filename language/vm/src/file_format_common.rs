@@ -368,12 +368,12 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
 //
 
 /// Version 1: the initial version
-pub const VERSION_1: u32 = 1u32;
+pub const VERSION_1: u32 = 1;
 
 /// Version 2: changes compared with version 1
 ///  + function visibility stored in separate byte before the flags byte
 ///  + the flags byte now contains only the is_native information (at bit 0x2)
-pub const VERSION_2: u32 = 2u32;
+pub const VERSION_2: u32 = 2;
 
 // Mark which version is the latest version
 pub const VERSION_MAX: u32 = VERSION_2;

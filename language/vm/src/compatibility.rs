@@ -87,8 +87,8 @@ impl Compatibility {
         }
 
         // old module's public functions are a subset of the new module's public functions
-        for function in &old_module.public_functions {
-            if !new_module.public_functions.contains(&function) {
+        for function in &old_module.externally_visible_functions {
+            if !new_module.externally_visible_functions.contains(&function) {
                 struct_and_function_linking = false;
             }
         }
