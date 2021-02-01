@@ -96,9 +96,12 @@ const MAX_NUM_EPOCH_ENDING_LEDGER_INFO: usize = 100;
 
 static ROCKSDB_PROPERTY_MAP: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
     [
-        ("diem_rocksdb_properties", "rocksdb.live-sst-files-size"),
         (
             "diem_rocksdb_live_sst_files_size_bytes",
+            "rocksdb.live-sst-files-size",
+        ),
+        (
+            "diem_rocksdb_all_memtables_size_bytes",
             "rocksdb.size-all-mem-tables",
         ),
         (
