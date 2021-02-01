@@ -3,13 +3,16 @@
 
 #![forbid(unsafe_code)]
 
+use std::convert::TryFrom;
+
 use anyhow::Error;
+use diem_client::BlockingClient;
 use diem_config::config::{TrustedPeer, TrustedPeerSet};
 use diem_logger::prelude::*;
 use diem_network_address::NetworkAddress;
-use diem_secure_json_rpc::JsonRpcClient;
 use diem_types::{
-    account_config::diem_root_address, on_chain_config::ValidatorSet,
+    account_config::diem_root_address, account_state::AccountState,
+    account_state_blob::AccountStateBlob, on_chain_config::ValidatorSet,
     validator_info::ValidatorInfo, PeerId,
 };
 
@@ -29,8 +32,17 @@ pub(crate) fn to_fullnode_addresses(
 /// Retrieve the validator set from a JSON RPC endpoint
 fn get_validator_set(client_endpoint: String) -> anyhow::Result<ValidatorSet> {
     let root_account_address = diem_root_address();
-    let json_rpc = JsonRpcClient::new(client_endpoint);
-    let account_state = json_rpc.get_account_state(root_account_address, None)?;
+    let json_rpc = BlockingClient::new(client_endpoint);
+    let account_state = json_rpc
+        .get_account_state_with_proof(root_account_address, None, None)?
+        .into_inner();
+
+    let blob = account_state
+        .blob
+        .ok_or_else(|| Error::msg("No validator set"))?
+        .into_bytes()?;
+    let account_state_blob = AccountStateBlob::from(bcs::from_bytes::<Vec<u8>>(&blob)?);
+    let account_state = AccountState::try_from(&account_state_blob)?;
     if let Some(val) = account_state.get_validator_set()? {
         Ok(val)
     } else {

@@ -20,7 +20,7 @@ thiserror = "1.0.23"
 bcs = "0.1.2"
 diem-config = { path = "..", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
+diem-client = { path = "../../sdk/client", features = ["blocking"], default-features = false }
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
 diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
