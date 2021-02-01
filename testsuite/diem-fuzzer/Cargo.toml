@@ -38,7 +38,6 @@ diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fu
 diem-jellyfish-merkle = { path = "../../storage/jellyfish-merkle", version = "0.1.0", features = ["fuzzing"] }
 diem-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
 diem-mempool = { path = "../../mempool", version = "0.1.0" }
-diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0", features = ["fuzzing"]}
 diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
 diemdb = { path = "../../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
