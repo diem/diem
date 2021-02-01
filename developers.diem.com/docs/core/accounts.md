@@ -27,7 +27,7 @@ ChildVASP is a child account of a particular ParentVASP. A Regulated VASP need n
 
 ## Creating accounts
 
-On Diem mainnet (at launch), ParentVASP accounts can only be created by the [DiemRoot account](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-diemaccount). Once a ParentVASP account is created, the Regulated VASP can then create ChildVASP accounts.
+On Diem mainnet (at launch), ParentVASP accounts can only be created by the [TreasuryCompliance account](https://github.com/diem/dip/blob/master/dips/dip-2.md#roles). Once a ParentVASP account is created, the Regulated VASP can then create ChildVASP accounts.
 
 In order to create a new account, the creator must specify the address of the new account, its authentication key prefix, and the currencies that the account will initially accept. Learn more about how accounts are created [here](transaction-types.md#account-creation-and-minting).
 
