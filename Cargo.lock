@@ -1587,7 +1587,6 @@ dependencies = [
  "diem-json-rpc",
  "diem-mempool",
  "diem-proptest-helpers",
- "diem-secure-json-rpc",
  "diem-types",
  "diem-vault-client",
  "diem-workspace-hack",
@@ -2073,33 +2072,6 @@ dependencies = [
  "diem-logger",
  "diem-workspace-hack",
  "tokio",
-]
-
-[[package]]
-name = "diem-secure-json-rpc"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcs",
- "diem-config",
- "diem-crypto",
- "diem-json-rpc",
- "diem-proptest-helpers",
- "diem-temppath",
- "diem-types",
- "diem-workspace-hack",
- "diemdb",
- "futures 0.3.12",
- "hex",
- "proptest",
- "proxy",
- "serde",
- "serde_json",
- "storage-interface",
- "thiserror",
- "tokio",
- "ureq",
- "vm-validator",
 ]
 
 [[package]]

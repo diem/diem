@@ -118,7 +118,6 @@ members = [
     "network/simple-onchain-discovery",
     "network/socket-bench-server",
     "sdk/client",
-    "secure/json-rpc",
     "secure/key-manager",
     "secure/net",
     "secure/push-metrics",
