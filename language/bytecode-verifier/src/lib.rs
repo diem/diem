@@ -11,6 +11,7 @@ pub mod code_unit_verifier;
 pub mod constants;
 pub mod control_flow;
 pub mod control_flow_graph;
+pub mod cyclic_dependencies;
 pub mod dependencies;
 pub mod instantiation_loops;
 pub mod instruction_consistency;
@@ -21,7 +22,6 @@ pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
 pub use code_unit_verifier::CodeUnitVerifier;
-pub use dependencies::{CyclicModuleDependencyChecker, DependencyChecker};
 pub use instruction_consistency::InstructionConsistency;
 pub use resources::ResourceTransitiveChecker;
 pub use signature::SignatureChecker;

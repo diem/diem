@@ -5,7 +5,7 @@
 
 pub mod transaction_scripts;
 
-use bytecode_verifier::{verify_module, DependencyChecker};
+use bytecode_verifier::{dependencies, verify_module};
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
@@ -51,7 +51,7 @@ static COMPILED_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
     let mut verified_modules = vec![];
     for (_, module) in modules.into_iter() {
         verify_module(&module).expect("stdlib module failed to verify");
-        DependencyChecker::verify_module(&module, &verified_modules)
+        dependencies::verify_module(&module, &verified_modules)
             .expect("stdlib module dependency failed to verify");
         verified_modules.push(module)
     }

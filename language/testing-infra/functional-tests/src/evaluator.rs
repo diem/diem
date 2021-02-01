@@ -6,7 +6,7 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::DependencyChecker;
+use bytecode_verifier::dependencies;
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use diem_state_view::StateView;
@@ -276,7 +276,7 @@ pub fn verify_script(
     deps: &[CompiledModule],
 ) -> std::result::Result<CompiledScript, VMError> {
     bytecode_verifier::verify_script(&script)?;
-    DependencyChecker::verify_script(&script, deps)?;
+    dependencies::verify_script(&script, deps)?;
     Ok(script)
 }
 
@@ -286,7 +286,7 @@ pub fn verify_module(
     deps: &[CompiledModule],
 ) -> std::result::Result<CompiledModule, VMError> {
     bytecode_verifier::verify_module(&module)?;
-    DependencyChecker::verify_module(&module, deps)?;
+    dependencies::verify_module(&module, deps)?;
     Ok(module)
 }
 

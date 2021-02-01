@@ -32,6 +32,27 @@ pub(crate) enum BinaryIndexedView<'a> {
 }
 
 impl<'a> BinaryIndexedView<'a> {
+    pub(crate) fn module_handles(&self) -> &[ModuleHandle] {
+        match self {
+            BinaryIndexedView::Module(module) => module.module_handles(),
+            BinaryIndexedView::Script(script) => script.module_handles(),
+        }
+    }
+
+    pub(crate) fn struct_handles(&self) -> &[StructHandle] {
+        match self {
+            BinaryIndexedView::Module(module) => module.struct_handles(),
+            BinaryIndexedView::Script(script) => script.struct_handles(),
+        }
+    }
+
+    pub(crate) fn function_handles(&self) -> &[FunctionHandle] {
+        match self {
+            BinaryIndexedView::Module(module) => module.function_handles(),
+            BinaryIndexedView::Script(script) => script.function_handles(),
+        }
+    }
+
     pub(crate) fn identifier_at(&self, idx: IdentifierIndex) -> &IdentStr {
         match self {
             BinaryIndexedView::Module(module) => module.identifier_at(idx),
@@ -192,11 +213,25 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
+    pub(crate) fn self_handle_idx(&self) -> Option<ModuleHandleIndex> {
+        match self {
+            BinaryIndexedView::Module(m) => Some(m.self_handle_idx()),
+            BinaryIndexedView::Script(_) => None,
+        }
+    }
+
     pub(crate) fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
         ModuleId::new(
             *self.address_identifier_at(module_handle.address),
             self.identifier_at(module_handle.name).to_owned(),
         )
+    }
+
+    pub(crate) fn self_id(&self) -> Option<ModuleId> {
+        match self {
+            BinaryIndexedView::Module(m) => Some(m.self_id()),
+            BinaryIndexedView::Script(_) => None,
+        }
     }
 }
 

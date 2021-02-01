@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Context;
-use bytecode_verifier::{verify_module, verify_script, DependencyChecker};
+use bytecode_verifier::{dependencies, verify_module, verify_script};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use diem_types::{access_path::AccessPath, account_address::AccountAddress, account_config};
@@ -55,7 +55,7 @@ fn print_error_and_exit(verification_error: &VMError) -> ! {
 
 fn do_verify_module(module: CompiledModule, dependencies: &[CompiledModule]) -> CompiledModule {
     verify_module(&module).unwrap_or_else(|err| print_error_and_exit(&err));
-    if let Err(err) = DependencyChecker::verify_module(&module, dependencies) {
+    if let Err(err) = dependencies::verify_module(&module, dependencies) {
         print_error_and_exit(&err);
     }
     module

@@ -806,7 +806,7 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
         }
 
         let imm_deps = code_cache.get_immediate_module_dependencies(module)?;
-        if bytecode_verifier::DependencyChecker::verify_module(module, imm_deps).is_err() {
+        if bytecode_verifier::dependencies::verify_module(module, imm_deps).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
                 module.self_id()
@@ -814,7 +814,7 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
         }
 
         let cyclic_check_result =
-            bytecode_verifier::CyclicModuleDependencyChecker::verify_module(module, |module_id| {
+            bytecode_verifier::cyclic_dependencies::verify_module(module, |module_id| {
                 code_cache
                     .get_module(module_id)
                     .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))

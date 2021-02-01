@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use bytecode_verifier::{verify_module, DependencyChecker};
+use bytecode_verifier::{dependencies, verify_module};
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
 use sha2::{Digest, Sha256};
@@ -152,7 +152,7 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
         match compiled_unit {
             CompiledUnit::Module { module, .. } => {
                 verify_module(&module).expect("stdlib module failed to verify");
-                DependencyChecker::verify_module(&module, modules.values())
+                dependencies::verify_module(&module, modules.values())
                     .expect("stdlib module dependency failed to verify");
                 // Tag each module with its index in the module dependency order. Needed for
                 // when they are deserialized and verified later on.

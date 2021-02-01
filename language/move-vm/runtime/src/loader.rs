@@ -3,9 +3,9 @@
 
 use crate::{logging::LogContext, native_functions::NativeFunction};
 use bytecode_verifier::{
-    constants, instantiation_loops::InstantiationLoopChecker, verify_main_signature,
-    CodeUnitVerifier, CyclicModuleDependencyChecker, DependencyChecker, DuplicationChecker,
-    InstructionConsistency, RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
+    constants, cyclic_dependencies, dependencies, instantiation_loops::InstantiationLoopChecker,
+    verify_main_signature, CodeUnitVerifier, DuplicationChecker, InstructionConsistency,
+    RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
@@ -549,7 +549,7 @@ impl Loader {
         for dep in &dependencies {
             deps.push(dep.module());
         }
-        DependencyChecker::verify_script(script, deps)
+        dependencies::verify_script(script, deps)
     }
 
     //
@@ -659,10 +659,10 @@ impl Loader {
             .iter()
             .map(|module| module.module())
             .collect();
-        DependencyChecker::verify_module(module, imm_deps)?;
+        dependencies::verify_module(module, imm_deps)?;
 
         let module_cache = self.module_cache.lock();
-        CyclicModuleDependencyChecker::verify_module(module, |module_id| {
+        cyclic_dependencies::verify_module(module, |module_id| {
             module_cache
                 .modules
                 .get(module_id)
