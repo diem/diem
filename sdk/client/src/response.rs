@@ -7,9 +7,8 @@ use crate::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
         StateProofView, TransactionView,
     },
-    Error,
+    Error, State,
 };
-use diem_json_rpc_types::response::JsonRpcResponse;
 use serde_json::Value;
 
 #[derive(Debug)]
@@ -38,23 +37,6 @@ impl<T> Response<T> {
 
     pub fn into_parts(self) -> (T, State) {
         (self.inner, self.state)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct State {
-    pub chain_id: u8,
-    pub version: u64,
-    pub timestamp_usecs: u64,
-}
-
-impl State {
-    pub fn from_response(resp: &JsonRpcResponse) -> Self {
-        Self {
-            chain_id: resp.diem_chain_id,
-            version: resp.diem_ledger_version,
-            timestamp_usecs: resp.diem_ledger_timestampusec,
-        }
     }
 }
 

@@ -4,6 +4,7 @@
 use super::{
     request::{JsonRpcRequest, MethodRequest},
     response::{MethodResponse, Response},
+    state::StateManager,
     validate, validate_batch, BatchResponse,
 };
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
         StateProofView, TransactionView,
     },
-    Error, Result,
+    Error, Result, State,
 };
 use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Client as ReqwestClient;
@@ -22,6 +23,7 @@ use std::time::Duration;
 pub struct Client {
     url: String,
     inner: ReqwestClient,
+    state: StateManager,
 }
 
 impl Client {
@@ -34,7 +36,12 @@ impl Client {
         Self {
             url: url.into(),
             inner,
+            state: StateManager::new(),
         }
+    }
+
+    pub fn last_known_state(&self) -> Option<State> {
+        self.state.last_known_state()
     }
 
     pub async fn batch(
@@ -180,7 +187,7 @@ impl Client {
         let request = JsonRpcRequest::new(request);
         let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request).await?;
 
-        let (id, state, result) = validate(&resp)?;
+        let (id, state, result) = validate(&self.state, &resp)?;
 
         if request.id() != id {
             return Err(Error::rpc_response("invalid response id"));
@@ -199,7 +206,7 @@ impl Client {
 
         let resp = resp.success()?;
 
-        validate_batch(&request, resp)
+        validate_batch(&self.state, &request, resp)
     }
 
     async fn send_impl<S: Serialize, T: DeserializeOwned>(&self, payload: &S) -> Result<T> {

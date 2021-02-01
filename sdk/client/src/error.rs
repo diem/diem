@@ -26,6 +26,8 @@ enum Kind {
     Request,
     JsonRpcError,
     RpcResponse,
+    ChainId,
+    StaleResponse,
     Batch,
     Decode,
     Unknown,
@@ -85,6 +87,20 @@ impl Error {
 
     pub(crate) fn request<E: Into<BoxError>>(e: E) -> Self {
         Self::new(Kind::Request, Some(e))
+    }
+
+    pub(crate) fn chain_id(expected: u8, recieved: u8) -> Self {
+        Self::new(
+            Kind::ChainId,
+            Some(format!("expected: {} recieved: {}", expected, recieved)),
+        )
+    }
+
+    pub(crate) fn stale(expected: &super::State, recieved: &super::State) -> Self {
+        Self::new(
+            Kind::StaleResponse,
+            Some(format!("expected: {:?} recieved: {:?}", expected, recieved)),
+        )
     }
 
     #[cfg(feature = "async")]
