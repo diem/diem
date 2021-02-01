@@ -27,7 +27,7 @@ thiserror = "1.0.23"
 tokio = { version = "1.1.0", features = ["full"] }
 tokio-retry = "0.2.0"
 tokio-stream = "0.1.2"
-tokio-util = { version = "0.6.2", features = ["compat", "codec"] }
+tokio-util = { version = "0.6.3", features = ["compat", "codec"] }
 
 bitvec = { path = "../common/bitvec", version = "0.1.0", package = "diem-bitvec" }
 channel = { path = "../common/channel", version = "0.1.0" }
