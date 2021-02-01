@@ -125,8 +125,8 @@ impl RequestManager {
             .is_upstream_peer(is_upstream_peer));
         if !is_upstream_peer {
             return Err(Error::PeerIsNotUpstream(
-                format!("{}", peer),
-                format!("{}", origin),
+                peer.to_string(),
+                origin.to_string(),
             ));
         }
 
@@ -370,31 +370,29 @@ impl RequestManager {
         self.update_score(peer, PeerScoreUpdateType::Success);
     }
 
-    // penalize peer's score for giving chunk with starting version that doesn't match local synced version
+    // Penalize the peer for giving a chunk with a starting version that doesn't match
+    // the local synced version.
     pub fn process_chunk_version_mismatch(
         &mut self,
         peer: &PeerNetworkId,
         chunk_version: u64,
         synced_version: u64,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         if self.is_multicast_response(chunk_version, peer) {
             // This chunk response was in response to a past multicast response that another
-            // peer sent a response to earlier than this peer
-            // Don't penalize if this response did not technically time out
-            bail!(
-                "[state sync] Received chunk for outdated request from {:?}: known_version: {}, received: {}",
-                peer,
-                synced_version,
-                chunk_version
-            );
+            // peer sent a response to earlier than this peer -- don't penalize!
+            Err(Error::ReceivedChunkForOutdatedRequest(
+                peer.to_string(),
+                synced_version.to_string(),
+                chunk_version.to_string(),
+            ))
         } else {
             self.update_score(&peer, PeerScoreUpdateType::ChunkVersionCannotBeApplied);
-            bail!(
-                "[state sync] Non sequential chunk from {:?}: known_version: {}, received: {}",
-                peer,
-                synced_version,
-                chunk_version
-            );
+            Err(Error::ReceivedNonSequentialChunk(
+                peer.to_string(),
+                synced_version.to_string(),
+                chunk_version.to_string(),
+            ))
         }
     }
 
@@ -448,7 +446,7 @@ impl RequestManager {
 
     /// Checks whether the request sent with known_version = `version` has timed out
     /// Returns true if such a request timed out (or does not exist), else false.
-    pub fn check_request_timeout(&mut self, version: u64) -> Result<bool> {
+    pub fn has_request_timed_out(&mut self, version: u64) -> Result<bool> {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
         let timeout = is_timeout(last_request_time, self.request_timeout);
@@ -609,7 +607,7 @@ mod tests {
         // Process multiple request timeouts from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
             request_manager.add_request(1, validator_0.clone());
-            assert!(request_manager.check_request_timeout(1).unwrap());
+            assert!(request_manager.has_request_timed_out(1).unwrap());
         }
 
         // Verify validator 0 is chosen less often than the other validators

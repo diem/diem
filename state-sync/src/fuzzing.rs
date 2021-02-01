@@ -9,10 +9,7 @@ use crate::{
     network::StateSyncMessage,
     shared_components::test_utils,
 };
-use diem_config::{
-    config::PeerNetworkId,
-    network_id::{NetworkId, NodeNetworkId},
-};
+use diem_config::network_id::{NetworkId, NodeNetworkId};
 use diem_infallible::Mutex;
 use diem_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof, PeerId,
@@ -38,16 +35,14 @@ proptest! {
     }
 }
 
-pub fn test_state_sync_msg_fuzzer_impl(msg: StateSyncMessage) {
+pub fn test_state_sync_msg_fuzzer_impl(message: StateSyncMessage) {
     block_on(async move {
-        STATE_SYNC_COORDINATOR
+        let _ = STATE_SYNC_COORDINATOR
             .lock()
-            .process_one_message(
-                PeerNetworkId(
-                    NodeNetworkId::new(NetworkId::Validator, 0),
-                    PeerId::new([0u8; PeerId::LENGTH]),
-                ),
-                msg,
+            .process_chunk_message(
+                NodeNetworkId::new(NetworkId::Validator, 0),
+                PeerId::new([0u8; PeerId::LENGTH]),
+                message,
             )
             .await;
     });

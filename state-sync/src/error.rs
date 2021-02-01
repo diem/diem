@@ -24,6 +24,18 @@ pub enum Error {
     OldSyncRequestVersion(Version, Version),
     #[error("Unable to add peer as they are not an upstream peer: {0}. Connection origin: {1}")]
     PeerIsNotUpstream(String, String),
+    #[error("Processed an invalid chunk! Failed to apply the chunk: {0}")]
+    ProcessInvalidChunk(String),
+    #[error(
+        "Received a chunk for an outdated request from peer {0}. Known version: {1}, received: {2}"
+    )]
+    ReceivedChunkForOutdatedRequest(String, String, String),
+    #[error("Received a chunk response from a downstream peer: {0}")]
+    ReceivedChunkFromDownstream(String),
+    #[error("Received an empty chunk response from a peer: {0}")]
+    ReceivedEmptyChunk(String),
+    #[error("Receivd a non-sequential chunk from {0}. Known version: {1}, received: {2}")]
+    ReceivedNonSequentialChunk(String, String, String),
     #[error("Synced beyond the target version. Synced version: {0}, target version: {1}")]
     SyncedBeyondTarget(Version, Version),
     #[error("State sync is uninitialized! Error: {0}")]

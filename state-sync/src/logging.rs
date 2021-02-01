@@ -17,7 +17,7 @@ pub struct LogSchema<'a> {
     name: LogEntry,
     event: Option<LogEvent>,
     #[schema(debug)]
-    error: Option<&'a anyhow::Error>,
+    error: Option<&'a anyhow::Error>, // TODO(joshlind): remove anyhow once we migrate!
     #[schema(display)]
     peer: Option<&'a PeerNetworkId>,
     is_upstream_peer: Option<bool>,
@@ -99,6 +99,7 @@ pub enum LogEntry {
     SendChunkRequest,
     ProcessChunkRequest,
     ProcessChunkResponse,
+    ProcessChunkMessage,
     NetworkError,
     EpochChange,
     CommitFlow,
@@ -110,12 +111,14 @@ pub enum LogEntry {
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LogEvent {
-    Initialize,
+    // Generic events
     CallbackFail,
     Complete,
+    Fail,
+    Initialize,
     Timeout,
     PublishError,
-    Fail,
+    Received,
 
     // SendChunkRequest events
     MissingPeers,
@@ -125,8 +128,7 @@ pub enum LogEvent {
     ChunkRequestInfo,
 
     // ProcessChunkResponse events
-    ConsensusIsRunning,
-    Received,
+    ReceivedChunkWithoutRequest,
     SendChunkRequestFail,
     ApplyChunkSuccess,
     ApplyChunkFail,
