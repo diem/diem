@@ -22,6 +22,8 @@ pub enum Error {
     NoTransactionsCommitted,
     #[error("Received an old sync request for version {0}, but our known version is: {1}")]
     OldSyncRequestVersion(Version, Version),
+    #[error("Unable to add peer as they are not an upstream peer: {0}. Connection origin: {1}")]
+    PeerIsNotUpstream(String, String),
     #[error("Synced beyond the target version. Synced version: {0}, target version: {1}")]
     SyncedBeyondTarget(Version, Version),
     #[error("State sync is uninitialized! Error: {0}")]

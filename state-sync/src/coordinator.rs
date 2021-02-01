@@ -25,6 +25,7 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
+    PeerId,
 };
 use fail::fail_point;
 use futures::{
@@ -32,6 +33,7 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
+use netcore::transport::ConnectionOrigin;
 use network::protocols::network::Event;
 use std::{
     collections::HashMap,
@@ -196,13 +198,14 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 (network_id, event) = network_events.select_next_some() => {
                     match event {
                         Event::NewPeer(peer_id, origin) => {
-                            let peer = PeerNetworkId(network_id, peer_id);
-                            self.request_manager.enable_peer(peer, origin);
-                            let _ = self.check_progress();
+                            if let Err(e) = self.process_new_peer(network_id, peer_id, origin) {
+                                error!(LogSchema::new(LogEntry::NewPeer).error(&e.into()));
+                            }
                         }
                         Event::LostPeer(peer_id, origin) => {
-                            let peer = PeerNetworkId(network_id, peer_id);
-                            self.request_manager.disable_peer(&peer, origin);
+                            if let Err(e) = self.process_lost_peer(network_id, peer_id, origin) {
+                                error!(LogSchema::new(LogEntry::LostPeer).error(&e.into()));
+                            }
                         }
                         Event::Message(peer_id, message) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
                         unexpected_event => {
@@ -223,6 +226,27 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 }
             }
         }
+    }
+
+    fn process_new_peer(
+        &mut self,
+        network_id: NodeNetworkId,
+        peer_id: PeerId,
+        origin: ConnectionOrigin,
+    ) -> Result<(), Error> {
+        let peer = PeerNetworkId(network_id, peer_id);
+        self.request_manager.enable_peer(peer, origin)?;
+        self.check_progress()
+    }
+
+    fn process_lost_peer(
+        &mut self,
+        network_id: NodeNetworkId,
+        peer_id: PeerId,
+        origin: ConnectionOrigin,
+    ) -> Result<(), Error> {
+        let peer = PeerNetworkId(network_id, peer_id);
+        self.request_manager.disable_peer(&peer, origin)
     }
 
     pub(crate) async fn process_one_message(&mut self, peer: PeerNetworkId, msg: StateSyncMessage) {
@@ -1369,7 +1393,10 @@ mod tests {
         shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
     };
     use anyhow::Result;
-    use diem_config::config::{NodeConfig, RoleType};
+    use diem_config::{
+        config::{NodeConfig, RoleType},
+        network_id::{NetworkId, NodeNetworkId},
+    };
     use diem_crypto::{
         ed25519::{Ed25519PrivateKey, Ed25519Signature},
         HashValue, PrivateKey, Uniform,
@@ -1384,8 +1411,10 @@ mod tests {
             RawTransaction, Script, SignedTransaction, Transaction, TransactionPayload, Version,
         },
         waypoint::Waypoint,
+        PeerId,
     };
     use futures::{channel::oneshot, executor::block_on};
+    use netcore::transport::ConnectionOrigin;
     use std::{collections::BTreeMap, time::SystemTime};
 
     #[test]
@@ -1599,6 +1628,46 @@ mod tests {
         // TODO(joshlind): check request resend after timeout.
 
         // TODO(joshlind): check overflow error returns.
+    }
+
+    #[test]
+    fn test_new_and_lost_peers() {
+        // Create a coordinator for a validator node
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
+
+        // Create a public peer
+        let node_network_id = NodeNetworkId::new(NetworkId::Public, 0);
+        let peer_id = PeerId::random();
+        let connection_origin = ConnectionOrigin::Inbound;
+
+        // Verify error is returned when adding peer that is not upstream
+        let new_peer_result =
+            validator_coordinator.process_new_peer(node_network_id, peer_id, connection_origin);
+        if !matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
+            panic!(
+                "Expected a peer is not upstream error but got: {:?}",
+                new_peer_result
+            );
+        }
+
+        // Verify the same error is not returned when adding a validator node
+        let node_network_id = NodeNetworkId::new(NetworkId::Validator, 0);
+        let new_peer_result = validator_coordinator.process_new_peer(
+            node_network_id.clone(),
+            peer_id,
+            connection_origin,
+        );
+        if matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
+            panic!(
+                "Expected not to receive a peer is not upstream error but got: {:?}",
+                new_peer_result
+            );
+        }
+
+        // Verify no error is returned when removing the node
+        validator_coordinator
+            .process_lost_peer(node_network_id, peer_id, connection_origin)
+            .unwrap();
     }
 
     fn create_test_transaction() -> Transaction {

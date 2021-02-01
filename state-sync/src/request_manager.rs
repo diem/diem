@@ -4,6 +4,7 @@
 use crate::{
     chunk_request::GetChunkRequest,
     counters,
+    error::Error,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSyncMessage, StateSyncSender},
 };
@@ -113,14 +114,20 @@ impl RequestManager {
         }
     }
 
-    pub fn enable_peer(&mut self, peer: PeerNetworkId, origin: ConnectionOrigin) {
+    pub fn enable_peer(
+        &mut self,
+        peer: PeerNetworkId,
+        origin: ConnectionOrigin,
+    ) -> Result<(), Error> {
         let is_upstream_peer = self.is_upstream_peer(&peer, origin);
         debug!(LogSchema::new(LogEntry::NewPeer)
             .peer(&peer)
             .is_upstream_peer(is_upstream_peer));
-
         if !is_upstream_peer {
-            return;
+            return Err(Error::PeerIsNotUpstream(
+                format!("{}", peer),
+                format!("{}", origin),
+            ));
         }
 
         counters::ACTIVE_UPSTREAM_PEERS
@@ -132,9 +139,15 @@ impl RequestManager {
             self.peers.insert(peer, PeerInfo::new(true, MAX_SCORE));
         }
         self.update_peer_selection_data();
+
+        Ok(())
     }
 
-    pub fn disable_peer(&mut self, peer: &PeerNetworkId, origin: ConnectionOrigin) {
+    pub fn disable_peer(
+        &mut self,
+        peer: &PeerNetworkId,
+        origin: ConnectionOrigin,
+    ) -> Result<(), Error> {
         debug!(LogSchema::new(LogEntry::LostPeer)
             .peer(&peer)
             .is_upstream_peer(self.is_upstream_peer(&peer, origin)));
@@ -146,6 +159,8 @@ impl RequestManager {
             peer_info.is_alive = false;
         }
         self.update_peer_selection_data();
+
+        Ok(())
     }
 
     pub fn no_available_peers(&self) -> bool {
@@ -548,14 +563,18 @@ mod tests {
         assert!(!request_manager.no_available_peers());
 
         // Disable validator 0
-        request_manager.disable_peer(&validator_0, ConnectionOrigin::Outbound);
+        request_manager
+            .disable_peer(&validator_0, ConnectionOrigin::Outbound)
+            .unwrap();
 
         // Verify validator 0 is still known, but no longer available
         assert!(request_manager.is_known_upstream_peer(&validator_0));
         assert!(request_manager.no_available_peers());
 
         // Add validator 0 and verify it's now enabled
-        request_manager.enable_peer(validator_0, ConnectionOrigin::Outbound);
+        request_manager
+            .enable_peer(validator_0, ConnectionOrigin::Outbound)
+            .unwrap();
         assert!(!request_manager.no_available_peers());
     }
 
@@ -792,7 +811,9 @@ mod tests {
         let mut validators = Vec::new();
         for _ in 0..num_validators {
             let validator = PeerNetworkId::random_validator();
-            request_manager.enable_peer(validator.clone(), ConnectionOrigin::Outbound);
+            request_manager
+                .enable_peer(validator.clone(), ConnectionOrigin::Outbound)
+                .unwrap();
             validators.push(validator);
         }
 
