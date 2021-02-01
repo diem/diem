@@ -8,7 +8,10 @@
 use enum_dispatch::enum_dispatch;
 #[cfg(any(test, feature = "async"))]
 use pin_project::pin_project;
-use std::{fmt::Debug, time::Duration};
+use std::{
+    fmt::Debug,
+    time::{Duration, Instant},
+};
 #[cfg(any(test, feature = "async"))]
 use std::{
     future::Future,
@@ -105,13 +108,24 @@ impl Default for TimeService {
 
 #[enum_dispatch]
 pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
+    /// Query a monotonically nondecreasing clock. Returns an opaque type that
+    /// can only be compared to other [`Instant`]s, i.e., this is a monotonic
+    /// relative time whereas [`now_unix_time`](#method.now_unix_time) is a
+    /// non-monotonic absolute time.
+    ///
+    /// On Linux, this is equivalent to
+    /// [`clock_gettime(CLOCK_MONOTONIC, _)`](https://linux.die.net/man/3/clock_gettime)
+    ///
+    /// See [`Instant`] for more details.
+    fn now(&self) -> Instant;
+
     /// Query the current unix timestamp as a [`Duration`].
     ///
     /// When used on a `TimeService::real()`, this is equivalent to
     /// `SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)`.
     ///
     /// Note: the [`Duration`] returned from this function is _NOT_ guaranteed to
-    /// be monotonic.
+    /// be monotonic. Use [`now`](#method.now) if you need monotonicity.
     ///
     /// From the [`SystemTime`] docs:
     ///
@@ -125,17 +139,21 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     /// For example, the system administrator could [`clock_settime`] into the
     /// past, breaking clock time monotonicity.
     ///
+    /// On Linux, this is equivalent to
+    /// [`clock_gettime(CLOCK_REALTIME, _)`](https://linux.die.net/man/3/clock_gettime).
+    ///
     /// [`Duration`]: std::time::Duration
     /// [`Instant`]: std::time::Instant
     /// [`SystemTime`]: std::time::SystemTime
     /// [`clock_settime`]: https://linux.die.net/man/3/clock_settime
-    fn now(&self) -> Duration;
+    fn now_unix_time(&self) -> Duration;
 
     /// Query the current unix timestamp in seconds.
     ///
-    /// Equivalent to `self.now().as_secs()`. See [`now`](#method.now).
+    /// Equivalent to `self.now_unix_time().as_secs()`.
+    /// See [`now_unix_time`](#method.now_unix_time).
     fn now_secs(&self) -> u64 {
-        self.now().as_secs()
+        self.now_unix_time().as_secs()
     }
 
     /// Return a [`Future`] that waits until `duration` has passed.
@@ -151,11 +169,23 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     #[cfg(any(test, feature = "async"))]
     fn sleep(&self, duration: Duration) -> Sleep;
 
+    /// Return a [`Future`] that waits until the `deadline`.
+    ///
+    /// If the deadline is in the past, the Sleep will trigger as soons as it's
+    /// polled.
+    ///
+    /// See [`sleep`](#method.sleep) for more details.
+    #[cfg(any(test, feature = "async"))]
+    fn sleep_until(&self, deadline: Instant) -> Sleep {
+        let duration = deadline.saturating_duration_since(self.now());
+        self.sleep(duration)
+    }
+
     /// Blocks the current thread until `duration` time has passed.
     fn sleep_blocking(&self, duration: Duration);
 
-    /// Creates new [`Interval`] that yields with interval of `period`. The first
-    /// tick completes immediately. An interval will tick indefinitely.
+    /// Creates a new [`Interval`] that yields with interval of `period`. The
+    /// first tick completes immediately. An interval will tick indefinitely.
     ///
     /// # Cancelation
     ///
@@ -167,6 +197,17 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
     #[cfg(any(test, feature = "async"))]
     fn interval(&self, period: Duration) -> Interval {
         let delay = self.sleep(ZERO_DURATION);
+        Interval::new(delay, period)
+    }
+
+    /// Creates a new [`Interval`] that yields with interval of `period`. The
+    /// first tick completes after the `start` deadline. An interval will tick
+    /// indefinitely.
+    ///
+    /// See [`interval`](#method.interval) for more details.
+    #[cfg(any(test, feature = "async"))]
+    fn interval_at(&self, start: Instant, period: Duration) -> Interval {
+        let delay = self.sleep_until(start);
         Interval::new(delay, period)
     }
 
@@ -188,12 +229,25 @@ pub trait TimeServiceTrait: Send + Sync + Clone + Debug {
         let delay = self.sleep(duration);
         Timeout::new(future, delay)
     }
+
+    /// Require a [`Future`] to complete before the `deadline`.
+    ///
+    /// If the future completes before the duration has elapsed, then the completed
+    /// value is returned. Otherwise, `Err(Elapsed)` is returned and the future is
+    /// canceled.
+    ///
+    /// See [`timeout`](#method.timeout) for more details.
+    #[cfg(any(test, feature = "async"))]
+    fn timeout_at<F: Future>(&self, deadline: Instant, future: F) -> Timeout<F> {
+        let delay = self.sleep_until(deadline);
+        Timeout::new(future, delay)
+    }
 }
 
 /// A [`Future`] that resolves after some time has elapsed (either real or
 /// simulated, depending on the parent [`TimeService`]).
 ///
-/// `Sleep` is modeled after [`tokio::time::Delay`].
+/// `Sleep` is modeled after [`tokio::time::Sleep`].
 #[pin_project(project = SleepProject)]
 #[derive(Debug)]
 #[cfg(any(test, feature = "async"))]
@@ -236,17 +290,20 @@ pub trait SleepTrait: Future<Output = ()> + Send + Sync + Debug {
     /// Returns `true` if this `Sleep`'s requested wait duration has elapsed.
     fn is_elapsed(&self) -> bool;
 
-    /// Resets this `Sleep`'s wait duration.
+    /// Resets this `Sleep` to wait again for `duration`.
     fn reset(self: Pin<&mut Self>, duration: Duration);
+
+    /// Reset this `Sleep` to wait again until the `deadline`.
+    fn reset_until(self: Pin<&mut Self>, deadline: Instant);
 }
 
 #[cfg(any(test, feature = "async"))]
 impl SleepTrait for Sleep {
     fn is_elapsed(&self) -> bool {
         match self {
-            Sleep::RealSleep(inner) => inner.is_elapsed(),
+            Sleep::RealSleep(inner) => SleepTrait::is_elapsed(inner),
             #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
-            Sleep::MockSleep(inner) => inner.is_elapsed(),
+            Sleep::MockSleep(inner) => SleepTrait::is_elapsed(inner),
         }
     }
 
@@ -254,7 +311,15 @@ impl SleepTrait for Sleep {
         match self.project() {
             SleepProject::RealSleep(inner) => SleepTrait::reset(inner, duration),
             #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
-            SleepProject::MockSleep(inner) => Pin::new(inner).reset(duration),
+            SleepProject::MockSleep(inner) => SleepTrait::reset(Pin::new(inner), duration),
+        }
+    }
+
+    fn reset_until(self: Pin<&mut Self>, deadline: Instant) {
+        match self.project() {
+            SleepProject::RealSleep(inner) => SleepTrait::reset_until(inner, deadline),
+            #[cfg(any(test, feature = "fuzzing", feature = "testing"))]
+            SleepProject::MockSleep(inner) => SleepTrait::reset_until(Pin::new(inner), deadline),
         }
     }
 }

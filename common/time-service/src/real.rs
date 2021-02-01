@@ -6,7 +6,10 @@ use crate::TimeServiceTrait;
 use crate::{Sleep, SleepTrait};
 #[cfg(any(test, feature = "async"))]
 use std::pin::Pin;
-use std::{thread, time::Duration};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 /// The real production tokio [`TimeService`](crate::TimeService).
 ///
@@ -25,7 +28,11 @@ impl RealTimeService {
 }
 
 impl TimeServiceTrait for RealTimeService {
-    fn now(&self) -> Duration {
+    fn now(&self) -> Instant {
+        Instant::now()
+    }
+
+    fn now_unix_time(&self) -> Duration {
         diem_infallible::duration_since_epoch()
     }
 
@@ -48,5 +55,9 @@ impl SleepTrait for RealSleep {
     fn reset(self: Pin<&mut Self>, duration: Duration) {
         let deadline = self.deadline() + duration;
         RealSleep::reset(self, deadline);
+    }
+
+    fn reset_until(self: Pin<&mut Self>, deadline: Instant) {
+        RealSleep::reset(self, tokio::time::Instant::from_std(deadline));
     }
 }

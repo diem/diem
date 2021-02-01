@@ -77,7 +77,7 @@ impl<T: DiemInterface> Node<T> {
         // 1) Update the clock for potential reconfigurations
         self.time.advance_secs(1);
 
-        let timestamp = self.time.now().as_micros() as u64;
+        let timestamp = self.time.now_unix_time().as_micros() as u64;
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT);
         let block_id = HashValue::zero();
         let block_metadata = BlockMetadata::new(block_id, 0, timestamp, vec![], owner_account);
