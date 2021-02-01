@@ -18,6 +18,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 const REQUEST_TIMEOUT: u64 = 10_000;
 
+#[derive(Clone, Debug)]
 pub struct BlockingClient {
     url: String,
 }

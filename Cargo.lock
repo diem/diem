@@ -1786,7 +1786,9 @@ name = "diem-key-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bcs",
  "crash-handler",
+ "diem-client",
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",
@@ -1794,7 +1796,6 @@ dependencies = [
  "diem-json-rpc",
  "diem-logger",
  "diem-network-address",
- "diem-secure-json-rpc",
  "diem-secure-push-metrics",
  "diem-secure-storage",
  "diem-time-service",

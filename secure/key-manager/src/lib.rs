@@ -90,10 +90,21 @@ pub enum Error {
     UnknownError(String),
 }
 
-#[cfg(test)]
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
         Error::UnknownError(format!("{}", error))
+    }
+}
+
+impl From<diem_client::Error> for Error {
+    fn from(error: diem_client::Error) -> Self {
+        Error::UnknownError(format!("Client error: {}", error))
+    }
+}
+
+impl From<bcs::Error> for Error {
+    fn from(error: bcs::Error) -> Self {
+        Error::UnknownError(format!("BCS error: {}", error))
     }
 }
 
