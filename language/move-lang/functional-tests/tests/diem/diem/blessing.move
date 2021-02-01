@@ -13,7 +13,6 @@ fun main() {
     Diem::assert_is_SCS_currency<XUS>();
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -23,7 +22,6 @@ fun main() {
     Diem::assert_is_SCS_currency<XDX>();
 }
 }
-// check: "Keep(ABORTED { code: 257,"
 
 //! new-transaction
 script {
@@ -32,7 +30,6 @@ fun main() {
     Diem::assert_is_currency<u64>();
 }
 }
-// check: "Keep(ABORTED { code: 261,"
 
 //! new-transaction
 script {
@@ -43,7 +40,6 @@ fun main(account: &signer) {
     Diem::update_xdx_exchange_rate<XUS>(account, FixedPoint32::create_from_rational(1, 3));
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 script {
@@ -53,7 +49,6 @@ fun main(account: &signer) {
     Diem::update_minting_ability<XUS>(account, false);
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 module Holder {
@@ -68,7 +63,6 @@ module Holder {
        x
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: diemroot
@@ -91,7 +85,6 @@ fun main(dr_account: &signer) {
     Holder::hold(dr_account, b);
 }
 }
-// check: "Keep(ABORTED { code: 262,"
 
 //! new-transaction
 //! sender: diemroot
@@ -112,7 +105,6 @@ fun main(dr_account: &signer) {
     Holder::hold(dr_account, b);
 }
 }
-// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: diemroot
@@ -133,4 +125,3 @@ fun main(dr_account: &signer) {
     Holder::hold(dr_account, b);
 }
 }
-// check: "Keep(ABORTED { code: 263,"

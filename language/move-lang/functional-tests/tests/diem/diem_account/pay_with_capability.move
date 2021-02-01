@@ -29,7 +29,6 @@ module AlicePays {
     }
 }
 
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -40,7 +39,6 @@ fun main(sender: &signer) {
 }
 }
 
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -57,4 +55,3 @@ fun main() {
     assert(alice_prev_balance - 10 == DiemAccount::balance<XUS>({{alice}}), 1);
 }
 }
-// check: "Keep(EXECUTED)"

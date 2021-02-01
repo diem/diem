@@ -5,7 +5,6 @@
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice", false
 stdlib_script::create_parent_vasp_account
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: diemroot
@@ -23,14 +22,12 @@ fun main(dr_account: &signer, vasp: &signer) {
     );
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: testnetdd
 //! type-args: 0x1::XUS::XUS
 //! args: {{alice}}, 1000000, b"", b""
 stdlib_script::peer_to_peer_with_metadata
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -49,7 +46,6 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -60,4 +56,3 @@ script {
     fun main() {
     }
 }
-// check: "Keep(EXECUTED)"

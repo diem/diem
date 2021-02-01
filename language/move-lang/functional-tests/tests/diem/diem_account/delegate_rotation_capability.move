@@ -84,7 +84,6 @@ script {
 fun main() {
 }
 }
-// check: Discard(INVALID_AUTH_KEY)
 
 //! new-transaction
 //! sender: bob

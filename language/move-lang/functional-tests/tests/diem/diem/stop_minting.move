@@ -13,7 +13,6 @@ fun main(config: &signer) {
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -42,7 +41,6 @@ module COIN {
     }
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -59,7 +57,6 @@ fun main(dr_account: &signer, tc_account: &signer) {
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // END: registration of a currency
 
@@ -105,7 +102,6 @@ fun main(account: &signer) {
     assert(Diem::market_cap<COIN>() - prev_mcap2 == 100, 8);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dd1
@@ -120,7 +116,6 @@ fun main(account: &signer) {
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dd2
@@ -135,7 +130,6 @@ fun main(account: &signer) {
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: "Keep(EXECUTED)"
 
 
 // do some burning
@@ -155,7 +149,6 @@ fun main(account: &signer) {
     assert(prev_mcap2 - Diem::market_cap<COIN>() == 100, 10);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // check that stop minting works
 //! new-transaction
@@ -170,4 +163,3 @@ fun main(account: &signer) {
     Diem::destroy_zero(coin);
 }
 }
-// check: "Keep(ABORTED { code: 1281,"

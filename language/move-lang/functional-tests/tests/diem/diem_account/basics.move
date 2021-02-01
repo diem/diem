@@ -28,7 +28,6 @@ script {
         DiemAccount::initialize(sender, x"00000000000000000000000000000000");
     }
 }
-// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: bob
@@ -41,7 +40,6 @@ script {
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -54,7 +52,6 @@ script {
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 4357,"
 
 //! new-transaction
 //! sender: bob
@@ -67,7 +64,6 @@ script {
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 4869,"
 
 //! new-transaction
 //! sender: bob
@@ -80,7 +76,6 @@ script {
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 4615,"
 
 //! new-transaction
 //! sender: bob
@@ -92,7 +87,6 @@ script {
         DiemAccount::restore_key_rotation_capability(rot_cap);
     }
 }
-// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 script {
@@ -109,7 +103,6 @@ script {
         );
     }
 }
-// check: "Keep(ABORTED { code: 2305,"
 
 //! new-transaction
 script {
@@ -130,7 +123,6 @@ script {
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -144,21 +136,18 @@ script {
         assert(DiemAccount::balance<XDX>({{alice}}) == 10000, 60)
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, 0x0, {{bob::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-// check: "Keep(ABORTED { code: 2567,"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{abby}}, x"", b"bob", true
 stdlib_script::create_parent_vasp_account
-// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 script {
@@ -167,7 +156,6 @@ fun main() {
     DiemAccount::sequence_number(0x1);
 }
 }
-// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 script {
@@ -176,7 +164,6 @@ fun main() {
     DiemAccount::authentication_key(0x1);
 }
 }
-// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 script {
@@ -185,7 +172,6 @@ fun main() {
     DiemAccount::delegated_key_rotation_capability(0x1);
 }
 }
-// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 script {
@@ -194,4 +180,3 @@ fun main() {
     DiemAccount::delegated_withdraw_capability(0x1);
 }
 }
-// check: "Keep(ABORTED { code: 5,"

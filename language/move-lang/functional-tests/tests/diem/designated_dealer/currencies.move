@@ -27,5 +27,3 @@ script {
         assert(DiemAccount::accepts_currency<XDX>(0x3), 5);
     }
 }
-
-// check: "Keep(EXECUTED)"

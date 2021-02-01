@@ -1,0 +1,27 @@
+[0] Transaction(0)
+[1] Move VM Status: EXECUTED
+[2] Transaction Status: Keep(EXECUTED)
+[3] Transaction(1)
+[4] Move VM Status: ABORTED { code: 257, location: 00000000000000000000000000000001::Diem }
+[5] Transaction Status: Keep(ABORTED { code: 257, location: 00000000000000000000000000000001::Diem })
+[6] Transaction(2)
+[7] Move VM Status: ABORTED { code: 261, location: 00000000000000000000000000000001::Diem }
+[8] Transaction Status: Keep(ABORTED { code: 261, location: 00000000000000000000000000000001::Diem })
+[9] Transaction(3)
+[10] Move VM Status: ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses }
+[11] Transaction Status: Keep(ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses })
+[12] Transaction(4)
+[13] Move VM Status: ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses }
+[14] Transaction Status: Keep(ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses })
+[15] Transaction(5)
+[16] Move VM Status: EXECUTED
+[17] Transaction Status: Keep(EXECUTED)
+[18] Transaction(6)
+[19] Move VM Status: ABORTED { code: 262, location: 00000000000000000000000000000001::Diem }
+[20] Transaction Status: Keep(ABORTED { code: 262, location: 00000000000000000000000000000001::Diem })
+[21] Transaction(7)
+[22] Move VM Status: ABORTED { code: 263, location: 00000000000000000000000000000001::Diem }
+[23] Transaction Status: Keep(ABORTED { code: 263, location: 00000000000000000000000000000001::Diem })
+[24] Transaction(8)
+[25] Move VM Status: ABORTED { code: 263, location: 00000000000000000000000000000001::Diem }
+[26] Transaction Status: Keep(ABORTED { code: 263, location: 00000000000000000000000000000001::Diem })

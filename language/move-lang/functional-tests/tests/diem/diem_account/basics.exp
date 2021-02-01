@@ -1,0 +1,48 @@
+[0] Transaction(0)
+[1] Move VM Status: EXECUTED
+[2] Transaction Status: Keep(EXECUTED)
+[3] Transaction(1)
+[4] Move VM Status: ABORTED { code: 1, location: 00000000000000000000000000000001::DiemTimestamp }
+[5] Transaction Status: Keep(ABORTED { code: 1, location: 00000000000000000000000000000001::DiemTimestamp })
+[6] Transaction(2)
+[7] Move VM Status: EXECUTED
+[8] Transaction Status: Keep(EXECUTED)
+[9] Transaction(3)
+[10] Move VM Status: ABORTED { code: 4357, location: 00000000000000000000000000000001::DiemAccount }
+[11] Transaction Status: Keep(ABORTED { code: 4357, location: 00000000000000000000000000000001::DiemAccount })
+[12] Transaction(4)
+[13] Move VM Status: ABORTED { code: 4869, location: 00000000000000000000000000000001::DiemAccount }
+[14] Transaction Status: Keep(ABORTED { code: 4869, location: 00000000000000000000000000000001::DiemAccount })
+[15] Transaction(5)
+[16] Move VM Status: ABORTED { code: 4615, location: 00000000000000000000000000000001::DiemAccount }
+[17] Transaction Status: Keep(ABORTED { code: 4615, location: 00000000000000000000000000000001::DiemAccount })
+[18] Transaction(6)
+[19] Move VM Status: ABORTED { code: 2055, location: 00000000000000000000000000000001::DiemAccount }
+[20] Transaction Status: Keep(ABORTED { code: 2055, location: 00000000000000000000000000000001::DiemAccount })
+[21] Transaction(7)
+[22] Move VM Status: ABORTED { code: 2305, location: 00000000000000000000000000000001::DiemAccount }
+[23] Transaction Status: Keep(ABORTED { code: 2305, location: 00000000000000000000000000000001::DiemAccount })
+[24] Transaction(8)
+[25] Move VM Status: EXECUTED
+[26] Transaction Status: Keep(EXECUTED)
+[27] Transaction(9)
+[28] Move VM Status: EXECUTED
+[29] Transaction Status: Keep(EXECUTED)
+[30] Transaction(10)
+[31] Move VM Status: ABORTED { code: 2567, location: 00000000000000000000000000000001::DiemAccount }
+[32] Transaction Status: Keep(ABORTED { code: 2567, location: 00000000000000000000000000000001::DiemAccount })
+[33] Transaction(11)
+[34] Move VM Status: ABORTED { code: 2055, location: 00000000000000000000000000000001::DiemAccount }
+[35] Transaction Status: Keep(ABORTED { code: 2055, location: 00000000000000000000000000000001::DiemAccount })
+[36] Transaction(12)
+[37] Move VM Status: ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount }
+[38] Transaction Status: Keep(ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount })
+[39] Transaction(13)
+[40] Move VM Status: ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount }
+[41] Transaction Status: Keep(ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount })
+[42] Transaction(14)
+[43] Move VM Status: ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount }
+[44] Transaction Status: Keep(ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount })
+[45] Transaction(15)
+[46] Move VM Status: ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount }
+[47] Transaction Status: Keep(ABORTED { code: 5, location: 00000000000000000000000000000001::DiemAccount })

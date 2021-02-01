@@ -39,7 +39,6 @@ fun main(sender: &signer) {
     SillyColdWallet::publish(sender, cap, {{bob}});
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -55,7 +54,6 @@ fun main(account: &signer) {
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: "Keep(ABORTED { code: 1793,"
 
 //! new-transaction
 //! sender: bob

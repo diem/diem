@@ -8,4 +8,3 @@ script {
 fun main() {
 }
 }
-// check: "Keep(EXECUTED)"

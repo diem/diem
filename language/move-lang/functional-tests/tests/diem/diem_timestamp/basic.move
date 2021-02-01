@@ -4,7 +4,6 @@
 //! proposer-address: 0x0
 //! block-time: 1
 
-// check: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION
 
 //! block-prologue
 //! proposer-address: 0x0
@@ -17,7 +16,6 @@ script {
         DiemTimestamp::set_time_has_started(account);
     }
 }
-// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: diemroot
@@ -27,4 +25,3 @@ script {
         DiemTimestamp::set_time_has_started(account);
     }
 }
-// check: "Keep(ABORTED { code: 1,"

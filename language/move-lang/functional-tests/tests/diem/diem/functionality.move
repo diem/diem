@@ -6,7 +6,6 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -33,7 +32,6 @@ fun main(account: &signer) {
     Diem::destroy_zero(Diem::zero<XUS>());
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -44,7 +42,6 @@ fun main(account: &signer) {
     Diem::destroy_zero(Diem::mint<XUS>(account, 1));
 }
 }
-// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 //! sender: bob
@@ -58,7 +55,6 @@ script {
         Diem::destroy_zero(coins);
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -69,7 +65,6 @@ script {
         );
     }
 }
-// check: "Keep(ABORTED { code: 261"
 
 //! new-transaction
 script {
@@ -82,7 +77,6 @@ script {
         assert(!Diem::is_synthetic_currency<u64>(), 11);
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -97,7 +91,6 @@ script {
         );
     }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: diemroot
@@ -113,7 +106,6 @@ fun main(account: &signer) {
     Holder::hold(account, mint_cap);
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -129,7 +121,6 @@ fun main(account: &signer) {
     Holder::hold(account, burn_cap);
 }
 }
-// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: diemroot
@@ -142,7 +133,6 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: diemroot
@@ -154,7 +144,6 @@ fun main(account: &signer) {
     Holder::hold(account, Diem::create_preburn<XUS>(account));
 }
 }
-// check: "Keep(ABORTED { code: 258,")
 
 //! new-transaction
 //! sender: diemroot
@@ -165,7 +154,6 @@ fun main(account: &signer) {
     Diem::publish_preburn_to_account<XDX>(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 1539,")
 
 //! new-transaction
 //! sender: diemroot
@@ -176,7 +164,6 @@ fun main(account: &signer) {
     Diem::publish_preburn_to_account<XUS>(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 1539,")
 
 //! new-transaction
 //! sender: blessed
@@ -190,7 +177,6 @@ fun main(account: &signer) {
     Diem::destroy_zero(xus);
 }
 }
-// check: "Keep(ABORTED { code: 2568,"
 
 //! new-transaction
 script {
@@ -204,7 +190,6 @@ fun main() {
     assert(Diem::is_synthetic_currency<XDX>(), 96);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -214,7 +199,6 @@ fun main(account: &signer) {
     CoreAddresses::assert_currency_info(account)
 }
 }
-// check: "Keep(ABORTED { code: 770,"
 
 //! new-transaction
 //! sender: blessed
@@ -229,4 +213,3 @@ fun main(tc_account: &signer) {
     Diem::destroy_zero(coin1);
 }
 }
-// check: "Keep(ABORTED { code: 1800,"

@@ -1,0 +1,3 @@
+[0] Transaction(0)
+[1] Move VM Status: ABORTED { code: 1, location: 00000000000000000000000000000001::DiemTimestamp }
+[2] Transaction Status: Keep(ABORTED { code: 1, location: 00000000000000000000000000000001::DiemTimestamp })

@@ -1,0 +1,12 @@
+[0] Transaction(0)
+[1] Move VM Status: ABORTED { code: 2567, location: 00000000000000000000000000000001::DiemAccount }
+[2] Transaction Status: Keep(ABORTED { code: 2567, location: 00000000000000000000000000000001::DiemAccount })
+[3] Transaction(1)
+[4] Move VM Status: ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses }
+[5] Transaction Status: Keep(ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses })
+[6] Transaction(2)
+[7] Move VM Status: ABORTED { code: 6151, location: 00000000000000000000000000000001::DiemAccount }
+[8] Transaction Status: Keep(ABORTED { code: 6151, location: 00000000000000000000000000000001::DiemAccount })
+[9] Transaction(3)
+[10] Move VM Status: ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses }
+[11] Transaction Status: Keep(ABORTED { code: 258, location: 00000000000000000000000000000001::CoreAddresses })

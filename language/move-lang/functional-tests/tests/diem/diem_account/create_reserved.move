@@ -11,7 +11,6 @@ fun main(account: &signer) {
         account, 0x0, x"00000000000000000000000000000000", x"", false);
 }
 }
-// check: "Keep(ABORTED { code: 2567,"
 
 //! new-transaction
 //! sender: diemroot
@@ -23,7 +22,6 @@ fun main(account: &signer) {
         account, 0x0, x"00000000000000000000000000000000", x"", false);
 }
 }
-// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -35,7 +33,6 @@ fun main(account: &signer) {
         account, 0x1, x"00000000000000000000000000000000", x"", false);
 }
 }
-// check: "Keep(ABORTED { code: 6151,"
 
 //! new-transaction
 //! sender: diemroot
@@ -47,4 +44,3 @@ fun main(account: &signer) {
         account, 0x1, x"00000000000000000000000000000000", x"", false);
 }
 }
-// check: "Keep(ABORTED { code: 258,"

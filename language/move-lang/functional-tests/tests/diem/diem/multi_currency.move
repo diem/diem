@@ -15,7 +15,6 @@ fun main(config: &signer) {
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: validator
@@ -44,7 +43,6 @@ module COIN {
     }
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: validator
@@ -61,7 +59,6 @@ fun main(dr_account: &signer, tc_account: &signer) {
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // END: registration of a currency
 
@@ -70,7 +67,6 @@ fun main(dr_account: &signer, tc_account: &signer) {
 //! type-args: 0x1::COIN::COIN
 //! args: 0, {{sally}}, {{sally::auth_key}}, b"bob", false
 stdlib_script::create_designated_dealer
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -109,7 +105,6 @@ fun main(tc_account: &signer) {
     );
 }
 }
-// check: "Keep(EXECUTED)"
 
 // Give alice money from richie
 //! new-transaction
@@ -123,7 +118,6 @@ fun main(account: &signer) {
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // Give bob money from sally
 //! new-transaction
@@ -137,7 +131,6 @@ fun main(account: &signer) {
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -148,7 +141,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<COIN>(account);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -159,7 +151,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // Adding a bogus currency should abort
 //! new-transaction
@@ -170,7 +161,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<u64>(account);
 }
 }
-// check: "Keep(ABORTED { code: 261,"
 
 // Adding XUS a second time should fail with ADD_EXISTING_CURRENCY
 //! new-transaction
@@ -182,7 +172,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(ABORTED { code: 3846,"
 
 //! new-transaction
 //! sender: alice
@@ -197,7 +186,6 @@ fun main(account: &signer) {
     assert(DiemAccount::balance<XUS>({{bob}}) == 10, 1);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -216,4 +204,3 @@ fun main(account: &signer) {
     assert(DiemAccount::balance<COIN>({{alice}}) == 10, 5);
 }
 }
-// check: "Keep(EXECUTED)"

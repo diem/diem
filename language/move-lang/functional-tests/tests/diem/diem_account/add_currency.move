@@ -16,7 +16,6 @@ fun main(config: &signer) {
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: validator
@@ -45,7 +44,6 @@ module COIN {
     }
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: validator
@@ -62,7 +60,6 @@ fun main(dr_account: &signer, tc_account: &signer) {
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // END: registration of a currency
 
@@ -76,7 +73,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(ABORTED { code: 1031,"
 
 // TreasuryCompliance should not be able to add a balance
 //! new-transaction
@@ -88,7 +84,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(ABORTED { code: 1031,"
 
 
 // Validators and ValidatorOperators should not be able to add a balance
@@ -102,7 +97,6 @@ fun main(account: &signer) {
 
 }
 }
-// check: "Keep(EXECUTED)"
 
 // check Validator case
 //! new-transaction
@@ -114,7 +108,6 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(ABORTED { code: 1031,"
 
 // check ValidatorOperator case
 //! new-transaction
@@ -126,31 +119,26 @@ fun main(account: &signer) {
     DiemAccount::add_currency<XUS>(account);
 }
 }
-// check: "Keep(ABORTED { code: 1031,"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{vasp}}, {{vasp::auth_key}}, b"bob", false
 stdlib_script::create_parent_vasp_account
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
 //! type-args: 0x1::COIN::COIN
 stdlib_script::add_currency_to_account
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
 //! type-args: 0x1::COIN::COIN
 //! args: {{child}}, {{child::auth_key}}, false, 0
 stdlib_script::create_child_vasp_account
-// check: "Keep(EXECUTED)"
 
 // can't add a balance of XDX right now
 //! new-transaction
 //! sender: child
 //! type-args: 0x1::XDX::XDX
 stdlib_script::add_currency_to_account
-// check: "Keep(EXECUTED)"

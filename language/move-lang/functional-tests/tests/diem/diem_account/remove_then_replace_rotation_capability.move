@@ -20,7 +20,6 @@ fun main(account: &signer) {
     assert(!DiemAccount::delegated_key_rotation_capability(sender), 52);
 }
 }
-// check: "Keep(EXECUTED)"
 
 // Extracting the capability should preclude rotation
 //! new-transaction
@@ -36,5 +35,3 @@ fun main(account: &signer) {
     DiemAccount::restore_key_rotation_capability(cap2);
 }
 }
-// check: "Keep(ABORTED { code: 2305,"
-// check: location: ::DiemAccount
