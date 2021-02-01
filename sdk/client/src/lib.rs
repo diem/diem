@@ -18,7 +18,10 @@ mod request;
 pub use request::{JsonRpcRequest, MethodRequest};
 
 mod response;
-pub use response::{MethodResponse, Response, State};
+pub use response::{MethodResponse, Response};
+
+mod state;
+pub use state::State;
 
 pub use diem_json_rpc_types::{errors, views};
 pub use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
@@ -55,6 +58,7 @@ pub enum Method {
 
 #[cfg(any(feature = "async", feature = "blocking"))]
 fn validate(
+    state_manager: &state::StateManager,
     resp: &diem_json_rpc_types::response::JsonRpcResponse,
 ) -> Result<(u64, State, serde_json::Value)> {
     if resp.jsonrpc != "2.0" {
@@ -69,22 +73,25 @@ fn validate(
         return Err(Error::json_rpc(err.clone()));
     }
 
+    let state = State::from_response(resp);
+    state_manager.update_state(&state)?;
+
     // Result being empty is an acceptable response
     let result = resp.result.clone().unwrap_or(serde_json::Value::Null);
 
-    let state = State::from_response(resp);
     Ok((id, state, result))
 }
 
 #[cfg(any(feature = "async", feature = "blocking"))]
 fn validate_batch(
+    state_manager: &state::StateManager,
     requests: &[JsonRpcRequest],
     raw_responses: Vec<diem_json_rpc_types::response::JsonRpcResponse>,
 ) -> Result<Vec<Result<Response<MethodResponse>>>> {
     let mut responses = std::collections::HashMap::new();
     for raw_response in &raw_responses {
         let id = get_id(&raw_response)?;
-        let response = validate(&raw_response);
+        let response = validate(state_manager, &raw_response);
 
         responses.insert(id, response);
     }

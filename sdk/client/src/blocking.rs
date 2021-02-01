@@ -4,6 +4,7 @@
 use super::{
     request::{JsonRpcRequest, MethodRequest},
     response::{MethodResponse, Response},
+    state::StateManager,
     validate, validate_batch, BatchResponse,
 };
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
         StateProofView, TransactionView,
     },
-    Error, Result,
+    Error, Result, State,
 };
 use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use serde::{de::DeserializeOwned, Serialize};
@@ -21,11 +22,19 @@ const REQUEST_TIMEOUT: u64 = 10_000;
 #[derive(Clone, Debug)]
 pub struct BlockingClient {
     url: String,
+    state: StateManager,
 }
 
 impl BlockingClient {
     pub fn new<T: Into<String>>(url: T) -> Self {
-        Self { url: url.into() }
+        Self {
+            url: url.into(),
+            state: StateManager::new(),
+        }
+    }
+
+    pub fn last_known_state(&self) -> Option<State> {
+        self.state.last_known_state()
     }
 
     pub fn batch(
@@ -158,7 +167,7 @@ impl BlockingClient {
         let request = JsonRpcRequest::new(request);
         let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request)?;
 
-        let (id, state, result) = validate(&resp)?;
+        let (id, state, result) = validate(&self.state, &resp)?;
 
         if request.id() != id {
             return Err(Error::rpc_response("invalid response id"));
@@ -177,7 +186,7 @@ impl BlockingClient {
 
         let resp = resp.success()?;
 
-        validate_batch(&request, resp)
+        validate_batch(&self.state, &request, resp)
     }
 
     // Executes the specified request method using the given parameters by contacting the JSON RPC

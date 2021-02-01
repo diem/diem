@@ -1,17 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::views::{
-    AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
-    StateProofView, TransactionView,
-};
-use diem_json_rpc_types::response::JsonRpcResponse;
-// use diem_json_rpc_types::proto::types::{
-//     Metadata, Account, Transaction, Event
-// };
-
 use super::Method;
-use crate::Error;
+use crate::{
+    views::{
+        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
+        StateProofView, TransactionView,
+    },
+    Error, State,
+};
 use serde_json::Value;
 
 #[derive(Debug)]
@@ -40,23 +37,6 @@ impl<T> Response<T> {
 
     pub fn into_parts(self) -> (T, State) {
         (self.inner, self.state)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct State {
-    pub chain_id: u8,
-    pub version: u64,
-    pub timestamp_usecs: u64,
-}
-
-impl State {
-    pub fn from_response(resp: &JsonRpcResponse) -> Self {
-        Self {
-            chain_id: resp.diem_chain_id,
-            version: resp.diem_ledger_version,
-            timestamp_usecs: resp.diem_ledger_timestampusec,
-        }
     }
 }
 
