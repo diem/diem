@@ -413,10 +413,19 @@ impl From<HashValue> for BytesView {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MoveAbortExplanationView {
-    category: String,
-    category_description: String,
-    reason: String,
-    reason_description: String,
+    pub category: String,
+    pub category_description: String,
+    pub reason: String,
+    pub reason_description: String,
+}
+
+impl std::fmt::Display for MoveAbortExplanationView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Error Category: {}", self.category)?;
+        writeln!(f, "\tCategory Description: {}", self.category_description)?;
+        writeln!(f, "Error Reason: {}", self.reason)?;
+        writeln!(f, "\tReason Description: {}", self.reason_description)
+    }
 }
 
 impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
@@ -441,25 +450,57 @@ impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum VMStatusView {
-    #[serde(rename = "executed")]
     Executed,
-    #[serde(rename = "out_of_gas")]
     OutOfGas,
-    #[serde(rename = "move_abort")]
     MoveAbort {
         location: String,
         abort_code: u64,
         explanation: Option<MoveAbortExplanationView>,
     },
-    #[serde(rename = "execution_failure")]
     ExecutionFailure {
         location: String,
         function_index: u16,
         code_offset: u16,
     },
-    #[serde(rename = "miscellaneous_error")]
     MiscellaneousError,
+    VerificationError,
+    DeserializationError,
+    PublishingFailure,
+}
+
+impl std::fmt::Display for VMStatusView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VMStatusView::Executed => write!(f, "Executed"),
+            VMStatusView::OutOfGas => write!(f, "Out of Gas"),
+            VMStatusView::MoveAbort {
+                location,
+                abort_code,
+                explanation,
+            } => {
+                write!(f, "Move Abort: {} at {}", abort_code, location)?;
+                if let Some(explanation) = explanation {
+                    write!(f, "\nExplanation:\n{}", explanation)?
+                }
+                Ok(())
+            }
+            VMStatusView::ExecutionFailure {
+                location,
+                function_index,
+                code_offset,
+            } => write!(
+                f,
+                "Execution failure: {} {} {}",
+                location, function_index, code_offset
+            ),
+            VMStatusView::MiscellaneousError => write!(f, "Miscellaneous Error"),
+            VMStatusView::VerificationError => write!(f, "Verification Error"),
+            VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
+            VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
+        }
+    }
 }
 
 impl From<&KeptVMStatus> for VMStatusView {

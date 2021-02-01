@@ -39,7 +39,7 @@ diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
 diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
 diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
-diem-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
+diem-client = { path = "../../sdk/client" }
 diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
 diem-smoke-test-attribute = { path = "../smoke-test/attribute", version = "0.1.0" }
 diem-swarm = { path = "../diem-swarm", version = "0.1.0"}
