@@ -166,8 +166,9 @@ impl StateSyncPeer {
         for _ in 0..max_retries {
             let state = block_on(self.client.as_ref().unwrap().get_state()).unwrap();
             if state.synced_version() == target_version {
-                return highest_li_version
-                    .map_or(true, |li_version| li_version == state.committed_version());
+                return highest_li_version.map_or(true, |highest_li_version| {
+                    highest_li_version == state.committed_version()
+                });
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));
         }
