@@ -94,7 +94,7 @@ impl Adapter {
                         .execute_function(
                             &module_id,
                             &name,
-                            vec![],
+                            &[],
                             vec![],
                             WORKING_ACCOUNT,
                             &mut cost_strategy,
@@ -120,7 +120,7 @@ impl Adapter {
             .execute_function(
                 module,
                 name,
-                vec![],
+                &[],
                 vec![],
                 WORKING_ACCOUNT,
                 &mut cost_strategy,

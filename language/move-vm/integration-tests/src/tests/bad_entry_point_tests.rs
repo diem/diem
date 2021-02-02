@@ -31,7 +31,7 @@ fn call_non_existent_module() {
         .execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -69,7 +69,7 @@ fn call_non_existent_function() {
         .execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,

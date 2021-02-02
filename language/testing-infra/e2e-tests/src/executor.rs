@@ -336,7 +336,7 @@ impl FakeExecutor {
         &mut self,
         module_name: &str,
         function_name: &str,
-        type_params: Vec<TypeTag>,
+        type_params: &[TypeTag],
         args: Vec<Value>,
         sender: &AccountAddress,
     ) {
@@ -377,7 +377,7 @@ impl FakeExecutor {
         &mut self,
         module_name: &str,
         function_name: &str,
-        type_params: Vec<TypeTag>,
+        type_params: &[TypeTag],
         args: Vec<Value>,
         sender: &AccountAddress,
     ) -> Result<WriteSet, VMStatus> {

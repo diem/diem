@@ -1248,7 +1248,7 @@ pub fn publish_and_register_new_currency() {
     executor.exec(
         "DesignatedDealer",
         "add_currency",
-        vec![coin_tag.clone()],
+        &[coin_tag.clone()],
         vec![
             Value::transaction_argument_signer_reference(*dd.address()),
             Value::transaction_argument_signer_reference(*tc_account.address()),
@@ -1299,7 +1299,7 @@ pub fn publish_and_register_new_currency() {
     executor.exec(
         "TransactionFee",
         "add_txn_fee_currency",
-        vec![coin_tag],
+        &[coin_tag],
         vec![Value::transaction_argument_signer_reference(
             *tc_account.address(),
         )],

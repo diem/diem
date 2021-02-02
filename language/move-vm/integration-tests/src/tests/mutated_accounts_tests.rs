@@ -60,7 +60,7 @@ fn mutated_accounts() {
     sess.execute_function(
         &module_id,
         &publish,
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(account1)],
         TEST_ADDR,
         &mut cost_strategy,
@@ -76,7 +76,7 @@ fn mutated_accounts() {
     sess.execute_function(
         &module_id,
         &get,
-        vec![],
+        &[],
         vec![Value::address(account1)],
         TEST_ADDR,
         &mut cost_strategy,
@@ -89,7 +89,7 @@ fn mutated_accounts() {
     sess.execute_function(
         &module_id,
         &flip,
-        vec![],
+        &[],
         vec![Value::address(account1)],
         TEST_ADDR,
         &mut cost_strategy,
@@ -106,7 +106,7 @@ fn mutated_accounts() {
     sess.execute_function(
         &module_id,
         &get,
-        vec![],
+        &[],
         vec![Value::address(account1)],
         TEST_ADDR,
         &mut cost_strategy,

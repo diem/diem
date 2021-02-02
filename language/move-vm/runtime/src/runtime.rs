@@ -174,7 +174,7 @@ impl VMRuntime {
         &self,
         module: &ModuleId,
         function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
+        ty_args: &[TypeTag],
         args: Vec<Value>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
@@ -184,7 +184,7 @@ impl VMRuntime {
         // its dependencies if the module was not loaded
         let (func, type_params) =
             self.loader
-                .load_function(function_name, module, &ty_args, data_store, log_context)?;
+                .load_function(function_name, module, ty_args, data_store, log_context)?;
 
         // check the arguments provided are of restricted types
         check_args(&args).map_err(|e| e.finish(Location::Module(module.clone())))?;

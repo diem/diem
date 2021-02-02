@@ -189,7 +189,7 @@ fn test_malformed_module() {
         sess.execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -217,7 +217,7 @@ fn test_malformed_module() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -260,7 +260,7 @@ fn test_unverifiable_module() {
         sess.execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -288,7 +288,7 @@ fn test_unverifiable_module() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -344,7 +344,7 @@ fn test_missing_module_dependency() {
         sess.execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -366,7 +366,7 @@ fn test_missing_module_dependency() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -422,7 +422,7 @@ fn test_malformed_module_denpency() {
         sess.execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -450,7 +450,7 @@ fn test_malformed_module_denpency() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -507,7 +507,7 @@ fn test_unverifiable_module_dependency() {
         sess.execute_function(
             &module_id,
             &fun_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -536,7 +536,7 @@ fn test_unverifiable_module_dependency() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -595,7 +595,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
             .execute_function(
                 &module_id,
                 &fun_name,
-                vec![],
+                &[],
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
@@ -664,7 +664,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         sess.execute_function(
             &m_id,
             &foo_name,
-            vec![],
+            &[],
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
@@ -676,7 +676,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             .execute_function(
                 &m_id,
                 &bar_name,
-                vec![],
+                &[],
                 vec![Value::transaction_argument_signer_reference(TEST_ADDR)],
                 TEST_ADDR,
                 &mut cost_strategy,

@@ -195,7 +195,7 @@ fn validator_batch_remove() {
         .try_exec(
             "DiemSystem",
             "remove_validator",
-            vec![],
+            &[],
             vec![
                 Value::transaction_argument_signer_reference(diem_root_address()),
                 Value::address(*validator_account_0.address())
@@ -207,7 +207,7 @@ fn validator_batch_remove() {
         .try_exec(
             "DiemSystem",
             "remove_validator",
-            vec![],
+            &[],
             vec![
                 Value::transaction_argument_signer_reference(diem_root_address()),
                 Value::address(*validator_account_1.address())

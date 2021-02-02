@@ -14,7 +14,7 @@ fn test_diem_initialize() {
     let output = executor.try_exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -26,7 +26,7 @@ fn test_diem_initialize() {
     executor.exec(
         "Roles",
         "grant_diem_root_role",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -37,7 +37,7 @@ fn test_diem_initialize() {
     executor.exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -49,7 +49,7 @@ fn test_diem_initialize() {
     let output = executor.try_exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -67,7 +67,7 @@ fn test_diem_initialize_tc_account() {
     let output = executor.try_exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -79,7 +79,7 @@ fn test_diem_initialize_tc_account() {
     executor.exec(
         "Roles",
         "grant_diem_root_role",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -90,7 +90,7 @@ fn test_diem_initialize_tc_account() {
     executor.exec(
         "Roles",
         "grant_treasury_compliance_role",
-        vec![],
+        &[],
         vec![
             Value::transaction_argument_signer_reference(
                 account_config::treasury_compliance_account_address(),
@@ -104,7 +104,7 @@ fn test_diem_initialize_tc_account() {
     let output = executor.try_exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::treasury_compliance_account_address(),
         )],
@@ -117,7 +117,7 @@ fn test_diem_initialize_tc_account() {
     executor.exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -129,7 +129,7 @@ fn test_diem_initialize_tc_account() {
     let output = executor.try_exec(
         "Diem",
         "initialize",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::treasury_compliance_account_address(),
         )],
@@ -148,7 +148,7 @@ fn test_diem_timestamp_time_has_started() {
     let output = executor.try_exec(
         "DiemTimestamp",
         "set_time_has_started",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_address,
         )],
@@ -159,7 +159,7 @@ fn test_diem_timestamp_time_has_started() {
     executor.exec(
         "DiemTimestamp",
         "set_time_has_started",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -169,7 +169,7 @@ fn test_diem_timestamp_time_has_started() {
     let output = executor.try_exec(
         "DiemTimestamp",
         "set_time_has_started",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -186,7 +186,7 @@ fn test_diem_block_double_init() {
     executor.exec(
         "Event",
         "publish_generator",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -196,7 +196,7 @@ fn test_diem_block_double_init() {
     executor.exec(
         "DiemBlock",
         "initialize_block_metadata",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],
@@ -206,7 +206,7 @@ fn test_diem_block_double_init() {
     let output = executor.try_exec(
         "DiemBlock",
         "initialize_block_metadata",
-        vec![],
+        &[],
         vec![Value::transaction_argument_signer_reference(
             account_config::diem_root_address(),
         )],

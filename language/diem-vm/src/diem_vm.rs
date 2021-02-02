@@ -225,7 +225,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &SCRIPT_PROLOGUE_NAME,
-                vec![gas_currency_ty],
+                &[gas_currency_ty],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
@@ -265,7 +265,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &MODULE_PROLOGUE_NAME,
-                vec![gas_currency_ty],
+                &[gas_currency_ty],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
@@ -308,7 +308,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
-                vec![gas_currency_ty],
+                &[gas_currency_ty],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
@@ -343,7 +343,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
-                vec![gas_currency_ty],
+                &[gas_currency_ty],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
@@ -379,7 +379,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_PROLOGUE_NAME,
-                vec![],
+                &[],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_sequence_number),
@@ -409,7 +409,7 @@ impl DiemVMImpl {
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_EPILOGUE_NAME,
-                vec![],
+                &[],
                 vec![
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::u64(txn_data.sequence_number),

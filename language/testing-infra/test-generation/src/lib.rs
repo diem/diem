@@ -79,20 +79,14 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
         .collect();
 
     let executor = FakeExecutor::from_genesis_file();
-    execute_function_in_module(
-        module,
-        entry_idx,
-        vec![],
-        main_args,
-        executor.get_state_view(),
-    )
+    execute_function_in_module(module, entry_idx, &[], main_args, executor.get_state_view())
 }
 
 /// Execute the first function in a module
 fn execute_function_in_module<S: StateView>(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
-    ty_args: Vec<TypeTag>,
+    ty_args: &[TypeTag],
     args: Vec<Value>,
     state_view: &S,
 ) -> Result<(), VMStatus> {

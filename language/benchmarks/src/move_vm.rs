@@ -97,7 +97,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, modules: Vec<CompiledModule>, fu
                 .execute_function(
                     &module_id,
                     &fun_name,
-                    vec![],
+                    &[],
                     vec![],
                     sender,
                     &mut cost_strategy,

@@ -40,7 +40,7 @@ fn valid_creator_already_vasp() {
         .try_exec(
             "VASP",
             "publish_parent_vasp_credential",
-            vec![],
+            &[],
             vec![
                 Value::transaction_argument_signer_reference(*account.address()),
                 Value::transaction_argument_signer_reference(*treasury_compliance.address()),

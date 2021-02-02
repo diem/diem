@@ -439,7 +439,7 @@ impl DiemVM {
             .execute_function(
                 &DIEM_BLOCK_MODULE,
                 &BLOCK_PROLOGUE,
-                vec![],
+                &[],
                 args,
                 txn_data.sender,
                 &mut cost_strategy,

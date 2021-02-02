@@ -36,7 +36,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
         sender: AccountAddress,
         module_name: &str,
         function_name: &str,
-        ty_args: Vec<TypeTag>,
+        ty_args: &[TypeTag],
         args: Vec<Value>,
     ) {
         self.0
@@ -80,7 +80,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
             diem_root_address(),
             "DiemConfig",
             "disable_reconfiguration",
-            vec![],
+            &[],
             vec![Value::transaction_argument_signer_reference(
                 diem_root_address(),
             )],
@@ -92,7 +92,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
             diem_root_address(),
             "DiemConfig",
             "enable_reconfiguration",
-            vec![],
+            &[],
             vec![Value::transaction_argument_signer_reference(
                 diem_root_address(),
             )],
@@ -103,7 +103,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
             diem_root_address(),
             "DiemVersion",
             "set",
-            vec![],
+            &[],
             vec![
                 Value::transaction_argument_signer_reference(diem_root_address()),
                 Value::u64(version),

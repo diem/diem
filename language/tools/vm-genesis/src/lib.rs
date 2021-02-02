@@ -191,7 +191,7 @@ fn exec_function(
     sender: AccountAddress,
     module_name: &str,
     function_name: &str,
-    ty_args: Vec<TypeTag>,
+    ty_args: &[TypeTag],
     args: Vec<Value>,
 ) {
     session
@@ -272,7 +272,7 @@ fn create_and_initialize_main_accounts(
         root_diem_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
-        vec![],
+        &[],
         vec![
             Value::transaction_argument_signer_reference(root_diem_root_address),
             Value::transaction_argument_signer_reference(tc_account_address),
@@ -296,7 +296,7 @@ fn create_and_initialize_main_accounts(
         root_diem_root_address,
         "DiemAccount",
         "epilogue",
-        vec![xdx_ty.clone()],
+        &[xdx_ty.clone()],
         vec![
             Value::transaction_argument_signer_reference(root_diem_root_address),
             Value::u64(/* txn_sequence_number */ 0),
@@ -343,7 +343,7 @@ fn create_and_initialize_testnet_minting(
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
-        vec![account_config::xus_tag()],
+        &[account_config::xus_tag()],
         vec![
             Value::transaction_argument_signer_reference(
                 account_config::treasury_compliance_account_address(),
@@ -459,7 +459,7 @@ fn create_and_initialize_owners_operators(
             diem_root_address,
             "DiemSystem",
             "add_validator",
-            vec![],
+            &[],
             vec![
                 Value::transaction_argument_signer_reference(diem_root_address),
                 Value::address(owner_address),
@@ -505,7 +505,7 @@ fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogCont
         account_config::diem_root_address(),
         "DiemConfig",
         "emit_genesis_reconfiguration_event",
-        vec![],
+        &[],
         vec![],
     );
 }

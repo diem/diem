@@ -39,7 +39,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
-        ty_args: Vec<TypeTag>,
+        ty_args: &[TypeTag],
         args: Vec<Value>,
         _sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
