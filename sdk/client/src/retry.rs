@@ -50,6 +50,7 @@ impl Retry {
         }
     }
 
+    #[cfg(feature = "async")]
     pub(crate) async fn retry_async<T, F, O>(&self, f: F) -> Result<T>
     where
         F: Fn() -> O,
