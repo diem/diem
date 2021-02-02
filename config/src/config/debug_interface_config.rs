@@ -19,7 +19,7 @@ impl Default for DebugInterfaceConfig {
     fn default() -> DebugInterfaceConfig {
         DebugInterfaceConfig {
             admission_control_node_debug_port: 6191,
-            address: "0.0.0.0".to_string(),
+            address: "127.0.0.1".to_string(),
             metrics_server_port: 9101,
             public_metrics_server_port: 9102,
             diem_trace: DiemTraceConfig::default(),
