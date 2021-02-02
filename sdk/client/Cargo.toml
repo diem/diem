@@ -12,7 +12,7 @@ edition = "2018"
 [features]
 default = ["async", "blocking"]
 blocking = ["ureq", "proxy"]
-async = ["reqwest"]
+async = ["reqwest", "tokio"]
 
 [dependencies]
 anyhow = "1.0.38"
@@ -21,11 +21,13 @@ hex = "0.4.2"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.61"
 
+diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-json-rpc-types  = { path = "../../json-rpc/types" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 # Optional Dependencies
 reqwest = { version = "0.11.0", features = ["json"], optional = true }
+tokio = { version = "1.1.0", features = ["time"], default_features = false, optional = true }
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false, optional = true }
 proxy = { path = "../../common/proxy", optional = true }

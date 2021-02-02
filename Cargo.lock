@@ -1397,6 +1397,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "diem-crypto",
  "diem-json-rpc-types",
  "diem-types",
  "diem-workspace-hack",
@@ -1405,6 +1406,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "tokio",
  "ureq",
 ]
 

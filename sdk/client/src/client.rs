@@ -8,13 +8,18 @@ use super::{
     validate, validate_batch, BatchResponse,
 };
 use crate::{
+    error::WaitForTransactionError,
     views::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
         StateProofView, TransactionView,
     },
     Error, Result, State,
 };
-use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use diem_crypto::hash::CryptoHash;
+use diem_types::{
+    account_address::AccountAddress,
+    transaction::{SignedTransaction, Transaction},
+};
 use reqwest::Client as ReqwestClient;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
@@ -42,6 +47,63 @@ impl Client {
 
     pub fn last_known_state(&self) -> Option<State> {
         self.state.last_known_state()
+    }
+
+    pub async fn wait_for_signed_transaction(
+        &self,
+        txn: &SignedTransaction,
+        timeout: Option<Duration>,
+        delay: Option<Duration>,
+    ) -> Result<Response<TransactionView>, WaitForTransactionError> {
+        self.wait_for_transaction(
+            txn.sender(),
+            txn.sequence_number(),
+            txn.expiration_timestamp_secs(),
+            &Transaction::UserTransaction(txn.clone()).hash().to_hex(),
+            timeout,
+            delay,
+        )
+        .await
+    }
+
+    pub async fn wait_for_transaction(
+        &self,
+        address: AccountAddress,
+        seq: u64,
+        expiration_time_secs: u64,
+        txn_hash: &str,
+        timeout: Option<Duration>,
+        delay: Option<Duration>,
+    ) -> Result<Response<TransactionView>, WaitForTransactionError> {
+        const DEFAULT_TIMEOUT: Duration = Duration::from_secs(5);
+        const DEFAULT_DELAY: Duration = Duration::from_millis(50);
+
+        let start = std::time::Instant::now();
+        while start.elapsed() < timeout.unwrap_or(DEFAULT_TIMEOUT) {
+            let txn_resp = self
+                .get_account_transaction(address, seq, true)
+                .await
+                .map_err(WaitForTransactionError::GetTransactionError)?;
+            if let (Some(txn), state) = txn_resp.into_parts() {
+                if txn.hash.0 != txn_hash {
+                    return Err(WaitForTransactionError::TransactionHashMismatchError(txn));
+                }
+                match txn.vm_status {
+                    diem_json_rpc_types::views::VMStatusView::Executed => {}
+                    _ => return Err(WaitForTransactionError::TransactionExecutionFailed(txn)),
+                }
+                return Ok(Response::new(txn, state));
+            }
+
+            if let Some(state) = self.last_known_state() {
+                if expiration_time_secs <= state.timestamp_usecs / 1_000_000 {
+                    return Err(WaitForTransactionError::TransactionExpired);
+                }
+            }
+            tokio::time::sleep(delay.unwrap_or(DEFAULT_DELAY)).await;
+        }
+
+        Err(WaitForTransactionError::Timeout)
     }
 
     pub async fn batch(
