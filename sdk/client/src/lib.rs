@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod error;
-pub use error::{Error, Result};
+pub use error::{Error, Result, WaitForTransactionError};
 
 #[cfg(feature = "blocking")]
 mod blocking;

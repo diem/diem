@@ -57,5 +57,5 @@ fn test_replay_tooling() {
 
     assert_eq!(account_creation_txn.version + 1, bisect_result);
     assert_eq!(replay_result.gas_used(), txn.gas_used);
-    assert_eq!("executed", txn.vm_status.unwrap().r#type);
+    assert_eq!(diem_client::views::VMStatusView::Executed, txn.vm_status);
 }
