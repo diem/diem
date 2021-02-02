@@ -49,6 +49,10 @@ pub fn set_version(version_type: VersionType, version: u64) {
         .set(version as i64)
 }
 
+pub fn get_version(version_type: VersionType) -> u64 {
+    VERSION.with_label_values(&[version_type.as_str()]).get() as u64
+}
+
 pub enum VersionType {
     /// Version of latest ledger info committed.
     Committed,

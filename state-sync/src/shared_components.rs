@@ -1,99 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::logging::{LogEntry, LogSchema};
-use anyhow::{format_err, Result};
-use diem_logger::prelude::*;
+use anyhow::Result;
 use diem_types::{
     epoch_change::Verifier, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
-    transaction::Version,
 };
 use executor_types::ExecutedTrees;
-use std::{collections::BTreeMap, ops::Bound::Included};
-
-// DS to help sync requester to keep track of ledger infos in the future
-// if it is lagging far behind the upstream node
-// Should only be modified upon local storage sync
-pub(crate) struct PendingLedgerInfos {
-    // In-memory store of ledger infos that are pending commits
-    // (k, v) - (LI version, LI)
-    pending_li_queue: BTreeMap<Version, LedgerInfoWithSignatures>,
-    // max size limit on `pending_li_queue`, to prevent OOM
-    max_pending_li_limit: usize,
-    // target li
-    target_li: Option<LedgerInfoWithSignatures>,
-}
-
-impl PendingLedgerInfos {
-    pub(crate) fn new(max_pending_li_limit: usize) -> Self {
-        Self {
-            pending_li_queue: BTreeMap::new(),
-            max_pending_li_limit,
-            target_li: None,
-        }
-    }
-
-    /// Adds `new_li` to the queue of pending LI's
-    pub(crate) fn add_li(&mut self, new_ledger_info: LedgerInfoWithSignatures) {
-        if self.pending_li_queue.len() >= self.max_pending_li_limit {
-            warn!(
-                LogSchema::new(LogEntry::ProcessChunkResponse),
-                "pending LI store reached max capacity {}, failed to add LI {}",
-                self.max_pending_li_limit,
-                new_ledger_info
-            );
-            return;
-        }
-
-        // update pending_ledgers if new LI is ahead of target LI (in terms of version)
-        let target_version = self
-            .target_li
-            .as_ref()
-            .map_or(0, |li| li.ledger_info().version());
-        let new_version = new_ledger_info.ledger_info().version();
-        if new_version > target_version {
-            self.pending_li_queue.insert(new_version, new_ledger_info);
-        }
-    }
-
-    pub(crate) fn update(&mut self, sync_state: &SyncState, chunk_limit: u64) -> Result<()> {
-        let highest_committed_li = sync_state.committed_version();
-        let highest_synced = sync_state.synced_version();
-
-        // prune any pending LIs that are older than the latest local synced version
-        let prune_version = highest_synced
-            .checked_add(1)
-            .ok_or_else(|| format_err!("Prune version has overflown!"))?;
-        self.pending_li_queue = self.pending_li_queue.split_off(&prune_version);
-
-        // pick target LI to use for sending ProgressiveTargetType requests.
-        self.target_li = if highest_committed_li == highest_synced {
-            // try to find LI with max version that will fit in a single chunk
-            let highest_version = highest_synced
-                .checked_add(chunk_limit)
-                .ok_or_else(|| format_err!("Highest version has overflown!"))?;
-            self.pending_li_queue
-                .range((Included(0), Included(highest_version)))
-                .rev()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        } else {
-            self.pending_li_queue
-                .iter()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        };
-        Ok(())
-    }
-
-    pub(crate) fn target_li(&self) -> Option<LedgerInfoWithSignatures> {
-        self.target_li.clone()
-    }
-
-    pub(crate) fn highest_version(&self) -> Option<Version> {
-        self.pending_li_queue.keys().last().cloned()
-    }
-}
 
 /// SyncState contains the following fields:
 /// * `committed_ledger_info` holds the latest certified ledger info (committed to storage),
