@@ -13,7 +13,7 @@ use crate::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
         StateProofView, TransactionView,
     },
-    Error, Result, State,
+    Error, Result, Retry, State,
 };
 use diem_crypto::hash::CryptoHash;
 use diem_types::{
@@ -29,6 +29,7 @@ pub struct Client {
     url: String,
     inner: ReqwestClient,
     state: StateManager,
+    retry: Retry,
 }
 
 impl Client {
@@ -42,6 +43,7 @@ impl Client {
             url: url.into(),
             inner,
             state: StateManager::new(),
+            retry: Retry::default(),
         }
     }
 
@@ -247,16 +249,22 @@ impl Client {
 
     async fn send<T: DeserializeOwned>(&self, request: MethodRequest) -> Result<Response<T>> {
         let request = JsonRpcRequest::new(request);
-        let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request).await?;
 
-        let (id, state, result) = validate(&self.state, &resp)?;
+        self.retry
+            .retry_async(|| async {
+                let resp: diem_json_rpc_types::response::JsonRpcResponse =
+                    self.send_impl(&request).await?;
 
-        if request.id() != id {
-            return Err(Error::rpc_response("invalid response id"));
-        }
+                let (id, state, result) = validate(&self.state, &resp)?;
 
-        let inner = serde_json::from_value(result).map_err(Error::decode)?;
-        Ok(Response::new(inner, state))
+                if request.id() != id {
+                    return Err(Error::rpc_response("invalid response id"));
+                }
+
+                let inner = serde_json::from_value(result).map_err(Error::decode)?;
+                Ok(Response::new(inner, state))
+            })
+            .await
     }
 
     async fn send_batch(

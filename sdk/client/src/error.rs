@@ -38,6 +38,21 @@ impl Error {
         self.inner.json_rpc_error.as_ref()
     }
 
+    pub fn is_retriable(&self) -> bool {
+        match self.inner.kind {
+            // internal server errors are retriable
+            Kind::HttpStatus(status) => status >= 500 && status <= 599,
+            Kind::Timeout | Kind::StaleResponse => true,
+            Kind::RpcResponse
+            | Kind::Request
+            | Kind::JsonRpcError
+            | Kind::ChainId
+            | Kind::Batch
+            | Kind::Decode
+            | Kind::Unknown => false,
+        }
+    }
+
     //
     // Private Constructors
     //
