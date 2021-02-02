@@ -203,7 +203,7 @@ pub struct NodeId(RawIndex);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct GlobalId(usize);
 
-// Some identifier qualified by a module.
+/// Some identifier qualified by a module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct QualifiedId<Id> {
     pub module_id: ModuleId,
@@ -363,10 +363,6 @@ pub struct GlobalEnv {
     file_idx_to_id: BTreeMap<u16, FileId>,
     /// A set indicating whether a file id is a target or a dependency.
     file_id_is_dep: BTreeSet<FileId>,
-    /// A set indicating whether a module should be translated or not.
-    module_id_should_translate: RefCell<BTreeSet<ModuleId>>,
-    /// A set indicating whether a function not in target module should be verified or not.
-    fun_id_should_verify: RefCell<BTreeSet<QualifiedId<FunId>>>,
     /// A special constant location representing an unknown location.
     /// This uses a pseudo entry in `source_files` to be safely represented.
     unknown_loc: Loc,
@@ -471,8 +467,6 @@ impl GlobalEnv {
             file_id_to_idx,
             file_idx_to_id,
             file_id_is_dep: BTreeSet::new(),
-            module_id_should_translate: RefCell::new(BTreeSet::new()),
-            fun_id_should_verify: RefCell::new(BTreeSet::new()),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             next_free_node_id: Default::default(),
@@ -684,12 +678,6 @@ impl GlobalEnv {
         }
     }
 
-    pub fn add_module_to_should_translate(&self, module_id: ModuleId) {
-        self.module_id_should_translate
-            .borrow_mut()
-            .insert(module_id);
-    }
-
     /// Adds a global invariant to this environment.
     pub fn add_global_invariant(&mut self, inv: GlobalInvariant) {
         let id = inv.id;
@@ -839,6 +827,8 @@ impl GlobalEnv {
             arg_names,
             type_arg_names,
             spec,
+            called_funs: Default::default(),
+            calling_funs: Default::default(),
         }
     }
 
@@ -1291,28 +1281,11 @@ impl<'env> ModuleEnv<'env> {
         self.data.name.is_script()
     }
 
-    /// Returns true of this module is from a dependency, i.e. not the target of verification.
-    /// TODO(emmazzz): if the concept of 'dependency' becomes confusing after we introduce the
-    /// third kind of module(which is verified but is not target), change this to `is_target`.
-    pub fn is_dependency(&self) -> bool {
+    /// Returns true of this module is target of compilation. A non-target module is
+    /// a dependency only but not explicitly requested to process.
+    pub fn is_target(&self) -> bool {
         let file_id = self.data.loc.file_id;
-        self.env.file_id_is_dep.contains(&file_id)
-    }
-
-    pub fn should_translate(&self) -> bool {
-        let module_id = self.get_id();
-        self.env
-            .module_id_should_translate
-            .borrow()
-            .contains(&module_id)
-    }
-
-    pub fn add_fun_to_should_verify(&self, fun_id: FunId) {
-        let module_id = self.get_id();
-        self.env
-            .fun_id_should_verify
-            .borrow_mut()
-            .insert(module_id.qualified(fun_id));
+        !self.env.file_id_is_dep.contains(&file_id)
     }
 
     /// Returns the path to source file of this module.
@@ -1509,6 +1482,7 @@ impl<'env> ModuleEnv<'env> {
                 data,
             })
     }
+
     /// Gets FunctionEnv for a function used in this module, via the FunctionHandleIndex. The
     /// returned function might be from this or another module.
     pub fn get_used_function(&self, idx: FunctionHandleIndex) -> FunctionEnv<'_> {
@@ -2158,6 +2132,12 @@ pub struct FunctionData {
 
     /// Specification associated with this function.
     spec: Spec,
+
+    /// A cache for the called functions.
+    called_funs: RefCell<Option<BTreeSet<QualifiedId<FunId>>>>,
+
+    /// A cache for the calling functions.
+    calling_funs: RefCell<Option<BTreeSet<QualifiedId<FunId>>>>,
 }
 
 impl FunctionData {
@@ -2174,6 +2154,8 @@ impl FunctionData {
             arg_names: vec![],
             type_arg_names: vec![],
             spec: Spec::default(),
+            called_funs: Default::default(),
+            calling_funs: Default::default(),
         }
     }
 }
@@ -2272,6 +2254,18 @@ impl<'env> FunctionEnv<'env> {
             return b;
         }
         default()
+    }
+
+    /// Returns true if the value of a boolean pragma for this function is false.
+    pub fn is_pragma_false(&self, name: &str) -> bool {
+        let env = self.module_env.env;
+        if let Some(b) = env.is_property_true(&self.get_spec().properties, name) {
+            return !b;
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, name) {
+            return !b;
+        }
+        false
     }
 
     /// Returns whether the value of a numeric pragma is explicitly set for this function.
@@ -2584,22 +2578,8 @@ impl<'env> FunctionEnv<'env> {
 
     /// Determine whether the function is target of verification.
     pub fn should_verify(&self, default_scope: VerificationScope) -> bool {
-        if self.module_env.is_dependency()
-            && !self
-                .module_env
-                .env
-                .fun_id_should_verify
-                .borrow()
-                .contains(&self.module_env.get_id().qualified(self.get_id()))
-        {
-            // Don't generate verify method for functions from dependencies unless
-            // they are marked as should_verify by our analysis.
-            return false;
-        }
-
-        if self.has_friend() {
-            // Don't generate verify method for a function with a friend since
-            // the function can only be verified in the context of the caller friend.
+        if !self.module_env.is_target() {
+            // Don't generate verify method for functions from dependencies.
             return false;
         }
 
@@ -2613,8 +2593,16 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(VERIFY_PRAGMA, default)
     }
 
+    /// Determine whether this function is explicitly deactivated for verification.
+    pub fn is_explicitly_not_verified(&self) -> bool {
+        self.is_pragma_false(VERIFY_PRAGMA)
+    }
+
     /// Get the functions that call this one
     pub fn get_calling_functions(&self) -> BTreeSet<QualifiedId<FunId>> {
+        if let Some(calling) = &*self.data.calling_funs.borrow() {
+            return calling.clone();
+        }
         let mut set: BTreeSet<QualifiedId<FunId>> = BTreeSet::new();
         for module_env in self.module_env.env.get_modules() {
             for fun_env in module_env.get_functions() {
@@ -2626,12 +2614,17 @@ impl<'env> FunctionEnv<'env> {
                 }
             }
         }
+        *self.data.calling_funs.borrow_mut() = Some(set.clone());
         set
     }
 
     /// Get the functions that this one calls
     pub fn get_called_functions(&self) -> BTreeSet<QualifiedId<FunId>> {
-        self.get_bytecode()
+        if let Some(called) = &*self.data.called_funs.borrow() {
+            return called.clone();
+        }
+        let called: BTreeSet<_> = self
+            .get_bytecode()
             .iter()
             .filter_map(|c| {
                 if let Bytecode::Call(i) = c {
@@ -2652,7 +2645,9 @@ impl<'env> FunctionEnv<'env> {
                     None
                 }
             })
-            .collect()
+            .collect();
+        *self.data.called_funs.borrow_mut() = Some(called.clone());
+        called
     }
 
     /// Returns the function name excluding the address and the module name

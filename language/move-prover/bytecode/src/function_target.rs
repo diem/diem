@@ -4,7 +4,7 @@
 use crate::{
     annotations::Annotations,
     borrow_analysis, livevar_analysis, reaching_def_analysis,
-    stackless_bytecode::{AttrId, Bytecode, Operation, SpecBlockId},
+    stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
 };
 use itertools::Itertools;
 use move_model::{
@@ -14,6 +14,7 @@ use move_model::{
     ty::{Type, TypeDisplayContext},
 };
 
+use crate::function_target_pipeline::FunctionVariant;
 use move_model::ast::TempIndex;
 use std::{
     cell::RefCell,
@@ -50,6 +51,8 @@ impl<'env> Clone for FunctionTarget<'env> {
 /// `FunctionTargetsHolder`.
 #[derive(Debug)]
 pub struct FunctionData {
+    /// The function variant.
+    pub variant: FunctionVariant,
     /// The bytecode.
     pub code: Vec<Bytecode>,
     /// The locals, including parameters.
@@ -363,6 +366,7 @@ impl FunctionData {
             .collect();
         let modify_targets = func_env.get_modify_targets();
         FunctionData {
+            variant: FunctionVariant::Baseline,
             code,
             local_types,
             return_types,
@@ -405,21 +409,6 @@ impl FunctionData {
             + 1
     }
 
-    /// Return the set of callees invoked by this function, including native functions
-    pub fn get_callees(&self) -> BTreeSet<QualifiedId<FunId>> {
-        use Bytecode::*;
-        use Operation::*;
-
-        let mut callees = BTreeSet::new();
-        for instr in &self.code {
-            if let Call(_, _, Function(mid, fid, _), _) = instr {
-                let callee = mid.qualified(*fid);
-                callees.insert(callee);
-            }
-        }
-        callees
-    }
-
     /// Apply a variable renaming to this data, adjusting internal data structures.
     pub fn rename_vars<F>(&mut self, f: &F)
     where
@@ -434,12 +423,13 @@ impl FunctionData {
             .map(|(x, y)| (f(x), f(y)))
             .collect();
     }
-}
 
-impl Clone for FunctionData {
-    /// Create a clone of this function data, without annotations.
-    fn clone(&self) -> Self {
+    /// Fork this function data, without annotations, and mark it as the given
+    /// variant.
+    pub fn fork(&self, new_variant: FunctionVariant) -> Self {
+        assert_ne!(self.variant, new_variant);
         FunctionData {
+            variant: new_variant,
             code: self.code.clone(),
             local_types: self.local_types.clone(),
             return_types: self.return_types.clone(),

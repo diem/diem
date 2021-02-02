@@ -172,28 +172,6 @@ fun Test::resource_with_old($t0|val: u64) {
 
 ============ after pipeline `spec_instrumentation` ================
 
-[variant baseline]
-fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
-     var $t3|tmp#$3: u64
-     var $t4: num
-  0: if ($t0) goto 3 else goto 1
-  1: label L1
-  2: goto 7
-  3: label L0
-  4: $t3 := /($t1, $t2)
-  5: on_abort goto 13 with $t4
-  6: goto 10
-  7: label L2
-  8: $t3 := *($t1, $t2)
-  9: on_abort goto 13 with $t4
- 10: label L3
- 11: label L4
- 12: return $t3
- 13: label L5
- 14: abort($t4)
-}
-
-
 [variant verification]
 fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
      var $t3|tmp#$3: u64
@@ -223,32 +201,6 @@ fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
      # VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:27:38+17
  18: assert Implies(And($t0, Eq<u64>($t2, 0)), Eq($t4, -1))
  19: abort($t4)
-}
-
-
-[variant baseline]
-fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
-     var $t2: u64
-     var $t3: bool
-     var $t4: u64
-     var $t5: num
-     var $t6: u64
-  0: $t2 := 0
-  1: $t3 := !=($t1, $t2)
-  2: if ($t3) goto 5 else goto 3
-  3: label L1
-  4: goto 9
-  5: label L0
-  6: $t4 := 22
-  7: $t5 := move($t4)
-  8: goto 14
-  9: label L2
- 10: $t6 := /($t0, $t1)
- 11: on_abort goto 14 with $t5
- 12: label L3
- 13: return $t6
- 14: label L4
- 15: abort($t5)
 }
 
 
@@ -288,22 +240,6 @@ fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
 }
 
 
-[variant baseline]
-fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
-     var $t2: u64
-     var $t3: num
-     var $t4: u64
-  0: $t2 := /($t0, $t1)
-  1: on_abort goto 6 with $t3
-  2: $t4 := %($t0, $t1)
-  3: on_abort goto 6 with $t3
-  4: label L1
-  5: return ($t2, $t4)
-  6: label L2
-  7: abort($t3)
-}
-
-
 [variant verification]
 fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
      var $t2: u64
@@ -327,35 +263,6 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
      # VC: `function aborts under this condition but with the wrong code` at tests/spec_instrumentation/fun_spec.move:18:28+17
  11: assert Implies(Eq<u64>($t1, 0), Eq($t3, -1))
  12: abort($t3)
-}
-
-
-[variant baseline]
-fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
-     var $t1|x: u64
-     var $t2: Test::R
-     var $t3: &mut Test::R
-     var $t4: u64
-     var $t5: u64
-     var $t6: u64
-     var $t7: u64
-     var $t8: num
-     var $t9: &mut u64
-  0: $t2 := move($t0)
-  1: $t3 := borrow_local($t2)
-  2: $t4 := get_field<Test::R>.v($t3)
-  3: $t5 := get_field<Test::R>.v($t3)
-  4: $t6 := 1
-  5: $t7 := -($t5, $t6)
-  6: on_abort goto 13 with $t8
-  7: $t9 := borrow_field<Test::R>.v($t3)
-  8: write_ref($t9, $t7)
-  9: write_back[Reference($t3)]($t9)
- 10: write_back[LocalRoot($t2)]($t3)
- 11: label L1
- 12: return ($t4, $t2)
- 13: label L2
- 14: abort($t8)
 }
 
 
@@ -398,15 +305,6 @@ fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
 }
 
 
-[variant baseline]
-fun Test::ref_param($t0|r: Test::R): u64 {
-     var $t1: u64
-  0: $t1 := get_field<Test::R>.v($t0)
-  1: label L1
-  2: return $t1
-}
-
-
 [variant verification]
 fun Test::ref_param($t0|r: Test::R): u64 {
      var $t1: u64
@@ -418,15 +316,6 @@ fun Test::ref_param($t0|r: Test::R): u64 {
 }
 
 
-[variant baseline]
-fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
-     var $t1: u64
-  0: $t1 := get_field<Test::R>.v($t0)
-  1: label L1
-  2: return $t1
-}
-
-
 [variant verification]
 fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
      var $t1: u64
@@ -435,47 +324,6 @@ fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
      # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:58:6+22
   2: assert Eq<u64>($t1, select Test::R.v($t0))
   3: return $t1
-}
-
-
-[variant baseline]
-fun Test::resource_with_old($t0|val: u64) {
-     var $t1|r: &mut Test::R
-     var $t2: address
-     var $t3: bool
-     var $t4: bool
-     var $t5: u64
-     var $t6: num
-     var $t7: address
-     var $t8: u64
-     var $t9: u64
-     var $t10: &mut u64
-  0: assume Gt($t0, 0)
-  1: $t2 := 0x0
-  2: $t3 := exists<Test::R>($t2)
-  3: $t4 := !($t3)
-  4: if ($t4) goto 7 else goto 5
-  5: label L1
-  6: goto 11
-  7: label L0
-  8: $t5 := 33
-  9: $t6 := move($t5)
- 10: goto 24
- 11: label L2
- 12: $t7 := 0x0
- 13: $t1 := borrow_global<Test::R>($t7)
- 14: on_abort goto 24 with $t6
- 15: $t8 := get_field<Test::R>.v($t1)
- 16: $t9 := +($t8, $t0)
- 17: on_abort goto 24 with $t6
- 18: $t10 := borrow_field<Test::R>.v($t1)
- 19: write_ref($t10, $t9)
- 20: write_back[Reference($t1)]($t10)
- 21: write_back[Test::R]($t1)
- 22: label L3
- 23: return ()
- 24: label L4
- 25: abort($t6)
 }
 
 

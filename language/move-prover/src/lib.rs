@@ -22,8 +22,9 @@ use bytecode::{
     memory_instrumentation::MemoryInstrumentationProcessor,
     packed_types_analysis::PackedTypesProcessor,
     reaching_def_analysis::ReachingDefProcessor,
-    spec_instrumentation::SpecInstrumenter,
-    usage_analysis::{self, UsageProcessor},
+    spec_instrumentation::SpecInstrumenterProcessor,
+    usage_analysis::UsageProcessor,
+    verification_analysis::VerificationAnalysisProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
@@ -33,12 +34,7 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
-use move_model::{
-    code_writer::CodeWriter,
-    emit, emitln,
-    model::{GlobalEnv, ModuleId, QualifiedId, StructId},
-    run_model_builder,
-};
+use move_model::{code_writer::CodeWriter, emit, emitln, model::GlobalEnv, run_model_builder};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
@@ -109,13 +105,11 @@ pub fn run_move_prover<W: WriteColor>(
         return Err(anyhow!("exiting with transformation errors"));
     }
 
-    check_modifies(&env, &targets);
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with modifies checking errors"));
     }
     // Analyze and find out the set of modules/functions to be translated and/or verified.
-    verification_analysis(&mut env, &targets);
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with analysis errors"));
@@ -270,123 +264,6 @@ fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Check modifies annotations
-/// TODO(wrwg): this should not live here but perhaps be part of the bytecode processing
-/// pipeline.
-fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
-    for module_env in env.get_modules() {
-        for func_env in module_env.get_functions() {
-            let caller_func_target = targets.get_annotated_target(&func_env);
-            for callee in func_env.get_called_functions() {
-                let callee_func_env = env.get_function(callee);
-                let callee_func_target = targets.get_annotated_target(&callee_func_env);
-                let callee_modified_memory =
-                    usage_analysis::get_modified_memory(&callee_func_target);
-                for target in caller_func_target.get_modify_targets().keys() {
-                    if callee_modified_memory.contains(target)
-                        && callee_func_target
-                            .get_modify_targets_for_type(target)
-                            .is_none()
-                    {
-                        let loc = caller_func_target.get_loc();
-                        env.error(
-                                &loc,
-                                &format!(
-                            "caller `{}` specifies modify targets for `{}::{}` but callee `{}` does not",
-                            env.symbol_pool().string(caller_func_target.get_name()),
-                            env.get_module(target.module_id).get_name().display(env.symbol_pool()),
-                            env.symbol_pool().string(target.id.symbol()),
-                                env.symbol_pool().string(callee_func_target.get_name())
-                            ));
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// This function analyzes the Move modules to be translated and the Move functions
-/// to be verified by doing the following:
-/// (1) Go through all invariants in the target modules and gather all resources
-///     mentioned in the invariants.
-/// (2) Go through all functions in all modules. If a function modifies one of
-///     the resources in (1) directly, then
-///     (a) Mark the function or its transitive friend(if there exists one) as should_verify and
-///     (b) Mark the module owning the function as should_translate.
-/// (3) Propagate should_translate to dependency modules.
-fn verification_analysis(env: &mut GlobalEnv, targets: &FunctionTargetsHolder) {
-    let mut target_resources = BTreeSet::new();
-
-    // Collect all resources mentioned in the invariants in target modules
-    for module_env in env.get_modules() {
-        if !module_env.is_dependency() {
-            let module_id = module_env.get_id();
-            env.add_module_to_should_translate(module_id);
-            propagate_should_translate(env, module_id);
-            let mentioned_resources: BTreeSet<QualifiedId<StructId>> = env
-                .get_global_invariants_by_module(module_id)
-                .iter()
-                .flat_map(|id| env.get_global_invariant(*id).unwrap().mem_usage.clone())
-                .collect();
-            target_resources.extend(mentioned_resources);
-        }
-    }
-
-    for module_env in env.get_modules() {
-        for func_env in module_env.get_functions() {
-            if func_env.has_friend() {
-                let loc = func_env.get_loc();
-                if func_env.is_opaque() {
-                    env.error(&loc, "function with a friend cannot be declared as opaque");
-                }
-                let calling_functions = func_env.get_calling_functions();
-
-                // Construct a set containing all friends of the function in the system.
-                // Right now there can be at most one friend.
-                let mut friends = BTreeSet::new();
-                if let Some(friend_env) = func_env.get_friend_env() {
-                    friends.insert(friend_env.get_qualified_id());
-                }
-
-                // If the set of callers is not a subset of the friends set,
-                // then some non-friend calls the function so generate an error message.
-                if !calling_functions.is_subset(&friends) {
-                    env.error(&loc, &format!("function `{}` is called by other functions while it can only be called by its friend {}",
-                                             func_env.get_name_string(),
-                                             func_env.get_friend_name().unwrap())
-                    );
-                }
-            }
-
-            let fun_target = targets.get_annotated_target(&func_env);
-            let directly_modified_structs =
-                usage_analysis::get_directly_modified_memory(&fun_target);
-            // Verify the function if it modifies one of the target resources
-            if !directly_modified_structs.is_disjoint(&target_resources) {
-                // If the function has a friend, then (1) this functions cannot
-                // be verified on its own, and (2) it has to be verified in the
-                // context of its friend.
-                let friend = func_env.get_transitive_friend();
-                let friend_module = &friend.module_env;
-                friend_module.add_fun_to_should_verify(friend.get_id());
-                env.add_module_to_should_translate(friend_module.get_id());
-                propagate_should_translate(env, friend_module.get_id());
-            }
-        }
-    }
-}
-
-/// Propage should_translate property to dependencies of the module.
-fn propagate_should_translate(env: &GlobalEnv, module_id: ModuleId) {
-    let module_env = env.get_module(module_id);
-    for dep in module_env.get_used_modules(true) {
-        if !env.get_module(dep).should_translate() {
-            env.add_module_to_should_translate(dep);
-            propagate_should_translate(env, dep);
-        }
-    }
-}
-
 /// Create bytecode and process it.
 fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTargetsHolder {
     let mut targets = FunctionTargetsHolder::default();
@@ -432,7 +309,8 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         res.add_processor(MemoryInstrumentationProcessor::new());
         res.add_processor(CleanAndOptimizeProcessor::new());
         res.add_processor(UsageProcessor::new());
-        res.add_processor(SpecInstrumenter::new());
+        res.add_processor(VerificationAnalysisProcessor::new());
+        res.add_processor(SpecInstrumenterProcessor::new());
     } else {
         res.add_processor(EliminateImmRefsProcessor::new());
         res.add_processor(EliminateMutRefsProcessor::new());
@@ -442,6 +320,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         res.add_processor(MemoryInstrumentationProcessor::new());
         res.add_processor(CleanAndOptimizeProcessor::new());
         res.add_processor(UsageProcessor::new());
+        res.add_processor(VerificationAnalysisProcessor::new());
         res.add_processor(PackedTypesProcessor::new());
     }
 

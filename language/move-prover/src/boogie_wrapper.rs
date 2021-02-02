@@ -502,9 +502,7 @@ impl<'env> BoogieWrapper<'env> {
             _ => "",
         };
         if let Some(func_env) = self.env.get_enclosing_function(loc.clone()) {
-            let func_target = self
-                .targets
-                .get_target(&func_env, FunctionVariant::Baseline);
+            let func_target = self.targets.get_annotated_target(&func_env);
             let func_name = format!(
                 "{}",
                 func_target.get_name().display(func_target.symbol_pool())

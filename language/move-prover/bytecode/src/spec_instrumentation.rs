@@ -5,12 +5,13 @@
 
 use crate::{
     function_data_builder::FunctionDataBuilder,
-    function_target::FunctionData,
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnalysisProcessor,
     options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
+    usage_analysis, verification_analysis,
 };
 use itertools::Itertools;
 use move_model::{
@@ -66,41 +67,49 @@ fn modify_check_fails_message(
     )
 }
 
-pub struct SpecInstrumenter {}
+//  ================================================================================================
+/// # Spec Instrumenter
 
-impl SpecInstrumenter {
+pub struct SpecInstrumenterProcessor {}
+
+impl SpecInstrumenterProcessor {
     pub fn new() -> Box<Self> {
         Box::new(Self {})
     }
 }
 
-impl FunctionTargetProcessor for SpecInstrumenter {
-    fn process(
+impl FunctionTargetProcessor for SpecInstrumenterProcessor {
+    fn initialize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
+        // Perform static analysis part of modifies check.
+        check_modifies(env, targets);
+    }
+
+    fn process_and_maybe_remove(
         &self,
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'_>,
         mut data: FunctionData,
-    ) -> FunctionData {
+    ) -> Option<FunctionData> {
         if fun_env.is_native() || fun_env.is_intrinsic() {
-            // Nothing to do
-            return data;
+            // Remove this function.
+            return None;
         }
 
-        // If verification is enabled for this function, create a new variant for verification
-        // purposes.
         let options = fun_env
             .module_env
             .env
             .get_extension::<ProverOptions>()
             .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
-        if fun_env.should_verify(options.verify_scope) {
+        let verification_info =
+            verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
+        if verification_info.verified {
             // Create a clone of the function data, moving annotations
             // out of this data and into the clone.
             // TODO(refactoring): we cannot clone annotations because they use the Any type.
             //   In any case, function variants should be revisited once refactoring is
             //   finished and all the old boilerplate is removed.
             let annotations = std::mem::take(&mut data.annotations);
-            let mut verification_data = data.clone();
+            let mut verification_data = data.fork(FunctionVariant::Verification);
             verification_data.annotations = annotations;
             verification_data = Instrumenter::run(
                 options,
@@ -116,8 +125,18 @@ impl FunctionTargetProcessor for SpecInstrumenter {
             );
         }
 
-        // Instrument baseline variant.
-        Instrumenter::run(options, targets, fun_env, FunctionVariant::Baseline, data)
+        // Instrument baseline variant only if it is inlined.
+        if verification_info.inlined {
+            Some(Instrumenter::run(
+                options,
+                targets,
+                fun_env,
+                FunctionVariant::Baseline,
+                data,
+            ))
+        } else {
+            None
+        }
     }
 
     fn name(&self) -> String {
@@ -653,8 +672,11 @@ impl<'a> Instrumenter<'a> {
     }
 }
 
+//  ================================================================================================
+/// # Spec Translator
+
 /// A helper which reduces specification conditions to assume/assert statements.
-struct SpecTranslator<'a, 'b> {
+pub(crate) struct SpecTranslator<'a, 'b> {
     /// The builder for the function we are currently translating. Note this is not
     /// necessarily the same as the function for which we translate specs.
     builder: &'b mut FunctionDataBuilder<'a>,
@@ -672,14 +694,14 @@ struct SpecTranslator<'a, 'b> {
 
 /// Represents a translated spec.
 #[derive(Default)]
-struct TranslatedSpec {
-    saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
-    saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
-    pre: Vec<(Loc, Exp)>,
-    post: Vec<(Loc, Exp)>,
-    aborts: Vec<(Loc, Exp, Option<Exp>)>,
-    aborts_with: Vec<(Loc, Vec<Exp>)>,
-    modifies: Vec<(Loc, Exp)>,
+pub(crate) struct TranslatedSpec {
+    pub(crate) saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
+    pub(crate) saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
+    pub(crate) pre: Vec<(Loc, Exp)>,
+    pub(crate) post: Vec<(Loc, Exp)>,
+    pub(crate) aborts: Vec<(Loc, Exp, Option<Exp>)>,
+    pub(crate) aborts_with: Vec<(Loc, Vec<Exp>)>,
+    pub(crate) modifies: Vec<(Loc, Exp)>,
 }
 
 impl TranslatedSpec {
@@ -744,7 +766,7 @@ impl TranslatedSpec {
 }
 
 impl<'a, 'b> SpecTranslator<'a, 'b> {
-    fn translate(
+    pub(crate) fn translate(
         builder: &'b mut FunctionDataBuilder<'a>,
         fun_env: &'b FunctionEnv<'a>,
         param_locals: Option<&'b [TempIndex]>,
@@ -1020,5 +1042,48 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .saved_memory
             .entry(qid)
             .or_insert_with(|| builder.global_env().new_global_id())
+    }
+}
+
+//  ================================================================================================
+/// # Modifies Checker
+
+/// Check modifies annotations. This is depending on usage analysis and is therefore
+/// invoked here from the initialize trait function of this processor.
+fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            if func_env.is_native() || func_env.is_intrinsic() {
+                continue;
+            }
+            let caller_func_target = targets.get_annotated_target(&func_env);
+            for callee in func_env.get_called_functions() {
+                let callee_func_env = env.get_function(callee);
+                if callee_func_env.is_native() || callee_func_env.is_intrinsic() {
+                    continue;
+                }
+                let callee_func_target = targets.get_annotated_target(&callee_func_env);
+                let callee_modified_memory =
+                    usage_analysis::get_modified_memory(&callee_func_target);
+                for target in caller_func_target.get_modify_targets().keys() {
+                    if callee_modified_memory.contains(target)
+                        && callee_func_target
+                            .get_modify_targets_for_type(target)
+                            .is_none()
+                    {
+                        let loc = caller_func_target.get_loc();
+                        env.error(
+                            &loc,
+                            &format!(
+                                "caller `{}` specifies modify targets for `{}::{}` but callee `{}` does not",
+                                env.symbol_pool().string(caller_func_target.get_name()),
+                                env.get_module(target.module_id).get_name().display(env.symbol_pool()),
+                                env.symbol_pool().string(target.id.symbol()),
+                                env.symbol_pool().string(callee_func_target.get_name())
+                            ));
+                    }
+                }
+            }
+        }
     }
 }

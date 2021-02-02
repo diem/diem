@@ -1,12 +1,4 @@
-Move prover returns: exiting with analysis errors
-error: function `TestFriendError::f` is called by other functions while it can only be called by its friend M::some_other_fun
-
-   ┌── tests/sources/functional/friend_error.move:7:5 ───
-   │
- 7 │     public fun f() {}
-   │     ^^^^^^^^^^^^^^^^^
-   │
-
+Move prover returns: exiting with transformation errors
 error: function with a friend cannot be declared as opaque
 
     ┌── tests/sources/functional/friend_error.move:13:5 ───
@@ -22,3 +14,11 @@ error: function `TestFriendError::g` is called by other functions while it can o
  13 │     public fun g() {}
     │     ^^^^^^^^^^^^^^^^^
     │
+
+error: function `TestFriendError::f` is called by other functions while it can only be called by its friend M::some_other_fun
+
+   ┌── tests/sources/functional/friend_error.move:7:5 ───
+   │
+ 7 │     public fun f() {}
+   │     ^^^^^^^^^^^^^^^^^
+   │

@@ -22,6 +22,7 @@ use bytecode::{
         Constant, Label, Operation, SpecBlockId,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    verification_analysis,
 };
 use move_model::{
     code_writer::CodeWriter,
@@ -272,7 +273,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates this module.
     fn translate(&mut self) {
         log!(
-            if self.module_env.is_dependency() {
+            if !self.module_env.is_target() {
                 Level::Debug
             } else {
                 Level::Info
@@ -288,10 +289,6 @@ impl<'env> ModuleTranslator<'env> {
         spec_translator.translate_spec_vars();
         spec_translator.translate_spec_funs();
         self.translate_structs();
-        // Don't translate functions if the module doesn't need to be translated
-        if !self.module_env.should_translate() {
-            return;
-        }
         self.translate_functions();
     }
 
@@ -537,7 +534,7 @@ impl<'env> ModuleTranslator<'env> {
                     .get_target(&func_env, FunctionVariant::Baseline),
             );
         }
-        if num_fun > 0 && !self.module_env.is_dependency() {
+        if num_fun > 0 && self.module_env.is_target() {
             debug!(
                 "{} out of {} functions have (directly or indirectly) \
                  specifications in module `{}`",
@@ -596,10 +593,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // If the function is not verified, or the timeout is less than the estimated time,
         // stop here.
-        if !func_target
-            .func_env
-            .should_verify(self.options.prover.verify_scope)
-        {
+        if !verification_analysis::get_info(func_target).verified {
             return;
         }
         if let Some(n) = func_target.module_env().env.get_num_property(

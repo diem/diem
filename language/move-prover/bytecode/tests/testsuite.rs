@@ -6,7 +6,6 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use bytecode::options::ProverOptions;
 use bytecode::{
     borrow_analysis::BorrowAnalysisProcessor,
     clean_and_optimize::CleanAndOptimizeProcessor,
@@ -18,7 +17,9 @@ use bytecode::{
     options::ProverOptions,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
-    spec_instrumentation::SpecInstrumenter,
+    spec_instrumentation::SpecInstrumenterProcessor,
+    usage_analysis::UsageProcessor,
+    verification_analysis::VerificationAnalysisProcessor,
 };
 use move_model::{model::GlobalEnv, run_model_builder};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
@@ -93,7 +94,9 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(BorrowAnalysisProcessor::new());
             pipeline.add_processor(MemoryInstrumentationProcessor::new());
             pipeline.add_processor(CleanAndOptimizeProcessor::new());
-            pipeline.add_processor(SpecInstrumenter::new());
+            pipeline.add_processor(UsageProcessor::new());
+            pipeline.add_processor(VerificationAnalysisProcessor::new());
+            pipeline.add_processor(SpecInstrumenterProcessor::new());
             Ok(Some(pipeline))
         }
 

@@ -36,7 +36,7 @@ impl<'a> SummaryCache<'a> {
             vec![FunctionVariant::Baseline]
         );
         self.targets
-            .get_target_data(&fun_id, FunctionVariant::Baseline)
+            .get_data(&fun_id, FunctionVariant::Baseline)
             .map(|fun_data| {
                 if self.global_env.get_function(fun_id).is_native() {
                     None

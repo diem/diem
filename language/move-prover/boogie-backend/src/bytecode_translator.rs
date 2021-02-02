@@ -91,7 +91,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates this module.
     fn translate(&mut self) {
         log!(
-            if self.module_env.is_dependency() {
+            if !self.module_env.is_target() {
                 Level::Debug
             } else {
                 Level::Info
@@ -106,10 +106,6 @@ impl<'env> ModuleTranslator<'env> {
         self.spec_translator.translate_spec_vars(&self.module_env);
         self.spec_translator.translate_spec_funs(&self.module_env);
         self.translate_structs();
-        // Don't translate functions if the module doesn't need to be translated
-        if !self.module_env.should_translate() {
-            return;
-        }
         self.translate_functions();
     }
 

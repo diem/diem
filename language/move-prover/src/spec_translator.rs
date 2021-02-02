@@ -1622,10 +1622,9 @@ impl<'env> SpecTranslator<'env> {
             self.global_env()
                 .get_global_invariant(*id)
                 .map(|inv| {
-                    !self
-                        .global_env()
+                    self.global_env()
                         .get_module(inv.declaring_module)
-                        .is_dependency()
+                        .is_target()
                 })
                 .unwrap_or(true)
         };

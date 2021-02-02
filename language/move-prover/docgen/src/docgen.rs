@@ -284,7 +284,7 @@ impl<'env> Docgen<'env> {
         // Generate documentation for standalone modules which are not included in the templates.
         for (id, info) in self.infos.clone() {
             let m = self.env.get_module(id);
-            if !info.is_included && !m.is_dependency() {
+            if !info.is_included && m.is_target() {
                 self.gen_module(&m, &info);
                 let mut path = PathBuf::from(&self.options.output_directory);
                 path.push(info.target_file);
@@ -444,7 +444,7 @@ impl<'env> Docgen<'env> {
                 m.get_name().display_full(m.symbol_pool()),
                 out_dir,
                 i.target_file,
-                if m.is_dependency() {
+                if !m.is_target() {
                     "exists"
                 } else {
                     "will be generated"
@@ -509,7 +509,7 @@ impl<'env> Docgen<'env> {
             .file_name()
             .expect("file name")
             .to_os_string();
-        if module_env.is_dependency() {
+        if !module_env.is_target() {
             // Try to locate the file in the provided search path.
             self.options.doc_path.iter().find_map(|dir| {
                 let mut path = PathBuf::from(dir);

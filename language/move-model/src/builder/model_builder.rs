@@ -302,7 +302,7 @@ impl<'env> ModelBuilder<'env> {
             let module_env = self.env.get_module(entry.module_id);
             // Warn about unused schema only if the module is a target and schema name
             // does not start with 'UNUSED'
-            if !module_env.is_dependency() && !schema_name.starts_with("UNUSED") {
+            if module_env.is_target() && !schema_name.starts_with("UNUSED") {
                 self.env.warn(
                     &entry.loc,
                     &format!("unused schema {}", name.display(self.env.symbol_pool())),

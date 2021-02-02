@@ -9,11 +9,7 @@ use crate::{
 use itertools::Itertools;
 use log::debug;
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Formatter,
-    fs,
-};
+use std::{collections::BTreeMap, fmt::Formatter, fs};
 
 /// A data structure which holds data for multiple function targets, and allows to
 /// manipulate them as part of a transformation pipeline.
@@ -43,22 +39,41 @@ impl std::fmt::Display for FunctionVariant {
     }
 }
 
-/// A trait for processing a function target. Takes as parameter a target holder which can be
-/// mutated, the env of the function being processed, and the target data. During the time
-/// the processor is called, the target data is removed from the holder, and added back once
-/// transformation has finished. This allows the processor to take ownership
-/// on the target data. Notice that you can use `FunctionTarget{func_env, &data}` to temporarily
-/// construct a function target for access to the underlying data.
+/// A trait describing a function target processor.
 pub trait FunctionTargetProcessor {
+    /// Processes a function variant. Takes as parameter a target holder which can be mutated, the
+    /// env of the function being processed, and the target data. During the time the processor is
+    /// called, the target data is removed from the holder, and added back once transformation
+    /// has finished. This allows the processor to take ownership on the target data.
     fn process(
+        &self,
+        _targets: &mut FunctionTargetsHolder,
+        _fun_env: &FunctionEnv<'_>,
+        _data: FunctionData,
+    ) -> FunctionData {
+        unimplemented!()
+    }
+
+    /// Same as `process` but can return None to indicate that the function variant is
+    /// removed. By default, this maps to `Some(self.process(..))`. One needs to implement
+    /// either this function or `process`.
+    fn process_and_maybe_remove(
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
         data: FunctionData,
-    ) -> FunctionData;
+    ) -> Option<FunctionData> {
+        Some(self.process(targets, func_env, data))
+    }
 
     /// Returns a name for this processor. This should be suitable as a file suffix.
     fn name(&self) -> String;
+
+    /// A function which is called once before any `process` call is issued.
+    fn initialize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {}
+
+    /// A function which is called once after the last `process` call.
+    fn finalize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {}
 }
 
 /// A processing pipeline for function targets.
@@ -68,6 +83,21 @@ pub struct FunctionTargetPipeline {
 }
 
 impl FunctionTargetsHolder {
+    /// Get an iterator for all functions this holder.
+    pub fn get_funs(&self) -> impl Iterator<Item = QualifiedId<FunId>> + '_ {
+        self.targets.keys().cloned()
+    }
+
+    /// Gets an iterator for all functions and variants in this holder.
+    pub fn get_funs_and_variants(
+        &self,
+    ) -> impl Iterator<Item = (QualifiedId<FunId>, FunctionVariant)> + '_ {
+        self.targets
+            .iter()
+            .map(|(id, vs)| vs.keys().map(move |v| (*id, *v)))
+            .flatten()
+    }
+
     /// Adds a new function target. The target will be initialized from the Move byte code.
     pub fn add_target(&mut self, func_env: &FunctionEnv<'_>, for_v2: bool) {
         let generator = StacklessBytecodeGenerator::new(func_env, for_v2);
@@ -85,7 +115,7 @@ impl FunctionTargetsHolder {
         variant: FunctionVariant,
     ) -> FunctionTarget<'env> {
         let data = self
-            .get_target_data(&func_env.get_qualified_id(), variant)
+            .get_data(&func_env.get_qualified_id(), variant)
             .expect("function target exists");
         FunctionTarget::new(func_env, &data)
     }
@@ -131,12 +161,21 @@ impl FunctionTargetsHolder {
     }
 
     /// Gets function data for a variant.
-    pub fn get_target_data(
+    pub fn get_data(
         &self,
         id: &QualifiedId<FunId>,
         variant: FunctionVariant,
     ) -> Option<&FunctionData> {
         self.targets.get(id).and_then(|vs| vs.get(&variant))
+    }
+
+    /// Gets mutable function data for a variant.
+    pub fn get_data_mut(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> Option<&mut FunctionData> {
+        self.targets.get_mut(id).and_then(|vs| vs.get_mut(&variant))
     }
 
     /// Removes function data for a variant.
@@ -168,9 +207,10 @@ impl FunctionTargetsHolder {
         for variant in self.get_target_variants(func_env) {
             // Remove data so we can own it.
             let data = self.remove_target_data(&id, variant);
-            let processed_data = processor.process(self, func_env, data);
-            // Put back processed data.
-            self.insert_target_data(&id, variant, processed_data);
+            if let Some(processed_data) = processor.process_and_maybe_remove(self, func_env, data) {
+                // Put back processed data.
+                self.insert_target_data(&id, variant, processed_data);
+            }
         }
     }
 }
@@ -194,13 +234,12 @@ impl FunctionTargetPipeline {
         dump_to_file: Option<String>,
     ) {
         let mut worklist = vec![];
-        for (key, variants) in &targets.targets {
-            // Use the union of the callees of all variants
-            let mut callees = BTreeSet::new();
-            for data in variants.values() {
-                callees.extend(data.get_callees());
-            }
-            worklist.push((*key, callees.into_iter().collect_vec()));
+        for fun in targets.get_funs() {
+            let fun_env = env.get_function(fun);
+            worklist.push((
+                fun,
+                fun_env.get_called_functions().into_iter().collect_vec(),
+            ));
         }
         let mut to_remove = vec![];
         let mut topological_order = vec![];
@@ -259,9 +298,11 @@ impl FunctionTargetPipeline {
         };
         dump_to_file(0, "stackless", targets);
         for (step_count, processor) in self.processors.iter().enumerate() {
+            processor.initialize(env, targets);
             for func_env in &topological_order {
                 targets.process(func_env, processor.as_ref());
             }
+            processor.finalize(env, targets);
             dump_to_file(step_count + 1, &processor.name(), targets);
         }
     }
