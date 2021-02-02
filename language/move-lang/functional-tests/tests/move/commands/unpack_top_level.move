@@ -17,4 +17,4 @@ fun main() {
     Test { b: _ } = t;
 }
 }
-// check: MoveSourceCompilerError
+// check: "Unbound type" "in current scope"

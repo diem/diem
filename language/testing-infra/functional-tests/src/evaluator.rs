@@ -31,6 +31,7 @@ use move_core_types::{
     language_storage::ModuleId,
 };
 use once_cell::sync::Lazy;
+use regex::{Captures, Regex};
 use std::{
     collections::HashMap,
     fmt::{self, Debug},
@@ -574,7 +575,23 @@ fn eval_transaction<TComp: Compiler>(
                     log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
                 }
             };
-            unwrap_or_abort!(compiler.compile(compiler_log, sender_addr, &transaction.input))
+
+            // Compiler error messages may contain temporary file names, causing tests to be non-deterministic.
+            // The following code get them filtered out using regex.
+            static FILENAME_PAT: Lazy<Regex> =
+                Lazy::new(|| Regex::new(r"[A-Za-z0-9_/.]+:([0-9]+):([0-9]+)").unwrap());
+
+            let compiler_res = compiler.compile(compiler_log, sender_addr, &transaction.input);
+            let filtered_compiler_res = compiler_res.map_err(|err| {
+                let msg = err.to_string();
+                let filtered = FILENAME_PAT
+                    .replace_all(&msg, |caps: &Captures| {
+                        format!("(file):{}:{}", &caps[1], &caps[2])
+                    })
+                    .to_string();
+                format_err!("{}", filtered)
+            });
+            unwrap_or_abort!(filtered_compiler_res)
         };
 
     match parsed_script_or_module {

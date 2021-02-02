@@ -1,6 +1,3 @@
-// check: BoundsCheckErrors
-// check: INDEX_OUT_OF_BOUNDS
-
 main() {
     let ret_if_val: bool;
     ret_if_val = true;
@@ -15,3 +12,5 @@ main() {
         return;
     }
 }
+// check: "Post-compile bounds check errors"
+// check: INDEX_OUT_OF_BOUNDS
