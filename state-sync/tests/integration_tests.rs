@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 use diem_config::config::RoleType;
 use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
 use netcore::transport::ConnectionOrigin::*;
+use network::protocols::direct_send::Message;
 use state_sync::network::StateSyncMessage;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use test_harness::StateSyncEnvironment;
@@ -255,9 +256,11 @@ fn catch_up_with_waypoints() {
 fn test_lagging_upstream_long_poll() {
     let mut env = StateSyncEnvironment::new(4);
 
+    // Start 2 validators and 2 fullnodes
     env.start_validator_peer(0, true);
+    env.start_validator_peer(1, true);
     env.setup_state_sync_peer(
-        1,
+        2,
         default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
@@ -267,206 +270,166 @@ fn test_lagging_upstream_long_poll() {
         Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
     env.start_state_sync_peer(
-        2,
+        3,
         default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
         true,
         Some(vec![VFN_NETWORK.clone()]),
     );
-    // we treat this a standalone node whose local state we use as the baseline
-    // to clone state to the other nodes
-    env.start_validator_peer(3, true);
 
     let validator_0 = env.get_state_sync_peer(0);
-    let fullnode_0 = env.get_state_sync_peer(1);
-    let fullnode_1 = env.get_state_sync_peer(2);
+    let fullnode_0 = env.get_state_sync_peer(2);
+    let fullnode_1 = env.get_state_sync_peer(3);
 
-    // network handles for each node
-    let validator_peer_id = validator_0.get_peer_id(VALIDATOR_NETWORK.clone());
-    let full_node_vfn_network_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
-    let full_node_failover_network_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
-    let failover_fn_vfn_network_peer_id = fullnode_1.get_peer_id(VFN_NETWORK.clone());
-    let failover_fn_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+    // Get peer ids of nodes (across different networks)
+    let validator_0_peer_id = validator_0.get_peer_id(VALIDATOR_NETWORK.clone());
+    let fullnode_0_peer_id_vfn = fullnode_0.get_peer_id(VFN_NETWORK.clone());
+    let fullnode_0_peer_id_pfn = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let fullnode_1_peer_id_vfn = fullnode_1.get_peer_id(VFN_NETWORK.clone());
+    let fullnode_1_peer_id_pfn = fullnode_1.get_peer_id(PFN_NETWORK.clone());
 
+    // Commit version 400 at the validator
     validator_0.commit(400);
-
     drop(validator_0);
     drop(fullnode_0);
     drop(fullnode_1);
 
-    // validator discovers FN
-    env.send_peer_event(
-        full_node_vfn_network_peer_id,
-        validator_peer_id,
-        true,
-        Inbound,
-    );
-    // fn discovers validator
-    env.send_peer_event(
-        validator_peer_id,
-        full_node_vfn_network_peer_id,
-        true,
-        Outbound,
-    );
+    // Validator and fullnode discover each other
+    env.send_peer_event(fullnode_0_peer_id_vfn, validator_0_peer_id, true, Inbound);
+    env.send_peer_event(validator_0_peer_id, fullnode_0_peer_id_vfn, true, Outbound);
 
-    // FN discovers failover upstream
+    // Fullnodes discover each other
     env.send_peer_event(
-        full_node_failover_network_peer_id,
-        failover_fn_peer_id,
+        fullnode_0_peer_id_pfn,
+        fullnode_1_peer_id_pfn,
         true,
         Inbound,
     );
     env.send_peer_event(
-        failover_fn_peer_id,
-        full_node_failover_network_peer_id,
+        fullnode_1_peer_id_pfn,
+        fullnode_0_peer_id_pfn,
         true,
         Outbound,
     );
 
-    let (_, msg) = env.deliver_msg(full_node_vfn_network_peer_id);
-    // expected: known_version 0, epoch 1, no target LI version
-    let req: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_request(req, 0, None);
+    // Deliver messages and verify versions and targets
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_vfn);
+    check_chunk_request(message, 0, None);
+    let (_, message) = env.deliver_msg(validator_0_peer_id);
+    check_chunk_response(message, 400, 1, 250);
+    env.get_state_sync_peer(2).wait_for_version(250, None);
 
-    let (_, msg) = env.deliver_msg(validator_peer_id);
-    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_response(resp, 400, 1, 250);
-    env.get_state_sync_peer(1).wait_for_version(250, None);
+    // Validator loses fullnode
+    env.send_peer_event(fullnode_0_peer_id_vfn, validator_0_peer_id, false, Inbound);
+    // Fullnode loses validator
+    env.send_peer_event(validator_0_peer_id, fullnode_0_peer_id_vfn, false, Outbound);
 
-    // validator loses FN
-    env.send_peer_event(
-        full_node_vfn_network_peer_id,
-        validator_peer_id,
-        false,
-        Inbound,
-    );
-    // fn loses validator
-    env.send_peer_event(
-        validator_peer_id,
-        full_node_vfn_network_peer_id,
-        false,
-        Outbound,
-    );
+    // Fullnode sends chunk request to other fullnode
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 250, None);
 
-    // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
-    let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
-    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_request(msg, 250, Some(400));
-
-    // update failover VFN from lagging state to updated state
-    // so it can deliver full_node's long-poll subscription
+    // Validator 0 commits to new version and fullnode 1 is fast forwarded
     env.get_state_sync_peer(0).commit(500);
-    // we directly sync up the storage of the failover upstream with this validator's for ease of testing
-    env.clone_storage(0, 2);
-    env.get_state_sync_peer(2).wait_for_version(500, Some(500));
+    env.clone_storage(0, 3);
+    env.get_state_sync_peer(3).wait_for_version(500, Some(500));
 
-    // connect the validator and the failover vfn so FN can sync to validator
-    // validator discovers FN
-    env.send_peer_event(
-        failover_fn_vfn_network_peer_id,
-        validator_peer_id,
-        true,
-        Inbound,
-    );
-    // fn discovers validator
-    env.send_peer_event(
-        validator_peer_id,
-        failover_fn_vfn_network_peer_id,
-        true,
-        Outbound,
-    );
+    // Connect the validator and the failover fullnode so the fullnode can sync.
+    // Validator discovers fullnode
+    env.send_peer_event(fullnode_1_peer_id_vfn, validator_0_peer_id, true, Inbound);
+    // Fullnode discovers validator
+    env.send_peer_event(validator_0_peer_id, fullnode_1_peer_id_vfn, true, Outbound);
 
-    // trigger another commit so that the failover fn's commit will trigger subscription delivery
+    // Trigger another commit so that the fullnodes's commit will trigger subscription delivery
     env.get_state_sync_peer(0).commit(600);
-    // failover fn sends chunk request to validator
-    let (_, msg) = env.deliver_msg(failover_fn_vfn_network_peer_id);
-    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_request(msg, 500, None);
-    let (_, msg) = env.deliver_msg(validator_peer_id);
-    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_response(resp, 600, 501, 100);
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_vfn);
+    check_chunk_request(message, 500, None);
+    let (_, message) = env.deliver_msg(validator_0_peer_id);
+    check_chunk_response(message, 600, 501, 100);
 
-    // failover sends long-poll subscription to fullnode
-    let (_, msg) = env.deliver_msg(failover_fn_peer_id);
-    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_response(resp, 600, 251, 250);
+    // Fullnode 1 sends long-poll subscription to fullnode 0
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 600, 251, 250);
 
-    // full_node sends chunk request to failover upstream for known_version 250 and target LI 400
-    let (_, msg) = env.deliver_msg(full_node_failover_network_peer_id);
-    let msg: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    // here we check that the next requested version is not the older target LI 400 - that should be
-    // pruned out from PendingLedgerInfos since it becomes outdated after the known_version advances to 500
-    check_chunk_request(msg, 500, None);
-
-    // check that fullnode successfully finishes sync to 600
-    let (_, msg) = env.deliver_msg(failover_fn_peer_id);
-    let resp: StateSyncMessage = bcs::from_bytes(&msg.mdata).expect("failed bcs deserialization");
-    check_chunk_response(resp, 600, 501, 100);
-    env.get_state_sync_peer(1).wait_for_version(600, Some(600));
+    // Fullnode 0 sends chunk request to fullnode 1 and commits to latest state
+    let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
+    check_chunk_request(message, 500, None);
+    let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
+    check_chunk_response(message, 600, 501, 100);
+    env.get_state_sync_peer(2).wait_for_version(600, Some(600));
 }
 
-// test full node catching up to validator that is also making progress
 #[test]
-fn test_sync_pending_ledger_infos() {
+fn test_fullnode_catch_up_validator() {
+    // Create validator and fullnode
     let mut env = StateSyncEnvironment::new(2);
-
     env.start_validator_peer(0, true);
     env.start_fullnode_peer(1, true);
 
+    // Get peer ids of nodes
     let validator_peer_id = env
         .get_state_sync_peer(0)
         .get_peer_id(VALIDATOR_NETWORK.clone());
     let fullnode_peer_id = env.get_state_sync_peer(1).get_peer_id(VFN_NETWORK.clone());
 
-    // validator discovers fn
+    // Validator and fullnode discover each other.
     env.send_peer_event(fullnode_peer_id, validator_peer_id, true, Inbound);
-
-    // fn discovers validator
     env.send_peer_event(validator_peer_id, fullnode_peer_id, true, Outbound);
 
+    // Versions to be committed by the validator
     let commit_versions = vec![
-        900, 1800, 2800, 3100, 3200, 3300, 3325, 3350, 3400, 3450, 3650, 4300,
+        900, 1800, 2800, 3100, 3200, 3300, 3325, 3350, 3400, 3450, 3650, 4300, 4549,
     ];
 
+    // Versions that will move to the next epoch
+    let versions_for_new_epochs = vec![2800, 3325, 4300];
+
+    // Expected fullnode sync states (i.e., synced version and committed version)
     let expected_states = vec![
         (250, 0),
         (500, 0),
         (750, 0),
-        (900, 900),
-        (1150, 900),
-        (1400, 900),
-        (1650, 900),
-        (1800, 1800),
-        (2050, 1800),
-        (2300, 1800),
-        (2550, 1800),
+        (1000, 0),
+        (1250, 0),
+        (1500, 0),
+        (1750, 0),
+        (2000, 0),
+        (2250, 0),
+        (2500, 0),
+        (2750, 0),
         (2800, 2800),
         (3050, 2800),
-        (3100, 3100),
-        (3350, 3350),
-        (3450, 3450),
-        (3650, 3650),
-        (3900, 3650),
-        (4150, 3650),
+        (3300, 2800),
+        (3325, 3325),
+        (3575, 3325),
+        (3825, 3325),
+        (4075, 3325),
         (4300, 4300),
+        (4549, 4549),
     ];
 
-    for (idx, expected_state) in expected_states.iter().enumerate() {
-        // commit if applicable
-        if let Some(version) = commit_versions.get(idx) {
-            env.get_state_sync_peer(0).commit(*version);
+    // Update the versions at the validator and check the full node syncs correctly.
+    for (index, (synced_version, committed_version)) in expected_states.iter().enumerate() {
+        if let Some(committed_version) = commit_versions.get(index) {
+            let validator = env.get_state_sync_peer(0);
+            validator.commit(*committed_version);
+
+            if versions_for_new_epochs.contains(committed_version) {
+                let validator_infos = vec![validator.get_validator_info()];
+                validator.move_to_next_epoch(validator_infos, 0);
+            }
         }
+
         env.deliver_msg(fullnode_peer_id);
         env.deliver_msg(validator_peer_id);
-        let (sync_version, li_version) = expected_state;
-        assert!(
-            env.get_state_sync_peer(1)
-                .wait_for_version(*sync_version, Some(*li_version)),
-            "didn't reach synced version {} and highest LI version {}",
-            sync_version,
-            li_version
-        );
+
+        let fullnode = env.get_state_sync_peer(1);
+        if !fullnode.wait_for_version(*synced_version, Some(*committed_version)) {
+            panic!(
+                "Failed to reach synced version: {} and committed version: {}",
+                synced_version, committed_version
+            );
+        }
     }
 }
 
@@ -900,35 +863,43 @@ fn test_multicast_failover() {
     env.assert_no_message_sent(fn_0_public_peer_id);
 }
 
-fn check_chunk_request(msg: StateSyncMessage, known_version: u64, target_version: Option<u64>) {
-    match msg {
-        StateSyncMessage::GetChunkRequest(req) => {
-            assert_eq!(req.known_version, known_version);
-            assert_eq!(req.target.version(), target_version);
+fn check_chunk_request(message: Message, known_version: u64, target_version: Option<u64>) {
+    let chunk_request: StateSyncMessage = bcs::from_bytes(&message.mdata).unwrap();
+    match chunk_request {
+        StateSyncMessage::GetChunkRequest(chunk_request) => {
+            assert_eq!(chunk_request.known_version, known_version);
+            assert_eq!(chunk_request.target.version(), target_version);
         }
         StateSyncMessage::GetChunkResponse(_) => {
-            panic!("received chunk response when expecting chunk request");
+            panic!("Received chunk response but expecting chunk request!");
         }
     }
 }
 
 fn check_chunk_response(
-    msg: StateSyncMessage,
+    message: Message,
     response_li_version: u64,
     chunk_start_version: u64,
     chunk_length: usize,
 ) {
-    match msg {
+    let chunk_response: StateSyncMessage = bcs::from_bytes(&message.mdata).unwrap();
+    match chunk_response {
         StateSyncMessage::GetChunkRequest(_) => {
-            panic!("received chunk response when expecting chunk request");
+            panic!("Received chunk response but expecting chunk request!");
         }
-        StateSyncMessage::GetChunkResponse(resp) => {
-            assert_eq!(resp.response_li.version(), response_li_version);
+        StateSyncMessage::GetChunkResponse(chunk_response) => {
+            assert_eq!(chunk_response.response_li.version(), response_li_version);
             assert_eq!(
-                resp.txn_list_with_proof.first_transaction_version.unwrap(),
+                chunk_response
+                    .txn_list_with_proof
+                    .first_transaction_version
+                    .unwrap(),
                 chunk_start_version
             );
-            assert_eq!(resp.txn_list_with_proof.transactions.len(), chunk_length)
+            assert_eq!(
+                chunk_response.txn_list_with_proof.transactions.len(),
+                chunk_length
+            )
         }
     }
 }
