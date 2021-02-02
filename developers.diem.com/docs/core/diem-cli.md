@@ -97,7 +97,7 @@ If you enter only the major command, it will show the help information for that 
                 other commands). If gas is being charged, the account that sent this mint transaction
                 (currently preloaded genesis account) pays for the gas.
           number_of_coins - The number of coins to be minted to the receiver account.
-          currency_code - Which currency to mint. For example, `Coin1`.
+          currency_code - Which currency to mint. For example, `XUS`.
 
 `<addc | ac> | <addcb | acb>` &mdash; Add specified currency to the account. Suffix 'b' is for blocking.
 
@@ -120,7 +120,7 @@ If you enter only the major command, it will show the help information for that 
                 If the receiver account does not exist, it will be created first. The sender will pay for
                 gas required for both account creation and coin transfer.
           number_of_coins - The number of coins transferred to receiver account.
-          currency_code - Which currency to transfer. For example, `Coin1`.
+          currency_code - Which currency to transfer. For example, `XUS`.
           gas_unit_price_in_micro_diems - The unit price to pay for gas.
           max_gas_amount_in_micro_diems - Max units of gas user is willing to pay for this transaction.
 
