@@ -19,7 +19,7 @@ use crate::{
             },
         },
     },
-    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
+    transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -66,7 +66,6 @@ fn build_test_peer(
             origin,
             MessagingProtocolVersion::V1,
             [].iter().into(),
-            TrustLevel::Untrusted,
             PeerRole::Unknown,
         ),
         socket: a,
@@ -160,8 +159,8 @@ async fn assert_disconnected_event(
     connection_notifs_rx: &mut channel::Receiver<TransportNotification<MemorySocket>>,
 ) {
     match connection_notifs_rx.next().await {
-        Some(TransportNotification::Disconnected(conn_info, actual_reason)) => {
-            assert_eq!(conn_info.remote_peer_id, peer_id);
+        Some(TransportNotification::Disconnected(metadata, actual_reason)) => {
+            assert_eq!(metadata.remote_peer_id, peer_id);
             assert_eq!(actual_reason, reason);
         }
         event => panic!("Expected a Disconnected, received: {:?}", event),

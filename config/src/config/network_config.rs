@@ -343,29 +343,29 @@ impl Default for RateLimitConfig {
 pub type PeerSet = HashMap<PeerId, Peer>;
 
 // TODO: Combine with RoleType?
+/// Represents the Role that a peer plays in the network ecosystem rather than the type of node.
+/// Determines how nodes are connected to other nodes, and how discovery views them.
+///
+/// Rules for upstream nodes via Peer Role:
+///
+/// Validator -> Always upstream if not Validator else P2P
+/// PreferredUpstream -> Always upstream, overriding any other discovery
+/// ValidatorFullNode -> Always upstream for incoming connections (including other ValidatorFullNodes)
+/// Upstream -> Upstream, if no ValidatorFullNode or PreferredUpstream.  Useful for initial seed discovery
+/// Unknown -> Undiscovered peer, likely due to a non-mutually authenticated connection always downstream
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum PeerRole {
     Validator = 0,
+    PreferredUpstream,
     ValidatorFullNode,
-    Preferred,
     Upstream,
-    Known,
     Unknown,
 }
 
 impl Default for PeerRole {
+    /// Default to least trusted
     fn default() -> Self {
-        // Default to least trusted
         PeerRole::Unknown
-    }
-}
-
-impl From<RoleType> for PeerRole {
-    fn from(role_type: RoleType) -> PeerRole {
-        match role_type {
-            RoleType::Validator => PeerRole::Validator,
-            RoleType::FullNode => PeerRole::ValidatorFullNode,
-        }
     }
 }
 

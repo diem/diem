@@ -106,11 +106,11 @@ const MAX_DNS_NAME_SIZE: usize = 255;
 ///
 /// [multiaddr]: https://multiformats.io/multiaddr/
 /// [`Transport`]: ../netcore/transport/trait.Transport.html
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub struct NetworkAddress(Vec<Protocol>);
 
 /// A single protocol in the [`NetworkAddress`] protocol stack.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum Protocol {
     Ip4(Ipv4Addr),
@@ -146,7 +146,7 @@ pub enum Protocol {
 /// is a valid unicode string. We do this because '/' characters are already our
 /// protocol delimiter and Rust's [`std::net::ToSocketAddrs`] API requires a
 /// `&str`.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Serialize)]
 pub struct DnsName(String);
 
 /// Possible errors when parsing a human-readable [`NetworkAddress`].

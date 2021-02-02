@@ -123,7 +123,11 @@ fn extract_updates(
             })
             .unwrap_or_default();
 
-            (peer_id, Peer::from_addrs(PeerRole::from(role), addrs))
+            let peer_role = match role {
+                RoleType::Validator => PeerRole::Validator,
+                RoleType::FullNode => PeerRole::ValidatorFullNode,
+            };
+            (peer_id, Peer::from_addrs(peer_role, addrs))
         })
         .collect();
 

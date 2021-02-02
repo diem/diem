@@ -197,13 +197,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 },
                 (network_id, event) = network_events.select_next_some() => {
                     match event {
-                        Event::NewPeer(peer_id, origin) => {
-                            if let Err(e) = self.process_new_peer(network_id, peer_id, origin) {
+                        Event::NewPeer(metadata) => {
+                            if let Err(e) = self.process_new_peer(network_id, metadata.remote_peer_id, metadata.origin) {
                                 error!(LogSchema::new(LogEntry::NewPeer).error(&e.into()));
                             }
                         }
-                        Event::LostPeer(peer_id, origin) => {
-                            if let Err(e) = self.process_lost_peer(network_id, peer_id, origin) {
+                        Event::LostPeer(metadata) => {
+                            if let Err(e) = self.process_lost_peer(network_id, metadata.remote_peer_id, metadata.origin) {
                                 error!(LogSchema::new(LogEntry::LostPeer).error(&e.into()));
                             }
                         }

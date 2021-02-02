@@ -14,7 +14,7 @@
 //! use network::noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
-//! use diem_config::{config::RoleType, network_id::{NetworkContext, NetworkId}};
+//! use diem_config::{config::{Peer, PeerRole, RoleType}, network_id::{NetworkContext, NetworkId}};
 //! use diem_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
 //! use diem_infallible::RwLock;
 //! use rand::{rngs::StdRng, SeedableRng};
@@ -36,8 +36,8 @@
 //! let client_pubkey_set: HashSet<_> = vec![client_public].into_iter().collect();
 //! let server_pubkey_set: HashSet<_> = vec![server_public].into_iter().collect();
 //! let trusted_peers: HashMap<_, _> = vec![
-//!     (client_peer_id, client_pubkey_set),
-//!     (server_peer_id, server_pubkey_set)
+//!     (client_peer_id, Peer::new(Vec::new(), client_pubkey_set, PeerRole::Validator)),
+//!     (server_peer_id, Peer::new(Vec::new(), server_pubkey_set, PeerRole::Validator))
 //! ].into_iter().collect();
 //! let trusted_peers = Arc::new(RwLock::new(trusted_peers));
 //!

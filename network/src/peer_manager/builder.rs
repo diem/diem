@@ -15,7 +15,7 @@ use crate::{
 };
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::{
-    config::{RateLimitConfig, HANDSHAKE_VERSION},
+    config::{PeerSet, RateLimitConfig, HANDSHAKE_VERSION},
     network_id::NetworkContext,
 };
 use diem_crypto::x25519;
@@ -32,13 +32,7 @@ use netcore::transport::{
     tcp::{TcpSocket, TcpTransport},
     Transport,
 };
-use std::{
-    clone::Clone,
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    net::IpAddr,
-    sync::Arc,
-};
+use std::{clone::Clone, collections::HashMap, fmt::Debug, net::IpAddr, sync::Arc};
 use tokio::runtime::Handle;
 
 // TODO:  This is the wrong logical location for this code to exist.  Determine the better location.
@@ -60,7 +54,7 @@ struct TransportContext {
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
     authentication_mode: AuthenticationMode,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    trusted_peers: Arc<RwLock<PeerSet>>,
 }
 
 impl TransportContext {
@@ -69,7 +63,7 @@ impl TransportContext {
         direct_send_protocols: Vec<ProtocolId>,
         rpc_protocols: Vec<ProtocolId>,
         authentication_mode: AuthenticationMode,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
     ) -> Self {
         Self {
             chain_id,
@@ -201,7 +195,7 @@ impl PeerManagerBuilder {
         network_context: Arc<NetworkContext>,
         // TODO(philiphayes): better support multiple listening addrs
         listen_address: NetworkAddress,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         authentication_mode: AuthenticationMode,
         channel_size: usize,
         max_concurrent_network_reqs: usize,

@@ -117,11 +117,12 @@ pub(crate) async fn coordinator<V>(
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
-                    Event::NewPeer(peer_id, origin) => {
+                    Event::NewPeer(metadata) => {
                         counters::SHARED_MEMPOOL_EVENTS
                             .with_label_values(&["new_peer".to_string().deref()])
                             .inc();
-                        let peer = PeerNetworkId(network_id, peer_id);
+                        let origin = metadata.origin;
+                        let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
                         let is_new_peer = peer_manager.add_peer(peer.clone(), origin);
                         let is_upstream_peer = peer_manager.is_upstream_peer(&peer, Some(origin));
                         debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer).is_upstream_peer(is_upstream_peer));
@@ -130,14 +131,14 @@ pub(crate) async fn coordinator<V>(
                             tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
                         }
                     }
-                    Event::LostPeer(peer_id, origin) => {
+                    Event::LostPeer(metadata) => {
                         counters::SHARED_MEMPOOL_EVENTS
                             .with_label_values(&["lost_peer".to_string().deref()])
                             .inc();
-                        let peer = PeerNetworkId(network_id, peer_id);
+                        let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
                         debug!(LogSchema::new(LogEntry::LostPeer)
                             .peer(&peer)
-                            .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
+                            .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(metadata.origin)))
                         );
                         peer_manager.disable_peer(peer);
                         notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);

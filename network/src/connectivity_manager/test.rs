@@ -289,6 +289,23 @@ async fn send_update_addresses(
     .await
 }
 
+fn check_trusted_peers(
+    trusted_peers: &Arc<RwLock<PeerSet>>,
+    expected_keys: &HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    expected_role: PeerRole,
+) {
+    let keys: HashMap<_, _> = trusted_peers
+        .read()
+        .iter()
+        .map(|(peer_id, auth_context)| (*peer_id, auth_context.keys.clone()))
+        .collect();
+    trusted_peers
+        .read()
+        .iter()
+        .for_each(|(_, auth_context)| assert_eq!(expected_role, auth_context.role));
+    assert_eq!(expected_keys, &keys);
+}
+
 #[test]
 fn connect_to_seeds_on_startup() {
     ::diem_logger::Logger::init_for_testing();
@@ -1315,37 +1332,37 @@ fn basic_update_discovered_peers() {
 
     // basic one peer one discovery source
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
 
     // same update does nothing
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
 
     // reset
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
 
     // basic union across multiple sources
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1);
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
     conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_2);
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
 
     // does nothing even if another source has same set
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1_2.clone());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
     conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_1_2);
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
     conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_1_2);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
 
     // reset
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
 
     // empty update again does nothing
     conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
-    assert_eq!(&*trusted_peers.read(), &pubkeys_map_empty);
+    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
 }

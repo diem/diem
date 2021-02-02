@@ -91,15 +91,6 @@ impl ConnectionIdGenerator {
     }
 }
 
-/// Used to indicate the trust level of a Connection
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub enum TrustLevel {
-    /// Either we dialed the peer or it was in our trusted peers set
-    Trusted,
-    /// A peer that isn't in our trusted peers set
-    Untrusted,
-}
-
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, PartialEq, Serialize)]
 pub struct ConnectionMetadata {
@@ -109,7 +100,6 @@ pub struct ConnectionMetadata {
     pub origin: ConnectionOrigin,
     pub messaging_protocol: MessagingProtocolVersion,
     pub application_protocols: SupportedProtocols,
-    pub trust_level: TrustLevel,
     pub role: PeerRole,
 }
 
@@ -121,7 +111,6 @@ impl ConnectionMetadata {
         origin: ConnectionOrigin,
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
-        trust_level: TrustLevel,
         role: PeerRole,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
@@ -131,7 +120,6 @@ impl ConnectionMetadata {
             origin,
             messaging_protocol,
             application_protocols,
-            trust_level,
             role,
         }
     }
@@ -145,7 +133,6 @@ impl ConnectionMetadata {
             origin: ConnectionOrigin::Inbound,
             messaging_protocol: MessagingProtocolVersion::V1,
             application_protocols: [].iter().into(),
-            trust_level: TrustLevel::Untrusted,
             role: PeerRole::Unknown,
         }
     }
@@ -246,7 +233,7 @@ async fn upgrade_inbound<T: TSocket>(
     };
 
     // try authenticating via noise handshake
-    let (mut socket, remote_peer_id, trust_level) =
+    let (mut socket, remote_peer_id, peer_role) =
         ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
             if err.should_security_log() {
                 sample!(
@@ -302,9 +289,7 @@ async fn upgrade_inbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
-            trust_level,
-            // TODO: Load correct role
-            PeerRole::Unknown,
+            peer_role,
         ),
     })
 }
@@ -374,8 +359,6 @@ async fn upgrade_outbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
-            TrustLevel::Trusted,
-            // TODO: Fix role
             PeerRole::Unknown,
         ),
     })

@@ -6,7 +6,10 @@ use crate::{
     transport::*,
 };
 use bytes::{Bytes, BytesMut};
-use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use diem_config::{
+    config::{Peer, PeerRole, PeerSet, HANDSHAKE_VERSION},
+    network_id::NetworkContext,
+};
 use diem_crypto::{test_utils::TEST_SEED, traits::Uniform, x25519};
 use diem_infallible::RwLock;
 use diem_network_address::{NetworkAddress, Protocol::*};
@@ -18,26 +21,27 @@ use netcore::{
     transport::{memory, ConnectionOrigin, Transport},
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    sync::Arc,
-};
+use std::{collections::HashMap, io, sync::Arc};
 use tokio::runtime::Runtime;
 
 /// helper to build trusted peer map
 fn build_trusted_peers(
     id1: PeerId,
     key1: &x25519::PrivateKey,
+    role1: PeerRole,
     id2: PeerId,
     key2: &x25519::PrivateKey,
-) -> Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>> {
+    role2: PeerRole,
+) -> Arc<RwLock<PeerSet>> {
     let pubkey_set1 = [key1.public_key()].iter().copied().collect();
     let pubkey_set2 = [key2.public_key()].iter().copied().collect();
     Arc::new(RwLock::new(
-        vec![(id1, pubkey_set1), (id2, pubkey_set2)]
-            .into_iter()
-            .collect(),
+        vec![
+            (id1, Peer::new(Vec::new(), pubkey_set1, role1)),
+            (id2, Peer::new(Vec::new(), pubkey_set2, role2)),
+        ]
+        .into_iter()
+        .collect(),
     ))
 }
 
@@ -55,7 +59,7 @@ fn setup<TTransport>(
     MockTimeService,
     (PeerId, DiemNetTransport<TTransport>),
     (PeerId, DiemNetTransport<TTransport>),
-    Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    Arc<RwLock<PeerSet>>,
     SupportedProtocols,
 )
 where
@@ -81,8 +85,10 @@ where
                 let trusted_peers = build_trusted_peers(
                     dialer_peer_id,
                     &dialer_key,
+                    PeerRole::Validator,
                     listener_peer_id,
                     &listener_key,
+                    PeerRole::Validator,
                 );
 
                 (
@@ -99,8 +105,10 @@ where
                 let trusted_peers = build_trusted_peers(
                     dialer_peer_id,
                     &dialer_key,
+                    PeerRole::Validator,
                     listener_peer_id,
                     &listener_key,
+                    PeerRole::Validator,
                 );
 
                 (
@@ -378,7 +386,14 @@ fn test_transport_maybe_mutual<TTransport>(
             conn.metadata.application_protocols,
             supported_protocols_clone,
         );
-        assert_eq!(conn.metadata.trust_level, TrustLevel::Trusted);
+        assert_eq!(
+            conn.metadata.role,
+            trusted_peers
+                .read()
+                .get(&conn.metadata.remote_peer_id)
+                .unwrap()
+                .role
+        );
 
         // test the socket works
         let msg = write_read_msg(&mut conn.socket, b"foobar").await;
@@ -405,7 +420,7 @@ fn test_transport_maybe_mutual<TTransport>(
             conn.metadata.application_protocols,
             supported_protocols_clone,
         );
-        assert_eq!(conn.metadata.trust_level, TrustLevel::Untrusted);
+        assert_eq!(conn.metadata.role, PeerRole::Unknown);
 
         // test the socket works
         let msg = write_read_msg(&mut conn.socket, b"foobar").await;

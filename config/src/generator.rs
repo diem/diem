@@ -69,7 +69,7 @@ pub fn build_seed_for_network(seed_config: &NetworkConfig) -> PeerSet {
             if network_id.is_vfn_network() {
                 PeerRole::ValidatorFullNode
             } else {
-                PeerRole::Known
+                PeerRole::Upstream
             }
         }
     };

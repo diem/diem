@@ -7,16 +7,10 @@ use crate::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
 use diem_config::{config::PeerSet, network_id::NetworkContext};
-use diem_crypto::x25519;
 use diem_infallible::RwLock;
-use diem_types::PeerId;
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 use tokio::{runtime::Handle, time::interval};
 use tokio_retry::strategy::ExponentialBackoff;
 use tokio_stream::wrappers::IntervalStream;
@@ -26,7 +20,7 @@ pub type ConnectivityManagerService = ConnectivityManager<Fuse<IntervalStream>, 
 /// The configuration fields for ConnectivityManager
 struct ConnectivityManagerBuilderConfig {
     network_context: Arc<NetworkContext>,
-    eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    eligible: Arc<RwLock<PeerSet>>,
     seeds: PeerSet,
     connectivity_check_interval_ms: u64,
     backoff_base: u64,
@@ -54,7 +48,7 @@ pub struct ConnectivityManagerBuilder {
 impl ConnectivityManagerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
-        eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        eligible: Arc<RwLock<PeerSet>>,
         seeds: PeerSet,
         connectivity_check_interval_ms: u64,
         backoff_base: u64,

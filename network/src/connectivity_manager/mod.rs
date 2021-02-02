@@ -32,7 +32,7 @@ use crate::{
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
 use diem_config::{
-    config::{PeerRole, PeerSet},
+    config::{Peer, PeerRole, PeerSet},
     network_id::NetworkContext,
 };
 use diem_crypto::x25519;
@@ -69,7 +69,7 @@ mod test;
 pub struct ConnectivityManager<TTicker, TBackoff> {
     network_context: Arc<NetworkContext>,
     /// Nodes which are eligible to join the network.
-    eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    eligible: Arc<RwLock<PeerSet>>,
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, NetworkAddress>,
     /// All information about peers from discovery sources.
@@ -160,6 +160,15 @@ impl DiscoveredPeerSet {
             Entry::Vacant(_) => true,
         }
     }
+
+    pub fn to_eligible_peers(&self) -> PeerSet {
+        self.0
+            .iter()
+            // Remove peers without keys, they can't be connected to
+            .filter(|(_, peer)| !peer.keys.is_empty())
+            .map(|(peer_id, peer)| (*peer_id, peer.into()))
+            .collect()
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
@@ -167,6 +176,12 @@ struct DiscoveredPeer {
     role: PeerRole,
     addrs: Addresses,
     keys: PublicKeys,
+}
+
+impl From<&DiscoveredPeer> for Peer {
+    fn from(peer: &DiscoveredPeer) -> Self {
+        Peer::new(peer.addrs.union(), peer.keys.union(), peer.role)
+    }
 }
 
 /// A set of `NetworkAddress`'s for a single peer, bucketed by DiscoverySource in
@@ -209,7 +224,7 @@ where
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
         network_context: Arc<NetworkContext>,
-        eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        eligible: Arc<RwLock<PeerSet>>,
         seeds: &PeerSet,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
@@ -647,14 +662,7 @@ where
         if keys_updated {
             // For each peer, union all of the pubkeys from each discovery source
             // to generate the new eligible peers set.
-            let new_eligible = self
-                .discovered_peers
-                .0
-                .iter()
-                // Remove peers without keys, they can't be connected to
-                .filter(|(_, peer)| !peer.keys.is_empty())
-                .map(|(peer_id, peer)| (*peer_id, peer.keys.union()))
-                .collect();
+            let new_eligible = self.discovered_peers.to_eligible_peers();
 
             // Swap in the new eligible peers set. Drop the old set after releasing
             // the write lock.
@@ -812,6 +820,12 @@ impl Addresses {
 
     fn get(&self, idx: usize) -> Option<&NetworkAddress> {
         self.0.iter().flatten().nth(idx)
+    }
+
+    /// The Union isn't stable, and order is completely disregarded
+    fn union(&self) -> Vec<NetworkAddress> {
+        let set: HashSet<_> = self.0.iter().flatten().cloned().collect();
+        set.into_iter().collect()
     }
 }
 

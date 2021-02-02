@@ -204,11 +204,11 @@ impl HealthChecker {
                     };
 
                     match event {
-                        Event::NewPeer(peer_id, _origin) => {
-                            self.connected.insert(peer_id, (self.round, 0));
+                        Event::NewPeer(metadata) => {
+                            self.connected.insert(metadata.remote_peer_id, (self.round, 0));
                         }
-                        Event::LostPeer(peer_id, _origin) => {
-                            self.connected.remove(&peer_id);
+                        Event::LostPeer(metadata) => {
+                            self.connected.remove(&metadata.remote_peer_id);
                         }
                         Event::RpcRequest(peer_id, msg, res_tx) => {
                             match msg {

@@ -25,6 +25,7 @@ use network::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
+    transport::ConnectionMetadata,
     ProtocolId,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -190,14 +191,13 @@ pub fn setup_network() -> DummyNetwork {
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap();
-    assert_eq!(
-        first_dialer_event,
-        Event::NewPeer(listener_peer_id, ConnectionOrigin::Outbound)
+    assert!(
+        matches!(first_dialer_event, Event::NewPeer(metadata) if connection_matches(&metadata, listener_peer_id, ConnectionOrigin::Outbound, PeerRole::Validator))
     );
+
     let first_listener_event = block_on(listener_events.next()).unwrap();
-    assert_eq!(
-        first_listener_event,
-        Event::NewPeer(dialer_peer_id, ConnectionOrigin::Inbound)
+    assert!(
+        matches!(first_listener_event, Event::NewPeer(metadata) if connection_matches(&metadata, dialer_peer_id, ConnectionOrigin::Inbound, PeerRole::Validator))
     );
 
     DummyNetwork {
@@ -209,4 +209,13 @@ pub fn setup_network() -> DummyNetwork {
         listener_events,
         listener_sender,
     }
+}
+
+fn connection_matches(
+    metadata: &ConnectionMetadata,
+    remote_peer_id: PeerId,
+    origin: ConnectionOrigin,
+    role: PeerRole,
+) -> bool {
+    metadata.remote_peer_id == remote_peer_id && metadata.origin == origin && metadata.role == role
 }

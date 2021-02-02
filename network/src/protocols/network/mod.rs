@@ -10,6 +10,7 @@ use crate::{
         ConnectionNotification, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequestSender,
     },
+    transport::ConnectionMetadata,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -23,7 +24,6 @@ use futures::{
     stream::{FilterMap, FusedStream, Map, Select, Stream, StreamExt},
     task::{Context, Poll},
 };
-use netcore::transport::ConnectionOrigin;
 use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{cmp::min, marker::PhantomData, pin::Pin, time::Duration};
@@ -49,9 +49,9 @@ pub enum Event<TMessage> {
     /// layer will handle sending the response over-the-wire.
     RpcRequest(PeerId, TMessage, oneshot::Sender<Result<Bytes, RpcError>>),
     /// Peer which we have a newly established connection with.
-    NewPeer(PeerId, ConnectionOrigin),
+    NewPeer(ConnectionMetadata),
     /// Peer with which we've lost our connection.
-    LostPeer(PeerId, ConnectionOrigin),
+    LostPeer(ConnectionMetadata),
 }
 
 /// impl PartialEq for simpler testing
@@ -62,10 +62,8 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
             (Message(pid1, msg1), Message(pid2, msg2)) => pid1 == pid2 && msg1 == msg2,
             // ignore oneshot::Sender in comparison
             (RpcRequest(pid1, msg1, _), RpcRequest(pid2, msg2, _)) => pid1 == pid2 && msg1 == msg2,
-            (NewPeer(pid1, origin1), NewPeer(pid2, origin2)) => pid1 == pid2 && origin1 == origin2,
-            (LostPeer(pid1, origin1), LostPeer(pid2, origin2)) => {
-                pid1 == pid2 && origin1 == origin2
-            }
+            (NewPeer(metadata1), NewPeer(metadata2)) => metadata1 == metadata2,
+            (LostPeer(metadata1), LostPeer(metadata2)) => metadata1 == metadata2,
             _ => false,
         }
     }
@@ -175,12 +173,8 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
 
 fn control_msg_to_event<TMessage>(notif: ConnectionNotification) -> Event<TMessage> {
     match notif {
-        ConnectionNotification::NewPeer(metadata, _context) => {
-            Event::NewPeer(metadata.remote_peer_id, metadata.origin)
-        }
-        ConnectionNotification::LostPeer(metadata, _context, _reason) => {
-            Event::LostPeer(metadata.remote_peer_id, metadata.origin)
-        }
+        ConnectionNotification::NewPeer(metadata, _context) => Event::NewPeer(metadata),
+        ConnectionNotification::LostPeer(metadata, _context, _reason) => Event::LostPeer(metadata),
     }
 }
 

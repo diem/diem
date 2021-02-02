@@ -19,14 +19,14 @@ use diem_config::{
     },
     network_id::NetworkContext,
 };
-use diem_crypto::{x25519, x25519::PublicKey};
+use diem_crypto::x25519::PublicKey;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address::NetworkAddress;
 use diem_network_address_encryption::Encryptor;
 use diem_time_service::TimeService;
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_types::chain_id::ChainId;
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     logging::NetworkSchema,
@@ -43,11 +43,7 @@ use network::{
 use network_simple_onchain_discovery::{
     builder::ConfigurationChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
 };
-use std::{
-    clone::Clone,
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::{clone::Clone, collections::HashMap, sync::Arc};
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 
@@ -82,7 +78,7 @@ impl NetworkBuilder {
     // TODO:  Remove `pub`.  NetworkBuilder should only be created thorugh `::create()`
     pub fn new(
         chain_id: ChainId,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
@@ -126,7 +122,7 @@ impl NetworkBuilder {
     pub fn new_for_test(
         chain_id: ChainId,
         seeds: &PeerSet,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
@@ -221,14 +217,14 @@ impl NetworkBuilder {
             || !config.seeds.is_empty()
         {
             let mut seeds = config.seeds.clone();
+
+            // Merge old seed configuration with new seed configuration
+            // TODO(gnazario): Once fully migrated, remove `seed_addrs`
             config
                 .seed_addrs
                 .iter()
                 .map(|(peer_id, addrs)| {
-                    (
-                        peer_id,
-                        Peer::from_addrs(PeerRole::from(role), addrs.clone()),
-                    )
+                    (peer_id, Peer::from_addrs(PeerRole::Upstream, addrs.clone()))
                 })
                 .for_each(|(peer_id, peer)| {
                     let seed = seeds.entry(*peer_id).or_default();
@@ -324,7 +320,7 @@ impl NetworkBuilder {
     pub fn add_connectivity_manager(
         &mut self,
         seeds: &PeerSet,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         max_outbound_connections: usize,
         connection_backoff_base: u64,
         max_connection_delay_ms: u64,

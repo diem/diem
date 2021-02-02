@@ -307,8 +307,8 @@ async fn mempool_load_test(
     mut events: MempoolNetworkEvents,
 ) -> Result<MempoolStats> {
     let new_peer_event = events.select_next_some().await;
-    let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
-        peer_id
+    let vfn = if let Event::NewPeer(metadata) = new_peer_event {
+        metadata.remote_peer_id
     } else {
         return Err(anyhow::format_err!(
             "received unexpected network event for mempool load test"
@@ -401,8 +401,8 @@ async fn state_sync_load_test(
     mut events: StateSyncEvents,
 ) -> Result<StateSyncStats> {
     let new_peer_event = events.select_next_some().await;
-    let vfn = if let Event::NewPeer(peer_id, _) = new_peer_event {
-        peer_id
+    let vfn = if let Event::NewPeer(metadata) = new_peer_event {
+        metadata.remote_peer_id
     } else {
         return Err(anyhow::format_err!(
             "received unexpected network event for state sync load test"

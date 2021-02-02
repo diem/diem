@@ -9,7 +9,7 @@ use crate::{
         messaging::v1::{NetworkMessage, NetworkMessageSink},
     },
     testutils::fake_socket::ReadOnlyTestSocketVec,
-    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
+    transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
@@ -95,7 +95,6 @@ pub fn fuzz(data: &[u8]) {
             ]
             .iter(),
         ),
-        TrustLevel::Untrusted,
         PeerRole::Unknown,
     );
     let connection = Connection { socket, metadata };
