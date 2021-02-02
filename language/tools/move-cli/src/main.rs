@@ -387,10 +387,10 @@ fn run(
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
-        script_bytes,
-        vm_type_args.clone(),
+        &script_bytes,
+        &vm_type_args,
         vm_args,
-        signer_addresses.clone(),
+        &signer_addresses,
         &mut cost_strategy,
         &log_context,
     );

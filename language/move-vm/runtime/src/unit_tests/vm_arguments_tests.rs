@@ -167,10 +167,10 @@ impl RemoteCache for RemoteStore {
 }
 
 fn call_script_with_args_ty_args_signers(
-    script: Vec<u8>,
+    script: &[u8],
     args: Vec<Value>,
-    ty_args: Vec<TypeTag>,
-    signers: Vec<AccountAddress>,
+    ty_args: &[TypeTag],
+    signers: &[AccountAddress],
 ) -> VMResult<()> {
     let move_vm = MoveVM::new();
     let remote_view = RemoteStore {};
@@ -188,8 +188,8 @@ fn call_script_with_args_ty_args_signers(
     )
 }
 
-fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
-    call_script_with_args_ty_args_signers(script, args, vec![], vec![])
+fn call_script(script: &[u8], args: Vec<Value>) -> VMResult<()> {
+    call_script_with_args_ty_args_signers(script, args, &[], &[])
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn check_main_signature() {
         StructHandleIndex(0),
     )]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -216,7 +216,7 @@ fn check_main_signature() {
         SignatureToken::U64,
     ]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -228,7 +228,7 @@ fn check_main_signature() {
         SignatureToken::MutableReference(Box::new(SignatureToken::Struct(StructHandleIndex(0)))),
     ]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -241,7 +241,7 @@ fn check_main_signature() {
         SignatureToken::U64,
     ]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -256,7 +256,7 @@ fn check_main_signature() {
         SignatureToken::U64,
     ]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -267,7 +267,7 @@ fn check_main_signature() {
         SignatureToken::Vector(Box::new(SignatureToken::Struct(StructHandleIndex(0)))),
     ))]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -278,7 +278,7 @@ fn check_main_signature() {
         SignatureToken::U64,
     ))]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -287,7 +287,7 @@ fn check_main_signature() {
     // `Signer` in signature (not `&Signer`)
     let script = make_script_consuming_args(Signature(vec![SignatureToken::Signer]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -298,7 +298,7 @@ fn check_main_signature() {
         SignatureToken::Signer,
     ))]));
     assert_eq!(
-        call_script(script, vec![Value::u128(0)])
+        call_script(&script, vec![Value::u128(0)])
             .err()
             .unwrap()
             .major_status(),
@@ -310,7 +310,7 @@ fn check_main_signature() {
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
     ]));
     assert_eq!(
-        call_script(script, vec![Value::bool(false)])
+        call_script(&script, vec![Value::bool(false)])
             .err()
             .unwrap()
             .major_status(),
@@ -325,14 +325,15 @@ fn check_main_signature() {
     let script = make_script(Signature(vec![SignatureToken::Vector(Box::new(
         SignatureToken::Bool,
     ))]));
-    call_script(script, vec![Value::vector_bool(vec![true, false])]).expect("vector<bool> is good");
+    call_script(&script, vec![Value::vector_bool(vec![true, false])])
+        .expect("vector<bool> is good");
     let script = make_script(Signature(vec![
         SignatureToken::Bool,
         SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Address,
     ]));
     call_script(
-        script,
+        &script,
         vec![
             Value::bool(true),
             Value::vector_u8(vec![0, 1]),
@@ -347,10 +348,10 @@ fn check_main_signature() {
         SignatureToken::Address,
     ]));
     call_script_with_args_ty_args_signers(
-        script,
+        &script,
         vec![Value::bool(false), Value::address(AccountAddress::random())],
-        vec![],
-        vec![AccountAddress::random()],
+        &[],
+        &[AccountAddress::random()],
     )
     .expect("&Signer first argument is good");
     let script = make_script(Signature(vec![
@@ -379,7 +380,7 @@ fn check_main_signature() {
     )
     .expect("vector<vector<address>> can be built");
     call_script(
-        script,
+        &script,
         vec![Value::bool(true), Value::vector_u8(vec![0, 1]), values],
     )
     .expect("vector<vector<address>> is good");
@@ -393,19 +394,19 @@ fn check_constant_args() {
 
     // U128 arg, success
     let script = make_script(Signature(vec![SignatureToken::U128]));
-    call_script(script, vec![Value::u128(0)]).expect("u128 is good");
+    call_script(&script, vec![Value::u128(0)]).expect("u128 is good");
 
     // error: no args - missing arg comes as type mismatch
     let script = make_script(Signature(vec![SignatureToken::U64]));
     assert_eq!(
-        call_script(script, vec![]).err().unwrap().major_status(),
+        call_script(&script, vec![]).err().unwrap().major_status(),
         StatusCode::TYPE_MISMATCH,
     );
 
     // error: too many args - too many args comes as type mismatch
     let script = make_script(Signature(vec![SignatureToken::Bool]));
     assert_eq!(
-        call_script(script, vec![]).err().unwrap().major_status(),
+        call_script(&script, vec![]).err().unwrap().major_status(),
         StatusCode::TYPE_MISMATCH,
     );
 
@@ -418,17 +419,17 @@ fn check_constant_args() {
         SignatureToken::Address,
     ))]));
     // empty vector
-    call_script(script.clone(), vec![Value::vector_address(vec![])])
+    call_script(&script, vec![Value::vector_address(vec![])])
         .expect("empty vector<address> is good");
     // one elem vector
     call_script(
-        script.clone(),
+        &script,
         vec![Value::vector_address(vec![AccountAddress::random()])],
     )
     .expect("vector<address> is good");
     // multiple elems vector
     call_script(
-        script.clone(),
+        &script,
         vec![Value::vector_address(vec![
             AccountAddress::random(),
             AccountAddress::random(),
@@ -440,7 +441,7 @@ fn check_constant_args() {
     .expect("multiple vector<address> is good");
     // wrong vector vector<bool> passed for vector<address>
     assert_eq!(
-        call_script(script.clone(), vec![Value::vector_bool(vec![true])])
+        call_script(&script, vec![Value::vector_bool(vec![true])])
             .err()
             .unwrap()
             .major_status(),
@@ -448,7 +449,7 @@ fn check_constant_args() {
     );
     // wrong U128 passed for vector<address>
     assert_eq!(
-        call_script(script, vec![Value::u128(12)])
+        call_script(&script, vec![Value::u128(12)])
             .err()
             .unwrap()
             .major_status(),
@@ -465,7 +466,7 @@ fn check_constant_args() {
         &SignatureToken::Vector(Box::new(SignatureToken::U8)),
     )
     .expect("create vector of vector");
-    call_script(script.clone(), vec![arg]).expect("empty vector<vector<u8>> is good");
+    call_script(&script, vec![arg]).expect("empty vector<vector<u8>> is good");
     // multiple elements vector
     let inner = vec![
         Value::vector_u8(vec![0, 1]),
@@ -477,10 +478,10 @@ fn check_constant_args() {
         &SignatureToken::Vector(Box::new(SignatureToken::U8)),
     )
     .expect("create vector of vector");
-    call_script(script.clone(), vec![arg]).expect("vector<vector<u8>> is good");
+    call_script(&script, vec![arg]).expect("vector<vector<u8>> is good");
     // wrong U8 passed for vector<U8>
     assert_eq!(
-        call_script(script, vec![Value::u8(12)])
+        call_script(&script, vec![Value::u8(12)])
             .err()
             .unwrap()
             .major_status(),
@@ -496,7 +497,7 @@ fn check_signer_args() {
     ]));
     // too few signers (0)
     assert_eq!(
-        call_script_with_args_ty_args_signers(two_signer_script.clone(), vec![], vec![], vec![])
+        call_script_with_args_ty_args_signers(&two_signer_script, vec![], &[], &[])
             .err()
             .unwrap()
             .major_status(),
@@ -506,15 +507,10 @@ fn check_signer_args() {
     // too few signers (1)
     let one_signer = vec![AccountAddress::random()];
     assert_eq!(
-        call_script_with_args_ty_args_signers(
-            two_signer_script.clone(),
-            vec![],
-            vec![],
-            one_signer,
-        )
-        .err()
-        .unwrap()
-        .major_status(),
+        call_script_with_args_ty_args_signers(&two_signer_script, vec![], &[], &one_signer)
+            .err()
+            .unwrap()
+            .major_status(),
         StatusCode::TYPE_MISMATCH
     );
 
@@ -525,30 +521,25 @@ fn check_signer_args() {
         AccountAddress::random(),
     ];
     assert_eq!(
-        call_script_with_args_ty_args_signers(
-            two_signer_script.clone(),
-            vec![],
-            vec![],
-            three_signers
-        )
-        .err()
-        .unwrap()
-        .major_status(),
+        call_script_with_args_ty_args_signers(&two_signer_script, vec![], &[], &three_signers)
+            .err()
+            .unwrap()
+            .major_status(),
         StatusCode::TYPE_MISMATCH
     );
 
     // correct number of signers (2)
     let two_signers = vec![AccountAddress::random(), AccountAddress::random()];
-    call_script_with_args_ty_args_signers(two_signer_script, vec![], vec![], two_signers)
+    call_script_with_args_ty_args_signers(&two_signer_script, vec![], &[], &two_signers)
         .expect("Expected two signers, passing two should work");
 
     // too many signers (1) in a script that expects 0 is ok
     let no_signer_script = make_script(Signature(vec![SignatureToken::U8]));
     call_script_with_args_ty_args_signers(
-        no_signer_script,
+        &no_signer_script,
         vec![Value::u8(10)],
-        vec![],
-        vec![AccountAddress::random()],
+        &[],
+        &[AccountAddress::random()],
     )
     .expect("Ok to pass oo many signers");
 }

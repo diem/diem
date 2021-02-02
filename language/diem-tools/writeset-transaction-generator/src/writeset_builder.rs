@@ -65,10 +65,10 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
     pub fn exec_script(&mut self, sender: AccountAddress, script: &Script) {
         self.0
             .execute_script(
-                script.code().to_vec(),
-                script.ty_args().to_vec(),
+                script.code(),
+                script.ty_args(),
                 convert_txn_args(script.args()),
-                vec![sender],
+                &[sender],
                 &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
                 &NoContextLog::new(),
             )

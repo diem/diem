@@ -114,10 +114,10 @@ impl VMRuntime {
     // See Session::execute_script for what contracts to follow.
     pub(crate) fn execute_script(
         &self,
-        script: Vec<u8>,
-        ty_args: Vec<TypeTag>,
+        script: &[u8],
+        ty_args: &[TypeTag],
         mut args: Vec<Value>,
-        senders: Vec<AccountAddress>,
+        senders: &[AccountAddress],
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
@@ -141,29 +141,27 @@ impl VMRuntime {
         // signer arguments can be be used by a script.
         let parameters = &main.parameters().0;
         let has_signer_parameters = parameters.get(0).map_or(false, is_signer_reference);
-        let mut signers_and_args = if has_signer_parameters {
+        if has_signer_parameters {
             if parameters.len() != args.len() + senders.len() {
                 return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Scripts must use all or no signers".to_string())
                     .finish(Location::Script));
             }
             // add signers to args
-            senders
-                .into_iter()
-                .map(Value::transaction_argument_signer_reference)
-                .collect()
-        } else {
-            // no signer parameters, don't add to args
-            vec![]
-        };
-        signers_and_args.append(&mut args);
-        check_args(&signers_and_args).map_err(|e| e.finish(Location::Script))?;
+            args.splice(
+                0..0,
+                senders
+                    .iter()
+                    .map(|sender| Value::transaction_argument_signer_reference(*sender)),
+            );
+        }
+        check_args(&args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script
         Interpreter::entrypoint(
             main,
             type_params,
-            signers_and_args,
+            args,
             data_store,
             cost_strategy,
             &self.loader,

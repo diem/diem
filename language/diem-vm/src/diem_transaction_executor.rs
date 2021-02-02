@@ -175,10 +175,10 @@ impl DiemVM {
                 .map_err(|e| e.into_vm_status())?;
             session
                 .execute_script(
-                    script.code().to_vec(),
-                    script.ty_args().to_vec(),
+                    script.code(),
+                    script.ty_args(),
                     convert_txn_args(script.args()),
-                    vec![txn_data.sender()],
+                    &[txn_data.sender()],
                     cost_strategy,
                     log_context,
                 )
@@ -350,10 +350,10 @@ impl DiemVM {
                 };
                 let execution_result = tmp_session
                     .execute_script(
-                        script.code().to_vec(),
-                        script.ty_args().to_vec(),
+                        script.code(),
+                        script.ty_args(),
                         args,
-                        senders,
+                        &senders,
                         &mut cost_strategy,
                         log_context,
                     )

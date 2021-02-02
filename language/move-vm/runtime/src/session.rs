@@ -70,10 +70,10 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
     /// not proceed with effect generation.
     pub fn execute_script(
         &mut self,
-        script: Vec<u8>,
-        ty_args: Vec<TypeTag>,
+        script: &[u8],
+        ty_args: &[TypeTag],
         args: Vec<Value>,
-        senders: Vec<AccountAddress>,
+        senders: &[AccountAddress],
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
     ) -> VMResult<()> {

@@ -97,10 +97,10 @@ fn test_malformed_resource() {
     s1.serialize(&mut script_blob).unwrap();
     let mut sess = vm.new_session(&storage);
     sess.execute_script(
-        script_blob,
+        &script_blob,
+        &[],
         vec![],
-        vec![],
-        vec![TEST_ADDR],
+        &[TEST_ADDR],
         &mut cost_strategy,
         &log_context,
     )
@@ -117,10 +117,10 @@ fn test_malformed_resource() {
     {
         let mut sess = vm.new_session(&storage);
         sess.execute_script(
-            script_blob.clone(),
+            &script_blob,
+            &[],
             vec![],
-            vec![],
-            vec![TEST_ADDR],
+            &[TEST_ADDR],
             &mut cost_strategy,
             &log_context,
         )
@@ -145,10 +145,10 @@ fn test_malformed_resource() {
         let mut sess = vm.new_session(&storage);
         let err = sess
             .execute_script(
-                script_blob,
+                &script_blob,
+                &[],
                 vec![],
-                vec![],
-                vec![TEST_ADDR],
+                &[TEST_ADDR],
                 &mut cost_strategy,
                 &log_context,
             )

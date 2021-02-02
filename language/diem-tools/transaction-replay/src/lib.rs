@@ -304,10 +304,10 @@ impl DiemDebugger {
                 let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
                 let log_context = NoContextLog::new();
                 session.execute_script(
-                    predicate.clone(),
+                    &predicate,
+                    &[],
                     vec![],
-                    vec![],
-                    vec![diem_root_address(), sender],
+                    &[diem_root_address(), sender],
                     &mut cost_strategy,
                     &log_context,
                 )
