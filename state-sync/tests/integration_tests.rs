@@ -6,7 +6,7 @@ use crate::test_harness::{
 };
 use anyhow::{bail, Result};
 use diem_config::config::RoleType;
-use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint};
+use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint, PeerId};
 use netcore::transport::ConnectionOrigin::*;
 use network::protocols::direct_send::Message;
 use state_sync::network::StateSyncMessage;
@@ -296,21 +296,14 @@ fn test_lagging_upstream_long_poll() {
     drop(fullnode_1);
 
     // Validator and fullnode discover each other
-    env.send_peer_event(fullnode_0_peer_id_vfn, validator_0_peer_id, true, Inbound);
-    env.send_peer_event(validator_0_peer_id, fullnode_0_peer_id_vfn, true, Outbound);
+    send_connection_notifications(&mut env, validator_0_peer_id, fullnode_0_peer_id_vfn, true);
 
     // Fullnodes discover each other
-    env.send_peer_event(
-        fullnode_0_peer_id_pfn,
-        fullnode_1_peer_id_pfn,
-        true,
-        Inbound,
-    );
-    env.send_peer_event(
+    send_connection_notifications(
+        &mut env,
         fullnode_1_peer_id_pfn,
         fullnode_0_peer_id_pfn,
         true,
-        Outbound,
     );
 
     // Deliver messages and verify versions and targets
@@ -321,9 +314,7 @@ fn test_lagging_upstream_long_poll() {
     env.get_state_sync_peer(2).wait_for_version(250, None);
 
     // Validator loses fullnode
-    env.send_peer_event(fullnode_0_peer_id_vfn, validator_0_peer_id, false, Inbound);
-    // Fullnode loses validator
-    env.send_peer_event(validator_0_peer_id, fullnode_0_peer_id_vfn, false, Outbound);
+    send_connection_notifications(&mut env, validator_0_peer_id, fullnode_0_peer_id_vfn, false);
 
     // Fullnode sends chunk request to other fullnode
     let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
@@ -335,10 +326,7 @@ fn test_lagging_upstream_long_poll() {
     env.get_state_sync_peer(3).wait_for_version(500, Some(500));
 
     // Connect the validator and the failover fullnode so the fullnode can sync.
-    // Validator discovers fullnode
-    env.send_peer_event(fullnode_1_peer_id_vfn, validator_0_peer_id, true, Inbound);
-    // Fullnode discovers validator
-    env.send_peer_event(validator_0_peer_id, fullnode_1_peer_id_vfn, true, Outbound);
+    send_connection_notifications(&mut env, validator_0_peer_id, fullnode_1_peer_id_vfn, true);
 
     // Trigger another commit so that the fullnodes's commit will trigger subscription delivery
     env.get_state_sync_peer(0).commit(600);
@@ -373,8 +361,7 @@ fn test_fullnode_catch_up_validator() {
     let fullnode_peer_id = env.get_state_sync_peer(1).get_peer_id(VFN_NETWORK.clone());
 
     // Validator and fullnode discover each other.
-    env.send_peer_event(fullnode_peer_id, validator_peer_id, true, Inbound);
-    env.send_peer_event(validator_peer_id, fullnode_peer_id, true, Outbound);
+    send_connection_notifications(&mut env, validator_peer_id, fullnode_peer_id, true);
 
     // Versions to be committed by the validator
     let commit_versions = vec![
@@ -475,18 +462,14 @@ fn test_fn_failover() {
     drop(fullnode_2);
     drop(fullnode_3);
 
-    // vfn network:
-    // validator discovers fn_0
-    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
-    // fn_0 discovers validator
-    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
+    // Validator discovers fullnode 0
+    send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
 
     // public network:
     // fn_0 sends new peer event to all its upstream public peers
     let upstream_peer_ids = [fn_1_peer_id, fn_2_peer_id, fn_3_peer_id];
     for peer in upstream_peer_ids.iter() {
-        env.send_peer_event(fn_0_public_peer_id, *peer, true, Inbound);
-        env.send_peer_event(*peer, fn_0_public_peer_id, true, Outbound);
+        send_connection_notifications(&mut env, *peer, fn_0_public_peer_id, true);
     }
 
     // commit some txns on v
@@ -508,9 +491,8 @@ fn test_fn_failover() {
         }
     }
 
-    // bring down v
-    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, false, Inbound);
-    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, false, Outbound);
+    // Bring down the validator connection to fullnode 0
+    send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, false);
 
     // deliver chunk response to fn_0 after the lost peer event
     // so that the next chunk request is guaranteed to be sent after the lost peer event
@@ -536,14 +518,11 @@ fn test_fn_failover() {
         }
     }
 
-    // bring down two public fallback
-    // disconnect fn_1 and fn_0
-    env.send_peer_event(fn_0_public_peer_id, fn_1_peer_id, false, Inbound);
-    env.send_peer_event(fn_1_peer_id, fn_0_public_peer_id, false, Outbound);
+    // Disconnect fullnode 1 and fullnode 0
+    send_connection_notifications(&mut env, fn_1_peer_id, fn_0_public_peer_id, false);
 
-    // disconnect fn_2 and fn_0
-    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, false, Inbound);
-    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, false, Outbound);
+    // Disconnect fullnode 2 and fullnode 0
+    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, false);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
@@ -567,10 +546,8 @@ fn test_fn_failover() {
         }
     }
 
-    // bring down everyone
-    // disconnect fn_3 and fn_0
-    env.send_peer_event(fn_3_peer_id, fn_0_public_peer_id, false, Outbound);
-    env.send_peer_event(fn_0_public_peer_id, fn_3_peer_id, false, Inbound);
+    // Disconnect fullnode 3 and fullnode 0
+    send_connection_notifications(&mut env, fn_3_peer_id, fn_0_public_peer_id, false);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
@@ -581,9 +558,8 @@ fn test_fn_failover() {
     env.assert_no_message_sent(fn_0_vfn_peer_id);
     env.assert_no_message_sent(fn_0_public_peer_id);
 
-    // bring back one fallback (fn_2)
-    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, true, Outbound);
-    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, true, Inbound);
+    // Connect fullnode 2 and fullnode 0
+    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, true);
 
     // check we only broadcast to the single live fallback peer (fn_2)
     for num_commit in 16..=20 {
@@ -602,9 +578,8 @@ fn test_fn_failover() {
         }
     }
 
-    // bring back v again
-    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
-    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
+    // Connect validator and fullnode 0
+    send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
 
     let (chunk_response_recipient, _) = env.deliver_msg(fn_2_peer_id);
     assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
@@ -633,8 +608,7 @@ fn test_fn_failover() {
             .get_peer_id(VFN_NETWORK_2.clone()),
     ];
     for peer in upstream_peers_to_revive.iter() {
-        env.send_peer_event(fn_0_public_peer_id, *peer, true, Inbound);
-        env.send_peer_event(*peer, fn_0_public_peer_id, true, Outbound);
+        send_connection_notifications(&mut env, *peer, fn_0_public_peer_id, true);
     }
 
     // deliver validator's chunk response after fallback peers are revived
@@ -704,23 +678,14 @@ fn test_multicast_failover() {
     drop(fullnode_1);
     drop(fullnode_2);
 
-    // vfn network:
-    // validator discovers fn_0
-    env.send_peer_event(fn_0_vfn_peer_id, validator_peer_id, true, Inbound);
-    // fn_0 discovers validator
-    env.send_peer_event(validator_peer_id, fn_0_vfn_peer_id, true, Outbound);
+    // Validator discovers fullnode 0
+    send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
 
-    // second private network: fn_1 is upstream to fn_0
-    // fn_1 discovers fn_0
-    env.send_peer_event(fn_0_second_peer_id, fn_1_peer_id, true, Inbound);
-    // fn_0 discovers fn_1
-    env.send_peer_event(fn_1_peer_id, fn_0_second_peer_id, true, Outbound);
+    // Fullnode 0 discovers fullnode 1
+    send_connection_notifications(&mut env, fn_1_peer_id, fn_0_second_peer_id, true);
 
-    // public network: fn_2 is upstream to fn_1
-    // fn_2 discovers fn_0
-    env.send_peer_event(fn_0_public_peer_id, fn_2_peer_id, true, Inbound);
-    // fn_0 discovers fn_2
-    env.send_peer_event(fn_2_peer_id, fn_0_public_peer_id, true, Outbound);
+    // Fullnode 2 discovers fullnode 0
+    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, true);
 
     for num_commit in 1..=3 {
         env.get_state_sync_peer(0).commit(num_commit * 5);
@@ -902,4 +867,17 @@ fn check_chunk_response(
             )
         }
     }
+}
+
+// Sends a connection notification to the given peers (i.e., connecting/disconnecting peer_id_0 to peer_id_1).
+// If `new_peer_notification` is true, the connection notification is a "new peer" (connect) notification,
+// otherwise, a "lost peer" (disconnect) notification is sent.
+fn send_connection_notifications(
+    env: &mut StateSyncEnvironment,
+    peer_id_0: PeerId,
+    peer_id_1: PeerId,
+    new_peer_notification: bool,
+) {
+    env.send_peer_event(peer_id_0, peer_id_1, new_peer_notification, Outbound);
+    env.send_peer_event(peer_id_1, peer_id_0, new_peer_notification, Inbound);
 }
