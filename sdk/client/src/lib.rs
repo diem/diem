@@ -23,6 +23,9 @@ pub use response::{MethodResponse, Response};
 mod state;
 pub use state::State;
 
+mod retry;
+pub use retry::Retry;
+
 pub use diem_json_rpc_types::{errors, views};
 pub use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
 
