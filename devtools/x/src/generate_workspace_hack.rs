@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::XContext, Result};
+use crate::{cargo::Cargo, context::XContext, Result};
 use anyhow::bail;
 use log::{info, warn};
 use structopt::{clap::arg_enum, StructOpt};
@@ -27,8 +27,11 @@ arg_enum! {
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
     let mut hakari_builder = xctx.core().hakari_builder()?;
+    let &hakari_package = hakari_builder
+        .hakari_package()
+        .expect("hakari package specified by builder");
 
-    match args.mode {
+    let update_cargo_lock = match args.mode {
         WorkspaceHackMode::Verify => {
             hakari_builder.set_verify_mode(true);
             let hakari = hakari_builder.compute();
@@ -54,6 +57,8 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
                 }
                 warn!("workspace-hack doesn't unify everything successfully");
             }
+
+            false
         }
         WorkspaceHackMode::Disable => {
             let existing_toml = hakari_builder
@@ -63,7 +68,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
             # Disabled through `cargo x generate-workspace-hack --mode disable`.\n\
             # To re-enable, `run cargo x generate-workspace-hack`.\n\
             \n";
-            existing_toml.write_to_file(disabled_msg)?;
+            existing_toml.write_to_file(disabled_msg)?
         }
         _other => {
             let hakari = hakari_builder.compute();
@@ -75,7 +80,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
             match args.mode {
                 WorkspaceHackMode::Write => {
                     // Write out the contents to the TOML file.
-                    existing_toml.write_to_file(&new_toml)?;
+                    existing_toml.write_to_file(&new_toml)?
                 }
                 WorkspaceHackMode::Diff => {
                     let patch = existing_toml.diff_toml(&new_toml);
@@ -83,11 +88,13 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
                     let formatter = hakari::diffy::PatchFormatter::new().with_color();
                     let diff = formatter.fmt_patch(&patch);
                     println!("{}", diff);
+                    false
                 }
                 WorkspaceHackMode::Check => {
                     if existing_toml.is_changed(&new_toml) {
                         bail!("existing TOML is different from generated version (run with --mode diff for diff)");
                     }
+                    false
                 }
                 WorkspaceHackMode::Disable | WorkspaceHackMode::Verify => {
                     unreachable!("already processed in outer match")
@@ -95,6 +102,14 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
             }
         }
     };
+
+    // Update Cargo.lock if the file on disk changed.
+    if update_cargo_lock {
+        info!("Workspace hack contents changed, updating Cargo.lock");
+        let mut cmd = Cargo::new(xctx.config().cargo_config(), "update", false);
+        cmd.args(&["--package", hakari_package.name()]);
+        cmd.run()?;
+    }
 
     Ok(())
 }
