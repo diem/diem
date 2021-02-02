@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-libc = "0.2.84"
+libc = "0.2.85"
 static_assertions = "1.1.0"
 
 bcs = "0.1.2"
