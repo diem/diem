@@ -21,6 +21,7 @@ arg_enum! {
         Diff,
         Check,
         Verify,
+        Disable,
     }
 }
 
@@ -54,6 +55,16 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
                 warn!("workspace-hack doesn't unify everything successfully");
             }
         }
+        WorkspaceHackMode::Disable => {
+            let existing_toml = hakari_builder
+                .read_toml()
+                .expect("hakari package specified by builder")?;
+            let disabled_msg = "\n\
+            # Disabled through `cargo x generate-workspace-hack --mode disable`.\n\
+            # To re-enable, `run cargo x generate-workspace-hack`.\n\
+            \n";
+            existing_toml.write_to_file(disabled_msg)?;
+        }
         _other => {
             let hakari = hakari_builder.compute();
             let existing_toml = hakari
@@ -78,7 +89,9 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
                         bail!("existing TOML is different from generated version (run with --mode diff for diff)");
                     }
                 }
-                WorkspaceHackMode::Verify => unreachable!("already processed in outer match"),
+                WorkspaceHackMode::Disable | WorkspaceHackMode::Verify => {
+                    unreachable!("already processed in outer match")
+                }
             }
         }
     };

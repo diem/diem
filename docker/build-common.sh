@@ -14,7 +14,13 @@ export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
 export CARGOFLAGS=$(cat cargo-flags)
 export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO for release builds
 
-# Build release binaries
+# Disable the workspace-hack package to prevent extra features and packages from being enabled.
+# Can't use ${CARGO} because of https://github.com/rust-lang/rustup/issues/2647 and
+# https://github.com/env-logger-rs/env_logger/issues/190.
+# TODO: consider using ${CARGO} once upstream issues are fixed.
+cargo x generate-workspace-hack --mode disable
+
+# Build release binaries (TODO: use x to run this?)
 ${CARGO} ${CARGOFLAGS} build --release \
          -p diem-genesis-tool \
          -p diem-operational-tool \
