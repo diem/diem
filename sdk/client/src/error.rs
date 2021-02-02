@@ -134,3 +134,33 @@ impl From<serde_json::Error> for Error {
         Self::decode(e)
     }
 }
+
+#[derive(Debug)]
+pub enum WaitForTransactionError {
+    // Get account transaction error
+    GetTransactionError(Error),
+    // Transaction hash does not match transaction hash argument
+    TransactionHashMismatchError(diem_json_rpc_types::views::TransactionView),
+    // Got transaction and it's vm_status#type is not "executed" (execution success)
+    TransactionExecutionFailed(diem_json_rpc_types::views::TransactionView),
+    // Wait timeout
+    Timeout,
+    // Transaction not found, latest known block (ledger info) timestamp is more recent
+    // than expiration_time_secs argument.
+    TransactionExpired,
+}
+
+impl std::fmt::Display for WaitForTransactionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self)
+    }
+}
+
+impl std::error::Error for WaitForTransactionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            WaitForTransactionError::GetTransactionError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
