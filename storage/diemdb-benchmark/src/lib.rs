@@ -10,7 +10,9 @@ use diem_types::{
     vm_status::KeptVMStatus,
     write_set::WriteSetMut,
 };
-use diemdb::DiemDB;
+use diemdb::{
+    metrics::DIEM_STORAGE_ROCKSDB_PROPERTIES, schema::JELLYFISH_MERKLE_NODE_CF_NAME, DiemDB,
+};
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use rand::Rng;
@@ -99,4 +101,19 @@ pub fn run_benchmark(num_accounts: usize, total_version: u64, blob_size: usize, 
         bar.inc(version_bump);
     }
     bar.finish();
+
+    db.update_rocksdb_properties().unwrap();
+    let db_size = DIEM_STORAGE_ROCKSDB_PROPERTIES
+        .with_label_values(&[JELLYFISH_MERKLE_NODE_CF_NAME, "diem_rocksdb_properties"])
+        .get();
+    let data_size = DIEM_STORAGE_ROCKSDB_PROPERTIES
+        .with_label_values(&[JELLYFISH_MERKLE_NODE_CF_NAME, "diem_rocksdb_cf_size_bytes"])
+        .get();
+    println!(
+        "created a DiemDB til version {}, where {} accounts with avg blob size {} bytes exist.",
+        total_version, num_accounts, blob_size
+    );
+    println!("DB dir: {}", db_dir.as_path().display());
+    println!("Jellyfish Merkle physical size: {}", db_size);
+    println!("Jellyfish Merkle logical size: {}", data_size);
 }

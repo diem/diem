@@ -17,13 +17,13 @@ pub mod test_helper;
 
 pub mod backup;
 pub mod errors;
+pub mod metrics;
 pub mod schema;
 
 mod change_set;
 mod event_store;
 mod ledger_counters;
 mod ledger_store;
-mod metrics;
 mod pruner;
 mod state_store;
 mod system_store;
@@ -141,6 +141,20 @@ fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
     db_opts
 }
 
+fn update_rocksdb_properties(db: &DB) -> Result<()> {
+    let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+        .with_label_values(&["update_rocksdb_properties"])
+        .start_timer();
+    for cf_name in DiemDB::column_families() {
+        for (property_name, rocksdb_property_argument) in &*ROCKSDB_PROPERTY_MAP {
+            DIEM_STORAGE_ROCKSDB_PROPERTIES
+                .with_label_values(&[cf_name, property_name])
+                .set(db.get_property(cf_name, rocksdb_property_argument)? as i64);
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 struct RocksdbPropertyReporter {
     sender: Mutex<mpsc::Sender<()>>,
@@ -151,7 +165,7 @@ impl RocksdbPropertyReporter {
     fn new(db: Arc<DB>) -> Self {
         let (send, recv) = mpsc::channel();
         let join_handle = Some(thread::spawn(move || loop {
-            if let Err(e) = Self::update_rocksdb_properties(&db) {
+            if let Err(e) = update_rocksdb_properties(&db) {
                 warn!(
                     error = ?e,
                     "Updating rocksdb property failed."
@@ -159,29 +173,15 @@ impl RocksdbPropertyReporter {
             }
             // report rocksdb properties each 10 seconds
             match recv.recv_timeout(Duration::from_secs(10)) {
+                Ok(_) => break,
                 Err(mpsc::RecvTimeoutError::Timeout) => (),
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
-                Ok(_) => break,
             }
         }));
         Self {
             sender: Mutex::new(send),
             join_handle,
         }
-    }
-
-    fn update_rocksdb_properties(db: &DB) -> Result<()> {
-        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-            .with_label_values(&["update_rocksdb_properties"])
-            .start_timer();
-        for cf_name in DiemDB::column_families() {
-            for (property_name, rocksdb_property_argument) in &*ROCKSDB_PROPERTY_MAP {
-                DIEM_STORAGE_ROCKSDB_PROPERTIES
-                    .with_label_values(&[cf_name, property_name])
-                    .set(db.get_property(cf_name, rocksdb_property_argument)? as i64);
-            }
-        }
-        Ok(())
     }
 }
 
@@ -321,6 +321,11 @@ impl DiemDB {
             RocksdbConfig::default(),
         )
         .expect("Unable to open DiemDB")
+    }
+
+    /// This force the db to update rocksdb properties immediately.
+    pub fn update_rocksdb_properties(&self) -> Result<()> {
+        update_rocksdb_properties(&self.db)
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no

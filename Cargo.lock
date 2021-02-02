@@ -2456,6 +2456,7 @@ dependencies = [
 name = "diemdb-benchmark"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "diem-config",
  "diem-types",

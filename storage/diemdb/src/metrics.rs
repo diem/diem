@@ -88,7 +88,7 @@ pub static DIEM_STORAGE_OTHER_TIMERS_SECONDS: Lazy<HistogramVec> = Lazy::new(|| 
 });
 
 /// Rocksdb metrics
-pub(crate) static DIEM_STORAGE_ROCKSDB_PROPERTIES: Lazy<IntGaugeVec> = Lazy::new(|| {
+pub static DIEM_STORAGE_ROCKSDB_PROPERTIES: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         // metric name
         "diem_rocksdb_properties",
