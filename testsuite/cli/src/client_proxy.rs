@@ -9,11 +9,11 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Error, Result};
 use compiled_stdlib::StdLibOptions;
 use compiler::Compiler;
+use diem_client::{views, WaitForTransactionError};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
 };
-use diem_json_rpc_client::async_client::{types as jsonrpc, WaitForTransactionError};
 use diem_logger::prelude::{error, info};
 use diem_temppath::TempPath;
 use diem_types::{
@@ -683,8 +683,13 @@ impl ClientProxy {
         while start.elapsed() < DEFAULT_WAIT_TIMEOUT {
             let account_txn = self.client.get_txn_by_acc_seq(&address, seq, false)?;
             if let Some(txn) = account_txn {
-                if txn.transaction.unwrap().sequence_number >= seq {
-                    return Ok(());
+                if let views::TransactionDataView::UserTransaction {
+                    sequence_number, ..
+                } = txn.transaction
+                {
+                    if sequence_number >= seq {
+                        return Ok(());
+                    }
                 }
             }
             std::thread::sleep(time::Duration::from_millis(10));
@@ -715,7 +720,7 @@ impl ClientProxy {
     pub fn wait_for_signed_transaction(
         &mut self,
         txn: &SignedTransaction,
-    ) -> Result<jsonrpc::Transaction> {
+    ) -> Result<views::TransactionView> {
         let (tx, rx) = std::sync::mpsc::channel();
         if !self.quiet_wait {
             let _handler = std::thread::spawn(move || loop {
@@ -1006,7 +1011,7 @@ impl ClientProxy {
     pub fn get_latest_account(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<jsonrpc::Account>> {
+    ) -> Result<Option<views::AccountView>> {
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments to get latest account"
@@ -1037,7 +1042,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<jsonrpc::Transaction>> {
+    ) -> Result<Option<views::TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by account and sequence number"
@@ -1069,7 +1074,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_range(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Vec<jsonrpc::Transaction>> {
+    ) -> Result<Vec<views::TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by range"
@@ -1145,7 +1150,7 @@ impl ClientProxy {
     pub fn get_events_by_account_and_type(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<(Vec<jsonrpc::Event>, jsonrpc::Account)> {
+    ) -> Result<(Vec<views::EventView>, views::AccountView)> {
         ensure!(
             space_delim_strings.len() == 5,
             "Invalid number of arguments, required 5, given {}",
@@ -1241,7 +1246,7 @@ impl ClientProxy {
     }
 
     /// Test JSON RPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<jsonrpc::Metadata> {
+    pub fn test_validator_connection(&mut self) -> Result<views::MetadataView> {
         self.client.update_and_verify_state_proof()?;
         self.client.get_metadata()
     }
@@ -1271,7 +1276,7 @@ impl ClientProxy {
     fn get_account_and_update(
         &mut self,
         address: &AccountAddress,
-    ) -> Result<Option<jsonrpc::Account>> {
+    ) -> Result<Option<views::AccountView>> {
         let account = self.client.get_account(address)?;
         self.client.update_and_verify_state_proof()?;
 
@@ -1310,7 +1315,7 @@ impl ClientProxy {
     fn get_account_resource_and_update(
         &mut self,
         address: &AccountAddress,
-    ) -> Result<jsonrpc::Account> {
+    ) -> Result<views::AccountView> {
         self.get_account_and_update(address)?
             .ok_or_else(|| format_err!("No account exists at {:?}", address))
     }
@@ -1331,7 +1336,7 @@ impl ClientProxy {
                 Ok(resp) => match resp {
                     Some(account_view) => (
                         account_view.sequence_number,
-                        Some(hex::decode(account_view.authentication_key)?),
+                        Some(account_view.authentication_key.into_bytes()?),
                         AccountStatus::Persisted,
                     ),
                     None => (0, authentication_key_opt, AccountStatus::Local),

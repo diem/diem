@@ -87,26 +87,25 @@ fn test_external_transaction_signer() {
         .unwrap();
 
     match txn.transaction {
-        Some(data) => {
-            assert_eq!("user", data.r#type);
-
-            let p_sender = data.sender;
-            let p_sequence_number = data.sequence_number;
-            let p_gas_unit_price = data.gas_unit_price;
-            let p_max_gas_amount = data.max_gas_amount;
-            let p_gas_currency = data.gas_currency;
-            let script = data.script.unwrap();
-
-            assert_eq!(p_sender, sender_address.to_string().to_lowercase());
-            assert_eq!(p_sequence_number, sequence_number);
-            assert_eq!(p_gas_unit_price, gas_unit_price);
-            assert_eq!(p_gas_currency, currency_code.to_string());
-            assert_eq!(p_max_gas_amount, max_gas_amount);
+        diem_client::views::TransactionDataView::UserTransaction {
+            sender,
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+            gas_currency,
+            script,
+            ..
+        } => {
+            assert_eq!(sender.0, sender_address.to_string().to_lowercase());
+            assert_eq!(sequence_number, sequence_number);
+            assert_eq!(gas_unit_price, gas_unit_price);
+            assert_eq!(gas_currency, currency_code.to_string());
+            assert_eq!(max_gas_amount, max_gas_amount);
 
             assert_eq!(script.r#type, "peer_to_peer_with_metadata");
-            assert_eq!(script.type_arguments, vec!["XUS"]);
+            assert_eq!(script.type_arguments.unwrap(), vec!["XUS"]);
             assert_eq!(
-                script.arguments,
+                script.arguments.unwrap(),
                 vec![
                     format!("{{ADDRESS: {:?}}}", &receiver_address),
                     format!("{{U64: {}}}", amount),
@@ -115,11 +114,14 @@ fn test_external_transaction_signer() {
                 ]
             );
             // legacy fields
-            assert_eq!(script.receiver, receiver_address.to_string().to_lowercase());
-            assert_eq!(script.amount, amount);
-            assert_eq!(script.currency, currency_code.to_string());
-            assert_eq!(script.metadata, "");
-            assert_eq!(script.metadata_signature, "");
+            assert_eq!(
+                script.receiver.unwrap().0,
+                receiver_address.to_string().to_lowercase()
+            );
+            assert_eq!(script.amount.unwrap(), amount);
+            assert_eq!(script.currency.unwrap(), currency_code.to_string());
+            assert_eq!(script.metadata.unwrap().0, "");
+            assert_eq!(script.metadata_signature.unwrap().0, "");
         }
         _ => panic!("Query should get user transaction"),
     }

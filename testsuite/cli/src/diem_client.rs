@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, ensure, Result};
-use diem_json_rpc_client::async_client::{
-    types as jsonrpc, Client, Retry, WaitForTransactionError,
-};
+use diem_client::{views, BlockingClient, Response, WaitForTransactionError};
 use diem_logger::prelude::info;
 use diem_types::{
     access_path::AccessPath,
@@ -35,30 +33,22 @@ use std::time::Duration;
 /// 3. We make another request to the remote AC service. In this case, the remote
 ///    AC will be behind us and we will reject their response as stale.
 pub struct DiemClient {
-    client: Client<Retry>,
+    client: BlockingClient,
     /// The latest verified chain state.
     trusted_state: TrustedState,
     /// The most recent epoch change ledger info. This is `None` if we only know
     /// about our local [`Waypoint`] and have not yet ratcheted to the remote's
     /// latest state.
     latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
-    runtime: diem_infallible::Mutex<tokio::runtime::Runtime>,
 }
 
 impl DiemClient {
     /// Construct a new Client instance.
     pub fn new(url: Url, waypoint: Waypoint) -> Result<Self> {
         let initial_trusted_state = TrustedState::from(waypoint);
-        let client = Client::from_url(url, Retry::default())?;
+        let client = BlockingClient::new(url.to_string());
 
         Ok(DiemClient {
-            runtime: diem_infallible::Mutex::new(
-                tokio::runtime::Builder::new_multi_thread()
-                    .thread_name("cli-client")
-                    .enable_all()
-                    .build()
-                    .expect("failed to create runtime"),
-            ),
             client,
             trusted_state: initial_trusted_state,
             latest_epoch_change_li: None,
@@ -68,21 +58,19 @@ impl DiemClient {
     /// Submits a transaction and bumps the sequence number for the sender, pass in `None` for
     /// sender_account if sender's address is not managed by the client.
     pub fn submit_transaction(&self, transaction: &SignedTransaction) -> Result<()> {
-        self.runtime
-            .lock()
-            .block_on(self.client.submit(transaction))
-            .map_err(anyhow::Error::new)
-            .map(|r| r.result)
+        self.client
+            .submit(transaction)
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     /// Retrieves account information
     /// - If `with_state_proof`, will also retrieve state proof from node and update trusted_state accordingly
-    pub fn get_account(&self, account: &AccountAddress) -> Result<Option<jsonrpc::Account>> {
-        self.runtime
-            .lock()
-            .block_on(self.client.get_account(account))
-            .map_err(anyhow::Error::new)
-            .map(|r| r.result)
+    pub fn get_account(&self, account: &AccountAddress) -> Result<Option<views::AccountView>> {
+        self.client
+            .get_account(*account)
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     pub fn get_account_state_blob(
@@ -90,16 +78,11 @@ impl DiemClient {
         account: &AccountAddress,
     ) -> Result<(Option<AccountStateBlob>, Version)> {
         let ret = self
-            .runtime
-            .lock()
-            .block_on(
-                self.client
-                    .get_account_state_with_proof(account, None, None),
-            )
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)?;
-        if !ret.blob.is_empty() {
-            Ok((Some(bcs::from_bytes(&hex::decode(ret.blob)?)?), ret.version))
+            .client
+            .get_account_state_with_proof(*account, None, None)
+            .map(Response::into_inner)?;
+        if let Some(blob) = ret.blob {
+            Ok((Some(bcs::from_bytes(&blob.into_bytes()?)?), ret.version))
         } else {
             Ok((None, ret.version))
         }
@@ -110,67 +93,56 @@ impl DiemClient {
         event_key: &str,
         start: u64,
         limit: u64,
-    ) -> Result<Vec<jsonrpc::Event>> {
-        self.runtime
-            .lock()
-            .block_on(self.client.get_events(event_key, start, limit))
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)
+    ) -> Result<Vec<views::EventView>> {
+        self.client
+            .get_events(event_key, start, limit)
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     pub fn wait_for_transaction(
         &self,
         txn: &SignedTransaction,
         timeout: Duration,
-    ) -> Result<jsonrpc::Transaction, WaitForTransactionError> {
-        self.runtime
-            .lock()
-            .block_on(
-                self.client
-                    .wait_for_signed_transaction(txn, Some(timeout), None),
-            )
-            .map(|r| r.result)
+    ) -> Result<views::TransactionView, WaitForTransactionError> {
+        self.client
+            .wait_for_transaction(txn, Some(timeout), None)
+            .map(Response::into_inner)
     }
 
     /// Gets the block metadata
-    pub fn get_metadata(&self) -> Result<jsonrpc::Metadata> {
-        self.runtime
-            .lock()
-            .block_on(self.client.get_metadata())
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)
+    pub fn get_metadata(&self) -> Result<views::MetadataView> {
+        self.client
+            .get_metadata()
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     /// Gets the currency info stored on-chain
-    pub fn get_currency_info(&self) -> Result<Vec<jsonrpc::CurrencyInfo>> {
-        self.runtime
-            .lock()
-            .block_on(self.client.get_currencies())
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)
+    pub fn get_currency_info(&self) -> Result<Vec<views::CurrencyInfoView>> {
+        self.client
+            .get_currencies()
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     /// Retrieves and checks the state proof
     pub fn update_and_verify_state_proof(&mut self) -> Result<()> {
         let state_proof = self
-            .runtime
-            .lock()
-            .block_on(
-                self.client
-                    .get_state_proof(self.trusted_state().latest_version()),
-            )
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)?;
+            .client
+            .get_state_proof(self.trusted_state().latest_version())
+            .map(Response::into_inner)?;
+
         self.verify_state_proof(state_proof)
     }
 
-    fn verify_state_proof(&mut self, state_proof: jsonrpc::StateProof) -> Result<()> {
+    fn verify_state_proof(&mut self, state_proof: views::StateProofView) -> Result<()> {
         let state = self.trusted_state();
 
         let li: LedgerInfoWithSignatures =
-            bcs::from_bytes(&hex::decode(state_proof.ledger_info_with_signatures)?)?;
+            bcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
         let epoch_change_proof: EpochChangeProof =
-            bcs::from_bytes(&hex::decode(state_proof.epoch_change_proof)?)?;
+            bcs::from_bytes(&state_proof.epoch_change_proof.into_bytes()?)?;
 
         // check ledger info version
         ensure!(
@@ -232,15 +204,11 @@ impl DiemClient {
         account: &AccountAddress,
         sequence_number: u64,
         fetch_events: bool,
-    ) -> Result<Option<jsonrpc::Transaction>> {
-        self.runtime
-            .lock()
-            .block_on(
-                self.client
-                    .get_account_transaction(&account, sequence_number, fetch_events),
-            )
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)
+    ) -> Result<Option<views::TransactionView>> {
+        self.client
+            .get_account_transaction(*account, sequence_number, fetch_events)
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     /// Get transactions in range (start_version..start_version + limit - 1) from validator.
@@ -249,15 +217,11 @@ impl DiemClient {
         start_version: u64,
         limit: u64,
         fetch_events: bool,
-    ) -> Result<Vec<jsonrpc::Transaction>> {
-        self.runtime
-            .lock()
-            .block_on(
-                self.client
-                    .get_transactions(start_version, limit, fetch_events),
-            )
-            .map(|r| r.result)
-            .map_err(anyhow::Error::new)
+    ) -> Result<Vec<views::TransactionView>> {
+        self.client
+            .get_transactions(start_version, limit, fetch_events)
+            .map_err(Into::into)
+            .map(Response::into_inner)
     }
 
     pub fn get_events_by_access_path(
@@ -265,7 +229,7 @@ impl DiemClient {
         access_path: AccessPath,
         start_event_seq_num: u64,
         limit: u64,
-    ) -> Result<(Vec<jsonrpc::Event>, jsonrpc::Account)> {
+    ) -> Result<(Vec<views::EventView>, views::AccountView)> {
         // get event key from access_path
         match self.get_account(&access_path.address)? {
             None => bail!("No account found for address {:?}", access_path.address),
@@ -280,7 +244,7 @@ impl DiemClient {
                 };
 
                 // get_events
-                let events = self.get_events(event_key, start_event_seq_num, limit)?;
+                let events = self.get_events(&event_key.0, start_event_seq_num, limit)?;
                 Ok((events, account_view))
             }
         }
