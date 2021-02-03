@@ -8,18 +8,17 @@ use crate::{
 };
 use diem_config::{config::PeerSet, network_id::NetworkContext};
 use diem_infallible::RwLock;
-use futures::stream::StreamExt;
-use futures_util::stream::Fuse;
+use diem_time_service::TimeService;
 use std::{sync::Arc, time::Duration};
-use tokio::{runtime::Handle, time::interval};
+use tokio::runtime::Handle;
 use tokio_retry::strategy::ExponentialBackoff;
-use tokio_stream::wrappers::IntervalStream;
 
-pub type ConnectivityManagerService = ConnectivityManager<Fuse<IntervalStream>, ExponentialBackoff>;
+pub type ConnectivityManagerService = ConnectivityManager<ExponentialBackoff>;
 
 /// The configuration fields for ConnectivityManager
 struct ConnectivityManagerBuilderConfig {
     network_context: Arc<NetworkContext>,
+    time_service: TimeService,
     eligible: Arc<RwLock<PeerSet>>,
     seeds: PeerSet,
     connectivity_check_interval_ms: u64,
@@ -48,6 +47,7 @@ pub struct ConnectivityManagerBuilder {
 impl ConnectivityManagerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         eligible: Arc<RwLock<PeerSet>>,
         seeds: PeerSet,
         connectivity_check_interval_ms: u64,
@@ -65,6 +65,7 @@ impl ConnectivityManagerBuilder {
         Self {
             config: Some(ConnectivityManagerBuilderConfig {
                 network_context,
+                time_service,
                 eligible,
                 seeds,
                 connectivity_check_interval_ms,
@@ -97,17 +98,15 @@ impl ConnectivityManagerBuilder {
         self.connectivity_manager = Some({
             ConnectivityManager::new(
                 config.network_context,
+                config.time_service,
                 config.eligible,
                 &config.seeds,
-                IntervalStream::new(interval(Duration::from_millis(
-                    config.connectivity_check_interval_ms,
-                )))
-                .fuse(),
                 config.connection_reqs_tx,
                 config.connection_notifs_rx,
                 config.requests_rx,
+                Duration::from_millis(config.connectivity_check_interval_ms),
                 ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
-                config.max_connection_delay_ms,
+                Duration::from_millis(config.max_connection_delay_ms),
                 config.outbound_connection_limit,
             )
         });

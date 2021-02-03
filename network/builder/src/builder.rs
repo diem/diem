@@ -351,6 +351,7 @@ impl NetworkBuilder {
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
+            TimeService::real(),
             trusted_peers,
             seeds,
             connectivity_check_interval_ms,
