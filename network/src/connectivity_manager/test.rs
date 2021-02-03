@@ -156,23 +156,17 @@ impl TestHarness {
         self.send_notification_await_delivery(peer_id, notif).await;
     }
 
-    async fn send_lost_peer_await_delivery(
-        &mut self,
-        peer_id: PeerId,
-        notif_peer_id: PeerId,
-        address: NetworkAddress,
-        reason: DisconnectReason,
-    ) {
+    async fn send_lost_peer_await_delivery(&mut self, peer_id: PeerId, address: NetworkAddress) {
         info!(
             "Sending LostPeer notification for peer: {}",
             peer_id.short_str()
         );
-        let mut metadata = ConnectionMetadata::mock(notif_peer_id);
+        let mut metadata = ConnectionMetadata::mock(peer_id);
         metadata.addr = address;
         let notif = peer_manager::ConnectionNotification::LostPeer(
             metadata,
             NetworkContext::mock(),
-            reason,
+            DisconnectReason::ConnectionLost,
         );
         self.send_notification_await_delivery(peer_id, notif).await;
     }
@@ -189,7 +183,7 @@ impl TestHarness {
         delivered_rx.await.unwrap();
     }
 
-    async fn expect_disconnect_request(
+    async fn expect_disconnect_inner(
         &mut self,
         peer_id: PeerId,
         address: NetworkAddress,
@@ -208,14 +202,18 @@ impl TestHarness {
             ),
         }
         if success {
-            self.send_lost_peer_await_delivery(
-                peer_id,
-                peer_id,
-                address,
-                DisconnectReason::Requested,
-            )
-            .await;
+            self.send_lost_peer_await_delivery(peer_id, address).await;
         }
+    }
+
+    async fn expect_disconnect_success(&mut self, peer_id: PeerId, address: NetworkAddress) {
+        self.expect_disconnect_inner(peer_id, address, Ok(())).await;
+    }
+
+    async fn expect_disconnect_fail(&mut self, peer_id: PeerId, address: NetworkAddress) {
+        let error = PeerManagerError::NotConnected(peer_id);
+        self.expect_disconnect_inner(peer_id, address, Err(error))
+            .await;
     }
 
     async fn wait_until_empty_dial_queue(&mut self) {
@@ -356,13 +354,8 @@ fn connect_to_seeds_on_startup() {
             .await;
 
         // We expect the peer which changed its address to also disconnect.
-        mock.send_lost_peer_await_delivery(
-            seed_peer_id,
-            seed_peer_id,
-            seed_addr.clone(),
-            DisconnectReason::ConnectionLost,
-        )
-        .await;
+        mock.send_lost_peer_await_delivery(seed_peer_id, seed_addr.clone())
+            .await;
 
         // We should try to connect to both the new address and seed address.
         mock.trigger_connectivity_check().await;
@@ -415,13 +408,8 @@ fn addr_change() {
         assert_eq!(1, mock.get_connected_size().await);
 
         // We expect the peer which changed its address to also disconnect. (even if the address doesn't match storage)
-        mock.send_lost_peer_await_delivery(
-            other_peer_id,
-            other_peer_id,
-            other_addr_new.clone(),
-            DisconnectReason::ConnectionLost,
-        )
-        .await;
+        mock.send_lost_peer_await_delivery(other_peer_id, other_addr_new.clone())
+            .await;
         assert_eq!(0, mock.get_connected_size().await);
 
         // We should receive dial request to other peer at new address
@@ -455,13 +443,8 @@ fn lost_connection() {
             .await;
 
         // Sending LostPeer event to signal connection loss
-        mock.send_lost_peer_await_delivery(
-            other_peer_id,
-            other_peer_id,
-            other_addr.clone(),
-            DisconnectReason::ConnectionLost,
-        )
-        .await;
+        mock.send_lost_peer_await_delivery(other_peer_id, other_addr.clone())
+            .await;
 
         // Peer manager receives a request to connect to the other peer after loss of
         // connection.
@@ -509,7 +492,7 @@ fn disconnect() {
 
         // Peer is now ineligible, we should disconnect from them
         mock.trigger_connectivity_check().await;
-        mock.expect_disconnect_request(other_peer_id, other_addr, Ok(()))
+        mock.expect_disconnect_success(other_peer_id, other_addr)
             .await;
     };
     block_on(future::join(conn_mgr.start(), test));
@@ -558,19 +541,13 @@ fn retry_on_failure() {
 
         // Peer manager receives a request to disconnect from the other peer, which fails.
         mock.trigger_connectivity_check().await;
-        mock.expect_disconnect_request(
-            other_peer_id,
-            other_addr.clone(),
-            Err(PeerManagerError::IoError(io::Error::from(
-                io::ErrorKind::Interrupted,
-            ))),
-        )
-        .await;
+        mock.expect_disconnect_fail(other_peer_id, other_addr.clone())
+            .await;
 
         // Peer manager receives another request to disconnect from the other peer, which now
         // succeeds.
         mock.trigger_connectivity_check().await;
-        mock.expect_disconnect_request(other_peer_id, other_addr.clone(), Ok(()))
+        mock.expect_disconnect_success(other_peer_id, other_addr.clone())
             .await;
     };
     block_on(future::join(conn_mgr.start(), test));
@@ -619,26 +596,19 @@ fn no_op_requests() {
 
         // Peer manager receives a request to disconnect from the other peer, which fails.
         mock.trigger_connectivity_check().await;
-        mock.expect_disconnect_request(
-            other_peer_id,
-            other_addr.clone(),
-            Err(PeerManagerError::NotConnected(other_peer_id)),
-        )
-        .await;
+        mock.expect_disconnect_fail(other_peer_id, other_addr.clone())
+            .await;
 
         // Send delayed LostPeer notification for other peer.
-        mock.send_lost_peer_await_delivery(
-            other_peer_id,
-            other_peer_id,
-            other_addr,
-            DisconnectReason::ConnectionLost,
-        )
-        .await;
+        mock.send_lost_peer_await_delivery(other_peer_id, other_addr)
+            .await;
 
         // Trigger connectivity check again. We don't expect connectivity manager to do
         // anything - if it does, the task should panic. That may not fail the test (right
         // now), but will be easily spotted by someone running the tests locally.
         mock.trigger_connectivity_check().await;
+        assert_eq!(0, mock.get_connected_size().await);
+        assert_eq!(0, mock.get_dial_queue_size().await);
     };
     block_on(future::join(conn_mgr.start(), test));
 }
