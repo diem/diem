@@ -19,7 +19,7 @@ parking_lot = "0.11.1"
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
-diem-state-view = { path = "../../storage/state-view", version = "0.1.0" }
+diem-state-view = { path = "../state-view", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
