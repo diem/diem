@@ -27,7 +27,7 @@ if include_events is false, the [events](type_event.md) field in the Transaction
 
 ```
 // Request: fetches transaction for account address "0xc1fda0ec67c1b87bfb9e883e2080e530", starting sequence number 0, limit 100, without including events associated with this transaction
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_transactions","params":["c1fda0ec67c1b87bfb9e883e2080e530", 0, 100, false],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_transactions","params":["c1fda0ec67c1b87bfb9e883e2080e530", 0, 100, false],"id":1}' https://testnet.diem.com/v1
 
 // Response
 {
