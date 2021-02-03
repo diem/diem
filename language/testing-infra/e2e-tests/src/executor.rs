@@ -9,7 +9,9 @@ use crate::{
     golden_outputs::GoldenOutputs,
     keygen::KeyGen,
 };
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    stdlib_modules, transaction_scripts::StdlibScript, StdLibModules, StdLibOptions,
+};
 use diem_crypto::HashValue;
 use diem_state_view::StateView;
 use diem_types::{
@@ -34,7 +36,6 @@ use move_core_types::{
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
-use vm::CompiledModule;
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
 
@@ -74,7 +75,7 @@ impl FakeExecutor {
 
     pub fn allowlist_genesis() -> Self {
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
             None,
             VMPublishingOption::locked(StdlibScript::allowlist()),
         )
@@ -89,7 +90,7 @@ impl FakeExecutor {
         }
 
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
             None,
             publishing_options,
         )
@@ -113,16 +114,22 @@ impl FakeExecutor {
     /// initialization done.
     pub fn stdlib_only_genesis() -> Self {
         let mut genesis = Self::no_genesis();
-        for module in stdlib_modules(StdLibOptions::Compiled) {
+        let StdLibModules {
+            bytes_opt,
+            compiled_modules,
+        } = stdlib_modules(StdLibOptions::Compiled);
+        let bytes = bytes_opt.unwrap();
+        assert!(bytes.len() == compiled_modules.len());
+        for (module, bytes) in compiled_modules.iter().zip(bytes) {
             let id = module.self_id();
-            genesis.add_module(&id, module);
+            genesis.add_module(&id, bytes.to_vec());
         }
         genesis
     }
 
     /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
-        genesis_modules: Vec<CompiledModule>,
+        genesis_modules: &[Vec<u8>],
         validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {
@@ -169,8 +176,8 @@ impl FakeExecutor {
     /// Adds a module to this executor's data store.
     ///
     /// Does not do any sort of verification on the module.
-    pub fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
-        self.data_store.add_module(module_id, module)
+    pub fn add_module(&mut self, module_id: &ModuleId, module_blob: Vec<u8>) {
+        self.data_store.add_module(module_id, module_blob)
     }
 
     /// Reads the resource [`Value`] for an account from this executor's data store.

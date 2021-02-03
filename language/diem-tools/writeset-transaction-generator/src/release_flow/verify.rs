@@ -21,13 +21,19 @@ pub fn verify_release(
     url: String,
     // Path to the serialized bytes of WriteSet
     writeset_payload: &WriteSetPayload,
-    remote_modules: &[CompiledModule],
+    remote_modules: &[(Vec<u8>, CompiledModule)],
 ) -> Result<()> {
     let artifact = load_artifact(&chain_id)?;
     if artifact.chain_id != chain_id {
         bail!("Unexpected ChainId");
     }
-    if artifact.stdlib_hash != hash_for_modules(remote_modules)? {
+    if artifact.stdlib_hash
+        != hash_for_modules(
+            remote_modules
+                .iter()
+                .map(|(bytes, module)| (module.self_id(), bytes)),
+        )?
+    {
         bail!("Build artifact doesn't match local stdlib hash");
     }
     let generated_payload = create_release_from_artifact(&artifact, url.as_str(), remote_modules)?;
@@ -39,16 +45,16 @@ pub fn verify_release(
         remote,
         Some(artifact.version),
         &writeset_payload,
-        remote_modules,
+        remote_modules.iter().map(|(_bytes, m)| m),
     )
 }
 /// Make sure that given a remote state, applying the `payload` will make sure the new on-chain
 /// states contains the exact same Diem Framework modules as the locally compiled stdlib.
-pub(crate) fn verify_payload_change(
+pub(crate) fn verify_payload_change<'a>(
     validator: Box<dyn DiemValidatorInterface>,
     block_height_opt: Option<Version>,
     payload: &WriteSetPayload,
-    remote_modules: &[CompiledModule],
+    remote_modules: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> Result<()> {
     let block_height = match block_height_opt {
         Some(h) => h,
@@ -107,7 +113,7 @@ pub(crate) fn verify_payload_change(
     }
 
     let local_modules = remote_modules
-        .iter()
+        .into_iter()
         .map(|m| (m.self_id(), m.clone()))
         .collect::<BTreeMap<_, _>>();
     if local_modules.len() != old_modules.len() {

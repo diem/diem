@@ -62,7 +62,11 @@ impl Compiler for IRCompiler {
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
     testsuite::functional_tests(
-        IRCompiler::new(stdlib_modules(StdLibOptions::Compiled).to_vec()),
+        IRCompiler::new(
+            stdlib_modules(StdLibOptions::Compiled)
+                .compiled_modules
+                .to_vec(),
+        ),
         path,
     )
 }

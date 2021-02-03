@@ -21,6 +21,7 @@ fn release_test() {
 
     // Create 10 distinct modules.
     let mut modules = vec![];
+    let mut modules_and_bytes = vec![];
     let mut modules_bytes = vec![];
     for i in 0..10 {
         let mut module = empty_module();
@@ -29,6 +30,7 @@ fn release_test() {
 
         let mut bytes = vec![];
         compiled_module.serialize(&mut bytes).unwrap();
+        modules_and_bytes.push((bytes.clone(), compiled_module.clone()));
         modules.push(compiled_module);
         modules_bytes.push(bytes);
     }
@@ -43,7 +45,7 @@ fn release_test() {
     replace_module.serialize(&mut replace_module_bytes).unwrap();
 
     // 1. Old and new framework are exactly the same.
-    let result = create_release_writeset(&modules, &modules).unwrap();
+    let result = create_release_writeset(&modules, &modules_and_bytes).unwrap();
 
     assert_eq!(
         result,
@@ -52,7 +54,8 @@ fn release_test() {
 
     // 2. Remove one existing module
     {
-        let result = create_release_writeset(&modules, &modules.clone().split_off(1)).unwrap();
+        let result =
+            create_release_writeset(&modules, &modules_and_bytes.clone().split_off(1)).unwrap();
         assert_eq!(
             result,
             WriteSetPayload::Direct(ChangeSet::new(
@@ -69,7 +72,8 @@ fn release_test() {
 
     // 3. Add one module
     {
-        let result = create_release_writeset(&modules.clone().split_off(1), &modules).unwrap();
+        let result =
+            create_release_writeset(&modules.clone().split_off(1), &modules_and_bytes).unwrap();
         assert_eq!(
             result,
             WriteSetPayload::Direct(ChangeSet::new(
@@ -86,9 +90,9 @@ fn release_test() {
 
     // 4. Modify one module
     {
-        let mut replace_modules = modules.clone();
+        let mut replace_modules = modules_and_bytes.clone();
         replace_modules.pop();
-        replace_modules.push(replace_module.clone());
+        replace_modules.push((replace_module_bytes.clone(), replace_module.clone()));
 
         let result = create_release_writeset(&modules, &replace_modules).unwrap();
         assert_eq!(
@@ -108,7 +112,7 @@ fn release_test() {
     // 5. Add and remove modules
     {
         // New modules has test_0 .. test_8
-        let mut new_modules = modules.clone();
+        let mut new_modules = modules_and_bytes.clone();
         new_modules.pop();
         // Old modules has test_1 .. test_9
         let mut old_modules = modules.clone();
@@ -139,9 +143,9 @@ fn release_test() {
     // 6. Remove and replace modules
     {
         // New modules has test_1 .. test_8, test_9'
-        let mut new_modules = modules.clone();
+        let mut new_modules = modules_and_bytes.clone();
         new_modules.pop();
-        new_modules.push(replace_module.clone());
+        new_modules.push((replace_module_bytes.clone(), replace_module.clone()));
         new_modules.swap_remove(0);
 
         let result = create_release_writeset(&modules, &new_modules).unwrap();
@@ -169,9 +173,9 @@ fn release_test() {
     // 7. Add and replace modules
     {
         // New modules has test_0 .. test_8, test_9'
-        let mut new_modules = modules.clone();
+        let mut new_modules = modules_and_bytes.clone();
         new_modules.pop();
-        new_modules.push(replace_module.clone());
+        new_modules.push((replace_module_bytes.clone(), replace_module.clone()));
 
         // Old modules has test_1 .. test_9
         let mut old_modules = modules.clone();
@@ -202,10 +206,10 @@ fn release_test() {
     // 8. Add, replace and remove modules
     {
         // New modules has test_0 .. test_7, test_9'
-        let mut new_modules = modules.clone();
+        let mut new_modules = modules_and_bytes.clone();
         new_modules.pop();
         new_modules.pop();
-        new_modules.push(replace_module.clone());
+        new_modules.push((replace_module_bytes.clone(), replace_module.clone()));
 
         // Old modules has test_1 .. test_9
         let mut old_modules = modules.clone();
@@ -240,10 +244,10 @@ fn release_test() {
     // 8. Swapping input order will not change result.
     {
         // New modules has test_0 .. test_7, test_9'
-        let mut new_modules = modules.clone();
+        let mut new_modules = modules_and_bytes;
         new_modules.pop();
         new_modules.pop();
-        new_modules.push(replace_module);
+        new_modules.push((replace_module_bytes.clone(), replace_module));
         new_modules.swap(0, 2);
 
         // Old modules has test_1 .. test_9

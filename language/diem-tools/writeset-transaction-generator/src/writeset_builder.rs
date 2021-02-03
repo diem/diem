@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::format_err;
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
 use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
@@ -102,9 +102,9 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
     }
 }
 
-fn move_module_changes(modules: &[CompiledModule]) -> MoveChanges {
+fn move_module_changes<'a>(modules: impl IntoIterator<Item = &'a CompiledModule>) -> MoveChanges {
     let mut shadow_changeset = MoveChanges::new();
-    for module in modules.iter() {
+    for module in modules {
         let id = module.self_id();
         let mut module_bytes = vec![];
         module.serialize(&mut module_bytes).unwrap();
@@ -116,6 +116,7 @@ fn move_module_changes(modules: &[CompiledModule]) -> MoveChanges {
 pub fn build_changeset<S: StateView, F>(
     state_view: &S,
     procedure: F,
+    bytes: &[Vec<u8>],
     modules: &[CompiledModule],
 ) -> ChangeSet
 where
@@ -137,11 +138,9 @@ where
             .unwrap()
     };
 
-    for module in modules {
-        let mut module_bytes = vec![];
-        module.serialize(&mut module_bytes).unwrap();
+    for (module, bytes) in modules.iter().zip(bytes) {
         // TODO: Check compatibility between old and new modules.
-        effect.modules.push((module.self_id(), module_bytes));
+        effect.modules.push((module.self_id(), bytes.clone()));
     }
 
     let (writeset, events) = txn_effects_to_writeset_and_events(effect)
@@ -152,5 +151,9 @@ where
 }
 
 pub fn build_stdlib_upgrade_changeset<S: StateView>(state_view: &S) -> ChangeSet {
-    build_changeset(state_view, |_| {}, stdlib_modules(StdLibOptions::Compiled))
+    let StdLibModules {
+        bytes_opt,
+        compiled_modules,
+    } = stdlib_modules(StdLibOptions::Compiled);
+    build_changeset(state_view, |_| {}, bytes_opt.unwrap(), compiled_modules)
 }

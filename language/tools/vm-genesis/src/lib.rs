@@ -6,6 +6,8 @@
 mod genesis_context;
 pub mod genesis_gas_schedule;
 
+use std::collections::BTreeMap;
+
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use diem_crypto::{
@@ -82,7 +84,7 @@ pub fn encode_genesis_transaction(
         &treasury_compliance_key,
         operator_assignments,
         operator_registrations,
-        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
+        stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(), // Must use compiled stdlib,
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
         chain_id,
@@ -104,15 +106,17 @@ pub fn encode_genesis_change_set(
     treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
-    stdlib_modules: &[CompiledModule],
+    stdlib_modules: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> ChangeSet {
+    let mut stdlib_module_map: BTreeMap<ModuleId, &Vec<u8>> = BTreeMap::new();
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
-        let module_id = module.self_id();
+        let module_id = CompiledModule::deserialize(module).unwrap().self_id();
         state_view.add_module(&module_id, &module);
+        stdlib_module_map.insert(module_id, module);
     }
     let data_cache = StateViewCache::new(&state_view);
 
@@ -157,7 +161,7 @@ pub fn encode_genesis_change_set(
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, &log_context, stdlib_modules);
+    publish_stdlib(&mut session, &log_context, stdlib_module_map);
     let effects_2 = session.finish().unwrap();
 
     let effects = merge_txn_effects(effects_1, effects_2);
@@ -443,32 +447,25 @@ fn create_and_initialize_owners_operators(
     }
 }
 
-fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &CompiledModule> {
-    stdlib_modules
-        .iter()
-        .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
-}
-
 /// Publish the standard library.
 fn publish_stdlib(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    stdlib: &[CompiledModule],
+    stdlib: BTreeMap<ModuleId, &Vec<u8>>,
 ) {
-    for module in remove_genesis(stdlib) {
-        assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
-        let mut module_vec = vec![];
-        module.serialize(&mut module_vec).unwrap();
+    let genesis_removed = stdlib
+        .iter()
+        .filter(|(module_id, _bytes)| module_id.name().as_str() != GENESIS_MODULE_NAME);
+    for (module_id, bytes) in genesis_removed {
+        assert!(module_id.name().as_str() != GENESIS_MODULE_NAME);
         session
             .publish_module(
-                module_vec,
-                *module.self_id().address(),
+                (*bytes).clone(),
+                *module_id.address(),
                 &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
                 log_context,
             )
-            .unwrap_or_else(|e| {
-                panic!("Failure publishing module {:?}, {:?}", module.self_id(), e)
-            });
+            .unwrap_or_else(|e| panic!("Failure publishing module {:?}, {:?}", module_id, e));
     }
 }
 
@@ -516,7 +513,7 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
     generate_test_genesis(
-        &stdlib_modules(stdlib_options),
+        &stdlib_modules(stdlib_options).bytes_vec(),
         VMPublishingOption::open(),
         None,
     )
@@ -530,7 +527,7 @@ pub fn test_genesis_transaction() -> Transaction {
 
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
     generate_test_genesis(
-        &stdlib_modules(StdLibOptions::Compiled),
+        &stdlib_modules(StdLibOptions::Compiled).bytes_vec(),
         VMPublishingOption::locked(StdlibScript::allowlist()),
         count,
     )
@@ -592,7 +589,7 @@ impl Validator {
 }
 
 pub fn generate_test_genesis(
-    stdlib_modules: &[CompiledModule],
+    stdlib_modules: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     count: Option<usize>,
 ) -> (ChangeSet, Vec<Validator>) {

@@ -21,7 +21,7 @@ use move_core_types::{
 use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use vm::{errors::*, CompiledModule};
+use vm::errors::*;
 use vm_genesis::generate_genesis_change_set_for_testing;
 
 /// Dummy genesis ChangeSet for testing
@@ -83,12 +83,8 @@ impl FakeDataStore {
     /// Adds a [`CompiledModule`] to this data store.
     ///
     /// Does not do any sort of verification on the module.
-    pub fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
+    pub fn add_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) {
         let access_path = AccessPath::from(module_id);
-        let mut blob = vec![];
-        module
-            .serialize(&mut blob)
-            .expect("serializing this module should work");
         self.set(access_path, blob);
     }
 }

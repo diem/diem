@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
 use diem_types::{chain_id::ChainId, transaction::TransactionPayload};
 use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
 use diem_writeset_generator::{
@@ -17,7 +17,16 @@ fn test_move_release_flow() {
     let validator_interface = JsonRpcDebuggerInterface::new(&url).unwrap();
 
     let chain_id = ChainId::test();
-    let old_modules = stdlib_modules(StdLibOptions::Compiled).to_vec();
+    let StdLibModules {
+        bytes_opt: old_modules_bytes,
+        compiled_modules: old_compiled_modules,
+    } = stdlib_modules(StdLibOptions::Compiled);
+    let old_modules = old_modules_bytes
+        .unwrap()
+        .iter()
+        .cloned()
+        .zip(old_compiled_modules.iter().cloned())
+        .collect::<Vec<_>>();
 
     let release_modules = release_modules();
 
@@ -55,7 +64,7 @@ fn test_move_release_flow() {
             .collect::<BTreeMap<_, _>>(),
         release_modules
             .iter()
-            .map(|m| (m.self_id(), m))
+            .map(|(_, m)| (m.self_id(), m))
             .collect::<BTreeMap<_, _>>(),
     );
 
@@ -97,7 +106,7 @@ fn test_move_release_flow() {
             .collect::<BTreeMap<_, _>>(),
         old_modules
             .iter()
-            .map(|m| (m.self_id(), m))
+            .map(|(_, m)| (m.self_id(), m))
             .collect::<BTreeMap<_, _>>(),
     );
 }
