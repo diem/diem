@@ -25,7 +25,6 @@ use network::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    transport::ConnectionMetadata,
     ProtocolId,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -191,14 +190,28 @@ pub fn setup_network() -> DummyNetwork {
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap();
-    assert!(
-        matches!(first_dialer_event, Event::NewPeer(metadata) if connection_matches(&metadata, listener_peer_id, ConnectionOrigin::Outbound, PeerRole::Validator))
-    );
+    if let Event::NewPeer(metadata) = first_dialer_event {
+        assert_eq!(metadata.remote_peer_id, listener_peer_id);
+        assert_eq!(metadata.origin, ConnectionOrigin::Outbound);
+        assert_eq!(metadata.role, PeerRole::Validator);
+    } else {
+        panic!(
+            "No NewPeer event on dialer received instead: {:?}",
+            first_dialer_event
+        );
+    }
 
     let first_listener_event = block_on(listener_events.next()).unwrap();
-    assert!(
-        matches!(first_listener_event, Event::NewPeer(metadata) if connection_matches(&metadata, dialer_peer_id, ConnectionOrigin::Inbound, PeerRole::Validator))
-    );
+    if let Event::NewPeer(metadata) = first_listener_event {
+        assert_eq!(metadata.remote_peer_id, dialer_peer_id);
+        assert_eq!(metadata.origin, ConnectionOrigin::Inbound);
+        assert_eq!(metadata.role, PeerRole::Validator);
+    } else {
+        panic!(
+            "No NewPeer event on listener received instead: {:?}",
+            first_listener_event
+        );
+    }
 
     DummyNetwork {
         runtime,
@@ -209,13 +222,4 @@ pub fn setup_network() -> DummyNetwork {
         listener_events,
         listener_sender,
     }
-}
-
-fn connection_matches(
-    metadata: &ConnectionMetadata,
-    remote_peer_id: PeerId,
-    origin: ConnectionOrigin,
-    role: PeerRole,
-) -> bool {
-    metadata.remote_peer_id == remote_peer_id && metadata.origin == origin && metadata.role == role
 }

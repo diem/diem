@@ -102,6 +102,7 @@ struct PeerManagerContext {
     connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
     connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
+    trusted_peers: Arc<RwLock<PeerSet>>,
     upstream_handlers:
         HashMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
@@ -118,6 +119,7 @@ impl PeerManagerContext {
         connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
         connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
+        trusted_peers: Arc<RwLock<PeerSet>>,
         upstream_handlers: HashMap<
             ProtocolId,
             diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
@@ -134,6 +136,7 @@ impl PeerManagerContext {
             connection_reqs_tx,
             connection_reqs_rx,
 
+            trusted_peers,
             upstream_handlers,
             connection_event_handlers,
 
@@ -222,13 +225,14 @@ impl PeerManagerBuilder {
                 Vec::new(),
                 Vec::new(),
                 authentication_mode,
-                trusted_peers,
+                trusted_peers.clone(),
             )),
             peer_manager_context: Some(PeerManagerContext::new(
                 pm_reqs_tx,
                 pm_reqs_rx,
                 connection_reqs_tx,
                 connection_reqs_rx,
+                trusted_peers,
                 HashMap::new(),
                 Vec::new(),
                 max_concurrent_network_reqs,
@@ -369,6 +373,7 @@ impl PeerManagerBuilder {
             // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
             // (which could be empty, like in client use case)
             self.listen_address.clone(),
+            pm_context.trusted_peers,
             pm_context.pm_reqs_rx,
             pm_context.connection_reqs_rx,
             pm_context.upstream_handlers,

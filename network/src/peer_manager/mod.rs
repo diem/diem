@@ -58,6 +58,8 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
+use diem_config::config::{PeerRole, PeerSet};
+use diem_infallible::RwLock;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
@@ -259,6 +261,8 @@ where
             diem_channel::Sender<ProtocolId, PeerRequest>,
         ),
     >,
+    /// Known trusted peers from discovery
+    trusted_peers: Arc<RwLock<PeerSet>>,
     /// Channel to receive requests from other actors.
     requests_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     /// Upstream handlers for RPC and DirectSend protocols. The handlers are promised fair delivery
@@ -307,6 +311,7 @@ where
         transport: TTransport,
         network_context: Arc<NetworkContext>,
         listen_addr: NetworkAddress,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         requests_rx: diem_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
         upstream_handlers: HashMap<
@@ -347,6 +352,7 @@ where
             listen_addr,
             transport_handler: Some(transport_handler),
             active_peers: HashMap::new(),
+            trusted_peers,
             requests_rx,
             connection_reqs_rx,
             transport_reqs_tx,
@@ -452,7 +458,17 @@ where
         );
         self.sample_connected_peers();
         match event {
-            TransportNotification::NewConnection(conn) => {
+            TransportNotification::NewConnection(mut conn) => {
+                // TODO: This is right now a hack around having to feed trusted peers deeper in the outbound path.  Inbound ones are assigned at Noise handshake time.
+                if conn.metadata.origin == ConnectionOrigin::Outbound {
+                    let peer_role = self
+                        .trusted_peers
+                        .read()
+                        .get(&conn.metadata.remote_peer_id)
+                        .map_or(PeerRole::Unknown, |auth_context| auth_context.role);
+                    conn.metadata.role = peer_role;
+                };
+
                 // TODO: Keep track of somewhere else to not take this hit in case of DDoS
                 let inbound_conns = self
                     .active_peers
