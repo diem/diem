@@ -22,7 +22,7 @@ bcs = "0.1.2"
 diem-client = { path = "../../../sdk/client", features = ["blocking"], default-features = false }
 diem-config = { path = "../..", version = "0.1.0"}
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-diem-global-constants = { path = "../../../config/global-constants", version = "0.1.0" }
+diem-global-constants = { path = "../../global-constants", version = "0.1.0" }
 diem-management = { path = "..", version = "0.1.0" }
 diem-network-address = { path = "../../../network/network-address", version = "0.1.0" }
 diem-network-address-encryption = {path = "../network-address-encryption", version = "0.1.0"}
