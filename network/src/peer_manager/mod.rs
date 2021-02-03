@@ -459,31 +459,34 @@ where
         self.sample_connected_peers();
         match event {
             TransportNotification::NewConnection(mut conn) => {
+                let trusted_peers = self.trusted_peers.read().clone();
                 // TODO: This is right now a hack around having to feed trusted peers deeper in the outbound path.  Inbound ones are assigned at Noise handshake time.
                 if conn.metadata.origin == ConnectionOrigin::Outbound {
-                    let peer_role = self
-                        .trusted_peers
-                        .read()
+                    let peer_role = trusted_peers
                         .get(&conn.metadata.remote_peer_id)
                         .map_or(PeerRole::Unknown, |auth_context| auth_context.role);
                     conn.metadata.role = peer_role;
                 };
 
                 // TODO: Keep track of somewhere else to not take this hit in case of DDoS
+                // Count inbound connections, not made by trusted peers
                 let inbound_conns = self
                     .active_peers
                     .iter()
-                    .filter(|(_, (metadata, _))| metadata.origin == ConnectionOrigin::Inbound)
+                    .filter(|(peer_id, (metadata, _))| {
+                        metadata.origin == ConnectionOrigin::Inbound
+                            && !trusted_peers.contains_key(peer_id)
+                    })
                     .count();
 
                 // Reject excessive inbound connections by letting them just drop out of scope
                 // We control outbound connections with Connectivity manager before we even send them
                 // and we must allow connections that already exist to pass through tie breaking.
-                // TODO: Allow for trusted peers to still connect
                 if conn.metadata.origin == ConnectionOrigin::Outbound
                     || self
                         .active_peers
                         .contains_key(&conn.metadata.remote_peer_id)
+                    || trusted_peers.contains_key(&conn.metadata.remote_peer_id)
                     || inbound_conns < self.inbound_connection_limit
                 {
                     info!(
