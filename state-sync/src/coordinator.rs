@@ -910,23 +910,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         // Process the chunk based on the response type
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                self.process_response_with_verifiable_li(txn_list_with_proof.clone(), li)
+                self.process_response_with_verifiable_li(txn_list_with_proof.clone(), li, None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
                 highest_li,
-            } => {
-                let highest_li = highest_li.unwrap_or_else(|| target_li.clone());
-                if target_li.ledger_info().version() > highest_li.ledger_info().version() {
-                    let error_message = format!(
-                        "Progressive ledger info received a target LI {} higher than highest LI {}",
-                        target_li, highest_li
-                    );
-                    Err(Error::ProcessInvalidChunk(error_message).into())
-                } else {
-                    self.process_response_with_verifiable_li(txn_list_with_proof.clone(), target_li)
-                }
-            }
+            } => self.process_response_with_verifiable_li(
+                txn_list_with_proof.clone(),
+                target_li,
+                highest_li,
+            ),
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
                 end_of_epoch_li,
@@ -937,6 +930,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             ),
         }
         .map_err(|error| {
+            // Invalid chunk received! Penalize peer and return error.
             self.request_manager.process_invalid_chunk(&peer);
             Error::ProcessInvalidChunk(format!("{}", error))
         })?;
@@ -1051,11 +1045,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         response_li: LedgerInfoWithSignatures,
+        highest_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
         ensure!(
             self.is_initialized(),
             "Response with a non-waypoint LI while still not initialized"
         );
+
         if let Some(sync_req) = self.sync_request.as_ref() {
             // Valid responses should not exceed the LI version of the request.
             if sync_req.target.ledger_info().version() < response_li.ledger_info().version() {
@@ -1066,6 +1062,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 );
             }
         }
+
         // Optimistically fetch the next chunk assuming the current chunk is going to be applied
         // successfully.
         let new_version = self
@@ -1086,7 +1083,19 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             // Remain in the current epoch
             self.local_state.trusted_epoch()
         };
+
+        // Verify the ledger infos that have been received
         self.local_state.verify_ledger_info(&response_li)?;
+        if let Some(highest_li) = highest_li {
+            if highest_li != response_li {
+                self.local_state.verify_ledger_info(&highest_li)?;
+            }
+            counters::set_version(
+                counters::VersionType::Highest,
+                highest_li.ledger_info().version(),
+            );
+        }
+
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
 
         // need to sync with local storage to see whether response LI was actually committed

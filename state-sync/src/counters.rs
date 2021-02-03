@@ -52,7 +52,7 @@ pub fn set_version(version_type: VersionType, version: u64) {
 pub enum VersionType {
     /// Version of latest ledger info committed.
     Committed,
-    /// Highest known version or version proceeding it
+    /// Highest version returned to us by our peers.
     Highest,
     /// Version of most recent txn that was synced (even if it is not backed by an LI)
     Synced,
