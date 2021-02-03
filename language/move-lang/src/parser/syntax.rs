@@ -474,6 +474,21 @@ fn parse_byte_string(tokens: &mut Lexer<'_>) -> Result<Value_, Error> {
     Ok(value_)
 }
 
+// Create an error for an integer literal that is too big to fit in its type.
+// This assumes that the literal is the current token.
+fn num_too_big_error(tokens: &mut Lexer<'_>, type_description: &str) -> Error {
+    let start_loc = tokens.start_loc();
+    let end_loc = start_loc + tokens.content().len();
+    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+    vec![(
+        loc,
+        format!(
+            "Invalid number literal. The given literal is too large to fit into the {}",
+            type_description
+        ),
+    )]
+}
+
 // Parse a value:
 //      Value =
 //          <Address>
@@ -503,7 +518,12 @@ fn parse_value(tokens: &mut Lexer<'_>) -> Result<Value, Error> {
             if s.ends_with("u8") {
                 s = &s[..s.len() - 2]
             }
-            let i = u8::from_str(s).unwrap();
+            let i = match u8::from_str(s) {
+                Ok(i) => i,
+                Err(_) => {
+                    return Err(num_too_big_error(tokens, "'u8' type"));
+                }
+            };
             tokens.advance()?;
             Value_::U8(i)
         }
@@ -512,7 +532,12 @@ fn parse_value(tokens: &mut Lexer<'_>) -> Result<Value, Error> {
             if s.ends_with("u64") {
                 s = &s[..s.len() - 3]
             }
-            let i = u64::from_str(s).unwrap();
+            let i = match u64::from_str(s) {
+                Ok(i) => i,
+                Err(_) => {
+                    return Err(num_too_big_error(tokens, "'u64' type"));
+                }
+            };
             tokens.advance()?;
             Value_::U64(i)
         }
@@ -521,7 +546,12 @@ fn parse_value(tokens: &mut Lexer<'_>) -> Result<Value, Error> {
             if s.ends_with("u128") {
                 s = &s[..s.len() - 4]
             }
-            let i = u128::from_str(s).unwrap();
+            let i = match u128::from_str(s) {
+                Ok(i) => i,
+                Err(_) => {
+                    return Err(num_too_big_error(tokens, "'u128' type"));
+                }
+            };
             tokens.advance()?;
             Value_::U128(i)
         }
@@ -535,17 +565,10 @@ fn parse_value(tokens: &mut Lexer<'_>) -> Result<Value, Error> {
 // Parse a num value:
 //    Num = <NumValue>
 fn parse_num(tokens: &mut Lexer) -> Result<u128, Error> {
-    let start_loc = tokens.start_loc();
     assert_eq!(tokens.peek(), Tok::NumValue);
     let res = match u128::from_str(tokens.content()) {
         Ok(i) => Ok(i),
-        Err(_) => {
-            let end_loc = start_loc + tokens.content().len();
-            let loc = make_loc(tokens.file_name(), start_loc, end_loc);
-            let msg = "Invalid number literal. The given literal is too large to fit into the \
-                       largest number type 'u128'";
-            Err(vec![(loc, msg.to_owned())])
-        }
+        Err(_) => Err(num_too_big_error(tokens, "largest number type 'u128'")),
     };
     tokens.advance()?;
     res

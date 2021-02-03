@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/number_literal_too_long_u8.move:4:2 ───
+   │
+ 4 │     256u8;
+   │     ^^^^^ Invalid number literal. The given literal is too large to fit into the 'u8' type
+   │
+
