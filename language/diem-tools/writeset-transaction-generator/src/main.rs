@@ -78,13 +78,16 @@ fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
         .map_err(|_| format_err!("Unable to write to path"))
 }
 
-fn stdlib_modules() -> Vec<CompiledModule> {
+fn stdlib_modules() -> Vec<(Vec<u8>, CompiledModule)> {
     // Need to filter out Genesis module similiar to what is done in vmgenesis to make sure Genesis
     // module isn't published on-chain.
-    stdlib(StdLibOptions::Compiled)
+    let (bytes_opt, modules) = stdlib(StdLibOptions::Compiled);
+    bytes_opt
+        .unwrap()
         .iter()
-        .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
-        .cloned()
+        .zip(modules)
+        .filter(|(_bytes, module)| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
+        .map(|(bytes, module)| (bytes.clone(), module.clone()))
         .collect()
 }
 

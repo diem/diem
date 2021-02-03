@@ -20,7 +20,7 @@ pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transactio
 /// Update WriteSet
 pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
     let mut write_set = WriteSetMut::new(vec![]);
-    let stdlib = compiled_stdlib::stdlib_modules(option);
+    let stdlib = compiled_stdlib::stdlib_modules(option).1;
     for module in stdlib {
         let mut bytes = vec![];
         module

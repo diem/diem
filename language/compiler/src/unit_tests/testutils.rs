@@ -146,5 +146,5 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    stdlib_modules(StdLibOptions::Compiled).to_vec()
+    stdlib_modules(StdLibOptions::Compiled).1.to_vec()
 }

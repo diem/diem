@@ -16,7 +16,6 @@ use std::{
     path::PathBuf,
     sync::Mutex,
 };
-use vm::CompiledModule;
 
 /// Checkin the release artifact to a local file to make sure the release process is reproducible
 #[derive(Clone, Serialize, Deserialize)]
@@ -67,7 +66,9 @@ pub fn load_artifact(chain_id: &ChainId) -> Result<ReleaseArtifact> {
 }
 
 /// Generate a unique hash for a list of modules
-pub fn hash_for_modules(modules: &[CompiledModule]) -> Result<HashValue> {
+pub fn hash_for_modules<'a>(
+    modules: impl IntoIterator<Item = (ModuleId, &'a Vec<u8>)>,
+) -> Result<HashValue> {
     #[derive(Serialize, Deserialize, CryptoHasher)]
     struct Stdlib {
         modules: BTreeMap<ModuleId, Vec<u8>>,
@@ -87,11 +88,8 @@ pub fn hash_for_modules(modules: &[CompiledModule]) -> Result<HashValue> {
     let mut stdlib = Stdlib {
         modules: BTreeMap::new(),
     };
-    for module in modules {
-        let id = module.self_id();
-        let mut bytes = vec![];
-        module.serialize(&mut bytes)?;
-        stdlib.modules.insert(id, bytes);
+    for (id, module_bytes) in modules {
+        stdlib.modules.insert(id, module_bytes.to_vec());
     }
     Ok(stdlib.hash())
 }

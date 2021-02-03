@@ -17,7 +17,13 @@ fn test_move_release_flow() {
     let validator_interface = JsonRpcDebuggerInterface::new(&url).unwrap();
 
     let chain_id = ChainId::test();
-    let old_modules = stdlib_modules(StdLibOptions::Compiled).to_vec();
+    let (old_modules_bytes, old_compiled_modules) = stdlib_modules(StdLibOptions::Compiled);
+    let old_modules = old_modules_bytes
+        .unwrap()
+        .iter()
+        .cloned()
+        .zip(old_compiled_modules.iter().cloned())
+        .collect::<Vec<_>>();
 
     let release_modules = release_modules();
 
@@ -55,7 +61,7 @@ fn test_move_release_flow() {
             .collect::<BTreeMap<_, _>>(),
         release_modules
             .iter()
-            .map(|m| (m.self_id(), m))
+            .map(|(_, m)| (m.self_id(), m))
             .collect::<BTreeMap<_, _>>(),
     );
 
@@ -97,7 +103,7 @@ fn test_move_release_flow() {
             .collect::<BTreeMap<_, _>>(),
         old_modules
             .iter()
-            .map(|m| (m.self_id(), m))
+            .map(|(_, m)| (m.self_id(), m))
             .collect::<BTreeMap<_, _>>(),
     );
 }

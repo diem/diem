@@ -727,15 +727,26 @@ pub fn eval<TComp: Compiler>(
             FakeExecutor::from_fresh_genesis()
         }
     } else {
+        let stdlib_modules = stdlib_modules(if compiler.use_compiled_genesis() {
+            StdLibOptions::Compiled
+        } else {
+            StdLibOptions::Fresh
+        });
+        let module_bytes = match stdlib_modules {
+            (Some(bytes), _) => bytes.to_vec(),
+            (None, modules) => modules
+                .iter()
+                .map(|m| {
+                    let mut bytes = vec![];
+                    m.serialize(&mut bytes).unwrap();
+                    bytes
+                })
+                .collect(),
+        };
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            stdlib_modules(if compiler.use_compiled_genesis() {
-                StdLibOptions::Compiled
-            } else {
-                StdLibOptions::Fresh
-            })
-            .to_vec(),
+            &module_bytes,
             Some(config.validator_accounts),
             VMPublishingOption::open(),
         )

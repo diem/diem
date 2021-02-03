@@ -758,7 +758,7 @@ pub fn test_open_publishing() {
     );
 }
 
-fn bad_module() -> CompiledModule {
+fn bad_module() -> (CompiledModule, Vec<u8>) {
     let bad_module_code = "
     module Test {
         resource R1 { b: bool }
@@ -776,12 +776,18 @@ fn bad_module() -> CompiledModule {
     let compiler = Compiler {
         ..Compiler::default()
     };
-    compiler
+    let module = compiler
         .into_compiled_module("file_name", bad_module_code)
-        .expect("Failed to compile")
+        .expect("Failed to compile");
+    let mut bytes = vec![];
+    module.serialize(&mut bytes).unwrap();
+    (module, bytes)
 }
 
-fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> CompiledModule {
+fn good_module_uses_bad(
+    address: AccountAddress,
+    bad_dep: CompiledModule,
+) -> (CompiledModule, Vec<u8>) {
     let good_module_code = "
     module Test2 {
         import 0x1.Test;
@@ -801,9 +807,12 @@ fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> Com
         extra_deps: vec![bad_dep],
         ..Compiler::default()
     };
-    compiler
+    let module = compiler
         .into_compiled_module("file_name", good_module_code)
-        .expect("Failed to compile")
+        .expect("Failed to compile");
+    let mut bytes = vec![];
+    module.serialize(&mut bytes).unwrap();
+    (module, bytes)
 }
 
 #[test]
@@ -812,8 +821,8 @@ fn test_script_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let module = bad_module();
-    executor.add_module(&module.self_id(), &module);
+    let (module, bytes) = bad_module();
+    executor.add_module(&module.self_id(), bytes);
 
     // Create a module that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -863,16 +872,14 @@ fn test_module_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
     let good_module = {
-        let m = good_module_uses_bad(*sender.address(), bad_module);
-        let mut serialized_module = Vec::<u8>::new();
-        m.serialize(&mut serialized_module).unwrap();
+        let (_, serialized_module) = good_module_uses_bad(*sender.address(), bad_module);
         diem_types::transaction::Module::new(serialized_module)
     };
 
@@ -901,8 +908,8 @@ fn test_type_tag_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let module = bad_module();
-    executor.add_module(&module.self_id(), &module);
+    let (module, bytes) = bad_module();
+    executor.add_module(&module.self_id(), bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -957,12 +964,13 @@ fn test_script_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -1011,12 +1019,13 @@ fn test_module_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -1069,12 +1078,13 @@ fn test_type_tag_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);

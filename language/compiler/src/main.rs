@@ -130,7 +130,7 @@ fn main() {
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules(StdLibOptions::Compiled).to_vec()
+            stdlib_modules(StdLibOptions::Compiled).1.to_vec()
         }
     };
 
