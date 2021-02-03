@@ -23,8 +23,8 @@ diem-global-constants = { path = "../../config/global-constants", version = "0.1
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
 diem-client = { path = "../../sdk/client", features = ["blocking"], default-features = false }
-diem-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
+diem-secure-push-metrics = { path = "../push-metrics", version = "0.1.0" }
+diem-secure-storage = { path = "../storage", version = "0.1.0" }
 diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
@@ -40,7 +40,7 @@ executor-test-helpers = { path = "../../execution/executor-test-helpers", versio
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
 diem-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+diem-secure-storage = { path = "../storage", version = "0.1.0", features = ["testing"] }
 diem-time-service = { path = "../../common/time-service", version = "0.1.0", features = ["testing"] }
 diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
 diemdb = { path = "../../storage/diemdb", version = "0.1.0" }

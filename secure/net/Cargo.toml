@@ -15,7 +15,7 @@ serde = { version = "1.0.123", features = ["rc"], default-features = false }
 thiserror = "1.0.23"
 
 diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
+diem-secure-push-metrics = { path = "../push-metrics", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
