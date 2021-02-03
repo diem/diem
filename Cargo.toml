@@ -13,6 +13,7 @@ members = [
     "common/datatest-stable",
     "common/debug-interface",
     "common/diemdoc",
+    "common/fallible",
     "common/infallible",
     "common/logger",
     "common/logger/derive",

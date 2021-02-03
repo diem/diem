@@ -1017,6 +1017,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
+ "fallible",
  "futures 0.3.12",
  "itertools 0.10.0",
  "mirai-annotations",
@@ -2065,6 +2066,7 @@ dependencies = [
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
+ "fallible",
  "hex",
  "serde",
  "serde_json",
@@ -2288,6 +2290,7 @@ dependencies = [
  "diem-network-address",
  "diem-proptest-helpers",
  "diem-workspace-hack",
+ "fallible",
  "hex",
  "itertools 0.10.0",
  "mirai-annotations",
@@ -2930,6 +2933,14 @@ name = "fake-simd"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
+
+[[package]]
+name = "fallible"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+ "thiserror",
+]
 
 [[package]]
 name = "fiat-crypto"
@@ -4294,6 +4305,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "difference",
+ "fallible",
  "hex",
  "ir-to-bytecode",
  "move-core-types",

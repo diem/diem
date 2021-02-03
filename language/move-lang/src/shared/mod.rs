@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use fallible::copy_from_slice::copy_slice_to_vec;
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
@@ -118,7 +119,7 @@ impl TryFrom<&[u8]> for Address {
             Err(format!("The Address {:?} is of invalid length", bytes))
         } else {
             let mut addr = [0u8; ADDRESS_LENGTH];
-            addr.copy_from_slice(bytes);
+            copy_slice_to_vec(bytes, &mut addr).map_err(|e| format!("{}", e))?;
             Ok(Address(addr))
         }
     }

@@ -10,6 +10,7 @@ use diem_network_address::{
 };
 use diem_network_address_encryption::Encryptor;
 use diem_secure_storage::{InMemoryStorage, Storage};
+use fallible::copy_from_slice::copy_slice_to_vec;
 use std::{
     io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
@@ -105,19 +106,12 @@ pub struct CheckValidatorSetEndpoints {
 
 fn parse_hex(src: &str) -> Result<Key, Error> {
     let potential_err_msg = format!("Not a valid encryption key: {}", src);
-    let value_slice = match hex::decode(src.trim()) {
-        Ok(value_slice) => {
-            if value_slice.len() != KEY_LEN {
-                Err(Error::CommandArgumentError(potential_err_msg))
-            } else {
-                Ok(value_slice)
-            }
-        }
-        Err(_) => Err(Error::CommandArgumentError(potential_err_msg)),
-    }?;
+    let value_slice =
+        hex::decode(src.trim()).map_err(|_| Error::CommandArgumentError(potential_err_msg))?;
 
     let mut value = [0; KEY_LEN];
-    value.copy_from_slice(&value_slice);
+    copy_slice_to_vec(&value_slice, &mut value)
+        .map_err(|e| Error::CommandArgumentError(format!("{}", e)))?;
     Ok(value)
 }
 
