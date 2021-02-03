@@ -50,7 +50,7 @@ ripemd160 = "0.9.1"
 criterion = "0.3.3"
 sha3 = "0.9.1"
 serde_json = "1.0.61"
-trybuild = "1.0.39"
+trybuild = "1.0.40"
 
 [features]
 default = ["fiat"]
