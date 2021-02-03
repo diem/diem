@@ -13,6 +13,7 @@ use diem_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use diem_logger::{prelude::*, Logger};
 use diem_mempool::gen_mempool_reconfig_subscription;
 use diem_metrics::metric_server;
+use diem_time_service::TimeService;
 use diem_types::{
     account_config::diem_root_address, account_state::AccountState, chain_id::ChainId,
     move_resource::MoveStorage, PeerId,
@@ -330,7 +331,8 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (idx, (role, network_config)) in network_configs.into_iter().enumerate() {
         // Perform common instantiation steps
-        let mut network_builder = NetworkBuilder::create(chain_id, role, network_config);
+        let mut network_builder =
+            NetworkBuilder::create(chain_id, role, network_config, TimeService::real());
         let network_id = network_config.network_id.clone();
 
         // Create the endpoints to connect the Network to State Sync.

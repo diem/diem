@@ -13,6 +13,7 @@ use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_infallible::RwLock;
 use diem_metrics::IntCounterVec;
 use diem_network_address::NetworkAddress;
+use diem_time_service::TimeService;
 use diem_types::{chain_id::ChainId, PeerId};
 use futures::{executor::block_on, StreamExt};
 use netcore::transport::ConnectionOrigin;
@@ -149,6 +150,7 @@ pub fn setup_network() -> DummyNetwork {
         &seeds,
         trusted_peers,
         network_context,
+        TimeService::real(),
         listener_addr,
         authentication_mode,
     );
@@ -180,6 +182,7 @@ pub fn setup_network() -> DummyNetwork {
         &seeds,
         trusted_peers,
         network_context,
+        TimeService::real(),
         dialer_addr,
         authentication_mode,
     );

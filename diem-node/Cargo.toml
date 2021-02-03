@@ -32,6 +32,7 @@ diem-mempool = { path = "../mempool", version = "0.1.0" }
 diem-metrics = { path = "../common/metrics", version = "0.1.0" }
 diem-secure-storage = { path = "../secure/storage", version = "0.1.0" }
 diem-temppath = { path = "../common/temppath", version = "0.1.0" }
+diem-time-service = { path = "../common/time-service", version = "0.1.0" }
 diem-trace = { path = "../common/trace", version = "0.1.0" }
 diem-types = { path = "../types", version = "0.1.0" }
 diem-vm = { path = "../language/diem-vm", version = "0.1.0" }

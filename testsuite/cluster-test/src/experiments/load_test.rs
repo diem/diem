@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_logger::*;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
+use diem_time_service::TimeService;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
 use futures::{sink::SinkExt, StreamExt};
 use network::{
@@ -265,8 +266,12 @@ impl StubbedNode {
             .unwrap();
         assert_eq!(network_config.network_id, NetworkId::Public);
 
-        let mut network_builder =
-            NetworkBuilder::create(ChainId::test(), pfn_config.base.role, network_config);
+        let mut network_builder = NetworkBuilder::create(
+            ChainId::test(),
+            pfn_config.base.role,
+            network_config,
+            TimeService::real(),
+        );
 
         let state_sync_handle = Some(
             network_builder.add_protocol_handler(state_sync::network::network_endpoint_config()),

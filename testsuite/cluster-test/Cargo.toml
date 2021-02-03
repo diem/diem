@@ -52,6 +52,7 @@ diem-node = { path = "../../diem-node", version = "0.1.0" }
 diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
 diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
 diem-swarm = { path = "../diem-swarm", version = "0.1.0" }
+diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
 diem-trace = {path = "../../common/trace", version = "0.1.0"}
 diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

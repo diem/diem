@@ -16,6 +16,7 @@ use diem_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     parse_memory, NetworkAddress, Protocol,
 };
+use diem_time_service::TimeService;
 use diem_types::{
     account_address::AccountAddress,
     account_config::xus_tag,
@@ -400,6 +401,7 @@ impl StateSyncEnvironment {
                 &seeds,
                 trusted_peers,
                 network_context,
+                TimeService::real(),
                 base_addr,
                 auth_mode,
             );

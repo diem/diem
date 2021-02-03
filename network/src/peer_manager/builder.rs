@@ -176,6 +176,7 @@ enum State {
 
 pub struct PeerManagerBuilder {
     network_context: Arc<NetworkContext>,
+    time_service: TimeService,
     transport_context: Option<TransportContext>,
     peer_manager_context: Option<PeerManagerContext>,
     // TODO(philiphayes): better support multiple listening addrs
@@ -196,6 +197,7 @@ impl PeerManagerBuilder {
     pub fn create(
         chain_id: ChainId,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         // TODO(philiphayes): better support multiple listening addrs
         listen_address: NetworkAddress,
         trusted_peers: Arc<RwLock<PeerSet>>,
@@ -220,6 +222,7 @@ impl PeerManagerBuilder {
 
         Self {
             network_context,
+            time_service,
             transport_context: Some(TransportContext::new(
                 chain_id,
                 Vec::new(),
@@ -302,7 +305,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
-                        TimeService::real(),
+                        self.time_service.clone(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
@@ -319,7 +322,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         MemoryTransport,
                         self.network_context.clone(),
-                        TimeService::real(),
+                        self.time_service.clone(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
@@ -367,7 +370,7 @@ impl PeerManagerBuilder {
         );
         let peer_mgr = PeerManager::new(
             executor.clone(),
-            TimeService::real(),
+            self.time_service.clone(),
             transport,
             self.network_context.clone(),
             // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`

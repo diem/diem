@@ -62,6 +62,7 @@ enum State {
 pub struct NetworkBuilder {
     state: State,
     executor: Option<Handle>,
+    time_service: TimeService,
     network_context: Arc<NetworkContext>,
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
@@ -80,6 +81,7 @@ impl NetworkBuilder {
         chain_id: ChainId,
         trusted_peers: Arc<RwLock<PeerSet>>,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
         max_frame_size: usize,
@@ -95,6 +97,7 @@ impl NetworkBuilder {
         let peer_manager_builder = PeerManagerBuilder::create(
             chain_id,
             network_context.clone(),
+            time_service.clone(),
             listen_address,
             trusted_peers,
             authentication_mode,
@@ -110,6 +113,7 @@ impl NetworkBuilder {
         NetworkBuilder {
             state: State::CREATED,
             executor: None,
+            time_service,
             network_context,
             configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
@@ -124,6 +128,7 @@ impl NetworkBuilder {
         seeds: &PeerSet,
         trusted_peers: Arc<RwLock<PeerSet>>,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
     ) -> NetworkBuilder {
@@ -131,6 +136,7 @@ impl NetworkBuilder {
             chain_id,
             trusted_peers.clone(),
             network_context,
+            time_service,
             listen_address,
             authentication_mode,
             MAX_FRAME_SIZE,
@@ -156,7 +162,12 @@ impl NetworkBuilder {
     }
 
     /// Create a new NetworkBuilder based on the provided configuration.
-    pub fn create(chain_id: ChainId, role: RoleType, config: &NetworkConfig) -> NetworkBuilder {
+    pub fn create(
+        chain_id: ChainId,
+        role: RoleType,
+        config: &NetworkConfig,
+        time_service: TimeService,
+    ) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
         let pubkey = identity_key.public_key();
@@ -179,6 +190,7 @@ impl NetworkBuilder {
             chain_id,
             trusted_peers.clone(),
             network_context,
+            time_service,
             config.listen_address.clone(),
             authentication_mode,
             config.max_frame_size,
@@ -351,7 +363,7 @@ impl NetworkBuilder {
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
-            TimeService::real(),
+            self.time_service.clone(),
             trusted_peers,
             seeds,
             connectivity_check_interval_ms,
@@ -435,7 +447,7 @@ impl NetworkBuilder {
 
         self.health_checker_builder = Some(HealthCheckerBuilder::create(
             self.network_context(),
-            TimeService::real(),
+            self.time_service.clone(),
             ping_interval_ms,
             ping_timeout_ms,
             ping_failures_tolerated,
