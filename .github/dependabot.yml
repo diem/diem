@@ -43,7 +43,7 @@ updates:
       - "dependencies"
 
   - package-ecosystem: "docker"
-    directory: "/docker/ci/circleci"
+    directory: "/docker/ci/github"
     schedule:
       interval: "daily"
     labels:
