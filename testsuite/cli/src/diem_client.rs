@@ -106,7 +106,7 @@ impl DiemClient {
         timeout: Duration,
     ) -> Result<views::TransactionView, WaitForTransactionError> {
         self.client
-            .wait_for_transaction(txn, Some(timeout), None)
+            .wait_for_signed_transaction(txn, Some(timeout), None)
             .map(Response::into_inner)
     }
 

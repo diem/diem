@@ -1,6 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// Allow dead_code so that we don't have to individually enable/disable parts when the 'async' or
+// 'blocking' feature are enabled
+#![allow(dead_code)]
+
 use diem_json_rpc_types::errors::JsonRpcError;
 
 pub type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -118,16 +122,17 @@ impl Error {
         )
     }
 
-    #[cfg(feature = "async")]
-    pub(crate) fn from_reqwest_error(e: reqwest::Error) -> Self {
-        if e.is_timeout() {
-            Self::timeout(e)
-        } else if e.is_request() {
-            Self::request(e)
-        } else if e.is_decode() {
-            Self::decode(e)
-        } else {
-            Self::unknown(e)
+    cfg_async! {
+        pub(crate) fn from_reqwest_error(e: reqwest::Error) -> Self {
+            if e.is_timeout() {
+                Self::timeout(e)
+            } else if e.is_request() {
+                Self::request(e)
+            } else if e.is_decode() {
+                Self::decode(e)
+            } else {
+                Self::unknown(e)
+            }
         }
     }
 }
