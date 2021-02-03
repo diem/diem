@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use bytecode_verifier::{dependencies, verify_module};
+use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
 use sha2::{Digest, Sha256};
@@ -13,7 +13,7 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-use vm::CompiledModule;
+use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub mod utils;
 
@@ -160,6 +160,19 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
             }
             CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
         }
+    }
+    let modules_by_id: BTreeMap<_, _> = modules
+        .values()
+        .map(|module| (module.self_id(), module))
+        .collect();
+    for module in modules_by_id.values() {
+        cyclic_dependencies::verify_module(module, |module_id| {
+            Ok(modules_by_id
+                .get(module_id)
+                .expect("missing module in stdlib")
+                .immediate_module_dependencies())
+        })
+        .expect("stdlib module has cyclic dependencies");
     }
     modules
 }

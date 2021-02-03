@@ -5,12 +5,12 @@
 
 pub mod transaction_scripts;
 
-use bytecode_verifier::{dependencies, verify_module};
+use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
 use stdlib::build_stdlib;
-use vm::file_format::CompiledModule;
+use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";
 
@@ -57,6 +57,19 @@ static COMPILED_MOVELANG_STDLIB_WITH_BYTES: Lazy<(Vec<Vec<u8>>, Vec<CompiledModu
                 .expect("stdlib module dependency failed to verify");
             module_bytes.push(bytes);
             verified_modules.push(module);
+        }
+        let modules_by_id: BTreeMap<_, _> = verified_modules
+            .iter()
+            .map(|module| (module.self_id(), module))
+            .collect();
+        for module in modules_by_id.values() {
+            cyclic_dependencies::verify_module(module, |module_id| {
+                Ok(modules_by_id
+                    .get(module_id)
+                    .expect("missing module in stdlib")
+                    .immediate_module_dependencies())
+            })
+            .expect("stdlib module has cyclic dependencies");
         }
         (module_bytes, verified_modules)
     });
