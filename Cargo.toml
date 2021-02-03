@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "client/diem-dev",
     "client/faucet",
     "client/json-rpc",
     "client/swiss-knife",
@@ -166,7 +165,6 @@ default-members = [
     "config/seed-peer-generator",
     "consensus/safety-rules",
     "client/faucet",
-    "client/diem-dev",
     "client/swiss-knife",
     "execution/db-bootstrapper",
     "execution/execution-correctness",

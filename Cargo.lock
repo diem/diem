@@ -1487,22 +1487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diem-dev"
-version = "0.1.0"
-dependencies = [
- "bcs",
- "bindgen",
- "diem-crypto",
- "diem-types",
- "diem-workspace-hack",
- "libc",
- "move-core-types",
- "rand 0.7.3",
- "static_assertions",
- "transaction-builder",
-]
-
-[[package]]
 name = "diem-documentation-tool"
 version = "0.1.0"
 dependencies = [
