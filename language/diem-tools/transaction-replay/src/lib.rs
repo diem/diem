@@ -123,7 +123,7 @@ impl DiemDebugger {
         save_write_set: bool,
     ) -> Result<TransactionOutput> {
         let state_view = DebuggerStateView::new(&*self.debugger, version + 1);
-        let mut vm = DiemVM::new(&state_view);
+        let vm = DiemVM::new(&state_view);
         let cache = diem_vm::data_cache::StateViewCache::new(&state_view);
         let log_context = NoContextLog::new();
         let mut txn_data = diem_vm::transaction_metadata::TransactionMetadata::default();
