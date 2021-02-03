@@ -4539,6 +4539,7 @@ dependencies = [
  "futures 0.3.12",
  "futures-util",
  "hex",
+ "maplit",
  "memsocket",
  "netcore",
  "network-builder",
