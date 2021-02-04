@@ -259,6 +259,23 @@ impl Context {
         self.is_current_module(m) && matches!(&self.current_function, Some(curf) if curf == f)
     }
 
+    fn is_in_script_context(&self) -> bool {
+        match (&self.current_module, &self.current_function) {
+            // in a constant
+            (_, None) => false,
+            // in a script function
+            (None, Some(_)) => true,
+            // in a module function
+            (Some(current_m), Some(current_f)) => {
+                let current_finfo = self.function_info(current_m, current_f);
+                match &current_finfo.visibility {
+                    FunctionVisibility::Public(_) | FunctionVisibility::Internal => false,
+                    FunctionVisibility::Script(_) => true,
+                }
+            }
+        }
+    }
+
     fn module_info(&self, m: &ModuleIdent) -> &ModuleInfo {
         self.modules
             .get(m)
@@ -289,7 +306,7 @@ impl Context {
         &self.struct_definition(m, n).type_parameters
     }
 
-    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
+    fn function_info(&self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
         self.module_info(m)
             .functions
             .get(n)
@@ -732,15 +749,28 @@ pub fn make_function_type(
     };
     let defined_loc = finfo.defined_loc;
     match &finfo.visibility {
-        FunctionVisibility::Internal if !in_current_module => {
-            let internal_msg = "This function is internal to its module. Only 'public' functions \
-                                can be called outside of their module";
-            context.error(vec![
-                (loc, format!("Invalid call to '{}::{}'", m, f)),
-                (defined_loc, internal_msg.into()),
-            ])
+        FunctionVisibility::Internal => {
+            if !in_current_module {
+                let internal_msg =
+                    "This function is internal to its module. \
+                    Only 'public' and 'public(script)' functions can be called outside of their module";
+                context.error(vec![
+                    (loc, format!("Invalid call to '{}::{}'", m, f)),
+                    (defined_loc, internal_msg.into()),
+                ])
+            }
         }
-        _ => (),
+        FunctionVisibility::Script(_) => {
+            if !context.is_in_script_context() {
+                let internal_msg = "This function can only be called from a script context, \
+                                i.e. a 'script' function or a 'public(script)' function";
+                context.error(vec![
+                    (loc, format!("Invalid call to '{}::{}'", m, f)),
+                    (defined_loc, internal_msg.into()),
+                ])
+            }
+        }
+        FunctionVisibility::Public(_) => (),
     };
     (defined_loc, ty_args, params, acquires, return_ty)
 }

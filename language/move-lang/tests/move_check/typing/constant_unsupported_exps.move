@@ -1,4 +1,10 @@
 address 0x42 {
+module X {
+    public fun f_public() {}
+    public(script) fun f_script() {}
+    fun f_private() {}
+}
+
 module M {
     resource struct R {}
     struct B { f: u64 }
@@ -11,7 +17,12 @@ module M {
         spec { };
         &x;
         &mut x;
-        foo();
+        f_public();
+        f_script();
+        f_private();
+        0x42::X::f_public();
+        0x42::X::f_script();
+        0x42::X::f_private();
         borrow_global<R>(0x42);
         borrow_global_mut<R>(0x42);
         move_to(s, R{});
@@ -33,6 +44,8 @@ module M {
         FLAG;
         0
     };
-    fun foo() {}
+    public fun f_public() {}
+    public(script) fun f_script() {}
+    fun f_private() {}
 }
 }

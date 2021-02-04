@@ -1,0 +1,55 @@
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_script_invalid.move:15:35 ───
+    │
+ 15 │     fun f_private_call_script() { X::f_script() }
+    │                                   ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_script'
+    ·
+  5 │     public(script) fun f_script() {}
+    │                        -------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_script_invalid.move:16:41 ───
+    │
+ 16 │     public fun f_public_call_script() { X::f_script() }
+    │                                         ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_script'
+    ·
+  5 │     public(script) fun f_script() {}
+    │                        -------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_script_invalid.move:20:40 ───
+    │
+ 20 │     fun f_private_call_self_script() { f_script_call_script() }
+    │                                        ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x2::M::f_script_call_script'
+    ·
+ 11 │     public(script) fun f_script_call_script() { X::f_script() }
+    │                        -------------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_script_invalid.move:21:46 ───
+    │
+ 21 │     public fun f_public_call_self_script() { f_script_call_script() }
+    │                                              ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x2::M::f_script_call_script'
+    ·
+ 11 │     public(script) fun f_script_call_script() { X::f_script() }
+    │                        -------------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_script_invalid.move:24:50 ───
+    │
+ 24 │     public(script) fun f_script_call_private() { X::f_private() }
+    │                                                  ^^^^^^^^^^^^^^ Invalid call to '0x2::X::f_private'
+    ·
+  4 │     fun f_private() {}
+    │         --------- This function is internal to its module. Only 'public' and 'public(script)' functions can be called outside of their module
+    │
+

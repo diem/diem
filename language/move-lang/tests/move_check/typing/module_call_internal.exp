@@ -6,6 +6,6 @@ error:
     │         ^^^^^^^^ Invalid call to '0x2::X::foo'
     ·
   4 │     fun foo() {}
-    │         --- This function is internal to its module. Only 'public' functions can be called outside of their module
+    │         --- This function is internal to its module. Only 'public' and 'public(script)' functions can be called outside of their module
     │
 
