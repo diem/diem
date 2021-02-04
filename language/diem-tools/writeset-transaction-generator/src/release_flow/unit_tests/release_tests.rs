@@ -244,7 +244,7 @@ fn release_test() {
     // 8. Swapping input order will not change result.
     {
         // New modules has test_0 .. test_7, test_9'
-        let mut new_modules = modules_and_bytes.clone();
+        let mut new_modules = modules_and_bytes;
         new_modules.pop();
         new_modules.pop();
         new_modules.push((replace_module_bytes.clone(), replace_module));

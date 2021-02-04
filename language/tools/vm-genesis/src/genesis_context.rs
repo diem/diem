@@ -21,9 +21,9 @@ impl GenesisStateView {
         }
     }
 
-    pub(crate) fn add_module(&mut self, module_id: &ModuleId, blob: &Vec<u8>) {
+    pub(crate) fn add_module(&mut self, module_id: &ModuleId, blob: &[u8]) {
         let access_path = AccessPath::from(module_id);
-        self.data.insert(access_path, blob.clone());
+        self.data.insert(access_path, blob.to_vec());
     }
 }
 
