@@ -5,7 +5,7 @@
 
 use std::{
     cell::RefCell,
-    collections::{BTreeSet, HashMap},
+    collections::{hash_map, BTreeSet, HashMap},
     rc::Rc,
 };
 
@@ -153,6 +153,8 @@ pub struct SpecTranslator<'env> {
     /// Set of items which have been already traced. This is used to avoid redundant tracing
     /// of expressions whose value has been already tracked.
     traced_items: RefCell<BTreeSet<TraceItem>>,
+    /// Local variables with a known translation.
+    assigned_local_vars: RefCell<HashMap<Symbol, Vec<String>>>,
 }
 
 /// A item which is traced for printing in diagnosis. The boolean indicates whether the item is
@@ -240,6 +242,7 @@ impl<'env> SpecTranslator<'env> {
             fresh_var_count: RefCell::new(0),
             type_args_opt: None,
             traced_items: Default::default(),
+            assigned_local_vars: RefCell::new(HashMap::new()),
         }
     }
 
@@ -264,6 +267,31 @@ impl<'env> SpecTranslator<'env> {
         *self.invariant_target.borrow_mut() = (target.to_string(), old_target.to_string());
         f();
         *self.invariant_target.borrow_mut() = ("".to_string(), "".to_string());
+    }
+
+    /// Assign some local variables to Boogie expressions.
+    fn with_local_assignments<F>(&self, assignments: &[(Symbol, String)], f: F)
+    where
+        F: Fn(),
+    {
+        {
+            let mut vars = self.assigned_local_vars.borrow_mut();
+            for (x, s) in assignments {
+                vars.entry(*x).or_insert(Vec::new()).push(s.to_string())
+            }
+        }
+        f();
+        {
+            let mut vars = self.assigned_local_vars.borrow_mut();
+            for (x, _) in assignments {
+                if let hash_map::Entry::Occupied(mut entry) = vars.entry(*x) {
+                    entry.get_mut().pop();
+                    if entry.get().is_empty() {
+                        entry.remove();
+                    }
+                }
+            }
+        }
     }
 
     /// Gets the current invariant target.
@@ -1872,6 +1900,12 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_local_var(&self, node_id: NodeId, name: Symbol) {
+        if let Some(values) = self.assigned_local_vars.borrow().get(&name) {
+            if let Some(value) = values.last() {
+                emit!(self.writer, value);
+                return;
+            }
+        }
         self.trace_value(
             node_id,
             TraceItem::Local(*self.in_old.borrow(), name),
@@ -2189,24 +2223,31 @@ impl<'env> SpecTranslator<'env> {
     ) {
         let loc = self.module_env().env.get_node_loc(node_id);
         // Translate range expressions.
-        let mut range_tmps = HashMap::new();
+        let mut vec_range_tmps = HashMap::new();
+        let mut prim_range_tmps = HashMap::new();
         for (var, range) in ranges {
             let quant_ty = self.module_env().env.get_node_type(range.node_id());
-            if matches!(
-                quant_ty.skip_reference(),
-                Type::Vector(..) | Type::Primitive(PrimitiveType::Range)
-            ) {
-                let var_name = self.module_env().symbol_pool().string(var.name);
-                let range_tmp = self.fresh_var_name("range");
-                emit!(self.writer, "(var {} := ", range_tmp);
-                self.translate_exp(&range);
-                emit!(self.writer, "; ");
-                range_tmps.insert(var_name, range_tmp);
+            match quant_ty.skip_reference() {
+                Type::Vector(..) => {
+                    let range_tmp = self.fresh_var_name("range");
+                    emit!(self.writer, "(var {} := ", range_tmp);
+                    self.translate_exp(&range);
+                    emit!(self.writer, "; ");
+                    vec_range_tmps.insert(var.name, range_tmp);
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    let range_tmp = self.fresh_var_name("range");
+                    emit!(self.writer, "(var {} := ", range_tmp);
+                    self.translate_exp(&range);
+                    emit!(self.writer, "; ");
+                    prim_range_tmps.insert(var.name, range_tmp);
+                }
+                Type::TypeDomain(_) => {}
+                _ => panic!("unexpected type"),
             }
         }
         // Translate quantified variables.
         emit!(self.writer, "$Boolean(({} ", kind);
-        let mut quant_vars = HashMap::new();
         let mut comma = "";
         for (var, range) in ranges {
             let var_name = self.module_env().symbol_pool().string(var.name);
@@ -2216,13 +2257,22 @@ impl<'env> SpecTranslator<'env> {
                     emit!(self.writer, "{}{}: $Value", comma, var_name);
                 }
                 _ => {
-                    let quant_var = self.fresh_var_name("i");
-                    emit!(self.writer, "{}{}: int", comma, quant_var);
-                    quant_vars.insert(var_name, quant_var);
+                    emit!(self.writer, "{}{}: int", comma, var_name);
                 }
             }
             comma = ", ";
         }
+        // Prepare remapping of range variables.
+        let mut subst = Vec::new();
+        for (var, tmp) in &vec_range_tmps {
+            let var_name = self.module_env().symbol_pool().string(*var);
+            subst.push((*var, format!("$select_vector({}, {})", tmp, var_name)));
+        }
+        for var in prim_range_tmps.keys() {
+            let var_name = self.module_env().symbol_pool().string(*var);
+            subst.push((*var, format!("$Integer({})", var_name)));
+        }
+        // Separator
         emit!(self.writer, " :: ");
         // Translate range constraints.
         let connective = match kind {
@@ -2258,25 +2308,23 @@ impl<'env> SpecTranslator<'env> {
                     }
                 }
                 Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = vec_range_tmps.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InVectorRange({}, {})",
                         separator,
                         range_tmp,
-                        quant_var,
+                        var_name,
                     );
                 }
                 Type::Primitive(PrimitiveType::Range) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = prim_range_tmps.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InRange({}, {})",
                         separator,
                         range_tmp,
-                        quant_var,
+                        var_name,
                     );
                 }
                 _ => panic!("unexpected type"),
@@ -2284,48 +2332,22 @@ impl<'env> SpecTranslator<'env> {
             separator = connective;
         }
         emit!(self.writer, "{}", connective);
-        // Translate range selectors.
-        for (var, range) in ranges {
-            let var_name = self.module_env().symbol_pool().string(var.name);
-            let quant_ty = self.module_env().env.get_node_type(range.node_id());
-            match quant_ty.skip_reference() {
-                Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
-                    emit!(
-                        self.writer,
-                        "(var {} := $select_vector({}, {}); ",
-                        var_name,
-                        range_tmp,
-                        quant_var,
-                    );
-                }
-                Type::Primitive(PrimitiveType::Range) => {
-                    let quant_var = quant_vars.get(&var_name).unwrap();
-                    emit!(
-                        self.writer,
-                        "(var {} := $Integer({}); ",
-                        var_name,
-                        quant_var
-                    );
-                }
-                _ => (),
+        // Translate body and "where" condition using remapping of range variables.
+        self.with_local_assignments(&subst, || {
+            if let Some(cond) = condition {
+                emit!(self.writer, "b#$Boolean(");
+                self.translate_exp(cond);
+                emit!(self.writer, ") {}", connective);
             }
-        }
-        // Translate body and "where" condition.
-        if let Some(cond) = condition {
             emit!(self.writer, "b#$Boolean(");
-            self.translate_exp(cond);
-            emit!(self.writer, ") {}", connective);
-        }
-        emit!(self.writer, "b#$Boolean(");
-        self.translate_exp(body);
-        emit!(
-            self.writer,
-            &std::iter::repeat(")")
-                .take(3 + 2 * range_tmps.len())
-                .collect::<String>()
-        );
+            self.translate_exp(body);
+            emit!(
+                self.writer,
+                &std::iter::repeat(")")
+                    .take(3 + vec_range_tmps.len() + prim_range_tmps.len())
+                    .collect::<String>()
+            );
+        });
     }
 
     fn translate_old(&self, args: &[Exp]) {
