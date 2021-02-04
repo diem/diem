@@ -8,7 +8,7 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-determinator = "0.1.0"
+determinator = "0.2.0"
 guppy = "0.6.3"
 indoc = "1.0.3"
 hex = "0.4.2"
