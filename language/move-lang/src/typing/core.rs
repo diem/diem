@@ -751,22 +751,28 @@ pub fn make_function_type(
     match &finfo.visibility {
         FunctionVisibility::Internal => {
             if !in_current_module {
-                let internal_msg =
+                let internal_msg = format!(
                     "This function is internal to its module. \
-                    Only 'public' and 'public(script)' functions can be called outside of their module";
+                    Only '{}' and '{}' functions can be called outside of their module",
+                    FunctionVisibility::PUBLIC,
+                    FunctionVisibility::SCRIPT
+                );
                 context.error(vec![
                     (loc, format!("Invalid call to '{}::{}'", m, f)),
-                    (defined_loc, internal_msg.into()),
+                    (defined_loc, internal_msg),
                 ])
             }
         }
         FunctionVisibility::Script(_) => {
             if !context.is_in_script_context() {
-                let internal_msg = "This function can only be called from a script context, \
-                                i.e. a 'script' function or a 'public(script)' function";
+                let internal_msg = format!(
+                    "This function can only be called from a script context, \
+                                i.e. a 'script' function or a '{}' function",
+                    FunctionVisibility::SCRIPT
+                );
                 context.error(vec![
                     (loc, format!("Invalid call to '{}::{}'", m, f)),
-                    (defined_loc, internal_msg.into()),
+                    (defined_loc, internal_msg),
                 ])
             }
         }

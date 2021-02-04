@@ -307,8 +307,9 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     match &function.visibility {
         FunctionVisibility::Public(loc) | FunctionVisibility::Script(loc) => {
             let msg = format!(
-                "Extraneous '{}' modifier. Script functions are always public(script)",
-                function.visibility
+                "Extraneous '{}' modifier. Script functions are always '{}'",
+                function.visibility,
+                FunctionVisibility::SCRIPT,
             );
             context.error(vec![(*loc, msg)]);
         }

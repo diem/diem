@@ -734,6 +734,12 @@ impl BinOp_ {
     }
 }
 
+impl FunctionVisibility {
+    pub const PUBLIC: &'static str = "public";
+    pub const SCRIPT: &'static str = "public(script)";
+    pub const INTERNAL: &'static str = "";
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
@@ -768,11 +774,15 @@ impl fmt::Display for BinOp_ {
 
 impl fmt::Display for FunctionVisibility {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        match &self {
-            FunctionVisibility::Public(_) => write!(f, "public"),
-            FunctionVisibility::Script(_) => write!(f, "public(script)"),
-            FunctionVisibility::Internal => write!(f, ""),
-        }
+        write!(
+            f,
+            "{}",
+            match &self {
+                FunctionVisibility::Public(_) => FunctionVisibility::PUBLIC,
+                FunctionVisibility::Script(_) => FunctionVisibility::SCRIPT,
+                FunctionVisibility::Internal => FunctionVisibility::INTERNAL,
+            }
+        )
     }
 }
 

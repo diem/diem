@@ -336,9 +336,13 @@ fn parse_function_visibility<'input>(
             None => FunctionVisibility::Public(loc),
             Some(Tok::Script) => FunctionVisibility::Script(loc),
             _ => {
-                let msg = "Invalid visibility modifier. \
-                Consider removing it or using one of `public` or `public(script)`";
-                return Err(vec![(loc, msg.to_owned())]);
+                let msg = format!(
+                    "Invalid visibility modifier. \
+                    Consider removing it or using one of '{}' or '{}'",
+                    FunctionVisibility::PUBLIC,
+                    FunctionVisibility::SCRIPT
+                );
+                return Err(vec![(loc, msg)]);
             }
         }
     } else {
