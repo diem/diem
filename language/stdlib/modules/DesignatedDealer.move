@@ -130,7 +130,9 @@ module DesignatedDealer {
         Roles::assert_treasury_compliance(tc_account);
         let dd_addr = Signer::address_of(dd);
         assert(exists_at(dd_addr), Errors::not_published(EDEALER));
-        Diem::publish_preburn_to_account<CoinType>(dd, tc_account);
+        // stop doing for now DDs
+        // Diem::publish_preburn_to_account<CoinType>(dd, tc_account);
+        // publish ConcurrentResource instead.
         assert(!exists<TierInfo<CoinType>>(dd_addr), Errors::already_published(EDEALER));
         move_to(dd, TierInfo<CoinType> {
             window_start: DiemTimestamp::now_microseconds(),

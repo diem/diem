@@ -48,8 +48,8 @@ use 0x1::DiemAccount;
 /// * `Script::burn`
 /// * `Script::preburn`
 
-fun cancel_burn<Token>(account: &signer, preburn_address: address) {
-    DiemAccount::cancel_burn<Token>(account, preburn_address)
+fun cancel_burn<Token>(account: &signer, preburn_address: address, amount: u64) {
+    DiemAccount::cancel_burn<Token>(account, preburn_address, amount)
 }
 
 spec fun cancel_burn {

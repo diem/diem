@@ -53,9 +53,9 @@ use 0x1::SlidingNonce;
 /// * `Script::cancel_burn`
 /// * `Script::preburn`
 
-fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) {
+fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-    Diem::burn<Token>(account, preburn_address)
+    Diem::burn<Token>(account, preburn_address, amount)
 }
 spec fun burn {
     use 0x1::Errors;

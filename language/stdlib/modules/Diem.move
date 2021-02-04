@@ -158,6 +158,7 @@ module Diem {
         invariant 0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR;
     }
 
+
     /// A holding area where funds that will subsequently be burned wait while their underlying
     /// assets are moved off-chain.
     /// This resource can only be created by the holder of a `BurnCapability`. An account that
@@ -169,6 +170,10 @@ module Diem {
         /// A single pending burn amount.
         /// There is no pending burn request if the value in `to_burn` is 0
         to_burn: Diem<CoinType>,
+    }
+
+    resource struct ConcurrentPreburns<CoinType> {
+        inflight_burns: vector<Preburn<CoinType>>,
     }
 
     /// Maximum u64 value.
@@ -275,12 +280,14 @@ module Diem {
     /// published `BurnCapability` for the `CoinType` published under it.
     public fun burn<CoinType>(
         account: &signer,
-        preburn_address: address
+        preburn_address: address,
+        amount: u64
     ) acquires BurnCapability, CurrencyInfo, Preburn {
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         burn_with_capability(
             preburn_address,
+            amount,
             borrow_global<BurnCapability<CoinType>>(addr)
         )
     }
@@ -316,12 +323,14 @@ module Diem {
     /// outstanding in the `Preburn` resource under `preburn_address`.
     public fun cancel_burn<CoinType>(
         account: &signer,
-        preburn_address: address
+        preburn_address: address,
+        amount: u64
     ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, Preburn {
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         cancel_burn_with_capability(
             preburn_address,
+            amount,
             borrow_global<BurnCapability<CoinType>>(addr)
         )
     }
@@ -406,9 +415,15 @@ module Diem {
         preburn_address: address,
     ) acquires CurrencyInfo {
         let coin_value = value(&coin);
-        // Throw if already occupied
-        assert(value(&preburn.to_burn) == 0, Errors::invalid_state(EPREBURN_OCCUPIED));
+        // Throw if preburn nflight full
+        // get concurrent_preburns resource
+        let concurrent_preburns = &mut blah blah from preburn_address;
+        assert(len(inflight < 256));
+        // put the coin resource in there first
         deposit(&mut preburn.to_burn, coin);
+        // then append to inflight queue
+        (Vector::push_back(concurrent_preburns, preburn));
+
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         assert(MAX_U64 - info.preburn_value >= coin_value, Errors::limit_exceeded(ECOIN));
@@ -451,7 +466,7 @@ module Diem {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Treasury Compliance specific methods for DDs
+    // Treasury Compliance account specific methods
     ///////////////////////////////////////////////////////////////////////////
 
     /// Create a `Preburn<CoinType>` resource
@@ -470,6 +485,9 @@ module Diem {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
     }
+    ///////////////////////////////////////////////////////////////////////////
+    // Treasury Compliance specific methods for DDs
+    ///////////////////////////////////////////////////////////////////////////
 
     /// Publishes a `Preburn` resource under `account`. This function is
     /// used for bootstrapping the designated dealer at account-creation
@@ -500,6 +518,35 @@ module Diem {
 
     }
 
+
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Upgrade to Concurrent Preburns for DDs
+    ///////////////////////////////////////////////////////////////////////////
+
+    // when dd tries to preburn
+    public fun remove_preburn_singleton_resource_if_exists<CoinType>(account: &signer) acquires Preburn<CoinType> {
+        let sender = Signer::address_of(account);
+        if (exists<Preburn<CoinType>>(sender)) {
+            let Preburn<CoinType> {} = move_from<Preburn<CoinType>>(sender);
+        }
+    }
+
+    // when DD tries to preburn ideally but actually need tc signer..to create preburn thing
+    public fun create_concurrent_preburn_resource<CoinType>(
+        account: &signer,
+    ) acquires CurrencyInfo {
+        Roles::assert_designated_dealer(account);
+        assert(!is_synthetic_currency<CoinType>(), Errors::invalid_argument(EIS_SYNTHETIC_CURRENCY));
+        if (!exists<Preburn<CoinType>>(Signer::address_of(account)))
+            move_to(dd, ConcurrentPreburns<CoinType> {
+                inflight_burns: Vector::empty(),
+            });
+    }
+
+
     ///////////////////////////////////////////////////////////////////////////
 
     /// Sends `coin` to the preburn queue for `account`, where it will wait to either be burned
@@ -509,10 +556,24 @@ module Diem {
     public fun preburn_to<CoinType>(
         account: &signer,
         coin: Diem<CoinType>
-    ) acquires CurrencyInfo, Preburn {
+    ) acquires CurrencyInfo, Preburn, ConcurrentPreburns { // how will this work
         Roles::assert_designated_dealer(account);
         let sender = Signer::address_of(account);
-        assert(exists<Preburn<CoinType>>(sender), Errors::not_published(EPREBURN));
+        // assert(exists<Preburn<CoinType>>(sender), Errors::not_published(EPREBURN));
+
+        // LOGIC HERE? all existing DDs will have Preburn. New DDs will not have it
+        // exists<Preburn>...(if this doesn't ONLY check at top level, then we can break flow on if the Concurrent Resource exists...that's probably better.)
+
+        // if !exists<ConcurrentResource<CoinType>>(sender) {...}
+        if (exists<Preburn<CoinType>>(sender)) { // for existing DDs, remove old and create new resource at the top level
+            remove_preburn_singleton_resource_if_exists(account)
+            create_concurrent_preburn_resource(account)
+        }
+        // irrespective of old or new DD, now you can preburn
+        // after creating one
+        // create a Preburn Resource to add (but not at the top level)
+        // TODO how to do that?
+        move_to(account, create_preburn<CoinType>(tc_account))
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
     }
     spec fun preburn_to {
@@ -540,13 +601,15 @@ module Diem {
     /// `CoinType` is empty.
     public fun burn_with_capability<CoinType>(
         preburn_address: address,
+        amount: u64,
         capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo, Preburn {
         // destroy the coin in the preburn to_burn area
         assert(exists<Preburn<CoinType>>(preburn_address), Errors::not_published(EPREBURN));
         burn_with_resource_cap(
-            borrow_global_mut<Preburn<CoinType>>(preburn_address),
+            borrow_global_mut<ConcurrentPreburns<CoinType>>(preburn_address),
             preburn_address,
+            amount,
             capability
         )
     }
@@ -556,6 +619,16 @@ module Diem {
         include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
+
+    // resource struct ConcurrentPreburns<CoinType> {
+    //     inflight_burns: vector<Preburn<CoinType>>,
+    // }
+    // resource struct Preburn<CoinType> {
+    //     /// A single pending burn amount.
+    //     /// There is no pending burn request if the value in `to_burn` is 0
+    //     to_burn: Diem<CoinType>,
+    // }
+
     /// Permanently removes the coins held in the `Preburn` resource (in `to_burn` field)
     /// stored at `preburn_address` and updates the market cap accordingly.
     /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
@@ -563,29 +636,49 @@ module Diem {
     /// resource under `preburn_address`, or, if the preburn `to_burn` area for
     /// `CoinType` is empty (error code 7).
     fun burn_with_resource_cap<CoinType>(
-        preburn: &mut Preburn<CoinType>,
+        concurrent_preburns: &mut ConcurrentPreburns<CoinType>,
         preburn_address: address,
+        amount_to_burn: u64,
         _capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo {
         let currency_code = currency_code<CoinType>();
-        // Abort if no coin present in preburn area
-        assert(preburn.to_burn.value > 0, Errors::invalid_state(EPREBURN_EMPTY));
-        // destroy the coin in Preburn area
-        let Diem { value } = withdraw_all<CoinType>(&mut preburn.to_burn);
-        // update the market cap
         assert_is_currency<CoinType>();
+
+        // Abort if no coin present in preburn queue
+
+        assert(len(concurrent_preburns.inflight_burns.value) == 0, Errors::invalid_state(EPREBURN_EMPTY));
+
+        let number_preburns_inflight = Vector::length(concurrent_preburns.inflight_burns);
+        let preburn_index = 0;
+
+        while (preburn_index < number_preburns_inflight) {
+            let burn = *Vector::borrow(concurrent_preburns.inflight_burns, preburn_index);
+            let burn_amount = burn.to_burn.amount;
+            if burn_amount == amount {
+                let to_burn = Vector::remove<Preburn<CoinType>>(concurrent_preburns.inflight_burns, index);
+                // destroy the coin
+                let Diem { _value } = withdraw_all<CoinType>(&mut to_burn.to_burn);
+                break
+            }
+            preburn_index = preburn_index + 1;
+            if preburn_index == number_preburns_inflight - 1 {
+                return Errors::invalid_state(E_ NO MATCHING PREBURN AMOUNT));
+            }
+        };
+
+        // update the market cap
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        assert(info.total_value >= (value as u128), Errors::limit_exceeded(ECURRENCY_INFO));
-        info.total_value = info.total_value - (value as u128);
-        assert(info.preburn_value >= value, Errors::limit_exceeded(EPREBURN));
-        info.preburn_value = info.preburn_value - value;
+        assert(info.total_value >= (amount_to_burn as u128), Errors::limit_exceeded(ECURRENCY_INFO));
+        info.total_value = info.total_value - (amount_to_burn as u128);
+        assert(info.preburn_value >= amount_to_burn, Errors::limit_exceeded(EPREBURN));
+        info.preburn_value = info.preburn_value - amount_to_burn;
         // don't emit burn events for synthetic currenices as this does not
         // change the total value of fiat currencies held on-chain.
         if (!info.is_synthetic) {
             Event::emit_event(
                 &mut info.burn_events,
                 BurnEvent {
-                    amount: value,
+                    amount: amount_to_burn,
                     currency_code,
                     preburn_address,
                 }
@@ -622,16 +715,34 @@ module Diem {
     /// at `preburn_address` does not contain a pending burn request.
     public fun cancel_burn_with_capability<CoinType>(
         preburn_address: address,
+        amount: u64,
         _capability: &BurnCapability<CoinType>
     ): Diem<CoinType> acquires CurrencyInfo, Preburn {
-        // destroy the coin in the preburn area
-        assert(exists<Preburn<CoinType>>(preburn_address), Errors::not_published(EPREBURN));
-        let preburn = borrow_global_mut<Preburn<CoinType>>(preburn_address);
-        let coin = withdraw_all<CoinType>(&mut preburn.to_burn);
+        // destroy the coin in the preburn queue with amount
+        assert(exists<ConcurrentPreburns<CoinType>>(preburn_address), Errors::not_published(E_CONCURRENTPREBURNS));
+        let concurrent_preburns = borrow_global_mut<ConcurrentPreburns<CoinType>>(preburn_address);
+        // Abort if no coin present in preburn queue
+
+        assert(len(concurrent_preburns.inflight_burns.value) == 0, Errors::invalid_state(EPREBURN_EMPTY));
+
+        let number_preburns_inflight = Vector::length(concurrent_preburns.inflight_burns);
+        let preburn_index = 0;
+
+        while (preburn_index < number_preburns_inflight) {
+            let cur_burn = *Vector::borrow(concurrent_preburns.inflight_burns, preburn_index);
+            if cur_burn.to_burn.amount == amount {
+                let to_cancel = Vector::remove<Preburn<CoinType>>(concurrent_preburns.inflight_burns, index);
+                let coin = withdraw_all<CoinType>(&mut preburn.to_burn);
+                break
+            }
+            preburn_index = preburn_index + 1;
+            if preburn_index == number_preburns_inflight - 1 {
+                return Errors::invalid_state(E_ NO MATCHING PREBURN AMOUNT));
+            }
+        };
         // update the market cap
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let amount = value(&coin);
         assert(info.preburn_value >= amount, Errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - amount;
         // Don't emit cancel burn events for synthetic currencies. cancel_burn
@@ -646,7 +757,7 @@ module Diem {
                 }
             );
         };
-
+        // can we bring out of the while loop scope?
         coin
     }
 
@@ -682,8 +793,13 @@ module Diem {
         capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo {
         assert(coin.value > 0, Errors::invalid_argument(ECOIN));
-        preburn_with_resource(coin, preburn, preburn_address);
-        burn_with_resource_cap(preburn, preburn_address, capability);
+        // this interface changes.
+        // few ways of doing this. Maybe most simple is to keep old preburn and burn functions just for TxnFee?
+        // otherwise.. could use a ConcurrentResource there..and preburn (add to queue) same function and then have a new
+        // burn function which burns everything inflight....maybe this will be useful in the future for something else?
+
+        // preburn_with_resource(coin, preburn, preburn_address);
+        // burn_with_resource_cap(preburn, preburn_address, capability);
     }
     spec fun burn_now {
         include BurnNowAbortsIf<CoinType>;

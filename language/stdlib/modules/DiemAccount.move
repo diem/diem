@@ -440,8 +440,9 @@ module DiemAccount {
     public fun cancel_burn<Token>(
         account: &signer,
         preburn_address: address,
+        amount: u64
     ) acquires DiemAccount, Balance, AccountOperationsCapability {
-        let coin = Diem::cancel_burn<Token>(account, preburn_address);
+        let coin = Diem::cancel_burn<Token>(account, preburn_address, amount);
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
