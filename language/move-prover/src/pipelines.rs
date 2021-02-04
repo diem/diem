@@ -14,8 +14,7 @@ use bytecode::{
 
 /// Allows client to decide between one of two pipelines for ease of benchmarking
 pub fn pipelines(experimental_pipeline: bool) -> Vec<Box<dyn FunctionTargetProcessor + 'static>> {
-    println!("option is {}", experimental_pipeline);
-    let vec: Vec<Box<dyn FunctionTargetProcessor + 'static>> = if experimental_pipeline == false {
+    let vec: Vec<Box<dyn FunctionTargetProcessor + 'static>> = if !experimental_pipeline {
         vec![
             EliminateImmRefsProcessor::new(),
             EliminateMutRefsProcessor::new(),
