@@ -438,16 +438,6 @@ transaction can only be sent from the Diem Root account.
 Script documentation: `update_diem_version`
 
 
----
-#### Script add_to_script_allow_list
-
-Adds a script hash to the transaction allowlist. This transaction
-can only be sent by the Diem Root account. Scripts with this hash can be
-sent afterward the successful execution of this script.
-
-Script documentation: `add_to_script_allow_list`
-
-
 
 ---
 ## Transaction Scripts
@@ -535,8 +525,6 @@ Script documentation: `add_to_script_allow_list`
 ### System Administration
 
 > {{move-include update_diem_version}}
----
-> {{move-include add_to_script_allow_list}}
 
 ### Index
 

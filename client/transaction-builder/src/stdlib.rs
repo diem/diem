@@ -105,41 +105,6 @@ pub enum ScriptCall {
     AddRecoveryRotationCapability { recovery_address: AccountAddress },
 
     /// # Summary
-    /// Adds a script hash to the transaction allowlist. This transaction
-    /// can only be sent by the Diem Root account. Scripts with this hash can be
-    /// sent afterward the successful execution of this script.
-    ///
-    /// # Technical Description
-    ///
-    /// The sending account (`dr_account`) must be the Diem Root account. The script allow
-    /// list must not already hold the script `hash` being added. The `sliding_nonce` must be
-    /// a valid nonce for the Diem Root account. After this transaction has executed
-    /// successfully a reconfiguration will be initiated, and the on-chain config
-    /// `DiemTransactionPublishingOption::DiemTransactionPublishingOption`'s
-    /// `script_allow_list` field will contain the new script `hash` and transactions
-    /// with this `hash` can be successfully sent to the network.
-    ///
-    /// # Parameters
-    /// | Name            | Type         | Description                                                                                     |
-    /// | ------          | ------       | -------------                                                                                   |
-    /// | `dr_account`    | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-    /// | `hash`          | `vector<u8>` | The hash of the script to be added to the script allowlist.                                     |
-    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                                           | Description                                                                                |
-    /// | ----------------           | --------------                                                         | -------------                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                                         | A `SlidingNonce` resource is not published under `dr_account`.                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                                         | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                                         | The `sliding_nonce` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                                | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                                           | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                                                   | The sending account is not the Diem Root account.                                         |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EINVALID_SCRIPT_HASH`               | The script `hash` is an invalid length.                                                    |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT` | The on-chain allowlist already contains the script `hash`.                                 |
-    AddToScriptAllowList { hash: Bytes, sliding_nonce: u64 },
-
-    /// # Summary
     /// Adds a validator account to the validator set, and triggers a
     /// reconfiguration of the system to admit the account to the validator set for the system. This
     /// transaction can only be successfully called by the Diem Root account.
@@ -1470,10 +1435,6 @@ impl ScriptCall {
             AddRecoveryRotationCapability { recovery_address } => {
                 encode_add_recovery_rotation_capability_script(recovery_address)
             }
-            AddToScriptAllowList {
-                hash,
-                sliding_nonce,
-            } => encode_add_to_script_allow_list_script(hash, sliding_nonce),
             AddValidatorAndReconfigure {
                 sliding_nonce,
                 validator_name,
@@ -1782,50 +1743,6 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
         ADD_RECOVERY_ROTATION_CAPABILITY_CODE.to_vec(),
         vec![],
         vec![TransactionArgument::Address(recovery_address)],
-    )
-}
-
-/// # Summary
-/// Adds a script hash to the transaction allowlist. This transaction
-/// can only be sent by the Diem Root account. Scripts with this hash can be
-/// sent afterward the successful execution of this script.
-///
-/// # Technical Description
-///
-/// The sending account (`dr_account`) must be the Diem Root account. The script allow
-/// list must not already hold the script `hash` being added. The `sliding_nonce` must be
-/// a valid nonce for the Diem Root account. After this transaction has executed
-/// successfully a reconfiguration will be initiated, and the on-chain config
-/// `DiemTransactionPublishingOption::DiemTransactionPublishingOption`'s
-/// `script_allow_list` field will contain the new script `hash` and transactions
-/// with this `hash` can be successfully sent to the network.
-///
-/// # Parameters
-/// | Name            | Type         | Description                                                                                     |
-/// | ------          | ------       | -------------                                                                                   |
-/// | `dr_account`    | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-/// | `hash`          | `vector<u8>` | The hash of the script to be added to the script allowlist.                                     |
-/// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-///
-/// # Common Abort Conditions
-/// | Error Category             | Error Reason                                                           | Description                                                                                |
-/// | ----------------           | --------------                                                         | -------------                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                                         | A `SlidingNonce` resource is not published under `dr_account`.                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                                         | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                                         | The `sliding_nonce` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                                | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                                           | The sending account is not the Diem Root account.                                         |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                                                   | The sending account is not the Diem Root account.                                         |
-/// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EINVALID_SCRIPT_HASH`               | The script `hash` is an invalid length.                                                    |
-/// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT` | The on-chain allowlist already contains the script `hash`.                                 |
-pub fn encode_add_to_script_allow_list_script(hash: Vec<u8>, sliding_nonce: u64) -> Script {
-    Script::new(
-        ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
-        vec![],
-        vec![
-            TransactionArgument::U8Vector(hash),
-            TransactionArgument::U64(sliding_nonce),
-        ],
     )
 }
 
@@ -3434,13 +3351,6 @@ fn decode_add_recovery_rotation_capability_script(script: &Script) -> Option<Scr
     })
 }
 
-fn decode_add_to_script_allow_list_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::AddToScriptAllowList {
-        hash: decode_u8vector_argument(script.args().get(0)?.clone())?,
-        sliding_nonce: decode_u64_argument(script.args().get(1)?.clone())?,
-    })
-}
-
 fn decode_add_validator_and_reconfigure_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::AddValidatorAndReconfigure {
         sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
@@ -3701,10 +3611,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         Box::new(decode_add_recovery_rotation_capability_script),
     );
     map.insert(
-        ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
-        Box::new(decode_add_to_script_allow_list_script),
-    );
-    map.insert(
         ADD_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
         Box::new(decode_add_validator_and_reconfigure_script),
     );
@@ -3870,17 +3776,6 @@ const ADD_RECOVERY_ROTATION_CAPABILITY_CODE: &[u8] = &[
     108, 105, 116, 121, 23, 97, 100, 100, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97,
     112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 3,
     5, 11, 0, 17, 0, 10, 1, 17, 1, 2,
-];
-
-const ADD_TO_SCRIPT_ALLOW_LIST_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 16, 7, 30, 92, 8, 122, 16, 0, 0, 0,
-    1, 0, 2, 0, 1, 0, 1, 3, 2, 1, 0, 2, 6, 12, 10, 2, 0, 2, 6, 12, 3, 3, 6, 12, 10, 2, 3, 31, 68,
-    105, 101, 109, 84, 114, 97, 110, 115, 97, 99, 116, 105, 111, 110, 80, 117, 98, 108, 105, 115,
-    104, 105, 110, 103, 79, 112, 116, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111,
-    110, 99, 101, 24, 97, 100, 100, 95, 116, 111, 95, 115, 99, 114, 105, 112, 116, 95, 97, 108,
-    108, 111, 119, 95, 108, 105, 115, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99,
-    101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 3, 1, 7, 10, 0, 10, 2, 17, 1, 11, 0, 11, 1, 17, 0, 2,
 ];
 
 const ADD_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[

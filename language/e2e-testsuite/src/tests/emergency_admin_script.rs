@@ -1,11 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_crypto::HashValue;
 use diem_types::{
     account_config::diem_root_address,
     on_chain_config::new_epoch_event_key,
-    transaction::{Transaction, TransactionPayload, TransactionStatus},
+    transaction::{Transaction, TransactionStatus},
     vm_status::KeptVMStatus,
 };
 use diem_writeset_generator::{
@@ -235,11 +234,6 @@ fn halt_network() {
         .unwrap()
         .pop()
         .unwrap();
-
-    assert!(output
-        .events()
-        .iter()
-        .any(|event| *event.key() == new_epoch_event_key()));
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(KeptVMStatus::Executed)
@@ -248,28 +242,20 @@ fn halt_network() {
     executor.apply_write_set(output.write_set());
 
     let txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, 1);
-    let script_hash = match txn.payload() {
-        TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()).to_vec(),
-        _ => panic!("Unexpected types of transaction"),
-    };
     // Regular transactions like p2p are no longer allowed.
-    let output = executor.execute_transaction(txn.clone());
+    let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
         &TransactionStatus::Discard(StatusCode::UNKNOWN_SCRIPT)
     );
 
+    let auth_key = diem_root_account.auth_key();
     // DiemRoot can still send transaction
     executor.execute_and_apply(
         diem_root_account
             .transaction()
-            .script(encode_add_to_script_allow_list_script(script_hash, 0))
+            .script(encode_rotate_authentication_key_script(auth_key))
             .sequence_number(1)
             .sign(),
-    );
-    let output = executor.execute_transaction(txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use compiler::Compiler;
-use diem_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
+use diem_crypto::{ed25519::*, PrivateKey, Uniform};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address, xus_tag},
     account_state::AccountState,
@@ -20,8 +20,8 @@ use executor_test_helpers::{
 use executor_types::BlockExecutor;
 use std::convert::TryFrom;
 use transaction_builder::{
-    encode_add_to_script_allow_list_script, encode_block_prologue_script,
-    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
+    encode_block_prologue_script, encode_peer_to_peer_with_metadata_script,
+    encode_set_validator_config_and_reconfigure_script,
 };
 
 #[test]
@@ -408,175 +408,6 @@ fn test_change_publishing_option_to_custom() {
         .get_txn_by_account(validator_account, 1, current_version, false)
         .unwrap();
     verify_committed_txn_status(txn3.as_ref(), &block2[1]).unwrap();
-}
-
-#[test]
-fn test_extend_allowlist() {
-    let path = diem_temppath::TempPath::new();
-    path.create_as_dir().unwrap();
-    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
-    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
-    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
-
-    let (_, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
-    let parent_block_id = executor.committed_block_id();
-
-    let treasury_compliance_account = treasury_compliance_account_address();
-    let genesis_account = diem_root_address();
-
-    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
-    let validator_account = signer.author();
-    let validator_privkey = signer.private_key();
-    let validator_pubkey = validator_privkey.public_key();
-
-    // give the validator some money so they can send a tx
-    let txn1 = get_test_signed_transaction(
-        treasury_compliance_account,
-        /* sequence_number = */ 0,
-        genesis_key.clone(),
-        genesis_key.public_key(),
-        Some(encode_peer_to_peer_with_metadata_script(
-            xus_tag(),
-            validator_account,
-            1_000_000,
-            vec![],
-            vec![],
-        )),
-    );
-
-    let script1 = Script::new(vec![], vec![], vec![]);
-    let script2 = Script::new(vec![1], vec![], vec![]);
-
-    // Create a transaction that is not allowed with default publishing option and make sure it is
-    // rejected.
-    let txn2 = get_test_signed_transaction(
-        validator_account,
-        /* sequence_number = */ 0,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
-        Some(script1.clone()),
-    );
-
-    let txn3 = get_test_signed_transaction(
-        validator_account,
-        /* sequence_number = */ 0,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
-        Some(script2.clone()),
-    );
-
-    // Create a dummy block prologue transaction that will bump the timer.
-    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
-
-    // Add script1 to allowlist.
-    let txn5 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 1,
-        genesis_key.clone(),
-        genesis_key.public_key(),
-        Some(encode_add_to_script_allow_list_script(
-            HashValue::sha3_256_of(&[]).to_vec(),
-            0,
-        )),
-    );
-
-    let block1 = vec![txn1, txn2, txn3, txn4, txn5];
-    let block1_id = gen_block_id(1);
-    let output1 = executor
-        .execute_block((block1_id, block1.clone()), parent_block_id)
-        .unwrap();
-
-    assert!(
-        output1.has_reconfiguration(),
-        "StateComputeResult has a new validator set"
-    );
-
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
-    let (_, reconfig_events) = executor
-        .commit_blocks(vec![block1_id], ledger_info_with_sigs)
-        .unwrap();
-    assert!(
-        !reconfig_events.is_empty(),
-        "executor commit should return reconfig events for reconfiguration"
-    );
-
-    let (li, epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state = TrustedState::from(waypoint);
-    match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
-        Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
-        _ => panic!("unexpected state change"),
-    }
-    let current_version = li.ledger_info().version();
-    assert_eq!(current_version, 3);
-    // Transaction 1 is committed as it's in the allowlist
-    let t1 = db
-        .reader
-        .get_txn_by_account(treasury_compliance_account, 0, current_version, false)
-        .unwrap();
-    verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
-
-    // Transaction 2, 3 are rejected
-    let t2 = db
-        .reader
-        .get_txn_by_account(validator_account, 0, current_version, false)
-        .unwrap();
-    assert!(t2.is_none());
-
-    // Now that the PublishingOption is modified to allowlist with script1 allowed, we can resubmit
-    // the script again.
-
-    let txn2 = get_test_signed_transaction(
-        validator_account,
-        /* sequence_number = */ 0,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
-        Some(script1),
-    );
-
-    let txn3 = get_test_signed_transaction(
-        validator_account,
-        /* sequence_number = */ 1,
-        validator_privkey.clone(),
-        validator_pubkey,
-        Some(script2),
-    );
-
-    let block2_id = gen_block_id(2);
-    let block2 = vec![txn2, txn3];
-    let output2 = executor
-        .execute_block((block2_id, block2.clone()), executor.committed_block_id())
-        .unwrap();
-
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output2, block2_id, vec![&signer]);
-    let (_, reconfig_events) = executor
-        .commit_blocks(vec![block2_id], ledger_info_with_sigs)
-        .unwrap();
-    assert!(
-        reconfig_events.is_empty(),
-        "expect executor to reutrn no reconfig events"
-    );
-
-    let (li, epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(current_version).unwrap();
-    trusted_state
-        .verify_and_ratchet(&li, &epoch_change_proof)
-        .unwrap();
-    let current_version = li.ledger_info().version();
-    assert_eq!(current_version, 4);
-    // Transaction 2 is committed.
-    let t2 = db
-        .reader
-        .get_txn_by_account(validator_account, 0, current_version, false)
-        .unwrap();
-    verify_committed_txn_status(t2.as_ref(), &block2[0]).unwrap();
-
-    // Transaction 3 is NOT committed.
-    let t3 = db
-        .reader
-        .get_txn_by_account(validator_account, 1, current_version, false)
-        .unwrap();
-    assert!(t3.is_none());
 }
 
 #[test]

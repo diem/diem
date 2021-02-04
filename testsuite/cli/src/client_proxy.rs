@@ -593,35 +593,6 @@ impl ClientProxy {
         }
     }
 
-    /// Add a hash to the allowlist that could be executed by the network.
-    pub fn add_to_script_allow_list(
-        &mut self,
-        space_delim_strings: &[&str],
-        is_blocking: bool,
-    ) -> Result<()> {
-        ensure!(
-            space_delim_strings[0] == "add_to_script_allow_list" || space_delim_strings[0] == "a",
-            "inconsistent command '{}' for add_to_script_allow_list",
-            space_delim_strings[0]
-        );
-        ensure!(
-            space_delim_strings.len() == 2,
-            "Invalid number of arguments for adding hash to script whitelist"
-        );
-        match self.diem_root_account {
-            Some(_) => self.association_transaction_with_local_diem_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_add_to_script_allow_list_script(
-                        hex::decode(space_delim_strings[1])?,
-                        self.diem_root_account.as_ref().unwrap().sequence_number,
-                    ),
-                ),
-                is_blocking,
-            ),
-            None => unimplemented!(),
-        }
-    }
-
     /// Modify the stored DiemVersion on chain.
     pub fn change_diem_version(
         &mut self,

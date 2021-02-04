@@ -28,7 +28,6 @@ impl Command for DevCommand {
             Box::new(DevCommandGenWaypoint {}),
             Box::new(DevCommandChangeDiemVersion {}),
             Box::new(DevCommandEnableCustomScript {}),
-            Box::new(AddToScriptAllowList {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -142,33 +141,6 @@ impl Command for DevCommandEnableCustomScript {
             return;
         }
         match client.enable_custom_script(params, true) {
-            Ok(_) => println!("Successfully finished execution"),
-            Err(e) => println!("{}", e),
-        }
-    }
-}
-
-pub struct AddToScriptAllowList {}
-
-impl Command for AddToScriptAllowList {
-    fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["add_to_script_allow_list", "a"]
-    }
-
-    fn get_params_help(&self) -> &'static str {
-        "<hash>"
-    }
-
-    fn get_description(&self) -> &'static str {
-        "Add a script hash to the allow list. This enables script hash verification."
-    }
-
-    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() != 2 {
-            println!("Invalid number of arguments");
-            return;
-        }
-        match client.add_to_script_allow_list(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

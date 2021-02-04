@@ -5,7 +5,6 @@ use crate::{
     test_utils::{compare_balances, setup_swarm_and_client_proxy},
     workspace_builder,
 };
-use diem_crypto::HashValue;
 use diem_temppath::TempPath;
 use diem_types::account_address::AccountAddress;
 use std::{
@@ -13,69 +12,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-
-#[test]
-fn test_e2e_modify_publishing_option() {
-    let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
-    client.create_next_account(false).unwrap();
-
-    client
-        .mint_coins(&["mintb", "0", "10", "XUS"], true)
-        .unwrap();
-    assert!(compare_balances(
-        vec![(10.0, "XUS".to_string())],
-        client.get_balances(&["b", "0"]).unwrap(),
-    ));
-    let script_path = workspace_builder::workspace_root()
-        .join("testsuite/smoke-test/src/dev_modules/test_script.move");
-    let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir =
-        workspace_builder::workspace_root().join("language/diem-framework/modules");
-    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
-    let mut script_compiled_paths = client.compile_program(script_params).unwrap();
-    let script_compiled_path = if script_compiled_paths.len() != 1 {
-        panic!("compiler output has more than one file")
-    } else {
-        script_compiled_paths.pop().unwrap()
-    };
-
-    // Initially publishing option was set to CustomScript, this transaction should be executed.
-    client
-        .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
-        .unwrap();
-
-    // Make sure the transaction is executed by checking if the sequence is bumped to 1.
-    assert_eq!(
-        client
-            .get_sequence_number(&["sequence", "0", "true"])
-            .unwrap(),
-        1
-    );
-
-    let hash = hex::encode(&HashValue::random().to_vec());
-
-    client
-        .add_to_script_allow_list(&["add_to_script_allow_list", hash.as_str()], true)
-        .unwrap();
-
-    // Now that publishing option was changed to locked, this transaction will be rejected.
-    assert!(format!(
-        "{:?}",
-        client
-            .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
-            .unwrap_err()
-            .root_cause()
-    )
-    .contains("UNKNOWN_SCRIPT"));
-
-    assert_eq!(
-        client
-            .get_sequence_number(&["sequence", "0", "true"])
-            .unwrap(),
-        1
-    );
-}
 
 #[test]
 fn test_malformed_script() {

@@ -272,8 +272,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
 mod tests {
     use super::*;
     use channel::diem_channel::Receiver;
-    use compiled_stdlib::transaction_scripts::StdlibScript;
-    use diem_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
+    use diem_crypto::{ed25519::*, PrivateKey, Uniform};
     use diem_types::{
         account_address::AccountAddress,
         account_config::{diem_root_address, xus_tag},
@@ -281,7 +280,7 @@ mod tests {
         contract_event::ContractEvent,
         ledger_info::LedgerInfoWithSignatures,
         on_chain_config::{
-            OnChainConfig, OnChainConfigPayload, VMConfig, VMPublishingOption, ValidatorSet,
+            DiemVersion, OnChainConfig, OnChainConfigPayload, VMConfig, ValidatorSet,
         },
         transaction::{Transaction, WriteSetPayload},
     };
@@ -296,9 +295,8 @@ mod tests {
     use storage_interface::DbReaderWriter;
     use subscription_service::ReconfigSubscription;
     use transaction_builder::{
-        encode_add_to_script_allow_list_script, encode_block_prologue_script,
-        encode_peer_to_peer_with_metadata_script,
-        encode_set_validator_config_and_reconfigure_script,
+        encode_block_prologue_script, encode_peer_to_peer_with_metadata_script,
+        encode_set_validator_config_and_reconfigure_script, encode_update_diem_version_script,
     };
     use vm_genesis::Validator;
 
@@ -312,13 +310,13 @@ mod tests {
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer, and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer, and update the validator set
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the block
-        let block = vec![dummy_txn, allowlist_txn];
+        let block = vec![dummy_txn, reconfig_txn];
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
@@ -336,17 +334,17 @@ mod tests {
     #[test]
     fn test_pub_sub_drop_receiver() {
         let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![VMPublishingOption::CONFIG_ID], vec![]);
+            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer, and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn, allowlist_txn];
+        let block = vec![dummy_txn, reconfig_txn];
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Drop the reconfig receiver
@@ -362,23 +360,23 @@ mod tests {
     fn test_pub_sub_multiple_subscriptions() {
         let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
             "",
-            vec![ValidatorSet::CONFIG_ID, VMPublishingOption::CONFIG_ID],
+            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
             vec![],
         );
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer, and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Give the validator some money so it can send a rotation tx and rotate the validator's consensus key.
         let money_txn = create_transfer_to_validator_transaction(validator_account, 2);
         let rotation_txn = create_consensus_key_rotation_transaction(&validators[0], 0);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn, allowlist_txn, money_txn, rotation_txn];
+        let block = vec![dummy_txn, reconfig_txn, money_txn, rotation_txn];
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
@@ -396,7 +394,7 @@ mod tests {
     #[test]
     fn test_pub_sub_no_reconfig_events() {
         let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![VMPublishingOption::CONFIG_ID], vec![]);
+            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
         let (_, _, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
@@ -419,13 +417,13 @@ mod tests {
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer, and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn, allowlist_txn];
+        let block = vec![dummy_txn, reconfig_txn];
         let (reconfig_events, _) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Publish the on chain config updates
@@ -441,16 +439,16 @@ mod tests {
     }
 
     #[test]
-    fn test_pub_sub_vm_publishing_option() {
+    fn test_pub_sub_diem_version() {
         let (subscription, mut reconfig_receiver) =
-            ReconfigSubscription::subscribe_all("", vec![VMPublishingOption::CONFIG_ID], vec![]);
+            ReconfigSubscription::subscribe_all("", vec![DiemVersion::CONFIG_ID], vec![]);
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer, and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer, and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, vm_publishing_option) = create_new_allowlist_transaction(1);
+        let allowlist_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the reconfig block
         let block = vec![dummy_txn, allowlist_txn];
@@ -463,27 +461,27 @@ mod tests {
 
         // Verify the correct reconfig notification is sent
         let payload = reconfig_receiver.select_next_some().now_or_never().unwrap();
-        let received_config = payload.get::<VMPublishingOption>().unwrap();
-        assert_eq!(received_config, vm_publishing_option);
+        let received_config = payload.get::<DiemVersion>().unwrap();
+        assert_eq!(received_config, DiemVersion { major: 7 });
     }
 
     #[test]
     fn test_pub_sub_with_executor_proxy() {
         let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
             "",
-            vec![ValidatorSet::CONFIG_ID, VMPublishingOption::CONFIG_ID],
+            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
             vec![],
         );
         let (validators, mut block_executor, mut executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn_1 = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn_1.clone(), allowlist_txn.clone()];
+        let block = vec![dummy_txn_1.clone(), reconfig_txn.clone()];
         let (_, ledger_info_epoch_1) = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Give the validator some money so it can send a rotation tx, create another dummy prologue
@@ -498,7 +496,7 @@ mod tests {
 
         // Grab the first two executed transactions and verify responses
         let txns = executor_proxy.get_chunk(0, 2, 2).unwrap();
-        assert_eq!(txns.transactions, vec![dummy_txn_1, allowlist_txn]);
+        assert_eq!(txns.transactions, vec![dummy_txn_1, reconfig_txn]);
         assert!(executor_proxy
             .execute_chunk(txns, ledger_info_epoch_1.clone(), None)
             .is_ok());
@@ -536,19 +534,19 @@ mod tests {
     fn test_pub_sub_with_executor_sync_state() {
         let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe_all(
             "",
-            vec![ValidatorSet::CONFIG_ID, VMPublishingOption::CONFIG_ID],
+            vec![ValidatorSet::CONFIG_ID, DiemVersion::CONFIG_ID],
             vec![],
         );
         let (validators, mut block_executor, executor_proxy) =
             bootstrap_genesis_and_set_subscription(subscription, &mut reconfig_receiver);
 
-        // Create a dummy prologue transaction that will bump the timer and update the VMPublishingOption
+        // Create a dummy prologue transaction that will bump the timer and update the Diem version
         let validator_account = validators[0].owner_address;
         let dummy_txn = create_dummy_transaction(1, validator_account);
-        let (allowlist_txn, _) = create_new_allowlist_transaction(1);
+        let reconfig_txn = create_new_update_diem_version_transaction(1);
 
         // Execute and commit the reconfig block
-        let block = vec![dummy_txn, allowlist_txn];
+        let block = vec![dummy_txn, reconfig_txn];
         let _ = execute_and_commit_block(&mut block_executor, block, 1);
 
         // Verify executor proxy sync state
@@ -644,32 +642,18 @@ mod tests {
         ))
     }
 
-    /// Creates a transaction that updates the on chain allowlist.
-    fn create_new_allowlist_transaction(
-        sequencer_number: u64,
-    ) -> (Transaction, VMPublishingOption) {
-        // Add a new script to the allowlist
-        let new_allowlist = {
-            let mut existing_list = StdlibScript::allowlist();
-            existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
-            existing_list
-        };
-        let vm_publishing_option = VMPublishingOption::locked(new_allowlist);
-
-        // Create a transaction for the new allowlist
+    /// Creates a transaction that creates a reconfiguration event by changing the Diem version
+    fn create_new_update_diem_version_transaction(sequence_number: u64) -> Transaction {
         let genesis_key = vm_genesis::GENESIS_KEYPAIR.0.clone();
-        let txn = get_test_signed_transaction(
+        get_test_signed_transaction(
             diem_root_address(),
-            /* sequence_number = */ sequencer_number,
+            sequence_number,
             genesis_key.clone(),
             genesis_key.public_key(),
-            Some(encode_add_to_script_allow_list_script(
-                HashValue::sha3_256_of(&[]).to_vec(),
-                0,
+            Some(encode_update_diem_version_script(
+                0, 7, // version
             )),
-        );
-
-        (txn, vm_publishing_option)
+        )
     }
 
     /// Creates a transaction that sends funds to the specified validator account.

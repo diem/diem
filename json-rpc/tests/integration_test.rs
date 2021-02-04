@@ -3,7 +3,6 @@
 
 use serde_json::json;
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
 use diem_crypto::hash::CryptoHash;
 use diem_types::{
     access_path::AccessPath,
@@ -1048,22 +1047,6 @@ fn create_test_cases() -> Vec<Test> {
                 }
 
                 assert_eq!(events.len(),3);
-            },
-        },
-        Test {
-            name: "block metadata returns script_hash_allow_list",
-            run: |env: &mut testing::Env| {
-                let hash = StdlibScript::AddCurrencyToAccount.compiled_bytes().hash();
-                let txn = env.create_txn(
-                    &env.root,
-                    stdlib::encode_add_to_script_allow_list_script(hash.to_vec(), 0),
-                );
-                env.submit_and_wait(txn);
-
-                let resp = env.send("get_metadata", json!([]));
-                let metadata = resp.result.unwrap();
-                assert_eq!(metadata["script_hash_allow_list"], json!([hash.to_hex()]));
-                assert_eq!(metadata["module_publishing_allowed"], true);
             },
         },
         // no test after this one, as your scripts may not in allow list.

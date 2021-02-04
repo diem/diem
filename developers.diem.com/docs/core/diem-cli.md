@@ -247,13 +247,6 @@ Subcommands include:
       Usage:
           enable_custom_script|s
 
-`add_to_script_allow_list | a` &mdash; Add a script hash to the allow list. This enables script hash verification.
-
-      Usage:
-          add_to_script_allow_list|a <hash>
-      Arguments:
-          hash - Hash of the custom script to allow.
-
 ---
 
 **`info | i` &mdash; Print CLI config and client internal information.**
