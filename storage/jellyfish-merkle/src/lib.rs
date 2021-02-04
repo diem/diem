@@ -140,10 +140,7 @@ pub trait Value: Clone + CryptoHash + Serialize + DeserializeOwned {}
 /// `TestValue` defines the types of data that can be stored in a Jellyfish Merkle tree and used in
 /// tests.
 #[cfg(any(test, feature = "fuzzing"))]
-pub trait TestValue:
-    Value + Arbitrary + Clone + std::fmt::Debug + Eq + PartialEq + 'static
-{
-}
+pub trait TestValue: Value + Arbitrary + std::fmt::Debug + Eq + PartialEq + 'static {}
 
 // This crate still depends on types for a few things, therefore we implement `Value` and
 // `TestValue` for `AccountStateBlob` here. Ideally the module that defines the specific value like
