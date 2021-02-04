@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-rand = "0.7.3"
+rand = "0.8.2"
 num_cpus = "1.13.0"
 mirai-annotations = "1.10.1"
 structopt = "0.3.21"

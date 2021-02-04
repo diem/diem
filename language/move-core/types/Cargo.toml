@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 hex = "0.4.2"
-rand = "0.7.3"
+rand = "0.8.2"
 proptest = { version = "0.10.1", default-features = false, optional = true }
 mirai-annotations = "1.10.1"
 proptest-derive = { version = "0.2.0", default-features = false, optional = true }

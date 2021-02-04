@@ -24,4 +24,4 @@ memsocket = { path = "../../network/memsocket", version = "0.1.0" }
 netcore = { path = "../../network/netcore", version = "0.1.0", features = ["fuzzing", "testing"] }
 network = { path = "../../network", version = "0.1.0", features = ["testing", "fuzzing"] }
 network-builder = { path = "../../network/builder", version = "0.1.0"}
-rand = "0.7.3"
+rand = "0.8.2"

@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 once_cell = "1.4.1"
-rand = { version = "0.7.3", default-features = false }
+rand = { version = "0.8.2", default-features = false }
 proptest = { version = "0.10.1", optional = true }
 rand_core = "0.5.1"
 

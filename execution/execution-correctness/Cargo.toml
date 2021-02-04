@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-rand = { version = "0.7.3", default-features = false }
+rand = { version = "0.8.2", default-features = false }
 
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false }
 executor = { path = "../executor", version = "0.1.0" }

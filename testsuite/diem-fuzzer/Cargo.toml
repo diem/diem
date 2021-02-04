@@ -20,7 +20,7 @@ rusty-fork = { version = "0.3.0", default-features = false }
 serde_json = "1.0.61"
 sha-1 = { version = "0.9.3", default-features = false }
 structopt = "0.3.21"
-rand = "0.7.3"
+rand = "0.8.2"
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
 bcs = "0.1.2"

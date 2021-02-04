@@ -33,4 +33,4 @@ subscription-service = { path = "../../common/subscription-service", version = "
 diem-network-address = {path = "../../network/network-address", version = "0.1.0", features = ["fuzzing"]}
 diem-config = { path = "../../config", version = "0.1.0", features = ["testing"]}
 netcore = { path = "../netcore", version = "0.1.0", features = ["testing"] }
-rand = "0.7.3"
+rand = "0.8.2"

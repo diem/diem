@@ -14,7 +14,7 @@ anyhow = "1.0.38"
 byteorder = "1.4.2"
 indicatif = "0.15.0"
 itertools = { version = "0.10.0", default-features = false }
-rand = "0.7.3"
+rand = "0.8.2"
 structopt = "0.3.21"
 
 diemdb = { path = "../diemdb", version = "0.1.0" }

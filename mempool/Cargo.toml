@@ -35,7 +35,7 @@ diem-types = { path = "../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 mirai-annotations = "1.10.1"
 network = { path = "../network", version = "0.1.0" }
-rand = "0.7.3"
+rand = "0.8.2"
 netcore = { path = "../network/netcore", version = "0.1.0" }
 serde_json = "1.0.61"
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }

@@ -12,4 +12,4 @@ edition = "2018"
 [dependencies]
 hex = "0.4.2"
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-rand = "0.7.3"
+rand = "0.8.2"

@@ -18,7 +18,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 proptest = { version = "0.10.1", optional = true }
 
 [dev-dependencies]
-rand = "0.7.3"
+rand = "0.8.2"
 proptest = "0.10.1"
 
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }

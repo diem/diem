@@ -13,7 +13,7 @@ edition = "2018"
 base64 = "0.13.0"
 chrono = "0.4.19"
 enum_dispatch = "0.3.5"
-rand = "0.7.3"
+rand = "0.8.2"
 serde = { version = "1.0.123", features = ["rc"], default-features = false }
 serde_json = "1.0.61"
 thiserror = "1.0.23"
@@ -31,7 +31,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 [dev-dependencies]
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-rand = "0.7.3"
+rand = "0.8.2"
 
 [features]
 fuzzing = ["diem-crypto/fuzzing"]

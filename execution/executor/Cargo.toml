@@ -38,7 +38,7 @@ proptest = { version = "0.10.1", optional = true }
 
 [dev-dependencies]
 proptest = "0.10.1"
-rand = "0.7.3"
+rand = "0.8.2"
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 compiler = { path = "../../language/compiler", version = "0.1.0" }
