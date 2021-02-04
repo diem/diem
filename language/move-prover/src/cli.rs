@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
+use once_cell::sync::Lazy;
 
 use abigen::AbigenOptions;
 use boogie_backend::options::BoogieOptions;
@@ -79,6 +80,8 @@ pub struct Options {
     /// TODO: this currently create errors during deserialization, so skip them for this.
     #[serde(skip_serializing)]
     pub errmapgen: ErrmapOptions,
+    /// Whether to run experimental pipeline
+    pub experimental_pipeline: bool,
 }
 
 impl Default for Options {
@@ -99,9 +102,12 @@ impl Default for Options {
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
+            experimental_pipeline: false,
         }
     }
 }
+
+pub static DEFAULT_OPTIONS: Lazy<Options> = Lazy::new(Options::default);
 
 impl Options {
     /// Creates options from toml configuration source.
@@ -338,7 +344,12 @@ impl Options {
                 Arg::with_name("use-cvc4")
                     .long("use-cvc4")
                     .help("use cvc4 solver instead of z3")
-            )
+            ).arg(
+                Arg::with_name("experimental_pipeline")
+                    .long("experimental_pipeline")
+                    .short("e")
+                    .help("whether to run experimental pipeline")
+        )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -450,6 +461,9 @@ impl Options {
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
+        }
+        if matches.is_present("experimental_pipeline") {
+            options.experimental_pipeline = true;
         }
         if matches.is_present("timeout") {
             options.backend.vc_timeout = matches.value_of("timeout").unwrap().parse::<usize>()?;

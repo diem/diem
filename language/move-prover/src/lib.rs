@@ -12,19 +12,10 @@ use crate::{
 use abigen::Abigen;
 use anyhow::anyhow;
 use bytecode::{
-    borrow_analysis::BorrowAnalysisProcessor,
-    clean_and_optimize::CleanAndOptimizeProcessor,
     debug_instrumentation::DebugInstrumenter,
-    eliminate_imm_refs::EliminateImmRefsProcessor,
-    eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
-    livevar_analysis::LiveVarAnalysisProcessor,
-    memory_instrumentation::MemoryInstrumentationProcessor,
     packed_types_analysis::PackedTypesProcessor,
-    reaching_def_analysis::ReachingDefProcessor,
     spec_instrumentation::SpecInstrumenterProcessor,
-    usage_analysis::UsageProcessor,
-    verification_analysis::VerificationAnalysisProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
@@ -53,6 +44,7 @@ pub mod cli;
 mod prelude_template_helpers;
 mod prover_task_runner;
 mod spec_translator;
+mod pipelines;
 
 // =================================================================================================
 // Entry Point
@@ -297,33 +289,17 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 /// Function to create the transformation pipeline.
 fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
-
     // Add processors in order they are executed.
     if options.trans_v2 {
         res.add_processor(DebugInstrumenter::new());
-        res.add_processor(EliminateImmRefsProcessor::new());
-        res.add_processor(EliminateMutRefsProcessor::new());
-        res.add_processor(ReachingDefProcessor::new());
-        res.add_processor(LiveVarAnalysisProcessor::new());
-        res.add_processor(BorrowAnalysisProcessor::new());
-        res.add_processor(MemoryInstrumentationProcessor::new());
-        res.add_processor(CleanAndOptimizeProcessor::new());
-        res.add_processor(UsageProcessor::new());
-        res.add_processor(VerificationAnalysisProcessor::new());
+    }
+    pipelines::pipelines(options.experimental_pipeline).into_iter().for_each(|processor| res.add_processor(processor));
+    if options.trans_v2 {
         res.add_processor(SpecInstrumenterProcessor::new());
-    } else {
-        res.add_processor(EliminateImmRefsProcessor::new());
-        res.add_processor(EliminateMutRefsProcessor::new());
-        res.add_processor(ReachingDefProcessor::new());
-        res.add_processor(LiveVarAnalysisProcessor::new());
-        res.add_processor(BorrowAnalysisProcessor::new());
-        res.add_processor(MemoryInstrumentationProcessor::new());
-        res.add_processor(CleanAndOptimizeProcessor::new());
-        res.add_processor(UsageProcessor::new());
-        res.add_processor(VerificationAnalysisProcessor::new());
+    }
+    else {
         res.add_processor(PackedTypesProcessor::new());
     }
-
     res
 }
 
