@@ -146,7 +146,7 @@ impl NibblePath {
 
     /// Get the i-th bit.
     fn get_bit(&self, i: usize) -> bool {
-        assert!(i / 4 < self.num_nibbles);
+        assert!(i < self.num_nibbles * 4);
         let pos = i / 8;
         let bit = 7 - i % 8;
         ((self.bytes[pos] >> bit) & 1) != 0
