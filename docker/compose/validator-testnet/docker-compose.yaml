@@ -3,7 +3,7 @@
 # * JSON-RPC endpoint at http://127.0.0.1:8080.
 # * waypoint file at waypoint.txt in the same directory as this compose
 # * genesis.blob at genesis.blob in the same directory as this compose
-# * diem_root_key (mint.key) in the same directory as this compose
+# * mint.key (diem_root_key) in the same directory as this compose
 # * chain_id of 4 / TESTING
 #
 # Additional information:
@@ -19,7 +19,7 @@ services:
     validator:
         # Note this image currently does not support this, will update to the appropriate minimum
         # version shortly
-        image: libra/validator:master_f53da21f
+        image: libra/validator:devnet
         networks:
             shared:
                 ipv4_address: 172.16.1.3

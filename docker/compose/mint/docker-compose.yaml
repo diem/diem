@@ -7,12 +7,12 @@
 # * waypoint.txt
 #
 # Additional notes:
-# * Images can be found at https://hub.docker.com/r/diem/mint/tags, obtain the latest tag and
+# * Images can be found at https://hub.docker.com/r/diem/faucet/tags, obtain the latest tag and
 # update below.
 version: "3.8"
 services:
-    mint:
-        image: libra/mint:master_f53da21f
+    faucet:
+        image: libra/faucet:devnet
         environment:
             AC_HOST: "172.16.1.3"
             AC_PORT: "8080"
@@ -24,22 +24,16 @@ services:
             - type: bind
               source: ./mint.key
               target: /opt/diem/etc/mint.key
-            - type: bind
-              source: ./waypoint.txt
-              target: /opt/diem/etc/waypoint.txt
         command: [
-            "gunicorn",
-            "--bind",
-            "0.0.0.0:8000",
-            "--access-logfile",
-            "-",
-            "--error-logfile",
-            "-",
-            "--log-level",
-            "info",
-            "--pythonpath",
-            "/opt/diem/bin",
-            "server",
+            "/opt/diem/bin/diem-faucet",
+            "--address",
+            "0.0.0.0",
+            "--port",
+            "8000",
+            "--mint-key-file-path",
+            "/opt/diem/etc/mint.key",
+            "--server-url",
+            "${AC_HOST:-172.16.1.3}"
         ]
         ports:
             - "8000:8000"

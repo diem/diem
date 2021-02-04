@@ -16,14 +16,14 @@ To use these compositions:
 To build your own complete testnet:
 0. Review both **validator-testnet** and **mint** docker-compose.yaml and ensure the image points to the same tagged image.
 1. Start the **validator-testnet**:
-    1. Enter the **validator-testnet** diretory `cd validator-testnet`
+    1. Enter the **validator-testnet** directory `cd validator-testnet`
     2. Start the composition `docker-compose up -d`
     3. Confirm that waypoint.txt is not empty
     4. Return to the compose directory: `cd ..`
 2. Start **mint**:
     1. Enter the **mint** directory: `cd mint`
     2. Copy the testnet waypoint: `cp ../validator-testnet/waypoint.txt .`
-    3. Copy the testnet mint.key: `cp ../validator-testnet/diem_root_key mint.key`
+    3. Copy the testnet diem_root_key as the mint.key: `cp ../validator-testnet/diem_root_key mint.key`
     4. Start the composition `docker-compose up -d`
     5. Return to the compose directory: `cd ..`
 3. Enjoy your testnet:
