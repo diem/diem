@@ -20,7 +20,7 @@ pub enum ResponseLedgerInfo {
     ProgressiveLedgerInfo {
         // LedgerInfo that the corresponding GetChunkResponse is built relative to.
         target_li: LedgerInfoWithSignatures,
-        // The highest ledger info that we're aware of. This will be >= target_li.
+        // The highest ledger info that the sending node is aware of. This will be >= target_li.
         highest_li: Option<LedgerInfoWithSignatures>,
     },
     /// During the initial catchup upon startup the chunks carry LedgerInfo that is verified

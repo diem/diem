@@ -709,14 +709,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         // If the request's epoch is in the past, `target_li` will be set to the end-of-epoch LI for that epoch
         let target_li = self.choose_response_li(request.current_epoch, target_li)?;
-        // Only populate highest_li field if it is different from target_li
-        let highest_li = if target_li.ledger_info().version() < local_version
-            && target_li.ledger_info().epoch() == self.local_state.trusted_epoch()
-        {
-            Some(self.local_state.committed_ledger_info())
-        } else {
-            None
-        };
+
+        // Populate the highest_li version so that the receiver can know how far ahead we are.
+        let highest_li = Some(self.local_state.committed_ledger_info());
 
         self.deliver_chunk(
             peer,
@@ -1752,6 +1747,9 @@ mod tests {
 
         // TODO(joshlind): test the more complex error failures and chunk validation procedures
         // (e.g., empty chunk, invalid chunk, out of order chunk, unwanted chunk, unknown peer etc.)
+
+        // TODO(joshlind): verify that responses are sent correctly based on different requests
+        // (e.g., always send the highest we know about on progressive ledger infos)
     }
 
     fn create_test_transaction() -> Transaction {

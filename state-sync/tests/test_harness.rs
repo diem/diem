@@ -164,7 +164,10 @@ impl StateSyncPeer {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.client.as_ref().unwrap().get_state()).unwrap();
+            println!("State synced: {:?}, target: {:?}", state.synced_version(), target_version);
             if state.synced_version() == target_version {
+                println!("Highest version: {:?}", highest_li_version);
+                println!("Committed version: {:?}", state.committed_version());
                 return match highest_li_version {
                     None => true,
                     Some(highest_li_version) => highest_li_version == state.committed_version(),
