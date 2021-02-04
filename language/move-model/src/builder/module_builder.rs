@@ -2398,6 +2398,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         return false;
                     }
                 }
+                PA::FunctionVisibility::Script(..) => {
+                    // TODO: model script visibility properly
+                    unimplemented!("Script visibility not supported yet")
+                }
             }
         }
         let rex = Regex::new(&format!(

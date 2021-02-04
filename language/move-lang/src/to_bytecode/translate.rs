@@ -449,6 +449,7 @@ fn function(
 fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
     match v {
         FunctionVisibility::Public(_) => IR::FunctionVisibility::Public,
+        FunctionVisibility::Script(_) => IR::FunctionVisibility::Script,
         FunctionVisibility::Internal => IR::FunctionVisibility::Internal,
     }
 }

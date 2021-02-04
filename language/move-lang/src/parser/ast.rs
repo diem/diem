@@ -147,6 +147,7 @@ pub struct FunctionSignature {
 #[derive(PartialEq, Debug, Clone)]
 pub enum FunctionVisibility {
     Public(Loc),
+    Script(Loc),
     Internal,
 }
 
@@ -765,6 +766,16 @@ impl fmt::Display for BinOp_ {
     }
 }
 
+impl fmt::Display for FunctionVisibility {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        match &self {
+            FunctionVisibility::Public(_) => write!(f, "public"),
+            FunctionVisibility::Script(_) => write!(f, "public(script)"),
+            FunctionVisibility::Internal => write!(f, ""),
+        }
+    }
+}
+
 //**************************************************************************************************
 // Debug
 //**************************************************************************************************
@@ -1119,10 +1130,7 @@ impl AstDebug for Function {
 
 impl AstDebug for FunctionVisibility {
     fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            FunctionVisibility::Internal => (),
-            FunctionVisibility::Public(_) => w.write("public "),
-        }
+        w.write(&format!("{} ", self))
     }
 }
 

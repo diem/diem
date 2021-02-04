@@ -308,6 +308,46 @@ fn parse_module_access<'input, F: FnOnce() -> String>(
 }
 
 //**************************************************************************************************
+// Visibility
+//**************************************************************************************************
+
+// Parse a function visibility modifier:
+//      FunctionVisibility = ( "public" ( "(" "script" ")" )? )?
+fn parse_function_visibility<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<FunctionVisibility, Error> {
+    let visibility = if tokens.peek() == Tok::Public {
+        let start_loc = tokens.start_loc();
+        tokens.advance()?;
+        let sub_public_vis = if match_token(tokens, Tok::LParen)? {
+            let sub_token = tokens.peek();
+            tokens.advance()?;
+            if sub_token != Tok::RParen {
+                consume_token(tokens, Tok::RParen)?;
+            }
+            Some(sub_token)
+        } else {
+            None
+        };
+        let end_loc = tokens.previous_end_loc();
+        // this loc will cover the span of 'public' or 'public(...)' in entirety
+        let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+        match sub_public_vis {
+            None => FunctionVisibility::Public(loc),
+            Some(Tok::Script) => FunctionVisibility::Script(loc),
+            _ => {
+                let msg = "Invalid visibility modifier. \
+                Consider removing it or using one of `public` or `public(script)`";
+                return Err(vec![(loc, msg.to_owned())]);
+            }
+        }
+    } else {
+        FunctionVisibility::Internal
+    };
+    Ok(visibility)
+}
+
+//**************************************************************************************************
 // Fields and Bindings
 //**************************************************************************************************
 
@@ -1279,13 +1319,13 @@ fn parse_optional_type_parameters<'input>(
 //          <NativeFunctionDecl>
 //          | <MoveFunctionDecl>
 //      NativeFunctionDecl =
-//          <DocComments> "native" ( "public" )? "fun"
+//          <DocComments> "native" <FunctionVisibility> "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          ";"
 //      MoveFunctionDecl =
-//          <DocComments> ( "public" )? "fun"
+//          <DocComments> <FunctionVisibility> "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
@@ -1315,13 +1355,7 @@ fn parse_function_decl<'input>(
         None
     };
 
-    // (<Public>)?
-    let public_opt = consume_optional_token_with_loc(tokens, Tok::Public)?;
-    let visibility = if let Some(loc) = public_opt {
-        FunctionVisibility::Public(loc)
-    } else {
-        FunctionVisibility::Internal
-    };
+    let visibility = parse_function_visibility(tokens)?;
 
     // "fun" <FunctionDefName>
     consume_token(tokens, Tok::Fun)?;
@@ -2137,6 +2171,7 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
 //     SpecApplyPattern = <SpecApplyFragment>+ <OptionalTypeArgs>
 fn parse_spec_apply_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<SpecApplyPattern, Error> {
     let start_loc = tokens.start_loc();
+    // TODO: update the visibility parsing in the spec as well
     let public_opt = consume_optional_token_with_loc(tokens, Tok::Public)?;
     let visibility = if let Some(loc) = public_opt {
         Some(FunctionVisibility::Public(loc))

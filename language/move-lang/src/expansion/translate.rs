@@ -304,9 +304,15 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     }
 
     let (function_name, function) = function_(context, pfunction);
-    if let FunctionVisibility::Public(loc) = &function.visibility {
-        let msg = "Extraneous 'public' modifier. Script functions are always public";
-        context.error(vec![(*loc, msg)]);
+    match &function.visibility {
+        FunctionVisibility::Public(loc) | FunctionVisibility::Script(loc) => {
+            let msg = format!(
+                "Extraneous '{}' modifier. Script functions are always public(script)",
+                function.visibility
+            );
+            context.error(vec![(*loc, msg)]);
+        }
+        FunctionVisibility::Internal => (),
     }
     match &function.body {
         sp!(_, E::FunctionBody_::Defined(_)) => (),

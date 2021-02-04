@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/function_visibility_empty.move:2:5 ───
+   │
+ 2 │     public() fun f() {}
+   │     ^^^^^^^^ Invalid visibility modifier. Consider removing it or using one of `public` or `public(script)`
+   │
+
