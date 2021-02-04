@@ -10,6 +10,9 @@ fn test_nibble_path_fmt() {
     let nibble_path = NibblePath::new(vec![0x12, 0x34, 0x56]);
     assert_eq!(format!("{:?}", nibble_path), "123456");
 
+    let nibble_path = NibblePath::new(vec![0x12, 0x34, 0x50]);
+    assert_eq!(format!("{:?}", nibble_path), "123450");
+
     let nibble_path = NibblePath::new_odd(vec![0x12, 0x34, 0x50]);
     assert_eq!(format!("{:?}", nibble_path), "12345");
 }
@@ -17,6 +20,9 @@ fn test_nibble_path_fmt() {
 #[test]
 fn test_create_nibble_path_success() {
     let nibble_path = NibblePath::new(vec![0x12, 0x34, 0x56]);
+    assert_eq!(nibble_path.num_nibbles(), 6);
+
+    let nibble_path = NibblePath::new(vec![0x12, 0x34, 0x50]);
     assert_eq!(nibble_path.num_nibbles(), 6);
 
     let nibble_path = NibblePath::new_odd(vec![0x12, 0x34, 0x50]);
