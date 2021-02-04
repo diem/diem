@@ -30,17 +30,7 @@ pub fn pipelines(experimental_pipeline: bool) -> Vec<Box<dyn FunctionTargetProce
     }
     // Enter your pipeline here
     else {
-        vec![
-            EliminateImmRefsProcessor::new(),
-            EliminateMutRefsProcessor::new(),
-            ReachingDefProcessor::new(),
-            LiveVarAnalysisProcessor::new(),
-            BorrowAnalysisProcessor::new(),
-            MemoryInstrumentationProcessor::new(),
-            CleanAndOptimizeProcessor::new(),
-            UsageProcessor::new(),
-            VerificationAnalysisProcessor::new(),
-        ]
+        panic!("No experimental pipeline set");
     };
     vec
 }
