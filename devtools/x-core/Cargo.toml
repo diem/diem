@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 determinator = "0.1.0"
-guppy = "0.6.3"
+guppy = "0.7.0"
 indoc = "1.0.3"
 hex = "0.4.2"
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
