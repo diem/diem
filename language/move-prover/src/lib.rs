@@ -41,10 +41,10 @@ mod boogie_helpers;
 mod boogie_wrapper;
 mod bytecode_translator;
 pub mod cli;
+mod pipelines;
 mod prelude_template_helpers;
 mod prover_task_runner;
 mod spec_translator;
-mod pipelines;
 
 // =================================================================================================
 // Entry Point
@@ -293,11 +293,12 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     if options.trans_v2 {
         res.add_processor(DebugInstrumenter::new());
     }
-    pipelines::pipelines(options.experimental_pipeline).into_iter().for_each(|processor| res.add_processor(processor));
+    pipelines::pipelines(options.experimental_pipeline)
+        .into_iter()
+        .for_each(|processor| res.add_processor(processor));
     if options.trans_v2 {
         res.add_processor(SpecInstrumenterProcessor::new());
-    }
-    else {
+    } else {
         res.add_processor(PackedTypesProcessor::new());
     }
     res

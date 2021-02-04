@@ -10,11 +10,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use anyhow::anyhow;
 use clap::{App, Arg};
 use log::LevelFilter;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use once_cell::sync::Lazy;
 
 use abigen::AbigenOptions;
 use boogie_backend::options::BoogieOptions;
