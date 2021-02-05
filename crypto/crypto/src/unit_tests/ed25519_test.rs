@@ -279,12 +279,9 @@ proptest! {
     fn test_pub_key_deserialization(bits in any::<[u8; 32]>()){
         let pt_deser = curve25519_dalek::edwards::CompressedEdwardsY(bits).decompress();
         let pub_key = Ed25519PublicKey::try_from(&bits[..]);
-        let check = match (pt_deser, pub_key) {
-            (Some(_), Ok(_)) => true, // we agree with Dalek,
-            (Some(_), Err(CryptoMaterialError::SmallSubgroupError)) => true, // dalek does not detect pubkeys in a small subgroup,
-            (None, Err(CryptoMaterialError::DeserializationError)) => true, // we agree on point decompression failures,
-                _ => false
-        };
+        let check = matches!((pt_deser, pub_key), (Some(_), Ok(_))
+                 | (Some(_), Err(CryptoMaterialError::SmallSubgroupError))
+                 | (None, Err(CryptoMaterialError::DeserializationError)));
         prop_assert!(check);
     }
 
