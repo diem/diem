@@ -269,34 +269,32 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     .start_timer();
 
                 // Process chunk request
-                self.process_chunk_request(peer.clone(), *request.clone())
-                    .map(|ok| {
-                        counters::PROCESS_CHUNK_REQUEST_COUNT
-                            .with_label_values(&[
-                                &peer.raw_network_id().to_string(),
-                                &peer.peer_id().to_string(),
-                                counters::SUCCESS_LABEL,
-                            ])
-                            .inc();
-                        ok
-                    })
-                    .map_err(|error| {
-                        error!(
-                            LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Fail)
-                                .peer(&peer)
-                                .error(&error.clone().into())
-                                .local_li_version(self.local_state.committed_version())
-                                .chunk_request(*request)
-                        );
-                        counters::PROCESS_CHUNK_REQUEST_COUNT
-                            .with_label_values(&[
-                                &peer.raw_network_id().to_string(),
-                                &peer.peer_id().to_string(),
-                                counters::FAIL_LABEL,
-                            ])
-                            .inc();
-                        error
-                    })
+                let process_result = self.process_chunk_request(peer.clone(), *request.clone());
+                if let Err(ref error) = process_result {
+                    error!(
+                        LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Fail)
+                            .peer(&peer)
+                            .error(&error.clone().into())
+                            .local_li_version(self.local_state.committed_version())
+                            .chunk_request(*request)
+                    );
+                    counters::PROCESS_CHUNK_REQUEST_COUNT
+                        .with_label_values(&[
+                            &peer.raw_network_id().to_string(),
+                            &peer.peer_id().to_string(),
+                            counters::FAIL_LABEL,
+                        ])
+                        .inc();
+                } else {
+                    counters::PROCESS_CHUNK_REQUEST_COUNT
+                        .with_label_values(&[
+                            &peer.raw_network_id().to_string(),
+                            &peer.peer_id().to_string(),
+                            counters::SUCCESS_LABEL,
+                        ])
+                        .inc();
+                }
+                process_result
             }
             StateSyncMessage::GetChunkResponse(response) => {
                 // Time response handling
@@ -659,8 +657,12 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         });
         self.sync_state_with_local_storage()?;
 
-        // Verify the chunk request is valid before trying to process it.
-        self.verify_chunk_request_is_valid(&request)?;
+        // Verify the chunk request is valid before trying to process it. If it's invalid,
+        // penalize the peer's score.
+        if let Err(error) = self.verify_chunk_request_is_valid(&request) {
+            self.request_manager.process_invalid_chunk_request(&peer);
+            return Err(error);
+        }
 
         let result = match request.target.clone() {
             TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),

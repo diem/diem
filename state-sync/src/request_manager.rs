@@ -74,6 +74,7 @@ enum PeerScoreUpdateType {
     // that a peer would first timeout and would then be punished with ChunkVersionCannotBeApplied.
     ChunkVersionCannotBeApplied,
     InvalidChunk,
+    InvalidChunkRequest,
     TimeOut,
 }
 
@@ -180,7 +181,9 @@ impl RequestManager {
                     let new_score = peer_info.score * 0.8;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
-                PeerScoreUpdateType::TimeOut | PeerScoreUpdateType::EmptyChunk => {
+                PeerScoreUpdateType::TimeOut
+                | PeerScoreUpdateType::EmptyChunk
+                | PeerScoreUpdateType::InvalidChunkRequest => {
                     let new_score = peer_info.score * 0.95;
                     peer_info.score = new_score.max(MIN_SCORE);
                 }
@@ -352,6 +355,10 @@ impl RequestManager {
 
     pub fn process_invalid_chunk(&mut self, peer: &PeerNetworkId) {
         self.update_score(peer, PeerScoreUpdateType::InvalidChunk);
+    }
+
+    pub fn process_invalid_chunk_request(&mut self, peer: &PeerNetworkId) {
+        self.update_score(peer, PeerScoreUpdateType::InvalidChunkRequest);
     }
 
     pub fn process_success_response(&mut self, peer: &PeerNetworkId) {
@@ -680,6 +687,19 @@ mod tests {
         // Process multiple invalid chunk responses from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
             request_manager.process_invalid_chunk(&validators[0]);
+        }
+
+        // Verify validator 0 is chosen less often than the other validators
+        verify_validator_picked_least_often(&mut request_manager, &validators, 0);
+    }
+
+    #[test]
+    fn test_score_invalid_chunk_request() {
+        let (mut request_manager, validators) = generate_request_manager_and_validators(10, 4);
+
+        // Process multiple invalid chunk requests from validator 0
+        for _ in 0..NUM_CHUNKS_TO_PROCESS {
+            request_manager.process_invalid_chunk_request(&validators[0]);
         }
 
         // Verify validator 0 is chosen less often than the other validators
