@@ -82,7 +82,7 @@ fn test_db_restore() {
 
     // nuke db
     let (mut node0_config, _) = load_node_config(&env.validator_swarm, 0);
-    let genesis_waypoint = node0_config.base.waypoint.genesis_waypoint();
+    let genesis_waypoint = node0_config.base.genesis_waypoint();
     insert_waypoint(&mut node0_config, genesis_waypoint);
     save_node_config(&mut node0_config, &env.validator_swarm, 0);
     let db_dir = node0_config.storage.dir();

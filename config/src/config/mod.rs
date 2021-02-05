@@ -94,6 +94,7 @@ pub struct BaseConfig {
     data_dir: PathBuf,
     pub role: RoleType,
     pub waypoint: WaypointConfig,
+    //specific for validating the genesis transaction during full node bootstrap from genesis
     genesis_waypoint: Option<WaypointConfig>,
 }
 
@@ -102,7 +103,20 @@ impl BaseConfig {
         if let Some(genesis_waypoint) = &self.genesis_waypoint {
             genesis_waypoint.waypoint()
         } else {
-            self.waypoint.genesis_waypoint()
+            Self::resolve_genesis_waypoint(&self.waypoint)
+        }
+    }
+
+    fn resolve_genesis_waypoint(waypoint_config: &WaypointConfig) -> Waypoint {
+        match &waypoint_config {
+            WaypointConfig::FromStorage(backend) => {
+                let storage: Storage = backend.into();
+                storage
+                    .get::<Waypoint>(diem_global_constants::GENESIS_WAYPOINT)
+                    .expect("Unable to read waypoint")
+                    .value
+            }
+            _ => waypoint_config.waypoint(),
         }
     }
 }
@@ -158,19 +172,6 @@ impl WaypointConfig {
             WaypointConfig::None => None,
         };
         waypoint.expect("waypoint should be present")
-    }
-
-    pub fn genesis_waypoint(&self) -> Waypoint {
-        match &self {
-            WaypointConfig::FromStorage(backend) => {
-                let storage: Storage = backend.into();
-                storage
-                    .get::<Waypoint>(diem_global_constants::GENESIS_WAYPOINT)
-                    .expect("Unable to read waypoint")
-                    .value
-            }
-            _ => self.waypoint(),
-        }
     }
 }
 
