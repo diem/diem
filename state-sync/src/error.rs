@@ -16,6 +16,8 @@ pub enum Error {
     FullNodeSyncRequest,
     #[error("An integer overflow has occurred: {0}")]
     IntegerOverflow(String),
+    #[error("Received an invalid chunk request: {0}")]
+    InvalidChunkRequest(String),
     #[error("No peers are currently available!")]
     NoAvailablePeers,
     #[error("No transactions were committed, but received a commit notification!")]

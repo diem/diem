@@ -259,7 +259,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         let peer = PeerNetworkId(network_id, peer_id);
         match msg {
             StateSyncMessage::GetChunkRequest(request) => {
-                // Time message handling
+                // Time request handling
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
                         &peer.raw_network_id().to_string(),
@@ -269,31 +269,37 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     .start_timer();
 
                 // Process chunk request
-                let result_label = match self.process_chunk_request(peer.clone(), *request.clone())
-                {
-                    Ok(()) => counters::SUCCESS_LABEL,
-                    Err(error) => {
+                self.process_chunk_request(peer.clone(), *request.clone())
+                    .map(|ok| {
+                        counters::PROCESS_CHUNK_REQUEST_COUNT
+                            .with_label_values(&[
+                                &peer.raw_network_id().to_string(),
+                                &peer.peer_id().to_string(),
+                                counters::SUCCESS_LABEL,
+                            ])
+                            .inc();
+                        ok
+                    })
+                    .map_err(|error| {
                         error!(
                             LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Fail)
                                 .peer(&peer)
-                                .error(&error.into())
+                                .error(&error.clone().into())
                                 .local_li_version(self.local_state.committed_version())
                                 .chunk_request(*request)
                         );
-                        counters::FAIL_LABEL
-                    }
-                };
-                counters::PROCESS_CHUNK_REQUEST_COUNT
-                    .with_label_values(&[
-                        &peer.raw_network_id().to_string(),
-                        &peer.peer_id().to_string(),
-                        result_label,
-                    ])
-                    .inc();
-                Ok(())
+                        counters::PROCESS_CHUNK_REQUEST_COUNT
+                            .with_label_values(&[
+                                &peer.raw_network_id().to_string(),
+                                &peer.peer_id().to_string(),
+                                counters::FAIL_LABEL,
+                            ])
+                            .inc();
+                        error
+                    })
             }
             StateSyncMessage::GetChunkResponse(response) => {
-                // Time chunk response handling
+                // Time response handling
                 let _timer = counters::PROCESS_MSG_LATENCY
                     .with_label_values(&[
                         &peer.raw_network_id().to_string(),
@@ -653,6 +659,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         });
         self.sync_state_with_local_storage()?;
 
+        // Verify the chunk request is valid before trying to process it.
+        self.verify_chunk_request_is_valid(&request)?;
+
         let result = match request.target.clone() {
             TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),
             TargetType::HighestAvailable {
@@ -664,6 +673,48 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             }
         };
         Ok(result?)
+    }
+
+    fn verify_chunk_request_is_valid(&mut self, request: &GetChunkRequest) -> Result<(), Error> {
+        // Ensure request versions are correctly formed
+        if let Some(target_version) = request.target.version() {
+            if target_version < request.known_version {
+                return Err(Error::InvalidChunkRequest(
+                    "Target version is less than known version! Discarding request.".into(),
+                ));
+            }
+        }
+
+        // Ensure request epochs are correctly formed
+        if let Some(target_epoch) = request.target.epoch() {
+            if target_epoch < request.current_epoch {
+                return Err(Error::InvalidChunkRequest(
+                    "Target epoch is less than current epoch! Discarding request.".into(),
+                ));
+            }
+        }
+
+        // Ensure the chunk limit is not zero
+        if request.limit == 0 {
+            return Err(Error::InvalidChunkRequest(
+                "Chunk request limit is 0. Discarding request.".into(),
+            ));
+        }
+
+        // Ensure the timeout is not zero
+        if let TargetType::HighestAvailable {
+            target_li: _,
+            timeout_ms,
+        } = request.target.clone()
+        {
+            if timeout_ms == 0 {
+                return Err(Error::InvalidChunkRequest(
+                    "Long poll timeout is 0. Discarding request.".into(),
+                ));
+            }
+        }
+
+        Ok(())
     }
 
     /// Processing requests with a specified target LedgerInfo.
@@ -1435,7 +1486,9 @@ mod tests {
         chunk_request::{GetChunkRequest, TargetType},
         chunk_response::{GetChunkResponse, ResponseLedgerInfo},
         client::SyncRequest,
+        coordinator::StateSyncCoordinator,
         error::Error,
+        executor_proxy::ExecutorProxy,
         network::StateSyncMessage,
         shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
     };
@@ -1716,23 +1769,85 @@ mod tests {
     }
 
     #[test]
-    fn test_process_chunk_request_message() {
+    fn test_invalid_chunk_request_messages() {
         // Create a coordinator for a validator node
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
-        // Create a test chunk request message
+        // Constants for the chunk requests
         let peer_network_id = PeerNetworkId::random();
-        let chunk_request_message = create_chunk_request_message(0, 0, 250, 10);
+        let current_epoch = 0;
+        let chunk_limit = 250;
+        let timeout_ms = 1000;
 
-        // Verify no error is returned processing a valid chunk request
-        block_on(validator_coordinator.process_chunk_message(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            chunk_request_message,
-        ))
-        .unwrap();
+        // Create chunk requests with a known version higher than the target
+        let known_version = 100;
+        let target_version = 10;
+        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+            known_version,
+            current_epoch,
+            chunk_limit,
+            target_version,
+            timeout_ms,
+        );
 
-        // TODO(joshlind): test the more complex error failures and chunk request flows.
+        // Verify invalid request errors are thrown
+        verify_all_chunk_requests_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[waypoint_request, target_request, highest_request],
+        );
+
+        // Create chunk requests with a current epoch higher than the target epoch
+        let known_version = 0;
+        let current_epoch = 100;
+        let (_, target_request, highest_request) = create_chunk_requests(
+            known_version,
+            current_epoch,
+            chunk_limit,
+            target_version,
+            timeout_ms,
+        );
+
+        // Verify invalid request errors are thrown
+        verify_all_chunk_requests_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[target_request, highest_request],
+        );
+
+        // Create chunk requests with a chunk limit size of 0 (which is a pointless request)
+        let chunk_limit = 0;
+        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+            known_version,
+            current_epoch,
+            chunk_limit,
+            target_version,
+            timeout_ms,
+        );
+
+        // Verify invalid request errors are thrown
+        verify_all_chunk_requests_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[waypoint_request, target_request, highest_request],
+        );
+
+        // Create chunk requests with a long poll timeout of 0 (which is a pointless request)
+        let chunk_limit = 0;
+        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+            known_version,
+            current_epoch,
+            chunk_limit,
+            target_version,
+            timeout_ms,
+        );
+
+        // Verify invalid request errors are thrown
+        verify_all_chunk_requests_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[waypoint_request, target_request, highest_request],
+        );
     }
 
     #[test]
@@ -1825,13 +1940,44 @@ mod tests {
         (sync_request, callback_receiver)
     }
 
-    fn create_chunk_request_message(
+    /// Creates a set of chunk requests (one for each type of possible request).
+    /// The returned request types are: (waypoint, target, highest).
+    fn create_chunk_requests(
         known_version: Version,
         current_epoch: u64,
         chunk_limit: u64,
         target_version: u64,
-    ) -> StateSyncMessage {
+        timeout_ms: u64,
+    ) -> (StateSyncMessage, StateSyncMessage, StateSyncMessage) {
+        // Create a waypoint chunk request
         let target = TargetType::Waypoint(target_version);
+        let waypoint_request =
+            create_chunk_request_message(known_version, current_epoch, chunk_limit, target);
+
+        // Create a highest chunk request
+        let target_li = Some(create_ledger_info_at_version(target_version));
+        let target = TargetType::HighestAvailable {
+            target_li,
+            timeout_ms,
+        };
+        let highest_request =
+            create_chunk_request_message(known_version, current_epoch, chunk_limit, target);
+
+        // Create a target chunk request
+        let target_ledger_info = create_ledger_info_at_version(target_version);
+        let target = TargetType::TargetLedgerInfo(target_ledger_info);
+        let target_request =
+            create_chunk_request_message(known_version, current_epoch, chunk_limit, target);
+
+        (waypoint_request, target_request, highest_request)
+    }
+
+    fn create_chunk_request_message(
+        known_version: Version,
+        current_epoch: u64,
+        chunk_limit: u64,
+        target: TargetType,
+    ) -> StateSyncMessage {
         let chunk_request = GetChunkRequest::new(known_version, current_epoch, chunk_limit, target);
         StateSyncMessage::GetChunkRequest(Box::new(chunk_request))
     }
@@ -1845,5 +1991,25 @@ mod tests {
         let chunk_response =
             GetChunkResponse::new(response_li, TransactionListWithProof::new_empty());
         StateSyncMessage::GetChunkResponse(Box::new(chunk_response))
+    }
+
+    fn verify_all_chunk_requests_are_invalid(
+        validator_coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        peer_network_id: &PeerNetworkId,
+        requests: &[StateSyncMessage],
+    ) {
+        for request in requests {
+            let process_result = block_on(validator_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                request.clone(),
+            ));
+            if !matches!(process_result, Err(Error::InvalidChunkRequest(..))) {
+                panic!(
+                    "Expected a chunk request error but got: {:?}",
+                    process_result
+                );
+            }
+        }
     }
 }

@@ -40,6 +40,16 @@ pub enum TargetType {
 }
 
 impl TargetType {
+    pub fn epoch(&self) -> Option<u64> {
+        match self {
+            TargetType::TargetLedgerInfo(li) => Some(li.ledger_info().epoch()),
+            TargetType::HighestAvailable { target_li, .. } => {
+                target_li.as_ref().map(|li| li.ledger_info().epoch())
+            }
+            TargetType::Waypoint(_) => None,
+        }
+    }
+
     pub fn version(&self) -> Option<u64> {
         match self {
             TargetType::TargetLedgerInfo(li) => Some(li.ledger_info().version()),
