@@ -29,5 +29,9 @@ vm = { path = "../vm", version = "0.1.0" }
 diem-vm = { path = "../diem-vm", version = "0.1.0" }
 
 [[bench]]
-name = "benchmarks"
+name = "vm_benches"
+harness = false
+
+[[bench]]
+name = "transaction_benches"
 harness = false
