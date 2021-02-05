@@ -67,7 +67,6 @@ pub struct BoogieOutput {
 /// Kind of boogie error.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BoogieErrorKind {
-    Compilation,
     Precondition,
     Postcondition,
     Assertion,
@@ -150,9 +149,13 @@ impl<'env> BoogieWrapper<'env> {
                 }
                 debug!("analyzing boogie output");
                 let out = String::from_utf8_lossy(&output.stdout).to_string();
+                // Boogie output contains the string "errors detected in" whenever parsing,
+                // resolution, or type checking errors are discovered.
+                if out.contains("errors detected in") {
+                    return Err(anyhow!("boogie exited with: {:?}", output));
+                }
                 let mut errors = self.extract_verification_errors(&out);
                 errors.extend(self.extract_inconclusive_errors(&out));
-                errors.extend(self.extract_compilation_errors(&out));
                 return Ok(BoogieOutput {
                     errors,
                     all_output: out,
@@ -563,20 +566,22 @@ impl<'env> BoogieWrapper<'env> {
     /// This parses the output for errors of the form:
     ///
     /// ```ignore
-    /// *** MODEL
-    /// ...
-    /// *** END MODEL
-    /// (0,0): Error BP5003: A postcondition might not hold on this return path.
+    /// (0,0): Error: A postcondition might not hold on this return path.
     /// output.bpl(2964,1): Related location: This is the postcondition that might not hold.
     /// Execution trace:
     ///    output.bpl(3068,5): anon0
     ///    output.bpl(2960,23): inline$DiemAccount_pay_from_sender_with_metadata$0$Entry
     ///    output.bpl(2989,5): inline$DiemAccount_pay_from_sender_with_metadata$0$anon0
     ///    ...
+    /// Augmented execution trace:
+    /// ...
+    /// *** MODEL
+    /// ...
+    /// *** END MODEL
     /// ```
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
         static VERIFICATION_DIAG_STARTS: Lazy<Regex> = Lazy::new(|| {
-            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap()
+            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error:(?P<msg>.*)$").unwrap()
         });
         static VERIFICATION_DIAG_RELATED: Lazy<Regex> =
             Lazy::new(|| Regex::new(r"^\n.+\((?P<line>\d+),(?P<col>\d+)\): Related.*\n").unwrap());
@@ -812,29 +817,6 @@ impl<'env> BoogieWrapper<'env> {
                     } else {
                         "verification inconclusive".to_string()
                     },
-                    execution_trace: vec![],
-                    model: None,
-                }
-            })
-            .collect_vec()
-    }
-
-    /// Extracts compilation errors. This captures any kind of errors different than the
-    /// verification errors (as seen so far).
-    fn extract_compilation_errors(&self, out: &str) -> Vec<BoogieError> {
-        let diag_re =
-            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\).*(Error:|error:).*$").unwrap();
-        diag_re
-            .captures_iter(&out)
-            .map(|cap| {
-                let line = cap.name("line").unwrap().as_str();
-                let col = cap.name("col").unwrap().as_str();
-                let msg = cap.get(0).unwrap().as_str();
-                BoogieError {
-                    kind: BoogieErrorKind::Compilation,
-                    position: make_position(line, col),
-                    context_position: None,
-                    message: msg.to_string(),
                     execution_trace: vec![],
                     model: None,
                 }
