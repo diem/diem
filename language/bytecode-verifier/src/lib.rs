@@ -16,6 +16,7 @@ pub mod dependencies;
 pub mod instantiation_loops;
 pub mod instruction_consistency;
 pub mod resources;
+pub mod script_signature;
 pub mod signature;
 pub mod struct_defs;
 pub mod verifier;
@@ -26,7 +27,7 @@ pub use instruction_consistency::InstructionConsistency;
 pub use resources::ResourceTransitiveChecker;
 pub use signature::SignatureChecker;
 pub use struct_defs::RecursiveStructDefChecker;
-pub use verifier::{verify_main_signature, verify_module, verify_script};
+pub use verifier::{verify_module, verify_script};
 
 mod absint;
 mod acquires_list_verifier;

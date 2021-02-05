@@ -254,6 +254,43 @@ impl VMRuntime {
         )
     }
 
+    // See Session::execute_script_function for what contracts to follow.
+    pub(crate) fn execute_script_function(
+        &self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<Vec<u8>>,
+        senders: Vec<AccountAddress>,
+        data_store: &mut impl DataStore,
+        cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
+    ) -> VMResult<()> {
+        let (func, ty_args, params) = self.loader.load_function(
+            function_name,
+            module,
+            &ty_args,
+            true, // is_script_execution
+            data_store,
+            log_context,
+        )?;
+
+        let signers_and_args = self
+            .create_signers_and_arguments(&params, senders, args)
+            .map_err(|err| err.finish(Location::Undefined))?;
+
+        // run the function
+        Interpreter::entrypoint(
+            func,
+            ty_args,
+            signers_and_args,
+            data_store,
+            cost_strategy,
+            &self.loader,
+            log_context,
+        )
+    }
+
     // See Session::execute_function for what contracts to follow.
     pub(crate) fn execute_function(
         &self,
@@ -267,9 +304,14 @@ impl VMRuntime {
     ) -> VMResult<()> {
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
-        let (func, ty_args, params) =
-            self.loader
-                .load_function(function_name, module, &ty_args, data_store, log_context)?;
+        let (func, ty_args, params) = self.loader.load_function(
+            function_name,
+            module,
+            &ty_args,
+            false, // is_script_execution
+            data_store,
+            log_context,
+        )?;
 
         let params = params
             .into_iter()

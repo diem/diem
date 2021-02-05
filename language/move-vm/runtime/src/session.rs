@@ -21,21 +21,21 @@ pub struct Session<'r, 'l, R> {
 }
 
 impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
-    /// Execute a Move function with the given arguments. This is mainly designed for an external environment
-    /// to invoke system logic written in Move.
+    /// Execute a Move function with the given arguments. This is mainly designed for an external
+    /// environment to invoke system logic written in Move.
     ///
     /// The caller MUST ensure
-    ///   - The function to be called and the module containing it exist.
     ///   - All types and modules referred to by the type arguments exist.
-    ///   - All arguments are valid and match the signature of the function called.
     ///
-    /// The Move VM MUST return an invariant violation if the caller fails to follow any of the rules above.
+    /// The Move VM MUST return an invariant violation if the caller fails to follow any of the
+    /// rules above.
     ///
-    /// Currently if any other error occurs during execution, the Move VM will simply propagate that error back
-    /// to the outer environment without handling/translating it. This behavior may be revised in the future.
+    /// Currently if any other error occurs during execution, the Move VM will simply propagate that
+    /// error back to the outer environment without handling/translating it. This behavior may be
+    /// revised in the future.
     ///
-    /// In case an invariant violation occurs, the whole Session should be considered corrupted and one shall
-    /// not proceed with effect generation.
+    /// In case an invariant violation occurs, the whole Session should be considered corrupted and
+    /// one shall not proceed with effect generation.
     pub fn execute_function(
         &mut self,
         module: &ModuleId,
@@ -56,18 +56,68 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         )
     }
 
-    /// Execute a transaction script.
+    /// Execute a Move script function with the given arguments.
     ///
-    /// The Move VM MUST return a user error (in other words, an error that's not an invariant violation) if
-    ///   - The script fails to deserialize or verify.
+    /// Unlike `execute_function` which is designed for system logic, `execute_script_function` is
+    /// mainly designed to call a script function in an existing module. It similar to
+    /// `execute_script` except that execution of the "script" begins with the specified function
+    ///
+    /// The Move VM MUST return a user error (in other words, an error that's not an invariant
+    /// violation) if
+    ///   - The function does not exist.
+    ///   - The function does not have script visibility.
+    ///   - The signature is not valid for a script. Not all script-visible module functions can
+    ///     be invoked from this entry point. See `bytecode_verifier::script_signature` for the
+    ///     rules.
     ///   - Type arguments refer to a non-existent type.
-    ///   - Arguments (senders included) are invalid or fail to match the signature of the script.
+    ///   - Arguments (senders included) fail to deserialize or fail to match the signature of the
+    ///     script function.
+
     ///
-    /// If any other error occurs during execution, the Move VM MUST propagate that error back to the caller.
+    /// If any other error occurs during execution, the Move VM MUST propagate that error back to
+    /// the caller.
     /// Besides, no user input should cause the Move VM to return an invariant violation.
     ///
-    /// In case an invariant violation occurs, the whole Session should be considered corrupted and one shall
-    /// not proceed with effect generation.
+    /// In case an invariant violation occurs, the whole Session should be considered corrupted and
+    /// one shall not proceed with effect generation.
+    pub fn execute_script_function(
+        &mut self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        args: Vec<Vec<u8>>,
+        senders: Vec<AccountAddress>,
+        cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
+    ) -> VMResult<()> {
+        self.runtime.execute_script_function(
+            module,
+            function_name,
+            ty_args,
+            args,
+            senders,
+            &mut self.data_cache,
+            cost_strategy,
+            log_context,
+        )
+    }
+
+    /// Execute a transaction script.
+    ///
+    /// The Move VM MUST return a user error (in other words, an error that's not an invariant
+    /// violation) if
+    ///   - The script fails to deserialize or verify. Not all expressible signatures are valid.
+    ///     See `bytecode_verifier::script_signature` for the rules.
+    ///   - Type arguments refer to a non-existent type.
+    ///   - Arguments (senders included) fail to deserialize or fail to match the signature of the
+    ///     script function.
+    ///
+    /// If any other error occurs during execution, the Move VM MUST propagate that error back to
+    /// the caller.
+    /// Besides, no user input should cause the Move VM to return an invariant violation.
+    ///
+    /// In case an invariant violation occurs, the whole Session should be considered corrupted and
+    /// one shall not proceed with effect generation.
     pub fn execute_script(
         &mut self,
         script: Vec<u8>,

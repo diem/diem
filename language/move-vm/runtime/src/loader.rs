@@ -7,7 +7,7 @@ use crate::{
 };
 use bytecode_verifier::{
     constants, cyclic_dependencies, dependencies, instantiation_loops::InstantiationLoopChecker,
-    verify_main_signature, CodeUnitVerifier, DuplicationChecker, InstructionConsistency,
+    script_signature, CodeUnitVerifier, DuplicationChecker, InstructionConsistency,
     RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use diem_crypto::HashValue;
@@ -540,7 +540,7 @@ impl Loader {
         InstructionConsistency::verify_script(&script)?;
         constants::verify_script(&script)?;
         CodeUnitVerifier::verify_script(&script)?;
-        verify_main_signature(&script)
+        script_signature::verify_script(&script)
     }
 
     fn verify_script_dependencies(
@@ -567,6 +567,7 @@ impl Loader {
         function_name: &IdentStr,
         module_id: &ModuleId,
         ty_args: &[TypeTag],
+        is_script_execution: bool,
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
@@ -592,6 +593,11 @@ impl Loader {
         }
         self.verify_ty_args(func.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
+
+        if is_script_execution {
+            let compiled_module = module.module();
+            script_signature::verify_module_script_function(compiled_module, function_name)?;
+        }
 
         Ok((func, type_params, parameter_tys))
     }

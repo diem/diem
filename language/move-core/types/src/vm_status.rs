@@ -565,6 +565,7 @@ pub enum StatusCode {
     FAILED_TO_DESERIALIZE_ARGUMENT = 1100,
     NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH = 1101,
     CALLED_SCRIPT_VISIBLE_FROM_NON_SCRIPT_VISIBLE = 1102,
+    EXECUTE_SCRIPT_FUNCTION_CALLED_ON_NON_SCRIPT_VISIBLE = 1103,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
