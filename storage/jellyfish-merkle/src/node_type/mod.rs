@@ -345,7 +345,9 @@ impl InternalNode {
         for (nibble, child) in self.children.iter() {
             let i = u8::from(*nibble);
             existence_bitmap |= 1u16 << i;
-            leaf_bitmap |= (child.is_leaf as u16) << i;
+            if child.is_leaf {
+                leaf_bitmap |= 1u16 << i;
+            }
         }
         // `leaf_bitmap` must be a subset of `existence_bitmap`.
         assert_eq!(existence_bitmap | leaf_bitmap, existence_bitmap);
@@ -392,11 +394,15 @@ impl InternalNode {
                 .unwrap()
                 .hash
         } else {
-            let left_child = self.merkle_hash(start, width / 2, (existence_bitmap, leaf_bitmap));
+            let left_child = self.merkle_hash(
+                start,
+                width / 2,
+                (range_existence_bitmap, range_leaf_bitmap),
+            );
             let right_child = self.merkle_hash(
                 start + width / 2,
                 width / 2,
-                (existence_bitmap, leaf_bitmap),
+                (range_existence_bitmap, range_leaf_bitmap),
             );
             SparseMerkleInternalNode::new(left_child, right_child).hash()
         }
@@ -450,7 +456,7 @@ impl InternalNode {
                 // No child in this range.
                 return (None, siblings);
             } else if range_existence_bitmap.count_ones() == 1
-                && (range_leaf_bitmap.count_ones() == 1 || width == 1)
+                && (range_leaf_bitmap != 0 || width == 1)
             {
                 // Return the only 1 leaf child under this subtree or reach the lowest level
                 // Even this leaf child is not the n-th child, it should be returned instead of
