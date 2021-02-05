@@ -308,23 +308,6 @@ impl TestHarness {
     }
 }
 
-fn check_trusted_peers(
-    trusted_peers: &Arc<RwLock<PeerSet>>,
-    expected_keys: &HashMap<PeerId, HashSet<x25519::PublicKey>>,
-    expected_role: PeerRole,
-) {
-    let keys: HashMap<_, _> = trusted_peers
-        .read()
-        .iter()
-        .map(|(peer_id, auth_context)| (*peer_id, auth_context.keys.clone()))
-        .collect();
-    trusted_peers
-        .read()
-        .iter()
-        .for_each(|(_, auth_context)| assert_eq!(expected_role, auth_context.role));
-    assert_eq!(expected_keys, &keys);
-}
-
 #[test]
 fn connect_to_seeds_on_startup() {
     let (seed_peer_id, _, _, seed_addr) = gen_peer();
@@ -819,50 +802,47 @@ fn basic_update_discovered_peers() {
 
     let peer_a1 = Peer::new(vec![addr_a.clone()], pubkeys_1.clone(), PeerRole::Validator);
     let peer_a2 = Peer::new(vec![addr_a.clone()], pubkeys_2, PeerRole::Validator);
-    let peer_b1 = Peer::new(vec![addr_b], pubkeys_1.clone(), PeerRole::Validator);
-    let peer_a_1_2 = Peer::new(vec![addr_a], pubkeys_1_2.clone(), PeerRole::Validator);
+    let peer_b1 = Peer::new(vec![addr_b], pubkeys_1, PeerRole::Validator);
+    let peer_a_1_2 = Peer::new(vec![addr_a], pubkeys_1_2, PeerRole::Validator);
 
-    let pubkeys_map_empty = HashMap::new();
-    let pubkeys_map_1 = hashmap! {peer_id_a => pubkeys_1.clone()};
-    let pubkeys_map_1_2 = hashmap! {peer_id_a => pubkeys_1_2, peer_id_b => pubkeys_1};
-
+    let peers_empty = PeerSet::new();
     let peers_1 = hashmap! {peer_id_a => peer_a1};
     let peers_2 = hashmap! {peer_id_a => peer_a2, peer_id_b => peer_b1.clone()};
     let peers_1_2 = hashmap! {peer_id_a => peer_a_1_2, peer_id_b => peer_b1};
 
     // basic one peer one discovery source
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
+    assert_eq!(*trusted_peers.read(), peers_1);
 
     // same update does nothing
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
+    assert_eq!(*trusted_peers.read(), peers_1);
 
     // reset
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_empty.clone());
+    assert_eq!(*trusted_peers.read(), peers_empty);
 
     // basic union across multiple sources
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1);
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1, PeerRole::Validator);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1.clone());
+    assert_eq!(*trusted_peers.read(), peers_1);
     conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_2);
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
+    assert_eq!(*trusted_peers.read(), peers_1_2);
 
     // does nothing even if another source has same set
     conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_1_2.clone());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_1_2);
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
+    assert_eq!(*trusted_peers.read(), peers_1_2);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_1_2.clone());
+    assert_eq!(*trusted_peers.read(), peers_1_2);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_1_2, PeerRole::Validator);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_empty.clone());
+    assert_eq!(*trusted_peers.read(), peers_1_2);
 
     // reset
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, PeerSet::new());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::OnChain, peers_empty.clone());
+    assert_eq!(*trusted_peers.read(), peers_empty);
 
     // empty update again does nothing
-    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, PeerSet::new());
-    check_trusted_peers(&trusted_peers, &pubkeys_map_empty, PeerRole::Validator);
+    conn_mgr.handle_update_discovered_peers(DiscoverySource::Config, peers_empty.clone());
+    assert_eq!(*trusted_peers.read(), peers_empty);
 }
