@@ -49,7 +49,7 @@ use futures::{
 use num_variants::NumVariants;
 use rand::{
     prelude::{SeedableRng, SmallRng},
-    seq::SliceRandom,
+    seq::IteratorRandom,
 };
 use serde::Serialize;
 use short_hex_str::AsShortHexStr;
@@ -395,10 +395,17 @@ where
         }
     }
 
-    async fn dial_eligible_peers<'a>(
+    fn dial_eligible_peers<'a>(
         &'a mut self,
         pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
     ) {
+        let to_connect = self.choose_peers_to_dial();
+        for (peer_id, addrs) in to_connect {
+            self.queue_dial_peer(peer_id, addrs, pending_dials);
+        }
+    }
+
+    fn choose_peers_to_dial(&mut self) -> Vec<(PeerId, Addresses)> {
         let eligible = self.eligible.read().clone();
         let to_connect: Vec<_> = self
             .discovered_peers
@@ -410,7 +417,7 @@ where
                     && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
                     && !peer.addrs.is_empty() // There is an address to dial.
             })
-            .map(|(peer_id, peer)| (peer_id, &peer.addrs))
+            .map(|(peer_id, peer)| (*peer_id, peer.addrs.clone()))
             .collect();
 
         // Limit the number of dialed connections from a Full Node
@@ -425,78 +432,84 @@ where
         } else {
             to_connect.len()
         };
+        to_connect
+            .into_iter()
+            .choose_multiple(&mut self.rng, to_connect_size)
+    }
 
+    fn queue_dial_peer<'a>(
+        &'a mut self,
+        peer_id: PeerId,
+        addrs: Addresses,
+        pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
+    ) {
+        // If we're attempting to dial a Peer we must not be connected to it. This ensures that
+        // newly eligible, but not connected to peers, have their counter initialized properly.
+        counters::peer_connected(&self.network_context, &peer_id, 0);
+
+        let mut connection_reqs_tx = self.connection_reqs_tx.clone();
         // The initial dial state; it has zero dial delay and uses the first
         // address.
         let init_dial_state = DialState::new(self.backoff_strategy.clone());
+        let dial_state = self
+            .dial_states
+            .entry(peer_id)
+            .or_insert_with(|| init_dial_state);
 
-        for (p, addrs) in to_connect.choose_multiple(&mut self.rng, to_connect_size) {
-            // If we're attempting to dial a Peer we must not be connected to it. This ensures that
-            // newly eligible, but not connected to peers, have their counter initialized properly.
-            counters::peer_connected(&self.network_context, p, 0);
+        // Choose the next addr to dial for this peer. Currently, we just
+        // round-robin the selection, i.e., try the sequence:
+        // addr[0], .., addr[len-1], addr[0], ..
+        let addr = dial_state.next_addr(&addrs).clone();
 
-            let mut connction_reqs_tx = self.connection_reqs_tx.clone();
-            let peer_id = **p;
-            let dial_state = self
-                .dial_states
-                .entry(peer_id)
-                .or_insert_with(|| init_dial_state.clone());
+        // Using the DialState's backoff strategy, compute the delay until
+        // the next dial attempt for this peer.
+        let dial_delay = dial_state.next_backoff_delay(self.max_delay);
+        let f_delay = self.time_service.sleep(dial_delay);
 
-            // Choose the next addr to dial for this peer. Currently, we just
-            // round-robin the selection, i.e., try the sequence:
-            // addr[0], .., addr[len-1], addr[0], ..
-            let addr = dial_state.next_addr(&addrs).clone();
+        let (cancel_tx, cancel_rx) = oneshot::channel();
 
-            // Using the DialState's backoff strategy, compute the delay until
-            // the next dial attempt for this peer.
-            let dial_delay = dial_state.next_backoff_delay(self.max_delay);
-            let f_delay = self.time_service.sleep(dial_delay);
+        info!(
+            NetworkSchema::new(&self.network_context)
+                .remote_peer(&peer_id)
+                .network_address(&addr),
+            delay = dial_delay,
+            "{} Create dial future to {} at {} after {:?}",
+            self.network_context,
+            peer_id.short_str(),
+            addr,
+            dial_delay
+        );
 
-            let (cancel_tx, cancel_rx) = oneshot::channel();
-
-            info!(
-                NetworkSchema::new(&self.network_context)
-                    .remote_peer(&peer_id)
-                    .network_address(&addr),
-                delay = dial_delay,
-                "{} Create dial future to {} at {} after {:?}",
-                self.network_context,
-                peer_id.short_str(),
-                addr,
-                dial_delay
-            );
-
-            let network_context = self.network_context.clone();
-            // Create future which completes by either dialing after calculated
-            // delay or on cancellation.
-            let f = async move {
-                // We dial after a delay. The dial can be canceled by sending to or dropping
-                // `cancel_rx`.
-                let dial_result = futures::select! {
-                    _ = f_delay.fuse() => {
-                        info!(
-                            NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id)
-                                .network_address(&addr),
-                            "{} Dialing peer {} at {}",
-                            network_context,
-                            peer_id.short_str(),
-                            addr
-                        );
-                        match connction_reqs_tx.dial_peer(peer_id, addr.clone()).await {
-                            Ok(_) => DialResult::Success,
-                            Err(e) => DialResult::Failed(e),
-                        }
-                    },
-                    _ = cancel_rx.fuse() => DialResult::Cancelled,
-                };
-                log_dial_result(network_context, peer_id, addr, dial_result);
-                // Send peer_id as future result so it can be removed from dial queue.
-                peer_id
+        let network_context = self.network_context.clone();
+        // Create future which completes by either dialing after calculated
+        // delay or on cancellation.
+        let f = async move {
+            // We dial after a delay. The dial can be canceled by sending to or dropping
+            // `cancel_rx`.
+            let dial_result = futures::select! {
+                _ = f_delay.fuse() => {
+                    info!(
+                        NetworkSchema::new(&network_context)
+                            .remote_peer(&peer_id)
+                            .network_address(&addr),
+                        "{} Dialing peer {} at {}",
+                        network_context,
+                        peer_id.short_str(),
+                        addr
+                    );
+                    match connection_reqs_tx.dial_peer(peer_id, addr.clone()).await {
+                        Ok(_) => DialResult::Success,
+                        Err(e) => DialResult::Failed(e),
+                    }
+                },
+                _ = cancel_rx.fuse() => DialResult::Cancelled,
             };
-            pending_dials.push(f.boxed());
-            self.dial_queue.insert(peer_id, cancel_tx);
-        }
+            log_dial_result(network_context, peer_id, addr, dial_result);
+            // Send peer_id as future result so it can be removed from dial queue.
+            peer_id
+        };
+        pending_dials.push(f.boxed());
+        self.dial_queue.insert(peer_id, cancel_tx);
     }
 
     // Note: We do not check that the connections to older incarnations of a node are broken, and
@@ -527,7 +540,7 @@ where
         self.close_stale_connections().await;
         // Dial peers which are eligible but are neither connected nor queued for dialing in the
         // future.
-        self.dial_eligible_peers(pending_dials).await;
+        self.dial_eligible_peers(pending_dials);
     }
 
     fn reset_dial_state(&mut self, peer_id: &PeerId) {
