@@ -357,13 +357,9 @@ impl InternalNode {
     /// Given a range [start, start + width), returns the sub-bitmap of that range.
     fn range_bitmaps(start: u8, width: u8, bitmaps: (u16, u16)) -> (u16, u16) {
         assert!(start < 16 && width.count_ones() == 1 && start % width == 0);
+        assert!(width <= 16 && (start + width) <= 16);
         // A range with `start == 8` and `width == 4` will generate a mask 0b0000111100000000.
-        let mask = if width == 16 {
-            0xffff
-        } else {
-            assert!(width <= 16);
-            (1 << width) - 1
-        } << start;
+        let mask = (((1 << width) - 1) << start) as u16;
         (bitmaps.0 & mask, bitmaps.1 & mask)
     }
 
