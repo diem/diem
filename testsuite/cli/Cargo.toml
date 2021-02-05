@@ -39,7 +39,7 @@ diem-types = { path = "../../types", version = "0.1.0" }
 diem-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 resource-viewer = { path = "../../language/tools/resource-viewer", version = "0.1.0" }
-compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
+compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 compiler = { path = "../../language/compiler",  version = "0.1.0" }
 

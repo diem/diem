@@ -18,7 +18,7 @@ fn get_diem_registry() -> Registry {
 
 fn get_stdlib_script_abis() -> Vec<ScriptABI> {
     // This is also a custom rule in diem/x.toml.
-    let path = "../../stdlib/compiled/transaction_scripts/abi";
+    let path = "../../diem-framework/compiled/transaction_scripts/abi";
     buildgen::read_abis(path).expect("reading ABI files should not fail")
 }
 
@@ -48,7 +48,7 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     installer.install_serde_runtime().unwrap();
     installer.install_bcs_runtime().unwrap();
 
-    let stdlib_dir_path = src_dir_path.join("diem_stdlib");
+    let stdlib_dir_path = src_dir_path.join("diem_framework");
     std::fs::create_dir_all(stdlib_dir_path.clone()).unwrap();
     let source_path = stdlib_dir_path.join("__init__.py");
 
@@ -130,14 +130,14 @@ fn test_that_rust_code_compiles() {
     let config = serdegen::CodeGeneratorConfig::new("diem-types".to_string());
     installer.install_module(&config, &registry).unwrap();
 
-    let stdlib_dir_path = dir.path().join("diem-stdlib");
+    let stdlib_dir_path = dir.path().join("diem-framework");
     std::fs::create_dir_all(stdlib_dir_path.clone()).unwrap();
 
     let mut cargo = std::fs::File::create(&stdlib_dir_path.join("Cargo.toml")).unwrap();
     write!(
         cargo,
         r#"[package]
-name = "diem-stdlib"
+name = "diem-framework"
 version = "0.1.0"
 edition = "2018"
 
@@ -169,7 +169,7 @@ test = false
     // Use a stable `target` dir to avoid downloading and recompiling crates everytime.
     let target_dir = std::env::current_dir().unwrap().join("../../target");
     let status = Command::new("cargo")
-        .current_dir(dir.path().join("diem-stdlib"))
+        .current_dir(dir.path().join("diem-framework"))
         .arg("build")
         .arg("--target-dir")
         .arg(target_dir.clone())
@@ -203,7 +203,7 @@ fn test_that_cpp_code_compiles_and_demo_runs() {
 
     let abi_installer = buildgen::cpp::Installer::new(dir.path().to_path_buf());
     abi_installer
-        .install_transaction_builders("diem_stdlib", &abis)
+        .install_transaction_builders("diem_framework", &abis)
         .unwrap();
 
     std::fs::copy(
@@ -215,7 +215,7 @@ fn test_that_cpp_code_compiles_and_demo_runs() {
     let status = Command::new("clang++")
         .arg("--std=c++17")
         .arg("-g")
-        .arg(dir.path().join("diem_stdlib.cpp"))
+        .arg(dir.path().join("diem_framework.cpp"))
         .arg(dir.path().join("stdlib_demo.cpp"))
         .arg("-o")
         .arg(dir.path().join("stdlib_demo"))

@@ -1,11 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "diem_stdlib.hpp"
+#include "diem_framework.hpp"
 #include "diem_types.hpp"
 #include <memory>
 
-using namespace diem_stdlib;
+using namespace diem_framework;
 using namespace diem_types;
 
 int main() {

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use diem_framework::build_stdlib;
 use diem_transaction_replay::DiemDebugger;
 use diem_types::{account_address::AccountAddress, transaction::Version};
 use difference::Changeset;
 use move_vm_test_utils::ChangeSet;
 use std::{fs, path::PathBuf};
-use stdlib::build_stdlib;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

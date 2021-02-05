@@ -267,7 +267,7 @@ mod test {
             assert_eq!(
                 script.name(),
                 script.abi().name(),
-                "The main function in language/stdlib/transaction_scripts/{}.move is named `{}` instead of `{}`. Please fix the issue and re-run (cd language/stdlib && cargo run --release)",
+                "The main function in language/diem-framework/transaction_scripts/{}.move is named `{}` instead of `{}`. Please fix the issue and re-run (cd language/diem-framework && cargo run --release)",
                 script.name(),
                 script.abi().name(),
                 script.name(),
@@ -281,7 +281,7 @@ mod test {
         for script in StdlibScript::all() {
             assert!(
                 !script.abi().doc().is_empty(),
-                "The main function in language/stdlib/transaction_scripts/{}.move does not have a `///` inline doc comment. Please fix the issue and re-run (cd language/stdlib && cargo run --release)",
+                "The main function in language/diem-framework/transaction_scripts/{}.move does not have a `///` inline doc comment. Please fix the issue and re-run (cd language/diem-framework && cargo run --release)",
                 script.name(),
             );
         }

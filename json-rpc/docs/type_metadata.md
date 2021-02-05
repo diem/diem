@@ -14,7 +14,7 @@
 | dual_attestation_limit     | unsigned int64 | The dual attestation limit on-chain. Defined in terms of micro-XDX. |
 
 Note:
-1. see [DiemTransactionPublishingOption](../../language/stdlib/modules/doc/DiemTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
+1. see [DiemTransactionPublishingOption](../../language/diem-framework/modules/doc/DiemTransactionPublishingOption.md) for more details of `script_hash_allow_list` and `module_publishing_allowed`.
 2. Fields `script_hash_allow_list`, `module_publishing_allowed` and `diem_version` are only returned when requesting latest version by [get_metadata](method_get_metadata.md) method call.
 
 

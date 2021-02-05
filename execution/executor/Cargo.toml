@@ -40,7 +40,7 @@ proptest = { version = "0.10.1", optional = true }
 proptest = "0.10.1"
 rand = "0.7.3"
 
-compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
+compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }
 compiler = { path = "../../language/compiler", version = "0.1.0" }
 executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
 diem-config = { path = "../../config", version = "0.1.0" }

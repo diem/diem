@@ -42,7 +42,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::Diem::BurnCapability<0x1::XUS::XUS>: [false]
     Added type 0x1::Diem::MintCapability<0x1::XUS::XUS>: [false]
     Added type 0x1::TransactionFee::TransactionFee<0x1::XUS::XUS>: [[U64(0)], [[U64(0)]]]
-Command `run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(Struct(RefCell { value: [Address(000000000000000000000000000000DD), U64(2)] }))) as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -60,7 +60,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [[U64(0)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [[false], [U64(3), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(Struct(RefCell { value: [Address(0000000000000000000000000000000A), U64(5)] }))) as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -76,7 +76,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [[U64(0)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [[false], [U64(4), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted Value(Container(Struct(RefCell { value: [Address(0000000000000000000000000000000B), U64(5)] }))) as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -92,7 +92,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [[U64(0)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [[false], [U64(5), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-Command `run ../../../../../stdlib/transaction_scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
 Compiling transaction script...
 Emitted 3 events:
 Emitted Value(Container(Struct(RefCell { value: [Container(VecU8(RefCell { value: [88, 85, 83] })), Address(000000000000000000000000000000DD), U64(1000)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -106,7 +106,7 @@ Changed resource(s) under 2 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [[U64(1000)]]
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::Diem::CurrencyInfo<0x1::XUS::XUS>: [U128(1000), U64(0), [U64(4294967296)], false, U64(1000000), U64(100), [88, 85, 83], true, [U64(1), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted Value(Container(Struct(RefCell { value: [U64(700), Container(VecU8(RefCell { value: [88, 85, 83] })), Address(0000000000000000000000000000000A), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -118,7 +118,7 @@ Changed resource(s) under 2 address(es):
   Changed 2 resource(s) under address 000000000000000000000000000000DD:
     Changed type 0x1::DiemAccount::DiemAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221], [[[Address(dd)]]], [[[Address(dd)]]], [U64(1), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], [U64(1), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]], U64(0)]
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [[U64(300)]]
-Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
+Command `run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted Value(Container(Struct(RefCell { value: [U64(500), Container(VecU8(RefCell { value: [88, 85, 83] })), Address(0000000000000000000000000000000B), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]

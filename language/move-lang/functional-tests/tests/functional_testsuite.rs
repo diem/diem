@@ -13,7 +13,7 @@ use move_lang::{
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
 
-pub const STD_LIB_DIR: &str = "../../stdlib/modules";
+pub const STD_LIB_DIR: &str = "../../diem-framework/modules";
 pub const FUNCTIONAL_TEST_DIR: &str = "tests";
 
 struct MoveSourceCompiler {

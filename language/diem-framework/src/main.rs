@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use clap::{App, Arg};
+use diem_framework::*;
 use rayon::prelude::*;
 use std::{
     collections::BTreeMap,
@@ -12,7 +13,6 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use stdlib::*;
 use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -62,12 +62,12 @@ fn main() {
         matches.is_present("no-check-liking-layout-compatibility");
     let with_diagram = matches.is_present("with-diagram");
 
-    // Make sure that the current directory is `language/stdlib` from now on.
+    // Make sure that the current directory is `language/diem-framework` from now on.
     let exec_path = std::env::args().next().expect("path of the executable");
     let base_path = std::path::Path::new(&exec_path)
         .parent()
         .unwrap()
-        .join("../../language/stdlib");
+        .join("../../language/diem-framework");
     std::env::set_current_dir(&base_path).expect("failed to change directory");
 
     #[cfg(debug_assertions)]
@@ -82,7 +82,7 @@ fn main() {
             || {
                 let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
                 module_path.push(COMPILED_STDLIB_DIR);
-                for f in stdlib::utils::iterate_directory(&module_path) {
+                for f in diem_framework::utils::iterate_directory(&module_path) {
                     let mut bytes = Vec::new();
                     File::open(f)
                         .expect("Failed to open module bytecode file")
@@ -143,7 +143,7 @@ fn main() {
         );
     }
 
-    let txn_source_files = stdlib::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
+    let txn_source_files = diem_framework::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
     let transaction_files = filter_move_files(txn_source_files)
         .flat_map(|path| path.into_os_string().into_string().ok())
         .collect::<Vec<_>>();

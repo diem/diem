@@ -112,7 +112,7 @@ The transaction script and arguments of the script call.
 
 | Name           | Type         | Description                                   |
 |----------------|--------------|-----------------------------------------------|
-| type           | string       | Name of the script code, see [transaction script doc](../../language/stdlib/transaction_scripts/doc/transaction_script_documentation.md) for all available script names. |
+| type           | string       | Name of the script code, see [transaction script doc](../../language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md) for all available script names. |
 | code           | string       | Hex-encoded compiled move script bytes        |
 | arguments      | List<string> | List of string value of the script arguments. Contains type information. |
 | type_arguments | List<string> | List of type arguments, converted into string |

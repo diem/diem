@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
-const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
+const STDLIB_FLAGS: &[&str] = &["--dependency=../diem-framework/modules"];
 
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
 
@@ -104,26 +104,26 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
 fn cvc4blacklisted(path: &Path) -> bool {
     let path_str = path.to_str().unwrap();
-    if path_str == "../stdlib/modules/ValidatorOperatorConfig.move" ||
-        path_str == "../stdlib/modules/Option.move" ||
-        path_str == "../stdlib/modules/RegisteredCurrencies.move" ||
-        path_str == "../stdlib/modules/AccountFreezing.move" ||
-        path_str == "../stdlib/modules/DiemTransactionPublishingOption.move" ||
-        path_str == "../stdlib/modules/VASP.move" ||
-        path_str == "../stdlib/modules/ValidatorConfig.move" ||
-        path_str == "../stdlib/modules/DiemConfig.move" ||
-        path_str == "../stdlib/modules/DiemSystem.move" ||
-        path_str == "../stdlib/modules/XUS.move" ||
-        path_str == "../stdlib/modules/DualAttestation.move" ||
-        path_str == "../stdlib/modules/XDX.move" ||
+    if path_str == "../diem-framework/modules/ValidatorOperatorConfig.move" ||
+        path_str == "../diem-framework/modules/Option.move" ||
+        path_str == "../diem-framework/modules/RegisteredCurrencies.move" ||
+        path_str == "../diem-framework/modules/AccountFreezing.move" ||
+        path_str == "../diem-framework/modules/DiemTransactionPublishingOption.move" ||
+        path_str == "../diem-framework/modules/VASP.move" ||
+        path_str == "../diem-framework/modules/ValidatorConfig.move" ||
+        path_str == "../diem-framework/modules/DiemConfig.move" ||
+        path_str == "../diem-framework/modules/DiemSystem.move" ||
+        path_str == "../diem-framework/modules/XUS.move" ||
+        path_str == "../diem-framework/modules/DualAttestation.move" ||
+        path_str == "../diem-framework/modules/XDX.move" ||
         path_str == "tests/sources/functional/cast.move" ||
-        path_str == "../stdlib/modules/RecoveryAddress.move" ||
+        path_str == "../diem-framework/modules/RecoveryAddress.move" ||
         path_str == "tests/sources/functional/loops.move" ||
-        path_str == "../stdlib/transaction_scripts/add_validator_and_reconfigure.move" ||
-        path_str == "../stdlib/transaction_scripts/rotate_authentication_key.move" ||
+        path_str == "../diem-framework/transaction_scripts/add_validator_and_reconfigure.move" ||
+        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key.move" ||
         path_str == "tests/sources/functional/aborts_if_assume_assert.move" ||
-        path_str == "../stdlib/transaction_scripts/remove_validator_and_reconfigure.move" ||
-        path_str == "../stdlib/modules/DesignatedDealer.move" ||
+        path_str == "../diem-framework/transaction_scripts/remove_validator_and_reconfigure.move" ||
+        path_str == "../diem-framework/modules/DesignatedDealer.move" ||
         path_str == "tests/sources/functional/marketcap.move" ||
         path_str == "tests/sources/functional/invariants.move" ||
         path_str == "tests/sources/functional/module_invariants.move" ||
@@ -133,13 +133,13 @@ fn cvc4blacklisted(path: &Path) -> bool {
         path_str == "tests/sources/functional/marketcap_generic.move" ||
         path_str == "tests/sources/functional/aborts_if_with_code.move" ||
         path_str == "tests/sources/functional/address_serialization_constant_size.move" ||
-        path_str == "../stdlib/transaction_scripts/set_validator_config_and_reconfigure.move" ||
+        path_str == "../diem-framework/transaction_scripts/set_validator_config_and_reconfigure.move" ||
         path_str == "tests/sources/functional/global_invariants.move" ||
         path_str == "tests/sources/functional/nested_invariants.move" ||
-        path_str == "../stdlib/transaction_scripts/rotate_authentication_key_with_recovery_address.move" ||
+        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_recovery_address.move" ||
         path_str == "tests/sources/functional/marketcap_as_schema_apply.move" ||
         path_str == "tests/sources/functional/global_vars.move" ||
-        path_str == "../stdlib/transaction_scripts/rotate_authentication_key_with_nonce.move" ||
+        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_nonce.move" ||
         path_str == "tests/sources/functional/specs_in_fun_ref.move" ||
         path_str == "tests/sources/functional/references.move" ||
         path_str == "tests/sources/functional/mut_ref_unpack.move" ||
@@ -166,19 +166,19 @@ fn cvc4blacklisted(path: &Path) -> bool {
         path_str == "tests/sources/regression/type_param_bug_200228.move" ||
         path_str == "tests/sources/regression/trace200527.move" ||
         path_str == "tests/sources/regression/generic_invariant200518.move" ||
-        path_str == "../stdlib/transaction_scripts/rotate_authentication_key_with_nonce_admin.move" ||
+        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_nonce_admin.move" ||
         path_str == "tests/sources/functional/simple_vector_client.move" ||
-        path_str == "../stdlib/transaction_scripts/publish_shared_ed25519_public_key.move" ||
+        path_str == "../diem-framework/transaction_scripts/publish_shared_ed25519_public_key.move" ||
         path_str == "tests/sources/functional/verify_vector.move" ||
-        path_str == "../stdlib/transaction_scripts/create_designated_dealer.move" ||
-        path_str == "../stdlib/transaction_scripts/create_parent_vasp_account.move" ||
-        path_str == "../stdlib/modules/Diem.move" ||
-        path_str == "../stdlib/transaction_scripts/create_child_vasp_account.move" ||
-        path_str == "../stdlib/modules/FixedPoint32.move" ||
-        path_str == "../stdlib/modules/Genesis.move" ||
-        path_str == "../stdlib/modules/DiemAccount.move" ||
+        path_str == "../diem-framework/transaction_scripts/create_designated_dealer.move" ||
+        path_str == "../diem-framework/transaction_scripts/create_parent_vasp_account.move" ||
+        path_str == "../diem-framework/modules/Diem.move" ||
+        path_str == "../diem-framework/transaction_scripts/create_child_vasp_account.move" ||
+        path_str == "../diem-framework/modules/FixedPoint32.move" ||
+        path_str == "../diem-framework/modules/Genesis.move" ||
+        path_str == "../diem-framework/modules/DiemAccount.move" ||
 
-        path_str == "../stdlib/modules/AccountLimits.move" || // This one takes over a minute
+        path_str == "../diem-framework/modules/AccountLimits.move" || // This one takes over a minute
 
         true
     {
@@ -190,7 +190,7 @@ fn cvc4blacklisted(path: &Path) -> bool {
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
-    let (base_flags, baseline_path, modifier) = if path_str.contains("../stdlib/") {
+    let (base_flags, baseline_path, modifier) = if path_str.contains("../diem-framework/") {
         (STDLIB_FLAGS, None, "std_")
     } else {
         (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")
@@ -232,7 +232,7 @@ fn main() {
         reqs.push(Requirements::new(
             test_runner,
             "stdlib".to_string(),
-            "../stdlib".to_string(),
+            "../diem-framework".to_string(),
             r".*\.move$".to_string(),
         ));
     }

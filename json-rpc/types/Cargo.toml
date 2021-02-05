@@ -16,7 +16,7 @@ serde = { version = "1.0.123", default-features = false }
 serde_json = "1.0.62"
 prost = "0.7.0"
 
-compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
+compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }
 bcs = "0.1.2"
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

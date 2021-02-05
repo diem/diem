@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use diem_framework::compile_script;
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
@@ -10,7 +11,6 @@ use diem_types::{
 use handlebars::Handlebars;
 use serde::Serialize;
 use std::{collections::HashMap, io::Write, path::PathBuf};
-use stdlib::compile_script;
 use tempfile::NamedTempFile;
 
 /// The relative path to the scripts templates

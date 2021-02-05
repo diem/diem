@@ -11,12 +11,12 @@ use std::{
     path::Path,
 };
 
+use diem_framework::{COMPILED_EXTENSION, MOVE_EXTENSION};
 use move_lang::{
     compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
     path_to_string,
 };
 use std::path::PathBuf;
-use stdlib::{COMPILED_EXTENSION, MOVE_EXTENSION};
 use vm::file_format::CompiledModule;
 
 /// Directory name for the package source files under package/<name>
@@ -25,9 +25,9 @@ const PKG_SOURCE_DIR: &str = "source_files";
 const PKG_BINARY_DIR: &str = "compiled";
 
 /// Content for the stdlib directory
-const DIR_STDLIB: Dir = include_dir!("../../stdlib/modules");
+const DIR_STDLIB: Dir = include_dir!("../../diem-framework/modules");
 /// Content for the nursery directory
-const DIR_NURSERY: Dir = include_dir!("../../stdlib/nursery");
+const DIR_NURSERY: Dir = include_dir!("../../diem-framework/nursery");
 
 /// The portion in the stdlib directory that are considered stdlib
 const STDLIB_MODULE_FILES: [&str; 8] = [

@@ -53,8 +53,8 @@ Learn more about account concepts [here](core/accounts.md).
     2. Initial currency: Coin1, or ALL. Learn more about choosing currencies [here](#choose-currencies).
     3. A human-readable VASP name to use on-chain. Diem Networks will need to check if this is a unique value.
 3. **DPN Creates Parent Account**: Diem Networks will send a transaction that creates a [ParentVASP account](#account-roles) with your authentication key.
-4. **Set up Base URL and Compliance Public Key for Off-Chain APIs**: In order to use off-chain APIs, you must send a transaction to set the base URL and compliance public key values on your parent account using [this](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-rotate_dual_attestation_info) transaction script.
-5. **Create Child Account**: If you want to, you can create a new [ChildVASP account](#account-roles) from your ParentVASP account using this transaction [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-create_child_vasp_account). You can only create ChildVASP accounts using your ParentVASP account.
+4. **Set up Base URL and Compliance Public Key for Off-Chain APIs**: In order to use off-chain APIs, you must send a transaction to set the base URL and compliance public key values on your parent account using [this](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-rotate_dual_attestation_info) transaction script.
+5. **Create Child Account**: If you want to, you can create a new [ChildVASP account](#account-roles) from your ParentVASP account using this transaction [script](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-create_child_vasp_account). You can only create ChildVASP accounts using your ParentVASP account.
 6. **Start Transacting**: Once the previous steps have been completed, you can send transactions from your account on-chain using the keypair from step (1).
 
 
@@ -69,7 +69,7 @@ At such time that more one Diem Coin currency is available, you can share with D
 >Note: When available, at the Move level, these will be different generic instantiations of the same Diem type (i.e. `Diem<Coin1>`).
 >
 
-You can [add new Diem Coin currencies to an existing account](core/transaction-types.md#adding-a-currency-to-an-account) via the `add_currency_to_account` transaction [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-add_currency_to_account). You can add all currencies offered on DPN to your child VASP accounts by using the `add_all_currencies` flag in the account creation scripts.
+You can [add new Diem Coin currencies to an existing account](core/transaction-types.md#adding-a-currency-to-an-account) via the `add_currency_to_account` transaction [script](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-add_currency_to_account). You can add all currencies offered on DPN to your child VASP accounts by using the `add_all_currencies` flag in the account creation scripts.
 
 
 ## Submit a Transaction on the Network

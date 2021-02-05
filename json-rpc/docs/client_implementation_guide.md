@@ -352,7 +352,7 @@ To make a production quality client, please checkout our [Client CHECKLIST](clie
 [4]: https://developers.diem.com/docs/rustdocs/diem_types/transaction/struct.RawTransaction.html "RawTransaction"
 [5]: https://docs.rs/bcs/ "BCS"
 [6]: ./../../client/swiss-knife#generate-a-ed25519-keypair "Swiss Knife Gen Keys"
-[7]: ./../../language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md#function-peer_to_peer_with_metadata-1 "P2P script doc"
+[7]: ./../../language/diem-framework/transaction_scripts/doc/peer_to_peer_with_metadata.md#function-peer_to_peer_with_metadata-1 "P2P script doc"
 [8]: ./../../client/swiss-knife/README.md#examples-for-generate-raw-txn-and-generate-signed-txn-operations "Swiss Knife gen txn"
 [9]: ./../../client/swiss-knife/README.md#building-the-binary-in-a-release-optimized-mode "Swiss Knife binary"
 [10]: ../../language/transaction-builder/generator/README.md#supported-languages "Transaction Builder Generator supports"

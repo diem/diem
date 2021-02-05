@@ -6,10 +6,10 @@
 pub mod transaction_scripts;
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
+use diem_framework::build_stdlib;
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use std::collections::BTreeMap;
-use stdlib::build_stdlib;
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";

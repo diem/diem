@@ -55,7 +55,7 @@ diem-proptest-helpers = { path = "../common/proptest-helpers" }
 diem-temppath = { path = "../common/temppath", version = "0.1.0" }
 diem-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
-compiled-stdlib = { path = "../language/stdlib/compiled",  version = "0.1.0" }
+compiled-stdlib = { path = "../language/diem-framework/compiled",  version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }

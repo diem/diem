@@ -28,7 +28,7 @@ static STDLIB_VECTOR_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
     vec![
         env!("CARGO_MANIFEST_DIR"),
         "..",
-        "stdlib",
+        "diem-framework",
         "modules",
         "Vector.move",
     ]

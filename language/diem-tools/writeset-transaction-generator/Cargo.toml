@@ -24,8 +24,8 @@ diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.
 diem-crypto-derive = { path = "../../../crypto/crypto-derive", version = "0.1.0" }
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }
-compiled-stdlib = { path = "../../stdlib/compiled",  version = "0.1.0" }
-stdlib = { path = "../../stdlib", version = "0.1.0" }
+compiled-stdlib = { path = "../../diem-framework/compiled",  version = "0.1.0" }
+diem-framework = { path = "../../diem-framework", version = "0.1.0" }
 move-lang = { path = "../../move-lang", version = "0.0.1" }
 bcs = "0.1.2"
 diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }

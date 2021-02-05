@@ -1,7 +1,7 @@
 [PROVER]: prover-guide.md
 [PROVER_USAGE]: prover-guide.md
 [PRE_POST_REFERENCE]: https://en.wikipedia.org/wiki/Design_by_contract
-[FRAMEWORK]: ../../../stdlib/modules/doc/overview.md
+[FRAMEWORK]: ../../../diem-framework/modules/doc/overview.md
 
 
 # Move Specification Language

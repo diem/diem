@@ -275,7 +275,8 @@ fn test_state_sync_multichunk_epoch() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/smoke-test/src/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let stdlib_source_dir =
+        workspace_builder::workspace_root().join("language/diem-framework/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let mut script_compiled_paths = client.compile_program(script_params).unwrap();

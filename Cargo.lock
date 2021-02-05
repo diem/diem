@@ -956,12 +956,12 @@ dependencies = [
  "bcs",
  "bytecode-verifier",
  "diem-crypto",
+ "diem-framework",
  "diem-types",
  "diem-workspace-hack",
  "include_dir",
  "once_cell",
  "sha2",
- "stdlib",
  "vm",
 ]
 
@@ -1563,6 +1563,28 @@ dependencies = [
  "tokio",
  "transaction-builder-generated",
  "warp",
+]
+
+[[package]]
+name = "diem-framework"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "bytecode-verifier",
+ "clap",
+ "datatest-stable",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "log",
+ "move-lang",
+ "move-prover",
+ "rayon",
+ "sha2",
+ "transaction-builder-generator",
+ "vm",
+ "walkdir",
 ]
 
 [[package]]
@@ -2226,6 +2248,7 @@ dependencies = [
  "anyhow",
  "bcs",
  "compiled-stdlib",
+ "diem-framework",
  "diem-state-view",
  "diem-types",
  "diem-validator-interface",
@@ -2240,7 +2263,6 @@ dependencies = [
  "move-vm-test-utils",
  "move-vm-types",
  "resource-viewer",
- "stdlib",
  "structopt 0.3.21",
  "vm",
  "vm-genesis",
@@ -2419,6 +2441,7 @@ dependencies = [
  "compiled-stdlib",
  "diem-crypto",
  "diem-crypto-derive",
+ "diem-framework",
  "diem-state-view",
  "diem-transaction-replay",
  "diem-types",
@@ -2435,7 +2458,6 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
- "stdlib",
  "structopt 0.3.21",
  "tempfile",
  "vm",
@@ -4140,6 +4162,7 @@ dependencies = [
  "bytecode-verifier",
  "compiled-stdlib",
  "datatest-stable",
+ "diem-framework",
  "diem-state-view",
  "diem-types",
  "diem-vm",
@@ -4155,7 +4178,6 @@ dependencies = [
  "move-vm-types",
  "once_cell",
  "resource-viewer",
- "stdlib",
  "structopt 0.3.21",
  "vm",
  "vm-genesis",
@@ -6677,28 +6699,6 @@ name = "stats_alloc"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a260c96bf26273969f360c2fc2e2c7732acc2ce49d939c7243c7230c2ad179d0"
-
-[[package]]
-name = "stdlib"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcs",
- "bytecode-verifier",
- "clap",
- "datatest-stable",
- "diem-crypto",
- "diem-types",
- "diem-workspace-hack",
- "log",
- "move-lang",
- "move-prover",
- "rayon",
- "sha2",
- "transaction-builder-generator",
- "vm",
- "walkdir",
-]
 
 [[package]]
 name = "stdweb"
