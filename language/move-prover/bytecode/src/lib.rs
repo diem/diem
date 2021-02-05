@@ -10,6 +10,7 @@ pub mod annotations;
 pub mod borrow_analysis;
 pub mod clean_and_optimize;
 pub mod compositional_analysis;
+pub mod data_invariant_instrumentation;
 pub mod dataflow_analysis;
 pub mod debug_instrumentation;
 pub mod eliminate_imm_refs;

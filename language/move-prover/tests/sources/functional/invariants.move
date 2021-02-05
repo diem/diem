@@ -1,5 +1,5 @@
+// flag: --v2
 module TestInvariants {
-
     spec module {
         pragma verify = true;
     }

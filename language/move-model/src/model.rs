@@ -1769,6 +1769,15 @@ impl<'env> StructEnv<'env> {
         self.data.name
     }
 
+    /// Gets full name as string.
+    pub fn get_full_name_str(&self) -> String {
+        format!(
+            "{}:{}",
+            self.module_env.get_name().display(self.symbol_pool()),
+            self.get_name().display(self.symbol_pool())
+        )
+    }
+
     /// Returns the VM identifier for this struct
     pub fn get_identifier(&self) -> Identifier {
         let handle = self
@@ -2173,6 +2182,15 @@ impl<'env> FunctionEnv<'env> {
     /// Returns the name of this function.
     pub fn get_name(&self) -> Symbol {
         self.data.name
+    }
+
+    /// Gets full name as string.
+    pub fn get_full_name_str(&self) -> String {
+        format!(
+            "{}:{}",
+            self.module_env.get_name().display(self.symbol_pool()),
+            self.get_name().display(self.symbol_pool())
+        )
     }
 
     /// Returns the VM identifier for this function

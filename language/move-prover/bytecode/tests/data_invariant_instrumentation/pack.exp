@@ -1,0 +1,40 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Test::test_pack(): Test::R {
+     var $t0|r: Test::R
+     var $t1|s: Test::S
+     var $t2: u64
+     var $t3: u64
+     var $t4: Test::S
+     var $t5: Test::R
+  0: $t2 := 3
+  1: $t3 := 1
+  2: $t4 := pack Test::S($t3)
+  3: $t5 := pack Test::R($t2, $t4)
+  4: return $t5
+}
+
+============ after pipeline `data_invariant_instrumentation` ================
+
+[variant verification]
+pub fun Test::test_pack(): Test::R {
+     var $t0|r: Test::R
+     var $t1|s: Test::S
+     var $t2: u64
+     var $t3: u64
+     var $t4: Test::S
+     var $t5: Test::R
+  0: $t2 := 3
+  1: $t3 := 1
+  2: $t4 := pack Test::S($t3)
+     # data invariant for `Test:S`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/pack.move:16:9+16
+  3: assert Gt(select Test::S.y($t4), 0)
+  4: $t5 := pack Test::R($t2, $t4)
+     # data invariant for `Test:R`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/pack.move:12:9+18
+  5: assert Gt(select Test::R.x($t5), select Test::S.y(select Test::R.s($t5)))
+  6: label L1
+  7: return $t5
+}

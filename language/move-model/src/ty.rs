@@ -119,6 +119,11 @@ impl Type {
         matches!(self, Type::Reference(false, _))
     }
 
+    /// Determines whether this type is a struct.
+    pub fn is_struct(&self) -> bool {
+        matches!(self, Type::Struct(..))
+    }
+
     /// Returns true if this type is a specification language only type or contains specification
     /// language only types
     pub fn is_spec(&self) -> bool {

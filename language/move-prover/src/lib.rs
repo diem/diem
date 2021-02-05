@@ -12,10 +12,11 @@ use crate::{
 use abigen::Abigen;
 use anyhow::anyhow;
 use bytecode::{
+    data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     packed_types_analysis::PackedTypesProcessor,
-    spec_instrumentation::SpecInstrumenterProcessor,
+    spec_instrumentation::SpecInstrumentationProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
@@ -297,7 +298,8 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         .into_iter()
         .for_each(|processor| res.add_processor(processor));
     if options.trans_v2 {
-        res.add_processor(SpecInstrumenterProcessor::new());
+        res.add_processor(SpecInstrumentationProcessor::new());
+        res.add_processor(DataInvariantInstrumentationProcessor::new());
     } else {
         res.add_processor(PackedTypesProcessor::new());
     }

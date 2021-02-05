@@ -225,7 +225,7 @@ impl BorrowNode {
 }
 
 /// A specification property kind.
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub enum PropKind {
     Assert,
     Assume,
@@ -395,6 +395,12 @@ impl Bytecode {
                 attr,
                 vec![],
                 WriteBack(LocalRoot(f(false, dest))),
+                map(true, f, srcs),
+            ),
+            Call(attr, _, WriteBack(Reference(dest)), srcs) => Call(
+                attr,
+                vec![],
+                WriteBack(Reference(f(false, dest))),
                 map(true, f, srcs),
             ),
             Call(attr, dests, Splice(m), srcs) => {

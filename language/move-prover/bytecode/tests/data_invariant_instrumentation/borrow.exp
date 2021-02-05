@@ -1,0 +1,202 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Test::test_borrow_imm(): u64 {
+     var $t0|r: &Test::R
+     var $t1: address
+     var $t2: &Test::R
+     var $t3: &Test::R
+     var $t4: &u64
+     var $t5: u64
+  0: $t1 := 0x1
+  1: $t2 := borrow_global<Test::R>($t1)
+  2: $t0 := $t2
+  3: $t3 := move($t0)
+  4: $t4 := borrow_field<Test::R>.x($t3)
+  5: $t5 := read_ref($t4)
+  6: return $t5
+}
+
+
+[variant baseline]
+pub fun Test::test_borrow_mut(): u64 {
+     var $t0|r: &mut Test::R
+     var $t1: address
+     var $t2: &mut Test::R
+     var $t3: u64
+     var $t4: &mut Test::R
+     var $t5: &mut Test::S
+     var $t6: &mut u64
+     var $t7: u64
+     var $t8: &mut Test::R
+     var $t9: &mut u64
+     var $t10: &mut Test::R
+     var $t11: &u64
+     var $t12: u64
+  0: $t1 := 0x1
+  1: $t2 := borrow_global<Test::R>($t1)
+  2: $t0 := $t2
+  3: $t3 := 2
+  4: $t4 := copy($t0)
+  5: $t5 := borrow_field<Test::R>.s($t4)
+  6: $t6 := borrow_field<Test::S>.y($t5)
+  7: write_ref($t6, $t3)
+  8: $t7 := 3
+  9: $t8 := copy($t0)
+ 10: $t9 := borrow_field<Test::R>.x($t8)
+ 11: write_ref($t9, $t7)
+ 12: $t10 := move($t0)
+ 13: $t11 := borrow_field<Test::R>.x($t10)
+ 14: $t12 := read_ref($t11)
+ 15: return $t12
+}
+
+
+[variant baseline]
+pub fun Test::test_borrow_mut_local(): Test::R {
+     var $t0|d: Test::R
+     var $t1|r: &mut Test::R
+     var $t2: u64
+     var $t3: u64
+     var $t4: Test::S
+     var $t5: Test::R
+     var $t6: &mut Test::R
+     var $t7: u64
+     var $t8: &mut Test::R
+     var $t9: &mut Test::S
+     var $t10: &mut u64
+     var $t11: u64
+     var $t12: &mut Test::R
+     var $t13: &mut u64
+     var $t14: Test::R
+  0: $t2 := 2
+  1: $t3 := 1
+  2: $t4 := pack Test::S($t3)
+  3: $t5 := pack Test::R($t2, $t4)
+  4: $t0 := $t5
+  5: $t6 := borrow_local($t0)
+  6: $t1 := $t6
+  7: $t7 := 2
+  8: $t8 := copy($t1)
+  9: $t9 := borrow_field<Test::R>.s($t8)
+ 10: $t10 := borrow_field<Test::S>.y($t9)
+ 11: write_ref($t10, $t7)
+ 12: $t11 := 3
+ 13: $t12 := move($t1)
+ 14: $t13 := borrow_field<Test::R>.x($t12)
+ 15: write_ref($t13, $t11)
+ 16: $t14 := move($t0)
+ 17: return $t14
+}
+
+============ after pipeline `data_invariant_instrumentation` ================
+
+[variant verification]
+pub fun Test::test_borrow_imm(): u64 {
+     var $t0|r: Test::R
+     var $t1: address
+     var $t2: num
+     var $t3: u64
+     var $t4: Test::S
+  0: $t1 := 0x1
+  1: $t0 := get_global<Test::R>($t1)
+     # data invariant for `Test:R`
+  2: assume Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
+     # data invariant for `Test:S`
+  3: $t4 := get_field<Test::R>.s($t0)
+  4: assume Gt(select Test::S.y($t4), 0)
+  5: on_abort goto 9 with $t2
+  6: $t3 := get_field<Test::R>.x($t0)
+  7: label L1
+  8: return $t3
+  9: label L2
+ 10: abort($t2)
+}
+
+
+[variant verification]
+pub fun Test::test_borrow_mut(): u64 {
+     var $t0|r: &mut Test::R
+     var $t1: address
+     var $t2: num
+     var $t3: u64
+     var $t4: &mut Test::S
+     var $t5: &mut u64
+     var $t6: u64
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: Test::S
+  0: $t1 := 0x1
+  1: $t0 := borrow_global<Test::R>($t1)
+     # data invariant for `Test:R`
+  2: assume Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
+     # data invariant for `Test:S`
+  3: $t9 := get_field<Test::R>.s($t0)
+  4: assume Gt(select Test::S.y($t9), 0)
+  5: on_abort goto 22 with $t2
+  6: $t3 := 2
+  7: $t4 := borrow_field<Test::R>.s($t0)
+  8: $t5 := borrow_field<Test::S>.y($t4)
+  9: write_ref($t5, $t3)
+ 10: write_back[Reference($t4)]($t5)
+     # data invariant for `Test:S`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:16:9+16
+ 11: assert Gt(select Test::S.y($t4), 0)
+ 12: write_back[Reference($t0)]($t4)
+ 13: $t6 := 3
+ 14: $t7 := borrow_field<Test::R>.x($t0)
+ 15: write_ref($t7, $t6)
+ 16: write_back[Reference($t0)]($t7)
+ 17: $t8 := get_field<Test::R>.x($t0)
+     # data invariant for `Test:R`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:12:9+18
+ 18: assert Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
+ 19: write_back[Test::R]($t0)
+ 20: label L1
+ 21: return $t8
+ 22: label L2
+ 23: abort($t2)
+}
+
+
+[variant verification]
+pub fun Test::test_borrow_mut_local(): Test::R {
+     var $t0|d: Test::R
+     var $t1|r: &mut Test::R
+     var $t2: u64
+     var $t3: u64
+     var $t4: Test::S
+     var $t5: u64
+     var $t6: &mut Test::S
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: &mut u64
+  0: $t2 := 2
+  1: $t3 := 1
+  2: $t4 := pack Test::S($t3)
+     # data invariant for `Test:S`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:16:9+16
+  3: assert Gt(select Test::S.y($t4), 0)
+  4: $t0 := pack Test::R($t2, $t4)
+     # data invariant for `Test:R`
+     # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:12:9+18
+  5: assert Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
+  6: $t1 := borrow_local($t0)
+  7: $t5 := 2
+  8: $t6 := borrow_field<Test::R>.s($t1)
+  9: $t7 := borrow_field<Test::S>.y($t6)
+ 10: write_ref($t7, $t5)
+ 11: write_back[Reference($t6)]($t7)
+     # data invariant for `Test:S`
+ 12: assert Gt(select Test::S.y($t6), 0)
+ 13: write_back[Reference($t1)]($t6)
+ 14: $t8 := 3
+ 15: $t9 := borrow_field<Test::R>.x($t1)
+ 16: write_ref($t9, $t8)
+ 17: write_back[Reference($t1)]($t9)
+     # data invariant for `Test:R`
+ 18: assert Gt(select Test::R.x($t1), select Test::S.y(select Test::R.s($t1)))
+ 19: write_back[LocalRoot($t0)]($t1)
+ 20: label L1
+ 21: return $t0
+}

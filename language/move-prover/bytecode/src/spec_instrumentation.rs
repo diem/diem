@@ -70,15 +70,15 @@ fn modify_check_fails_message(
 //  ================================================================================================
 /// # Spec Instrumenter
 
-pub struct SpecInstrumenterProcessor {}
+pub struct SpecInstrumentationProcessor {}
 
-impl SpecInstrumenterProcessor {
+impl SpecInstrumentationProcessor {
     pub fn new() -> Box<Self> {
         Box::new(Self {})
     }
 }
 
-impl FunctionTargetProcessor for SpecInstrumenterProcessor {
+impl FunctionTargetProcessor for SpecInstrumentationProcessor {
     fn initialize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
         // Perform static analysis part of modifies check.
         check_modifies(env, targets);

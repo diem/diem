@@ -487,6 +487,80 @@ impl Exp {
         visitor(true, self);
     }
 
+    /// Rewrites this expression based on the rewriter function. In
+    /// `let (is_rewritten, exp) = rewriter(exp)`, the function should return true if
+    /// the expression was rewritten, false and the original expression if not. In case the
+    /// expression is rewritten, the expression tree will not further be traversed and the
+    /// rewritten expression immediately returned. Otherwise, the function will recurse and
+    /// rewrite sub-expressions.
+    pub fn rewrite<F>(self, rewriter: &mut F) -> Exp
+    where
+        F: FnMut(Exp) -> (bool, Exp),
+    {
+        use Exp::*;
+        let (is_rewritten, exp) = rewriter(self);
+        if is_rewritten {
+            return exp;
+        }
+
+        let rewrite_vec = |rewriter: &mut F, exps: Vec<Exp>| -> Vec<Exp> {
+            exps.into_iter().map(|e| e.rewrite(rewriter)).collect()
+        };
+        let rewrite_box =
+            |rewriter: &mut F, exp: Box<Exp>| -> Box<Exp> { Box::new(exp.rewrite(rewriter)) };
+        let rewrite_decl = |rewriter: &mut F, d: LocalVarDecl| LocalVarDecl {
+            id: d.id,
+            name: d.name,
+            binding: d.binding.map(|e| e.rewrite(rewriter)),
+        };
+        let rewrite_decls = |rewriter: &mut F, decls: Vec<LocalVarDecl>| -> Vec<LocalVarDecl> {
+            decls
+                .into_iter()
+                .map(|d| rewrite_decl(rewriter, d))
+                .collect()
+        };
+        let rewrite_quant_decls =
+            |rewriter: &mut F, decls: Vec<(LocalVarDecl, Exp)>| -> Vec<(LocalVarDecl, Exp)> {
+                decls
+                    .into_iter()
+                    .map(|(d, r)| (rewrite_decl(rewriter, d), r.rewrite(rewriter)))
+                    .collect()
+            };
+
+        match exp {
+            Call(id, oper, args) => Call(id, oper, rewrite_vec(rewriter, args)),
+            Invoke(id, target, args) => Invoke(
+                id,
+                rewrite_box(rewriter, target),
+                rewrite_vec(rewriter, args),
+            ),
+            Lambda(id, decls, body) => Lambda(
+                id,
+                rewrite_decls(rewriter, decls),
+                rewrite_box(rewriter, body),
+            ),
+            Quant(id, kind, decls, condition, body) => Quant(
+                id,
+                kind,
+                rewrite_quant_decls(rewriter, decls),
+                condition.map(|e| rewrite_box(rewriter, e)),
+                rewrite_box(rewriter, body),
+            ),
+            Block(id, decls, body) => Block(
+                id,
+                rewrite_decls(rewriter, decls),
+                rewrite_box(rewriter, body),
+            ),
+            IfElse(id, c, t, e) => IfElse(
+                id,
+                rewrite_box(rewriter, c),
+                rewrite_box(rewriter, t),
+                rewrite_box(rewriter, e),
+            ),
+            _ => exp,
+        }
+    }
+
     /// Returns the set of module ids used by this expression.
     pub fn module_usage(&self, usage: &mut BTreeSet<ModuleId>) {
         self.visit(&mut |e| match e {
