@@ -1384,10 +1384,11 @@ dependencies = [
 
 [[package]]
 name = "determinator"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f67196df4b7b51e340ba1adfc9361414c51321336b59c148d18da7acf8fe7f71"
+checksum = "6f862ffb07525089b200b5bd75d2be5a35eebb529cf1118511827a3929358b21"
 dependencies = [
+ "cfg-if 1.0.0",
  "globset",
  "guppy",
  "itertools 0.10.0",
