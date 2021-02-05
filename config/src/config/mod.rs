@@ -99,10 +99,10 @@ pub struct BaseConfig {
 
 impl BaseConfig {
     pub fn genesis_waypoint(&self) -> Waypoint {
-        if self.genesis_waypoint.is_none() {
-            self.waypoint.waypoint()
+        if let Some(genesis_waypoint) = &self.genesis_waypoint {
+            genesis_waypoint.waypoint()
         } else {
-            self.genesis_waypoint.as_ref().unwrap().genesis_waypoint()
+            self.waypoint.genesis_waypoint()
         }
     }
 }

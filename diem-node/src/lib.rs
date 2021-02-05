@@ -276,10 +276,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         node_config.storage.backup_service_address,
         Arc::clone(&diem_db),
     );
-    let genesis_waypoint = node_config.base.genesis_waypoint();
     // if there's genesis txn and waypoint, commit it if the result matches.
     if let Some(genesis) = get_genesis_txn(&node_config) {
-        maybe_bootstrap::<DiemVM>(&db_rw, genesis, genesis_waypoint)
+        maybe_bootstrap::<DiemVM>(&db_rw, genesis, node_config.base.genesis_waypoint())
             .expect("Db-bootstrapper should not fail.");
     } else {
         info!("Genesis txn not provided, it's fine if you don't expect to apply it otherwise please double check config");
@@ -407,14 +406,13 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // for state sync to send requests to mempool
     let (state_sync_to_mempool_sender, state_sync_requests) =
         channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
-    let waypoint = node_config.base.waypoint.waypoint();
     let state_sync_bootstrapper = StateSyncBootstrapper::bootstrap(
         state_sync_network_handles,
         state_sync_to_mempool_sender,
         Arc::clone(&db_rw.reader),
         chunk_executor,
         node_config,
-        waypoint,
+        node_config.base.waypoint.waypoint(),
         reconfig_subscriptions,
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
