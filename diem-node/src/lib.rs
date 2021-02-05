@@ -276,12 +276,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         node_config.storage.backup_service_address,
         Arc::clone(&diem_db),
     );
-    let genesis_waypoint = node_config
-        .base
-        .genesis_waypoint
-        .as_ref()
-        .unwrap_or(&node_config.base.waypoint)
-        .genesis_waypoint();
+    let genesis_waypoint = node_config.base.genesis_waypoint();
     // if there's genesis txn and waypoint, commit it if the result matches.
     if let Some(genesis) = get_genesis_txn(&node_config) {
         maybe_bootstrap::<DiemVM>(&db_rw, genesis, genesis_waypoint)

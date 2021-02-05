@@ -94,7 +94,17 @@ pub struct BaseConfig {
     data_dir: PathBuf,
     pub role: RoleType,
     pub waypoint: WaypointConfig,
-    pub genesis_waypoint: Option<WaypointConfig>,
+    genesis_waypoint: Option<WaypointConfig>,
+}
+
+impl BaseConfig {
+    pub fn genesis_waypoint(&self) -> Waypoint {
+        if self.genesis_waypoint.is_none() {
+            self.waypoint.waypoint()
+        } else {
+            self.genesis_waypoint.as_ref().unwrap().genesis_waypoint()
+        }
+    }
 }
 
 impl Default for BaseConfig {
