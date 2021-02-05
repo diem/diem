@@ -67,12 +67,21 @@ static COMPILED_MOVELANG_STDLIB_WITH_BYTES: Lazy<(Vec<Vec<u8>>, Vec<CompiledModu
             .map(|module| (module.self_id(), module))
             .collect();
         for module in modules_by_id.values() {
-            cyclic_dependencies::verify_module(module, |module_id| {
-                Ok(modules_by_id
-                    .get(module_id)
-                    .expect("missing module in stdlib")
-                    .immediate_module_dependencies())
-            })
+            cyclic_dependencies::verify_module(
+                module,
+                |module_id| {
+                    Ok(modules_by_id
+                        .get(module_id)
+                        .expect("missing module in stdlib")
+                        .immediate_dependencies())
+                },
+                |module_id| {
+                    Ok(modules_by_id
+                        .get(module_id)
+                        .expect("missing module in stdlib")
+                        .immediate_friends())
+                },
+            )
             .expect("stdlib module has cyclic dependencies");
         }
         (module_bytes, verified_modules)

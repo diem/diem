@@ -566,6 +566,14 @@ pub enum StatusCode {
     NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH = 1101,
     CALLED_SCRIPT_VISIBLE_FROM_NON_SCRIPT_VISIBLE = 1102,
     EXECUTE_SCRIPT_FUNCTION_CALLED_ON_NON_SCRIPT_VISIBLE = 1103,
+    // Cannot mark the module itself as a friend
+    INVALID_FRIEND_DECL_WITH_SELF = 1104,
+    // Cannot declare modules outside of account address as friends
+    INVALID_FRIEND_DECL_WITH_MODULES_OUTSIDE_ACCOUNT_ADDRESS = 1105,
+    // Cannot declare modules that this module depends on as friends
+    INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES = 1106,
+    // The updated module introduces a cyclic friendship (i.e., A friends B and B also friends A)
+    CYCLIC_MODULE_FRIENDSHIP = 1107,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

@@ -1232,14 +1232,12 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Return the set of language storage ModuleId's that this module's bytecode depends on
-    /// (including itself).
+    /// (including itself), friend modules are excluded from the return result.
     pub fn get_dependencies(&self) -> Vec<language_storage::ModuleId> {
         let compiled_module = &self.data.module;
-        compiled_module
-            .module_handles()
-            .iter()
-            .map(|h| compiled_module.module_id_for_handle(h))
-            .collect()
+        let mut deps = self.data.module.immediate_dependencies();
+        deps.push(compiled_module.self_id());
+        deps
     }
 
     /// Returns the set of modules that use this one.

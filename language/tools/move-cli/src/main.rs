@@ -611,7 +611,7 @@ fn explain_publish_error(
             let mut stack = vec![];
             let mut state = BTreeMap::new();
             state.insert(module_id.clone(), true);
-            for dep in module.immediate_module_dependencies() {
+            for dep in module.immediate_dependencies() {
                 stack.push((code_cache.get_module(&dep)?, false));
             }
 
@@ -623,7 +623,7 @@ fn explain_publish_error(
                 } else {
                     state.insert(cur_id, true);
                     stack.push((cur, true));
-                    for next in cur.immediate_module_dependencies() {
+                    for next in cur.immediate_dependencies() {
                         if let Some(is_discovered_but_not_finished) = state.get(&next) {
                             if *is_discovered_but_not_finished {
                                 let cycle_path: Vec<_> = stack
@@ -814,13 +814,21 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
             )
         }
 
-        let cyclic_check_result =
-            bytecode_verifier::cyclic_dependencies::verify_module(module, |module_id| {
+        let cyclic_check_result = bytecode_verifier::cyclic_dependencies::verify_module(
+            module,
+            |module_id| {
                 code_cache
                     .get_module(module_id)
                     .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
-                    .map(|m| m.immediate_module_dependencies())
-            });
+                    .map(|m| m.immediate_dependencies())
+            },
+            |module_id| {
+                code_cache
+                    .get_module(module_id)
+                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                    .map(|m| m.immediate_friends())
+            },
+        );
         if let Err(cyclic_check_error) = cyclic_check_result {
             // the only possible error in the CLI's context is CYCLIC_MODULE_DEPENDENCY
             assert_eq!(

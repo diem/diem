@@ -447,7 +447,7 @@ impl CodeCache {
         module: &CompiledModule,
     ) -> Result<Vec<&CompiledModule>> {
         module
-            .immediate_module_dependencies()
+            .immediate_dependencies()
             .into_iter()
             .map(|module_id| self.get_module(&module_id))
             .collect::<Result<Vec<_>>>()
@@ -464,7 +464,7 @@ impl CodeCache {
         ) -> Result<()> {
             if let btree_map::Entry::Vacant(entry) = all_deps.entry(module_id) {
                 let module = loader.get_module(entry.key())?;
-                let next_deps = module.immediate_module_dependencies();
+                let next_deps = module.immediate_dependencies();
                 entry.insert(module);
                 for next in next_deps {
                     get_all_module_dependencies_recursive(all_deps, next, loader)?;
@@ -474,7 +474,7 @@ impl CodeCache {
         }
 
         let mut all_deps = BTreeMap::new();
-        for dep in module.immediate_module_dependencies() {
+        for dep in module.immediate_dependencies() {
             get_all_module_dependencies_recursive(&mut all_deps, dep, self)?;
         }
         Ok(all_deps)

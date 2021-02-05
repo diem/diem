@@ -14,6 +14,7 @@ pub mod control_flow;
 pub mod control_flow_graph;
 pub mod cyclic_dependencies;
 pub mod dependencies;
+pub mod friends;
 pub mod instantiation_loops;
 pub mod instruction_consistency;
 pub mod script_signature;

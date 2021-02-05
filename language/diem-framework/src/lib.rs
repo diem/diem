@@ -169,12 +169,21 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
         .map(|module| (module.self_id(), module))
         .collect();
     for module in modules_by_id.values() {
-        cyclic_dependencies::verify_module(module, |module_id| {
-            Ok(modules_by_id
-                .get(module_id)
-                .expect("missing module in stdlib")
-                .immediate_module_dependencies())
-        })
+        cyclic_dependencies::verify_module(
+            module,
+            |module_id| {
+                Ok(modules_by_id
+                    .get(module_id)
+                    .expect("missing module in stdlib")
+                    .immediate_dependencies())
+            },
+            |module_id| {
+                Ok(modules_by_id
+                    .get(module_id)
+                    .expect("missing module in stdlib")
+                    .immediate_friends())
+            },
+        )
         .expect("stdlib module has cyclic dependencies");
     }
     modules

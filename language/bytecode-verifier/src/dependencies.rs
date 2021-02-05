@@ -72,7 +72,7 @@ impl<'a, 'b> Context<'a, 'b> {
 
         let mut dependency_visibilities = HashMap::new();
         for (module_id, module) in &context.dependency_map {
-            let friend_module_ids: BTreeSet<_> = module.friend_module_ids().into_iter().collect();
+            let friend_module_ids: BTreeSet<_> = module.immediate_friends().into_iter().collect();
 
             // Module::StructName -> def handle idx
             for struct_def in module.struct_defs() {

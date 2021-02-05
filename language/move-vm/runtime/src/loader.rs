@@ -5,11 +5,7 @@ use crate::{
     logging::{expect_no_verification_errors, LogContext},
     native_functions::NativeFunction,
 };
-use bytecode_verifier::{
-    ability_field_requirements, constants, cyclic_dependencies, dependencies,
-    instantiation_loops::InstantiationLoopChecker, script_signature, CodeUnitVerifier,
-    DuplicationChecker, InstructionConsistency, RecursiveStructDefChecker, SignatureChecker,
-};
+use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -507,7 +503,7 @@ impl Loader {
         match self.verify_script(&script) {
             Ok(_) => {
                 // verify dependencies
-                let deps = script.immediate_module_dependencies();
+                let deps = script.immediate_dependencies();
                 let loaded_deps = self.load_dependencies_verify_no_missing_dependencies(
                     deps,
                     data_store,
@@ -530,12 +526,7 @@ impl Loader {
     // Script verification steps.
     // See `verify_module()` for module verification steps.
     fn verify_script(&self, script: &CompiledScript) -> VMResult<()> {
-        DuplicationChecker::verify_script(&script)?;
-        SignatureChecker::verify_script(&script)?;
-        InstructionConsistency::verify_script(&script)?;
-        constants::verify_script(&script)?;
-        CodeUnitVerifier::verify_script(&script)?;
-        script_signature::verify_script(&script)
+        bytecode_verifier::verify_script(&script)
     }
 
     fn verify_script_dependencies(
@@ -640,21 +631,21 @@ impl Loader {
         verify_no_missing_modules: bool,
         log_context: &impl LogContext,
     ) -> VMResult<()> {
-        DuplicationChecker::verify_module(&module)?;
-        SignatureChecker::verify_module(&module)?;
-        InstructionConsistency::verify_module(&module)?;
-        ability_field_requirements::verify_module(&module)?;
-        constants::verify_module(&module)?;
-        RecursiveStructDefChecker::verify_module(&module)?;
-        InstantiationLoopChecker::verify_module(&module)?;
-        CodeUnitVerifier::verify_module(&module)?;
+        bytecode_verifier::verify_module(&module)?;
         Self::check_natives(&module)?;
 
-        let deps = module.immediate_module_dependencies();
+        let deps = module.immediate_dependencies();
         let loaded_imm_deps = if verify_no_missing_modules {
             self.load_dependencies_verify_no_missing_dependencies(deps, data_store, log_context)?
         } else {
             self.load_dependencies_expect_no_missing_dependencies(deps, data_store, log_context)?
+        };
+
+        let friends = module.immediate_friends();
+        if verify_no_missing_modules {
+            self.load_dependencies_verify_no_missing_dependencies(friends, data_store, log_context)?
+        } else {
+            self.load_dependencies_expect_no_missing_dependencies(friends, data_store, log_context)?
         };
 
         self.verify_module_dependencies(module, loaded_imm_deps)
@@ -672,13 +663,23 @@ impl Loader {
         dependencies::verify_module(module, imm_deps)?;
 
         let module_cache = self.module_cache.lock();
-        cyclic_dependencies::verify_module(module, |module_id| {
-            module_cache
-                .modules
-                .get(module_id)
-                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
-                .map(|m| m.module().immediate_module_dependencies())
-        })
+        cyclic_dependencies::verify_module(
+            module,
+            |module_id| {
+                module_cache
+                    .modules
+                    .get(module_id)
+                    .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                    .map(|m| m.module().immediate_dependencies())
+            },
+            |module_id| {
+                module_cache
+                    .modules
+                    .get(module_id)
+                    .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                    .map(|m| m.module().immediate_friends())
+            },
+        )
     }
 
     // All native functions must be known to the loader

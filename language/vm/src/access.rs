@@ -188,7 +188,7 @@ pub trait ModuleAccess: Sync {
         self.as_module().self_id()
     }
 
-    fn immediate_module_dependencies(&self) -> Vec<ModuleId> {
+    fn immediate_dependencies(&self) -> Vec<ModuleId> {
         let self_handle = self.self_handle();
         self.module_handles()
             .iter()
@@ -197,7 +197,7 @@ pub trait ModuleAccess: Sync {
             .collect()
     }
 
-    fn friend_module_ids(&self) -> Vec<ModuleId> {
+    fn immediate_friends(&self) -> Vec<ModuleId> {
         self.friend_decls()
             .iter()
             .map(|handle| self.module_id_for_handle(handle))
@@ -280,7 +280,7 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().code
     }
 
-    fn immediate_module_dependencies(&self) -> Vec<ModuleId> {
+    fn immediate_dependencies(&self) -> Vec<ModuleId> {
         self.module_handles()
             .iter()
             .map(|handle| {
