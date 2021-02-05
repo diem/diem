@@ -46,7 +46,7 @@ standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.22", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -91,7 +91,7 @@ syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clon
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.60", features = ["clone-impls", "default", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.22", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -131,7 +131,7 @@ standback = { version = "0.2.14", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.22", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -176,7 +176,7 @@ syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clon
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.60", features = ["clone-impls", "default", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tokio = { version = "1.1.1", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.22", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
