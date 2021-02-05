@@ -1029,7 +1029,7 @@ impl<'a> fmt::Display for OperationDisplay<'a> {
             _ => write!(f, "{:?}", self.oper),
         }?;
 
-        // If operation as a type instantiation, add it.
+        // If operation has a type instantiation, add it.
         let type_inst = self.env.get_node_instantiation(self.node_id);
         if !type_inst.is_empty() {
             let tctx = TypeDisplayContext::WithEnv {

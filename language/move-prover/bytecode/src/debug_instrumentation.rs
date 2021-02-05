@@ -46,7 +46,7 @@ impl FunctionTargetProcessor for DebugInstrumenter {
         // Emit trace instructions for parameters at entry.
         builder.set_loc(builder.fun_env.get_loc().at_start());
         for i in 0..builder.fun_env.get_parameter_count() {
-            builder.emit_with(|id| Call(id, vec![], Operation::TraceLocal(i), vec![i]));
+            builder.emit_with(|id| Call(id, vec![], Operation::TraceLocal(i), vec![i], None));
         }
 
         for bc in code {
@@ -55,21 +55,28 @@ impl FunctionTargetProcessor for DebugInstrumenter {
                     // Emit trace instructions for return values.
                     builder.set_loc_from_attr(*id);
                     for (i, l) in locals.iter().enumerate() {
-                        builder
-                            .emit_with(|id| Call(id, vec![], Operation::TraceReturn(i), vec![*l]));
+                        builder.emit_with(|id| {
+                            Call(id, vec![], Operation::TraceReturn(i), vec![*l], None)
+                        });
                     }
                     builder.emit(bc);
                 }
                 Abort(id, l) => {
                     builder.set_loc_from_attr(*id);
-                    builder.emit_with(|id| Call(id, vec![], Operation::TraceAbort, vec![*l]));
+                    builder.emit_with(|id| Call(id, vec![], Operation::TraceAbort, vec![*l], None));
                     builder.emit(bc);
                 }
-                Call(_, _, Operation::WriteRef, srcs) if srcs[0] < fun_env.get_local_count() => {
+                Call(_, _, Operation::WriteRef, srcs, _) if srcs[0] < fun_env.get_local_count() => {
                     builder.set_loc_from_attr(bc.get_attr_id());
                     builder.emit(bc.clone());
                     builder.emit_with(|id| {
-                        Call(id, vec![], Operation::TraceLocal(srcs[0]), vec![srcs[0]])
+                        Call(
+                            id,
+                            vec![],
+                            Operation::TraceLocal(srcs[0]),
+                            vec![srcs[0]],
+                            None,
+                        )
                     });
                 }
                 _ => {
@@ -81,7 +88,7 @@ impl FunctionTargetProcessor for DebugInstrumenter {
                         // by stack elimination.
                         if idx < fun_env.get_local_count() {
                             builder.emit_with(|id| {
-                                Call(id, vec![], Operation::TraceLocal(idx), vec![idx])
+                                Call(id, vec![], Operation::TraceLocal(idx), vec![idx], None)
                             });
                         }
                     }

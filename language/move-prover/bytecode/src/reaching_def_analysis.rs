@@ -10,7 +10,7 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{BorrowNode, Bytecode, Operation},
+    stackless_bytecode::{AbortAction, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
@@ -103,9 +103,9 @@ impl ReachingDefProcessor {
         use Bytecode::*;
         code.iter()
             .filter_map(|bc| match bc {
-                Call(_, _, Operation::BorrowLoc, srcs) => Some(srcs[0]),
-                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src)), _) => Some(*src),
-                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src)), _) => Some(*src),
+                Call(_, _, Operation::BorrowLoc, srcs, _) => Some(srcs[0]),
+                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src)), ..) => Some(*src),
+                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src)), ..) => Some(*src),
                 _ => None,
             })
             .collect()
@@ -212,15 +212,17 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
             Load(_, dest, ..) => {
                 state.kill(*dest);
             }
-            Call(_, dests, oper, ..) => {
+            Call(_, dests, oper, _, on_abort) => {
                 if let WriteBack(LocalRoot(dest)) = oper {
                     state.kill(*dest);
                 }
                 for dest in dests {
                     state.kill(*dest);
                 }
+                if let Some(AbortAction(_, dest)) = on_abort {
+                    state.kill(*dest);
+                }
             }
-            OnAbort(_, _, code_dest) => state.kill(*code_dest),
             _ => {}
         }
     }

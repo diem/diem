@@ -3,6 +3,16 @@
 
 // Transformation which injects specifications (Move function spec blocks) into the bytecode.
 
+use itertools::Itertools;
+
+use move_model::{
+    ast,
+    ast::{Exp, TempIndex},
+    model::{ConditionTag, FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
+    pragmas::ABORTS_IF_IS_PARTIAL_PRAGMA,
+    ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
+};
+
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
@@ -10,28 +20,15 @@ use crate::{
     livevar_analysis::LiveVarAnalysisProcessor,
     options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
     reaching_def_analysis::ReachingDefProcessor,
-    stackless_bytecode::{AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
+    spec_translator::{SpecTranslator, TranslatedSpec},
+    stackless_bytecode::{AbortAction, AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
     usage_analysis, verification_analysis,
 };
-use itertools::Itertools;
-use move_model::{
-    ast,
-    ast::{ConditionKind, Exp, LocalVarDecl, MemoryLabel, TempIndex},
-    model::{
-        ConditionTag, FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, SpecVarId,
-        StructId,
-    },
-    pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA},
-    symbol::Symbol,
-    ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
-};
-use std::collections::{BTreeMap, BTreeSet};
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
 const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
 const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
-const WRONG_ABORTS_CODE: &str = "function aborts under this condition but with the wrong code";
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
 
@@ -91,8 +88,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
         mut data: FunctionData,
     ) -> Option<FunctionData> {
         if fun_env.is_native() || fun_env.is_intrinsic() {
-            // Remove this function.
-            return None;
+            return Some(data);
         }
 
         let options = fun_env
@@ -187,7 +183,14 @@ impl<'a> Instrumenter<'a> {
 
         // Translate the specification. This deals with elimination of `old(..)` expressions,
         // as well as replaces `result_n` references with `ret_locals`.
-        let spec = SpecTranslator::translate(&mut builder, fun_env, None, &ret_locals);
+        let spec = SpecTranslator::translate_fun_spec(
+            false,
+            &mut builder,
+            fun_env,
+            &[],
+            None,
+            &ret_locals,
+        );
 
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
@@ -224,10 +227,10 @@ impl<'a> Instrumenter<'a> {
         // Inject preconditions as assumes. This is done for all self.variant values.
         self.builder
             .set_loc(self.builder.fun_env.get_loc().at_start()); // reset to function level
-        for (loc, exp) in &self.spec.pre {
-            self.builder.set_loc(loc.clone());
+        for (loc, exp) in self.spec.pre_conditions(&self.builder) {
+            self.builder.set_loc(loc);
             self.builder
-                .emit_with(move |attr_id| Prop(attr_id, Assume, exp.clone()))
+                .emit_with(move |attr_id| Prop(attr_id, Assume, exp))
         }
 
         if self.variant == FunctionVariant::Verification {
@@ -264,8 +267,8 @@ impl<'a> Instrumenter<'a> {
         // the BorrowGlobal at this point represents a mutation and immutable references have
         // been removed.
         match &bc {
-            Call(id, _, BorrowGlobal(mid, sid, targs), srcs)
-            | Call(id, _, MoveFrom(mid, sid, targs), srcs) => {
+            Call(id, _, BorrowGlobal(mid, sid, targs), srcs, _)
+            | Call(id, _, MoveFrom(mid, sid, targs), srcs, _) => {
                 let addr_exp = self.builder.mk_local(srcs[0]);
                 self.generate_modifies_check(
                     &self.builder.get_loc(*id),
@@ -274,7 +277,7 @@ impl<'a> Instrumenter<'a> {
                     &addr_exp,
                 );
             }
-            Call(id, _, MoveTo(mid, sid, targs), srcs) => {
+            Call(id, _, MoveTo(mid, sid, targs), srcs, _) => {
                 let addr_exp = self.builder.mk_local(srcs[1]);
                 self.generate_modifies_check(
                     &self.builder.get_loc(*id),
@@ -306,23 +309,24 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| Jump(id, abort_label));
                 self.can_abort = true;
             }
-            Call(id, dests, Function(mid, fid, targs), srcs) => {
-                self.generate_call(id, dests, mid, fid, targs, srcs);
+            Call(id, dests, Function(mid, fid, targs), srcs, aa) => {
+                self.instrument_call(id, dests, mid, fid, targs, srcs, aa);
             }
-            Call(id, dests, oper, srcs) if oper.can_abort() => {
-                self.builder.emit(Call(id, dests, oper, srcs));
-                self.builder.set_loc_from_attr(id);
-                let abort_label = self.abort_label;
-                let abort_local = self.abort_local;
-                self.builder
-                    .emit_with(|id| OnAbort(id, abort_label, abort_local));
+            Call(id, dests, oper, srcs, _) if oper.can_abort() => {
+                self.builder.emit(Call(
+                    id,
+                    dests,
+                    oper,
+                    srcs,
+                    Some(AbortAction(self.abort_label, self.abort_local)),
+                ));
                 self.can_abort = true;
             }
             _ => self.builder.emit(bc),
         }
     }
 
-    fn generate_call(
+    fn instrument_call(
         &mut self,
         id: AttrId,
         dests: Vec<TempIndex>,
@@ -330,6 +334,7 @@ impl<'a> Instrumenter<'a> {
         fid: FunId,
         targs: Vec<Type>,
         srcs: Vec<TempIndex>,
+        aa: Option<AbortAction>,
     ) {
         use Bytecode::*;
         use PropKind::*;
@@ -338,8 +343,14 @@ impl<'a> Instrumenter<'a> {
 
         let callee_env = env.get_module(mid).into_function(fid);
         let callee_opaque = callee_env.is_opaque();
-        let mut callee_spec =
-            SpecTranslator::translate(&mut self.builder, &callee_env, Some(&srcs), &dests);
+        let mut callee_spec = SpecTranslator::translate_fun_spec(
+            true,
+            &mut self.builder,
+            &callee_env,
+            &targs,
+            Some(&srcs),
+            &dests,
+        );
 
         self.builder.set_loc_from_attr(id);
 
@@ -351,6 +362,7 @@ impl<'a> Instrumenter<'a> {
                 dests.clone(),
                 Operation::Function(mid, fid, targs.clone()),
                 srcs.clone(),
+                aa,
             );
             self.builder.set_next_debug_comment(format!(
                 "original call of opaque function: {}",
@@ -363,7 +375,7 @@ impl<'a> Instrumenter<'a> {
         // emitting any pre-conditions because they are assumed already at entry into the
         // function.
         if self.variant == FunctionVariant::Verification || callee_opaque {
-            for (loc, cond) in std::mem::take(&mut callee_spec.pre) {
+            for (loc, cond) in callee_spec.pre_conditions(&self.builder) {
                 // Determine whether we want to emit this as an assertion or an assumption.
                 let prop_kind = match self.variant {
                     FunctionVariant::Verification => {
@@ -395,12 +407,13 @@ impl<'a> Instrumenter<'a> {
 
         // From here on code differs depending on whether the callee is opaque or not.
         if !callee_env.is_opaque() {
-            self.builder
-                .emit(Call(id, dests, Operation::Function(mid, fid, targs), srcs));
-            let abort_label = self.abort_label;
-            let abort_local = self.abort_local;
-            self.builder
-                .emit_with(|id| OnAbort(id, abort_label, abort_local));
+            self.builder.emit(Call(
+                id,
+                dests,
+                Operation::Function(mid, fid, targs),
+                srcs,
+                Some(AbortAction(self.abort_label, self.abort_local)),
+            ));
             self.can_abort = true;
         } else {
             // Emit all necessary state saves
@@ -416,19 +429,27 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| Prop(id, Modifies, modifies));
             }
 
-            // Translate the abort condition. We generate:
-            //
-            //   assume <temp> == <abort_cond>
-            //   if <temp> goto abort_label
-            //
-            if let Some(abort_cond_temp) = self.generate_abort_opaque_cond(&callee_spec) {
-                let abort_label = self.abort_label;
-                let no_abort_label = self.builder.new_label();
-                self.builder
-                    .emit_with(|id| Branch(id, abort_label, no_abort_label, abort_cond_temp));
-                self.builder.emit_with(|id| Label(id, no_abort_label));
-                self.can_abort = true;
+            // Translate the abort condition.
+            let (abort_cond_temp, code_cond) = self.generate_abort_opaque_cond(&callee_spec);
+            let abort_label = self.abort_label;
+            let no_abort_label = self.builder.new_label();
+            // If the code_cond is not empty, we first need to branch to the abort_here_label
+            // which contains additional assumptions about abort code, before we jump to the
+            // abort_label.
+            let abort_here_label = if code_cond.is_some() {
+                self.builder.new_label()
+            } else {
+                abort_label
+            };
+            self.builder
+                .emit_with(|id| Branch(id, abort_here_label, no_abort_label, abort_cond_temp));
+            if let Some(cond) = code_cond {
+                self.builder.emit_with(|id| Label(id, abort_here_label));
+                self.builder.emit_with(move |id| Prop(id, Assume, cond));
+                self.builder.emit_with(|id| Jump(id, abort_label));
             }
+            self.builder.emit_with(|id| Label(id, no_abort_label));
+            self.can_abort = true;
 
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
@@ -454,24 +475,7 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Abort(id, abort_local));
     }
 
-    /// Generates verification conditions for abort block. Note that some of the complexity
-    /// of this stems from that we aim to get as much detailed as possible diagnosis of
-    /// verification failures, by splitting this into multiple asserts.
-    ///
-    /// Let (P1, C1)..(Pj, Cj) be aborts_if with a code, Pk..Pl aborts_if without a code, and the
-    /// Cm..Cn standalone aborts codes from an aborts_with. We generate:
-    ///
-    ///  ```notrust
-    ///   let P_with_code = P1 || .. || Pj
-    ///   let P_without_code = Pk || .. || Pl
-    ///   assert P_with_code || P_without_code    [if not partial]
-    ///   assert P1 ==> abort_code == C1
-    ///   ..
-    ///   assert Pj ==> abort_code == Cj
-    ///   assert !P_with_code ==> abort_code == Cm || .. || abort_code == Cn
-    /// ```
-    ///
-    /// Each of the asserts has its own related ConditionInfo for failure reporting.
+    /// Generates verification conditions for abort block.
     fn generate_abort_verify(&mut self) {
         use Bytecode::*;
         use PropKind::*;
@@ -481,31 +485,9 @@ impl<'a> Instrumenter<'a> {
             .fun_env
             .is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
 
-        let actual_code = self.builder.mk_local(self.abort_local);
-        let mut p_with_code = self.spec.aborts_if_with_code_disjunction(&self.builder);
-        let p_without_code = self.spec.aborts_if_without_code_disjunction(&self.builder);
-        let p_implies_code = self
-            .spec
-            .aborts_if_with_code_implication(&self.builder, &actual_code);
-        let aborts_with_codes = self
-            .spec
-            .aborts_with_code_disjunction(&self.builder, &actual_code);
-
-        if aborts_with_codes.is_some() && p_with_code.is_some() && !is_partial {
-            // We need the p_with_code expression two times: first for asserting
-            // the aborts condition, and second for asserting the aborts_with codes.
-            // Save it into a temporary.
-            p_with_code = p_with_code.map(|e| self.builder.emit_let(e).1);
-        }
-
-        // If !is_partial, assert the abort condition.
         if !is_partial {
-            let p_overall = self.builder.mk_join_opt_bool(
-                ast::Operation::Or,
-                p_with_code.clone(),
-                p_without_code,
-            );
-            if let Some(p) = p_overall {
+            // If not partial, emit an assertion for the overall aborts condition.
+            if let Some(cond) = self.spec.aborts_condition(&self.builder) {
                 // TODO(wrwg): we need a location for the spec block of this function.
                 //   The conditions don't give us a good indication because via
                 //   schemas, they can come from anywhere. For now we use the
@@ -513,95 +495,57 @@ impl<'a> Instrumenter<'a> {
                 let loc = self.builder.fun_env.get_loc();
                 self.builder
                     .set_loc_and_vc_info(loc, ConditionTag::Ensures, ABORT_NOT_COVERED);
-                self.builder.emit_with(move |id| Prop(id, Assert, p));
+                self.builder.emit_with(move |id| Prop(id, Assert, cond));
             }
         }
 
-        // Next assert implications for aborts_if with code.
-        for (loc, implies) in p_implies_code {
-            self.builder
-                .set_loc_and_vc_info(loc, ConditionTag::Ensures, WRONG_ABORTS_CODE);
-            self.builder.emit_with(move |id| Prop(id, Assert, implies));
-        }
-
-        // Finally emit aborts_with.
-        if aborts_with_codes.is_some() {
-            let not_p_with_code = p_with_code.map(|e| self.builder.mk_not(e));
-            let aborts_with_cond = self
-                .builder
-                .mk_join_opt_bool(ast::Operation::Implies, not_p_with_code, aborts_with_codes)
-                .unwrap();
-            self.builder.set_loc_and_vc_info(
-                self.builder.fun_env.get_loc().at_start(),
-                ConditionTag::Ensures,
-                ABORTS_CODE_NOT_COVERED,
-            );
-            self.builder
-                .emit_with(move |id| Prop(id, Assert, aborts_with_cond));
+        if self.spec.has_aborts_code_specs() {
+            // If any codes are specified, emit an assertion for the code condition.
+            let actual_code = self.builder.mk_local(self.abort_local);
+            if let Some(code_cond) = self.spec.aborts_code_condition(&self.builder, &actual_code) {
+                // TODO(wrwg): we can't use the same location as for the aborts conditions, because
+                //   of the way vc-info association works. Need to redesign this and attach info
+                //   about VC conditions directly to the asserts.
+                let loc = self.builder.fun_env.get_loc().at_start();
+                self.builder.set_loc_and_vc_info(
+                    loc,
+                    ConditionTag::Ensures,
+                    ABORTS_CODE_NOT_COVERED,
+                );
+                self.builder
+                    .emit_with(move |id| Prop(id, Assert, code_cond));
+            }
         }
     }
 
-    /// Generates an abort condition for assumption in opaque calls. In contrast
-    /// to `generate_abort_verify`, this function does not need to consider failure
-    /// reporting. We generate (see `generate_abort_if` for definitions):
-    ///
-    ///  ```notrust
-    ///   let P_with_code = P1 || .. || Pj
-    ///   let P_without_code = Pk || .. || Pl
-    ///   let result = (P_with_code || P_without_code)
-    ///             && (P1 ==> abort_code == C1)
-    ///             ..
-    ///             && (Pj ==> abort_code == Cj)
-    ///             && (!P_with_code ==> abort_code == Cm || .. || abort_code == Cn)
-    /// ```
-    ///
-    /// `result` is stored in a temporary which is returned and can be used to branch
-    /// under this condition.
-    fn generate_abort_opaque_cond(&mut self, spec: &TranslatedSpec) -> Option<TempIndex> {
-        // TODO(refactoring): we expect that opaque functions are `aborts_if_is_partial`. Need
-        //   to check whether we check this in the frontend.
-        let actual_code = self.builder.mk_local(self.abort_local);
-        let mut p_with_code = spec.aborts_if_with_code_disjunction(&self.builder);
-        let p_without_code = spec.aborts_if_without_code_disjunction(&self.builder);
-        let p_implies_code = spec.aborts_if_with_code_implication(&self.builder, &actual_code);
-        let abort_with_codes = spec.aborts_with_code_disjunction(&self.builder, &actual_code);
-
-        if abort_with_codes.is_some() && p_with_code.is_some() {
-            // We need the p_with_code expression two times: first for the
-            // aborts condition, and second for the aborts_with codes.
-            // Save it into a temporary.
-            p_with_code = p_with_code.map(|e| self.builder.emit_let(e).1);
-        }
-
-        let mut p_overall =
-            self.builder
-                .mk_join_opt_bool(ast::Operation::Or, p_with_code.clone(), p_without_code);
-
-        // Next add implications for aborts_if with code.
-        for (_, implies) in p_implies_code {
-            p_overall =
-                self.builder
-                    .mk_join_opt_bool(ast::Operation::And, p_overall, Some(implies));
-        }
-
-        // Finally add aborts_with.
-        if abort_with_codes.is_some() {
-            let not_p_with_code = p_with_code.map(|e| self.builder.mk_not(e));
-            let aborts_with_cond = self.builder.mk_join_opt_bool(
-                ast::Operation::Implies,
-                not_p_with_code,
-                abort_with_codes,
-            );
-            p_overall =
-                self.builder
-                    .mk_join_opt_bool(ast::Operation::And, p_overall, aborts_with_cond);
-        }
-
-        if let Some(p) = p_overall {
-            Some(self.builder.emit_let(p).0)
+    /// Generates an abort condition for assumption in opaque calls. This returns a temporary
+    /// in which the abort condition is stored, plus an optional expression which constraints
+    /// the abort code.
+    fn generate_abort_opaque_cond(&mut self, spec: &TranslatedSpec) -> (TempIndex, Option<Exp>) {
+        let is_partial = self
+            .builder
+            .fun_env
+            .is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
+        let aborts_cond = if is_partial {
+            None
+        } else {
+            spec.aborts_condition(&self.builder)
+        };
+        let aborts_cond_temp = if let Some(cond) = aborts_cond {
+            // Introduce a temporary to hold the value of the aborts condition.
+            self.builder.emit_let(cond).0
+        } else {
+            // Introduce a havoced temporary to hold an arbitrary value for the aborts
+            // condition.
+            self.builder.emit_let_havoc(BOOL_TYPE.clone()).0
+        };
+        let aborts_code_cond = if spec.has_aborts_code_specs() {
+            let actual_code = self.builder.mk_local(self.abort_local);
+            spec.aborts_code_condition(&self.builder, &actual_code)
         } else {
             None
-        }
+        };
+        (aborts_cond_temp, aborts_code_cond)
     }
 
     fn generate_return_block(&mut self) {
@@ -669,379 +613,6 @@ impl<'a> Instrumenter<'a> {
             self.builder
                 .emit_with(|id| Bytecode::Prop(id, PropKind::Assert, can_modify));
         }
-    }
-}
-
-//  ================================================================================================
-/// # Spec Translator
-
-/// A helper which reduces specification conditions to assume/assert statements.
-pub(crate) struct SpecTranslator<'a, 'b> {
-    /// The builder for the function we are currently translating. Note this is not
-    /// necessarily the same as the function for which we translate specs.
-    builder: &'b mut FunctionDataBuilder<'a>,
-    /// The function for which we translate specifications.
-    fun_env: &'b FunctionEnv<'a>,
-    /// An optional substitution for parameters of the above function.
-    param_substitution: Option<&'b [TempIndex]>,
-    /// A substitution for return vales.
-    ret_locals: &'b [TempIndex],
-    /// A set of locals which are declared by outer block, lambda, or quant expressions.
-    shadowed: Vec<BTreeSet<Symbol>>,
-    /// The translated spec.
-    result: TranslatedSpec,
-}
-
-/// Represents a translated spec.
-#[derive(Default)]
-pub(crate) struct TranslatedSpec {
-    pub(crate) saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
-    pub(crate) saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
-    pub(crate) pre: Vec<(Loc, Exp)>,
-    pub(crate) post: Vec<(Loc, Exp)>,
-    pub(crate) aborts: Vec<(Loc, Exp, Option<Exp>)>,
-    pub(crate) aborts_with: Vec<(Loc, Vec<Exp>)>,
-    pub(crate) modifies: Vec<(Loc, Exp)>,
-}
-
-impl TranslatedSpec {
-    /// Creates a disjunction of all abort conditions which come with a code.
-    fn aborts_if_with_code_disjunction(&self, builder: &FunctionDataBuilder<'_>) -> Option<Exp> {
-        builder.mk_join_bool(
-            ast::Operation::Or,
-            self.aborts
-                .iter()
-                .filter_map(|(_, e, c)| if c.is_some() { Some(e.clone()) } else { None }),
-        )
-    }
-
-    /// Creates a disjunction of all abort conditions which come without a code.
-    fn aborts_if_without_code_disjunction(&self, builder: &FunctionDataBuilder<'_>) -> Option<Exp> {
-        builder.mk_join_bool(
-            ast::Operation::Or,
-            self.aborts
-                .iter()
-                .filter_map(|(_, e, c)| if c.is_none() { Some(e.clone()) } else { None }),
-        )
-    }
-
-    /// Creates a list of implications that if an aborts condition with a code holds, the
-    /// abort code must have the expected value.
-    fn aborts_if_with_code_implication(
-        &self,
-        builder: &FunctionDataBuilder<'_>,
-        actual_code: &Exp,
-    ) -> Vec<(Loc, Exp)> {
-        self.aborts
-            .iter()
-            .filter_map(|(_, e, c)| {
-                if let Some(expected_code) = c {
-                    let loc = builder.global_env().get_node_loc(expected_code.node_id());
-                    let matches = builder.mk_eq(actual_code.clone(), expected_code.clone());
-                    Some((loc, builder.mk_implies(e.clone(), matches)))
-                } else {
-                    None
-                }
-            })
-            .collect_vec()
-    }
-
-    /// Creates a disjunction that the actual aborts code must be one of the codes specified
-    /// with aborts_with.
-    fn aborts_with_code_disjunction(
-        &self,
-        builder: &FunctionDataBuilder<'_>,
-        actual_code: &Exp,
-    ) -> Option<Exp> {
-        let codes = self
-            .aborts_with
-            .iter()
-            .map(|(_, v)| v.iter())
-            .flatten()
-            .cloned();
-        let equalities =
-            codes.map(|expected_code| builder.mk_eq(actual_code.clone(), expected_code));
-        builder.mk_join_bool(ast::Operation::Or, equalities)
-    }
-}
-
-impl<'a, 'b> SpecTranslator<'a, 'b> {
-    pub(crate) fn translate(
-        builder: &'b mut FunctionDataBuilder<'a>,
-        fun_env: &'b FunctionEnv<'a>,
-        param_locals: Option<&'b [TempIndex]>,
-        ret_locals: &'b [TempIndex],
-    ) -> TranslatedSpec {
-        let mut translator = SpecTranslator {
-            builder,
-            fun_env,
-            param_substitution: param_locals,
-            ret_locals,
-            shadowed: Default::default(),
-            result: Default::default(),
-        };
-        translator.translate_spec();
-        translator.result
-    }
-
-    fn translate_spec(&mut self) {
-        let fun_env = self.fun_env;
-        let spec = fun_env.get_spec();
-
-        for cond in spec.filter_kind(ConditionKind::Requires) {
-            self.result.pre.push((cond.loc.clone(), cond.exp.clone()));
-        }
-
-        for cond in spec.filter_kind(ConditionKind::AbortsIf) {
-            let code_opt = if cond.additional_exps.is_empty() {
-                None
-            } else {
-                Some(self.translate_exp(&cond.additional_exps[0], true))
-            };
-            let exp = self.translate_exp(&cond.exp, true);
-            self.result.aborts.push((cond.loc.clone(), exp, code_opt));
-        }
-
-        for cond in spec.filter_kind(ConditionKind::AbortsWith) {
-            let codes = cond
-                .all_exps()
-                .map(|e| self.translate_exp(e, true))
-                .collect_vec();
-            self.result.aborts_with.push((cond.loc.clone(), codes));
-        }
-
-        // If there are no aborts_if and aborts_with, and the pragma `aborts_if_is_strict` is set,
-        // add an implicit aborts_if false.
-        if self.result.aborts.is_empty()
-            && self.result.aborts_with.is_empty()
-            && self
-                .fun_env
-                .is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
-        {
-            self.result.aborts.push((
-                self.fun_env.get_loc().at_end(),
-                self.builder.mk_bool_const(false),
-                None,
-            ));
-        }
-
-        for cond in spec.filter_kind(ConditionKind::Ensures) {
-            let exp = self.translate_exp(&cond.exp, false);
-            self.result.post.push((cond.loc.clone(), exp));
-        }
-
-        for cond in spec.filter_kind(ConditionKind::Modifies) {
-            let exp = self.translate_exp(&cond.exp, false);
-            self.result.modifies.push((cond.loc.clone(), exp));
-        }
-    }
-
-    fn translate_exp(&mut self, exp: &Exp, in_old: bool) -> Exp {
-        use ast::Operation::*;
-        use Exp::*;
-        match exp {
-            Temporary(node_id, idx) => {
-                // Compute the effective name of parameter.
-                let mut_ret_opt = self.get_ret_proxy(*idx);
-                let effective_idx = match (in_old, mut_ret_opt) {
-                    (false, Some(mut_ret_idx)) => {
-                        // We access a &mut outside of old context. Map it to the according return
-                        // parameter. Notice the result of ret_locals[idx] needs to be interpreted
-                        // in the builders function env, because we are substituting locals of the
-                        // built function for parameters used by the function spec of this function.
-                        self.ret_locals[mut_ret_idx]
-                    }
-                    _ => {
-                        // We either access a regular parameter, or a &mut in old context, which is
-                        // treated like a regular parameter.
-                        if let Some(map) = self.param_substitution {
-                            map[*idx]
-                        } else {
-                            *idx
-                        }
-                    }
-                };
-                let node_id = if mut_ret_opt.is_some() {
-                    // Dereference the type stored with node_id. It might be still the original
-                    // &mut T, but now it is T.
-                    let ty = self
-                        .builder
-                        .global_env()
-                        .get_node_type(*node_id)
-                        .skip_reference()
-                        .clone();
-                    let loc = self.builder.global_env().get_node_loc(*node_id);
-                    self.builder.global_env().new_node(loc, ty)
-                } else {
-                    *node_id
-                };
-                Temporary(node_id, effective_idx)
-            }
-            SpecVar(node_id, mid, vid, None) if in_old => SpecVar(
-                *node_id,
-                *mid,
-                *vid,
-                Some(self.save_spec_var(mid.qualified(*vid))),
-            ),
-            Call(node_id, Global(None), args) if in_old => {
-                let args = self.translate_exp_vec(args, in_old);
-                Call(
-                    *node_id,
-                    Global(Some(
-                        self.save_memory(self.builder.get_memory_of_node(*node_id)),
-                    )),
-                    args,
-                )
-            }
-            Call(node_id, Exists(None), args) if in_old => {
-                let args = self.translate_exp_vec(args, in_old);
-                Call(
-                    *node_id,
-                    Exists(Some(
-                        self.save_memory(self.builder.get_memory_of_node(*node_id)),
-                    )),
-                    args,
-                )
-            }
-            Call(node_id, Function(mid, fid, None), args) if in_old => {
-                let (used_memory, used_spec_vars) = {
-                    let module_env = self.builder.global_env().get_module(*mid);
-                    let decl = module_env.get_spec_fun(*fid);
-                    // Unfortunately, the below clones are necessary, as we cannot borrow decl
-                    // and at the same time mutate self later.
-                    (decl.used_memory.clone(), decl.used_spec_vars.clone())
-                };
-                let mut labels = vec![];
-                for mem in used_memory {
-                    labels.push(self.save_memory(mem));
-                }
-                for var in used_spec_vars {
-                    labels.push(self.save_spec_var(var));
-                }
-                Call(
-                    *node_id,
-                    Function(*mid, *fid, Some(labels)),
-                    self.translate_exp_vec(args, in_old),
-                )
-            }
-            Call(_, Old, args) => self.translate_exp(&args[0], true),
-            Call(node_id, Result(n), _) => {
-                self.builder.set_loc_from_node(*node_id);
-                self.builder.mk_local(self.ret_locals[*n])
-            }
-            Call(node_id, oper, args) => {
-                Call(*node_id, oper.clone(), self.translate_exp_vec(args, in_old))
-            }
-            Invoke(node_id, target, args) => {
-                let target = self.translate_exp(target, in_old);
-                Invoke(
-                    *node_id,
-                    Box::new(target),
-                    self.translate_exp_vec(args, in_old),
-                )
-            }
-            Lambda(node_id, decls, body) => {
-                let decls = self.translate_exp_decls(decls, in_old);
-                self.shadowed.push(decls.iter().map(|d| d.name).collect());
-                let res = Lambda(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
-                self.shadowed.pop();
-                res
-            }
-            Block(node_id, decls, body) => {
-                let decls = self.translate_exp_decls(decls, in_old);
-                self.shadowed.push(decls.iter().map(|d| d.name).collect());
-                let res = Block(*node_id, decls, Box::new(self.translate_exp(body, in_old)));
-                self.shadowed.pop();
-                res
-            }
-            Quant(node_id, kind, decls, where_opt, body) => {
-                let decls = self.translate_exp_quant_decls(decls, in_old);
-                self.shadowed
-                    .push(decls.iter().map(|(d, _)| d.name).collect());
-                let where_opt = where_opt
-                    .as_ref()
-                    .map(|e| Box::new(self.translate_exp(e, in_old)));
-                let body = Box::new(self.translate_exp(body, in_old));
-                let res = Quant(*node_id, *kind, decls, where_opt, body);
-                self.shadowed.pop();
-                res
-            }
-            IfElse(node_id, cond, if_true, if_false) => IfElse(
-                *node_id,
-                Box::new(self.translate_exp(cond, in_old)),
-                Box::new(self.translate_exp(if_true, in_old)),
-                Box::new(self.translate_exp(if_false, in_old)),
-            ),
-            _ => exp.clone(),
-        }
-    }
-
-    /// If the parameter is a &mut, return the proxy return parameter which was introduced by
-    /// memory instrumentation for it.
-    fn get_ret_proxy(&self, idx: TempIndex) -> Option<usize> {
-        if self.fun_env.get_local_type(idx).is_mutable_reference() {
-            let mut_ref_pos = (0..idx)
-                .filter(|i| self.fun_env.get_local_type(*i).is_mutable_reference())
-                .count();
-            Some(self.fun_env.get_return_count() + mut_ref_pos)
-        } else {
-            None
-        }
-    }
-
-    fn translate_exp_vec(&mut self, exps: &[Exp], in_old: bool) -> Vec<Exp> {
-        exps.iter()
-            .map(|e| self.translate_exp(e, in_old))
-            .collect_vec()
-    }
-
-    fn translate_exp_decls(&mut self, decls: &[LocalVarDecl], in_old: bool) -> Vec<LocalVarDecl> {
-        decls
-            .iter()
-            .map(|LocalVarDecl { id, name, binding }| LocalVarDecl {
-                id: *id,
-                name: *name,
-                binding: binding.as_ref().map(|e| self.translate_exp(e, in_old)),
-            })
-            .collect_vec()
-    }
-
-    fn translate_exp_quant_decls(
-        &mut self,
-        decls: &[(LocalVarDecl, Exp)],
-        in_old: bool,
-    ) -> Vec<(LocalVarDecl, Exp)> {
-        decls
-            .iter()
-            .map(|(LocalVarDecl { id, name, .. }, exp)| {
-                (
-                    LocalVarDecl {
-                        id: *id,
-                        name: *name,
-                        binding: None,
-                    },
-                    self.translate_exp(exp, in_old),
-                )
-            })
-            .collect_vec()
-    }
-
-    fn save_spec_var(&mut self, qid: QualifiedId<SpecVarId>) -> MemoryLabel {
-        let builder = &mut self.builder;
-        *self
-            .result
-            .saved_spec_vars
-            .entry(qid)
-            .or_insert_with(|| builder.global_env().new_global_id())
-    }
-
-    fn save_memory(&mut self, qid: QualifiedId<StructId>) -> MemoryLabel {
-        let builder = &mut self.builder;
-        *self
-            .result
-            .saved_memory
-            .entry(qid)
-            .or_insert_with(|| builder.global_env().new_global_id())
     }
 }
 

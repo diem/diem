@@ -34,11 +34,13 @@ impl FunctionTargetProcessor for DataInvariantInstrumentationProcessor {
         fun_env: &FunctionEnv<'_>,
         data: FunctionData,
     ) -> FunctionData {
-        if fun_env.is_native()
-            || fun_env.is_intrinsic()
-            || data.variant != FunctionVariant::Verification
-        {
+        if fun_env.is_native() || fun_env.is_intrinsic() {
             // Nothing to do.
+            return data;
+        }
+        if data.variant != FunctionVariant::Verification && !fun_env.has_friend() {
+            // Only need to instrument if this is a verification variant, or if the
+            // function has a friend and is verified in the friend's context.
             return data;
         }
 
@@ -109,37 +111,37 @@ impl<'a> Instrumenter<'a> {
         use Operation::*;
         match bc {
             // Remove Unpack, we currently don't need it.
-            Call(_, _, UnpackRef, _) | Call(_, _, UnpackRefDeep, _) => {}
+            Call(_, _, UnpackRef, ..) | Call(_, _, UnpackRefDeep, ..) => {}
 
             // Instructions which lead to asserting data invariants.
-            Call(id, dests, Pack(mid, sid, targs), srcs) => {
+            Call(id, dests, Pack(mid, sid, targs), srcs, aa) => {
                 let struct_temp = dests[0];
                 self.builder
-                    .emit(Call(id, dests, Pack(mid, sid, targs), srcs));
+                    .emit(Call(id, dests, Pack(mid, sid, targs), srcs, aa));
                 // Emit a shallow assert of the data invariant.
                 self.emit_data_invariant_for_temp(false, PropKind::Assert, struct_temp);
             }
-            Call(_, _, PackRef, srcs) => {
+            Call(_, _, PackRef, srcs, _) => {
                 // Emit a shallow assert of the data invariant.
                 self.emit_data_invariant_for_temp(false, PropKind::Assert, srcs[0]);
             }
-            Call(_, _, PackRefDeep, srcs) => {
+            Call(_, _, PackRefDeep, srcs, _) => {
                 // Emit a deep assert of the data invariant.
                 self.emit_data_invariant_for_temp(true, PropKind::Assert, srcs[0]);
             }
 
             // Instructions which lead to assuming data invariants.
-            Call(id, dests, BorrowGlobal(mid, sid, targs), srcs) => {
+            Call(id, dests, BorrowGlobal(mid, sid, targs), srcs, aa) => {
                 let struct_temp = dests[0];
                 self.builder
-                    .emit(Call(id, dests, BorrowGlobal(mid, sid, targs), srcs));
+                    .emit(Call(id, dests, BorrowGlobal(mid, sid, targs), srcs, aa));
                 // Emit deep assume of the data invariant.
                 self.emit_data_invariant_for_temp(true, PropKind::Assume, struct_temp);
             }
-            Call(id, dests, GetGlobal(mid, sid, targs), srcs) => {
+            Call(id, dests, GetGlobal(mid, sid, targs), srcs, aa) => {
                 let struct_temp = dests[0];
                 self.builder
-                    .emit(Call(id, dests, GetGlobal(mid, sid, targs), srcs));
+                    .emit(Call(id, dests, GetGlobal(mid, sid, targs), srcs, aa));
                 // Emit deep assume of the data invariant.
                 self.emit_data_invariant_for_temp(true, PropKind::Assume, struct_temp);
             }
@@ -243,6 +245,7 @@ impl<'a> Instrumenter<'a> {
                                     field_env.get_offset(),
                                 ),
                                 vec![parent_temp],
+                                None,
                             )
                         });
                         field_temp_opt = Some(new_temp);

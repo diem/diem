@@ -366,7 +366,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                     }
                 }
             }
-            Call(_, dests, oper, srcs) => {
+            Call(_, dests, oper, srcs, _) => {
                 use Operation::*;
                 match oper {
                     // In the borrows below, we only create an edge if the
@@ -508,9 +508,9 @@ impl TransferFunctions for PropagateSplicedAnalysis {
                 .extend(borrow.after.spliced_nodes.iter().cloned());
         }
         match instr {
-            Call(_, dests, BorrowLoc, _)
-            | Call(_, dests, BorrowGlobal(..), _)
-            | Call(_, dests, BorrowField(..), _) => {
+            Call(_, dests, BorrowLoc, ..)
+            | Call(_, dests, BorrowGlobal(..), ..)
+            | Call(_, dests, BorrowField(..), ..) => {
                 state.spliced.remove(&BorrowNode::Reference(dests[0]));
             }
             _ => {}

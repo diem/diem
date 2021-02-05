@@ -111,7 +111,7 @@ impl<'a> Instrumenter<'a> {
     ) -> (Vec<Bytecode>, Vec<Bytecode>) {
         let mut before = vec![];
         let mut after = vec![];
-        if let Call(attr_id, _, Operation::Function(mid, fid, _), srcs) = bytecode {
+        if let Call(attr_id, _, Operation::Function(mid, fid, _), srcs, _) = bytecode {
             let callee_env = self
                 .func_target
                 .module_env()
@@ -132,6 +132,7 @@ impl<'a> Instrumenter<'a> {
                                 vec![],
                                 Operation::PackRef,
                                 vec![**idx],
+                                None,
                             )
                         })
                         .collect(),
@@ -145,6 +146,7 @@ impl<'a> Instrumenter<'a> {
                                 vec![],
                                 Operation::UnpackRef,
                                 vec![*idx],
+                                None,
                             )
                         })
                         .collect(),
@@ -202,7 +204,7 @@ impl<'a> Instrumenter<'a> {
         let mut instrumented_bytecodes = vec![];
 
         // Generate UnpackRef from Borrow instructions.
-        if let Call(attr_id, dests, op, _) = bytecode {
+        if let Call(attr_id, dests, op, _, _) = bytecode {
             use Operation::*;
             match op {
                 BorrowLoc | BorrowField(..) | BorrowGlobal(..) => {
@@ -221,6 +223,7 @@ impl<'a> Instrumenter<'a> {
                                 Operation::UnpackRef
                             },
                             vec![dests[0]],
+                            None,
                         ));
                     }
                 }
@@ -251,6 +254,7 @@ impl<'a> Instrumenter<'a> {
                                 Operation::PackRef
                             },
                             vec![*idx],
+                            None,
                         ));
                     }
                 }
@@ -261,6 +265,7 @@ impl<'a> Instrumenter<'a> {
                         vec![],
                         Operation::WriteBack(parent.clone()),
                         vec![*idx],
+                        None,
                     ));
                 }
             }

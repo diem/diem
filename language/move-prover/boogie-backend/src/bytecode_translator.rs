@@ -35,7 +35,10 @@ use crate::{
     options::BoogieOptions,
     spec_translator::SpecTranslator,
 };
-use bytecode::{function_target_pipeline::FunctionVariant, stackless_bytecode::PropKind};
+use bytecode::{
+    function_target_pipeline::FunctionVariant,
+    stackless_bytecode::{AbortAction, PropKind},
+};
 use move_model::{ast::TempIndex, model::Loc};
 
 pub struct BoogieTranslator<'env> {
@@ -534,16 +537,6 @@ impl<'env> ModuleTranslator<'env> {
                 then_target.as_usize(),
                 else_target.as_usize(),
             ),
-            OnAbort(_, target, code) => {
-                emitln!(self.writer, "if ($abort_flag) {");
-                self.writer.indent();
-                let code_str = str_local(*code);
-                emitln!(self.writer, "{} := $Integer($abort_code);", code_str);
-                self.track_abort(&loc, &code_str);
-                emitln!(self.writer, "goto L{};", target.as_usize());
-                self.writer.unindent();
-                emitln!(self.writer, "}");
-            }
             Assign(_, dest, src, _) => {
                 if func_target.get_local_type(*dest).is_reference() {
                     emitln!(
@@ -579,7 +572,7 @@ impl<'env> ModuleTranslator<'env> {
                 };
                 emitln!(self.writer, "{} := {};", str_local(*idx), value);
             }
-            Call(_, dests, oper, srcs) => {
+            Call(_, dests, oper, srcs, aa) => {
                 use Operation::*;
                 match oper {
                     FreezeRef => unreachable!(),
@@ -878,6 +871,15 @@ impl<'env> ModuleTranslator<'env> {
                             type_args,
                         );
                     }
+                    Havoc => {
+                        let dest_str = str_local(dests[0]);
+                        emitln!(self.writer, "havoc {};", dest_str);
+                        let ty = func_target.get_local_type(dests[0]);
+                        let check = boogie_well_formed_check(self.module_env.env, &dest_str, ty);
+                        if !check.is_empty() {
+                            emitln!(self.writer, &check);
+                        }
+                    }
                     CastU8 => {
                         let src = srcs[0];
                         let dest = dests[0];
@@ -1134,6 +1136,16 @@ impl<'env> ModuleTranslator<'env> {
                         self.track_return(func_target, &loc, *i, srcs[0]);
                     }
                     TraceAbort => self.track_abort(&loc, &str_local(srcs[0])),
+                }
+                if let Some(AbortAction(target, code)) = aa {
+                    emitln!(self.writer, "if ($abort_flag) {");
+                    self.writer.indent();
+                    let code_str = str_local(*code);
+                    emitln!(self.writer, "{} := $Integer($abort_code);", code_str);
+                    self.track_abort(&loc, &code_str);
+                    emitln!(self.writer, "goto L{};", target.as_usize());
+                    self.writer.unindent();
+                    emitln!(self.writer, "}");
                 }
             }
             Abort(_, src) => {

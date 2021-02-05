@@ -1,0 +1,61 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Test::publish($t0|s: &signer) {
+     var $t1: &signer
+     var $t2: u64
+     var $t3: Test::R
+  0: $t1 := move($t0)
+  1: $t2 := 1
+  2: $t3 := pack Test::R($t2)
+  3: move_to<Test::R>($t3, $t1)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Test::remove($t0|a: address): Test::R {
+     var $t1: address
+     var $t2: Test::R
+  0: $t1 := copy($t0)
+  1: $t2 := move_from<Test::R>($t1)
+  2: return $t2
+}
+
+============ after pipeline `global_invariant_instrumentation` ================
+
+[variant verification]
+pub fun Test::publish($t0|s: signer) {
+     var $t1: u64
+     var $t2: Test::R
+     var $t3: num
+     # global invariant at tests/global_invariant_instrumentation/move.move:7:9+57
+  0: assume forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+  1: $t1 := 1
+  2: $t2 := pack Test::R($t1)
+  3: move_to<Test::R>($t2, $t0) on_abort goto 7 with $t3
+     # global invariant at tests/global_invariant_instrumentation/move.move:7:9+57
+     # VC: `global memory invariant does not hold` at tests/global_invariant_instrumentation/move.move:7:9+57
+  4: assert forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+  5: label L1
+  6: return ()
+  7: label L2
+  8: abort($t3)
+}
+
+
+[variant verification]
+pub fun Test::remove($t0|a: address): Test::R {
+     var $t1: Test::R
+     var $t2: num
+     # global invariant at tests/global_invariant_instrumentation/move.move:7:9+57
+  0: assume forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+  1: $t1 := move_from<Test::R>($t0) on_abort goto 5 with $t2
+     # global invariant at tests/global_invariant_instrumentation/move.move:7:9+57
+     # VC: `global memory invariant does not hold` at tests/global_invariant_instrumentation/move.move:7:9+57
+  2: assert forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+  3: label L1
+  4: return $t1
+  5: label L2
+  6: abort($t2)
+}

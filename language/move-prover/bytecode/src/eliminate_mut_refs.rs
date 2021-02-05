@@ -5,7 +5,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
-        AssignKind, AttrId, BorrowNode,
+        AbortAction, AssignKind, AttrId, BorrowNode,
         Bytecode::{self, *},
         Operation,
         Operation::*,
@@ -58,7 +58,7 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
 
         let mut max_ref_params_per_type = BTreeMap::new();
         for bytecode in &data.code {
-            if let Call(_, _, Function(..), srcs) = bytecode {
+            if let Call(_, _, Function(..), srcs, _) = bytecode {
                 let mut ref_params_per_type = BTreeMap::new();
                 for idx in srcs {
                     let ty = &local_types[*idx];
@@ -111,6 +111,7 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
                     vec![ref_param_proxy_map[&idx]],
                     BorrowLoc,
                     vec![param_proxy_map[&idx]],
+                    None,
                 ));
                 next_attr_id += 1;
             }
@@ -215,12 +216,13 @@ impl<'a> EliminateMutRefs<'a> {
     }
 
     fn transform_bytecode_indices(&self, bytecode: Bytecode) -> Bytecode {
-        if let Call(attr_id, dests, op, srcs) = bytecode {
+        if let Call(attr_id, dests, op, srcs, aa) = bytecode {
             Call(
                 attr_id,
                 self.transform_indices(dests),
                 self.transform_operation(op),
                 self.transform_indices(srcs),
+                self.transform_abort_action(aa),
             )
         } else {
             bytecode.remap_all_vars(self.func_target, &mut |idx| self.transform_index(idx))
@@ -239,6 +241,10 @@ impl<'a> EliminateMutRefs<'a> {
         }
     }
 
+    fn transform_abort_action(&self, aa: Option<AbortAction>) -> Option<AbortAction> {
+        aa.map(|AbortAction(l, code)| AbortAction(l, self.transform_index(code)))
+    }
+
     fn new_attr_id(&mut self, loc: Loc) -> AttrId {
         let attr_id = AttrId::new(self.next_attr_id);
         self.next_attr_id += 1;
@@ -254,7 +260,7 @@ impl<'a> EliminateMutRefs<'a> {
     fn transform_bytecode(&mut self, bytecode: Bytecode) -> Vec<Bytecode> {
         let bytecode = self.transform_bytecode_indices(bytecode);
         match bytecode {
-            Call(attr_id, mut dests, Function(mid, fid, type_actuals), mut srcs) => {
+            Call(attr_id, mut dests, Function(mid, fid, type_actuals), mut srcs, aa) => {
                 let mut ref_param_count_per_type = BTreeMap::new();
                 let old_srcs = std::mem::take(&mut srcs);
                 let mut read_ref_bytecodes = vec![];
@@ -275,12 +281,14 @@ impl<'a> EliminateMutRefs<'a> {
                             vec![read_ref_dest_idx],
                             ReadRef,
                             vec![idx],
+                            None,
                         ));
                         write_ref_bytecodes.push(Call(
                             self.clone_attr(attr_id),
                             vec![],
                             WriteRef,
                             vec![idx, read_ref_dest_idx],
+                            None,
                         ));
                         splice_map.insert(pos, idx);
                     } else {
@@ -296,13 +304,20 @@ impl<'a> EliminateMutRefs<'a> {
                             vec![],
                             Splice(splice_map.clone()),
                             vec![*idx],
+                            None,
                         ))
                     }
                 }
 
                 let mut return_bytecodes = vec![];
                 return_bytecodes.append(&mut read_ref_bytecodes);
-                return_bytecodes.push(Call(attr_id, dests, Function(mid, fid, type_actuals), srcs));
+                return_bytecodes.push(Call(
+                    attr_id,
+                    dests,
+                    Function(mid, fid, type_actuals),
+                    srcs,
+                    aa,
+                ));
                 return_bytecodes.append(&mut write_ref_bytecodes);
                 return_bytecodes.append(&mut splice_bytecodes);
                 return_bytecodes

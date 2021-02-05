@@ -8,7 +8,7 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{AttrId, Bytecode, Label, Operation},
+    stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
@@ -246,7 +246,7 @@ impl<'a> LiveVarAnalysis<'a> {
                 Bytecode::Assign(_, dest, _, _) if !annotation_at.after.contains(&dest) => {
                     // Drop this assign as it is not used.
                 }
-                Bytecode::Call(attr_id, dests, oper, srcs)
+                Bytecode::Call(attr_id, dests, oper, srcs, aa)
                     if code_offset + 1 < code.len() && dests.len() == 1 =>
                 {
                     // Catch the common case where we have:
@@ -262,13 +262,19 @@ impl<'a> LiveVarAnalysis<'a> {
                     if let Bytecode::Assign(_, dest, src, _) = &code[next_code_offset] {
                         let annotation_at = &annotations[&(next_code_offset as CodeOffset)];
                         if src == &dests[0] && !annotation_at.after.contains(src) {
-                            transformed_code.push(Bytecode::Call(attr_id, vec![*dest], oper, srcs));
+                            transformed_code.push(Bytecode::Call(
+                                attr_id,
+                                vec![*dest],
+                                oper,
+                                srcs,
+                                aa,
+                            ));
                             skip_next = true;
                         } else {
-                            transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs));
+                            transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs, aa));
                         }
                     } else {
-                        transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs));
+                        transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs, aa));
                     }
                 }
                 _ => {
@@ -308,6 +314,7 @@ impl<'a> LiveVarAnalysis<'a> {
                     vec![],
                     Operation::Destroy,
                     vec![idx],
+                    None,
                 ));
             }
             new_bytecodes.push(Bytecode::Jump(self.new_attr_id(), jump_label));
@@ -348,11 +355,14 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
             Load(_, dst, _) => {
                 state.remove(&[*dst]);
             }
-            Call(_, dsts, oper, srcs) => {
+            Call(_, dsts, oper, srcs, on_abort) => {
                 state.remove(dsts);
                 state.insert(srcs);
                 if let Operation::Splice(map) = oper {
                     state.insert(&map.values().cloned().collect_vec());
+                }
+                if let Some(AbortAction(_, dst)) = on_abort {
+                    state.remove(&[*dst]);
                 }
             }
             Ret(_, srcs) => {
@@ -360,9 +370,6 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
             }
             Abort(_, src) | Branch(_, _, _, src) => {
                 state.insert(&[*src]);
-            }
-            OnAbort(_, _, dst) => {
-                state.remove(&[*dst]);
             }
             Prop(_, _, exp) => {
                 for idx in exp.temporaries() {

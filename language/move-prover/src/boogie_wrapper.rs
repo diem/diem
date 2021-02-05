@@ -152,7 +152,10 @@ impl<'env> BoogieWrapper<'env> {
                 // Boogie output contains the string "errors detected in" whenever parsing,
                 // resolution, or type checking errors are discovered.
                 if out.contains("errors detected in") {
-                    return Err(anyhow!("boogie exited with: {:?}", output));
+                    return Err(anyhow!(
+                        "[internal] boogie exited with compilation errors:\n{}",
+                        out
+                    ));
                 }
                 let mut errors = self.extract_verification_errors(&out);
                 errors.extend(self.extract_inconclusive_errors(&out));

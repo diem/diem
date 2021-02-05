@@ -105,7 +105,7 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
         use Bytecode::*;
         use Operation::*;
 
-        if let Call(_, _, oper, _) = instr {
+        if let Call(_, _, oper, ..) = instr {
             match oper {
                 Pack(mid, sid, types) => {
                     let env = self.cache.global_env();

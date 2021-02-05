@@ -140,8 +140,6 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
     }
 
     pub fn rewrite_vec(&mut self, exps: &[Exp]) -> Vec<Exp> {
-        // For some reason, we don't get the lifetime right when we use a map. Figure out
-        // why and remove this explicit treatment.
         let mut res = vec![];
         for exp in exps {
             res.push(self.rewrite(exp));

@@ -83,7 +83,7 @@ impl<'a> TransferFunctions for Optimizer<'a> {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
-        if let Call(_, _, oper, srcs) = instr {
+        if let Call(_, _, oper, srcs, _) = instr {
             match oper {
                 WriteRef => {
                     state.unwritten.insert(Reference(srcs[0]));
@@ -120,7 +120,7 @@ impl<'a> Optimizer<'a> {
             if !new_instrs.is_empty() {
                 // Perform peephole optimization
                 match (&new_instrs[new_instrs.len() - 1], &instr) {
-                    (Call(_, _, UnpackRef, srcs1), Call(_, _, PackRef, srcs2))
+                    (Call(_, _, UnpackRef, srcs1, _), Call(_, _, PackRef, srcs2, _))
                         if srcs1[0] == srcs2[0] =>
                     {
                         // skip this redundant unpack/pack pair.
@@ -131,7 +131,7 @@ impl<'a> Optimizer<'a> {
                 }
             }
             // Remove unnecessary WriteBack
-            if let Call(_, _, WriteBack(_), srcs) = &instr {
+            if let Call(_, _, WriteBack(_), srcs, _) = &instr {
                 if let Some(unwritten) =
                     data.get(&(code_offset as CodeOffset)).map(|d| &d.unwritten)
                 {

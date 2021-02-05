@@ -76,7 +76,7 @@ impl<'a> EliminateImmRefs<'a> {
 
     fn transform_bytecode(&self, bytecode: Bytecode) -> Bytecode {
         match &bytecode {
-            Call(attr_id, dests, op, srcs) => match op {
+            Call(attr_id, dests, op, srcs, aa) => match op {
                 ReadRef => {
                     let src = srcs[0];
                     let dest = dests[0];
@@ -90,7 +90,7 @@ impl<'a> EliminateImmRefs<'a> {
                         bytecode
                     }
                 }
-                FreezeRef => Call(*attr_id, dests.to_vec(), ReadRef, srcs.to_vec()),
+                FreezeRef => Call(*attr_id, dests.to_vec(), ReadRef, srcs.to_vec(), None),
                 BorrowLoc => {
                     let src = srcs[0];
                     let dest = dests[0];
@@ -115,6 +115,7 @@ impl<'a> EliminateImmRefs<'a> {
                             dests.to_vec(),
                             GetField(*mid, *sid, type_actuals.to_vec(), *field_offset),
                             srcs.to_vec(),
+                            aa.clone(),
                         )
                     } else {
                         bytecode
@@ -132,6 +133,7 @@ impl<'a> EliminateImmRefs<'a> {
                             dests.to_vec(),
                             GetGlobal(*mid, *sid, type_actuals.to_vec()),
                             srcs.to_vec(),
+                            aa.clone(),
                         )
                     } else {
                         bytecode

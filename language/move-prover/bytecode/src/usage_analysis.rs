@@ -120,7 +120,7 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
         use Bytecode::*;
         use Operation::*;
 
-        if let Call(_, _, oper, _) = code {
+        if let Call(_, _, oper, _, _) = code {
             match oper {
                 Function(mid, fid, _) => {
                     if let Some(summary) = self.cache.get::<UsageState>(mid.qualified(*fid)) {

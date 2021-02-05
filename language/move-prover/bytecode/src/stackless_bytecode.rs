@@ -111,6 +111,7 @@ pub enum Operation {
     ReadRef,
     WriteRef,
     FreezeRef,
+    Havoc,
 
     // Memory model
     WriteBack(BorrowNode),
@@ -171,6 +172,7 @@ impl Operation {
             Operation::ReadRef => false,
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
+            Operation::Havoc => false,
             Operation::WriteBack(_) => false,
             Operation::Splice(_) => false,
             Operation::UnpackRef => false,
@@ -232,6 +234,12 @@ pub enum PropKind {
     Modifies,
 }
 
+/// Information about the action to take on abort. The label represents the
+/// destination to jump to, and the temporary where to store the abort code before
+/// jump.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AbortAction(pub Label, pub TempIndex);
+
 /// The stackless bytecode.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
@@ -239,12 +247,17 @@ pub enum Bytecode {
 
     Assign(AttrId, TempIndex, TempIndex, AssignKind),
 
-    Call(AttrId, Vec<TempIndex>, Operation, Vec<TempIndex>),
+    Call(
+        AttrId,
+        Vec<TempIndex>,
+        Operation,
+        Vec<TempIndex>,
+        Option<AbortAction>,
+    ),
     Ret(AttrId, Vec<TempIndex>),
 
     Load(AttrId, TempIndex, Constant),
     Branch(AttrId, Label, Label, TempIndex),
-    OnAbort(AttrId, Label, TempIndex),
     Jump(AttrId, Label),
     Label(AttrId, Label),
     Abort(AttrId, TempIndex),
@@ -265,7 +278,6 @@ impl Bytecode {
             | Ret(id, ..)
             | Load(id, ..)
             | Branch(id, ..)
-            | OnAbort(id, ..)
             | Jump(id, ..)
             | Label(id, ..)
             | Abort(id, ..)
@@ -292,7 +304,7 @@ impl Bytecode {
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        matches!(self, Bytecode::Branch(..) | Bytecode::OnAbort(..))
+        matches!(self, Bytecode::Branch(..) | Bytecode::Call(_, _, _, _, Some(_)))
     }
 
     pub fn is_branch(&self) -> bool {
@@ -303,7 +315,9 @@ impl Bytecode {
     pub fn branch_dests(&self) -> Vec<Label> {
         match self {
             Bytecode::Branch(_, then_label, else_label, _) => vec![*then_label, *else_label],
-            Bytecode::Jump(_, label) | Bytecode::OnAbort(_, label, _) => vec![*label],
+            Bytecode::Jump(_, label) | Bytecode::Call(_, _, _, _, Some(AbortAction(label, _))) => {
+                vec![*label]
+            }
             _ => vec![],
         }
     }
@@ -335,7 +349,7 @@ impl Bytecode {
             for label in bytecode.branch_dests() {
                 v.push(*label_offsets.get(&label).expect("label defined"));
             }
-            if matches!(bytecode, Bytecode::OnAbort(..)) {
+            if matches!(bytecode, Bytecode::Call(_, _, _, _, Some(_))) {
                 // Falls through.
                 v.push(pc + 1);
             }
@@ -388,31 +402,47 @@ impl Bytecode {
         let map = |is_src: bool, f: &mut F, v: Vec<TempIndex>| -> Vec<TempIndex> {
             v.into_iter().map(|i| f(is_src, i)).collect()
         };
+        let map_abort = |f: &mut F, aa: Option<AbortAction>| {
+            aa.map(|AbortAction(l, code)| AbortAction(l, f(false, code)))
+        };
         match self {
             Load(attr, dst, cons) => Load(attr, f(false, dst), cons),
             Assign(attr, dest, src, kind) => Assign(attr, f(false, dest), f(true, src), kind),
-            Call(attr, _, WriteBack(LocalRoot(dest)), srcs) => Call(
+            Call(attr, _, WriteBack(LocalRoot(dest)), srcs, aa) => Call(
                 attr,
                 vec![],
                 WriteBack(LocalRoot(f(false, dest))),
                 map(true, f, srcs),
+                map_abort(f, aa),
             ),
-            Call(attr, _, WriteBack(Reference(dest)), srcs) => Call(
+            Call(attr, _, WriteBack(Reference(dest)), srcs, aa) => Call(
                 attr,
                 vec![],
                 WriteBack(Reference(f(false, dest))),
                 map(true, f, srcs),
+                map_abort(f, aa),
             ),
-            Call(attr, dests, Splice(m), srcs) => {
+            Call(attr, dests, Splice(m), srcs, aa) => {
                 let m = m.into_iter().map(|(p, t)| (p, f(true, t))).collect();
-                Call(attr, map(false, f, dests), Splice(m), map(true, f, srcs))
+                Call(
+                    attr,
+                    map(false, f, dests),
+                    Splice(m),
+                    map(true, f, srcs),
+                    map_abort(f, aa),
+                )
             }
-            Call(attr, dests, op, srcs) => Call(attr, map(false, f, dests), op, map(true, f, srcs)),
+            Call(attr, dests, op, srcs, aa) => Call(
+                attr,
+                map(false, f, dests),
+                op,
+                map(true, f, srcs),
+                map_abort(f, aa),
+            ),
             Ret(attr, rets) => Ret(attr, map(true, f, rets)),
             Branch(attr, if_label, else_label, cond) => {
                 Branch(attr, if_label, else_label, f(true, cond))
             }
-            OnAbort(attr, label, code) => OnAbort(attr, label, f(false, code)),
             Abort(attr, cond) => Abort(attr, f(true, cond)),
             Prop(attr, kind, exp) => {
                 let new_exp = Bytecode::remap_exp(func_target, &mut |idx| f(true, idx), exp);
@@ -442,23 +472,27 @@ impl Bytecode {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
+        let add_abort = |mut res: Vec<TempIndex>, aa: &Option<AbortAction>| {
+            if let Some(AbortAction(_, dest)) = aa {
+                res.push(*dest)
+            }
+            res
+        };
         match self {
-            Assign(_, dest, ..)
-            | Load(_, dest, ..)
-            | Call(_, _, WriteBack(LocalRoot(dest)), ..)
-            | Call(_, _, WriteBack(Reference(dest)), ..) => vec![*dest],
-            Call(_, _, WriteRef, srcs) => vec![srcs[0]],
-            Call(_, dests, Function(..), srcs) => {
+            Assign(_, dest, ..) | Load(_, dest, ..) => vec![*dest],
+            Call(_, _, WriteBack(LocalRoot(dest)), _, aa)
+            | Call(_, _, WriteBack(Reference(dest)), _, aa) => add_abort(vec![*dest], aa),
+            Call(_, _, WriteRef, srcs, aa) => add_abort(vec![srcs[0]], aa),
+            Call(_, dests, Function(..), srcs, aa) => {
                 let mut res = dests.clone();
                 for src in srcs {
                     if fun_target.get_local_type(*src).is_mutable_reference() {
                         res.push(*src);
                     }
                 }
-                res
+                add_abort(res, aa)
             }
-            Call(_, dests, ..) => dests.clone(),
-            OnAbort(_, _, code) => vec![*code],
+            Call(_, dests, _, _, aa) => add_abort(dests.clone(), aa),
             _ => vec![],
         }
     }
@@ -509,13 +543,21 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Assign(_, dst, src, AssignKind::Store) => {
                 write!(f, "{} := {}", self.lstr(*dst), self.lstr(*src))?
             }
-            Call(_, dsts, oper, args) => {
+            Call(_, dsts, oper, args, aa) => {
                 if !dsts.is_empty() {
                     self.fmt_locals(f, dsts, false)?;
                     write!(f, " := ")?;
                 }
                 write!(f, "{}", oper.display(self.func_target))?;
                 self.fmt_locals(f, args, true)?;
+                if let Some(AbortAction(label, code)) = aa {
+                    write!(
+                        f,
+                        " on_abort goto {} with {}",
+                        self.label_str(*label),
+                        self.lstr(*code)
+                    )?;
+                }
             }
             Ret(_, srcs) => {
                 write!(f, "return ")?;
@@ -531,14 +573,6 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
                     self.lstr(*src),
                     self.label_str(*then_label),
                     self.label_str(*else_label),
-                )?;
-            }
-            OnAbort(_, label, code) => {
-                write!(
-                    f,
-                    "on_abort goto {} with {}",
-                    self.label_str(*label),
-                    self.lstr(*code)
                 )?;
             }
             Jump(_, label) => {
@@ -758,7 +792,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                     .map(|(idx, local)| format!("{} -> $t{}", idx, *local))
                     .join(", ")
             )?,
-
+            Havoc => {
+                write!(f, "havoc")?;
+            }
             // Unary
             CastU8 => write!(f, "(u8)")?,
             CastU64 => write!(f, "(u64)")?,

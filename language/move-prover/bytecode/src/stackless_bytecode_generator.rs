@@ -186,13 +186,13 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         let attr_id = self.new_loc_attr(code_offset);
 
         let mk_call = |op: Operation, dsts: Vec<usize>, srcs: Vec<usize>| -> Bytecode {
-            Bytecode::Call(attr_id, dsts, op, srcs)
+            Bytecode::Call(attr_id, dsts, op, srcs, None)
         };
         let mk_unary = |op: Operation, dst: usize, src: usize| -> Bytecode {
-            Bytecode::Call(attr_id, vec![dst], op, vec![src])
+            Bytecode::Call(attr_id, vec![dst], op, vec![src], None)
         };
         let mk_binary = |op: Operation, dst: usize, src1: usize, src2: usize| -> Bytecode {
-            Bytecode::Call(attr_id, vec![dst], op, vec![src1, src2])
+            Bytecode::Call(attr_id, vec![dst], op, vec![src1, src2], None)
         };
 
         match bytecode {

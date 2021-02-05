@@ -787,6 +787,7 @@ impl GlobalEnv {
             source_map,
             loc,
             spec_block_infos,
+            used_modules: Default::default(),
         });
     }
 
@@ -1226,6 +1227,9 @@ pub struct ModuleData {
 
     /// A list of spec block infos, for documentation generation.
     pub spec_block_infos: Vec<SpecBlockInfo>,
+
+    /// A cache for the modules used by this one.
+    used_modules: RefCell<BTreeMap<bool, BTreeSet<ModuleId>>>,
 }
 
 impl ModuleData {
@@ -1246,6 +1250,7 @@ impl ModuleData {
             source_map: SourceMap::new(None),
             loc: Loc::default(),
             spec_block_infos: vec![],
+            used_modules: Default::default(),
         }
     }
 }
@@ -1269,6 +1274,11 @@ impl<'env> ModuleEnv<'env> {
     /// Returns the name of this module.
     pub fn get_name(&'env self) -> &'env ModuleName {
         &self.data.name
+    }
+
+    /// Returns full name as a string.
+    pub fn get_full_name_str(&self) -> String {
+        self.get_name().display_full(self.symbol_pool()).to_string()
     }
 
     /// Returns the VM identifier for this module
@@ -1305,7 +1315,7 @@ impl<'env> ModuleEnv<'env> {
             .collect()
     }
 
-    /// Returns the set of modules that use this one (including itself).
+    /// Returns the set of modules that use this one.
     pub fn get_using_modules(&self, include_specs: bool) -> BTreeSet<ModuleId> {
         self.env
             .get_modules()
@@ -1322,8 +1332,11 @@ impl<'env> ModuleEnv<'env> {
             .collect()
     }
 
-    /// Returns the set of modules this one uses (including itself).
+    /// Returns the set of modules this one uses.
     pub fn get_used_modules(&self, include_specs: bool) -> BTreeSet<ModuleId> {
+        if let Some(usage) = self.data.used_modules.borrow().get(&include_specs) {
+            return usage.clone();
+        }
         // Determine modules used in bytecode from the compiled module.
         let mut usage: BTreeSet<ModuleId> = self
             .get_dependencies()
@@ -1335,9 +1348,6 @@ impl<'env> ModuleEnv<'env> {
             .collect();
         if include_specs {
             // Add any usage in specs.
-            // We currently do traverse the entire module for this every time this is called.
-            // We may want to cache the result if this function is more frequently called
-            // (currently it is only needed by docgen)
             let add_usage_of_exp = |usage: &mut BTreeSet<ModuleId>, exp: &Exp| {
                 exp.module_usage(usage);
                 for node_id in exp.node_ids() {
@@ -1365,7 +1375,27 @@ impl<'env> ModuleEnv<'env> {
                 }
             }
         }
+        self.data
+            .used_modules
+            .borrow_mut()
+            .insert(include_specs, usage.clone());
         usage
+    }
+
+    /// Returns true if the given module is a transitive dependency of this one. The
+    /// transitive dependency set contains this module and all directly or indirectly used
+    /// modules (without spec usage).
+    pub fn is_transitive_dependency(&self, module_id: ModuleId) -> bool {
+        if self.get_id() == module_id {
+            true
+        } else {
+            for dep in self.get_used_modules(false) {
+                if self.env.get_module(dep).is_transitive_dependency(module_id) {
+                    return true;
+                }
+            }
+            false
+        }
     }
 
     /// Returns documentation associated with this module.

@@ -99,18 +99,17 @@ pub fun Test::test_borrow_imm(): u64 {
      var $t3: u64
      var $t4: Test::S
   0: $t1 := 0x1
-  1: $t0 := get_global<Test::R>($t1)
+  1: $t0 := get_global<Test::R>($t1) on_abort goto 8 with $t2
      # data invariant for `Test:R`
   2: assume Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
      # data invariant for `Test:S`
   3: $t4 := get_field<Test::R>.s($t0)
   4: assume Gt(select Test::S.y($t4), 0)
-  5: on_abort goto 9 with $t2
-  6: $t3 := get_field<Test::R>.x($t0)
-  7: label L1
-  8: return $t3
-  9: label L2
- 10: abort($t2)
+  5: $t3 := get_field<Test::R>.x($t0)
+  6: label L1
+  7: return $t3
+  8: label L2
+  9: abort($t2)
 }
 
 
@@ -127,35 +126,34 @@ pub fun Test::test_borrow_mut(): u64 {
      var $t8: u64
      var $t9: Test::S
   0: $t1 := 0x1
-  1: $t0 := borrow_global<Test::R>($t1)
+  1: $t0 := borrow_global<Test::R>($t1) on_abort goto 21 with $t2
      # data invariant for `Test:R`
   2: assume Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
      # data invariant for `Test:S`
   3: $t9 := get_field<Test::R>.s($t0)
   4: assume Gt(select Test::S.y($t9), 0)
-  5: on_abort goto 22 with $t2
-  6: $t3 := 2
-  7: $t4 := borrow_field<Test::R>.s($t0)
-  8: $t5 := borrow_field<Test::S>.y($t4)
-  9: write_ref($t5, $t3)
- 10: write_back[Reference($t4)]($t5)
+  5: $t3 := 2
+  6: $t4 := borrow_field<Test::R>.s($t0)
+  7: $t5 := borrow_field<Test::S>.y($t4)
+  8: write_ref($t5, $t3)
+  9: write_back[Reference($t4)]($t5)
      # data invariant for `Test:S`
      # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:16:9+16
- 11: assert Gt(select Test::S.y($t4), 0)
- 12: write_back[Reference($t0)]($t4)
- 13: $t6 := 3
- 14: $t7 := borrow_field<Test::R>.x($t0)
- 15: write_ref($t7, $t6)
- 16: write_back[Reference($t0)]($t7)
- 17: $t8 := get_field<Test::R>.x($t0)
+ 10: assert Gt(select Test::S.y($t4), 0)
+ 11: write_back[Reference($t0)]($t4)
+ 12: $t6 := 3
+ 13: $t7 := borrow_field<Test::R>.x($t0)
+ 14: write_ref($t7, $t6)
+ 15: write_back[Reference($t0)]($t7)
+ 16: $t8 := get_field<Test::R>.x($t0)
      # data invariant for `Test:R`
      # VC: `data invariant does not hold` at tests/data_invariant_instrumentation/borrow.move:12:9+18
- 18: assert Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
- 19: write_back[Test::R]($t0)
- 20: label L1
- 21: return $t8
- 22: label L2
- 23: abort($t2)
+ 17: assert Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
+ 18: write_back[Test::R]($t0)
+ 19: label L1
+ 20: return $t8
+ 21: label L2
+ 22: abort($t2)
 }
 
 

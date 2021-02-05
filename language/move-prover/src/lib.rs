@@ -15,6 +15,7 @@ use bytecode::{
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
     packed_types_analysis::PackedTypesProcessor,
     spec_instrumentation::SpecInstrumentationProcessor,
 };
@@ -300,6 +301,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     if options.trans_v2 {
         res.add_processor(SpecInstrumentationProcessor::new());
         res.add_processor(DataInvariantInstrumentationProcessor::new());
+        res.add_processor(GlobalInvariantInstrumentationProcessor::new());
     } else {
         res.add_processor(PackedTypesProcessor::new());
     }

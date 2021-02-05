@@ -103,7 +103,7 @@ impl BytecodeContext {
         // Walk over the bytecode and collect various context information.
         for bytecode in code {
             match bytecode {
-                Call(_, dsts, oper, _) => {
+                Call(_, dsts, oper, ..) => {
                     use Operation::*;
                     match oper {
                         BorrowLoc | BorrowGlobal(..) | BorrowField(..) => {
@@ -201,9 +201,9 @@ impl BytecodeContext {
         match bytecode {
             Assign(_, dest, _, _) => vec![*dest],
             Load(_, dest, _) => vec![*dest],
-            Call(_, _, Operation::WriteBack(LocalRoot(dest)), _) => vec![*dest],
-            Call(_, _, Operation::WriteBack(Reference(dest)), _) => vec![*dest],
-            Call(_, dests, _, _) => dests.clone(),
+            Call(_, _, Operation::WriteBack(LocalRoot(dest)), ..) => vec![*dest],
+            Call(_, _, Operation::WriteBack(Reference(dest)), ..) => vec![*dest],
+            Call(_, dests, ..) => dests.clone(),
             _ => vec![],
         }
     }
@@ -1047,10 +1047,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
-            Bytecode::Prop(..)
-            | Bytecode::SaveMem(..)
-            | Bytecode::SaveSpecVar(..)
-            | Bytecode::OnAbort(..) => {
+            Bytecode::Prop(..) | Bytecode::SaveMem(..) | Bytecode::SaveSpecVar(..) => {
                 unimplemented!()
             }
             SpecBlock(_, block_id) => {
@@ -1136,9 +1133,10 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "{} := {};", str_local(*idx), value);
                 emit_track_local(*idx);
             }
-            Call(_, dests, oper, srcs) => {
+            Call(_, dests, oper, srcs, _) => {
                 use Operation::*;
                 match oper {
+                    Havoc => unimplemented!(),
                     UnpackRef => {
                         self.unpack_ref(false, func_target, srcs[0]);
                     }

@@ -6,7 +6,7 @@
 
 use crate::{
     function_target::{FunctionData, FunctionTarget},
-    stackless_bytecode::{AttrId, Bytecode, Label, PropKind},
+    stackless_bytecode::{AttrId, Bytecode, Label, Operation, PropKind},
 };
 use itertools::Itertools;
 use move_model::{
@@ -224,6 +224,13 @@ impl<'env> FunctionDataBuilder<'env> {
         }
     }
 
+    /// Emits a sequence of bytecodes.
+    pub fn emit_vec(&mut self, bcs: Vec<Bytecode>) {
+        for bc in bcs {
+            self.emit(bc);
+        }
+    }
+
     /// Emits a bytecode via a function which takes a freshly generated attribute id.
     pub fn emit_with<F>(&mut self, f: F)
     where
@@ -257,6 +264,14 @@ impl<'env> FunctionDataBuilder<'env> {
         let temp_exp = self.mk_local(temp);
         let definition = self.mk_eq(temp_exp.clone(), def);
         self.emit_with(|id| Bytecode::Prop(id, PropKind::Assume, definition));
+        (temp, temp_exp)
+    }
+
+    /// Emits a new temporary with a havoced value of given type.
+    pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
+        let temp = self.new_temp(ty);
+        let temp_exp = self.mk_local(temp);
+        self.emit_with(|id| Bytecode::Call(id, vec![temp], Operation::Havoc, vec![], None));
         (temp, temp_exp)
     }
 }

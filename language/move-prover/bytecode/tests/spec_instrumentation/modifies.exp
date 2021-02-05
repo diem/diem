@@ -176,23 +176,22 @@ pub fun A::mutate_at($t0|addr: address) {
   0: @1 := save_mem(A::S)
      # VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:18:17+17
   1: assert CanModify<A::S>($t0)
-  2: $t1 := borrow_global<A::S>($t0)
-  3: on_abort goto 13 with $t2
-  4: $t3 := 2
-  5: $t4 := borrow_field<A::S>.x($t1)
-  6: write_ref($t4, $t3)
-  7: write_back[Reference($t1)]($t4)
-  8: write_back[A::S]($t1)
-  9: label L1
+  2: $t1 := borrow_global<A::S>($t0) on_abort goto 12 with $t2
+  3: $t3 := 2
+  4: $t4 := borrow_field<A::S>.x($t1)
+  5: write_ref($t4, $t3)
+  6: write_back[Reference($t1)]($t4)
+  7: write_back[A::S]($t1)
+  8: label L1
      # VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:24:9+27
- 10: assert Not(Not(exists[@1]<A::S>($t0)))
+  9: assert Not(Not(exists[@1]<A::S>($t0)))
      # VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:23:9+31
- 11: assert Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
- 12: return ()
- 13: label L2
+ 10: assert Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
+ 11: return ()
+ 12: label L2
      # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:17:5+115
- 14: assert Not(exists[@1]<A::S>($t0))
- 15: abort($t2)
+ 13: assert Not(exists[@1]<A::S>($t0))
+ 14: abort($t2)
 }
 
 
@@ -202,19 +201,18 @@ pub fun A::read_at($t0|addr: address): u64 {
      var $t2: num
      var $t3: u64
   0: @0 := save_mem(A::S)
-  1: $t1 := get_global<A::S>($t0)
-  2: on_abort goto 8 with $t2
-  3: $t3 := get_field<A::S>.x($t1)
-  4: label L1
+  1: $t1 := get_global<A::S>($t0) on_abort goto 7 with $t2
+  2: $t3 := get_field<A::S>.x($t1)
+  3: label L1
      # VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:13:9+27
-  5: assert Not(Not(exists[@0]<A::S>($t0)))
+  4: assert Not(Not(exists[@0]<A::S>($t0)))
      # VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:14:9+36
-  6: assert Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
-  7: return $t3
-  8: label L2
+  5: assert Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
+  6: return $t3
+  7: label L2
      # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:7:5+109
-  9: assert Not(exists[@0]<A::S>($t0))
- 10: abort($t2)
+  8: assert Not(exists[@0]<A::S>($t0))
+  9: abort($t2)
 }
 
 
@@ -229,24 +227,23 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
      # original call of opaque function: $t3 := A::read_at($t6)
   0: @6 := save_mem(A::S)
   1: assume Eq($t5, Not(exists[@6]<A::S>($t1)))
-  2: if ($t5) goto 16 else goto 3
+  2: if ($t5) goto 15 else goto 3
   3: label L3
   4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
      # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:65:17+9
   5: assert CanModify<B::T>($t0)
-  6: $t2 := move_from<B::T>($t0)
-  7: on_abort goto 16 with $t6
+  6: $t2 := move_from<B::T>($t0) on_abort goto 15 with $t6
      # original call of opaque function: $t4 := A::read_at($t6)
-  8: @7 := save_mem(A::S)
-  9: assume Eq($t7, Not(exists[@7]<A::S>($t1)))
- 10: if ($t7) goto 16 else goto 11
- 11: label L4
- 12: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
- 13: assert Eq<u64>($t3, $t4)
- 14: label L1
- 15: return $t2
- 16: label L2
- 17: abort($t6)
+  7: @7 := save_mem(A::S)
+  8: assume Eq($t7, Not(exists[@7]<A::S>($t1)))
+  9: if ($t7) goto 15 else goto 10
+ 10: label L4
+ 11: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 12: assert Eq<u64>($t3, $t4)
+ 13: label L1
+ 14: return $t2
+ 15: label L2
+ 16: abort($t6)
 }
 
 
@@ -262,26 +259,25 @@ pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
      # original call of opaque function: $t2 := A::read_at($t5)
   0: @4 := save_mem(A::S)
   1: assume Eq($t4, Not(exists[@4]<A::S>($t1)))
-  2: if ($t4) goto 18 else goto 3
+  2: if ($t4) goto 17 else goto 3
   3: label L3
   4: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
   5: $t5 := 2
   6: $t6 := pack B::T($t5)
      # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:52:9+7
   7: assert CanModify<B::T>($t0)
-  8: move_to<B::T>($t6, $t0)
-  9: on_abort goto 18 with $t7
+  8: move_to<B::T>($t6, $t0) on_abort goto 17 with $t7
      # original call of opaque function: $t3 := A::read_at($t5)
- 10: @5 := save_mem(A::S)
- 11: assume Eq($t8, Not(exists[@5]<A::S>($t1)))
- 12: if ($t8) goto 18 else goto 13
- 13: label L4
- 14: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
- 15: assert Eq<u64>($t2, $t3)
- 16: label L1
- 17: return ()
- 18: label L2
- 19: abort($t7)
+  9: @5 := save_mem(A::S)
+ 10: assume Eq($t8, Not(exists[@5]<A::S>($t1)))
+ 11: if ($t8) goto 17 else goto 12
+ 12: label L4
+ 13: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
+ 14: assert Eq<u64>($t2, $t3)
+ 15: label L1
+ 16: return ()
+ 17: label L2
+ 18: abort($t7)
 }
 
 
@@ -373,27 +369,26 @@ pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
      # original call of opaque function: $t3 := A::read_at($t6)
   0: @2 := save_mem(A::S)
   1: assume Eq($t5, Not(exists[@2]<A::S>($t1)))
-  2: if ($t5) goto 21 else goto 3
+  2: if ($t5) goto 20 else goto 3
   3: label L3
   4: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
      # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:38:17+17
   5: assert CanModify<B::T>($t0)
-  6: $t2 := borrow_global<B::T>($t0)
-  7: on_abort goto 21 with $t6
-  8: $t7 := 2
-  9: $t8 := borrow_field<B::T>.x($t2)
- 10: write_ref($t8, $t7)
- 11: write_back[Reference($t2)]($t8)
- 12: write_back[B::T]($t2)
+  6: $t2 := borrow_global<B::T>($t0) on_abort goto 20 with $t6
+  7: $t7 := 2
+  8: $t8 := borrow_field<B::T>.x($t2)
+  9: write_ref($t8, $t7)
+ 10: write_back[Reference($t2)]($t8)
+ 11: write_back[B::T]($t2)
      # original call of opaque function: $t4 := A::read_at($t6)
- 13: @3 := save_mem(A::S)
- 14: assume Eq($t9, Not(exists[@3]<A::S>($t1)))
- 15: if ($t9) goto 21 else goto 16
- 16: label L4
- 17: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
- 18: assert Eq<u64>($t3, $t4)
- 19: label L1
- 20: return ()
- 21: label L2
- 22: abort($t6)
+ 12: @3 := save_mem(A::S)
+ 13: assume Eq($t9, Not(exists[@3]<A::S>($t1)))
+ 14: if ($t9) goto 20 else goto 15
+ 15: label L4
+ 16: assume Eq<u64>($t4, select A::S.x(global<A::S>($t1)))
+ 17: assert Eq<u64>($t3, $t4)
+ 18: label L1
+ 19: return ()
+ 20: label L2
+ 21: abort($t6)
 }
