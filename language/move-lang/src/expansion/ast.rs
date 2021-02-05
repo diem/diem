@@ -262,7 +262,13 @@ pub enum Exp_ {
     Loop(Box<Exp>),
     Block(Sequence),
     Lambda(LValueList, Box<Exp>), // spec only
-    Quant(QuantKind, LValueWithRangeList, Option<Box<Exp>>, Box<Exp>), // spec only
+    Quant(
+        QuantKind,
+        LValueWithRangeList,
+        Vec<Vec<Exp>>,
+        Option<Box<Exp>>,
+        Box<Exp>,
+    ), // spec only
 
     Assign(LValueList, Box<Exp>),
     FieldMutate(Box<ExpDotted>, Box<Exp>),
@@ -278,7 +284,9 @@ pub enum Exp_ {
     BinopExp(Box<Exp>, BinOp, Box<Exp>),
 
     ExpList(Vec<Exp>),
-    Unit { trailing: bool },
+    Unit {
+        trailing: bool,
+    },
 
     Borrow(bool, Box<Exp>),
     ExpDotted(Box<ExpDotted>),
@@ -812,10 +820,11 @@ impl AstDebug for Exp_ {
                 w.write(" ");
                 e.ast_debug(w);
             }
-            E::Quant(kind, sp!(_, rs), c_opt, e) => {
+            E::Quant(kind, sp!(_, rs), trs, c_opt, e) => {
                 kind.ast_debug(w);
                 w.write(" ");
                 rs.ast_debug(w);
+                trs.ast_debug(w);
                 if let Some(c) = c_opt {
                     w.write(" where ");
                     c.ast_debug(w);
@@ -988,5 +997,15 @@ impl AstDebug for (LValue, Exp) {
         self.0.ast_debug(w);
         w.write(" in ");
         self.1.ast_debug(w);
+    }
+}
+
+impl AstDebug for Vec<Vec<Exp>> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        for trigger in self {
+            w.write("{");
+            w.comma(trigger, |w, b| b.ast_debug(w));
+            w.write("}");
+        }
     }
 }

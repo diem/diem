@@ -395,15 +395,26 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 self.shadowed.pop();
                 res
             }
-            Quant(node_id, kind, decls, where_opt, body) => {
+            Quant(node_id, kind, decls, triggers, where_opt, body) => {
                 let decls = self.translate_exp_quant_decls(decls, in_old);
                 self.shadowed
                     .push(decls.iter().map(|(d, _)| d.name).collect());
+                let triggers = triggers
+                    .iter()
+                    .map(|tr| tr.iter().map(|e| self.translate_exp(e, in_old)).collect())
+                    .collect();
                 let where_opt = where_opt
                     .as_ref()
                     .map(|e| Box::new(self.translate_exp(e, in_old)));
                 let body = Box::new(self.translate_exp(body, in_old));
-                let res = Quant(self.instantiate(*node_id), *kind, decls, where_opt, body);
+                let res = Quant(
+                    self.instantiate(*node_id),
+                    *kind,
+                    decls,
+                    triggers,
+                    where_opt,
+                    body,
+                );
                 self.shadowed.pop();
                 res
             }

@@ -1192,16 +1192,20 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 }
             }
         }
-        PE::Quant(k, prs, pc, pe) => {
+        PE::Quant(k, prs, ptrs, pc, pe) => {
             if !context.require_spec_context(loc, "expression only allowed in specifications") {
                 assert!(context.has_errors());
                 EE::UnresolvedError
             } else {
                 let rs_opt = bind_with_range_list(context, prs);
+                let rtrs = ptrs
+                    .into_iter()
+                    .map(|trs| trs.into_iter().map(|tr| exp_(context, tr)).collect())
+                    .collect();
                 let rc = pc.map(|c| Box::new(exp_(context, *c)));
                 let re = exp_(context, *pe);
                 match rs_opt {
-                    Some(rs) => EE::Quant(k, rs, rc, Box::new(re)),
+                    Some(rs) => EE::Quant(k, rs, rtrs, rc, Box::new(re)),
                     None => {
                         assert!(context.has_errors());
                         EE::UnresolvedError
@@ -1589,10 +1593,13 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
             // remove anything in `ls`
             unbound_names_binds(unbound, ls);
         }
-        EE::Quant(_, rs, cr_opt, er) => {
+        EE::Quant(_, rs, trs, cr_opt, er) => {
             unbound_names_exp(unbound, er);
             if let Some(cr) = cr_opt {
                 unbound_names_exp(unbound, cr);
+            }
+            for tr in trs {
+                unbound_names_exps(unbound, tr);
             }
             // remove anything in `rs`
             unbound_names_binds_with_range(unbound, rs);

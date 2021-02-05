@@ -1800,9 +1800,9 @@ impl<'env> SpecTranslator<'env> {
                 &self.module_env().env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
-            Exp::Quant(node_id, kind, ranges, condition, exp) => {
+            Exp::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
-                self.translate_quant(*node_id, *kind, ranges, condition, exp)
+                self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
             }
             Exp::Block(node_id, vars, scope) => {
                 self.set_writer_location(*node_id);
@@ -2179,11 +2179,58 @@ impl<'env> SpecTranslator<'env> {
         });
     }
 
+    fn with_range_selector_assignments<F>(
+        &self,
+        ranges: &[(LocalVarDecl, Exp)],
+        range_tmps: &HashMap<Symbol, String>,
+        quant_vars: &HashMap<Symbol, String>,
+        f: F,
+    ) where
+        F: Fn(),
+    {
+        // Translate range selectors.
+        for (var, range) in ranges {
+            let var_name = self.module_env().symbol_pool().string(var.name);
+            let quant_ty = self.module_env().env.get_node_type(range.node_id());
+            match quant_ty.skip_reference() {
+                Type::Vector(..) => {
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
+                    emit!(
+                        self.writer,
+                        "(var {} := $select_vector({}, {}); ",
+                        var_name,
+                        range_tmp,
+                        quant_var,
+                    );
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    let quant_var = quant_vars.get(&var.name).unwrap();
+                    emit!(
+                        self.writer,
+                        "(var {} := $Integer({}); ",
+                        var_name,
+                        quant_var
+                    );
+                }
+                _ => (),
+            }
+        }
+        f();
+        emit!(
+            self.writer,
+            &std::iter::repeat(")")
+                .take(range_tmps.len())
+                .collect::<String>()
+        );
+    }
+
     fn translate_quant(
         &self,
         node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
+        triggers: &[Vec<Exp>],
         condition: &Option<Box<Exp>>,
         body: &Exp,
     ) {
@@ -2196,12 +2243,11 @@ impl<'env> SpecTranslator<'env> {
                 quant_ty.skip_reference(),
                 Type::Vector(..) | Type::Primitive(PrimitiveType::Range)
             ) {
-                let var_name = self.module_env().symbol_pool().string(var.name);
                 let range_tmp = self.fresh_var_name("range");
                 emit!(self.writer, "(var {} := ", range_tmp);
                 self.translate_exp(&range);
                 emit!(self.writer, "; ");
-                range_tmps.insert(var_name, range_tmp);
+                range_tmps.insert(var.name, range_tmp);
             }
         }
         // Translate quantified variables.
@@ -2218,12 +2264,27 @@ impl<'env> SpecTranslator<'env> {
                 _ => {
                     let quant_var = self.fresh_var_name("i");
                     emit!(self.writer, "{}{}: int", comma, quant_var);
-                    quant_vars.insert(var_name, quant_var);
+                    quant_vars.insert(var.name, quant_var);
                 }
             }
             comma = ", ";
         }
         emit!(self.writer, " :: ");
+        // Translate triggers.
+        if !triggers.is_empty() {
+            for trigger in triggers {
+                emit!(self.writer, "{");
+                let mut comma = "";
+                for p in trigger {
+                    emit!(self.writer, "{}", comma);
+                    self.with_range_selector_assignments(&ranges, &range_tmps, &quant_vars, || {
+                        self.translate_exp(p);
+                    });
+                    comma = ",";
+                }
+                emit!(self.writer, "} ");
+            }
+        }
         // Translate range constraints.
         let connective = match kind {
             QuantKind::Forall => " ==> ",
@@ -2258,8 +2319,8 @@ impl<'env> SpecTranslator<'env> {
                     }
                 }
                 Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InVectorRange({}, {})",
@@ -2269,8 +2330,8 @@ impl<'env> SpecTranslator<'env> {
                     );
                 }
                 Type::Primitive(PrimitiveType::Range) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
+                    let range_tmp = range_tmps.get(&var.name).unwrap();
+                    let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
                         "{}$InRange({}, {})",
@@ -2284,46 +2345,21 @@ impl<'env> SpecTranslator<'env> {
             separator = connective;
         }
         emit!(self.writer, "{}", connective);
-        // Translate range selectors.
-        for (var, range) in ranges {
-            let var_name = self.module_env().symbol_pool().string(var.name);
-            let quant_ty = self.module_env().env.get_node_type(range.node_id());
-            match quant_ty.skip_reference() {
-                Type::Vector(..) => {
-                    let range_tmp = range_tmps.get(&var_name).unwrap();
-                    let quant_var = quant_vars.get(&var_name).unwrap();
-                    emit!(
-                        self.writer,
-                        "(var {} := $select_vector({}, {}); ",
-                        var_name,
-                        range_tmp,
-                        quant_var,
-                    );
-                }
-                Type::Primitive(PrimitiveType::Range) => {
-                    let quant_var = quant_vars.get(&var_name).unwrap();
-                    emit!(
-                        self.writer,
-                        "(var {} := $Integer({}); ",
-                        var_name,
-                        quant_var
-                    );
-                }
-                _ => (),
+        self.with_range_selector_assignments(&ranges, &range_tmps, &quant_vars, || {
+            // Translate body and "where" condition.
+            if let Some(cond) = condition {
+                emit!(self.writer, "b#$Boolean(");
+                self.translate_exp(cond);
+                emit!(self.writer, ") {}", connective);
             }
-        }
-        // Translate body and "where" condition.
-        if let Some(cond) = condition {
             emit!(self.writer, "b#$Boolean(");
-            self.translate_exp(cond);
-            emit!(self.writer, ") {}", connective);
-        }
-        emit!(self.writer, "b#$Boolean(");
-        self.translate_exp(body);
+            self.translate_exp(body);
+            emit!(self.writer, ")");
+        });
         emit!(
             self.writer,
             &std::iter::repeat(")")
-                .take(3 + 2 * range_tmps.len())
+                .take(range_tmps.len().checked_add(2).unwrap())
                 .collect::<String>()
         );
     }

@@ -336,6 +336,7 @@ pub enum Exp {
         NodeId,
         QuantKind,
         Vec<(LocalVarDecl, Exp)>,
+        Vec<Vec<Exp>>,
         Option<Box<Exp>>,
         Box<Exp>,
     ),
@@ -460,11 +461,16 @@ impl Exp {
                 }
             }
             Lambda(_, _, body) => body.visit_pre_post(visitor),
-            Quant(_, _, ranges, condition, body) => {
+            Quant(_, _, ranges, triggers, condition, body) => {
                 for (_, range) in ranges {
                     range.visit_pre_post(visitor);
                 }
-                if let Some(exp) = &condition {
+                for trigger in triggers {
+                    for e in trigger {
+                        e.visit_pre_post(visitor);
+                    }
+                }
+                if let Some(exp) = condition {
                     exp.visit_pre_post(visitor);
                 }
                 body.visit_pre_post(visitor);
@@ -539,10 +545,14 @@ impl Exp {
                 rewrite_decls(rewriter, decls),
                 rewrite_box(rewriter, body),
             ),
-            Quant(id, kind, decls, condition, body) => Quant(
+            Quant(id, kind, decls, triggers, condition, body) => Quant(
                 id,
                 kind,
                 rewrite_quant_decls(rewriter, decls),
+                triggers
+                    .into_iter()
+                    .map(|t| t.into_iter().map(|e| e.rewrite(rewriter)).collect())
+                    .collect(),
                 condition.map(|e| rewrite_box(rewriter, e)),
                 rewrite_box(rewriter, body),
             ),
@@ -905,7 +915,12 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
                     body.display(self.env)
                 )
             }
-            Quant(_, kind, decls, opt_where, body) => {
+            Quant(_, kind, decls, triggers, opt_where, body) => {
+                let triggers_str = triggers
+                    .iter()
+                    .map(|trigger| format!("{{{}}}", self.fmt_exps(trigger)))
+                    .collect_vec()
+                    .join("");
                 let where_str = if let Some(exp) = opt_where {
                     format!(" where {}", exp.display(self.env))
                 } else {
@@ -913,9 +928,10 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
                 };
                 write!(
                     f,
-                    "{} {}{}: {}",
+                    "{} {}{}{}: {}",
                     kind,
                     self.fmt_quant_decls(decls),
+                    triggers_str,
                     where_str,
                     body.display(self.env)
                 )

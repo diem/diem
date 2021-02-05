@@ -77,7 +77,7 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
                 self.shadowed.pop_front();
                 res
             }
-            Quant(id, kind, ranges, condition, body) => {
+            Quant(id, kind, ranges, triggers, condition, body) => {
                 let ranges = ranges
                     .iter()
                     .map(|(decl, range)| (decl.clone(), self.rewrite(range)))
@@ -88,6 +88,10 @@ impl<'env, 'rewriter> ExpRewriter<'env, 'rewriter> {
                     self.rewrite_attrs(*id),
                     *kind,
                     ranges,
+                    triggers
+                        .iter()
+                        .map(|trigger| trigger.iter().map(|exp| self.rewrite(&*exp)).collect())
+                        .collect(),
                     condition.as_ref().map(|exp| Box::new(self.rewrite(&*exp))),
                     Box::new(self.rewrite(body)),
                 );

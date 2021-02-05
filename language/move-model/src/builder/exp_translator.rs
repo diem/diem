@@ -733,9 +733,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             EA::Exp_::Lambda(bindings, exp) => {
                 self.translate_lambda(&loc, bindings, exp, expected_type)
             }
-            EA::Exp_::Quant(kind, ranges, condition, body) => {
-                self.translate_quant(&loc, *kind, ranges, condition, body, expected_type)
-            }
+            EA::Exp_::Quant(kind, ranges, triggers, condition, body) => self.translate_quant(
+                &loc,
+                *kind,
+                ranges,
+                triggers,
+                condition,
+                body,
+                expected_type,
+            ),
             EA::Exp_::BinopExp(l, op, r) => {
                 let args = vec![l.as_ref(), r.as_ref()];
                 let QualifiedSymbol {
@@ -1793,6 +1799,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         loc: &Loc,
         kind: PA::QuantKind,
         ranges: &EA::LValueWithRangeList,
+        triggers: &[Vec<EA::Exp>],
         condition: &Option<Box<EA::Exp>>,
         body: &EA::Exp,
         expected_type: &Type,
@@ -1867,6 +1874,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             expected_type,
             "in quantified expression",
         );
+        let rtriggers = triggers
+            .iter()
+            .map(|trigger| {
+                trigger
+                    .iter()
+                    .map(|e| self.translate_exp_free(e).1)
+                    .collect()
+            })
+            .collect();
         let rbody = self.translate_exp(body, &rty);
         let rcondition = condition
             .as_ref()
@@ -1877,7 +1893,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             PA::QuantKind_::Forall => QuantKind::Forall,
             PA::QuantKind_::Exists => QuantKind::Exists,
         };
-        Exp::Quant(id, rkind, rranges, rcondition, Box::new(rbody))
+        Exp::Quant(id, rkind, rranges, rtriggers, rcondition, Box::new(rbody))
     }
 
     pub fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type, context_msg: &str) -> Type {

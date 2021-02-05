@@ -1100,7 +1100,7 @@ fn is_quant<'input>(tokens: &mut Lexer<'input>) -> bool {
 
 // Parses a quantifier expressions, assuming is_quant(tokens) is true.
 //
-//   <Quantifier> = ( "forall" | "exists" ) <QuantifierBindings> ("where" <Exp>)? ":" Exp
+//   <Quantifier> = ( "forall" | "exists" ) <QuantifierBindings> ({ (<Exp>)* })* ("where" <Exp>)? ":" Exp
 //   <QuantifierBindings> = <QuantifierBind> ("," <QuantifierBind>)*
 //   <QuantifierBind> = <Identifier> ":" <Type> | <Identifier> "in" <Exp>
 //
@@ -1141,6 +1141,30 @@ fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
         binds_with_range_list,
     );
 
+    let triggers = if tokens.peek() == Tok::LBrace {
+        parse_list(
+            tokens,
+            |tokens| {
+                if tokens.peek() == Tok::LBrace {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            },
+            |tokens| {
+                parse_comma_list(
+                    tokens,
+                    Tok::LBrace,
+                    Tok::RBrace,
+                    parse_exp,
+                    "a trigger expresssion",
+                )
+            },
+        )?
+    } else {
+        Vec::new()
+    };
+
     let condition = match tokens.peek() {
         Tok::IdentifierValue if tokens.content() == "where" => {
             tokens.advance()?;
@@ -1154,6 +1178,7 @@ fn parse_quant<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     Ok(Exp_::Quant(
         kind,
         binds_with_range_list,
+        triggers,
         condition,
         Box::new(body),
     ))
