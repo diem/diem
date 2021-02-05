@@ -49,7 +49,7 @@ use futures::{
 use num_variants::NumVariants;
 use rand::{
     prelude::{SeedableRng, SmallRng},
-    seq::IteratorRandom,
+    seq::SliceRandom,
 };
 use serde::Serialize;
 use short_hex_str::AsShortHexStr;
@@ -172,11 +172,12 @@ impl DiscoveredPeerSet {
         }
     }
 
+    /// Converts `DiscoveredPeerSet` into a `PeerSet`, however disregards the source of discovery
+    /// TODO: Provide smarter merging based on discovery source
     pub fn to_eligible_peers(&self) -> PeerSet {
         self.0
             .iter()
-            // Remove peers without keys, they can't be connected to
-            .filter(|(_, peer)| !peer.keys.is_empty())
+            .filter(|(_, peer)| peer.is_eligible())
             .map(|(peer_id, peer)| (*peer_id, peer.into()))
             .collect()
     }
@@ -187,6 +188,18 @@ struct DiscoveredPeer {
     role: PeerRole,
     addrs: Addresses,
     keys: PublicKeys,
+}
+
+impl DiscoveredPeer {
+    /// Peers without keys are not able to be mutually authenticated to
+    pub fn is_eligible(&self) -> bool {
+        !self.keys.is_empty()
+    }
+
+    /// Peers without addresses can't be dialed to
+    pub fn is_eligible_to_be_dialed(&self) -> bool {
+        self.is_eligible() && !self.addrs.is_empty()
+    }
 }
 
 impl From<&DiscoveredPeer> for Peer {
@@ -400,24 +413,21 @@ where
         pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
     ) {
         let to_connect = self.choose_peers_to_dial();
-        for (peer_id, addrs) in to_connect {
-            self.queue_dial_peer(peer_id, addrs, pending_dials);
+        for (peer_id, peer) in to_connect {
+            self.queue_dial_peer(peer_id, peer, pending_dials);
         }
     }
 
-    fn choose_peers_to_dial(&mut self) -> Vec<(PeerId, Addresses)> {
-        let eligible = self.eligible.read().clone();
+    fn choose_peers_to_dial(&mut self) -> Vec<(PeerId, DiscoveredPeer)> {
         let to_connect: Vec<_> = self
             .discovered_peers
             .0
             .iter()
             .filter(|(peer_id, peer)| {
-                eligible.contains_key(peer_id)  // The node is eligible to be dialed.
+                peer.is_eligible_to_be_dialed() // The node is eligible to dial
                     && self.connected.get(peer_id).is_none() // The node is not already connected.
                     && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
-                    && !peer.addrs.is_empty() // There is an address to dial.
             })
-            .map(|(peer_id, peer)| (*peer_id, peer.addrs.clone()))
             .collect();
 
         // Limit the number of dialed connections from a Full Node
@@ -433,14 +443,15 @@ where
             to_connect.len()
         };
         to_connect
-            .into_iter()
             .choose_multiple(&mut self.rng, to_connect_size)
+            .map(|(peer_id, peer)| (**peer_id, (*peer).clone()))
+            .collect()
     }
 
     fn queue_dial_peer<'a>(
         &'a mut self,
         peer_id: PeerId,
-        addrs: Addresses,
+        peer: DiscoveredPeer,
         pending_dials: &'a mut FuturesUnordered<BoxFuture<'static, PeerId>>,
     ) {
         // If we're attempting to dial a Peer we must not be connected to it. This ensures that
@@ -459,7 +470,7 @@ where
         // Choose the next addr to dial for this peer. Currently, we just
         // round-robin the selection, i.e., try the sequence:
         // addr[0], .., addr[len-1], addr[0], ..
-        let addr = dial_state.next_addr(&addrs).clone();
+        let addr = dial_state.next_addr(&peer.addrs).clone();
 
         // Using the DialState's backoff strategy, compute the delay until
         // the next dial attempt for this peer.
