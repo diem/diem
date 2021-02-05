@@ -11,7 +11,7 @@ license = "Apache-2.0"
 determinator = "0.2.1"
 guppy = "0.7.0"
 indoc = "1.0.3"
-hakari = { version = "0.1.0", features = ["summaries"] }
+hakari = { version = "0.1.1", features = ["summaries"] }
 hex = "0.4.2"
 log = "0.4.14"
 toml = "0.5.8"

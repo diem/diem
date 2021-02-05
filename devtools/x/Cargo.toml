@@ -15,7 +15,7 @@ structopt = "0.3.21"
 anyhow = "1.0.38"
 colored-diff = "0.2.2"
 guppy = { version = "0.7.0", features = ["summaries"] }
-hakari = "0.1.0"
+hakari = "0.1.1"
 indoc = "1.0.3"
 toml = "0.5.8"
 env_logger = "0.8.2"
