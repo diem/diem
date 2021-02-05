@@ -680,8 +680,11 @@ fn serialize_u64_varint(mut num: u64, binary: &mut Vec<u8>) {
     for _ in 0..8 {
         let low_bits = num as u8 & 0x7f;
         num >>= 7;
-        let more = (num > 0) as u8;
-        binary.push(low_bits | more << 7);
+        let more = match num {
+            0 => 0u8,
+            _ => 0x80,
+        };
+        binary.push(low_bits | more);
         if more == 0 {
             return;
         }
@@ -700,9 +703,8 @@ where
     let mut num = 0u64;
     for i in 0..8 {
         let byte = reader.read_u8()?;
-        let more = (byte & 0x80) != 0;
         num |= u64::from(byte & 0x7f) << (i * 7);
-        if !more {
+        if (byte & 0x80) == 0 {
             return Ok(num);
         }
     }
