@@ -102,7 +102,16 @@ impl BaseConfig {
         if self.genesis_waypoint.is_none() {
             self.waypoint.waypoint()
         } else {
-            self.genesis_waypoint.as_ref().unwrap().genesis_waypoint()
+            match self.genesis_waypoint.as_ref().unwrap() {
+                WaypointConfig::FromStorage(backend) => {
+                    let storage: Storage = backend.into();
+                    storage
+                        .get::<Waypoint>(diem_global_constants::GENESIS_WAYPOINT)
+                        .expect("Unable to read waypoint")
+                        .value
+                }
+                _ => self.waypoint.waypoint(),
+            }
         }
     }
 }
@@ -158,19 +167,6 @@ impl WaypointConfig {
             WaypointConfig::None => None,
         };
         waypoint.expect("waypoint should be present")
-    }
-
-    pub fn genesis_waypoint(&self) -> Waypoint {
-        match &self {
-            WaypointConfig::FromStorage(backend) => {
-                let storage: Storage = backend.into();
-                storage
-                    .get::<Waypoint>(diem_global_constants::GENESIS_WAYPOINT)
-                    .expect("Unable to read waypoint")
-                    .value
-            }
-            _ => self.waypoint(),
-        }
     }
 }
 
