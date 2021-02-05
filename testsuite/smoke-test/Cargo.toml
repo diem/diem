@@ -17,7 +17,7 @@ num = "0.3.0"
 num-traits = "0.2.14"
 rand = "0.7.3"
 regex = "1.4.3"
-rust_decimal = "1.10.1"
+rust_decimal = "1.10.2"
 rusty-fork = "0.3.0"
 statistical = "1.0.0"
 tokio = { version = "1.1.1", features = ["full"] }
