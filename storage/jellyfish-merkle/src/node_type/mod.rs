@@ -375,7 +375,7 @@ impl InternalNode {
         if range_existence_bitmap == 0 {
             // No child under this subtree
             *SPARSE_MERKLE_PLACEHOLDER_HASH
-        } else if range_existence_bitmap.count_ones() == 1 && (range_leaf_bitmap != 0 || width == 1)
+        } else if width == 1 || (range_existence_bitmap.count_ones() == 1 && range_leaf_bitmap != 0)
         {
             // Only 1 leaf child under this subtree or reach the lowest level
             let only_child_index = Nibble::from(range_existence_bitmap.trailing_zeros() as u8);
@@ -451,8 +451,8 @@ impl InternalNode {
             if range_existence_bitmap == 0 {
                 // No child in this range.
                 return (None, siblings);
-            } else if range_existence_bitmap.count_ones() == 1
-                && (range_leaf_bitmap != 0 || width == 1)
+            } else if width == 1
+                || (range_existence_bitmap.count_ones() == 1 && range_leaf_bitmap != 0)
             {
                 // Return the only 1 leaf child under this subtree or reach the lowest level
                 // Even this leaf child is not the n-th child, it should be returned instead of
