@@ -316,6 +316,7 @@ where
         for i in 0..ROOT_NIBBLE_HEIGHT {
             let child_index = u8::from(nibbles.next().expect("This nibble must exist.")) as usize;
 
+            assert!(i < self.partial_nodes.len());
             match self.partial_nodes[i].children[child_index] {
                 Some(ref child_info) => {
                     // If there exists an internal node at this position, we just continue the loop

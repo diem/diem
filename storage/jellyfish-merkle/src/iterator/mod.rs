@@ -45,6 +45,7 @@ impl NodeVisitInfo {
     /// be set to the leftmost child.
     fn new(node_key: NodeKey, node: InternalNode) -> Self {
         let (children_bitmap, _) = node.generate_bitmaps();
+        assert!(children_bitmap != 0);
         Self {
             node_key,
             node,
@@ -63,6 +64,7 @@ impl NodeVisitInfo {
     ) -> Self {
         let (children_bitmap, _) = node.generate_bitmaps();
         let mut next_child_to_visit = 1 << u8::from(next_child_to_visit);
+        assert!(children_bitmap >= next_child_to_visit);
         while next_child_to_visit & children_bitmap == 0 {
             next_child_to_visit <<= 1;
         }
