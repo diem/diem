@@ -1,0 +1,25 @@
+[package]
+name = "offchain"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem offchain sdk module"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+base64 = "0.13"
+serde = { version = "1.0.123", features = ["derive"] }
+serde_json = "1.0.61"
+serde_repr = "0.1"
+uuid = { version = "0.8.2", features = ["serde"] }
+
+diem-sdk = { path = ".." }
+
+[dev-dependencies]
+hex = "0.4.2"
+rand_core = "0.6"
+
+diem-workspace-hack = { path = "../../common/workspace-hack" }

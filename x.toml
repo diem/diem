@@ -188,6 +188,7 @@ members = [
     "move-lang-test-utils",
     "move-prover-test-utils",
     "move-vm-integration-tests",
+    "offchain",
     "sdk-compatibility",
     "serializer-tests",
     "smoke-test",

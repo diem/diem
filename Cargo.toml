@@ -120,6 +120,7 @@ members = [
     "sdk",
     "sdk/client",
     "sdk/compatibility",
+    "sdk/offchain",
     "sdk/transaction-builder",
     "secure/key-manager",
     "secure/net",
