@@ -28,6 +28,6 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 
 # Optional Dependencies
 reqwest = { version = "0.11.0", features = ["json"], optional = true }
-tokio = { version = "1.1.0", features = ["time"], default_features = false, optional = true }
+tokio = { version = "1.2.0", features = ["time"], default_features = false, optional = true }
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false, optional = true }
 proxy = { path = "../../common/proxy", optional = true }

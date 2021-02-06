@@ -14,7 +14,7 @@ bytes = "1.0.1"
 futures = "0.3.12"
 pin-project = "1.0.5"
 serde = { version = "1.0.123", default-features = false }
-tokio = { version = "1.1.1", features = ["full"] }
+tokio = { version = "1.2.0", features = ["full"] }
 tokio-util = { version = "0.6.3", features = ["compat"] }
 url = { version = "2.1.1" }
 
