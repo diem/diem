@@ -72,7 +72,7 @@ mod tree_cache_test;
 use crate::{
     metrics::DIEM_JELLYFISH_STORAGE_READS,
     node_type::{Node, NodeKey},
-    NodeStats, StaleNodeIndex, TreeReader, TreeUpdateBatch,
+    NodeBatch, NodeStats, StaleNodeIndex, StaleNodeIndexBatch, TreeReader, TreeUpdateBatch,
 };
 use anyhow::{bail, Result};
 use diem_crypto::HashValue;
@@ -85,10 +85,10 @@ use std::collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet};
 /// help commit more than one transaction in a row atomically.
 struct FrozenTreeCache<V> {
     /// Immutable node_cache.
-    node_cache: BTreeMap<NodeKey, Node<V>>,
+    node_cache: NodeBatch<V>,
 
     /// Immutable stale_node_index_cache.
-    stale_node_index_cache: BTreeSet<StaleNodeIndex>,
+    stale_node_index_cache: StaleNodeIndexBatch,
 
     /// the stats vector including the number of new nodes, new leaves, stale nodes and stale leaves.
     node_stats: Vec<NodeStats>,
