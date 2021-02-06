@@ -24,34 +24,24 @@ const PKG_SOURCE_DIR: &str = "source_files";
 /// Directory name for the package binary files under package/<name>
 const PKG_BINARY_DIR: &str = "compiled";
 
-/// Content for the stdlib directory
-const DIR_STDLIB: Dir = include_dir!("../../diem-framework/modules");
+/// Content for the move stdlib directory
+const DIR_MOVE_STDLIB: Dir = include_dir!("../../move-stdlib/modules");
 /// Content for the nursery directory
-const DIR_NURSERY: Dir = include_dir!("../../diem-framework/nursery");
-
-/// The portion in the stdlib directory that are considered stdlib
-const STDLIB_MODULE_FILES: [&str; 8] = [
-    "Errors.move",
-    "Event.move",
-    "FixedPoint32.move",
-    "Hash.move",
-    "BCS.move",
-    "Option.move",
-    "Vector.move",
-    "Signer.move",
-];
+const DIR_MOVE_STDLIB_NURSERY: Dir = include_dir!("../../move-stdlib/nursery");
+/// Content for diem framework directory
+const DIR_DIEM_FRAMEWORK: Dir = include_dir!("../../diem-framework/modules");
 
 /// Pre-defined stdlib package
-static PACKAGE_STDLIB: Lazy<MovePackage> = Lazy::new(|| MovePackage {
+static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| MovePackage {
     name: "stdlib",
     sources: vec![
         SourceFilter {
-            source_dir: &DIR_STDLIB,
-            inclusion: Some(STDLIB_MODULE_FILES.iter().copied().collect()),
+            source_dir: &DIR_MOVE_STDLIB,
+            inclusion: None, // include everything
             exclusion: HashSet::new(),
         },
         SourceFilter {
-            source_dir: &DIR_NURSERY,
+            source_dir: &DIR_MOVE_STDLIB_NURSERY,
             inclusion: None, // include everything
             exclusion: HashSet::new(),
         },
@@ -59,14 +49,14 @@ static PACKAGE_STDLIB: Lazy<MovePackage> = Lazy::new(|| MovePackage {
     deps: vec![],
 });
 
-static PACKAGE_DIEM: Lazy<MovePackage> = Lazy::new(|| MovePackage {
+static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| MovePackage {
     name: "diem",
     sources: vec![SourceFilter {
-        source_dir: &DIR_STDLIB,
+        source_dir: &DIR_DIEM_FRAMEWORK,
         inclusion: None, // include everything
-        exclusion: STDLIB_MODULE_FILES.iter().copied().collect(),
+        exclusion: HashSet::new(),
     }],
-    deps: vec![&PACKAGE_STDLIB],
+    deps: vec![&PACKAGE_MOVE_STDLIB],
 });
 
 struct SourceFilter<'a> {
@@ -256,8 +246,8 @@ impl Mode {
 pub fn parse_mode_from_string(mode: &str) -> Result<Mode> {
     match mode {
         "bare" => Ok(Mode(vec![])),
-        "stdlib" => Ok(Mode(vec![&*PACKAGE_STDLIB])),
-        "diem" => Ok(Mode(vec![&*PACKAGE_DIEM])),
+        "stdlib" => Ok(Mode(vec![&*PACKAGE_MOVE_STDLIB])),
+        "diem" => Ok(Mode(vec![&*PACKAGE_DIEM_FRAMEWORK])),
         _ => bail!("Invalid mode for dependency: {}", mode),
     }
 }

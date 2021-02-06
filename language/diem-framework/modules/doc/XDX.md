@@ -24,8 +24,8 @@ Once the component makeup of the XDX has been chosen the
 <b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
 <b>use</b> <a href="Diem.md#0x1_Diem">0x1::Diem</a>;
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
-<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32">0x1::FixedPoint32</a>;
 </code></pre>
 
 
@@ -151,10 +151,10 @@ restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_curren
     // Operational constraint
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_currency_info">CoreAddresses::assert_currency_info</a>(dr_account);
     // <a href="XDX.md#0x1_XDX_Reserve">Reserve</a> must not exist.
-    <b>assert</b>(!<b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="XDX.md#0x1_XDX_ERESERVE">ERESERVE</a>));
+    <b>assert</b>(!<b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="XDX.md#0x1_XDX_ERESERVE">ERESERVE</a>));
     <b>let</b> (mint_cap, burn_cap) = <a href="Diem.md#0x1_Diem_register_currency">Diem::register_currency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;(
         dr_account,
-        <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="XDX.md#0x1_XDX">XDX</a>
+        <a href="../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="XDX.md#0x1_XDX">XDX</a>
         <b>true</b>,    // is_synthetic
         1000000, // scaling_factor = 10^6
         1000,    // fractional_part = 10^3
@@ -178,7 +178,7 @@ restrictions are enforced in the <code><a href="Diem.md#0x1_Diem_register_curren
 
 
 <pre><code><b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">CoreAddresses::AbortsIfNotCurrencyInfo</a>{account: dr_account};
-<b>aborts_if</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>aborts_if</b> <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>include</b> <a href="Diem.md#0x1_Diem_RegisterCurrencyAbortsIf">Diem::RegisterCurrencyAbortsIf</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;{
     currency_code: b"<a href="XDX.md#0x1_XDX">XDX</a>",
     scaling_factor: 1000000

@@ -369,7 +369,7 @@ fn compile_move_script(file_path: &str, sender: AccountAddress) -> Result<Vec<u8
     let sender_opt = Some(sender_addr);
     let (files, units_or_errors) = move_compile(
         targets,
-        &diem_framework::stdlib_files(),
+        &diem_framework::diem_stdlib_files(),
         sender_opt,
         None,
         false,

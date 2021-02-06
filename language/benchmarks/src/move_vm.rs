@@ -26,10 +26,7 @@ static MOVE_BENCH_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
 
 static STDLIB_VECTOR_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
     vec![
-        env!("CARGO_MANIFEST_DIR"),
-        "..",
-        "diem-framework",
-        "modules",
+        move_stdlib::move_stdlib_modules_full_path().as_str(),
         "Vector.move",
     ]
     .into_iter()

@@ -20,7 +20,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
-const STDLIB_FLAGS: &[&str] = &["--dependency=../diem-framework/modules"];
+const STDLIB_FLAGS: &[&str] = &[
+    "--dependency=../move-stdlib/modules",
+    "--dependency=../diem-framework/modules",
+];
 
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
 
@@ -120,100 +123,103 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 }
 
 fn cvc4_deny_listed(path: &Path) -> bool {
-    let path_str = path.to_str().unwrap();
-    if path_str == "../diem-framework/modules/ValidatorOperatorConfig.move" ||
-        path_str == "../diem-framework/modules/Option.move" ||
-        path_str == "../diem-framework/modules/RegisteredCurrencies.move" ||
-        path_str == "../diem-framework/modules/AccountFreezing.move" ||
-        path_str == "../diem-framework/modules/DiemTransactionPublishingOption.move" ||
-        path_str == "../diem-framework/modules/VASP.move" ||
-        path_str == "../diem-framework/modules/ValidatorConfig.move" ||
-        path_str == "../diem-framework/modules/DiemConfig.move" ||
-        path_str == "../diem-framework/modules/DiemSystem.move" ||
-        path_str == "../diem-framework/modules/XUS.move" ||
-        path_str == "../diem-framework/modules/DualAttestation.move" ||
-        path_str == "../diem-framework/modules/XDX.move" ||
-        path_str == "tests/sources/functional/cast.move" ||
-        path_str == "../diem-framework/modules/RecoveryAddress.move" ||
-        path_str == "tests/sources/functional/loops.move" ||
-        path_str == "../diem-framework/transaction_scripts/add_validator_and_reconfigure.move" ||
-        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key.move" ||
-        path_str == "tests/sources/functional/aborts_if_assume_assert.move" ||
-        path_str == "../diem-framework/transaction_scripts/remove_validator_and_reconfigure.move" ||
-        path_str == "../diem-framework/modules/DesignatedDealer.move" ||
-        path_str == "tests/sources/functional/marketcap.move" ||
-        path_str == "tests/sources/functional/invariants.move" ||
-        path_str == "tests/sources/functional/invariants_resources.move" ||
-        path_str == "tests/sources/functional/module_invariants.move" ||
-        path_str == "tests/sources/functional/ModifiesSchemaTest.move" ||
-        path_str == "tests/sources/functional/resources.move" ||
-        path_str == "tests/sources/functional/schema_exp.move" ||
-        path_str == "tests/sources/functional/marketcap_generic.move" ||
-        path_str == "tests/sources/functional/aborts_if_with_code.move" ||
-        path_str == "tests/sources/functional/address_serialization_constant_size.move" ||
-        path_str == "../diem-framework/transaction_scripts/set_validator_config_and_reconfigure.move" ||
-        path_str == "../diem-framework/burn.move" ||
-        path_str == "tests/sources/functional/global_invariants.move" ||
-        path_str == "tests/sources/functional/nested_invariants.move" ||
-        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_recovery_address.move" ||
-        path_str == "tests/sources/functional/marketcap_as_schema_apply.move" ||
-        path_str == "tests/sources/functional/global_vars.move" ||
-        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_nonce.move" ||
-        path_str == "tests/sources/functional/specs_in_fun_ref.move" ||
-        path_str == "tests/sources/functional/references.move" ||
-        path_str == "tests/sources/functional/mut_ref_unpack.move" ||
-        path_str == "tests/sources/functional/hash_model.move" ||
-        path_str == "tests/sources/functional/ModifiesErrorTest.move" ||
-        path_str == "tests/sources/functional/consts.move" ||
-        path_str == "tests/sources/functional/type_values.move" ||
-        path_str == "tests/sources/functional/pragma.move" ||
-        path_str == "tests/sources/functional/exists_in_vector.move" ||
-        path_str == "tests/sources/functional/aborts_with_check.move" ||
-        path_str == "tests/sources/functional/aborts_with_negative_check.move" ||
-        path_str == "tests/sources/functional/opaque.move" ||
-        path_str == "tests/sources/functional/marketcap_as_schema.move" ||
-        path_str == "tests/sources/functional/aborts_if.move" ||
-        path_str == "tests/sources/functional/address_quant.move" ||
-        path_str == "tests/sources/functional/hash_model_invalid.move" ||
-        path_str == "tests/sources/functional/serialize_model.move" ||
-        path_str == "tests/sources/functional/return_values.move" ||
-        path_str == "tests/sources/functional/pack_unpack.move" ||
-        path_str == "tests/sources/functional/specs_in_fun.move" ||
-        path_str == "tests/sources/functional/arithm.move" ||
-        path_str == "tests/sources/regression/Escape.move" ||
-        path_str == "tests/sources/functional/mut_ref_accross_modules.move" ||
-        path_str == "tests/sources/regression/type_param_bug_200228.move" ||
-        path_str == "tests/sources/regression/trace200527.move" ||
-        path_str == "tests/sources/regression/generic_invariant200518.move" ||
-        path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_nonce_admin.move" ||
-        path_str == "tests/sources/functional/simple_vector_client.move" ||
-        path_str == "../diem-framework/transaction_scripts/publish_shared_ed25519_public_key.move" ||
-        path_str == "tests/sources/functional/verify_vector.move" ||
-        path_str == "../diem-framework/transaction_scripts/create_designated_dealer.move" ||
-        path_str == "../diem-framework/transaction_scripts/create_parent_vasp_account.move" ||
-        path_str == "../diem-framework/modules/Diem.move" ||
-        path_str == "../diem-framework/transaction_scripts/create_child_vasp_account.move" ||
-        path_str == "../diem-framework/modules/FixedPoint32.move" ||
-        path_str == "../diem-framework/modules/Genesis.move" ||
-        path_str == "../diem-framework/modules/DiemAccount.move" ||
-	path_str == "../diem-framework/transaction_scripts/update_exchange_rate.move" ||
-	path_str == "tests/sources/functional/script_incorrect.move" ||
-	path_str == "tests/sources/functional/emits.move" ||
-	path_str == "tests/sources/functional/friend.move" ||
-	path_str == "tests/sources/regression/set_200701.move" ||
-	path_str == "../diem-framework/modules/DiemBlock.move" ||
-	path_str == "../diem-framework/modules/ChainId.move" ||
-	path_str == "../diem-framework/modules/DiemVMConfig.move" ||
-	path_str == "../diem-framework/modules/SlidingNonce.move" ||
-	path_str == "../diem-framework/modules/TransactionFee.move" ||
-	path_str == "../diem-framework/modules/Roles.move" ||
-	path_str == "../diem-framework/modules/DiemTimestamp.move" ||
-	path_str == "../diem-framework/modules/DiemVersion.move" ||
-	path_str == "../diem-framework/modules/AccountLimits.move" || // This one takes over a minute
+    static DENY_LIST: &[&str] = &[
+        "diem-framework/modules/ValidatorOperatorConfig.move",
+        "diem-framework/modules/Option.move",
+        "diem-framework/modules/RegisteredCurrencies.move",
+        "diem-framework/modules/AccountFreezing.move",
+        "diem-framework/modules/DiemTransactionPublishingOption.move",
+        "diem-framework/modules/VASP.move",
+        "diem-framework/modules/ValidatorConfig.move",
+        "diem-framework/modules/DiemConfig.move",
+        "diem-framework/modules/DiemSystem.move",
+        "diem-framework/modules/XUS.move",
+        "diem-framework/modules/DualAttestation.move",
+        "diem-framework/modules/XDX.move",
+        "tests/sources/functional/cast.move",
+        "diem-framework/modules/RecoveryAddress.move",
+        "tests/sources/functional/loops.move",
+        "diem-framework/transaction_scripts/add_validator_and_reconfigure.move",
+        "diem-framework/transaction_scripts/rotate_authentication_key.move",
+        "tests/sources/functional/aborts_if_assume_assert.move",
+        "diem-framework/transaction_scripts/remove_validator_and_reconfigure.move",
+        "diem-framework/modules/DesignatedDealer.move",
+        "tests/sources/functional/marketcap.move",
+        "tests/sources/functional/invariants.move",
+        "tests/sources/functional/invariants_resources.move",
+        "tests/sources/functional/module_invariants.move",
+        "tests/sources/functional/ModifiesSchemaTest.move",
+        "tests/sources/functional/resources.move",
+        "tests/sources/functional/schema_exp.move",
+        "tests/sources/functional/marketcap_generic.move",
+        "tests/sources/functional/aborts_if_with_code.move",
+        "tests/sources/functional/address_serialization_constant_size.move",
+        "diem-framework/transaction_scripts/set_validator_config_and_reconfigure.move",
+        "diem-framework/burn.move",
+        "tests/sources/functional/global_invariants.move",
+        "tests/sources/functional/nested_invariants.move",
+        "diem-framework/transaction_scripts/rotate_authentication_key_with_recovery_address.move",
+        "tests/sources/functional/marketcap_as_schema_apply.move",
+        "tests/sources/functional/global_vars.move",
+        "diem-framework/transaction_scripts/rotate_authentication_key_with_nonce.move",
+        "tests/sources/functional/specs_in_fun_ref.move",
+        "tests/sources/functional/references.move",
+        "tests/sources/functional/mut_ref_unpack.move",
+        "tests/sources/functional/hash_model.move",
+        "tests/sources/functional/ModifiesErrorTest.move",
+        "tests/sources/functional/consts.move",
+        "tests/sources/functional/type_values.move",
+        "tests/sources/functional/pragma.move",
+        "tests/sources/functional/exists_in_vector.move",
+        "tests/sources/functional/aborts_with_check.move",
+        "tests/sources/functional/aborts_with_negative_check.move",
+        "tests/sources/functional/opaque.move",
+        "tests/sources/functional/marketcap_as_schema.move",
+        "tests/sources/functional/aborts_if.move",
+        "tests/sources/functional/address_quant.move",
+        "tests/sources/functional/hash_model_invalid.move",
+        "tests/sources/functional/serialize_model.move",
+        "tests/sources/functional/return_values.move",
+        "tests/sources/functional/pack_unpack.move",
+        "tests/sources/functional/specs_in_fun.move",
+        "tests/sources/functional/arithm.move",
+        "tests/sources/regression/Escape.move",
+        "tests/sources/functional/mut_ref_accross_modules.move",
+        "tests/sources/regression/type_param_bug_200228.move",
+        "tests/sources/regression/trace200527.move",
+        "tests/sources/regression/generic_invariant200518.move",
+        "diem-framework/transaction_scripts/rotate_authentication_key_with_nonce_admin.move",
+        "tests/sources/functional/simple_vector_client.move",
+        "diem-framework/transaction_scripts/publish_shared_ed25519_public_key.move",
+        "tests/sources/functional/verify_vector.move",
+        "diem-framework/transaction_scripts/create_designated_dealer.move",
+        "diem-framework/transaction_scripts/create_parent_vasp_account.move",
+        "diem-framework/modules/Diem.move",
+        "diem-framework/transaction_scripts/create_child_vasp_account.move",
+        "diem-framework/modules/FixedPoint32.move",
+        "diem-framework/modules/Genesis.move",
+        "diem-framework/modules/DiemAccount.move",
+        "diem-framework/transaction_scripts/update_exchange_rate.move",
+        "tests/sources/functional/script_incorrect.move",
+        "tests/sources/functional/emits.move",
+        "tests/sources/functional/friend.move",
+        "tests/sources/regression/set_200701.move",
+        "diem-framework/modules/DiemBlock.move",
+        "diem-framework/modules/ChainId.move",
+        "diem-framework/modules/DiemVMConfig.move",
+        "diem-framework/modules/SlidingNonce.move",
+        "diem-framework/modules/TransactionFee.move",
+        "diem-framework/modules/Roles.move",
+        "diem-framework/modules/DiemTimestamp.move",
+        "diem-framework/modules/DiemVersion.move",
+        "diem-framework/modules/AccountLimits.move", // This one takes over a minute
+    ];
 
-        false
-    {
-        return true;
+    let path_str = path.to_str().unwrap();
+    for entry in DENY_LIST {
+        if path_str.contains(entry) {
+            return true;
+        }
     }
     false
 }
@@ -221,7 +227,7 @@ fn cvc4_deny_listed(path: &Path) -> bool {
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
-    let (base_flags, baseline_path, modifier) = if path_str.contains("../diem-framework/") {
+    let (base_flags, baseline_path, modifier) = if path_str.contains("diem-framework/") {
         (STDLIB_FLAGS, None, "std_")
     } else {
         (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")

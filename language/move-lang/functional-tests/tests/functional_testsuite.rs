@@ -22,9 +22,9 @@ struct MoveSourceCompiler {
 }
 
 impl MoveSourceCompiler {
-    fn new(stdlib_dir: String) -> Self {
+    fn new(deps: Vec<String>) -> Self {
         MoveSourceCompiler {
-            deps: vec![stdlib_dir],
+            deps,
             temp_files: vec![],
         }
     }
@@ -99,7 +99,10 @@ impl Compiler for MoveSourceCompiler {
 }
 
 fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
-    testsuite::functional_tests(MoveSourceCompiler::new(STD_LIB_DIR.to_string()), path)
+    testsuite::functional_tests(
+        MoveSourceCompiler::new(diem_framework::diem_stdlib_files()),
+        path,
+    )
 }
 
 datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move$");

@@ -23,11 +23,17 @@ fn test_malformed_script() {
 
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/smoke-test/src/dev_modules/test_script.move");
+
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir =
-        workspace_builder::workspace_root().join("language/diem-framework/modules");
-    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
+    let move_stdlib_dir = move_stdlib::move_stdlib_modules_full_path();
+    let diem_framework_dir = diem_framework::diem_stdlib_modules_full_path();
+    let script_params = &[
+        "compile",
+        "0",
+        unwrapped_script_path,
+        move_stdlib_dir.as_str(),
+        diem_framework_dir.as_str(),
+    ];
     let mut script_compiled_paths = client.compile_program(script_params).unwrap();
     let script_compiled_path = if script_compiled_paths.len() != 1 {
         panic!("compiler output has more than one file")
@@ -66,9 +72,8 @@ fn test_execute_custom_module_and_script() {
     let (sender_account, _) = client.get_account_address_from_parameter("0").unwrap();
 
     // Get the path to the Move stdlib sources
-    let stdlib_source_dir =
-        workspace_builder::workspace_root().join("language/diem-framework/modules");
-    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let move_stdlib_dir = move_stdlib::move_stdlib_modules_full_path();
+    let diem_framework_dir = diem_framework::diem_stdlib_modules_full_path();
 
     // Make a copy of module.move with "{{sender}}" substituted.
     let module_path = workspace_builder::workspace_root()
@@ -77,7 +82,13 @@ fn test_execute_custom_module_and_script() {
     let unwrapped_module_path = copied_module_path.to_str().unwrap();
 
     // Compile and publish that module.
-    let module_params = &["compile", "0", unwrapped_module_path, unwrapped_stdlib_dir];
+    let module_params = &[
+        "compile",
+        "0",
+        unwrapped_module_path,
+        move_stdlib_dir.as_str(),
+        diem_framework_dir.as_str(),
+    ];
     let mut module_compiled_paths = client.compile_program(module_params).unwrap();
     let module_compiled_path = if module_compiled_paths.len() != 1 {
         panic!("compiler output has more than one file")
@@ -100,7 +111,8 @@ fn test_execute_custom_module_and_script() {
         "0",
         unwrapped_script_path,
         unwrapped_module_path,
-        unwrapped_stdlib_dir,
+        move_stdlib_dir.as_str(),
+        diem_framework_dir.as_str(),
     ];
     let mut script_compiled_paths = client.compile_program(script_params).unwrap();
     let script_compiled_path = if script_compiled_paths.len() != 1 {

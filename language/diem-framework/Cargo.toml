@@ -23,6 +23,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 bcs = "0.1.2"
 vm = { path = "../vm" }
 transaction-builder-generator = { path = "../transaction-builder/generator" }
+move-stdlib = { path = "../move-stdlib" }
 
 clap = "2.33.3"
 log = "0.4.14"

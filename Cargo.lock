@@ -1575,6 +1575,7 @@ dependencies = [
  "log",
  "move-lang",
  "move-prover",
+ "move-stdlib",
  "rayon",
  "sha2",
  "transaction-builder-generator",
@@ -2572,6 +2573,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 dependencies = [
  "generic-array 0.14.4",
+]
+
+[[package]]
+name = "dir-diff"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2860407d7d7e2e004bb2128510ad9e8d669e76fa005ccf567977b5d71b8b4a0b"
+dependencies = [
+ "walkdir",
 ]
 
 [[package]]
@@ -3890,6 +3900,7 @@ dependencies = [
  "language-e2e-tests",
  "move-core-types",
  "move-lang",
+ "move-stdlib",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
@@ -4281,6 +4292,7 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
+ "diem-framework",
  "diem-types",
  "diem-workspace-hack",
  "difference",
@@ -4290,6 +4302,7 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "move-lang-test-utils",
+ "move-stdlib",
  "once_cell",
  "petgraph",
  "regex",
@@ -4305,6 +4318,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "datatest-stable",
+ "diem-framework",
  "diem-types",
  "diem-workspace-hack",
  "functional-tests",
@@ -4406,6 +4420,19 @@ dependencies = [
  "diem-workspace-hack",
  "prettydiff",
  "regex",
+]
+
+[[package]]
+name = "move-stdlib"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+ "dir-diff",
+ "docgen",
+ "log",
+ "move-prover",
+ "tempfile",
+ "walkdir",
 ]
 
 [[package]]
@@ -6533,6 +6560,7 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-events-fetcher",
+ "diem-framework",
  "diem-genesis-tool",
  "diem-global-constants",
  "diem-infallible",
@@ -6555,6 +6583,7 @@ dependencies = [
  "diem-writeset-generator",
  "generate-key",
  "hex",
+ "move-stdlib",
  "num 0.4.0",
  "num-traits",
  "once_cell",

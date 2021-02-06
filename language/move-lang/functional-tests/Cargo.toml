@@ -19,6 +19,7 @@ datatest-stable = { path = "../../../common/datatest-stable" }
 functional-tests = { path = "../../testing-infra/functional-tests" }
 diem-types = { path = "../../../types" }
 move-lang = { path = ".." }
+diem-framework = { path = "../../diem-framework" }
 
 [[test]]
 name = "functional_testsuite"

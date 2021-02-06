@@ -16,10 +16,10 @@ and MultiEd25519 (K-of-N multisig).
 -  [Function `threshold`](#0x1_Authenticator_threshold)
 
 
-<pre><code><b>use</b> <a href="BCS.md#0x1_BCS">0x1::BCS</a>;
-<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
-<b>use</b> <a href="Hash.md#0x1_Hash">0x1::Hash</a>;
-<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+<pre><code><b>use</b> <a href="../../../move-stdlib/docs/BCS.md#0x1_BCS">0x1::BCS</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Hash.md#0x1_Hash">0x1::Hash</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector">0x1::Vector</a>;
 </code></pre>
 
 
@@ -148,16 +148,16 @@ Aborts if threshold is zero or bigger than the length of <code>public_keys</code
     threshold: u8
 ): <a href="Authenticator.md#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> {
     // check threshold requirements
-    <b>let</b> len = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&public_keys);
-    <b>assert</b>(threshold != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_EZERO_THRESHOLD">EZERO_THRESHOLD</a>));
+    <b>let</b> len = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&public_keys);
+    <b>assert</b>(threshold != 0, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_EZERO_THRESHOLD">EZERO_THRESHOLD</a>));
     <b>assert</b>(
         (threshold <b>as</b> u64) &lt;= len,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD">ENOT_ENOUGH_KEYS_FOR_THRESHOLD</a>)
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD">ENOT_ENOUGH_KEYS_FOR_THRESHOLD</a>)
     );
     // the multied25519 signature scheme allows at most 32 keys
     <b>assert</b>(
         len &lt;= <a href="Authenticator.md#0x1_Authenticator_MAX_MULTI_ED25519_KEYS">MAX_MULTI_ED25519_KEYS</a>,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD">ENUM_KEYS_ABOVE_MAX_THRESHOLD</a>)
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Authenticator.md#0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD">ENUM_KEYS_ABOVE_MAX_THRESHOLD</a>)
     );
 
     <a href="Authenticator.md#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> { public_keys, threshold }
@@ -185,8 +185,8 @@ Compute an authentication key for the ed25519 public key <code>public_key</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="Authenticator.md#0x1_Authenticator_ed25519_authentication_key">ed25519_authentication_key</a>(public_key: vector&lt;u8&gt;): vector&lt;u8&gt; {
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> public_key, <a href="Authenticator.md#0x1_Authenticator_SINGLE_ED25519_SCHEME_ID">SINGLE_ED25519_SCHEME_ID</a>);
-    <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(public_key)
+    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> public_key, <a href="Authenticator.md#0x1_Authenticator_SINGLE_ED25519_SCHEME_ID">SINGLE_ED25519_SCHEME_ID</a>);
+    <a href="../../../move-stdlib/docs/Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(public_key)
 }
 </code></pre>
 
@@ -237,20 +237,20 @@ Compute a multied25519 account authentication key for the policy <code>k</code>
 
 <pre><code><b>public</b> <b>fun</b> <a href="Authenticator.md#0x1_Authenticator_multi_ed25519_authentication_key">multi_ed25519_authentication_key</a>(k: &<a href="Authenticator.md#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a>): vector&lt;u8&gt; {
     <b>let</b> public_keys = &k.public_keys;
-    <b>let</b> len = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(public_keys);
-    <b>let</b> authentication_key_preimage = <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>();
+    <b>let</b> len = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(public_keys);
+    <b>let</b> authentication_key_preimage = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_empty">Vector::empty</a>();
     <b>let</b> i = 0;
     <b>while</b> (i &lt; len) {
-        <b>let</b> public_key = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(public_keys, i);
-        <a href="Vector.md#0x1_Vector_append">Vector::append</a>(
+        <b>let</b> public_key = *<a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(public_keys, i);
+        <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_append">Vector::append</a>(
             &<b>mut</b> authentication_key_preimage,
             public_key
         );
         i = i + 1;
     };
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> authentication_key_preimage, <a href="BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&k.threshold));
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> authentication_key_preimage, <a href="Authenticator.md#0x1_Authenticator_MULTI_ED25519_SCHEME_ID">MULTI_ED25519_SCHEME_ID</a>);
-    <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(authentication_key_preimage)
+    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> authentication_key_preimage, <a href="../../../move-stdlib/docs/BCS.md#0x1_BCS_to_bytes">BCS::to_bytes</a>(&k.threshold));
+    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> authentication_key_preimage, <a href="Authenticator.md#0x1_Authenticator_MULTI_ED25519_SCHEME_ID">MULTI_ED25519_SCHEME_ID</a>);
+    <a href="../../../move-stdlib/docs/Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(authentication_key_preimage)
 }
 </code></pre>
 

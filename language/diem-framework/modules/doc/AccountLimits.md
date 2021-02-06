@@ -30,9 +30,9 @@ a given time period.
 
 
 <pre><code><b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
-<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
-<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
 </code></pre>
 
 
@@ -293,7 +293,7 @@ Returns false if this deposit violates the account limits.
     addr: address,
     _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
@@ -338,7 +338,7 @@ Returns false if this deposit violates the account limits.
 
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_AbortsIfNoWindow">AbortsIfNoWindow</a>&lt;CoinType&gt; {
     addr: address;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -380,7 +380,7 @@ Returns <code><b>false</b></code> if this withdrawal violates account limits.
     addr: address,
     _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
@@ -457,11 +457,11 @@ their root/parent account.
     limit_address: address,
 ) {
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_or_child_vasp">Roles::assert_parent_vasp_or_child_vasp</a>(to_limit);
     <b>assert</b>(
-        !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_limit)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>)
+        !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_limit)),
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>)
     );
     move_to(
         to_limit,
@@ -508,8 +508,8 @@ Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROL
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishWindowAbortsIf">PublishWindowAbortsIf</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrChildVasp">Roles::AbortsIfNotParentVaspOrChildVasp</a>{account: to_limit};
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -540,8 +540,8 @@ resource once it's published.
 
 <pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType: store&gt;(publish_account: &signer) {
     <b>assert</b>(
-        !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(publish_account)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>)
+        !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(publish_account)),
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>)
     );
     move_to(
         publish_account,
@@ -581,8 +581,8 @@ XUS about LimitsDefinition<XUS>.
 
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsAbortsIf">PublishUnrestrictedLimitsAbortsIf</a>&lt;CoinType&gt; {
     publish_account: signer;
-    <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account))
-        <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account))
+        <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -594,7 +594,7 @@ XUS about LimitsDefinition<XUS>.
 
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_PublishUnrestrictedLimitsEnsures">PublishUnrestrictedLimitsEnsures</a>&lt;CoinType&gt; {
     publish_account: signer;
-    <b>ensures</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account));
+    <b>ensures</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account));
 }
 </code></pre>
 
@@ -632,7 +632,7 @@ TODO: This should be specified.
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     // As we don't have Optionals for txn scripts, in update_account_limit_definition.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_def = borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address);
     <b>if</b> (new_max_inflow &gt; 0) { limits_def.max_inflow = new_max_inflow };
     <b>if</b> (new_max_outflow &gt; 0) { limits_def.max_outflow = new_max_outflow };
@@ -680,7 +680,7 @@ TODO(wrwg): specify
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> window = borrow_global_mut&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(window_address);
     <b>if</b> (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(new_limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(new_limit_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     window.limit_address = new_limit_address;
 }
 </code></pre>
@@ -709,7 +709,7 @@ the inflow and outflow records.
 
 <pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType: store&gt;(window: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, limits_definition: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;) {
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>();
-    <b>assert</b>(window.window_start &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - limits_definition.time_period, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(window.window_start &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - limits_definition.time_period, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>if</b> (current_time &gt; window.window_start + limits_definition.time_period) {
         window.window_start = current_time;
         window.window_inflow = 0;
@@ -742,7 +742,7 @@ the inflow and outflow records.
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;;
     <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
-    <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64() <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -818,7 +818,7 @@ If the receipt of <code>amount</code> doesn't violate the limits <code>amount</c
     amount: u64,
     receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_definition = borrow_global&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
@@ -826,10 +826,10 @@ If the receipt of <code>amount</code> doesn't violate the limits <code>amount</c
     <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>(receiving, limits_definition);
     // Check that the inflow is OK
     // TODO(wrwg): instead of aborting <b>if</b> the below additions overflow, we should perhaps just have ok <b>false</b>.
-    <b>assert</b>(receiving.window_inflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(receiving.window_inflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>let</b> inflow_ok = (receiving.window_inflow + amount) &lt;= limits_definition.max_inflow;
     // Check that the holding after the deposit is OK
-    <b>assert</b>(receiving.tracked_balance &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(receiving.tracked_balance &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>let</b> holding_ok = (receiving.tracked_balance + amount) &lt;= limits_definition.max_holding;
     // The account <b>with</b> `receiving` window can receive the payment so record it.
     <b>if</b> (inflow_ok && holding_ok) {
@@ -863,7 +863,7 @@ If the receipt of <code>amount</code> doesn't violate the limits <code>amount</c
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt; {
     amount: num;
     receiving: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> !<a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>&lt;CoinType&gt;(receiving) ==&gt; <a href="AccountLimits.md#0x1_AccountLimits_CanReceiveRestrictedAbortsIf">CanReceiveRestrictedAbortsIf</a>&lt;CoinType&gt;;
 }
 </code></pre>
@@ -881,8 +881,8 @@ If the receipt of <code>amount</code> doesn't violate the limits <code>amount</c
         window: receiving,
         limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(receiving)
     };
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).tracked_balance + amount &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount &gt; max_u64() <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).tracked_balance + amount &gt; max_u64() <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -998,14 +998,14 @@ If the withdrawal of <code>amount</code> doesn't violate the limits <code>amount
     amount: u64,
     sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_definition = borrow_global&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
     <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>(sending, limits_definition);
     // Check outflow is OK
-    <b>assert</b>(sending.window_outflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>assert</b>(sending.window_outflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>let</b> outflow_ok = sending.window_outflow + amount &lt;= limits_definition.max_outflow;
     // Flow is OK, so record it.
     <b>if</b> (outflow_ok) {
@@ -1040,7 +1040,7 @@ If the withdrawal of <code>amount</code> doesn't violate the limits <code>amount
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_CanWithdrawAbortsIf">CanWithdrawAbortsIf</a>&lt;CoinType&gt; {
     amount: u64;
     sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> !<a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(sending) ==&gt; <a href="AccountLimits.md#0x1_AccountLimits_CanWithdrawRestrictedAbortsIf">CanWithdrawRestrictedAbortsIf</a>&lt;CoinType&gt;;
 }
 </code></pre>
@@ -1058,7 +1058,7 @@ If the withdrawal of <code>amount</code> doesn't violate the limits <code>amount
         window: sending,
         limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(sending)
     };
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &gt; <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &gt; <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 

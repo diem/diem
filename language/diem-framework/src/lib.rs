@@ -3,10 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-use abigen::AbigenOptions;
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use diem_types::transaction::ScriptABI;
-use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
@@ -19,13 +17,11 @@ use std::{
 };
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 
-pub mod utils;
+pub use move_stdlib::{COMPILED_EXTENSION, ERROR_DESC_EXTENSION, MOVE_EXTENSION};
 
-pub const STD_LIB_DIR: &str = "modules";
-pub const MOVE_EXTENSION: &str = "move";
-pub const ERROR_DESC_EXTENSION: &str = "errmap";
+const MODULES_DIR: &str = "modules";
+
 /// The extension for compiled files
-pub const COMPILED_EXTENSION: &str = "mv";
 
 pub const TRANSACTION_SCRIPTS: &str = "transaction_scripts";
 /// The output path under which compiled files will be put
@@ -65,28 +61,6 @@ pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scr
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
     "compiled/src/shim/tmp_new_transaction_script_builders.rs";
 
-pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
-    dir_iter.flat_map(|path| {
-        if path.extension()?.to_str()? == MOVE_EXTENSION {
-            Some(path)
-        } else {
-            None
-        }
-    })
-}
-
-pub fn filter_move_bytecode_files(
-    dir_iter: impl Iterator<Item = PathBuf>,
-) -> impl Iterator<Item = PathBuf> {
-    dir_iter.flat_map(|path| {
-        if path.extension()?.to_str()? == COMPILED_EXTENSION {
-            Some(path)
-        } else {
-            None
-        }
-    })
-}
-
 pub fn path_in_crate<S>(relative: S) -> PathBuf
 where
     S: Into<String>,
@@ -96,19 +70,29 @@ where
     path
 }
 
-pub fn stdlib_files() -> Vec<String> {
-    let path = path_in_crate(STD_LIB_DIR);
-    let dirfiles = utils::iterate_directory(&path);
-    filter_move_files(dirfiles)
+pub fn diem_stdlib_modules_full_path() -> String {
+    format!("{}/{}", env!("CARGO_MANIFEST_DIR"), MODULES_DIR)
+}
+
+pub fn diem_stdlib_files_no_dependencies() -> Vec<String> {
+    let path = path_in_crate(MODULES_DIR);
+    let dirfiles = move_stdlib::utils::iterate_directory(&path);
+    move_stdlib::filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()
 }
 
+pub fn diem_stdlib_files() -> Vec<String> {
+    let mut files = move_stdlib::move_stdlib_files();
+    files.extend(diem_stdlib_files_no_dependencies());
+    files
+}
+
 pub fn stdlib_bytecode_files() -> Vec<String> {
     let path = path_in_crate(COMPILED_OUTPUT_PATH);
-    let names = stdlib_files();
-    let dirfiles = utils::iterate_directory(&path);
-    let res: Vec<String> = filter_move_bytecode_files(dirfiles)
+    let names = diem_stdlib_files();
+    let dirfiles = move_stdlib::utils::iterate_directory(&path);
+    let res: Vec<String> = move_stdlib::filter_move_bytecode_files(dirfiles)
         .filter(|path| {
             for name in &names {
                 let suffix = "_".to_owned()
@@ -140,16 +124,21 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
 
 pub fn script_files() -> Vec<String> {
     let path = path_in_crate(TRANSACTION_SCRIPTS);
-    let dirfiles = utils::iterate_directory(&path);
-    filter_move_files(dirfiles)
+    let dirfiles = move_stdlib::utils::iterate_directory(&path);
+    move_stdlib::filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()
 }
 
 pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
-    let (_files, compiled_units) =
-        move_compile_and_report(&stdlib_files(), &[], Some(Address::DIEM_CORE), None, false)
-            .unwrap();
+    let (_files, compiled_units) = move_compile_and_report(
+        &diem_stdlib_files(),
+        &[],
+        Some(Address::DIEM_CORE),
+        None,
+        false,
+    )
+    .unwrap();
     let mut modules = BTreeMap::new();
     for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
         let name = compiled_unit.name();
@@ -193,7 +182,7 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
 pub fn compile_script(source_file_str: String) -> Vec<u8> {
     let (_files, mut compiled_program) = move_compile_and_report(
         &[source_file_str],
-        &stdlib_files(),
+        &diem_stdlib_files(),
         Some(Address::DIEM_CORE),
         None,
         false,
@@ -221,9 +210,11 @@ pub fn save_binary(path: &Path, binary: &[u8]) -> bool {
 }
 
 pub fn build_stdlib_doc(with_diagram: bool) {
-    build_doc(
+    move_stdlib::build_doc(
         STD_LIB_DOC_DIR,
-        "",
+        // FIXME: use absolute path when the bug in docgen is fixed.
+        // &move_stdlib::move_stdlib_docs_full_path(),
+        "../move-stdlib/docs",
         vec![path_in_crate(STD_LIB_DOC_TEMPLATE)
             .to_string_lossy()
             .to_string()],
@@ -232,15 +223,17 @@ pub fn build_stdlib_doc(with_diagram: bool) {
                 .to_string_lossy()
                 .to_string(),
         ),
-        stdlib_files().as_slice(),
-        "",
+        diem_stdlib_files_no_dependencies().as_slice(),
+        vec![move_stdlib::move_stdlib_modules_full_path()],
         with_diagram,
     )
 }
 
 pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool) {
-    build_doc(
+    move_stdlib::build_doc(
         TRANSACTION_SCRIPTS_DOC_DIR,
+        // FIXME: links to move stdlib modules are broken since the tool does not currently
+        // support multiple paths.
         STD_LIB_DOC_DIR,
         vec![
             path_in_crate(TRANSACTION_SCRIPT_DOC_TEMPLATE)
@@ -256,7 +249,10 @@ pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool)
                 .to_string(),
         ),
         script_files,
-        STD_LIB_DIR,
+        vec![
+            move_stdlib::move_stdlib_modules_full_path(),
+            diem_stdlib_modules_full_path(),
+        ],
         with_diagram,
     )
 }
@@ -265,7 +261,10 @@ pub fn build_transaction_script_abi(script_file_str: String) {
     build_abi(
         COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
         &[script_file_str],
-        STD_LIB_DIR,
+        vec![
+            move_stdlib::move_stdlib_modules_full_path(),
+            diem_stdlib_modules_full_path(),
+        ],
         COMPILED_TRANSACTION_SCRIPTS_DIR,
     )
 }
@@ -276,59 +275,21 @@ pub fn build_stdlib_error_code_map() {
     fs::create_dir_all(&path).unwrap();
     path.push(ERROR_DESC_FILENAME);
     path.set_extension(ERROR_DESC_EXTENSION);
-    build_error_code_map(path.to_str().unwrap(), stdlib_files().as_slice(), "")
+    build_error_code_map(path.to_str().unwrap(), diem_stdlib_files().as_slice(), "")
 }
 
-fn build_doc(
+fn build_abi(
     output_path: &str,
-    doc_path: &str,
-    templates: Vec<String>,
-    references_file: Option<String>,
     sources: &[String],
-    dep_path: &str,
-    with_diagram: bool,
+    dep_paths: Vec<String>,
+    compiled_script_path: &str,
 ) {
     let options = move_prover::cli::Options {
         move_sources: sources.to_vec(),
-        move_deps: if !dep_path.is_empty() {
-            vec![dep_path.to_string()]
-        } else {
-            vec![]
-        },
-        verbosity_level: LevelFilter::Warn,
-        run_docgen: true,
-        // Take the defaults here for docgen. Changes in options should be applied there so
-        // command line and invocation here have same output.
-        docgen: DocgenOptions {
-            doc_path: if !doc_path.is_empty() {
-                vec![doc_path.to_string()]
-            } else {
-                vec![]
-            },
-            root_doc_templates: templates,
-            references_file,
-            output_directory: output_path.to_string(),
-            include_dep_diagrams: with_diagram,
-            include_call_diagrams: with_diagram,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    options.setup_logging_for_test();
-    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
-}
-
-fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_script_path: &str) {
-    let options = move_prover::cli::Options {
-        move_sources: sources.to_vec(),
-        move_deps: if !dep_path.is_empty() {
-            vec![dep_path.to_string()]
-        } else {
-            vec![]
-        },
+        move_deps: dep_paths,
         verbosity_level: LevelFilter::Warn,
         run_abigen: true,
-        abigen: AbigenOptions {
+        abigen: abigen::AbigenOptions {
             output_directory: output_path.to_string(),
             compiled_script_directory: compiled_script_path.to_string(),
         },

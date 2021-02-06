@@ -33,7 +33,9 @@ bcs = "0.1.2"
 
 [dev-dependencies]
 move-lang-test-utils = { path = "test-utils" }
+move-stdlib = { path = "../move-stdlib" }
 datatest-stable = { path = "../../common/datatest-stable" }
+diem-framework = { path = "../diem-framework" }
 
 [[test]]
 name = "move_check_testsuite"
@@ -41,7 +43,7 @@ harness = false
 
 [[test]]
 name = "stdlib_sanity_check"
-harness = false
+harness = true
 
 [[test]]
 name = "ir_test_coverage"

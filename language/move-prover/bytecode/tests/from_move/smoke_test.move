@@ -1,7 +1,7 @@
 // This module contains just some arbitrary code to smoke test the basic functionality of translation from Move
 // to stackless bytecode. Coverage for byte code translation is achieved by many more tests in the prover.
 
-// dep: ../../diem-framework/modules/Signer.move
+// dep: ../../move-stdlib/modules/Signer.move
 
 module SmokeTest {
     use 0x1::Signer;

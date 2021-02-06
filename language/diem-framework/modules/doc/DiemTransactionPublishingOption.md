@@ -26,10 +26,10 @@ This module defines a struct storing the publishing policies for the VM.
 <pre><code><b>use</b> <a href="CoreAddresses.md#0x1_CoreAddresses">0x1::CoreAddresses</a>;
 <b>use</b> <a href="DiemConfig.md#0x1_DiemConfig">0x1::DiemConfig</a>;
 <b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
-<b>use</b> <a href="Errors.md#0x1_Errors">0x1::Errors</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">0x1::Errors</a>;
 <b>use</b> <a href="Roles.md#0x1_Roles">0x1::Roles</a>;
-<b>use</b> <a href="Signer.md#0x1_Signer">0x1::Signer</a>;
-<b>use</b> <a href="Vector.md#0x1_Vector">0x1::Vector</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer">0x1::Signer</a>;
+<b>use</b> <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector">0x1::Vector</a>;
 </code></pre>
 
 
@@ -230,9 +230,9 @@ Check if sender can execute script with <code>hash</code>
 
     <b>let</b> publish_option = <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;();
     // allowlist empty = open publishing, anyone can send txes
-    <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&publish_option.script_allow_list)
+    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&publish_option.script_allow_list)
         // fixed allowlist. check inclusion
-        || <a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&publish_option.script_allow_list, hash)
+        || <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_contains">Vector::contains</a>(&publish_option.script_allow_list, hash)
 }
 </code></pre>
 
@@ -322,7 +322,7 @@ Allow the execution of arbitrary script or not.
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <b>let</b> publish_option = <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;();
 
-    publish_option.script_allow_list = <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>();
+    publish_option.script_allow_list = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_empty">Vector::empty</a>();
     <a href="DiemConfig.md#0x1_DiemConfig_set">DiemConfig::set</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;(dr_account, publish_option);
 }
 </code></pre>
@@ -412,8 +412,8 @@ If called, transactions cannot be sent from any account except DiemRoot
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_halt_all_transactions">halt_all_transactions</a>(dr_account: &signer) {
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
     <b>assert</b>(
-        !<b>exists</b>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EHALT_ALL_TRANSACTIONS">EHALT_ALL_TRANSACTIONS</a>),
+        !<b>exists</b>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a>&gt;(<a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account)),
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EHALT_ALL_TRANSACTIONS">EHALT_ALL_TRANSACTIONS</a>),
     );
     move_to(dr_account, <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a> {});
 }
@@ -441,10 +441,10 @@ If called, transactions can be sent from any account once again
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_resume_transactions">resume_transactions</a>(dr_account: &signer) <b>acquires</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a> {
     <a href="Roles.md#0x1_Roles_assert_diem_root">Roles::assert_diem_root</a>(dr_account);
-    <b>let</b> dr_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account);
+    <b>let</b> dr_address = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dr_account);
     <b>assert</b>(
         <b>exists</b>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a>&gt;(dr_address),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EHALT_ALL_TRANSACTIONS">EHALT_ALL_TRANSACTIONS</a>),
+        <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_EHALT_ALL_TRANSACTIONS">EHALT_ALL_TRANSACTIONS</a>),
     );
 
     <b>let</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a> {} = move_from&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a>&gt;(dr_address);
@@ -536,8 +536,8 @@ DiemTransactionPublishingOption config [[H11]][PERMISSION]
 <pre><code><b>define</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_spec_is_script_allowed">spec_is_script_allowed</a>(account: signer, hash: vector&lt;u8&gt;): bool {
     <b>let</b> publish_option = <a href="DiemConfig.md#0x1_DiemConfig_spec_get_config">DiemConfig::spec_get_config</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;();
     <a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account) || (!<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>() && (
-    <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
-        || <a href="Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash)))
+    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
+        || <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash)))
 }
 <a name="0x1_DiemTransactionPublishingOption_spec_is_module_allowed"></a>
 <b>define</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_spec_is_module_allowed">spec_is_module_allowed</a>(account: signer): bool {

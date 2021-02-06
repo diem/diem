@@ -27,6 +27,7 @@ move-vm-runtime = { path = "../move-vm/runtime" }
 move-vm-types = { path = "../move-vm/types" }
 vm = { path = "../vm" }
 diem-vm = { path = "../diem-vm" }
+move-stdlib = { path = "../move-stdlib" }
 
 [[bench]]
 name = "vm_benches"

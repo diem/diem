@@ -274,10 +274,15 @@ fn test_state_sync_multichunk_epoch() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/smoke-test/src/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir =
-        workspace_builder::workspace_root().join("language/diem-framework/modules");
-    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
+    let move_stdlib_dir = move_stdlib::move_stdlib_modules_full_path();
+    let diem_framework_dir = diem_framework::diem_stdlib_modules_full_path();
+    let script_params = &[
+        "compile",
+        "0",
+        unwrapped_script_path,
+        move_stdlib_dir.as_str(),
+        diem_framework_dir.as_str(),
+    ];
     let mut script_compiled_paths = client.compile_program(script_params).unwrap();
     let script_compiled_path = if script_compiled_paths.len() != 1 {
         panic!("compiler output has more than one file")

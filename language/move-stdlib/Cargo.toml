@@ -1,0 +1,24 @@
+[package]
+name = "move-stdlib"
+version = "0.1.0"
+edition = "2018"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem stdlib"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+docgen = { path = "../move-prover/docgen" }
+move-prover = { path = "../move-prover" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+
+log = "0.4.14"
+walkdir = "2.3.1"
+
+[dev-dependencies]
+tempfile = "3.2.0"
+dir-diff = "0.3.2"

@@ -5,13 +5,13 @@
 
 use clap::{App, Arg};
 use diem_framework::*;
+use move_stdlib::utils::time_it;
 use rayon::prelude::*;
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{Read, Write},
+    io::Read,
     path::{Path, PathBuf},
-    time::Instant,
 };
 use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
@@ -82,7 +82,7 @@ fn main() {
             || {
                 let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
                 module_path.push(COMPILED_STDLIB_DIR);
-                for f in diem_framework::utils::iterate_directory(&module_path) {
+                for f in move_stdlib::utils::iterate_directory(&module_path) {
                     let mut bytes = Vec::new();
                     File::open(f)
                         .expect("Failed to open module bytecode file")
@@ -143,8 +143,8 @@ fn main() {
         );
     }
 
-    let txn_source_files = diem_framework::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
-    let transaction_files = filter_move_files(txn_source_files)
+    let txn_source_files = move_stdlib::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
+    let transaction_files = move_stdlib::filter_move_files(txn_source_files)
         .flat_map(|path| path.into_os_string().into_string().ok())
         .collect::<Vec<_>>();
     if !no_compiler {
@@ -198,15 +198,4 @@ fn main() {
     time_it("Generating error explanations", || {
         build_stdlib_error_code_map()
     });
-}
-
-fn time_it<F>(msg: &str, mut f: F)
-where
-    F: FnMut(),
-{
-    let now = Instant::now();
-    print!("{} ... ", msg);
-    let _ = std::io::stdout().flush();
-    f();
-    println!("(took {:.3}s)", now.elapsed().as_secs_f64());
 }

@@ -28,6 +28,7 @@ compiled-stdlib = { path = "../../language/diem-framework/compiled" }
 debug-interface = { path = "../../common/debug-interface" }
 generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
+move-stdlib = { path = "../../language/move-stdlib" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
@@ -52,4 +53,5 @@ diem-vault-client = { path = "../../secure/storage/vault", features = ["fuzzing"
 diem-validator-interface = { path = "../../language/diem-tools/diem-validator-interface" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator" }
+diem-framework = { path = "../../language/diem-framework" }
 transaction-builder = { path = "../../language/transaction-builder" }

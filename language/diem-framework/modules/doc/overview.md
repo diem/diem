@@ -72,16 +72,16 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 
 ### Module Utility Libraries
 
-* <code><a href="Errors.md#0x1_Errors">Errors</a></code>
+* <code><a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">Errors</a></code>
 * <code><a href="CoreAddresses.md#0x1_CoreAddresses">CoreAddresses</a></code>
-* <code><a href="Event.md#0x1_Event">Event</a></code>
-* <code><a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>
-* <code><a href="Hash.md#0x1_Hash">Hash</a></code>
-* <code><a href="BCS.md#0x1_BCS">BCS</a></code>
-* <code><a href="Option.md#0x1_Option">Option</a></code>
+* <code><a href="../../../move-stdlib/docs/Event.md#0x1_Event">Event</a></code>
+* <code><a href="../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>
+* <code><a href="../../../move-stdlib/docs/Hash.md#0x1_Hash">Hash</a></code>
+* <code><a href="../../../move-stdlib/docs/BCS.md#0x1_BCS">BCS</a></code>
+* <code><a href="../../../move-stdlib/docs/Option.md#0x1_Option">Option</a></code>
 * <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>
-* <code><a href="Vector.md#0x1_Vector">Vector</a></code>
-* <code><a href="Signer.md#0x1_Signer">Signer</a></code>
+* <code><a href="../../../move-stdlib/docs/Vector.md#0x1_Vector">Vector</a></code>
+* <code><a href="../../../move-stdlib/docs/Signer.md#0x1_Signer">Signer</a></code>
 
 
 <a name="@Index_6"></a>
@@ -92,7 +92,7 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::AccountFreezing`](AccountFreezing.md#0x1_AccountFreezing)
 -  [`0x1::AccountLimits`](AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
--  [`0x1::BCS`](BCS.md#0x1_BCS)
+-  [`0x1::BCS`](../../../move-stdlib/docs/BCS.md#0x1_BCS)
 -  [`0x1::ChainId`](ChainId.md#0x1_ChainId)
 -  [`0x1::CoreAddresses`](CoreAddresses.md#0x1_CoreAddresses)
 -  [`0x1::DesignatedDealer`](DesignatedDealer.md#0x1_DesignatedDealer)
@@ -106,24 +106,24 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::DiemVMConfig`](DiemVMConfig.md#0x1_DiemVMConfig)
 -  [`0x1::DiemVersion`](DiemVersion.md#0x1_DiemVersion)
 -  [`0x1::DualAttestation`](DualAttestation.md#0x1_DualAttestation)
--  [`0x1::Errors`](Errors.md#0x1_Errors)
--  [`0x1::Event`](Event.md#0x1_Event)
--  [`0x1::FixedPoint32`](FixedPoint32.md#0x1_FixedPoint32)
+-  [`0x1::Errors`](../../../move-stdlib/docs/Errors.md#0x1_Errors)
+-  [`0x1::Event`](../../../move-stdlib/docs/Event.md#0x1_Event)
+-  [`0x1::FixedPoint32`](../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32)
 -  [`0x1::Genesis`](Genesis.md#0x1_Genesis)
--  [`0x1::Hash`](Hash.md#0x1_Hash)
--  [`0x1::Option`](Option.md#0x1_Option)
+-  [`0x1::Hash`](../../../move-stdlib/docs/Hash.md#0x1_Hash)
+-  [`0x1::Option`](../../../move-stdlib/docs/Option.md#0x1_Option)
 -  [`0x1::RecoveryAddress`](RecoveryAddress.md#0x1_RecoveryAddress)
 -  [`0x1::RegisteredCurrencies`](RegisteredCurrencies.md#0x1_RegisteredCurrencies)
 -  [`0x1::Roles`](Roles.md#0x1_Roles)
 -  [`0x1::SharedEd25519PublicKey`](SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey)
 -  [`0x1::Signature`](Signature.md#0x1_Signature)
--  [`0x1::Signer`](Signer.md#0x1_Signer)
+-  [`0x1::Signer`](../../../move-stdlib/docs/Signer.md#0x1_Signer)
 -  [`0x1::SlidingNonce`](SlidingNonce.md#0x1_SlidingNonce)
 -  [`0x1::TransactionFee`](TransactionFee.md#0x1_TransactionFee)
 -  [`0x1::VASP`](VASP.md#0x1_VASP)
 -  [`0x1::ValidatorConfig`](ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
--  [`0x1::Vector`](Vector.md#0x1_Vector)
+-  [`0x1::Vector`](../../../move-stdlib/docs/Vector.md#0x1_Vector)
 -  [`0x1::XDX`](XDX.md#0x1_XDX)
 -  [`0x1::XUS`](XUS.md#0x1_XUS)
 

@@ -8,7 +8,6 @@ pub struct StringError(String);
 pub const SENDER: &str = "0x8675309";
 
 // These paths are relative to the move-lang directory.
-pub const STD_LIB_DIR: &str = "../diem-framework/modules";
 pub const STD_LIB_COMPILED_DIR: &str = "../diem-framework/compiled/stdlib";
 pub const FUNCTIONAL_TEST_DIR: &str = "functional-tests/tests";
 pub const MOVE_CHECK_DIR: &str = "tests/move_check";
@@ -29,16 +28,6 @@ pub const COMPLETED_DIRECTORIES: &[&str; 5] = &[
     "move/signer",
     "move/operators",
 ];
-
-pub fn minimal_stdlib_files() -> Vec<String> {
-    vec![
-        format!("{}/Errors.move", STD_LIB_DIR),
-        format!("{}/Hash.move", STD_LIB_DIR),
-        format!("{}/Option.move", STD_LIB_DIR),
-        format!("{}/Signer.move", STD_LIB_DIR),
-        format!("{}/Vector.move", STD_LIB_DIR),
-    ]
-}
 
 impl std::fmt::Display for StringError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
