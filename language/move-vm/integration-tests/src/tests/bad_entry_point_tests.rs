@@ -39,7 +39,7 @@ fn call_non_existent_module() {
         )
         .unwrap_err();
 
-    assert_eq!(err.status_type(), StatusType::InvariantViolation);
+    assert_eq!(err.status_type(), StatusType::Verification);
 }
 
 #[test]
@@ -76,5 +76,5 @@ fn call_non_existent_function() {
         )
         .unwrap_err();
 
-    assert_eq!(err.status_type(), StatusType::InvariantViolation);
+    assert_eq!(err.status_type(), StatusType::Verification);
 }

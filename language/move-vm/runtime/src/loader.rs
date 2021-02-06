@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{logging::LogContext, native_functions::NativeFunction};
+use crate::{
+    logging::{expect_no_verification_errors, LogContext},
+    native_functions::NativeFunction,
+};
 use bytecode_verifier::{
     constants, cyclic_dependencies, dependencies, instantiation_loops::InstantiationLoopChecker,
     verify_main_signature, CodeUnitVerifier, DuplicationChecker, InstructionConsistency,
@@ -14,7 +17,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     value::{MoveStructLayout, MoveTypeLayout},
-    vm_status::{StatusCode, StatusType},
+    vm_status::StatusCode,
 };
 use move_vm_types::{
     data_store::DataStore,
@@ -23,7 +26,7 @@ use move_vm_types::{
 use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMError, VMResult},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
@@ -567,15 +570,12 @@ impl Loader {
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
     ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
-        let module =
-            self.load_module_expect_no_missing_dependencies(module_id, data_store, log_context)?;
+        let module = self.load_module_verify_not_missing(module_id, data_store, log_context)?;
         let idx = self
             .module_cache
             .lock()
             .resolve_function_by_name(function_name, module_id)
-            .map_err(|err| {
-                expect_no_verification_errors(err.finish(Location::Undefined), log_context)
-            })?;
+            .map_err(|err| err.finish(Location::Undefined))?;
         let func = self.module_cache.lock().function_at(idx);
         let parameter_tys = func
             .parameters
@@ -733,11 +733,7 @@ impl Loader {
             }
             TypeTag::Struct(struct_tag) => {
                 let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module_verify_no_missing_dependencies(
-                    &module_id,
-                    data_store,
-                    log_context,
-                )?;
+                self.load_module_verify_not_missing(&module_id, data_store, log_context)?;
                 let (idx, struct_type) = self
                     .module_cache
                     .lock()
@@ -776,7 +772,7 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
-        verify_no_missing_modules: bool,
+        verify_module_is_not_missing: bool,
         log_context: &impl LogContext,
     ) -> VMResult<Arc<Module>> {
         // kept private to `load_module` to prevent verification errors from leaking
@@ -805,7 +801,7 @@ impl Loader {
 
         let bytes = match data_store.load_module(id) {
             Ok(bytes) => bytes,
-            Err(err) if verify_no_missing_modules => return Err(err),
+            Err(err) if verify_module_is_not_missing => return Err(err),
             Err(err) => {
                 log_context.alert();
                 error!(*log_context, "[VM] Error fetching module with id {:?}", id);
@@ -821,7 +817,7 @@ impl Loader {
     }
 
     // Returns a verifier error if the module does not exist
-    fn load_module_verify_no_missing_dependencies(
+    fn load_module_verify_not_missing(
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
@@ -831,7 +827,7 @@ impl Loader {
     }
 
     // Expects all modules to be on chain. Gives an invariant violation if it is not found
-    fn load_module_expect_no_missing_dependencies(
+    fn load_module_expect_not_missing(
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
@@ -848,9 +844,7 @@ impl Loader {
         log_context: &impl LogContext,
     ) -> VMResult<Vec<Arc<Module>>> {
         deps.into_iter()
-            .map(|dep| {
-                self.load_module_verify_no_missing_dependencies(&dep, data_store, log_context)
-            })
+            .map(|dep| self.load_module_verify_not_missing(&dep, data_store, log_context))
             .collect()
     }
 
@@ -862,9 +856,7 @@ impl Loader {
         log_context: &impl LogContext,
     ) -> VMResult<Vec<Arc<Module>>> {
         deps.into_iter()
-            .map(|dep| {
-                self.load_module_expect_no_missing_dependencies(&dep, data_store, log_context)
-            })
+            .map(|dep| self.load_module_expect_not_missing(&dep, data_store, log_context))
             .collect()
     }
 
@@ -1657,38 +1649,6 @@ struct FieldInstantiation {
     offset: usize,
     // `ModuelCache::structs` global table index. It is the generic type.
     owner: usize,
-}
-
-//
-// Utility functions
-//
-
-fn expect_no_verification_errors(err: VMError, log_context: &impl LogContext) -> VMError {
-    match err.status_type() {
-        status_type @ StatusType::Deserialization | status_type @ StatusType::Verification => {
-            let message = format!(
-                "Unexpected verifier/deserialization error! This likely means there is code \
-                stored on chain that is unverifiable!\nError: {:?}",
-                &err
-            );
-            let (_old_status, _old_sub_status, _old_message, location, indices, offsets) =
-                err.all_data();
-            let major_status = match status_type {
-                StatusType::Deserialization => StatusCode::UNEXPECTED_DESERIALIZATION_ERROR,
-                StatusType::Verification => StatusCode::UNEXPECTED_VERIFIER_ERROR,
-                _ => unreachable!(),
-            };
-
-            log_context.alert();
-            error!(*log_context, "[VM] {}", message);
-            PartialVMError::new(major_status)
-                .with_message(message)
-                .at_indices(indices)
-                .at_code_offsets(offsets)
-                .finish(location)
-        }
-        _ => err,
-    }
 }
 
 //
