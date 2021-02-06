@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.38"
 structopt = "0.3.21"
 serde = "1.0.123"
-serde_json = "1.0.61"
+serde_json = "1.0.62"
 
 diemdb = { path = "../diemdb", version = "0.1.0", features = ["diemsum"] }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
