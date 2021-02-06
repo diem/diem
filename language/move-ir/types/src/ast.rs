@@ -321,6 +321,9 @@ pub enum FunctionVisibility {
     /// The procedure can only be invoked from a script context
     /// `public(script)`
     Script,
+    /// The procedure can be invoked internally as well as by modules in the friend list
+    /// `public(friend)`
+    Friend,
     /// The procedure can be invoked only internally
     /// `<no modifier>`
     Internal,

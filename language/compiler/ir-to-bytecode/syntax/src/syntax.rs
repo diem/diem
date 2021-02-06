@@ -1654,7 +1654,7 @@ fn parse_synthetic_(
 }
 
 // FunctionVisibility : FunctionVisibility = {
-//   (Public("("<v: Script>")")?)?
+//   (Public("("<v: Script | Friend>")")?)?
 // }
 fn parse_function_visibility(
     tokens: &mut Lexer<'_>,
@@ -1663,7 +1663,7 @@ fn parse_function_visibility(
         let sub_public_vis = if match_token(tokens, Tok::LParen)? {
             let sub_token = tokens.peek();
             match &sub_token {
-                Tok::Script => (),
+                Tok::Script | Tok::Friend => (),
                 _ => {
                     return Err(ParseError::InvalidToken {
                         location: current_token_loc(tokens),
@@ -1679,6 +1679,7 @@ fn parse_function_visibility(
         match sub_public_vis {
             None => FunctionVisibility::Public,
             Some(Tok::Script) => FunctionVisibility::Script,
+            Some(Tok::Friend) => FunctionVisibility::Friend,
             _ => panic!("Unexpected token that is not a visibility modifier"),
         }
     } else {

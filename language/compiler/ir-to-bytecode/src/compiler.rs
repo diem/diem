@@ -927,6 +927,7 @@ fn compile_function(
     let visibility = match ast_function.visibility {
         FunctionVisibility::Public => Visibility::Public,
         FunctionVisibility::Script => Visibility::Script,
+        FunctionVisibility::Friend => Visibility::Friend,
         FunctionVisibility::Internal => Visibility::Private,
     };
     let acquires_global_resources = ast_function
