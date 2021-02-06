@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-serde_yaml = "0.8.15"
+serde_yaml = "0.8.16"
 serde-reflection = "0.3.2"
 serde-generate = "0.18.0"
 anyhow = "1.0.38"

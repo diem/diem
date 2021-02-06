@@ -15,7 +15,7 @@ log = { version = "0.4.14", features = ["serde"] }
 mirai-annotations = "1.10.1"
 rand = "0.7.3"
 serde = { version = "1.0.123", features = ["rc"], default-features = false }
-serde_yaml = "0.8.15"
+serde_yaml = "0.8.16"
 thiserror = "1.0.23"
 
 

@@ -13,7 +13,7 @@ edition = "2018"
 rand = "0.7.3"
 serde = { version = "1.0.123", features = ["derive"] }
 serde-reflection = "0.3.2"
-serde_yaml = "0.8.15"
+serde_yaml = "0.8.16"
 structopt = "0.3.21"
 
 consensus = { path = "../../consensus", version = "0.1.0", features=["fuzzing"] }
