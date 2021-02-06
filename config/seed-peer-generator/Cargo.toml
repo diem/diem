@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.38"
 hex = "0.4.2"
 rand = "0.7.3"
-serde_yaml = "0.8.15"
+serde_yaml = "0.8.16"
 structopt = "0.3.21"
 thiserror = "1.0.23"
 
