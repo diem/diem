@@ -318,6 +318,9 @@ pub enum FunctionVisibility {
     /// The procedure can be invoked anywhere
     /// `public`
     Public,
+    /// The procedure can only be invoked from a script context
+    /// `public(script)`
+    Script,
     /// The procedure can be invoked only internally
     /// `<no modifier>`
     Internal,

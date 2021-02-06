@@ -62,6 +62,20 @@ fn spanned<T>(file: &'static str, start: usize, end: usize, value: T) -> Spanned
     }
 }
 
+// Check for the specified token and consume it if it matches.
+// Returns true if the token matches.
+fn match_token<'input>(
+    tokens: &mut Lexer<'input>,
+    tok: Tok,
+) -> Result<bool, ParseError<Loc, anyhow::Error>> {
+    if tokens.peek() == tok {
+        tokens.advance()?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 fn consume_token<'input>(
     tokens: &mut Lexer<'input>,
     tok: Tok,
@@ -1699,20 +1713,54 @@ fn parse_synthetic_<'input>(
     Ok(SyntheticDefinition_ { name, type_ })
 }
 
+// FunctionVisibility : FunctionVisibility = {
+//   (Public("("<v: Script>")")?)?
+// }
+fn parse_function_visibility<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<FunctionVisibility, ParseError<Loc, anyhow::Error>> {
+    let visibility = if match_token(tokens, Tok::Public)? {
+        let sub_public_vis = if match_token(tokens, Tok::LParen)? {
+            let sub_token = tokens.peek();
+            match &sub_token {
+                Tok::Script => (),
+                _ => {
+                    return Err(ParseError::InvalidToken {
+                        location: current_token_loc(tokens),
+                    });
+                }
+            }
+            tokens.advance()?;
+            consume_token(tokens, Tok::RParen)?;
+            Some(sub_token)
+        } else {
+            None
+        };
+        match sub_public_vis {
+            None => FunctionVisibility::Public,
+            Some(Tok::Script) => FunctionVisibility::Script,
+            _ => panic!("Unexpected token that is not a visibility modifier"),
+        }
+    } else {
+        FunctionVisibility::Internal
+    };
+    Ok(visibility)
+}
+
 // FunctionDecl : (FunctionName, Function_) = {
 //   <f: Sp<MoveFunctionDecl>> => (f.value.0, Spanned { span: f.loc, value: f.value.1 }),
 //   <f: Sp<NativeFunctionDecl>> => (f.value.0, Spanned { span: f.loc, value: f.value.1 }),
 // }
 
 // MoveFunctionDecl : (FunctionName, Function) = {
-//     <p: Public?> <name_and_type_parameters: NameAndTypeFormals> "(" <args:
-//     (ArgDecl)*> ")" <ret: ReturnType?>
-//     <acquires: AcquireList?>
-//     <locals_body: FunctionBlock> =>? { ... }
+//     <v: FunctionVisibility> <name_and_type_parameters: NameAndTypeFormals>
+//     "(" <args: (ArgDecl)*> ")" <ret: ReturnType?>
+//         <acquires: AcquireList?>
+//         <locals_body: FunctionBlock> =>? { ... }
 // }
 
 // NativeFunctionDecl: (FunctionName, Function) = {
-//     <nat: NativeTag> <p: Public?> <name_and_type_parameters: NameAndTypeFormals>
+//     <nat: NativeTag> <v: FunctionVisibility> <name_and_type_parameters: NameAndTypeFormals>
 //     "(" <args: Comma<ArgDecl>> ")" <ret: ReturnType?>
 //         <acquires: AcquireList?>
 //         ";" =>? { ... }
@@ -1730,12 +1778,7 @@ fn parse_function_decl<'input>(
         false
     };
 
-    let is_public = if tokens.peek() == Tok::Public {
-        tokens.advance()?;
-        true
-    } else {
-        false
-    };
+    let visibility = parse_function_visibility(tokens)?;
 
     let (name, type_parameters) = parse_name_and_type_parameters(tokens)?;
     consume_token(tokens, Tok::LParen)?;
@@ -1765,11 +1808,7 @@ fn parse_function_decl<'input>(
 
     let func_name = FunctionName::new(name);
     let func = Function_::new(
-        if is_public {
-            FunctionVisibility::Public
-        } else {
-            FunctionVisibility::Internal
-        },
+        visibility,
         args,
         ret.unwrap_or_else(Vec::new),
         type_parameters,
