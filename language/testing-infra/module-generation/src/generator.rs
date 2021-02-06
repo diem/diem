@@ -53,6 +53,8 @@ pub fn generate_modules(
         })
         .collect();
 
+    // TODO: for friend visibility, maybe we could generate a module that friend all other modules...
+
     let mut compiled_root = compile_module(AccountAddress::ZERO, root_module, &compiled_callees)
         .unwrap()
         .0
@@ -306,6 +308,7 @@ impl<'a> ModuleGenerator<'a> {
         };
         let current_module = ModuleDefinition {
             name: ModuleName::new(module_name),
+            friends: Vec::new(),
             imports: Self::imports(callable_modules),
             explicit_dependency_declarations: Vec::new(),
             structs: Vec::new(),

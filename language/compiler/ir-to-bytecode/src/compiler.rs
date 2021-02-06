@@ -26,9 +26,9 @@ use vm::{
     file_format::{
         Ability, AbilitySet, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut,
         CompiledScript, CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition,
-        FunctionSignature, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature,
-        Visibility,
+        FunctionSignature, ModuleHandle, Signature, SignatureToken, StructDefinition,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
+        TypeParameterIndex, TypeSignature, Visibility,
     },
 };
 
@@ -494,10 +494,16 @@ pub fn compile_module<'a>(
     for dep in dependencies {
         context.add_compiled_dependency(dep)?;
     }
+
+    // Compile friends
+    let friend_decls = compile_friends(&mut context, Some(address), module.friends)?;
+
+    // Compile imports
     let self_name = ModuleName::new(ModuleName::self_name().into());
     let self_module_handle_idx = context.declare_import(current_module, self_name.clone())?;
     // Explicitly declare all imports as they will be included even if not used
     compile_imports(&mut context, Some(address), module.imports.clone())?;
+
     // Add explicit handles/dependency declarations to `dependencies`
     compile_explicit_dependency_declarations(
         &mut context,
@@ -528,8 +534,7 @@ pub fn compile_module<'a>(
         context.declare_function(self_name.clone(), name.clone(), sig)?;
     }
 
-    // Current module
-
+    // Compile definitions
     let struct_defs = compile_structs(&mut context, &self_name, module.structs)?;
     let function_defs = compile_functions(&mut context, &self_name, module.functions)?;
 
@@ -556,6 +561,7 @@ pub fn compile_module<'a>(
         struct_handles,
         function_handles,
         field_handles,
+        friend_decls,
         struct_def_instantiations,
         function_instantiations,
         field_instantiations,
@@ -565,8 +571,6 @@ pub fn compile_module<'a>(
         constant_pool,
         struct_defs,
         function_defs,
-        // TODO (mengxu): add friend declarations when the IR compiler is ready
-        friend_decls: vec![],
     };
     compiled_module
         .freeze()
@@ -635,6 +639,7 @@ fn compile_explicit_dependency_declarations(
             struct_handles,
             function_handles,
             field_handles,
+            friend_decls: vec![],
             struct_def_instantiations,
             function_instantiations,
             field_instantiations,
@@ -644,8 +649,6 @@ fn compile_explicit_dependency_declarations(
             constant_pool,
             struct_defs: vec![],
             function_defs: vec![],
-            // TODO (mengxu): add friend declarations when the IR compiler is ready
-            friend_decls: vec![],
         }
         .freeze()
         .map_err(|e| {
@@ -659,6 +662,29 @@ fn compile_explicit_dependency_declarations(
     }
     outer_context.restore_dependencies(dependencies_acc);
     Ok(())
+}
+
+fn compile_friends(
+    context: &mut Context,
+    address_opt: Option<AccountAddress>,
+    friends: Vec<ast::ModuleIdent>,
+) -> Result<Vec<ModuleHandle>> {
+    let mut friend_decls = vec![];
+    for friend in friends {
+        let ident = match (address_opt, friend) {
+            (Some(address), ModuleIdent::Transaction(name)) => {
+                QualifiedModuleIdent { address, name }
+            }
+            (None, ModuleIdent::Transaction(name)) => bail!(
+                "Invalid friend '{}'. No address specified for script so cannot resolve friend",
+                name
+            ),
+            (_, ModuleIdent::Qualified(id)) => id,
+        };
+        let handle = context.declare_friend(ident)?;
+        friend_decls.push(handle);
+    }
+    Ok(friend_decls)
 }
 
 fn compile_imports(

@@ -145,6 +145,8 @@ fn module(
     );
     let ir_module = IR::ModuleDefinition {
         name: IR::ModuleName::new(mname.0.value),
+        // TODO: add friends here
+        friends: vec![],
         imports,
         explicit_dependency_declarations,
         structs,

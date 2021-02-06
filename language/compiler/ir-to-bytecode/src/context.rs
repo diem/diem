@@ -231,7 +231,7 @@ pub struct MaterializedPools {
     pub identifiers: Vec<Identifier>,
     /// Address identifier pool
     pub address_identifiers: Vec<AccountAddress>,
-    /// Constnat pool
+    /// Constant pool
     pub constant_pool: Vec<Constant>,
 }
 
@@ -566,6 +566,13 @@ impl<'a> Context<'a> {
     //**********************************************************************************************
     // Declarations
     //**********************************************************************************************
+
+    /// Add a friend. This creates a module handle for the friended module.
+    pub fn declare_friend(&mut self, id: QualifiedModuleIdent) -> Result<ModuleHandle> {
+        let address = self.address_index(id.address)?;
+        let name = self.identifier_index(id.name.as_inner())?;
+        Ok(ModuleHandle { address, name })
+    }
 
     /// Add an import. This creates a module handle index for the imported module.
     pub fn declare_import(

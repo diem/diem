@@ -1934,6 +1934,19 @@ fn parse_module_ident(
     Ok(ModuleIdent::Transaction(m))
 }
 
+// FriendDecl: ModuleIdent = {
+//     "friend" <ident: ModuleIdent> ";" => { ... }
+// }
+
+fn parse_friend_decl(
+    tokens: &mut Lexer<'_>,
+) -> Result<ModuleIdent, ParseError<Loc, anyhow::Error>> {
+    consume_token(tokens, Tok::Friend)?;
+    let ident = parse_module_ident(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    Ok(ident)
+}
+
 // ImportAlias: ModuleName = {
 //     "as" <alias: ModuleName> => { ... }
 // }
@@ -1972,6 +1985,7 @@ fn parse_import_decl(
 
 // pub Module : ModuleDefinition = {
 //     "module" <n: Name> "{"
+//         <friends: (FriendDecl)*>
 //         <imports: (ImportDecl)*>
 //         <structs: (StructDecl)*>
 //         <functions: (FunctionDecl)*>
@@ -1992,6 +2006,11 @@ fn parse_module(
     consume_token(tokens, Tok::Module)?;
     let name = parse_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
+
+    let mut friends: Vec<ModuleIdent> = vec![];
+    while tokens.peek() == Tok::Friend {
+        friends.push(parse_friend_decl(tokens)?);
+    }
 
     let mut imports: Vec<ImportDefinition> = vec![];
     while tokens.peek() == Tok::Import {
@@ -2016,6 +2035,7 @@ fn parse_module(
 
     Ok(ModuleDefinition::new(
         name,
+        friends,
         imports,
         vec![],
         structs,
