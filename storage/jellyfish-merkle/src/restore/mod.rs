@@ -370,7 +370,7 @@ where
         existing_leaf: LeafNode<V>,
         new_key: HashValue,
         new_value: V,
-        mut remaining_nibbles: NibbleIterator<'_>,
+        mut remaining_nibbles: NibbleIterator,
     ) {
         let num_existing_partial_nodes = self.partial_nodes.len();
 
