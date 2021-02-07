@@ -20,8 +20,8 @@ diem-logger = { path = "../../common/logger", version = "0.1.0" }
 diem-network-address = { path = "../network-address", version = "0.1.0" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-memsocket = { path = "../../network/memsocket", version = "0.1.0" }
-netcore = { path = "../../network/netcore", version = "0.1.0", features = ["fuzzing", "testing"] }
-network = { path = "../../network", version = "0.1.0", features = ["testing", "fuzzing"] }
-network-builder = { path = "../../network/builder", version = "0.1.0"}
+memsocket = { path = "../memsocket", version = "0.1.0" }
+netcore = { path = "../netcore", version = "0.1.0", features = ["fuzzing", "testing"] }
+network = { path = "../.", version = "0.1.0", features = ["testing", "fuzzing"] }
+network-builder = { path = "../builder", version = "0.1.0"}
 rand = "0.7.3"
