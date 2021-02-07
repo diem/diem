@@ -217,7 +217,7 @@ where
         rightmost_leaf_node_key: NodeKey,
     ) -> Result<Vec<InternalInfo<V>>> {
         ensure!(
-            rightmost_leaf_node_key.nibble_path().num_nibbles() > 0,
+            !rightmost_leaf_node_key.nibble_path().is_empty(),
             "Root node would not be written until entire restoration process has completed \
              successfully.",
         );
@@ -265,7 +265,7 @@ where
             }
 
             partial_nodes.push(internal_info);
-            if node_key.nibble_path().num_nibbles() == 0 {
+            if node_key.nibble_path().is_empty() {
                 break;
             }
             previous_child_index = node_key.nibble_path().last().map(|x| u8::from(x) as usize);

@@ -341,7 +341,7 @@ where
                 tree_cache,
             ),
             Node::Null => {
-                if node_key.nibble_path().num_nibbles() != 0 {
+                if !node_key.nibble_path().is_empty() {
                     bail!(
                         "Null node exists for non-root node with node_key {:?}",
                         node_key

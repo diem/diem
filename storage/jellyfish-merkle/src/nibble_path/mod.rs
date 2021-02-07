@@ -178,6 +178,11 @@ impl NibblePath {
         self.num_nibbles
     }
 
+    ///  Returns `true` if the nibbles contains no elements.
+    pub fn is_empty(&self) -> bool {
+        self.num_nibbles() == 0
+    }
+
     /// Get the underlying bytes storing nibbles.
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
