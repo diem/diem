@@ -13,5 +13,5 @@ edition = "2018"
 anyhow = "1.0.38"
 
 diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-channel = { path = "..//channel", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+channel = { path = "../channel", version = "0.1.0" }
