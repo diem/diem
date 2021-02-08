@@ -326,7 +326,7 @@ module DualAttestation {
             VASP::parent_address(payer) != VASP::parent_address(payee)
     }
     spec fun dual_attestation_required {
-        pragma opaque = true;
+        pragma opaque;
         include DualAttestationRequiredAbortsIf<Token>;
         ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
     }

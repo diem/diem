@@ -149,8 +149,8 @@ use 0x1::COIN::COIN;
 fun main(account: &signer) {
     let prev_mcap1 = Diem::market_cap<XUS>();
     let prev_mcap2 = Diem::market_cap<COIN>();
-    Diem::burn<XUS>(account, {{dd1}});
-    Diem::burn<COIN>(account, {{dd2}});
+    Diem::burn<XUS>(account, {{dd1}}, 10);
+    Diem::burn<COIN>(account, {{dd2}}, 100);
     assert(prev_mcap1 - Diem::market_cap<XUS>() == 10, 9);
     assert(prev_mcap2 - Diem::market_cap<COIN>() == 100, 10);
 }

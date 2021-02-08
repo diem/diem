@@ -3,6 +3,7 @@
 
 use serde_json::json;
 
+use compiled_stdlib::shim::tmp_new_transaction_script_builders;
 use diem_crypto::hash::CryptoHash;
 use diem_types::{
     access_path::AccessPath,
@@ -204,12 +205,7 @@ fn create_test_cases() -> Vec<Test> {
                             "compliance_key": "",
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "moneybags",
-                            "preburn_balances": [
-                                {
-                                    "amount": 0,
-                                    "currency": "XUS"
-                                },
-                            ],
+                            "preburn_balances": [],
                             "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
                             "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
                             "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
@@ -536,7 +532,9 @@ fn create_test_cases() -> Vec<Test> {
                     result["transaction"]
                 );
 
-                let script = stdlib::encode_burn_script(xus_tag(), 0, env.dd.address);
+                let script = tmp_new_transaction_script_builders::encode_burn_with_amount_script(
+                    xus_tag(), 0, env.dd.address, 100
+                );
                 let burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -563,10 +561,11 @@ fn create_test_cases() -> Vec<Test> {
                         ],
                         "arguments": [
                             "{U64: 0}",
-                            "{ADDRESS: 000000000000000000000000000000DD}"
+                            "{ADDRESS: 000000000000000000000000000000DD}",
+                            "{U64: 100}",
                         ],
                         "code": hex::encode(script.code()),
-                        "type": "burn"
+                        "type": "burn_with_amount"
                     }),
                     "{}",
                     result["transaction"]
@@ -580,7 +579,7 @@ fn create_test_cases() -> Vec<Test> {
                     env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100));
                 env.submit_and_wait(txn);
 
-                let script = stdlib::encode_cancel_burn_script(xus_tag(), env.dd.address);
+                let script = tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script(xus_tag(), env.dd.address, 100);
                 let cancel_burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -621,9 +620,10 @@ fn create_test_cases() -> Vec<Test> {
                         ],
                         "arguments": [
                             "{ADDRESS: 000000000000000000000000000000DD}",
+                            "{U64: 100}",
                         ],
                         "code": hex::encode(script.code()),
-                        "type": "cancel_burn"
+                        "type": "cancel_burn_with_amount"
                     }),
                     "{}",
                     result["transaction"]

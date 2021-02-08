@@ -77,8 +77,6 @@
         -  [Script `set_validator_operator_with_nonce_admin`](#set_validator_operator_with_nonce_admin)
     -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_163)
         -  [Script `preburn`](#preburn)
-        -  [Script `burn`](#burn)
-        -  [Script `cancel_burn`](#cancel_burn)
         -  [Script `burn_txn_fees`](#burn_txn_fees)
         -  [Script `tiered_mint`](#tiered_mint)
         -  [Script `freeze_account`](#freeze_account)
@@ -86,9 +84,9 @@
         -  [Script `update_dual_attestation_limit`](#update_dual_attestation_limit)
         -  [Script `update_exchange_rate`](#update_exchange_rate)
         -  [Script `update_minting_ability`](#update_minting_ability)
-    -  [System Administration](#@System_Administration_221)
+    -  [System Administration](#@System_Administration_209)
         -  [Script `update_diem_version`](#update_diem_version)
-    -  [Index](#@Index_226)
+    -  [Index](#@Index_214)
 
 
 
@@ -565,7 +563,7 @@ be the Treasury Compliance account.
 The account that holds the preburn resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
-Script documentation: <code><a href="transaction_script_documentation.md#burn">burn</a></code>
+Script documentation: <code>burn</code>
 
 
 ---
@@ -579,7 +577,7 @@ Cancels and returns all coins held in the preburn area under
 <code>preburn_address</code> and returns the funds to the <code>preburn_address</code>'s balance.
 Can only be successfully sent by an account with Treasury Compliance role.
 
-Script documentation: <code><a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a></code>
+Script documentation: <code>cancel_burn</code>
 
 
 ---
@@ -3766,8 +3764,8 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 ##### Related Scripts
 
-* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
-* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
+* <code>Script::cancel_burn</code>
+* <code>Script::burn</code>
 * <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
 
 
@@ -3816,7 +3814,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoPreburn">Diem::AbortsIfNoPreburn</a>&lt;Token&gt;{preburn_address: account_addr};
+<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoPreburnQueue">Diem::AbortsIfNoPreburnQueue</a>&lt;Token&gt;{preburn_address: account_addr};
 </code></pre>
 
 
@@ -3825,301 +3823,11 @@ Only the account with a preburn area can preburn [[H4]][PERMISSION].
 
 ---
 
-
-<a name="burn"></a>
-
-#### Script `burn`
-
-
-
-<pre><code><b>use</b> <a href="../../modules/doc/Diem.md#0x1_Diem">0x1::Diem</a>;
-<b>use</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">0x1::SlidingNonce</a>;
-</code></pre>
-
-
-
-<a name="@Summary_170"></a>
-
-##### Summary
-
-Burns all coins held in the preburn resource at the specified
-preburn address and removes them from the system. The sending account must
-be the Treasury Compliance account.
-The account that holds the preburn resource will normally be a Designated
-Dealer, but there are no enforced requirements that it be one.
-
-
-<a name="@Technical_Description_171"></a>
-
-##### Technical Description
-
-This transaction permanently destroys all the coins of <code>Token</code> type
-stored in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under the
-<code>preburn_address</code> account address.
-
-This transaction will only succeed if the sending <code>account</code> has a
-<code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code>, and a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource
-exists under <code>preburn_address</code>, with a non-zero <code>to_burn</code> field. After the successful execution
-of this transaction the <code>total_value</code> field in the
-<code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource published under <code>0xA550C18</code> will be
-decremented by the value of the <code>to_burn</code> field of the preburn resource
-under <code>preburn_address</code> immediately before this transaction, and the
-<code>to_burn</code> field of the preburn resource will have a zero value.
-
-
-<a name="@Events_172"></a>
-
-###### Events
-
-The successful execution of this transaction will emit a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
-held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource's <code>burn_events</code> published under
-<code>0xA550C18</code>.
-
-
-<a name="@Parameters_173"></a>
-
-##### Parameters
-
-| Name              | Type      | Description                                                                                                                  |
-| ------            | ------    | -------------                                                                                                                |
-| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currency being burned. <code>Token</code> must be an already-registered currency on-chain.                |
-| <code>tc_account</code>      | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it. |
-| <code>sliding_nonce</code>   | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                   |
-| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                 |
-
-
-<a name="@Common_Abort_Conditions_174"></a>
-
-##### Common Abort Conditions
-
-| Error Category                | Error Reason                            | Description                                                                                           |
-| ----------------              | --------------                          | -------------                                                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>account</code>.                                           |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not.            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>               | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                       | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN_EMPTY">Diem::EPREBURN_EMPTY</a></code>                 | The <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource is empty (has a value of 0).                                     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                 | The specified <code>Token</code> is not a registered currency on-chain.                                          |
-
-
-<a name="@Related_Scripts_175"></a>
-
-##### Related Scripts
-
-* <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
-* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
-* <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn">burn</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address) {
-    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <a href="../../modules/doc/Diem.md#0x1_Diem_burn">Diem::burn</a>&lt;Token&gt;(account, preburn_address)
-}
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
-<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnAbortsIf">Diem::BurnAbortsIf</a>&lt;Token&gt;;
-<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnEnsures">Diem::BurnEnsures</a>&lt;Token&gt;;
-<b>aborts_with</b> [check]
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
-<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnWithResourceCapEmits">Diem::BurnWithResourceCapEmits</a>&lt;Token&gt;{<a href="transaction_script_documentation.md#preburn">preburn</a>: <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(preburn_address)};
-</code></pre>
-
-
-**Access Control:**
-Only the account with the burn capability can burn coins [[H3]][PERMISSION].
-
-
-<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoBurnCapability">Diem::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
-</code></pre>
-
-
-
-</details>
+> undefined move-include `burn`
 
 ---
 
-
-<a name="cancel_burn"></a>
-
-#### Script `cancel_burn`
-
-
-
-<pre><code><b>use</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
-</code></pre>
-
-
-
-<a name="@Summary_176"></a>
-
-##### Summary
-
-Cancels and returns all coins held in the preburn area under
-<code>preburn_address</code> and returns the funds to the <code>preburn_address</code>'s balance.
-Can only be successfully sent by an account with Treasury Compliance role.
-
-
-<a name="@Technical_Description_177"></a>
-
-##### Technical Description
-
-Cancels and returns all coins held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource under the <code>preburn_address</code> and
-return the funds to the <code>preburn_address</code> account's <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Token&gt;</code>.
-The transaction must be sent by an <code>account</code> with a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code>
-resource published under it. The account at <code>preburn_address</code> must have a
-<code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it, and its value must be nonzero. The transaction removes
-the entire balance held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource, and returns it back to the account's
-<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Token&gt;</code> under <code>preburn_address</code>. Due to this, the account at
-<code>preburn_address</code> must already have a balance in the <code>Token</code> currency published
-before this script is called otherwise the transaction will fail.
-
-
-<a name="@Events_178"></a>
-
-###### Events
-
-The successful execution of this transaction will emit:
-* A <code><a href="../../modules/doc/Diem.md#0x1_Diem_CancelBurnEvent">Diem::CancelBurnEvent</a></code> on the event handle held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code>
-resource's <code>burn_events</code> published under <code>0xA550C18</code>.
-* A <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> on the <code>preburn_address</code>'s
-<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> event handle with both the <code>payer</code> and <code>payee</code>
-being <code>preburn_address</code>.
-
-
-<a name="@Parameters_179"></a>
-
-##### Parameters
-
-| Name              | Type      | Description                                                                                                                          |
-| ------            | ------    | -------------                                                                                                                        |
-| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currenty that burning is being cancelled for. <code>Token</code> must be an already-registered currency on-chain. |
-| <code>account</code>         | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it.         |
-| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                         |
-
-
-<a name="@Common_Abort_Conditions_180"></a>
-
-##### Common Abort Conditions
-
-| Error Category                | Error Reason                                     | Description                                                                                           |
-| ----------------              | --------------                                   | -------------                                                                                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EBURN_CAPABILITY">Diem::EBURN_CAPABILITY</a></code>                        | The sending <code>account</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;Token&gt;</code> published under it.              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_EPREBURN">Diem::EPREBURN</a></code>                                | The account at <code>preburn_address</code> does not have a <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;</code> resource published under it. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                          | The specified <code>Token</code> is not a registered currency on-chain.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ECOIN_DEPOSIT_IS_ZERO">DiemAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | The value held in the preburn resource was zero.                                                      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | The account at <code>preburn_address</code> doesn't have a balance resource for <code>Token</code>.                         |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | The depositing of the funds held in the prebun area would exceed the <code>account</code>'s account limits.      |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET</a></code> | The <code>account</code> does not have a compliance key set on it but dual attestion checking was performed.     |
-
-
-<a name="@Related_Scripts_181"></a>
-
-##### Related Scripts
-
-* <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
-* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
-* <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
-    <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_cancel_burn">DiemAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address)
-}
-</code></pre>
-
-
-
-</details>
-
-<details>
-<summary>Specification</summary>
-
-
-
-<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
-<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_CancelBurnAbortsIf">DiemAccount::CancelBurnAbortsIf</a>&lt;Token&gt;;
-<a name="cancel_burn_preburn_value_at_addr$1"></a>
-<b>let</b> preburn_value_at_addr = <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(preburn_address).to_burn.value;
-<a name="cancel_burn_total_preburn_value$2"></a>
-<b>let</b> total_preburn_value =
-    <b>global</b>&lt;<a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value;
-<a name="cancel_burn_balance_at_addr$3"></a>
-<b>let</b> balance_at_addr = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_balance">DiemAccount::balance</a>&lt;Token&gt;(preburn_address);
-</code></pre>
-
-
-The value stored at <code><a href="../../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a></code> under <code>preburn_address</code> should become zero.
-
-
-<pre><code><b>ensures</b> preburn_value_at_addr == 0;
-</code></pre>
-
-
-The total value of preburn for <code>Token</code> should decrease by the preburned amount.
-
-
-<pre><code><b>ensures</b> total_preburn_value == <b>old</b>(total_preburn_value) - <b>old</b>(preburn_value_at_addr);
-</code></pre>
-
-
-The balance of <code>Token</code> at <code>preburn_address</code> should increase by the preburned amount.
-
-
-<pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + <b>old</b>(preburn_value_at_addr);
-<b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_CancelBurnWithCapEmits">Diem::CancelBurnWithCapEmits</a>&lt;Token&gt;;
-<b>aborts_with</b> [check]
-    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
-    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
-</code></pre>
-
-
-**Access Control:**
-Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
-
-
-<pre><code><b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_AbortsIfNoBurnCapability">Diem::AbortsIfNoBurnCapability</a>&lt;Token&gt;{account: account};
-</code></pre>
-
-
-
-</details>
+> undefined move-include `cancel_burn`
 
 ---
 
@@ -4135,7 +3843,7 @@ Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 
 
 
-<a name="@Summary_182"></a>
+<a name="@Summary_170"></a>
 
 ##### Summary
 
@@ -4144,7 +3852,7 @@ Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_183"></a>
+<a name="@Technical_Description_171"></a>
 
 ##### Technical Description
 
@@ -4157,7 +3865,7 @@ currency. Both <code>balance</code> and <code><a href="transaction_script_docume
 account address will have a value of 0 after the successful execution of this script.
 
 
-<a name="@Events_184"></a>
+<a name="@Events_172"></a>
 
 ###### Events
 
@@ -4166,7 +3874,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 <code>0xA550C18</code>.
 
 
-<a name="@Parameters_185"></a>
+<a name="@Parameters_173"></a>
 
 ##### Parameters
 
@@ -4176,7 +3884,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 | <code>tc_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
 
 
-<a name="@Common_Abort_Conditions_186"></a>
+<a name="@Common_Abort_Conditions_174"></a>
 
 ##### Common Abort Conditions
 
@@ -4187,12 +3895,12 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECOIN">Diem::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
 
 
-<a name="@Related_Scripts_187"></a>
+<a name="@Related_Scripts_175"></a>
 
 ##### Related Scripts
 
-* <code><a href="transaction_script_documentation.md#burn">Script::burn</a></code>
-* <code><a href="transaction_script_documentation.md#cancel_burn">Script::cancel_burn</a></code>
+* <code>Script::burn</code>
+* <code>Script::cancel_burn</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
@@ -4228,7 +3936,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 
 
 
-<a name="@Summary_188"></a>
+<a name="@Summary_176"></a>
 
 ##### Summary
 
@@ -4237,7 +3945,7 @@ must be the Treasury Compliance account, and coins can only be minted to a Desig
 account.
 
 
-<a name="@Technical_Description_189"></a>
+<a name="@Technical_Description_177"></a>
 
 ##### Technical Description
 
@@ -4250,7 +3958,7 @@ they support. The sending <code>tc_account</code> must be the Treasury Complianc
 receiver an authorized Designated Dealer account.
 
 
-<a name="@Events_190"></a>
+<a name="@Events_178"></a>
 
 ###### Events
 
@@ -4263,7 +3971,7 @@ Dealer's address is emitted on the <code>mint_event_handle</code> in the stored 
 resource published under the <code>designated_dealer_address</code>.
 
 
-<a name="@Parameters_191"></a>
+<a name="@Parameters_179"></a>
 
 ##### Parameters
 
@@ -4277,7 +3985,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code>tier_index</code>                | <code>u64</code>     | The mint tier index to use for the Designated Dealer account.                                              |
 
 
-<a name="@Common_Abort_Conditions_192"></a>
+<a name="@Common_Abort_Conditions_180"></a>
 
 ##### Common Abort Conditions
 
@@ -4298,7 +4006,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
 
 
-<a name="@Related_Scripts_193"></a>
+<a name="@Related_Scripts_181"></a>
 
 ##### Related Scripts
 
@@ -4380,7 +4088,7 @@ Only the Treasury Compliance account can mint [[H1]][PERMISSION].
 
 
 
-<a name="@Summary_194"></a>
+<a name="@Summary_182"></a>
 
 ##### Summary
 
@@ -4391,7 +4099,7 @@ execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
 
-<a name="@Technical_Description_195"></a>
+<a name="@Technical_Description_183"></a>
 
 ##### Technical Description
 
@@ -4405,7 +4113,7 @@ accounts and vice versa.
 
 
 
-<a name="@Events_196"></a>
+<a name="@Events_184"></a>
 
 ###### Events
 
@@ -4414,7 +4122,7 @@ the <code>freeze_event_handle</code> held in the <code><a href="../../modules/do
 under <code>0xA550C18</code> with the <code>frozen_address</code> being the <code>to_freeze_account</code>.
 
 
-<a name="@Parameters_197"></a>
+<a name="@Parameters_185"></a>
 
 ##### Parameters
 
@@ -4425,7 +4133,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
 
 
-<a name="@Common_Abort_Conditions_198"></a>
+<a name="@Common_Abort_Conditions_186"></a>
 
 ##### Common Abort Conditions
 
@@ -4441,7 +4149,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_DIEM_ROOT">AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT</a></code> | <code>to_freeze_account</code> was the Diem Root account (<code>0xA550C18</code>).                              |
 
 
-<a name="@Related_Scripts_199"></a>
+<a name="@Related_Scripts_187"></a>
 
 ##### Related Scripts
 
@@ -4482,7 +4190,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 
 
-<a name="@Summary_200"></a>
+<a name="@Summary_188"></a>
 
 ##### Summary
 
@@ -4491,7 +4199,7 @@ Treasury Compliance account. After the successful execution of this transaction 
 may be sent from the previously frozen account, and coins may be sent and received.
 
 
-<a name="@Technical_Description_201"></a>
+<a name="@Technical_Description_189"></a>
 
 ##### Technical Description
 
@@ -4501,7 +4209,7 @@ account. Note that this is a per-account property so unfreezing a Parent VASP wi
 the status any of its child accounts and vice versa.
 
 
-<a name="@Events_202"></a>
+<a name="@Events_190"></a>
 
 ###### Events
 
@@ -4509,7 +4217,7 @@ Successful execution of this script will emit a <code>AccountFreezing::UnFreezeA
 the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s address.
 
 
-<a name="@Parameters_203"></a>
+<a name="@Parameters_191"></a>
 
 ##### Parameters
 
@@ -4520,7 +4228,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
 
 
-<a name="@Common_Abort_Conditions_204"></a>
+<a name="@Common_Abort_Conditions_192"></a>
 
 ##### Common Abort Conditions
 
@@ -4533,7 +4241,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
 
 
-<a name="@Related_Scripts_205"></a>
+<a name="@Related_Scripts_193"></a>
 
 ##### Related Scripts
 
@@ -4574,7 +4282,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 
 
-<a name="@Summary_206"></a>
+<a name="@Summary_194"></a>
 
 ##### Summary
 
@@ -4583,7 +4291,7 @@ only be sent by the Treasury Compliance account.  After this transaction all int
 payments over this limit must be checked for dual attestation.
 
 
-<a name="@Technical_Description_207"></a>
+<a name="@Technical_Description_195"></a>
 
 ##### Technical Description
 
@@ -4591,7 +4299,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modul
 <code>0xA550C18</code>. The amount is set in micro-XDX.
 
 
-<a name="@Parameters_208"></a>
+<a name="@Parameters_196"></a>
 
 ##### Parameters
 
@@ -4602,7 +4310,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modul
 | <code>new_micro_xdx_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
 
 
-<a name="@Common_Abort_Conditions_209"></a>
+<a name="@Common_Abort_Conditions_197"></a>
 
 ##### Common Abort Conditions
 
@@ -4615,7 +4323,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modul
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<a name="@Related_Scripts_210"></a>
+<a name="@Related_Scripts_198"></a>
 
 ##### Related Scripts
 
@@ -4662,7 +4370,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modul
 
 
 
-<a name="@Summary_211"></a>
+<a name="@Summary_199"></a>
 
 ##### Summary
 
@@ -4672,7 +4380,7 @@ transaction the updated exchange rate will be used for normalization of gas pric
 dual attestation checking.
 
 
-<a name="@Technical_Description_212"></a>
+<a name="@Technical_Description_200"></a>
 
 ##### Technical Description
 
@@ -4680,7 +4388,7 @@ Updates the on-chain exchange rate from the given <code>Currency</code> to micro
 is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</code>.
 
 
-<a name="@Parameters_213"></a>
+<a name="@Parameters_201"></a>
 
 ##### Parameters
 
@@ -4693,7 +4401,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
 
 
-<a name="@Common_Abort_Conditions_214"></a>
+<a name="@Common_Abort_Conditions_202"></a>
 
 ##### Common Abort Conditions
 
@@ -4710,7 +4418,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>.                                       |
 
 
-<a name="@Related_Scripts_215"></a>
+<a name="@Related_Scripts_203"></a>
 
 ##### Related Scripts
 
@@ -4799,7 +4507,7 @@ Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISS
 
 
 
-<a name="@Summary_216"></a>
+<a name="@Summary_204"></a>
 
 ##### Summary
 
@@ -4808,7 +4516,7 @@ only be sent by the Treasury Compliance account.  Turning minting off for a curr
 no effect on coins already in circulation, and coins may still be removed from the system.
 
 
-<a name="@Technical_Description_217"></a>
+<a name="@Technical_Description_205"></a>
 
 ##### Technical Description
 
@@ -4818,7 +4526,7 @@ this field is set to <code><b>true</b></code> and minting of new coins in <code>
 This transaction needs to be sent by the Treasury Compliance account.
 
 
-<a name="@Parameters_218"></a>
+<a name="@Parameters_206"></a>
 
 ##### Parameters
 
@@ -4829,7 +4537,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code>allow_minting</code> | <code>bool</code>    | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
-<a name="@Common_Abort_Conditions_219"></a>
+<a name="@Common_Abort_Conditions_207"></a>
 
 ##### Common Abort Conditions
 
@@ -4839,7 +4547,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>               | <code>Currency</code> is not a registered currency on-chain.    |
 
 
-<a name="@Related_Scripts_220"></a>
+<a name="@Related_Scripts_208"></a>
 
 ##### Related Scripts
 
@@ -4871,7 +4579,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ---
 
-<a name="@System_Administration_221"></a>
+<a name="@System_Administration_209"></a>
 
 ### System Administration
 
@@ -4889,7 +4597,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 
 
-<a name="@Summary_222"></a>
+<a name="@Summary_210"></a>
 
 ##### Summary
 
@@ -4897,7 +4605,7 @@ Updates the Diem major version that is stored on-chain and is used by the VM.  T
 transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_223"></a>
+<a name="@Technical_Description_211"></a>
 
 ##### Technical Description
 
@@ -4907,7 +4615,7 @@ than the current major version held on-chain. The VM reads this information and 
 preserve backwards compatibility with previous major versions of the VM.
 
 
-<a name="@Parameters_224"></a>
+<a name="@Parameters_212"></a>
 
 ##### Parameters
 
@@ -4918,7 +4626,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
-<a name="@Common_Abort_Conditions_225"></a>
+<a name="@Common_Abort_Conditions_213"></a>
 
 ##### Common Abort Conditions
 
@@ -4953,7 +4661,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 
 
-<a name="@Index_226"></a>
+<a name="@Index_214"></a>
 
 ### Index
 
@@ -4998,9 +4706,9 @@ preserve backwards compatibility with previous major versions of the VM.
 -  [`add_currency_to_account`](transaction_script_documentation.md#add_currency_to_account)
 -  [`add_recovery_rotation_capability`](transaction_script_documentation.md#add_recovery_rotation_capability)
 -  [`add_validator_and_reconfigure`](transaction_script_documentation.md#add_validator_and_reconfigure)
--  [`burn`](transaction_script_documentation.md#burn)
 -  [`burn_txn_fees`](transaction_script_documentation.md#burn_txn_fees)
--  [`cancel_burn`](transaction_script_documentation.md#cancel_burn)
+-  [`burn_with_amount`](burn_with_amount.md#burn_with_amount)
+-  [`cancel_burn_with_amount`](cancel_burn_with_amount.md#cancel_burn_with_amount)
 -  [`create_child_vasp_account`](transaction_script_documentation.md#create_child_vasp_account)
 -  [`create_designated_dealer`](transaction_script_documentation.md#create_designated_dealer)
 -  [`create_parent_vasp_account`](transaction_script_documentation.md#create_parent_vasp_account)

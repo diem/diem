@@ -654,6 +654,20 @@ Check <code>v1</code> is equal to the result of removing the first element of <c
 </code></pre>
 
 
+Check that <code>v1</code> is equal to the result of removing the element at index <code>i</code> from <code>v2</code>.
+
+
+<a name="0x1_Vector_eq_remove_elem_at_index"></a>
+
+
+<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_eq_remove_elem_at_index">eq_remove_elem_at_index</a>&lt;Element&gt;(i: u64, v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
+    len(v1) + 1 == len(v2) &&
+    v1[0..i] == v2[0..i] &&
+    v1[i..len(v1)] == v2[i + 1..len(v2)]
+}
+</code></pre>
+
+
 [//]: # ("File containing references which can be used from documentation")
 [ACCESS_CONTROL]: https://github.com/diem/dip/blob/master/dips/dip-2.md
 [ROLE]: https://github.com/diem/dip/blob/master/dips/dip-2.md#roles

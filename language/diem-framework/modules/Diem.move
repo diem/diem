@@ -13,6 +13,7 @@ module Diem {
     use 0x1::Signer;
     use 0x1::Roles;
     use 0x1::DiemTimestamp;
+    use 0x1::Vector;
 
     /// The `Diem` resource defines the Diem coin for each currency in
     /// Diem. Each "coin" is coupled with a type `CoinType` specifying the
@@ -59,32 +60,32 @@ module Diem {
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
         currency_code: vector<u8>,
-        /// Address with the `Preburn` resource that stored the now-burned funds
+        /// Address with the `PreburnQueue` resource that stored the now-burned funds
         preburn_address: address,
     }
 
     /// A `PreburnEvent` is emitted every time an `amount` of funds with
-    /// a coin type `currency_code` are moved to a `Preburn` resource under
+    /// a coin type `currency_code` is enqueued in the `PreburnQueue` resource under
     /// the account at the address `preburn_address`.
     struct PreburnEvent {
         /// The amount of funds waiting to be removed (burned) from the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
         currency_code: vector<u8>,
-        /// Address with the `Preburn` resource that now holds the funds
+        /// Address with the `PreburnQueue` resource that now holds the funds
         preburn_address: address,
     }
 
     /// A `CancelBurnEvent` is emitted every time funds of `amount` in a `Preburn`
-    /// resource at `preburn_address` is canceled (removed from the
-    /// preburn, but not burned). The currency of the funds is given by the
+    /// resource held in a `PreburnQueue` at `preburn_address` is canceled (removed from the
+    /// preburn queue, but not burned). The currency of the funds is given by the
     /// `currency_code` as defined in the `CurrencyInfo` for that currency.
     struct CancelBurnEvent {
         /// The amount of funds returned
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
         currency_code: vector<u8>,
-        /// Address of the `Preburn` resource that held the now-returned funds.
+        /// Address of the `PreburnQueue` resource that held the now-returned funds.
         preburn_address: address,
     }
 
@@ -160,15 +161,41 @@ module Diem {
 
     /// A holding area where funds that will subsequently be burned wait while their underlying
     /// assets are moved off-chain.
-    /// This resource can only be created by the holder of a `BurnCapability`. An account that
-    /// contains this address has the authority to initiate a burn request. A burn request can be
-    /// resolved by the holder of a `BurnCapability` by either (1) burning the funds, or (2)
-    /// returning the funds to the account that initiated the burn request.
-    /// Concurrent preburn requests are not allowed, only one request (in `to_burn`) can be handled at any time.
+    /// This resource can only be created by the holder of a `BurnCapability`
+    /// or during an upgrade process to the `PreburnQueue` by a designated
+    /// dealer. An account that contains this address has the authority to
+    /// initiate a burn request. A burn request can be resolved by the holder
+    /// of a `BurnCapability` by either (1) burning the funds, or (2) returning
+    /// the funds to the account that initiated the burn request.
     resource struct Preburn<CoinType> {
-        /// A single pending burn amount.
-        /// There is no pending burn request if the value in `to_burn` is 0
+        /// A single pending burn amount. This is an element in the
+        /// `PreburnQueue` resource published under each Designated Dealer account.
         to_burn: Diem<CoinType>,
+    }
+
+    /// A queue of preburn requests. This is a FIFO queue whose elements
+    /// are indexed by the value held within each preburn resource in the
+    /// `preburns` field. When burning or cancelling a burn of a given
+    /// `amount`, the `Preburn` resource with with the smallest index in this
+    /// queue matching `amount` in its `to_burn` coin's `value` field will be
+    /// removed and its contents either (1) burned, or (2) returned
+    /// back to the holding DD's account balance. Every `Preburn` resource in
+    /// the `PreburnQueue` must have a nonzero coin value within it.
+    /// This resource can be created by either the TreasuryCompliance
+    /// account, or during the upgrade process, by a designated dealer with an
+    /// existing `Preburn` resource in `CoinType`
+    resource struct PreburnQueue<CoinType> {
+        /// The queue of preburn requests
+        preburns: vector<Preburn<CoinType>>,
+    }
+
+    spec struct PreburnQueue {
+        /// The number of outstanding preburn requests is bounded.
+        invariant len(preburns) <= MAX_OUTSTANDING_PREBURNS;
+        /// No preburn request can have a zero value.
+        /// The `value` field of any coin in a `Preburn` resource
+        /// within this field must be nonzero.
+        invariant forall i in 0..len(preburns): preburns[i].to_burn.value > 0;
     }
 
     /// Maximum u64 value.
@@ -198,6 +225,14 @@ module Diem {
     const EMINT_CAPABILITY: u64 = 9;
     /// A withdrawal greater than the value of the coin was attempted.
     const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 10;
+    /// A property expected of the `PreburnQueue` resource didn't hold.
+    const EPREBURN_QUEUE: u64 = 11;
+    /// A preburn with a matching amount in the preburn queue was not found.
+    const EPREBURN_NOT_FOUND: u64 = 12;
+
+    /// The maximum number of preburn requests that can be outstanding for a
+    /// given designated dealer/currency.
+    const MAX_OUTSTANDING_PREBURNS: u64 = 256;
 
     /// Initialization of the `Diem` module. Initializes the set of
     /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
@@ -270,24 +305,29 @@ module Diem {
         include MintEnsures<CoinType>;
     }
 
-    /// Burns the coins currently held in the `Preburn` resource held under `preburn_address`.
+    /// Burns the coins held in the first `Preburn` request in the `PreburnQueue`
+    /// resource held under `preburn_address` that is equal to `amount`.
     /// Calls to this functions will fail if the `account` does not have a
-    /// published `BurnCapability` for the `CoinType` published under it.
+    /// published `BurnCapability` for the `CoinType` published under it, or if
+    /// there is not a `Preburn` request in the `PreburnQueue` that does not
+    /// equal `amount`.
     public fun burn<CoinType>(
         account: &signer,
-        preburn_address: address
-    ) acquires BurnCapability, CurrencyInfo, Preburn {
+        preburn_address: address,
+        amount: u64,
+    ) acquires BurnCapability, CurrencyInfo, PreburnQueue {
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<CoinType>>(addr)
+            borrow_global<BurnCapability<CoinType>>(addr),
+            amount
         )
     }
     spec fun burn {
         include BurnAbortsIf<CoinType>;
         include BurnEnsures<CoinType>;
-        include BurnWithResourceCapEmits<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapEmits<CoinType>{preburn: spec_make_preburn(amount)};
     }
     spec schema BurnAbortsIf<CoinType> {
         account: signer;
@@ -295,44 +335,64 @@ module Diem {
 
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
-
-        include AbortsIfNoPreburn<CoinType>;
-        include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithCapabilityAbortsIf<CoinType>;
     }
     spec schema BurnEnsures<CoinType> {
         account: signer;
         preburn_address: address;
-
-        include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithCapabilityEnsures<CoinType>;
     }
-    spec schema AbortsIfNoPreburn<CoinType> {
+    spec schema AbortsIfNoPreburnQueue<CoinType> {
         preburn_address: address;
-        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
     }
 
-    /// Cancels the current burn request in the `Preburn` resource held
-    /// under the `preburn_address`, and returns the coins.
+    /// Cancels the `Preburn` request in the `PreburnQueue` resource held
+    /// under the `preburn_address` with a value equal to `amount`, and returns the coins.
     /// Calls to this will fail if the sender does not have a published
     /// `BurnCapability<CoinType>`, or if there is no preburn request
-    /// outstanding in the `Preburn` resource under `preburn_address`.
+    /// outstanding in the `PreburnQueue` resource under `preburn_address` with
+    /// a value equal to `amount`.
     public fun cancel_burn<CoinType>(
         account: &signer,
-        preburn_address: address
-    ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, Preburn {
+        preburn_address: address,
+        amount: u64,
+    ): Diem<CoinType> acquires BurnCapability, CurrencyInfo, PreburnQueue {
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
         cancel_burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<CoinType>>(addr)
+            borrow_global<BurnCapability<CoinType>>(addr),
+            amount,
         )
     }
     spec fun cancel_burn {
+        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        modifies global<PreburnQueue<CoinType>>(preburn_address);
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        include CancelBurnAbortsIf<CoinType>;
+        include CancelBurnWithCapEnsures<CoinType>;
+        include CancelBurnWithCapEmits<CoinType>;
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<PreburnQueue<CoinType>>(preburn_address);
+        ensures currency_info == update_field(
+            old(currency_info),
+            preburn_value,
+            currency_info.preburn_value
+        );
+        ensures result.value == amount;
+        ensures result.value > 0;
+    }
+
+    spec schema CancelBurnAbortsIf<CoinType> {
+        account: signer;
+        preburn_address: address;
+        amount: u64;
         /// Must abort if the account does not have the BurnCapability [[H3]][PERMISSION].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
         include CancelBurnWithCapAbortsIf<CoinType>;
-        include CancelBurnWithCapEnsures<CoinType>;
-        include CancelBurnWithCapEmits<CoinType>;
     }
+
 
     /// Mint a new `Diem` coin of `CoinType` currency worth `value`. The
     /// caller must have a reference to a `MintCapability<CoinType>`. Only
@@ -397,12 +457,13 @@ module Diem {
     }
 
     /// Add the `coin` to the `preburn.to_burn` field in the `Preburn` resource
-    /// held at the address `preburn_address` if it is empty, otherwise raise
-    /// a PendingPreburn Error (code 6). Emits a `PreburnEvent` to
-    /// the `preburn_events` event stream in the `CurrencyInfo` for the
-    /// `CoinType` passed in. However, if the currency being preburned has true
-    /// `is_synthetic` then no `PreburnEvent` event will be emitted.
-    public fun preburn_with_resource<CoinType>(
+    /// held in the preburn queue at the address `preburn_address` if it is
+    /// empty, otherwise raise a `EPREBURN_OCCUPIED` Error. Emits a
+    /// `PreburnEvent` to the `preburn_events` event stream in the
+    /// `CurrencyInfo` for the `CoinType` passed in. However, if the currency
+    /// being preburned is a synthetic currency (`is_synthetic = true`) then no
+    /// `PreburnEvent` will be emitted.
+    fun preburn_with_resource<CoinType>(
         coin: Diem<CoinType>,
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
@@ -431,6 +492,8 @@ module Diem {
         };
     }
     spec fun preburn_with_resource {
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
         include PreburnEnsures<CoinType>{amount: coin.value};
         include PreburnWithResourceEmits<CoinType>;
@@ -438,7 +501,7 @@ module Diem {
     spec schema PreburnWithResourceAbortsIf<CoinType> {
         amount: u64;
         preburn: Preburn<CoinType>;
-        aborts_if preburn.to_burn.value != 0 with Errors::INVALID_STATE;
+        aborts_if preburn.to_burn.value > 0 with Errors::INVALID_STATE;
         include PreburnAbortsIf<CoinType>;
     }
     spec schema PreburnAbortsIf<CoinType> {
@@ -470,7 +533,9 @@ module Diem {
     // Treasury Compliance specific methods for DDs
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Create a `Preburn<CoinType>` resource
+    /// Create a `Preburn<CoinType>` resource.
+    /// This is useful for places where a module needs to be able to burn coins
+    /// outside of a Designated Dealer, e.g., for transaction fees, or for the XDX reserve.
     public fun create_preburn<CoinType>(
         tc_account: &signer
     ): Preburn<CoinType> {
@@ -487,99 +552,336 @@ module Diem {
         include AbortsIfNoCurrency<CoinType>;
     }
 
-    /// Publishes a `Preburn` resource under `account`. This function is
+    /// Publish an empty `PreburnQueue` resource under the Designated Dealer
+    /// dealer account `account`.
+    fun publish_preburn_queue<CoinType>(
+        account: &signer
+    ) {
+        let account_addr = Signer::address_of(account);
+        Roles::assert_designated_dealer(account);
+        assert_is_currency<CoinType>();
+        assert(
+            !exists<Preburn<CoinType>>(account_addr),
+            Errors::invalid_state(EPREBURN)
+        );
+        assert(
+            !exists<PreburnQueue<CoinType>>(account_addr),
+            Errors::already_published(EPREBURN_QUEUE)
+        );
+        move_to(account, PreburnQueue<CoinType> {
+            preburns: Vector::empty()
+        })
+    }
+    spec fun publish_preburn_queue {
+        pragma opaque;
+        let account_addr = Signer::spec_address_of(account);
+        modifies global<PreburnQueue<CoinType>>(account_addr);
+        // the preburn queue cannot already exist
+        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with Errors::ALREADY_PUBLISHED;
+        // There cannot be a preburn resource published at the same time as a
+        // `PreburnQueue` resource of the same currency.
+        aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
+        include PublishPreburnQueueAbortsIf<CoinType>;
+        include PublishPreburnQueueEnsures<CoinType>;
+    }
+    spec schema PublishPreburnQueueAbortsIf<CoinType> {
+        account: signer;
+        include Roles::AbortsIfNotDesignatedDealer;
+        include AbortsIfNoCurrency<CoinType>;
+    }
+    spec schema PublishPreburnQueueEnsures<CoinType> {
+        account: signer;
+        let account_addr = Signer::spec_address_of(account);
+        let exists_preburn_queue = exists<PreburnQueue<CoinType>>(account_addr);
+        // The preburn queue is published at the end of this function,
+        ensures exists_preburn_queue;
+        // there cannot be a preburn resource for the same currency as the account,
+        ensures !exists<Preburn<CoinType>>(account_addr);
+        // and the preburn queue is empty
+        ensures Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) == 0;
+        ensures old(exists_preburn_queue) ==> exists_preburn_queue;
+    }
+
+    /// Publish a `Preburn` resource under `account`. This function is
     /// used for bootstrapping the designated dealer at account-creation
-    /// time, and the association TC account `creator` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
-    /// this resource for the designated dealer.
-    public fun publish_preburn_to_account<CoinType>(
+    /// time, and the association TC account `tc_account` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
+    /// this resource for the designated dealer `account`.
+    public fun publish_preburn_queue_to_account<CoinType>(
         account: &signer,
         tc_account: &signer
     ) acquires CurrencyInfo {
         Roles::assert_designated_dealer(account);
         Roles::assert_treasury_compliance(tc_account);
         assert(!is_synthetic_currency<CoinType>(), Errors::invalid_argument(EIS_SYNTHETIC_CURRENCY));
-        assert(!exists<Preburn<CoinType>>(Signer::address_of(account)), Errors::already_published(EPREBURN));
-        move_to(account, create_preburn<CoinType>(tc_account))
+        publish_preburn_queue<CoinType>(account)
     }
-    spec fun publish_preburn_to_account {
-        modifies global<Preburn<CoinType>>(Signer::spec_address_of(account));
+    spec fun publish_preburn_queue_to_account {
+        pragma opaque;
+        let account_addr = Signer::spec_address_of(account);
+        modifies global<PreburnQueue<CoinType>>(account_addr);
         /// The premission "PreburnCurrency" is granted to DesignatedDealer [[H4]][PERMISSION].
         /// Must abort if the account does not have the DesignatedDealer role.
         include Roles::AbortsIfNotDesignatedDealer;
-        /// Preburn is published under the DesignatedDealer account.
-        ensures exists<Preburn<CoinType>>(Signer::spec_address_of(account));
+        /// PreburnQueue is published under the DesignatedDealer account.
+        include PublishPreburnQueueAbortsIf<CoinType>;
+        include PublishPreburnQueueEnsures<CoinType>;
+        ensures exists<PreburnQueue<CoinType>>(account_addr);
 
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
         aborts_if is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
-        aborts_if exists<Preburn<CoinType>>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<PreburnQueue<CoinType>>(account_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
 
     }
 
     ///////////////////////////////////////////////////////////////////////////
 
+
+    /// Upgrade a designated dealer account from using a single `Preburn`
+    /// resource to using a `PreburnQueue` resource so that multiple preburn
+    /// requests can be outstanding in the same currency for a designated dealer.
+    fun upgrade_preburn<CoinType>(account: &signer)
+    acquires Preburn {
+        Roles::assert_designated_dealer(account);
+        let sender = Signer::address_of(account);
+        let preburn_exists = exists<Preburn<CoinType>>(sender);
+        let preburn_queue_exists = exists<PreburnQueue<CoinType>>(sender);
+        // The DD must already have an existing `Preburn` resource, and not a
+        // `PreburnQueue` resource already, in order to be upgraded.
+        if (preburn_exists && !preburn_queue_exists) {
+            let Preburn { to_burn } = move_from<Preburn<CoinType>>(sender);
+            destroy_zero(to_burn);
+            publish_preburn_queue<CoinType>(account);
+        }
+    }
+    spec fun upgrade_preburn {
+        let account_addr = Signer::spec_address_of(account);
+        modifies global<Preburn<CoinType>>(account_addr);
+        modifies global<PreburnQueue<CoinType>>(account_addr);
+        include UpgradePreburnAbortsIf<CoinType>;
+        include UpgradePreburnEnsures<CoinType>;
+    }
+    spec schema UpgradePreburnAbortsIf<CoinType> {
+        account: signer;
+        let account_addr = Signer::spec_address_of(account);
+        let preburn = global<Preburn<CoinType>>(account_addr);
+        let preburn_exists = exists<Preburn<CoinType>>(account_addr);
+        let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
+        aborts_if preburn_exists && !preburn_queue_exists && preburn.to_burn.value > 0 with Errors::INVALID_ARGUMENT;
+        /// Must abort if the account doesn't have the `PreburnQueue` or
+        /// `Preburn` resource to satisfy [[H4]][PERMISSION] of `preburn_to`.
+        include Roles::AbortsIfNotDesignatedDealer;
+        include (preburn_exists && !preburn_queue_exists) ==> PublishPreburnQueueAbortsIf<CoinType>;
+    }
+    spec schema UpgradePreburnEnsures<CoinType> {
+        account: signer;
+        let account_addr = Signer::spec_address_of(account);
+        let preburn_exists = exists<Preburn<CoinType>>(account_addr);
+        let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
+        include (preburn_exists && !preburn_queue_exists) ==> PublishPreburnQueueEnsures<CoinType>;
+    }
+
+    /// Add the `preburn` request to the preburn queue of `account`, and check that the
+    /// number of preburn requests does not exceed `MAX_OUTSTANDING_PREBURNS`.
+    fun add_preburn_to_queue<CoinType>(account: &signer, preburn: Preburn<CoinType>)
+    acquires PreburnQueue {
+        let account_addr = Signer::address_of(account);
+        assert(exists<PreburnQueue<CoinType>>(account_addr), Errors::invalid_state(EPREBURN_QUEUE));
+        assert(value(&preburn.to_burn) > 0, Errors::invalid_argument(EPREBURN));
+        let preburns = &mut borrow_global_mut<PreburnQueue<CoinType>>(account_addr).preburns;
+        assert(
+            Vector::length(preburns) < MAX_OUTSTANDING_PREBURNS,
+            Errors::limit_exceeded(EPREBURN_QUEUE)
+        );
+        Vector::push_back(preburns, preburn);
+    }
+    spec fun add_preburn_to_queue {
+        pragma opaque;
+        let account_addr = Signer::spec_address_of(account);
+        let preburns = global<PreburnQueue<CoinType>>(account_addr).preburns;
+        modifies global<PreburnQueue<CoinType>>(account_addr);
+        aborts_if !exists<PreburnQueue<CoinType>>(account_addr) with Errors::INVALID_STATE;
+        include AddPreburnToQueueAbortsIf<CoinType>;
+        ensures exists<PreburnQueue<CoinType>>(account_addr) ==>
+            Vector::eq_push_back(preburns, old(preburns), preburn);
+        ensures !exists<PreburnQueue<CoinType>>(account_addr) ==>
+            preburns == Vector::spec_singleton(preburn);
+    }
+    spec schema AddPreburnToQueueAbortsIf<CoinType> {
+        account: signer;
+        preburn: Preburn<CoinType>;
+        let account_addr = Signer::spec_address_of(account);
+        aborts_if preburn.to_burn.value == 0 with Errors::INVALID_ARGUMENT;
+        aborts_if exists<PreburnQueue<CoinType>>(account_addr) &&
+            Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) >= MAX_OUTSTANDING_PREBURNS
+            with Errors::LIMIT_EXCEEDED;
+    }
+
     /// Sends `coin` to the preburn queue for `account`, where it will wait to either be burned
     /// or returned to the balance of `account`.
-    /// Calls to this function will fail if `account` does not have a
-    /// `Preburn<CoinType>` resource published under it.
+    /// Calls to this function will fail if:
+    /// * `account` does not have a `PreburnQueue<CoinType>` resource published under it; or
+    /// * the preburn queue is already at capacity (i.e., at `MAX_OUTSTANDING_PREBURNS`); or
+    /// * `coin` has a `value` field of zero.
     public fun preburn_to<CoinType>(
         account: &signer,
         coin: Diem<CoinType>
-    ) acquires CurrencyInfo, Preburn {
+    ) acquires CurrencyInfo, Preburn, PreburnQueue {
         Roles::assert_designated_dealer(account);
+        // any coin that is preburned needs to have a nonzero value
+        assert(value(&coin) > 0, Errors::invalid_argument(ECOIN));
         let sender = Signer::address_of(account);
-        assert(exists<Preburn<CoinType>>(sender), Errors::not_published(EPREBURN));
-        preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
+        // After an upgrade a `Preburn` resource no longer exists in this
+        // currency, and it is replaced with a `PreburnQueue` resource
+        // for the same currency.
+        upgrade_preburn<CoinType>(account);
+
+        let preburn = Preburn {
+            to_burn: zero<CoinType>(),
+        };
+        preburn_with_resource(coin, &mut preburn, sender);
+        add_preburn_to_queue(account, preburn);
     }
     spec fun preburn_to {
-        let preburn = global<Preburn<CoinType>>(Signer::spec_address_of(account));
+        pragma opaque;
+        let account_addr = Signer::spec_address_of(account);
+        // Removes the preburn resource if it exists
+        modifies global<Preburn<CoinType>>(account_addr);
+        // Publishes if it doesn't exists. Updates its state either way.
+        modifies global<PreburnQueue<CoinType>>(account_addr);
+        // The preburn amount in the currency info can be updated.
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
-        include PreburnEnsures<CoinType>{preburn: preburn, amount: coin.value};
+        include PreburnEnsures<CoinType>{preburn: spec_make_preburn(coin.value), amount: coin.value};
         include PreburnWithResourceEmits<CoinType>{preburn_address: Signer::spec_address_of(account)};
     }
-
     spec schema PreburnToAbortsIf<CoinType> {
         account: signer;
         amount: u64;
         let account_addr = Signer::spec_address_of(account);
-        let preburn = global<Preburn<CoinType>>(account_addr);
-        /// Must abort if the account does have the Preburn resource [[H4]][PERMISSION].
+        /// Must abort if the account doesn't have the PreburnQueue or Preburn resource [[H4]][PERMISSION].
+        /// This aborts condition is covered in the `UpgradePreburnAbortsIf` schema.
         include Roles::AbortsIfNotDesignatedDealer;
-        include AbortsIfNoPreburn<CoinType>{preburn_address: account_addr};
-        include PreburnWithResourceAbortsIf<CoinType>{preburn: preburn};
+        include PreburnAbortsIf<CoinType>;
+        include UpgradePreburnAbortsIf<CoinType>;
+        include AddPreburnToQueueAbortsIf<CoinType>{preburn: spec_make_preburn(amount)};
     }
 
-    /// Permanently removes the coins held in the `Preburn` resource (in `to_burn` field)
-    /// stored at `preburn_address` and updates the market cap accordingly.
+    /// Remove the oldest preburn request in the `PreburnQueue<CoinType>`
+    /// resource published under `preburn_address` whose value is equal to `amount`.
+    /// Calls to this function will fail if:
+    /// * `preburn_address` doesn't have a `PreburnQueue<CoinType>` resource published under it; or
+    /// * a preburn request with the correct value for `amount` cannot be found in the preburn queue for `preburn_address`;
+    fun remove_preburn_from_queue<CoinType>(preburn_address: address, amount: u64): Preburn<CoinType>
+    acquires PreburnQueue {
+        assert(exists<PreburnQueue<CoinType>>(preburn_address), Errors::not_published(EPREBURN_QUEUE));
+        // We search from the head of the queue
+        let index = 0;
+        let preburn_queue = &mut borrow_global_mut<PreburnQueue<CoinType>>(preburn_address).preburns;
+        let queue_length = Vector::length(preburn_queue);
+
+        while ({
+            spec {
+                assert index <= queue_length;
+                assert forall j in 0..index: preburn_queue[j].to_burn.value != amount;
+            };
+            (index < queue_length)
+            }) {
+            let elem = Vector::borrow(preburn_queue, index);
+            if (value(&elem.to_burn) == amount) {
+                let preburn = Vector::remove(preburn_queue, index);
+                // Make sure that the value is correct
+                return preburn
+            };
+            index = index + 1;
+        };
+
+        spec {
+            assert index == queue_length;
+            assert forall j in 0..queue_length: preburn_queue[j] != spec_make_preburn(amount);
+        };
+
+        // If we didn't return already, we couldn't find a preburn with a matching value.
+        abort Errors::invalid_state(EPREBURN_NOT_FOUND)
+    }
+    spec fun remove_preburn_from_queue {
+        // TODO: re-enable once loop invariants are implemented
+        pragma verify = false;
+        pragma opaque;
+        modifies global<PreburnQueue<CoinType>>(preburn_address);
+        include RemovePreburnFromQueueAbortsIf<CoinType>;
+        include RemovePreburnFromQueueEnsures<CoinType>;
+        ensures result.to_burn.value == amount;
+    }
+    spec schema RemovePreburnFromQueueAbortsIf<CoinType> {
+        preburn_address: address;
+        amount: u64;
+        let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
+        let preburn = Preburn { to_burn: Diem { value: amount }};
+        aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        aborts_if !Vector::spec_contains(preburn_queue, preburn) with Errors::INVALID_STATE;
+    }
+    /// > TODO: See this cannot currently be expressed in the MSL.
+    /// > See https://github.com/diem/diem/issues/7615 for more information.
+    spec schema RemovePreburnFromQueueEnsures<CoinType> {
+        preburn_address: address;
+        amount: u64;
+        let exists_preburn_queue = exists<PreburnQueue<CoinType>>(preburn_address);
+        ensures old(exists_preburn_queue) ==> exists_preburn_queue;
+        // let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
+        // let preburn = Preburn { to_burn: Diem { value: amount }};
+        // let (found, index) = Vector::index_of(preburn_queue, preburn);
+        // ensures found ==> Vector::eq_remove_elem_at_index(index, preburn_queue, old(preburn_queue));
+    }
+
+    /// Permanently removes the coins in the oldest preburn request in the
+    /// `PreburnQueue` resource under `preburn_address` that has a `to_burn`
+    /// value of `amount` and updates the market cap accordingly.
     /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
-    /// Calls to this function will fail if the there is no `Preburn<CoinType>`
-    /// resource under `preburn_address`, or, if the `preburn.to_burn` area for
-    /// `CoinType` is empty.
+    /// Calls to this function will fail if the there is no `PreburnQueue<CoinType>`
+    /// resource under `preburn_address`, or, if there is no preburn request in
+    /// the preburn queue with a `to_burn` amount equal to `amount`.
     public fun burn_with_capability<CoinType>(
         preburn_address: address,
-        capability: &BurnCapability<CoinType>
-    ) acquires CurrencyInfo, Preburn {
-        // destroy the coin in the preburn to_burn area
-        assert(exists<Preburn<CoinType>>(preburn_address), Errors::not_published(EPREBURN));
-        burn_with_resource_cap(
-            borrow_global_mut<Preburn<CoinType>>(preburn_address),
-            preburn_address,
-            capability
-        )
+        capability: &BurnCapability<CoinType>,
+        amount: u64,
+    ) acquires CurrencyInfo, PreburnQueue {
+
+        // Remove the preburn request
+        let preburn = remove_preburn_from_queue<CoinType>(preburn_address, amount);
+
+        // Burn the contained coins
+        burn_with_resource_cap(&mut preburn, preburn_address, capability);
+
+        let Preburn { to_burn } = preburn;
+        destroy_zero(to_burn);
     }
     spec fun burn_with_capability {
-        include AbortsIfNoPreburn<CoinType>;
-        include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
-        include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
-        include BurnWithResourceCapEmits<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapEmits<CoinType>{preburn: spec_make_preburn(amount)};
+        include BurnWithCapabilityAbortsIf<CoinType>;
+        include BurnWithCapabilityEnsures<CoinType>;
+    }
+    spec schema BurnWithCapabilityAbortsIf<CoinType> {
+        preburn_address: address;
+        amount: u64;
+        let preburn = spec_make_preburn(amount);
+        include AbortsIfNoPreburnQueue<CoinType>;
+        include RemovePreburnFromQueueAbortsIf<CoinType>;
+        include BurnWithResourceCapAbortsIf<CoinType>{preburn: preburn};
+    }
+    spec schema BurnWithCapabilityEnsures<CoinType> {
+        preburn_address: address;
+        amount: u64;
+        let preburn = spec_make_preburn(amount);
+        include BurnWithResourceCapEnsures<CoinType>{preburn: preburn};
+        include RemovePreburnFromQueueEnsures<CoinType>;
     }
 
     /// Permanently removes the coins held in the `Preburn` resource (in `to_burn` field)
-    /// stored at `preburn_address` and updates the market cap accordingly.
+    /// that was stored in a `PreburnQueue` at `preburn_address` and updates the market cap accordingly.
     /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
-    /// Calls to this function will fail if the there is no `Preburn<CoinType>`
-    /// resource under `preburn_address`, or, if the preburn `to_burn` area for
-    /// `CoinType` is empty (error code 7).
+    /// Calls to this function will fail if the preburn `to_burn` area for `CoinType` is empty.
     fun burn_with_resource_cap<CoinType>(
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
@@ -645,23 +947,23 @@ module Diem {
             to handle if !info.is_synthetic;
     }
 
-    /// Cancels the burn request in the `Preburn` resource stored at `preburn_address` and
-    /// return the coins to the caller.
+    /// Cancels the oldest preburn request held in the `PreburnQueue` resource under
+    /// `preburn_address` with a `to_burn` amount matching `amount`. It then returns these coins to the caller.
     /// This function can only be called by the holder of a
-    /// `BurnCapability<CoinType>`, and will fail if the `Preburn<CoinType>` resource
-    /// at `preburn_address` does not contain a pending burn request.
+    /// `BurnCapability<CoinType>`, and will fail if the `PreburnQueue<CoinType>` resource
+    /// at `preburn_address` does not contain a preburn request of the right amount.
     public fun cancel_burn_with_capability<CoinType>(
         preburn_address: address,
-        _capability: &BurnCapability<CoinType>
-    ): Diem<CoinType> acquires CurrencyInfo, Preburn {
+        _capability: &BurnCapability<CoinType>,
+        amount: u64,
+    ): Diem<CoinType> acquires CurrencyInfo, PreburnQueue {
+
         // destroy the coin in the preburn area
-        assert(exists<Preburn<CoinType>>(preburn_address), Errors::not_published(EPREBURN));
-        let preburn = borrow_global_mut<Preburn<CoinType>>(preburn_address);
-        let coin = withdraw_all<CoinType>(&mut preburn.to_burn);
+        let Preburn { to_burn } = remove_preburn_from_queue<CoinType>(preburn_address, amount);
+
         // update the market cap
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let amount = value(&coin);
         assert(info.preburn_value >= amount, Errors::limit_exceeded(EPREBURN));
         info.preburn_value = info.preburn_value - amount;
         // Don't emit cancel burn events for synthetic currencies. cancel_burn
@@ -677,36 +979,41 @@ module Diem {
             );
         };
 
-        coin
+        to_burn
     }
     spec fun cancel_burn_with_capability {
+        modifies global<PreburnQueue<CoinType>>(preburn_address);
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include CancelBurnWithCapAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
         include CancelBurnWithCapEmits<CoinType>;
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures result.value == amount;
+        ensures result.value > 0;
     }
     spec schema CancelBurnWithCapAbortsIf<CoinType> {
         preburn_address: address;
+        amount: u64;
         let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        let amount = global<Preburn<CoinType>>(preburn_address).to_burn.value;
-        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
         include AbortsIfNoCurrency<CoinType>;
+        include RemovePreburnFromQueueAbortsIf<CoinType>;
         aborts_if info.preburn_value < amount with Errors::LIMIT_EXCEEDED;
     }
     spec schema CancelBurnWithCapEnsures<CoinType> {
         preburn_address: address;
-        let preburn_value = global<Preburn<CoinType>>(preburn_address).to_burn.value;
-        let total_preburn_value =
-            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value;
-        ensures preburn_value == 0;
-        ensures total_preburn_value == old(total_preburn_value) - old(preburn_value);
+        amount: u64;
+        include RemovePreburnFromQueueEnsures<CoinType>;
+        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures info == update_field(old(info), preburn_value, old(info.preburn_value) - amount);
     }
     spec schema CancelBurnWithCapEmits<CoinType> {
         preburn_address: address;
-        let info = spec_currency_info<CoinType>();
+        amount: u64;
+        let info = TRACE(spec_currency_info<CoinType>());
         let currency_code = spec_currency_code<CoinType>();
         let handle = info.cancel_burn_events;
         emits CancelBurnEvent {
-               amount: old(global<Preburn<CoinType>>(preburn_address).to_burn.value),
+               amount,
                currency_code,
                preburn_address,
            }
@@ -727,11 +1034,11 @@ module Diem {
     }
     spec fun burn_now {
         include BurnNowAbortsIf<CoinType>;
-        ensures preburn.to_burn.value == 0;
         let info = spec_currency_info<CoinType>();
-        ensures info.total_value == old(info.total_value) - coin.value;
         include PreburnWithResourceEmits<CoinType>{coin: coin, preburn_address: preburn_address};
         include BurnWithResourceCapEmits<CoinType>{preburn: Preburn<CoinType>{to_burn: coin}};
+        ensures preburn.to_burn.value == 0;
+        ensures info == update_field(old(info), total_value, old(info.total_value) - coin.value);
     }
     spec schema BurnNowAbortsIf<CoinType> {
         coin: Diem<CoinType>;
@@ -1159,6 +1466,12 @@ module Diem {
         assert_is_currency<CoinType>();
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
     }
+    spec fun xdx_exchange_rate {
+        pragma opaque;
+        include AbortsIfNoCurrency<CoinType>;
+        let info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures result == info.to_xdx_exchange_rate;
+    }
 
     /// There may be situations in which we disallow the further minting of
     /// coins in the system without removing the currency. This function
@@ -1347,17 +1660,20 @@ module Diem {
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().preburn_value >= old(spec_currency_info<CoinType>().preburn_value);
     }
-    spec schema PreservePreburnExistence<CoinType> {
-        /// The existence of Preburn is preserved.
+    spec schema PreservePreburnQueueExistence<CoinType> {
+        /// The existence of the `PreburnQueue` resource is preserved.
         ensures forall addr: address:
-            old(exists<Preburn<CoinType>>(addr)) ==>
-                exists<Preburn<CoinType>>(addr);
+            old(exists<PreburnQueue<CoinType>>(addr)) ==>
+                exists<PreburnQueue<CoinType>>(addr);
     }
-    spec schema PreservePreburnAbsence<CoinType> {
-        /// The absence of Preburn is preserved.
+    spec schema PreservePreburnQueueAbsence<CoinType> {
+        /// The absence of a `PreburnQueue` is preserved.
+        /// > NB: As part of the upgrade process, we also tie this in with the
+        ///       non-existence of a `Preburn` resource as well. Once the upgrade
+        ///       process is complete this additional existence check can be removed.
         ensures forall addr: address:
-            old(!exists<Preburn<CoinType>>(addr)) ==>
-                !exists<Preburn<CoinType>>(addr);
+            old(!(exists<PreburnQueue<CoinType>>(addr) || exists<Preburn<CoinType>>(addr))) ==>
+                !exists<PreburnQueue<CoinType>>(addr);
     }
 
     spec module {
@@ -1371,30 +1687,62 @@ module Diem {
             except preburn_to<CoinType>, preburn_with_resource<CoinType>;
 
         /// In order to successfully call the preburn functions, Preburn is required. Preburn must
-        /// be only granted to a DesignatedDealer account [[H4]][PERMISSION]. Only `publish_preburn_to_account`
-        /// publishes Preburn, which must abort if the account does not have the DesignatedDealer role [[H4]][PERMISSION].
-        apply Roles::AbortsIfNotDesignatedDealer to publish_preburn_to_account<CoinType>;
-        apply PreservePreburnAbsence<CoinType> to *<CoinType> except publish_preburn_to_account<CoinType>;
+        /// be only granted to a DesignatedDealer account [[H4]][PERMISSION]. Only `publish_preburn_queue_to_account` and `publish_preburn_queue`
+        /// publishes `PreburnQueue`, which must abort if the account does not have the DesignatedDealer role [[H4]][PERMISSION].
+        apply Roles::AbortsIfNotDesignatedDealer to publish_preburn_queue<CoinType>, publish_preburn_queue_to_account<CoinType>;
+        apply PreservePreburnQueueAbsence<CoinType> to *<CoinType> except
+            publish_preburn_queue<CoinType>,
+            publish_preburn_queue_to_account<CoinType>;
 
-        /// Only DesignatedDealer can have Preburn [[H3]][PERMISSION].
-        /// If an account has Preburn, it is a DesignatedDealer account.
+        /// Only DesignatedDealer can have PreburnQueue [[H3]][PERMISSION].
+        /// If an account has PreburnQueue, it is a DesignatedDealer account.
+        /// > NB: during the transition this holds for both `Preburn` and `PreburnQueue` resources.
         invariant [global] forall coin_type: type:
             forall addr1: address:
-                exists<Preburn<coin_type>>(addr1) ==>
+                exists<PreburnQueue<coin_type>>(addr1) || exists<Preburn<coin_type>>(addr1) ==>
                     Roles::spec_has_designated_dealer_role_addr(addr1);
 
+        /// If there is a preburn resource published, it must have a value of zero.
+        /// If there is a preburn resource published, there cannot also be a
+        /// `PreburnQueue` resource published under that same account for the
+        /// same currency.
+        /// > NB: This invariant is part of the upgrade process, eventually
+        ///       this will be removed once all DD's have been upgraded to
+        ///       using the `PreburnQueue`.
+        invariant [global] forall coin_type: type, dd_addr: address
+            where exists<Preburn<coin_type>>(dd_addr):
+                global<Preburn<coin_type>>(dd_addr).to_burn.value == 0 &&
+                !exists<PreburnQueue<coin_type>>(dd_addr);
+
+        /// If there is a `PreburnQueue` resource published, then there cannot
+        /// also be a `Preburn` resource for that same currency published under
+        /// the same address.
+        invariant [global] forall coin_type: type, dd_addr: address
+            where exists<PreburnQueue<coin_type>>(dd_addr):
+                !exists<Preburn<coin_type>>(dd_addr);
+
+        /// A `Preburn` resource can only be published holding a currency type.
+        invariant [global] forall addr: address, coin_type: type
+            where exists<Preburn<coin_type>>(addr):
+            spec_is_currency<coin_type>();
+
+        /// A `PreburnQueue` resource can only be published holding a currency type.
+        invariant [global] forall addr: address, coin_type: type
+            where exists<PreburnQueue<coin_type>>(addr):
+            spec_is_currency<coin_type>();
+
         /// Preburn is not transferrable [[J4]][PERMISSION].
-        apply PreservePreburnExistence<CoinType> to *<CoinType>;
+        apply PreservePreburnQueueExistence<CoinType> to *<CoinType>;
 
         /// resource struct `CurrencyInfo` is persistent
         invariant update [global] forall coin_type: type, dr_addr: address
             where old(exists<CurrencyInfo<coin_type>>(dr_addr)):
                 exists<CurrencyInfo<coin_type>>(dr_addr);
 
-        /// resource struct `Preburn<CoinType>` is persistent
+        /// resource struct `PreburnQueue<CoinType>` is persistent
         invariant update [global] forall coin_type: type, tc_addr: address
-            where old(exists<Preburn<coin_type>>(tc_addr)):
-                exists<Preburn<coin_type>>(tc_addr);
+            where old(exists<PreburnQueue<coin_type>>(tc_addr)):
+                exists<PreburnQueue<coin_type>>(tc_addr);
 
         /// resource struct `MintCapability<CoinType>` is persistent
         invariant update [global] forall coin_type: type, tc_addr: address
@@ -1450,6 +1798,11 @@ module Diem {
         /// Returns true if a BurnCapability for CoinType exists at addr.
         define spec_has_burn_capability<CoinType>(addr: address): bool {
             exists<BurnCapability<CoinType>>(addr)
+        }
+
+        /// Returns the Preburn in the preburn queue.
+        define spec_make_preburn<CoinType>(amount: u64): Preburn<CoinType> {
+            Preburn { to_burn: Diem { value: amount }}
         }
     }
 

@@ -51,7 +51,7 @@ Changed resource(s) under 3 address(es):
     Added type 0x1::AccountFreezing::FreezingBit: [0]
     Added type 0x1::DesignatedDealer::Dealer: [0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
     Added type 0x1::DesignatedDealer::TierInfo<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 136, 82, 106, 116, 0, 0, 0, 0, 80, 57, 39, 140, 4, 0, 0, 0, 32, 61, 136, 121, 45, 0, 0, 0, 64, 99, 82, 191, 198, 1, 0]
-    Added type 0x1::Diem::Preburn<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0]
+    Added type 0x1::Diem::PreburnQueue<0x1::XUS::XUS>: [0]
     Added type 0x1::DiemAccount::Balance<0x1::XDX::XDX>: [0, 0, 0, 0, 0, 0, 0, 0]
     Added type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0]
     Added type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0, 0, 0, 0, 24, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0, 0, 0, 0]

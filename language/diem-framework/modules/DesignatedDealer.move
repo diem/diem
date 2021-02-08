@@ -26,7 +26,7 @@ module DesignatedDealer {
 
     /// The `TierInfo` resource holds the information needed to track which
     /// tier a mint to a DD needs to be in.
-    // Preburn published at top level in Diem.move
+    // PreburnQueue published at top level in Diem.move
     resource struct TierInfo<CoinType> {
         /// Time window start in microseconds
         window_start: u64,
@@ -83,8 +83,8 @@ module DesignatedDealer {
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Publishes a `Dealer` resource under `dd` with a `TierInfo`, `Preburn`, and default tiers for `CoinType`.
-    /// If `add_all_currencies = true` this will add a `TierInfo`, `Preburn`,
+    /// Publishes a `Dealer` resource under `dd` with a `TierInfo`, `PreburnQueue`, and default tiers for `CoinType`.
+    /// If `add_all_currencies = true` this will add a `TierInfo`, `PreburnQueue`,
     /// and default tiers for each known currency at launch.
     public fun publish_designated_dealer_credential<CoinType>(
         dd: &signer,
@@ -130,7 +130,7 @@ module DesignatedDealer {
         Roles::assert_treasury_compliance(tc_account);
         let dd_addr = Signer::address_of(dd);
         assert(exists_at(dd_addr), Errors::not_published(EDEALER));
-        Diem::publish_preburn_to_account<CoinType>(dd, tc_account);
+        Diem::publish_preburn_queue_to_account<CoinType>(dd, tc_account);
         assert(!exists<TierInfo<CoinType>>(dd_addr), Errors::already_published(EDEALER));
         move_to(dd, TierInfo<CoinType> {
             window_start: DiemTimestamp::now_microseconds(),
@@ -154,7 +154,7 @@ module DesignatedDealer {
         include AbortsIfNoDealer{dd_addr: dd_addr};
         include AddCurrencyAbortsIf<CoinType>{dd_addr: dd_addr};
 
-        modifies global<Diem::Preburn<CoinType>>(dd_addr);
+        modifies global<Diem::PreburnQueue<CoinType>>(dd_addr);
         modifies global<TierInfo<CoinType>>(dd_addr);
         ensures exists<TierInfo<CoinType>>(dd_addr);
         ensures global<TierInfo<CoinType>>(dd_addr) ==
@@ -170,7 +170,8 @@ module DesignatedDealer {
         aborts_if exists<TierInfo<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
         include Diem::AbortsIfNoCurrency<CoinType>;
         aborts_if Diem::is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
-        aborts_if exists<Diem::Preburn<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Diem::PreburnQueue<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<Diem::Preburn<CoinType>>(dd_addr) with Errors::INVALID_STATE;
         include DiemTimestamp::AbortsIfNotOperating;
     }
 

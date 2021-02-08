@@ -947,7 +947,7 @@ Helper which returns true if dual attestion is required for a deposit.
 
 
 
-<pre><code><b>pragma</b> opaque = <b>true</b>;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_DualAttestationRequiredAbortsIf">DualAttestationRequiredAbortsIf</a>&lt;Token&gt;;
 <b>ensures</b> result == <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
 </code></pre>

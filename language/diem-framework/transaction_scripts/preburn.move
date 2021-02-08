@@ -71,6 +71,6 @@ spec fun preburn {
 
     /// **Access Control:**
     /// Only the account with a preburn area can preburn [[H4]][PERMISSION].
-    include Diem::AbortsIfNoPreburn<Token>{preburn_address: account_addr};
+    include Diem::AbortsIfNoPreburnQueue<Token>{preburn_address: account_addr};
 }
 }

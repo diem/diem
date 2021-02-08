@@ -3,10 +3,12 @@ use 0x1::Diem;
 use 0x1::SlidingNonce;
 
 /// # Summary
-/// Burns all coins held in the preburn resource at the specified
-/// preburn address and removes them from the system. The sending account must
-/// be the Treasury Compliance account.
-/// The account that holds the preburn resource will normally be a Designated
+/// Burns the coins held in a preburn resource in the preburn queue at the
+/// specified preburn address, which are equal to the `amount` specified in the
+/// transaction. Finds the first relevant outstanding preburn request with
+/// matching amount and removes the contained coins from the system. The sending
+/// account must be the Treasury Compliance account.
+/// The account that holds the preburn queue resource will normally be a Designated
 /// Dealer, but there are no enforced requirements that it be one.
 ///
 /// # Technical Description
@@ -35,29 +37,30 @@ use 0x1::SlidingNonce;
 /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
 /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
 /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+/// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
 ///
 /// # Common Abort Conditions
-/// | Error Category                | Error Reason                            | Description                                                                                           |
-/// | ----------------              | --------------                          | -------------                                                                                         |
-/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                           |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
-/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
+/// | Error Category                | Error Reason                            | Description                                                                                                                         |
+/// | ----------------              | --------------                          | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
 ///
 /// # Related Scripts
 /// * `Script::burn_txn_fees`
 /// * `Script::cancel_burn`
 /// * `Script::preburn`
 
-fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) {
+fun burn_with_amount<Token>(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-    Diem::burn<Token>(account, preburn_address)
+    Diem::burn<Token>(account, preburn_address, amount)
 }
-spec fun burn {
+spec fun burn_with_amount {
     use 0x1::Errors;
     use 0x1::DiemAccount;
 

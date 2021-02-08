@@ -158,62 +158,6 @@ pub enum ScriptCall {
     },
 
     /// # Summary
-    /// Burns all coins held in the preburn resource at the specified
-    /// preburn address and removes them from the system. The sending account must
-    /// be the Treasury Compliance account.
-    /// The account that holds the preburn resource will normally be a Designated
-    /// Dealer, but there are no enforced requirements that it be one.
-    ///
-    /// # Technical Description
-    /// This transaction permanently destroys all the coins of `Token` type
-    /// stored in the `Diem::Preburn<Token>` resource published under the
-    /// `preburn_address` account address.
-    ///
-    /// This transaction will only succeed if the sending `account` has a
-    /// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
-    /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
-    /// of this transaction the `total_value` field in the
-    /// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
-    /// decremented by the value of the `to_burn` field of the preburn resource
-    /// under `preburn_address` immediately before this transaction, and the
-    /// `to_burn` field of the preburn resource will have a zero value.
-    ///
-    /// ## Events
-    /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
-    /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
-    /// `0xA550C18`.
-    ///
-    /// # Parameters
-    /// | Name              | Type      | Description                                                                                                                  |
-    /// | ------            | ------    | -------------                                                                                                                |
-    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                            | Description                                                                                           |
-    /// | ----------------              | --------------                          | -------------                                                                                         |
-    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                           |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
-    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
-    ///
-    /// # Related Scripts
-    /// * `Script::burn_txn_fees`
-    /// * `Script::cancel_burn`
-    /// * `Script::preburn`
-    Burn {
-        token: TypeTag,
-        sliding_nonce: u64,
-        preburn_address: AccountAddress,
-    },
-
-    /// # Summary
     /// Burns the transaction fees collected in the `CoinType` currency so that the
     /// Diem association may reclaim the backing coins off-chain. May only be sent
     /// by the Treasury Compliance account.
@@ -251,8 +195,69 @@ pub enum ScriptCall {
     BurnTxnFees { coin_type: TypeTag },
 
     /// # Summary
-    /// Cancels and returns all coins held in the preburn area under
-    /// `preburn_address` and returns the funds to the `preburn_address`'s balance.
+    /// Burns the coins held in a preburn resource in the preburn queue at the
+    /// specified preburn address, which are equal to the `amount` specified in the
+    /// transaction. Finds the first relevant outstanding preburn request with
+    /// matching amount and removes the contained coins from the system. The sending
+    /// account must be the Treasury Compliance account.
+    /// The account that holds the preburn queue resource will normally be a Designated
+    /// Dealer, but there are no enforced requirements that it be one.
+    ///
+    /// # Technical Description
+    /// This transaction permanently destroys all the coins of `Token` type
+    /// stored in the `Diem::Preburn<Token>` resource published under the
+    /// `preburn_address` account address.
+    ///
+    /// This transaction will only succeed if the sending `account` has a
+    /// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+    /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+    /// of this transaction the `total_value` field in the
+    /// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+    /// decremented by the value of the `to_burn` field of the preburn resource
+    /// under `preburn_address` immediately before this transaction, and the
+    /// `to_burn` field of the preburn resource will have a zero value.
+    ///
+    /// ## Events
+    /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+    /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+    /// `0xA550C18`.
+    ///
+    /// # Parameters
+    /// | Name              | Type      | Description                                                                                                                  |
+    /// | ------            | ------    | -------------                                                                                                                |
+    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+    /// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category                | Error Reason                            | Description                                                                                                                         |
+    /// | ----------------              | --------------                          | -------------                                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
+    ///
+    /// # Related Scripts
+    /// * `Script::burn_txn_fees`
+    /// * `Script::cancel_burn`
+    /// * `Script::preburn`
+    BurnWithAmount {
+        token: TypeTag,
+        sliding_nonce: u64,
+        preburn_address: AccountAddress,
+        amount: u64,
+    },
+
+    /// # Summary
+    /// Cancels and returns the coins held in the preburn area under
+    /// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
+    /// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
     /// Can only be successfully sent by an account with Treasury Compliance role.
     ///
     /// # Technical Description
@@ -280,25 +285,27 @@ pub enum ScriptCall {
     /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
     /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
     /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
+    /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
     ///
     /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                                     | Description                                                                                           |
-    /// | ----------------              | --------------                                   | -------------                                                                                         |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                        | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                                | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                          | The specified `Token` is not a registered currency on-chain.                                          |
-    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | The value held in the preburn resource was zero.                                                      |
-    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | The account at `preburn_address` doesn't have a balance resource for `Token`.                         |
-    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.      |
-    /// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.     |
+    /// | Error Category                | Error Reason                                     | Description                                                                                                                         |
+    /// | ----------------              | --------------                                   | -------------                                                                                                                       |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
+    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
+    /// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
     ///
     /// # Related Scripts
     /// * `Script::burn_txn_fees`
     /// * `Script::burn`
     /// * `Script::preburn`
-    CancelBurn {
+    CancelBurnWithAmount {
         token: TypeTag,
         preburn_address: AccountAddress,
+        amount: u64,
     },
 
     /// # Summary
@@ -1449,16 +1456,18 @@ impl ScriptCall {
                 validator_name,
                 validator_address,
             ),
-            Burn {
+            BurnTxnFees { coin_type } => encode_burn_txn_fees_script(coin_type),
+            BurnWithAmount {
                 token,
                 sliding_nonce,
                 preburn_address,
-            } => encode_burn_script(token, sliding_nonce, preburn_address),
-            BurnTxnFees { coin_type } => encode_burn_txn_fees_script(coin_type),
-            CancelBurn {
+                amount,
+            } => encode_burn_with_amount_script(token, sliding_nonce, preburn_address, amount),
+            CancelBurnWithAmount {
                 token,
                 preburn_address,
-            } => encode_cancel_burn_script(token, preburn_address),
+                amount,
+            } => encode_cancel_burn_with_amount_script(token, preburn_address, amount),
             CreateChildVaspAccount {
                 coin_type,
                 child_address,
@@ -1814,71 +1823,6 @@ pub fn encode_add_validator_and_reconfigure_script(
 }
 
 /// # Summary
-/// Burns all coins held in the preburn resource at the specified
-/// preburn address and removes them from the system. The sending account must
-/// be the Treasury Compliance account.
-/// The account that holds the preburn resource will normally be a Designated
-/// Dealer, but there are no enforced requirements that it be one.
-///
-/// # Technical Description
-/// This transaction permanently destroys all the coins of `Token` type
-/// stored in the `Diem::Preburn<Token>` resource published under the
-/// `preburn_address` account address.
-///
-/// This transaction will only succeed if the sending `account` has a
-/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
-/// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
-/// of this transaction the `total_value` field in the
-/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
-/// decremented by the value of the `to_burn` field of the preburn resource
-/// under `preburn_address` immediately before this transaction, and the
-/// `to_burn` field of the preburn resource will have a zero value.
-///
-/// ## Events
-/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
-/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
-/// `0xA550C18`.
-///
-/// # Parameters
-/// | Name              | Type      | Description                                                                                                                  |
-/// | ------            | ------    | -------------                                                                                                                |
-/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-///
-/// # Common Abort Conditions
-/// | Error Category                | Error Reason                            | Description                                                                                           |
-/// | ----------------              | --------------                          | -------------                                                                                         |
-/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                           |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
-/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
-///
-/// # Related Scripts
-/// * `Script::burn_txn_fees`
-/// * `Script::cancel_burn`
-/// * `Script::preburn`
-pub fn encode_burn_script(
-    token: TypeTag,
-    sliding_nonce: u64,
-    preburn_address: AccountAddress,
-) -> Script {
-    Script::new(
-        BURN_CODE.to_vec(),
-        vec![token],
-        vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(preburn_address),
-        ],
-    )
-}
-
-/// # Summary
 /// Burns the transaction fees collected in the `CoinType` currency so that the
 /// Diem association may reclaim the backing coins off-chain. May only be sent
 /// by the Treasury Compliance account.
@@ -1918,8 +1862,79 @@ pub fn encode_burn_txn_fees_script(coin_type: TypeTag) -> Script {
 }
 
 /// # Summary
-/// Cancels and returns all coins held in the preburn area under
-/// `preburn_address` and returns the funds to the `preburn_address`'s balance.
+/// Burns the coins held in a preburn resource in the preburn queue at the
+/// specified preburn address, which are equal to the `amount` specified in the
+/// transaction. Finds the first relevant outstanding preburn request with
+/// matching amount and removes the contained coins from the system. The sending
+/// account must be the Treasury Compliance account.
+/// The account that holds the preburn queue resource will normally be a Designated
+/// Dealer, but there are no enforced requirements that it be one.
+///
+/// # Technical Description
+/// This transaction permanently destroys all the coins of `Token` type
+/// stored in the `Diem::Preburn<Token>` resource published under the
+/// `preburn_address` account address.
+///
+/// This transaction will only succeed if the sending `account` has a
+/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+/// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+/// of this transaction the `total_value` field in the
+/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+/// decremented by the value of the `to_burn` field of the preburn resource
+/// under `preburn_address` immediately before this transaction, and the
+/// `to_burn` field of the preburn resource will have a zero value.
+///
+/// ## Events
+/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+/// `0xA550C18`.
+///
+/// # Parameters
+/// | Name              | Type      | Description                                                                                                                  |
+/// | ------            | ------    | -------------                                                                                                                |
+/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+/// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+///
+/// # Common Abort Conditions
+/// | Error Category                | Error Reason                            | Description                                                                                                                         |
+/// | ----------------              | --------------                          | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
+///
+/// # Related Scripts
+/// * `Script::burn_txn_fees`
+/// * `Script::cancel_burn`
+/// * `Script::preburn`
+pub fn encode_burn_with_amount_script(
+    token: TypeTag,
+    sliding_nonce: u64,
+    preburn_address: AccountAddress,
+    amount: u64,
+) -> Script {
+    Script::new(
+        BURN_WITH_AMOUNT_CODE.to_vec(),
+        vec![token],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::Address(preburn_address),
+            TransactionArgument::U64(amount),
+        ],
+    )
+}
+
+/// # Summary
+/// Cancels and returns the coins held in the preburn area under
+/// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
+/// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
 /// Can only be successfully sent by an account with Treasury Compliance role.
 ///
 /// # Technical Description
@@ -1947,27 +1962,35 @@ pub fn encode_burn_txn_fees_script(coin_type: TypeTag) -> Script {
 /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
 /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
 /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
+/// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
 ///
 /// # Common Abort Conditions
-/// | Error Category                | Error Reason                                     | Description                                                                                           |
-/// | ----------------              | --------------                                   | -------------                                                                                         |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                        | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                                | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                          | The specified `Token` is not a registered currency on-chain.                                          |
-/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | The value held in the preburn resource was zero.                                                      |
-/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | The account at `preburn_address` doesn't have a balance resource for `Token`.                         |
-/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.      |
-/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.     |
+/// | Error Category                | Error Reason                                     | Description                                                                                                                         |
+/// | ----------------              | --------------                                   | -------------                                                                                                                       |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
+/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
+/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
+/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
 ///
 /// # Related Scripts
 /// * `Script::burn_txn_fees`
 /// * `Script::burn`
 /// * `Script::preburn`
-pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress) -> Script {
+pub fn encode_cancel_burn_with_amount_script(
+    token: TypeTag,
+    preburn_address: AccountAddress,
+    amount: u64,
+) -> Script {
     Script::new(
-        CANCEL_BURN_CODE.to_vec(),
+        CANCEL_BURN_WITH_AMOUNT_CODE.to_vec(),
         vec![token],
-        vec![TransactionArgument::Address(preburn_address)],
+        vec![
+            TransactionArgument::Address(preburn_address),
+            TransactionArgument::U64(amount),
+        ],
     )
 }
 
@@ -3368,24 +3391,26 @@ fn decode_add_validator_and_reconfigure_script(script: &Script) -> Option<Script
     })
 }
 
-fn decode_burn_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::Burn {
-        token: script.ty_args().get(0)?.clone(),
-        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-        preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
-    })
-}
-
 fn decode_burn_txn_fees_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::BurnTxnFees {
         coin_type: script.ty_args().get(0)?.clone(),
     })
 }
 
-fn decode_cancel_burn_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::CancelBurn {
+fn decode_burn_with_amount_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::BurnWithAmount {
+        token: script.ty_args().get(0)?.clone(),
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
+        amount: decode_u64_argument(script.args().get(2)?.clone())?,
+    })
+}
+
+fn decode_cancel_burn_with_amount_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::CancelBurnWithAmount {
         token: script.ty_args().get(0)?.clone(),
         preburn_address: decode_address_argument(script.args().get(0)?.clone())?,
+        amount: decode_u64_argument(script.args().get(1)?.clone())?,
     })
 }
 
@@ -3623,14 +3648,17 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         ADD_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
         Box::new(decode_add_validator_and_reconfigure_script),
     );
-    map.insert(BURN_CODE.to_vec(), Box::new(decode_burn_script));
     map.insert(
         BURN_TXN_FEES_CODE.to_vec(),
         Box::new(decode_burn_txn_fees_script),
     );
     map.insert(
-        CANCEL_BURN_CODE.to_vec(),
-        Box::new(decode_cancel_burn_script),
+        BURN_WITH_AMOUNT_CODE.to_vec(),
+        Box::new(decode_burn_with_amount_script),
+    );
+    map.insert(
+        CANCEL_BURN_WITH_AMOUNT_CODE.to_vec(),
+        Box::new(decode_cancel_burn_with_amount_script),
     );
     map.insert(
         CREATE_CHILD_VASP_ACCOUNT_CODE.to_vec(),
@@ -3799,15 +3827,6 @@ const ADD_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[
     2, 33, 12, 4, 11, 4, 3, 14, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10, 3, 17, 2, 2,
 ];
 
-const BURN_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 17, 7, 34, 45, 8, 79, 16,
-    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 3, 6, 12, 3, 5, 0, 2, 6, 12, 3, 1, 9, 0, 2,
-    6, 12, 5, 4, 68, 105, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101,
-    21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111,
-    114, 116, 4, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 7,
-    10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 56, 0, 2,
-];
-
 const BURN_TXN_FEES_CODE: &[u8] = &[
     161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 25, 8, 42, 16, 0,
     0, 0, 1, 0, 1, 1, 4, 0, 2, 1, 6, 12, 0, 1, 9, 0, 14, 84, 114, 97, 110, 115, 97, 99, 116, 105,
@@ -3815,11 +3834,20 @@ const BURN_TXN_FEES_CODE: &[u8] = &[
     0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 3, 11, 0, 56, 0, 2,
 ];
 
-const CANCEL_BURN_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 8, 7, 18, 24, 8, 42, 16, 0,
-    0, 0, 1, 0, 1, 1, 4, 0, 2, 2, 6, 12, 5, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111,
+const BURN_WITH_AMOUNT_CODE: &[u8] = &[
+    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 19, 7, 36, 45, 8, 81, 16,
+    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 4, 6, 12, 3, 5, 3, 0, 2, 6, 12, 3, 1, 9, 0,
+    3, 6, 12, 5, 3, 4, 68, 105, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
+    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
+    111, 114, 116, 4, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0,
+    1, 8, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 10, 3, 56, 0, 2,
+];
+
+const CANCEL_BURN_WITH_AMOUNT_CODE: &[u8] = &[
+    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 9, 7, 19, 24, 8, 43, 16, 0,
+    0, 0, 1, 0, 1, 1, 4, 0, 2, 3, 6, 12, 5, 3, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111,
     117, 110, 116, 11, 99, 97, 110, 99, 101, 108, 95, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 4, 11, 0, 10, 1, 56, 0, 2,
+    0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 5, 11, 0, 10, 1, 10, 2, 56, 0, 2,
 ];
 
 const CREATE_CHILD_VASP_ACCOUNT_CODE: &[u8] = &[

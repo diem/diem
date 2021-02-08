@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
+use compiled_stdlib::shim::tmp_new_transaction_scripts;
 use diem_crypto::HashValue;
 use diem_json_rpc_types::views::{
     BytesView, MoveAbortExplanationView, ScriptView, TransactionDataView, VMStatusView,
@@ -11,7 +11,6 @@ use diem_types::{
     vm_status::{AbortLocation, KeptVMStatus},
 };
 use move_core_types::language_storage::{StructTag, TypeTag};
-use std::convert::TryFrom;
 
 /// Helper macros. Used to simplify adding new RpcHandler to Registry
 /// `registry` - name of local registry variable
@@ -134,8 +133,8 @@ pub fn transaction_data_view_from_transaction(tx: Transaction) -> TransactionDat
 }
 
 pub fn script_view_from_script(script: &Script) -> ScriptView {
-    let name = LegacyStdlibScript::try_from(script.code())
-        .map_or("unknown".to_string(), |name| format!("{}", name));
+    let name = tmp_new_transaction_scripts::name_for_script(script.code())
+        .unwrap_or_else(|_| "unknown".to_string());
     let ty_args: Vec<String> = script
         .ty_args()
         .iter()

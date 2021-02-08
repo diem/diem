@@ -3,8 +3,11 @@
 
 #![forbid(unsafe_code)]
 
+// Old transaction scripts, and ways of handling them and getting their name etc.
 pub mod legacy;
-pub mod tmp_new_transaction_script_builders;
+// Temporary shim code that replicated the above logic for any new scripts between now, and when we
+// fully support script functions.
+pub mod shim;
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use diem_framework::build_stdlib;

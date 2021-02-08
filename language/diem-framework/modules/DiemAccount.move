@@ -459,8 +459,9 @@ module DiemAccount {
     public fun cancel_burn<Token>(
         account: &signer,
         preburn_address: address,
+        amount: u64,
     ) acquires DiemAccount, Balance, AccountOperationsCapability {
-        let coin = Diem::cancel_burn<Token>(account, preburn_address);
+        let coin = Diem::cancel_burn<Token>(account, preburn_address, amount);
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
@@ -468,20 +469,16 @@ module DiemAccount {
 
     spec fun cancel_burn {
         include CancelBurnAbortsIf<Token>;
-        include Diem::CancelBurnWithCapEnsures<Token>;
-        let preburn_value_at_addr = global<Diem::Preburn<Token>>(preburn_address).to_burn.value;
-        let balance_at_addr = balance<Token>(preburn_address);
-        ensures balance_at_addr == old(balance_at_addr) + old(preburn_value_at_addr);
         include Diem::CancelBurnWithCapEmits<Token>;
+        include Diem::CancelBurnWithCapEnsures<Token>;
+        include DepositEnsures<Token>{payee: preburn_address};
     }
 
     spec schema CancelBurnAbortsIf<Token> {
         account: signer;
         preburn_address: address;
-        let amount = global<Diem::Preburn<Token>>(preburn_address).to_burn.value;
-        aborts_if !exists<Diem::BurnCapability<Token>>(Signer::spec_address_of(account))
-            with Errors::REQUIRES_CAPABILITY;
-        include Diem::CancelBurnWithCapAbortsIf<Token>;
+        amount: u64;
+        include Diem::CancelBurnAbortsIf<Token>;
         include DepositAbortsIf<Token>{
             payer: preburn_address,
             payee: preburn_address,
@@ -660,12 +657,12 @@ module DiemAccount {
     spec schema PreburnEnsures<Token> {
         dd_addr: address;
         payer: address;
+        amount: u64;
         let payer_balance = global<Balance<Token>>(payer).coin.value;
-        let preburn = global<Diem::Preburn<Token>>(dd_addr);
         /// The balance of payer decreases by `amount`.
         ensures payer_balance == old(payer_balance) - amount;
         /// The value of preburn at `dd_addr` increases by `amount`;
-        include Diem::PreburnEnsures<Token>{preburn: preburn};
+        include Diem::PreburnEnsures<Token>{preburn: Diem::spec_make_preburn(amount) };
     }
     spec schema PreburnEmits<Token> {
         dd_addr: address;

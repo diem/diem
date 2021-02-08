@@ -1,80 +1,80 @@
 +-------------------------+
 | Move Coverage Summary   |
 +-------------------------+
-Module 00000000000000000000000000000000::Debug
+Module 00000000000000000000000000000001::Signer
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::Errors
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::CoreAddresses
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::DiemTimestamp
+>>> % Module coverage: 97.83
+Module 00000000000000000000000000000001::Roles
+>>> % Module coverage: 93.72
+Module 00000000000000000000000000000001::Vector
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::BCS
 >>> % Module coverage: NaN
-Module 00000000000000000000000000000000::Testnet
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemTimestamp
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Association
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::AccountLimits
->>> % Module coverage: 96.87
-Module 00000000000000000000000000000000::Vector
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Empty
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::AccountType
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::VASP
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Unhosted
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::AccountTrack
->>> % Module coverage: 88.96
-Module 00000000000000000000000000000000::BCS
+Module 00000000000000000000000000000001::Event
+>>> % Module coverage: 93.02
+Module 00000000000000000000000000000001::AccountFreezing
+>>> % Module coverage: 97.50
+Module 00000000000000000000000000000001::AccountLimits
+>>> % Module coverage: 92.43
+Module 00000000000000000000000000000001::Hash
 >>> % Module coverage: NaN
-Module 00000000000000000000000000000000::Hash
+Module 00000000000000000000000000000001::Authenticator
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::ChainId
+>>> % Module coverage: 85.71
+Module 00000000000000000000000000000001::FixedPoint32
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::DiemConfig
+>>> % Module coverage: 87.98
+Module 00000000000000000000000000000001::RegisteredCurrencies
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::Diem
+>>> % Module coverage: 92.22
+Module 00000000000000000000000000000001::XUS
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::DesignatedDealer
+>>> % Module coverage: 94.09
+Module 00000000000000000000000000000001::XDX
+>>> % Module coverage: 81.03
+Module 00000000000000000000000000000001::ValidatorOperatorConfig
+>>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::Signature
 >>> % Module coverage: NaN
-Module 00000000000000000000000000000000::Authenticator
+Module 00000000000000000000000000000001::Option
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Offer
+Module 00000000000000000000000000000001::ValidatorConfig
+>>> % Module coverage: 97.36
+Module 00000000000000000000000000000001::VASP
+>>> % Module coverage: 90.48
+Module 00000000000000000000000000000001::TransactionFee
+>>> % Module coverage: 97.85
+Module 00000000000000000000000000000001::SlidingNonce
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Event
->>> % Module coverage: 92.25
-Module 00000000000000000000000000000000::DiemConfig
+Module 00000000000000000000000000000001::DualAttestation
+>>> % Module coverage: 95.31
+Module 00000000000000000000000000000001::DiemTransactionPublishingOption
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::RegisteredCurrencies
+Module 00000000000000000000000000000001::DiemAccount
+>>> % Module coverage: 95.62
+Module 00000000000000000000000000000001::DiemSystem
+>>> % Module coverage: 96.02
+Module 00000000000000000000000000000001::DiemBlock
+>>> % Module coverage: 97.73
+Module 00000000000000000000000000000001::DiemVMConfig
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::FixedPoint32
+Module 00000000000000000000000000000001::DiemVersion
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Diem
+Module 00000000000000000000000000000001::Genesis
 >>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Coin1
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Coin2
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Compare
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Option
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Signature
->>> % Module coverage: NaN
-Module 00000000000000000000000000000000::DiemTransactionTimeout
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemAccount
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::ValidatorConfig
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemSystem
->>> % Module coverage: 98.98
-Module 00000000000000000000000000000000::TransactionFee
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemWriteSetManager
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemBlock
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::XDX
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::Genesis
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemVMConfig
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::DiemVersion
->>> % Module coverage: 100.00
-Module 00000000000000000000000000000000::SharedEd25519PublicKey
->>> % Module coverage: 100.00
+Module 00000000000000000000000000000001::RecoveryAddress
+>>> % Module coverage: 97.71
+Module 00000000000000000000000000000001::SharedEd25519PublicKey
+>>> % Module coverage: 95.24
 +-------------------------+
-| % Move Coverage: 99.14  |
+| % Move Coverage: 95.01  |
 +-------------------------+

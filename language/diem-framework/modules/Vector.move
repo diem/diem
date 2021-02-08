@@ -188,6 +188,13 @@ module Vector {
             len(v1) + 1 == len(v2) &&
             v1 == v2[1..len(v2)]
         }
+
+        /// Check that `v1` is equal to the result of removing the element at index `i` from `v2`.
+        define eq_remove_elem_at_index<Element>(i: u64, v1: vector<Element>, v2: vector<Element>): bool {
+            len(v1) + 1 == len(v2) &&
+            v1[0..i] == v2[0..i] &&
+            v1[i..len(v1)] == v2[i + 1..len(v2)]
+        }
     }
 
 }

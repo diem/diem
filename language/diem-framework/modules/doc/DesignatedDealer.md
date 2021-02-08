@@ -292,8 +292,8 @@ These get scaled by coin specific scaling factor on tier setting
 
 ## Function `publish_designated_dealer_credential`
 
-Publishes a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a></code> resource under <code>dd</code> with a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a></code>, <code>Preburn</code>, and default tiers for <code>CoinType</code>.
-If <code>add_all_currencies = <b>true</b></code> this will add a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a></code>, <code>Preburn</code>,
+Publishes a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a></code> resource under <code>dd</code> with a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a></code>, <code>PreburnQueue</code>, and default tiers for <code>CoinType</code>.
+If <code>add_all_currencies = <b>true</b></code> this will add a <code><a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a></code>, <code>PreburnQueue</code>,
 and default tiers for each known currency at launch.
 
 
@@ -373,7 +373,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dd);
     <b>assert</b>(<a href="DesignatedDealer.md#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">EDEALER</a>));
-    <a href="Diem.md#0x1_Diem_publish_preburn_to_account">Diem::publish_preburn_to_account</a>&lt;CoinType&gt;(dd, tc_account);
+    <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">Diem::publish_preburn_queue_to_account</a>&lt;CoinType&gt;(dd, tc_account);
     <b>assert</b>(!<b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="DesignatedDealer.md#0x1_DesignatedDealer_EDEALER">EDEALER</a>));
     move_to(dd, <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; {
         window_start: <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>(),
@@ -405,7 +405,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>{account: dd};
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AbortsIfNoDealer">AbortsIfNoDealer</a>{dd_addr: dd_addr};
 <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;CoinType&gt;{dd_addr: dd_addr};
-<b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;CoinType&gt;&gt;(dd_addr);
 <b>modifies</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 <b>ensures</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 <b>ensures</b> <b>global</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) ==
@@ -428,7 +428,8 @@ multi-signer transactions in order to add a new currency to an existing DD.
     <b>aborts_if</b> <b>exists</b>&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
     <b>include</b> <a href="Diem.md#0x1_Diem_AbortsIfNoCurrency">Diem::AbortsIfNoCurrency</a>&lt;CoinType&gt;;
     <b>aborts_if</b> <a href="Diem.md#0x1_Diem_is_synthetic_currency">Diem::is_synthetic_currency</a>&lt;CoinType&gt;() <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-    <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotOperating">DiemTimestamp::AbortsIfNotOperating</a>;
 }
 </code></pre>
