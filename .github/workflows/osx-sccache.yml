@@ -1,0 +1,52 @@
+name: osx-sccache
+
+on:
+  push:
+    branches: [master, release-*, gha-test-*]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  max_threads: 16
+  pre_command: cd /opt/git/diem/
+
+jobs:
+  update-sccache:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/check-machine
+        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: ci-test.yml
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^documentation\|^docker\|^scripts\|^.circleci'
+          invert: "true"
+      - uses: ./.github/actions/build-setup
+        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
+      - uses: actions/cache@v2
+        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run unit tests
+        run: $pre_command && cargo x test --no-run --jobs ${max_threads} --unit #--changed-since "origin/$TARGET_BRANCH"
+      #        env:
+      #          TARGET_BRANCH: ${{ steps.changes.outputs.changes-target-branch }}
+      - uses: ./.github/actions/build-teardown
