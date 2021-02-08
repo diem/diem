@@ -351,6 +351,12 @@ impl NodeConfig {
         Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
     }
 
+    pub fn default_for_public_full_node_with_genesis_waypoint() -> Self {
+        let contents = std::include_str!("test_data/public_full_node_with_genesis_waypoint.yaml");
+        let path = "default_for_public_full_node_with_genesis_waypoint";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
     pub fn default_for_validator() -> Self {
         let contents = std::include_str!("test_data/validator.yaml");
         let path = "default_for_validator";
@@ -446,6 +452,36 @@ mod test {
             Err(ParseRoleError(_)) => { /* the expected error was thrown! */ }
             _ => panic!("A ParseRoleError should have been thrown on the invalid role type!"),
         }
+    }
+
+    #[test]
+    fn verify_get_waypoint() {
+        let node_config = NodeConfig::default_for_public_full_node();
+        let parsed_waypoint = Waypoint::from_str(
+            "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210",
+        )
+        .unwrap();
+        assert_eq!(node_config.base.waypoint.waypoint(), parsed_waypoint);
+    }
+
+    #[test]
+    fn verify_get_genesis_waypoint() {
+        let node_config = NodeConfig::default_for_public_full_node_with_genesis_waypoint();
+        let parsed_waypoint = Waypoint::from_str(
+            "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654211",
+        )
+        .unwrap();
+        assert_eq!(node_config.base.genesis_waypoint(), parsed_waypoint);
+    }
+
+    #[test]
+    fn verify_genesis_waypoint_fallback() {
+        let node_config = NodeConfig::default_for_public_full_node();
+        let parsed_waypoint = Waypoint::from_str(
+            "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210",
+        )
+        .unwrap();
+        assert_eq!(node_config.base.genesis_waypoint(), parsed_waypoint);
     }
 
     #[test]
