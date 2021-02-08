@@ -335,6 +335,49 @@ function {{backend.func_inline}} $ContainValueArray(a: $ValueArray, v: $Value): 
 {{/if}} //end of backend.vector_using_sequences
 
 
+// This is the implementation of $ValueMultiset
+
+type {:datatype} $ValueMultiset;
+
+function {:constructor} $ValueMultiset(v: [$Value]int, l: int): $ValueMultiset;
+
+function {:builtin "MapConst"} $MapConstInt(l: int): [$Value]int;
+
+const $EmptyValueMultiset: $ValueMultiset;
+axiom $IsEmptyValueMultiset($EmptyValueMultiset);
+
+function {{backend.func_inline}} $LenValueMultiset(s: $ValueMultiset): int {
+    l#$ValueMultiset(s)
+}
+
+function {{backend.func_inline}} $ExtendValueMultiset(s: $ValueMultiset, v: $Value): $ValueMultiset {
+    (var len := l#$ValueMultiset(s);
+    (var cnt := v#$ValueMultiset(s)[v];
+    $ValueMultiset(v#$ValueMultiset(s)[v := (cnt + 1)], len + 1)))
+}
+
+// This function returns (s1 - s2). This function assumes that s2 is a subset of s1.
+function {{backend.func_inline}} $SubtractValueMultiset(s1: $ValueMultiset, s2: $ValueMultiset): $ValueMultiset {
+    (var len1 := l#$ValueMultiset(s1);
+    (var len2 := l#$ValueMultiset(s2);
+    $ValueMultiset((lambda v:$Value :: v#$ValueMultiset(s1)[v]-v#$ValueMultiset(s2)[v]), len1-len2)))
+}
+
+function {:inline} $IsEmptyValueMultiset(s: $ValueMultiset): bool {
+    (l#$ValueMultiset(s) == 0) &&
+    (forall v: $Value :: v#$ValueMultiset(s)[v] == 0)
+}
+
+function {:inline} $IsSubsetValueMultiset(s1: $ValueMultiset, s2: $ValueMultiset): bool {
+    (l#$ValueMultiset(s1) <= l#$ValueMultiset(s2)) &&
+    (forall v: $Value :: v#$ValueMultiset(s1)[v] <= v#$ValueMultiset(s2)[v])
+}
+
+function {{backend.func_inline}} $ContainValueMultiset(s: $ValueMultiset, v: $Value): bool {
+    v#$ValueMultiset(s)[v] > 0
+}
+
+
 // Stratified Functions on Values
 // ------------------------------
 
@@ -582,7 +625,7 @@ procedure {:inline 1} $Modifies(m: $Memory, type_args: $TypeValueArray, addr: in
 // Representation of EventStore that consists of event streams. The map `streams` takes GUIDs (with type of $Value),
 // and returns sequences of messages (with type of $ValueArray).
 type {:datatype} $EventStore;
-function {:constructor} $EventStore(streams: [$Value]$ValueArray): $EventStore;
+function {:constructor} $EventStore(streams: [$Value]$ValueMultiset): $EventStore;
 
 function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
     true
@@ -591,13 +634,42 @@ function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
 function {:inline} $EventStore__is_empty(es: $EventStore): bool {
     (forall guid: $Value ::
         (var stream := streams#$EventStore(es)[guid];
-        $IsEmpty(stream) && $IsNormalizedValueArray(stream, 0)))
+        $IsEmptyValueMultiset(stream)))
 }
 
-function {:builtin "MapConst"} $ConstEventStoreContent(v: $Value): [$Value]$ValueArray;
+function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
+    $EventStore((lambda guid: $Value ::
+        $SubtractValueMultiset(
+            streams#$EventStore(es1)[guid],
+            streams#$EventStore(es2)[guid])))
+}
+
+function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
+    (forall guid: $Value ::
+        $IsSubsetValueMultiset(
+            streams#$EventStore(es1)[guid],
+            streams#$EventStore(es2)[guid]
+        )
+    )
+}
+
+function {:builtin "MapConst"} $ConstEventStoreContent(s: $ValueMultiset): [$Value]$ValueMultiset;
 
 const $EmptyEventStore: $EventStore;
-axiom streams#$EventStore($EmptyEventStore) == $ConstEventStoreContent($DefaultValue());
+axiom $EventStore__is_empty($EmptyEventStore);
+
+function {:inline} $ExtendEventStore(es: $EventStore, guid: $Value, msg: $Value): $EventStore {
+    (var stream := streams#$EventStore(es)[guid];
+    (var stream_new := $ExtendValueMultiset(stream, msg);
+    $EventStore(streams#$EventStore(es)[guid := stream_new])))
+}
+
+function {:inline} $CondExtendEventStore(es: $EventStore, guid: $Value, msg: $Value, cond: $Value): $EventStore {
+    if b#$Boolean(cond) then
+        $ExtendEventStore(es, guid, msg)
+    else
+        es
+}
 
 var $es: $EventStore;
 
@@ -1459,10 +1531,7 @@ procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Va
 }
 
 procedure {:inline 1} $Event_write_to_event_store(t: $TypeValue, guid: $Value, count: $Value, msg: $Value) {
-    var stream, stream_new: $ValueArray;
-    stream := streams#$EventStore($es)[guid];
-    stream_new := $ExtendValueArray(stream, msg);
-    $es := $EventStore(streams#$EventStore($es)[guid := stream_new]);
+    $es := $ExtendEventStore($es, guid, msg);
 }
 
 procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: $Value) {

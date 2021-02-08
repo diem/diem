@@ -906,29 +906,49 @@ impl<'env> SpecTranslator<'env> {
 
         if !emits.is_empty() {
             *self.in_ensures.borrow_mut() = true;
-            self.translate_seq(emits.iter(), "\n", |cond| {
-                self.writer.set_location(&cond.loc);
-                self.set_condition_info(&cond.loc, ConditionTag::Ensures, EMITS_FAILS_MESSAGE);
-                emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
-
-                if cond.additional_exps.len() > 1 {
-                    self.translate_exp(&cond.additional_exps[1]);
-                } else {
-                    emit!(self.writer, "$Boolean(true)");
-                }
-                emit!(self.writer, ")) ==> (");
+            // Generate the verification conditions to ensure that the specified events are actually
+            // emitted. The verification condition is formed to check if the expected EventStore is
+            // a subset of the actual EventStore. The expected EventStore is constructed from the
+            // `emits` specs. The actual EventStore means the events emitted by the function, which
+            // can be obtained by `$EventStore__subtract($es, old($es))`. Although it seems to be
+            // redundant, we generate the verification conditions "incrementally" in order for a
+            // better error report. So, Prover can tell which specific `emits` spec is violated.
+            for i in 0..emits.len() {
+                self.writer.set_location(&emits[i].loc);
+                self.set_condition_info(&emits[i].loc, ConditionTag::Ensures, EMITS_FAILS_MESSAGE);
+                emit!(self.writer, "ensures !$abort_flag ==> ");
                 emit!(
                     self.writer,
-                    "$ContainValueArray(streams#$EventStore($es)[$SelectField("
+                    "(var actual := $EventStore__subtract($es, old($es)); "
                 );
-                self.translate_exp(&cond.additional_exps[0]);
-                emit!(self.writer, ", $Event_EventHandle_guid)");
-                emit!(self.writer, "],");
-                self.translate_exp(&cond.exp);
-                emit!(self.writer, "));")
-            });
+                emit!(self.writer, "(var expected := ");
+                // Construct the expected EventStore from the `emits` specs.
+                let n = i + 1;
+                emit!(
+                    self.writer,
+                    "{}$EmptyEventStore",
+                    "$CondExtendEventStore(".repeat(n)
+                );
+                self.translate_seq(emits[..n].iter(), "", |cond| {
+                    // Emit ", [guid], [msg], [cond])"
+                    emit!(self.writer, ", ");
+                    emit!(self.writer, "$SelectField(");
+                    self.translate_exp(&cond.additional_exps[0]);
+                    emit!(self.writer, ", $Event_EventHandle_guid)");
+                    emit!(self.writer, ", ");
+                    self.translate_exp(&cond.exp);
+                    emit!(self.writer, ", ");
+                    if cond.additional_exps.len() > 1 {
+                        self.translate_exp(&cond.additional_exps[1]);
+                    } else {
+                        emit!(self.writer, "$Boolean(true)");
+                    }
+                    emit!(self.writer, ")")
+                });
+                emit!(self.writer, "; $EventStore__is_subset(expected, actual)));");
+                emitln!(self.writer);
+            }
             *self.in_ensures.borrow_mut() = false;
-            emitln!(self.writer);
         }
 
         // If this is an opaque function, also generate ensures for type assumptions.
