@@ -13,10 +13,10 @@ edition = "2018"
 anyhow = "1.0.38"
 bytes = "1.0.1"
 vanilla-curve25519-dalek = { version = "3", package = 'curve25519-dalek', default-features = false, features = ["std"], optional = true }
-curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat3", version = "3", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }
+curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat4", version = "3", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }
 digest = "0.9.0"
 vanilla-ed25519-dalek = { version = "1.0.1", package = 'ed25519-dalek', default-features = false, features = ["std"], optional = true }
-ed25519-dalek = { git = "https://github.com/novifinancial/ed25519-dalek.git", branch = "fiat5", version = "1.0.1", default-features = false, features = ["std", "fiat_u64_backend", "serde"], optional = true }
+ed25519-dalek = { git = "https://github.com/novifinancial/ed25519-dalek.git", branch = "fiat6", version = "1.0.1", default-features = false, features = ["std", "fiat_u64_backend", "serde"], optional = true }
 hex = "0.4.2"
 hkdf = "0.10.0"
 once_cell = "1.4.1"
@@ -34,7 +34,7 @@ static_assertions = "1.1.0"
 thiserror = "1.0.23"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 vanilla-x25519-dalek = { version = "1.1.0", package = 'x25519-dalek', default-features = false, features = ["std"], optional = true }
-x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat4", version = "1.1.0", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
+x25519-dalek = { git = "https://github.com/novifinancial/x25519-dalek.git", branch = "fiat5", version = "1.1.0", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
 aes-gcm = "0.8.0"
 diem-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 bcs = "0.1.2"
