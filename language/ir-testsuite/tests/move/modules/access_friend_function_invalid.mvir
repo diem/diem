@@ -1,0 +1,17 @@
+module M {
+    public(friend) foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module N {
+    import {{default}}.M;
+    foo() {
+        M.foo();
+        return;
+    }
+}
+
+// check: LOOKUP_FAILED
