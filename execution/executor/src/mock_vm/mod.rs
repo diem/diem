@@ -368,6 +368,10 @@ fn decode_transaction(txn: &SignedTransaction) -> MockVMTransaction {
                 _ => unimplemented!("Transaction must have one or two arguments."),
             }
         }
+        TransactionPayload::ScriptFunction(_) => {
+            // TODO: we need to migrate Script to ScriptFunction later
+            unimplemented!("MockVM does not support script function transaction payload.")
+        }
         TransactionPayload::WriteSet(_) => {
             // Use WriteSet for reconfig only for testing.
             MockVMTransaction::Reconfiguration
