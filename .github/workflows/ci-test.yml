@@ -68,7 +68,7 @@ jobs:
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
       matrix:
-        target_os: [alpine, arch, centos, github]
+        target_os: [alpine, centos, github] #arch is broken, re-add when fixed: https://bugs.archlinux.org/task/69563
     steps:
       - uses: actions/checkout@v2
         with:
@@ -358,7 +358,7 @@ jobs:
           name: bench-baseline
           retention-days: 5
           path: |
-              /tmp/benches
+            /tmp/benches
 
   success:
     name: ci-test-success
