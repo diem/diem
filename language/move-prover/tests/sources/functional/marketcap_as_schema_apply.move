@@ -3,6 +3,10 @@ address 0x1 {
 
 module TestMarketCapWithSchemas {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
     }
@@ -101,6 +105,8 @@ module TestMarketCapWithSchemas {
     spec fun deposit_different_type_params {
         include DepositIncorrect<Token>;
     }
+
+    */
 }
 
 }

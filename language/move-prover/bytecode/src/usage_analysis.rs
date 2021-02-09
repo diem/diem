@@ -133,7 +133,7 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                     state.directly_modified_memory.insert(mid.qualified(*sid));
                     state.used_memory.insert(mid.qualified(*sid));
                 }
-                Exists(mid, sid, _) | GetField(mid, sid, ..) | GetGlobal(mid, sid, _) => {
+                Exists(mid, sid, _) | GetGlobal(mid, sid, _) => {
                     state.used_memory.insert(mid.qualified(*sid));
                 }
                 _ => {}

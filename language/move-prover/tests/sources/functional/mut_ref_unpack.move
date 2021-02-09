@@ -1,6 +1,10 @@
 address 0x1 {
 module TestMutRefs {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
     }
@@ -45,5 +49,7 @@ module TestMutRefs {
      spec fun unpack_caller {
         ensures r.value == 0;
      }
+
+     */
 }
 }

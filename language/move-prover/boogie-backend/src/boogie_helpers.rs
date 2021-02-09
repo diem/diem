@@ -108,6 +108,7 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
             PrimitiveType::Signer => "$AddressType()".to_string(),
             PrimitiveType::Range => "$RangeType()".to_string(),
             PrimitiveType::TypeValue => "$TypeType()".to_string(),
+            PrimitiveType::EventStore => unimplemented!("EventStore"),
         },
         Type::Vector(t) => format!("$Vector_type_value({})", boogie_type_value(env, t)),
         Type::Reference(_, t) => format!("ReferenceType({})", boogie_type_value(env, t)),
@@ -121,7 +122,7 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
         Type::Fun(_args, _result) => "Function_type_value()".to_string(),
         Type::Error => panic!("unexpected error type"),
         Type::Var(..) => panic!("unexpected type variable"),
-        Type::TypeDomain(..) => panic!("unexpected transient type"),
+        Type::TypeDomain(..) | Type::ResourceDomain(..) => panic!("unexpected transient type"),
     }
 }
 
@@ -228,6 +229,7 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             PrimitiveType::Signer => add_type_check(format!("is#$Address({})", name)),
             PrimitiveType::Range => add_type_check(format!("$IsValidRange({})", name)),
             PrimitiveType::TypeValue => add_type_check(format!("is#$Type({})", name)),
+            PrimitiveType::EventStore => unimplemented!("EventStore"),
         },
         Type::Vector(elem_ty) => {
             add_type_check(format!("$Vector_$is_well_formed({})", name));
@@ -265,7 +267,9 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
         Type::Tuple(_elems) => {}
         // A type parameter or type value is opaque, so no type check here.
         Type::TypeParameter(..) | Type::TypeLocal(..) => {}
-        Type::Error | Type::Var(..) | Type::TypeDomain(..) => panic!("unexpected transient type"),
+        Type::Error | Type::Var(..) | Type::TypeDomain(..) | Type::ResourceDomain(..) => {
+            panic!("unexpected transient type")
+        }
     }
     conds.iter().filter(|s| !s.is_empty()).join(" && ")
 }
@@ -342,7 +346,7 @@ pub fn boogie_byte_blob(options: &BoogieOptions, val: &[u8]) -> String {
         for (i, b) in val.iter().enumerate() {
             ctor_expr = format!("{}[{} := $Integer({})]", ctor_expr, i, *b);
         }
-        format!("$Vector($ValueArray({}, {}))", ctor_expr, val.len())
+        format!("$ValueArray({}, {})", ctor_expr, val.len())
     }
 }
 

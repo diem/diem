@@ -564,6 +564,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 writeln!(f, "{}", annotations)?;
             }
             if let Some(loc) = self.data.locations.get(&attr_id) {
+                // for debugging: writeln!(f, "     # {}", loc.display(self.global_env()))?;
                 if matches!(code, Bytecode::Prop(..)) && loc_vc_shown.insert(loc.clone()) {
                     for (_, info) in self.func_env.module_env.env.get_condition_infos(loc) {
                         writeln!(f, "     # VC: {} {}", info, loc.display(self.global_env()))?;

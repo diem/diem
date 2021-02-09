@@ -286,6 +286,7 @@ module DiemSystem {
         pragma opaque;
         pragma verify_duration_estimate = 100;
         modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        include ValidatorConfig::AbortsIfGetOperator{addr: validator_addr};
         include UpdateConfigAndReconfigureAbortsIf;
         include UpdateConfigAndReconfigureEnsures;
         // The property below is not in `UpdateConfigAndReconfigureEnsures` because that is reused
@@ -435,6 +436,8 @@ module DiemSystem {
         return Option::none()
     }
     spec fun get_validator_index_ {
+        // TODO(refactoring): re-enable once loop invariants are implemented.
+        pragma verify = false;
         pragma opaque;
         aborts_if false;
         let size = len(validators);
@@ -564,12 +567,11 @@ module DiemSystem {
     }
 
     /// # Helper Functions
-    spec module {
-        /// Fetches the currently published validator set from the published DiemConfig<DiemSystem>
-        /// resource.
-        define spec_get_validators(): vector<ValidatorInfo> {
-            DiemConfig::get<DiemSystem>().validators
-        }
+
+    /// Fetches the currently published validator set from the published DiemConfig<DiemSystem>
+    /// resource.
+    spec define spec_get_validators(): vector<ValidatorInfo> {
+        DiemConfig::get<DiemSystem>().validators
     }
 
     spec module {

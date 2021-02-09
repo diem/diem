@@ -1,6 +1,6 @@
-// flag: --v2
 address 0x0 {
 module A {
+
     resource struct S {
         x: u64
     }

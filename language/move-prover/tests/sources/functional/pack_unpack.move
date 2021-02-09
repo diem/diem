@@ -1,6 +1,10 @@
 address 0x1 {
 module TestPackUnpack {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed
+
     spec module {
         pragma verify = true;
     }
@@ -210,6 +214,8 @@ module TestPackUnpack {
         ensures r_count == old(r_count) + 1;
         ensures s_sum == old(s_sum) + 2;
     }
+
+    */
 
 }
 }

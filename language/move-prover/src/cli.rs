@@ -98,7 +98,7 @@ impl Default for Options {
             move_deps: vec![],
             prover: ProverOptions::default(),
             backend: BoogieOptions::default(),
-            trans_v2: false,
+            trans_v2: true,
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
@@ -202,9 +202,9 @@ impl Options {
                     .help("keep intermediate artifacts of the backend around")
             )
             .arg(
-                Arg::with_name("trans_v2")
-                    .long("v2")
-                    .help("whether to use the new v2 translation and backend")
+                Arg::with_name("trans_v1")
+                    .long("v1")
+                    .help("whether to use the old v1 translation and backend")
             )
             .arg(
                 Arg::with_name("negative")
@@ -341,6 +341,13 @@ impl Options {
                     .help("whether to run the Boogie instances sequentially")
             )
             .arg(
+                Arg::with_name("stable-test-output")
+                    .long("stable-test-output")
+                    .help("instruct the prover to produce output in diagnosis which is stable \
+                     and suitable for baseline tests. This redacts values in diagnosis which might\
+                     be non-deterministic, and may do other things to keep output stable.")
+            )
+            .arg(
                 Arg::with_name("use-cvc4")
                     .long("use-cvc4")
                     .help("use cvc4 solver instead of z3")
@@ -450,11 +457,14 @@ impl Options {
         if matches.is_present("sequential") {
             options.prover.sequential_task = true;
         }
+        if matches.is_present("stable-test-output") {
+            options.prover.stable_test_output = true;
+        }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
         }
-        if matches.is_present("trans_v2") {
-            options.trans_v2 = true;
+        if matches.is_present("trans_v1") {
+            options.trans_v2 = false;
         }
         if matches.is_present("negative") {
             options.prover.negative_checks = true;

@@ -30,6 +30,7 @@ pub enum Type {
     // Types only appearing in specifications
     Fun(Vec<Type>, Box<Type>),
     TypeDomain(Box<Type>),
+    ResourceDomain(ModuleId, StructId),
     TypeLocal(Symbol),
 
     // Temporary types used during type checking
@@ -53,6 +54,7 @@ pub enum PrimitiveType {
     Num,
     Range,
     TypeValue,
+    EventStore,
 }
 
 /// A type substitution.
@@ -80,7 +82,7 @@ impl PrimitiveType {
         use PrimitiveType::*;
         match self {
             Bool | U8 | U64 | U128 | Address | Signer => false,
-            Num | Range | TypeValue => true,
+            Num | Range | TypeValue | EventStore => true,
         }
     }
 
@@ -94,7 +96,7 @@ impl PrimitiveType {
             U128 => TypeTag::U128,
             Address => TypeTag::Address,
             Signer => TypeTag::Signer,
-            Num | Range | TypeValue => return None,
+            Num | Range | TypeValue | EventStore => return None,
         })
     }
 }
@@ -124,13 +126,23 @@ impl Type {
         matches!(self, Type::Struct(..))
     }
 
+    /// Determines whether this is a struct, or a vector of structs, or a reference to any of
+    /// those.
+    pub fn is_struct_or_vector_of_struct(&self) -> bool {
+        match self.skip_reference() {
+            Type::Struct(..) => true,
+            Type::Vector(ety) => ety.is_struct_or_vector_of_struct(),
+            _ => false,
+        }
+    }
+
     /// Returns true if this type is a specification language only type or contains specification
     /// language only types
     pub fn is_spec(&self) -> bool {
         use Type::*;
         match self {
             Primitive(p) => p.is_spec(),
-            Fun(..) | TypeDomain(..) | TypeLocal(..) | Error => true,
+            Fun(..) | TypeDomain(..) | TypeLocal(..) | ResourceDomain(..) | Error => true,
             Var(..) | TypeParameter(..) => false,
             Tuple(ts) => ts.iter().any(|t| t.is_spec()),
             Struct(_, _, ts) => ts.iter().any(|t| t.is_spec()),
@@ -236,7 +248,9 @@ impl Type {
             Type::Tuple(args) => Type::Tuple(replace_vec(args)),
             Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs))),
             Type::TypeDomain(et) => Type::TypeDomain(Box::new(et.replace(params, subs))),
-            Type::Primitive(..) | Type::TypeLocal(..) | Type::Error => self.clone(),
+            Type::ResourceDomain(..) | Type::Primitive(..) | Type::TypeLocal(..) | Type::Error => {
+                self.clone()
+            }
         }
     }
 
@@ -271,7 +285,7 @@ impl Type {
             Vector(et) => et.is_incomplete(),
             Reference(_, bt) => bt.is_incomplete(),
             TypeDomain(bt) => bt.is_incomplete(),
-            Error | Primitive(..) | TypeLocal(..) | TypeParameter(_) => false,
+            Error | Primitive(..) | TypeLocal(..) | TypeParameter(_) | ResourceDomain(..) => false,
         }
     }
 
@@ -280,7 +294,7 @@ impl Type {
         use Type::*;
         match self {
             TypeParameter(_) | TypeLocal(_) => true,
-            Primitive(_) => false,
+            Primitive(_) | ResourceDomain(..) => false,
             Tuple(ts) => ts.iter().any(|t| t.is_open()),
             Fun(ts, r) => ts.iter().any(|t| t.is_open()) || r.is_open(),
             Struct(_, _, ts) => ts.iter().any(|t| t.is_open()),
@@ -330,7 +344,7 @@ impl Type {
                         Box::new(et.into_type_tag(env)
                                  .expect("Invariant violation: vector type argument contains incomplete, tuple, reference, or spec type"))
                     ),
-                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | TypeParameter(..) | TypeLocal(..) | Var(..) | Reference(..) =>
+                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | ResourceDomain(..) | TypeParameter(..) | TypeLocal(..) | Var(..) | Reference(..) =>
                         return None
                 }
             )
@@ -384,7 +398,7 @@ impl Type {
             Vector(et) => et.internal_get_vars(vars),
             Reference(_, bt) => bt.internal_get_vars(vars),
             TypeDomain(bt) => bt.internal_get_vars(vars),
-            Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) => {}
+            Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) | ResourceDomain(..) => {}
         }
     }
 }
@@ -504,14 +518,22 @@ impl Substitution {
                 }
             }
             (Type::Vector(e1), Type::Vector(e2)) => {
-                return self.unify(display_context, &*e1, &*e2);
+                return Ok(Type::Vector(Box::new(self.unify(
+                    display_context,
+                    &*e1,
+                    &*e2,
+                )?)));
             }
             (Type::TypeDomain(e1), Type::TypeDomain(e2)) => {
-                return self.unify(display_context, &*e1, &*e2);
+                return Ok(Type::TypeDomain(Box::new(self.unify(
+                    display_context,
+                    &*e1,
+                    &*e2,
+                )?)));
             }
             (Type::TypeLocal(s1), Type::TypeLocal(s2)) => {
                 if s1 == s2 {
-                    return Ok(t1.clone());
+                    return Ok(Type::TypeLocal(*s1));
                 }
             }
             _ => {}
@@ -660,6 +682,7 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
             }
             Vector(t) => write!(f, "vector<{}>", t.display(self.context)),
             TypeDomain(t) => write!(f, "domain<{}>", t.display(self.context)),
+            ResourceDomain(mid, sid) => write!(f, "resources<{}>", self.struct_str(*mid, *sid)),
             TypeLocal(s) => write!(f, "{}", s.display(self.context.symbol_pool())),
             Fun(ts, t) => {
                 f.write_str("|")?;
@@ -668,27 +691,7 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 write!(f, "{}", t.display(self.context))
             }
             Struct(mid, sid, ts) => {
-                match self.context {
-                    TypeDisplayContext::WithoutEnv {
-                        symbol_pool,
-                        reverse_struct_table,
-                    } => {
-                        if let Some(sym) = reverse_struct_table.get(&(*mid, *sid)) {
-                            write!(f, "{}", sym.display(symbol_pool))?;
-                        } else {
-                            f.write_str("??unknown??")?;
-                        }
-                    }
-                    TypeDisplayContext::WithEnv { env, .. } => {
-                        let struct_env = env.get_module(*mid).into_struct(*sid);
-                        write!(
-                            f,
-                            "{}::{}",
-                            struct_env.module_env.get_name().display(env.symbol_pool()),
-                            struct_env.get_name().display(env.symbol_pool())
-                        )?;
-                    }
-                }
+                write!(f, "{}", self.struct_str(*mid, *sid))?;
                 if !ts.is_empty() {
                     f.write_str("<")?;
                     comma_list(f, ts)?;
@@ -725,6 +728,31 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
     }
 }
 
+impl<'a> TypeDisplay<'a> {
+    fn struct_str(&self, mid: ModuleId, sid: StructId) -> String {
+        match self.context {
+            TypeDisplayContext::WithoutEnv {
+                symbol_pool,
+                reverse_struct_table,
+            } => {
+                if let Some(sym) = reverse_struct_table.get(&(mid, sid)) {
+                    sym.display(symbol_pool).to_string()
+                } else {
+                    "??unknown??".to_string()
+                }
+            }
+            TypeDisplayContext::WithEnv { env, .. } => {
+                let struct_env = env.get_module(mid).into_struct(sid);
+                format!(
+                    "{}::{}",
+                    struct_env.module_env.get_name().display(env.symbol_pool()),
+                    struct_env.get_name().display(env.symbol_pool())
+                )
+            }
+        }
+    }
+}
+
 impl fmt::Display for PrimitiveType {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use PrimitiveType::*;
@@ -738,6 +766,7 @@ impl fmt::Display for PrimitiveType {
             Range => f.write_str("range"),
             Num => f.write_str("num"),
             TypeValue => f.write_str("type"),
+            EventStore => f.write_str("estore"),
         }
     }
 }

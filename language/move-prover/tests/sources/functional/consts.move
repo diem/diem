@@ -1,5 +1,5 @@
-// flag: --v2
 module TestConst {
+
     struct T {
         x: u64,
         b: bool,

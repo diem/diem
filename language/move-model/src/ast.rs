@@ -631,6 +631,7 @@ pub enum Operation {
     Len,
     TypeValue,
     TypeDomain,
+    ResourceDomain,
     Global(Option<MemoryLabel>),
     Exists(Option<MemoryLabel>),
     CanModify,
@@ -643,8 +644,16 @@ pub enum Operation {
     MaxU8,
     MaxU64,
     MaxU128,
+
+    // Functions which support the transformation and translation process.
     AbortFlag,
     AbortCode,
+    WellFormed,
+    BoxValue,
+    UnboxValue,
+    EmptyEventStore,
+    ExtendEventStore,
+    CheckEventStore,
 
     // Operation with no effect
     NoOp,

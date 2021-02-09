@@ -92,7 +92,7 @@ spec fun create_child_vasp_account {
     aborts_if child_initial_balance > max_u64() with Errors::LIMIT_EXCEEDED;
     include (child_initial_balance > 0) ==>
         DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: parent_addr};
-    include (child_initial_balance > 0) ==>
+    include child_initial_balance > 0 ==>
         DiemAccount::PayFromAbortsIfRestricted<CoinType>{
             cap: parent_cap,
             payee: child_address,
@@ -105,8 +105,8 @@ spec fun create_child_vasp_account {
         child_addr: child_address,
     };
     ensures DiemAccount::balance<CoinType>(child_address) == child_initial_balance;
-    ensures DiemAccount::balance<CoinType>(parent_addr)
-        == old(DiemAccount::balance<CoinType>(parent_addr)) - child_initial_balance;
+    ensures TRACE(DiemAccount::balance<CoinType>(parent_addr))
+        == TRACE(old(DiemAccount::balance<CoinType>(parent_addr)) - child_initial_balance);
 
     aborts_with [check]
         Errors::REQUIRES_ROLE,

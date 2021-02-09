@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use move_model::{
     ast,
-    ast::{Exp, TempIndex},
+    ast::{Exp, TempIndex, Value},
     model::{ConditionTag, FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
     pragmas::ABORTS_IF_IS_PARTIAL_PRAGMA,
     ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
@@ -24,6 +24,8 @@ use crate::{
     stackless_bytecode::{AbortAction, AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
     usage_analysis, verification_analysis,
 };
+use move_model::ast::QuantKind;
+use std::collections::BTreeSet;
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
@@ -31,6 +33,7 @@ const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condit
 const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
+const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
 
 fn modify_check_fails_message(
     env: &GlobalEnv,
@@ -81,14 +84,15 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
         check_modifies(env, targets);
     }
 
-    fn process_and_maybe_remove(
+    fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'_>,
         mut data: FunctionData,
-    ) -> Option<FunctionData> {
+    ) -> FunctionData {
+        assert_eq!(data.variant, FunctionVariant::Baseline);
         if fun_env.is_native() || fun_env.is_intrinsic() {
-            return Some(data);
+            return data;
         }
 
         let options = fun_env
@@ -98,6 +102,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
         let verification_info =
             verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
+
         if verification_info.verified {
             // Create a clone of the function data, moving annotations
             // out of this data and into the clone.
@@ -123,15 +128,13 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         // Instrument baseline variant only if it is inlined.
         if verification_info.inlined {
-            Some(Instrumenter::run(
-                options,
-                targets,
-                fun_env,
-                FunctionVariant::Baseline,
-                data,
-            ))
+            Instrumenter::run(options, targets, fun_env, FunctionVariant::Baseline, data)
         } else {
-            None
+            // Clear code but keep function data stub.
+            // TODO(refactoring): the stub is currently still needed because boogie_wrapper
+            //   seems to access information about it, which it should not in fact.
+            data.code = vec![];
+            data
         }
     }
 
@@ -142,6 +145,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
 struct Instrumenter<'a> {
     options: &'a ProverOptions,
+    targets: &'a mut FunctionTargetsHolder,
     variant: FunctionVariant,
     builder: FunctionDataBuilder<'a>,
     spec: TranslatedSpec,
@@ -195,6 +199,7 @@ impl<'a> Instrumenter<'a> {
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
             options,
+            targets,
             variant,
             builder,
             spec,
@@ -224,6 +229,33 @@ impl<'a> Instrumenter<'a> {
         // Extract and clear current code
         let old_code = std::mem::take(&mut self.builder.data.code);
 
+        if self.variant == FunctionVariant::Verification {
+            // Inject well-formedness assumptions for parameters.
+            for param in 0..self.builder.fun_env.get_parameter_count() {
+                let exp = self.builder.mk_call(
+                    &BOOL_TYPE,
+                    ast::Operation::WellFormed,
+                    vec![self.builder.mk_temporary(param)],
+                );
+                self.builder.emit_with(move |id| Prop(id, Assume, exp));
+            }
+
+            // Inject well-formedness assumption for used memory.
+            for mem in self.get_used_memory() {
+                let exp = self
+                    .builder
+                    .mk_mem_quant_opt(QuantKind::Forall, mem, &mut |val| {
+                        Some(self.builder.mk_call(
+                            &BOOL_TYPE,
+                            ast::Operation::WellFormed,
+                            vec![val],
+                        ))
+                    })
+                    .expect("quant defined");
+                self.builder.emit_with(move |id| Prop(id, Assume, exp));
+            }
+        }
+
         // Inject preconditions as assumes. This is done for all self.variant values.
         self.builder
             .set_loc(self.builder.fun_env.get_loc().at_start()); // reset to function level
@@ -248,7 +280,7 @@ impl<'a> Instrumenter<'a> {
 
         // Instrument and generate new code
         for bc in old_code {
-            self.instrument_bytecode(bc.clone());
+            self.instrument_bytecode(bc);
         }
 
         // Generate return and abort blocks
@@ -257,6 +289,26 @@ impl<'a> Instrumenter<'a> {
         }
         if self.can_abort {
             self.generate_abort_block();
+        }
+    }
+
+    fn get_used_memory(&self) -> BTreeSet<QualifiedId<StructId>> {
+        // TODO(refactoring): we currently need to do some odd treatment to access the usage
+        //   annotation. The annotation is either in the verification variant or, if none
+        //   exists, in the Baseline variant. Furthermore, data of the currently processed
+        //   variant is detached from targets.
+        if self.builder.data.variant == FunctionVariant::Verification
+            || !self
+                .targets
+                .get_target_variants(self.builder.fun_env)
+                .contains(&FunctionVariant::Verification)
+        {
+            usage_analysis::get_used_memory(&self.builder.get_target()).clone()
+        } else {
+            usage_analysis::get_used_memory(
+                &self.targets.get_annotated_target(&self.builder.fun_env),
+            )
+            .clone()
         }
     }
 
@@ -269,7 +321,7 @@ impl<'a> Instrumenter<'a> {
         match &bc {
             Call(id, _, BorrowGlobal(mid, sid, targs), srcs, _)
             | Call(id, _, MoveFrom(mid, sid, targs), srcs, _) => {
-                let addr_exp = self.builder.mk_local(srcs[0]);
+                let addr_exp = self.builder.mk_temporary(srcs[0]);
                 self.generate_modifies_check(
                     &self.builder.get_loc(*id),
                     mid.qualified(*sid),
@@ -278,7 +330,7 @@ impl<'a> Instrumenter<'a> {
                 );
             }
             Call(id, _, MoveTo(mid, sid, targs), srcs, _) => {
-                let addr_exp = self.builder.mk_local(srcs[1]);
+                let addr_exp = self.builder.mk_temporary(srcs[1]);
                 self.generate_modifies_check(
                     &self.builder.get_loc(*id),
                     mid.qualified(*sid),
@@ -416,6 +468,28 @@ impl<'a> Instrumenter<'a> {
             ));
             self.can_abort = true;
         } else {
+            // Translate the abort condition. If the abort_cond_temp_opt is None, it indicates
+            // that the abort condition is known to be false, so we can skip the abort handling.
+            let (abort_cond_temp_opt, code_cond) = self.generate_abort_opaque_cond(&callee_spec);
+            if let Some(abort_cond_temp) = abort_cond_temp_opt {
+                let abort_local = self.abort_local;
+                let abort_label = self.abort_label;
+                let no_abort_label = self.builder.new_label();
+                let abort_here_label = self.builder.new_label();
+                self.builder
+                    .emit_with(|id| Branch(id, abort_here_label, no_abort_label, abort_cond_temp));
+                self.builder.emit_with(|id| Label(id, abort_here_label));
+                if let Some(cond) = code_cond {
+                    self.builder.emit_with(move |id| Prop(id, Assume, cond));
+                }
+                self.builder.emit_with(move |id| {
+                    Call(id, vec![], Operation::TraceAbort, vec![abort_local], None)
+                });
+                self.builder.emit_with(|id| Jump(id, abort_label));
+                self.builder.emit_with(|id| Label(id, no_abort_label));
+                self.can_abort = true;
+            }
+
             // Emit all necessary state saves
             for (mem, label) in std::mem::take(&mut callee_spec.saved_memory) {
                 self.builder.emit_with(|id| SaveMem(id, label, mem));
@@ -429,31 +503,19 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| Prop(id, Modifies, modifies));
             }
 
-            // Translate the abort condition.
-            let (abort_cond_temp, code_cond) = self.generate_abort_opaque_cond(&callee_spec);
-            let abort_label = self.abort_label;
-            let no_abort_label = self.builder.new_label();
-            // If the code_cond is not empty, we first need to branch to the abort_here_label
-            // which contains additional assumptions about abort code, before we jump to the
-            // abort_label.
-            let abort_here_label = if code_cond.is_some() {
-                self.builder.new_label()
-            } else {
-                abort_label
-            };
-            self.builder
-                .emit_with(|id| Branch(id, abort_here_label, no_abort_label, abort_cond_temp));
-            if let Some(cond) = code_cond {
-                self.builder.emit_with(|id| Label(id, abort_here_label));
-                self.builder.emit_with(move |id| Prop(id, Assume, cond));
-                self.builder.emit_with(|id| Jump(id, abort_label));
-            }
-            self.builder.emit_with(|id| Label(id, no_abort_label));
-            self.can_abort = true;
-
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
                 self.builder.emit_with(|id| Prop(id, Assume, cond));
+            }
+
+            // Emit placeholders for assuming well-formedness of return values.
+            for dest in dests {
+                let exp = self.builder.mk_call(
+                    &BOOL_TYPE,
+                    ast::Operation::WellFormed,
+                    vec![self.builder.mk_temporary(dest)],
+                );
+                self.builder.emit_with(move |id| Prop(id, Assume, exp));
             }
         }
     }
@@ -501,7 +563,7 @@ impl<'a> Instrumenter<'a> {
 
         if self.spec.has_aborts_code_specs() {
             // If any codes are specified, emit an assertion for the code condition.
-            let actual_code = self.builder.mk_local(self.abort_local);
+            let actual_code = self.builder.mk_temporary(self.abort_local);
             if let Some(code_cond) = self.spec.aborts_code_condition(&self.builder, &actual_code) {
                 // TODO(wrwg): we can't use the same location as for the aborts conditions, because
                 //   of the way vc-info association works. Need to redesign this and attach info
@@ -520,8 +582,12 @@ impl<'a> Instrumenter<'a> {
 
     /// Generates an abort condition for assumption in opaque calls. This returns a temporary
     /// in which the abort condition is stored, plus an optional expression which constraints
-    /// the abort code.
-    fn generate_abort_opaque_cond(&mut self, spec: &TranslatedSpec) -> (TempIndex, Option<Exp>) {
+    /// the abort code. If the 1st return value is None, it indicates that the abort condition
+    /// is known to be false.
+    fn generate_abort_opaque_cond(
+        &mut self,
+        spec: &TranslatedSpec,
+    ) -> (Option<TempIndex>, Option<Exp>) {
         let is_partial = self
             .builder
             .fun_env
@@ -532,6 +598,9 @@ impl<'a> Instrumenter<'a> {
             spec.aborts_condition(&self.builder)
         };
         let aborts_cond_temp = if let Some(cond) = aborts_cond {
+            if matches!(cond, Exp::Value(_, Value::Bool(false))) {
+                return (None, None);
+            }
             // Introduce a temporary to hold the value of the aborts condition.
             self.builder.emit_let(cond).0
         } else {
@@ -540,12 +609,12 @@ impl<'a> Instrumenter<'a> {
             self.builder.emit_let_havoc(BOOL_TYPE.clone()).0
         };
         let aborts_code_cond = if spec.has_aborts_code_specs() {
-            let actual_code = self.builder.mk_local(self.abort_local);
+            let actual_code = self.builder.mk_temporary(self.abort_local);
             spec.aborts_code_condition(&self.builder, &actual_code)
         } else {
             None
         };
-        (aborts_cond_temp, aborts_code_cond)
+        (Some(aborts_cond_temp), aborts_code_cond)
     }
 
     fn generate_return_block(&mut self) {
@@ -579,6 +648,13 @@ impl<'a> Instrumenter<'a> {
                 );
                 self.builder
                     .emit_with(move |id| Prop(id, Assert, cond.clone()))
+            }
+
+            // Emit all event `emits` checks.
+            for (loc, cond) in self.spec.emits_conditions(&self.builder) {
+                self.builder
+                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, EMITS_FAILS_MESSAGE);
+                self.builder.emit_with(move |id| Prop(id, Assert, cond))
             }
         }
 

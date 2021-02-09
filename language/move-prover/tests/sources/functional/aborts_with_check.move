@@ -1,5 +1,9 @@
 module TestAbortsWithCheck {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     fun aborts_with_check(x: u64, y: u64): u64 {
         if (x == 1) {
             abort 2
@@ -31,4 +35,5 @@ module TestAbortsWithCheck {
         aborts_with [check] 2;
         ensures result == x;
     }
+    */
 }

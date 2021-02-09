@@ -338,10 +338,13 @@ module DiemAccount {
         modifies global<Balance<Token>>(payee);
         modifies global<DiemAccount>(payee);
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payee));
+        // TODO(wrwg): precisely specify what changed in the modified resources using `update_field`
         ensures exists<DiemAccount>(payee);
         ensures exists<Balance<Token>>(payee);
         ensures global<DiemAccount>(payee).withdraw_capability
             == old(global<DiemAccount>(payee).withdraw_capability);
+        ensures global<DiemAccount>(payee).authentication_key
+            == old(global<DiemAccount>(payee).authentication_key);
         let amount = to_deposit.value;
         include DepositAbortsIf<Token>{amount: amount};
         include DepositOverflowAbortsIf<Token>{amount: amount};

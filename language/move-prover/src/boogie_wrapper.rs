@@ -430,9 +430,8 @@ impl<'env> BoogieWrapper<'env> {
         // Inject secondary labels about expression values.
         if let Some(m) = &error.model {
             for (desc, values) in &m.tracked_exps {
-                let module_env = self.env.get_module(desc.module_id);
-                let loc = module_env.env.get_node_loc(desc.node_id);
-                let ty = module_env.env.get_node_type(desc.node_id);
+                let loc = self.env.get_node_loc(desc.node_id);
+                let ty = self.env.get_node_type(desc.node_id);
                 let value_display = values
                     .iter()
                     .filter_map(|v| Some(v.pretty_or_raw(self, m, &ty)).map(|p| self.render(&p)))
@@ -1051,25 +1050,18 @@ impl Model {
         map_entry: &ModelValue,
     ) -> Result<(ExpDescriptor, ModelValue), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
-            if args.len() != 3 {
+            if args.len() != 2 {
                 return Err(Self::invalid_track_info());
             }
-            let module_id = ModuleId::new(
-                args[0]
-                    .extract_number()
-                    .ok_or_else(Self::invalid_track_info)
-                    .and_then(Self::index_range_check(wrapper.env.get_module_count()))?,
-            );
-            let module_env = wrapper.env.get_module(module_id);
             let node_id = NodeId::new(
-                args[1]
+                args[0]
                     .extract_number()
                     .ok_or_else(Self::invalid_track_info)?,
             );
-            if module_env.env.get_node_type(node_id) == Type::Error {
+            if wrapper.env.get_node_type(node_id) == Type::Error {
                 return Err(Self::invalid_track_info());
             }
-            Ok((ExpDescriptor { module_id, node_id }, args[2].clone()))
+            Ok((ExpDescriptor { node_id }, args[1].clone()))
         } else {
             Err(Self::invalid_track_info())
         }
@@ -1558,7 +1550,6 @@ struct AbortDescriptor {
 /// Represents an expression descriptor.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct ExpDescriptor {
-    module_id: ModuleId,
     node_id: NodeId,
 }
 

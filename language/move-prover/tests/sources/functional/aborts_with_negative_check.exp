@@ -1,8 +1,0 @@
-Move prover returns: exiting with boogie verification errors
-error: abort with 4 does never occur (negative error)
-
-    ┌── tests/sources/functional/aborts_with_negative_check.move:15:35 ───
-    │
- 15 │         aborts_with [check] 2, 3, 4;
-    │                                   ^
-    │

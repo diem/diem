@@ -98,8 +98,7 @@ module DiemBlock {
         ensures DiemTimestamp::spec_now_microseconds() == timestamp;
         ensures get_current_block_height() == old(get_current_block_height()) + 1;
 
-        /// The below counter overflow is assumed to be excluded from verification of callers.
-        aborts_if [assume] get_current_block_height() + 1 > MAX_U64 with EXECUTION_FAILURE;
+        aborts_if get_current_block_height() + 1 > MAX_U64 with EXECUTION_FAILURE;
         include BlockPrologueEmits;
     }
     spec schema BlockPrologueEmits {

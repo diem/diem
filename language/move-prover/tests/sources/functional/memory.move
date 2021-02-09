@@ -1,5 +1,5 @@
-// flag: --v2
 module TestMemory {
+
     spec module {
         pragma verify = true;
     }

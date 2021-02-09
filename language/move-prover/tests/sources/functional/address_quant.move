@@ -1,7 +1,7 @@
-// flag: --v2
 // Tests of quantification over addresses.
 module AddressQuant {
     use 0x1::Signer;
+
     resource struct R {
         x: u64
     }

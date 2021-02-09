@@ -1,8 +1,8 @@
-// flag: --v2
 module TestPureFun {
     use 0x1::CoreAddresses;
     use 0x1::Signer;
     use 0x1::Vector;
+
     resource struct T {
         x: u64,
     }

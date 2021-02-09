@@ -1,5 +1,5 @@
-// flag: --v2
 module TestAssertWithReferences {
+
     spec module {
         pragma verify = true;
     }

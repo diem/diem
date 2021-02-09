@@ -243,7 +243,7 @@ fn main() {
         ));
         reqs.push(Requirements::new(
             test_runner,
-            "stdlib".to_string(),
+            "fx".to_string(),
             "../diem-framework".to_string(),
             r".*\.move$".to_string(),
         ));

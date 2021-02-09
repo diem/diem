@@ -1,6 +1,6 @@
-// flag: --v2
 // Tests pragmas.
 module TestPragma {
+
 
     spec module {
         // if not specified otherwise, verification is off.

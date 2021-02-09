@@ -1,6 +1,6 @@
-// flag: --v2
 module TestGlobalInvariants {
     use 0x1::Signer;
+
     spec module {
         pragma verify = true;
     }

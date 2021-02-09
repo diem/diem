@@ -1862,13 +1862,7 @@ impl<'env> SpecTranslator<'env> {
             false
         };
         if go {
-            let module_env = self.module_env();
-            emit!(
-                self.writer,
-                "$DebugTrackExp({}, {}, ",
-                module_env.get_id().to_usize(),
-                node_id.as_usize(),
-            );
+            emit!(self.writer, "$DebugTrackExp({}, ", node_id.as_usize());
             f();
             emit!(self.writer, ")");
         } else {
@@ -2029,7 +2023,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Exists(_) => unimplemented!(),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
             Operation::TypeValue => self.translate_type_value(node_id),
-            Operation::TypeDomain => self.error(
+            Operation::TypeDomain | Operation::ResourceDomain => self.error(
                 &loc,
                 "the `domain<T>()` function can only be used as the 1st \
                  parameter of `all` or `any`",
@@ -2045,7 +2039,15 @@ impl<'env> SpecTranslator<'env> {
             Operation::MaxU8 => emit!(self.writer, "$Integer($MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "$Integer($MAX_U64)"),
             Operation::MaxU128 => emit!(self.writer, "$Integer($MAX_U128)"),
-            Operation::CanModify | Operation::AbortCode | Operation::AbortFlag => unimplemented!(),
+            Operation::CanModify
+            | Operation::AbortCode
+            | Operation::AbortFlag
+            | Operation::WellFormed
+            | Operation::BoxValue
+            | Operation::CheckEventStore
+            | Operation::EmptyEventStore
+            | Operation::ExtendEventStore
+            | Operation::UnboxValue => unimplemented!(),
             Operation::NoOp => { /* do nothing. */ }
         }
     }

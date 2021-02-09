@@ -1,6 +1,10 @@
 address 0x1 {
 module TestMutRefsAccrossModule {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
     }
@@ -122,8 +126,11 @@ module TestMutRefsAccrossModule {
          increment(r);
          x
      }
+
+     */
 }
 
+/*
 module TestMutRefsUser {
     use 0x1::TestMutRefsAccrossModule;
 
@@ -133,4 +140,6 @@ module TestMutRefsUser {
         TestMutRefsAccrossModule::delete(x);
     }
 }
+*/
+
 }
