@@ -13,7 +13,7 @@ use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
     stackless_bytecode::{BorrowNode, Bytecode, Constant, Operation},
-    usage_analysis,
+    verification_analysis,
 };
 use move_model::{
     code_writer::CodeWriter,
@@ -29,8 +29,7 @@ use crate::{
         boogie_byte_blob, boogie_debug_track_abort_via_attrib, boogie_debug_track_local_via_attrib,
         boogie_field_name, boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
         boogie_resource_memory_name, boogie_struct_name, boogie_type_value,
-        boogie_type_value_array, boogie_type_value_array_from_strings, boogie_type_values,
-        boogie_well_formed_check,
+        boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -172,12 +171,14 @@ impl<'env> ModuleTranslator<'env> {
         );
 
         // Emit memory variable.
-        let memory_name = boogie_resource_memory_name(
-            struct_env.module_env.env,
-            struct_env.get_qualified_id(),
-            &None,
-        );
-        emitln!(self.writer, "var {}: $Memory;", memory_name);
+        if struct_env.is_resource() {
+            let memory_name = boogie_resource_memory_name(
+                struct_env.module_env.env,
+                struct_env.get_qualified_id(),
+                &None,
+            );
+            emitln!(self.writer, "var {}: $Memory;", memory_name);
+        }
 
         // Emit type assumption function.
         self.spec_translator
@@ -197,8 +198,14 @@ impl<'env> ModuleTranslator<'env> {
             if func_env.is_native() || func_env.is_intrinsic() {
                 continue;
             }
+            let verification_info =
+                verification_analysis::get_info(&self.targets.get_annotated_target(&func_env));
             for variant in self.targets.get_target_variants(&func_env) {
-                self.translate_function(variant, &self.targets.get_target(&func_env, variant));
+                if verification_info.verified && variant == FunctionVariant::Verification
+                    || verification_info.inlined && variant == FunctionVariant::Baseline
+                {
+                    self.translate_function(variant, &self.targets.get_target(&func_env, variant));
+                }
             }
         }
     }
@@ -388,9 +395,6 @@ impl<'env> ModuleTranslator<'env> {
         // Prelude initialization
         emitln!(self.writer, "call $InitVerification();");
 
-        // Assume type wellformedness of parameters.
-        self.assume_wellformedness(func_target, 0..func_target.get_parameter_count());
-
         // Assume reference parameters to be based on the Param(i) Location, ensuring
         // they are disjoint from all other references. This prevents aliasing and is justified as
         // follows:
@@ -407,36 +411,6 @@ impl<'env> ModuleTranslator<'env> {
 
         // Initialize modify permissions.
         self.initialize_modifies_permissions(func_target);
-
-        // Assume used memory to be wellformed.
-        let used_mem = usage_analysis::get_used_memory(&func_target);
-        let env = self.module_env.env;
-        for mem in used_mem {
-            let struct_env = env.get_module(mem.module_id).into_struct(mem.id);
-            emit!(self.writer, "assume ");
-            let memory_name = boogie_resource_memory_name(func_target.global_env(), *mem, &None);
-            emit!(self.writer, "(forall $inv_addr: int");
-            let mut type_args = vec![];
-            for i in 0..struct_env.get_type_parameters().len() {
-                emit!(self.writer, ", $inv_tv{}: $TypeValue", i);
-                type_args.push(format!("$inv_tv{}", i));
-            }
-            let get_resource = format!(
-                "contents#$Memory({})[{}, $inv_addr]",
-                memory_name,
-                boogie_type_value_array_from_strings(&type_args)
-            );
-            emitln!(self.writer, " :: {{{}}}", get_resource);
-            self.writer.indent();
-            emitln!(
-                self.writer,
-                "{}_$is_well_formed({})",
-                boogie_struct_name(&struct_env),
-                get_resource,
-            );
-            self.writer.unindent();
-            emitln!(self.writer, ");");
-        }
     }
 
     /// Initializes modifies permissions.
@@ -456,7 +430,7 @@ impl<'env> ModuleTranslator<'env> {
                 let (_, _, targs) = rty.require_struct();
                 let type_args = boogie_type_value_array(env, targs);
                 emit!(self.writer, "[{}, a#$Address(", type_args);
-                self.spec_translator.translate_exp(&args[0]);
+                self.spec_translator.translate(&args[0]);
                 emit!(self.writer, ") := true]");
             }
             emitln!(self.writer, ";");
@@ -498,14 +472,14 @@ impl<'env> ModuleTranslator<'env> {
             }
             Prop(_, kind, exp) => match kind {
                 PropKind::Assert => {
-                    emit!(self.writer, "assert b#$Boolean(");
-                    self.spec_translator.translate_exp(exp);
-                    emitln!(self.writer, ");");
+                    emit!(self.writer, "assert ");
+                    self.spec_translator.translate_unboxed(exp);
+                    emitln!(self.writer, ";");
                 }
                 PropKind::Assume => {
-                    emit!(self.writer, "assume b#$Boolean(");
-                    self.spec_translator.translate_exp(exp);
-                    emitln!(self.writer, ");");
+                    emit!(self.writer, "assume ");
+                    self.spec_translator.translate_unboxed(exp);
+                    emitln!(self.writer, ";");
                 }
                 PropKind::Modifies => {
                     let ty = self.module_env.env.get_node_type(exp.node_id());
@@ -515,13 +489,13 @@ impl<'env> ModuleTranslator<'env> {
                     let boogie_type_args = boogie_type_value_array(self.module_env.env, type_args);
                     emit!(
                         self.writer,
-                        "call {} := $Modifies({}, {}, a#$Address(",
+                        "call {} := $Modifies({}, {}, ",
                         boogie_mem,
                         boogie_mem,
                         boogie_type_args
                     );
-                    self.spec_translator.translate_exp(&exp.call_args()[0]);
-                    emitln!(self.writer, "));");
+                    self.spec_translator.translate_unboxed(&exp.call_args()[0]);
+                    emitln!(self.writer, ");");
                 }
             },
             Label(_, label) => {
@@ -568,7 +542,9 @@ impl<'env> ModuleTranslator<'env> {
                     Constant::U64(num) => format!("$Integer({})", num),
                     Constant::U128(num) => format!("$Integer({})", num),
                     Constant::Address(val) => format!("$Address({})", val),
-                    Constant::ByteArray(val) => boogie_byte_blob(self.options, val),
+                    Constant::ByteArray(val) => {
+                        format!("$Vector({})", boogie_byte_blob(self.options, val))
+                    }
                 };
                 emitln!(self.writer, "{} := {};", str_local(*idx), value);
             }
@@ -1237,20 +1213,5 @@ impl<'env> ModuleTranslator<'env> {
             usize::saturating_add(func_target.get_local_count(), return_idx).to_string();
         let track = boogie_debug_track_local_via_attrib(&file_idx, &pos, &return_idx, &value);
         emitln!(self.writer, &track);
-    }
-
-    fn assume_wellformedness(
-        &self,
-        func_target: &FunctionTarget<'_>,
-        locals: impl Iterator<Item = TempIndex>,
-    ) {
-        for local in locals {
-            let ty = func_target.get_local_type(local);
-            let name = format!("$t{}", local);
-            let check = boogie_well_formed_check(self.module_env.env, &name, ty);
-            if !check.is_empty() {
-                emitln!(self.writer, &check);
-            }
-        }
     }
 }

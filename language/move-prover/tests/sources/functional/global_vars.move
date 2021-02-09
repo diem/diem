@@ -1,4 +1,9 @@
 module TestGlobalVars {
+
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
     }
@@ -152,4 +157,6 @@ module TestGlobalVars {
     spec fun update_S_incorrect {
         ensures sum_of_S == old(sum_of_S) + 1;
     }
+
+    */
 }

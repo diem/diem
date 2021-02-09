@@ -25,35 +25,43 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
 fun Generics::remove<$tv0>($t0|a: address): Generics::R<#0> {
      var $t1: Generics::R<#0>
      var $t2: num
+  0: assume WellFormed($t0)
+  1: assume forall $rsc: ResourceDomain<Generics::R<#0>>(): WellFormed($rsc)
      # VC: `caller does not have permission to modify `Generics::R<#0>` at given address` at tests/spec_instrumentation/generics.move:11:9+9
-  0: assert CanModify<Generics::R<#0>>($t0)
-  1: $t1 := move_from<Generics::R<#0>>($t0) on_abort goto 5 with $t2
-  2: label L1
+  2: assert CanModify<Generics::R<#0>>($t0)
+  3: $t1 := move_from<Generics::R<#0>>($t0) on_abort goto 7 with $t2
+  4: label L1
      # VC: `post-condition does not hold` at tests/spec_instrumentation/generics.move:20:9+25
-  3: assert Not(exists<Generics::R<#0>>($t0))
-  4: return $t1
-  5: label L2
-  6: abort($t2)
+  5: assert Not(exists<Generics::R<#0>>($t0))
+  6: return $t1
+  7: label L2
+  8: abort($t2)
 }
 
 
 [variant verification]
 fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
      var $t1: bool
-     var $t2: Generics::R<u64>
-     var $t3: num
+     var $t2: num
+     var $t3: Generics::R<u64>
+  0: assume WellFormed($t0)
+  1: assume forall $rsc: ResourceDomain<Generics::R<#0>>(): WellFormed($rsc)
      # original call of opaque function: $t2 := Generics::remove<u64>($t1)
      # VC: `caller does not have permission to modify `Generics::R<u64>` at given address` at tests/spec_instrumentation/generics.move:10:9+6
-  0: assert CanModify<Generics::R<u64>>($t0)
-  1: modifies global<Generics::R<u64>>($t0)
-  2: $t1 := havoc()
-  3: if ($t1) goto 9 else goto 4
-  4: label L3
-  5: assume Not(exists<Generics::R<u64>>($t0))
-  6: label L1
+  2: assert CanModify<Generics::R<u64>>($t0)
+  3: $t1 := havoc()
+  4: if ($t1) goto 5 else goto 8
+  5: label L4
+  6: trace_abort($t2)
+  7: goto 15
+  8: label L3
+  9: modifies global<Generics::R<u64>>($t0)
+ 10: assume Not(exists<Generics::R<u64>>($t0))
+ 11: assume WellFormed($t3)
+ 12: label L1
      # VC: `post-condition does not hold` at tests/spec_instrumentation/generics.move:20:9+25
-  7: assert Not(exists<Generics::R<u64>>($t0))
-  8: return $t2
-  9: label L2
- 10: abort($t3)
+ 13: assert Not(exists<Generics::R<u64>>($t0))
+ 14: return $t3
+ 15: label L2
+ 16: abort($t2)
 }

@@ -74,19 +74,25 @@ module DiemTimestamp {
         global_timer.microseconds = timestamp;
     }
     spec fun update_global_time {
+        pragma opaque;
+        modifies global<CurrentTimeMicroseconds>(CoreAddresses::DIEM_ROOT_ADDRESS());
+
+        let now = spec_now_microseconds();
+
+        /// Conditions unique for abstract and concrete version of this function.
         include AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM;
-        let now = spec_now_microseconds();
-        // TODO(wrwg): remove this assume by ensuring callers do not violate the condition
-        aborts_if [assume]
+        ensures now == timestamp; // refers to the `now` in the post state
+
+        /// Conditions we only check for the implementation, but do not pass to the caller.
+        aborts_if [concrete]
             (if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
-                now != timestamp
+                now != timestamp // Refers to the now in the pre state
              } else  {
                 now >= timestamp
              }
             )
             with Errors::INVALID_ARGUMENT;
-        ensures spec_now_microseconds() == timestamp;
     }
 
     /// Gets the current time in microseconds.

@@ -116,7 +116,13 @@ impl FunctionTargetsHolder {
     ) -> FunctionTarget<'env> {
         let data = self
             .get_data(&func_env.get_qualified_id(), variant)
-            .expect("function target exists");
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected function target: {} ({:?})",
+                    func_env.get_full_name_str(),
+                    variant
+                )
+            });
         FunctionTarget::new(func_env, &data)
     }
 

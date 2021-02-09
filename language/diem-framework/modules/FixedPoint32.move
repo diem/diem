@@ -201,7 +201,7 @@ module FixedPoint32 {
         include ConcreteCreateFromRationalAbortsIf;
     }
 
-    /// Abstract to either 0.5 or 1. This assumes validation of numerator and denominator has been
+    /// Abstract to either 0.5 or 1. This assumes validation of numerator and denominator has
     /// succeeded.
     spec define spec_create_from_rational(numerator: num, denominator: num): FixedPoint32 {
         if (numerator == denominator)

@@ -216,7 +216,7 @@ module ValidatorConfig {
         consensus_pubkey: vector<u8>;
         aborts_if Signer::address_of(validator_operator_account) != get_operator(validator_addr)
             with Errors::INVALID_ARGUMENT;
-        include AbortsIfNoValidatorConfig{addr: validator_addr};
+        include AbortsIfGetOperator{addr: validator_addr};
         aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with Errors::INVALID_ARGUMENT;
     }
 
@@ -287,9 +287,14 @@ module ValidatorConfig {
 
     spec fun get_operator {
         pragma opaque;
-        aborts_if !Option::is_some(global<ValidatorConfig>(addr).operator_account) with Errors::INVALID_ARGUMENT;
-        include AbortsIfNoValidatorConfig;
+        include AbortsIfGetOperator;
         ensures result == get_operator(addr);
+    }
+
+    spec schema AbortsIfGetOperator {
+        addr: address;
+        include AbortsIfNoValidatorConfig;
+        aborts_if !spec_has_operator(addr) with Errors::INVALID_ARGUMENT;
     }
 
     /// Get consensus_pubkey from Config

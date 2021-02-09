@@ -11,10 +11,12 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{Exp, TempIndex, Value},
+    ast::{Exp, LocalVarDecl, QuantKind, TempIndex, Value},
     model::{
-        ConditionInfo, ConditionTag, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId,
+        ConditionInfo, ConditionTag, FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId,
+        StructId,
     },
+    symbol::Symbol,
     ty::{Type, BOOL_TYPE, NUM_TYPE},
 };
 
@@ -102,6 +104,11 @@ impl<'env> FunctionDataBuilder<'env> {
             .unwrap_or_else(|| self.fun_env.get_loc())
     }
 
+    /// Gets the default location.
+    pub fn get_current_loc(&self) -> &Loc {
+        &self.current_loc
+    }
+
     /// Creates a new bytecode attribute id with default location.
     pub fn new_attr(&mut self) -> AttrId {
         let id = AttrId::new(self.next_free_attr_index);
@@ -117,20 +124,37 @@ impl<'env> FunctionDataBuilder<'env> {
         label
     }
 
+    /// Creates a new expression node id, using current default location, provided type,
+    /// and optional instantiation.
+    pub fn new_node(&self, ty: Type, inst_opt: Option<Vec<Type>>) -> NodeId {
+        let node_id = self.global_env().new_node(self.current_loc.clone(), ty);
+        if let Some(inst) = inst_opt {
+            self.global_env().set_node_instantiation(node_id, inst);
+        }
+        node_id
+    }
+
     /// Make a boolean constant expression.
     pub fn mk_bool_const(&self, value: bool) -> Exp {
-        let node_id = self
-            .global_env()
-            .new_node(self.current_loc.clone(), BOOL_TYPE.clone());
+        let node_id = self.new_node(BOOL_TYPE.clone(), None);
         Exp::Value(node_id, Value::Bool(value))
     }
 
     /// Makes a Call expression.
     pub fn mk_call(&self, ty: &Type, oper: ast::Operation, args: Vec<Exp>) -> Exp {
-        let node_id = self
-            .global_env()
-            .new_node(self.current_loc.clone(), ty.clone());
+        let node_id = self.new_node(ty.clone(), None);
         Exp::Call(node_id, oper, args)
+    }
+
+    /// Makes an if-then-else expression.
+    pub fn mk_ite(&self, cond: Exp, if_true: Exp, if_false: Exp) -> Exp {
+        let node_id = self.new_node(self.global_env().get_node_type(if_true.node_id()), None);
+        Exp::IfElse(
+            node_id,
+            Box::new(cond),
+            Box::new(if_true),
+            Box::new(if_false),
+        )
     }
 
     /// Makes a Call expression with boolean result type.
@@ -194,11 +218,135 @@ impl<'env> FunctionDataBuilder<'env> {
         }
     }
 
-    /// Makes a local for a temporary.
-    pub fn mk_local(&self, temp: TempIndex) -> Exp {
+    /// Creates a quantifier over the content of a vector. The passed function `f` receives
+    /// an expression representing an element of the vector and returns the quantifiers predicate;
+    /// if it returns None, this function will also return None, otherwise the quantifier will be
+    /// returned.
+    pub fn mk_vector_quant_opt<F>(
+        &self,
+        kind: QuantKind,
+        vector: Exp,
+        elem_ty: &Type,
+        f: &mut F,
+    ) -> Option<Exp>
+    where
+        F: FnMut(Exp) -> Option<Exp>,
+    {
+        let elem = self.mk_local("$elem", elem_ty.clone());
+        if let Some(body) = f(elem) {
+            let range_decl = self.mk_decl(self.mk_symbol("$elem"), elem_ty.clone(), None);
+            let node_id = self.new_node(BOOL_TYPE.clone(), None);
+            Some(Exp::Quant(
+                node_id,
+                kind,
+                vec![(range_decl, vector)],
+                vec![],
+                None,
+                Box::new(body),
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Creates a quantifier over the content of memory. The passed function `f` receives
+    //  an expression representing a value in memory and returns the quantifiers predicate;
+    //  if it returns None, this function will also return None.
+    pub fn mk_mem_quant_opt<F>(
+        &self,
+        kind: QuantKind,
+        mem: QualifiedId<StructId>,
+        f: &mut F,
+    ) -> Option<Exp>
+    where
+        F: FnMut(Exp) -> Option<Exp>,
+    {
+        // We generate `forall $val in resources<R>: INV[$val]`. The `resources<R>`
+        // quantifier domain is currently only available in the internal expression language,
+        // not on user level.
+        let struct_env = self
+            .global_env()
+            .get_module(mem.module_id)
+            .into_struct(mem.id);
+        let type_inst = (0..struct_env.get_type_parameters().len())
+            .map(|i| Type::TypeParameter(i as u16))
+            .collect_vec();
+        let struct_ty = Type::Struct(mem.module_id, mem.id, type_inst);
+        let value = self.mk_local("$rsc", struct_ty.clone());
+
+        if let Some(body) = f(value) {
+            let resource_domain_ty = Type::ResourceDomain(mem.module_id, mem.id);
+            let resource_domain_node_id =
+                self.new_node(resource_domain_ty, Some(vec![struct_ty.clone()]));
+            let resource_domain = Exp::Call(
+                resource_domain_node_id,
+                ast::Operation::ResourceDomain,
+                vec![],
+            );
+            let resource_decl = self.mk_decl(self.mk_symbol("$rsc"), struct_ty, None);
+            let quant_node_id = self.new_node(BOOL_TYPE.clone(), None);
+            Some(Exp::Quant(
+                quant_node_id,
+                kind,
+                vec![(resource_decl, resource_domain)],
+                vec![],
+                None,
+                Box::new(body),
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Makes a local variable declaration.
+    pub fn mk_decl(&self, name: Symbol, ty: Type, binding: Option<Exp>) -> LocalVarDecl {
+        let node_id = self.new_node(ty, None);
+        LocalVarDecl {
+            id: node_id,
+            name,
+            binding,
+        }
+    }
+
+    /// Makes a symbol from a string.
+    pub fn mk_symbol(&self, str: &str) -> Symbol {
+        self.global_env().symbol_pool().make(str)
+    }
+
+    /// Makes a type domain expression.
+    pub fn mk_type_domain(&self, ty: Type) -> Exp {
+        let domain_ty = Type::TypeDomain(Box::new(ty.clone()));
+        let node_id = self.new_node(domain_ty, Some(vec![ty]));
+        Exp::Call(node_id, ast::Operation::TypeDomain, vec![])
+    }
+
+    /// Makes an expression which selects a field from a struct.
+    pub fn mk_field_select(&self, field_env: &FieldEnv<'_>, targs: &[Type], exp: Exp) -> Exp {
+        let ty = field_env.get_type().instantiate(targs);
+        let node_id = self.new_node(ty, None);
+        Exp::Call(
+            node_id,
+            ast::Operation::Select(
+                field_env.struct_env.module_env.get_id(),
+                field_env.struct_env.get_id(),
+                field_env.get_id(),
+            ),
+            vec![exp],
+        )
+    }
+
+    /// Makes an expression for a temporary.
+    pub fn mk_temporary(&self, temp: TempIndex) -> Exp {
         let ty = self.data.local_types[temp].clone();
-        let node_id = self.global_env().new_node(self.current_loc.clone(), ty);
+        let node_id = self.new_node(ty, None);
         Exp::Temporary(node_id, temp)
+    }
+
+    /// Makes an expression for a named local.
+    pub fn mk_local(&self, name: &str, ty: Type) -> Exp {
+        let node_id = self.new_node(ty, None);
+        let sym = self.mk_symbol(name);
+        Exp::LocalVar(node_id, sym)
     }
 
     /// Get's the memory associated with a Call(Global,..) or Call(Exists, ..) node. Crashes
@@ -261,7 +409,7 @@ impl<'env> FunctionDataBuilder<'env> {
     pub fn emit_let(&mut self, def: Exp) -> (TempIndex, Exp) {
         let ty = self.global_env().get_node_type(def.node_id());
         let temp = self.new_temp(ty);
-        let temp_exp = self.mk_local(temp);
+        let temp_exp = self.mk_temporary(temp);
         let definition = self.mk_eq(temp_exp.clone(), def);
         self.emit_with(|id| Bytecode::Prop(id, PropKind::Assume, definition));
         (temp, temp_exp)
@@ -270,7 +418,7 @@ impl<'env> FunctionDataBuilder<'env> {
     /// Emits a new temporary with a havoced value of given type.
     pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
         let temp = self.new_temp(ty);
-        let temp_exp = self.mk_local(temp);
+        let temp_exp = self.mk_temporary(temp);
         self.emit_with(|id| Bytecode::Call(id, vec![temp], Operation::Havoc, vec![], None));
         (temp, temp_exp)
     }

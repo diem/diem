@@ -1,6 +1,6 @@
-// flag: --v2
 // flag: --warn
 module TestUnusedSchema {
+
     spec module {
         pragma verify = true;
     }

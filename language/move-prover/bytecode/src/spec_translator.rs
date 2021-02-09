@@ -18,6 +18,11 @@ use move_model::{
 };
 
 use crate::function_data_builder::FunctionDataBuilder;
+use move_model::{
+    model::GlobalId,
+    pragmas::{CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP},
+    ty::PrimitiveType,
+};
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b> {
@@ -36,6 +41,8 @@ pub struct SpecTranslator<'a, 'b> {
     shadowed: Vec<BTreeSet<Symbol>>,
     /// The translated spec.
     result: TranslatedSpec,
+    /// Whether we are translating in a post-state (ensures)
+    at_post: bool,
 }
 
 /// Represents a translated spec.
@@ -47,8 +54,9 @@ pub struct TranslatedSpec {
     pub post: Vec<(Loc, Exp)>,
     pub aborts: Vec<(Loc, Exp, Option<Exp>)>,
     pub aborts_with: Vec<(Loc, Vec<Exp>)>,
+    pub emits: Vec<(Loc, Exp, Exp, Option<Exp>)>,
     pub modifies: Vec<(Loc, Exp)>,
-    pub invariants: Vec<(Loc, Exp)>,
+    pub invariants: Vec<(Loc, GlobalId, Exp)>,
 }
 
 impl TranslatedSpec {
@@ -112,29 +120,64 @@ impl TranslatedSpec {
         !self.aborts_with.is_empty() || self.aborts.iter().any(|(_, _, c)| c.is_some())
     }
 
-    /// Return an iterator of effective pre conditions. Each individual condition is or-ed with
-    /// the aborts condition, if present, as the pre-condition only needs to hold if the function
-    /// does not abort.
-    pub fn pre_conditions(&self, builder: &FunctionDataBuilder<'_>) -> Vec<(Loc, Exp)> {
-        let abort_cond = self.aborts_condition(builder);
-        self.pre
-            .iter()
-            .map(|(loc, exp)| {
-                (
-                    loc.clone(),
-                    builder
-                        .mk_join_opt_bool(ast::Operation::Or, Some(exp.clone()), abort_cond.clone())
-                        .unwrap(),
-                )
-            })
-            .collect()
+    /// Return an iterator of effective pre conditions.
+    pub fn pre_conditions(
+        &self,
+        _builder: &FunctionDataBuilder<'_>,
+    ) -> impl Iterator<Item = (Loc, Exp)> + '_ {
+        self.pre.iter().cloned()
+    }
+
+    /// Returns a sequence of EventCheck expressions which verify the `emits` clauses of a
+    /// function spec. While logically we could generate a single EventCheck, for better
+    /// error reporting we construct incrementally multiple EventCheck expressions with some
+    /// redundancy for each individual `emits, so we the see the exact failure at the right
+    /// emit condition.
+    pub fn emits_conditions(&self, builder: &FunctionDataBuilder<'_>) -> Vec<(Loc, Exp)> {
+        let es_ty = Type::Primitive(PrimitiveType::EventStore);
+        let mut result = vec![];
+        for i in 0..self.emits.len() {
+            let loc = self.emits[i].0.clone();
+            let es = self.build_event_store(
+                builder,
+                builder.mk_call(&es_ty, ast::Operation::EmptyEventStore, vec![]),
+                &self.emits[0..i + 1],
+            );
+            result.push((
+                loc,
+                builder.mk_bool_call(ast::Operation::CheckEventStore, vec![es]),
+            ));
+        }
+        result
+    }
+
+    fn build_event_store(
+        &self,
+        builder: &FunctionDataBuilder<'_>,
+        es: Exp,
+        emits: &[(Loc, Exp, Exp, Option<Exp>)],
+    ) -> Exp {
+        if emits.is_empty() {
+            es
+        } else {
+            let (_, event, handle, cond) = &emits[0];
+            let mut args = vec![es, event.clone(), handle.clone()];
+            if let Some(c) = cond {
+                args.push(c.clone())
+            }
+            let es_ty = Type::Primitive(PrimitiveType::EventStore);
+            let extend_exp = builder.mk_call(&es_ty, ast::Operation::ExtendEventStore, args);
+            self.build_event_store(builder, extend_exp, &emits[1..])
+        }
     }
 }
 
 impl<'a, 'b> SpecTranslator<'a, 'b> {
     /// Translates the specification of function `fun_env`. This can happen for a call of the
     /// function or for its definition (parameter `for_call`). This will process all the
-    /// conditions found in the spec block of the function, dealing with references to `old(..)`.
+    /// conditions found in the spec block of the function, dealing with references to `old(..)`,
+    /// and creating respective memory/spec var saves. If `for_call` is true, abort conditions
+    /// will be translated for the current state, otherwise they will be treated as in an `old`.
     /// and creating respective memory/spec var saves. It also allows to provide type arguments
     /// with which the specifications are instantiated, as well as a substitution for temporaries.
     /// The later two parameters are used to instantiate a function specification for a given
@@ -155,6 +198,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ret_locals,
             shadowed: Default::default(),
             result: Default::default(),
+            at_post: false,
         };
         translator.translate_spec(for_call);
         translator.result
@@ -175,10 +219,14 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ret_locals: Default::default(),
             shadowed: Default::default(),
             result: Default::default(),
+            at_post: false,
         };
         for inv in invariants {
             let exp = translator.translate_exp(&inv.cond, false);
-            translator.result.invariants.push((inv.loc.clone(), exp));
+            translator
+                .result
+                .invariants
+                .push((inv.loc.clone(), inv.id, exp));
         }
         translator.result
     }
@@ -190,7 +238,9 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         // A function which determines whether a condition is applicable in the context, which
         // is `for_call` for the function being called, and `!for_call` if its verified.
         // If a condition has the `[abstract]` property, it will only be included for calls,
-        // and if it has the `[concrete]` property only for verification.
+        // and if it has the `[concrete]` property only for verification. Also, conditions
+        // which are injected from a schema are only included on call site if they are also
+        // exported.
         let is_applicable = |cond: &&Condition| {
             let env = fun_env.module_env.env;
             let abstract_ = env
@@ -199,8 +249,14 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             let concrete = env
                 .is_property_true(&cond.properties, CONDITION_CONCRETE_PROP)
                 .unwrap_or(false);
+            let injected = env
+                .is_property_true(&cond.properties, CONDITION_INJECTED_PROP)
+                .unwrap_or(false);
+            let exported = env
+                .is_property_true(&cond.properties, CONDITION_EXPORT_PROP)
+                .unwrap_or(false);
             if for_call {
-                abstract_ || !concrete
+                (!injected || exported) && (abstract_ || !concrete)
             } else {
                 concrete || !abstract_
             }
@@ -209,10 +265,13 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .filter_kind(ConditionKind::Requires)
             .filter(is_applicable)
         {
+            self.at_post = false;
             let exp = self.translate_exp(&cond.exp, false);
             self.result.pre.push((cond.loc.clone(), exp));
         }
 
+        let translate_aborts_in_old = !for_call;
+        self.at_post = translate_aborts_in_old;
         for cond in spec
             .filter_kind(ConditionKind::AbortsIf)
             .filter(is_applicable)
@@ -220,19 +279,20 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             let code_opt = if cond.additional_exps.is_empty() {
                 None
             } else {
-                Some(self.translate_exp(&cond.additional_exps[0], true))
+                Some(self.translate_exp(&cond.additional_exps[0], translate_aborts_in_old))
             };
-            let exp = self.translate_exp(&cond.exp, true);
+            let exp = self.translate_exp(&cond.exp, translate_aborts_in_old);
             self.result.aborts.push((cond.loc.clone(), exp, code_opt));
         }
 
+        self.at_post = translate_aborts_in_old;
         for cond in spec
             .filter_kind(ConditionKind::AbortsWith)
             .filter(is_applicable)
         {
             let codes = cond
                 .all_exps()
-                .map(|e| self.translate_exp(e, true))
+                .map(|e| self.translate_exp(e, translate_aborts_in_old))
                 .collect_vec();
             self.result.aborts_with.push((cond.loc.clone(), codes));
         }
@@ -252,6 +312,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ));
         }
 
+        self.at_post = true;
         for cond in spec
             .filter_kind(ConditionKind::Ensures)
             .filter(is_applicable)
@@ -260,12 +321,27 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             self.result.post.push((cond.loc.clone(), exp));
         }
 
+        self.at_post = false;
         for cond in spec
             .filter_kind(ConditionKind::Modifies)
             .filter(is_applicable)
         {
             let exp = self.translate_exp(&cond.exp, false);
             self.result.modifies.push((cond.loc.clone(), exp));
+        }
+
+        self.at_post = true;
+        for cond in spec.filter_kind(ConditionKind::Emits).filter(is_applicable) {
+            let event_exp = self.translate_exp(&cond.exp, false);
+            let handle_exp = self.translate_exp(&cond.additional_exps[0], false);
+            let cond_exp = if cond.additional_exps.len() > 1 {
+                Some(self.translate_exp(&cond.additional_exps[1], false))
+            } else {
+                None
+            };
+            self.result
+                .emits
+                .push((cond.loc.clone(), event_exp, handle_exp, cond_exp));
         }
     }
 
@@ -275,7 +351,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             Temporary(node_id, idx) => {
                 // Compute the effective name of parameter.
                 let mut_ret_opt = self.get_ret_proxy(*idx);
-                let effective_idx = match (in_old, mut_ret_opt) {
+                let effective_idx = match (in_old || !self.at_post, mut_ret_opt) {
                     (false, Some(mut_ret_idx)) => {
                         // We access a &mut outside of old context. Map it to the according return
                         // parameter. Notice the result of ret_locals[idx] needs to be interpreted
@@ -358,7 +434,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             Call(_, Old, args) => self.translate_exp(&args[0], true),
             Call(node_id, Result(n), _) => {
                 self.builder.set_loc_from_node(*node_id);
-                self.builder.mk_local(self.ret_locals[*n])
+                self.builder.mk_temporary(self.ret_locals[*n])
             }
             Call(node_id, oper, args) => Call(
                 self.instantiate(*node_id),

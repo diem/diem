@@ -1,5 +1,9 @@
 module TestAbortsIfAssumeAssert {
-    // TODO(refactoring): remove this test because we do not plan to support this feature in v2 right now
+
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
 
@@ -79,4 +83,6 @@ module TestAbortsIfAssumeAssert {
     spec fun assumed_spec_invalid {
         aborts_if [assume] x == 1;
     }
+
+    */
 }

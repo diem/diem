@@ -7,10 +7,9 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:106:5: conditional_missing_condition_incorrect
+     =     at tests/sources/functional/emits.move:107:17: conditional_missing_condition_incorrect
      =         x = <redacted>,
-     =         handle = <redacted>,
-     =         result = <redacted>
-     =     at tests/sources/functional/emits.move:107:9: conditional_missing_condition_incorrect
+     =         handle = <redacted>
 
 error: function does not emit the expected event
 
@@ -20,10 +19,9 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:141:5: conditional_multiple_incorrect
+     =     at tests/sources/functional/emits.move:142:51: conditional_multiple_incorrect
      =         b = <redacted>,
-     =         handle = <redacted>,
-     =         result = <redacted>
-     =     at tests/sources/functional/emits.move:142:16: conditional_multiple_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:143:16: conditional_multiple_incorrect
      =     at tests/sources/functional/emits.move:144:9: conditional_multiple_incorrect
 
@@ -35,10 +33,9 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:171:5: conditional_multiple_same_incorrect
+     =     at tests/sources/functional/emits.move:172:51: conditional_multiple_same_incorrect
      =         b = <redacted>,
-     =         handle = <redacted>,
-     =         result = <redacted>
-     =     at tests/sources/functional/emits.move:172:16: conditional_multiple_same_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:173:16: conditional_multiple_same_incorrect
      =     at tests/sources/functional/emits.move:174:9: conditional_multiple_same_incorrect
 
@@ -50,10 +47,9 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:97:5: conditional_wrong_condition_incorrect
+     =     at tests/sources/functional/emits.move:98:17: conditional_wrong_condition_incorrect
      =         x = <redacted>,
-     =         handle = <redacted>,
-     =         result = <redacted>
-     =     at tests/sources/functional/emits.move:98:9: conditional_wrong_condition_incorrect
+     =         handle = <redacted>
 
 error: function does not emit the expected event
 
@@ -63,9 +59,8 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:47:5: multiple_incorrect
-    =         handle = <redacted>,
-    =         result = <redacted>
-    =     at tests/sources/functional/emits.move:48:16: multiple_incorrect
+    =     at tests/sources/functional/emits.move:48:51: multiple_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:49:16: multiple_incorrect
 
 error: function does not emit the expected event
@@ -76,9 +71,8 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:66:5: multiple_same_incorrect
-    =         handle = <redacted>,
-    =         result = <redacted>
-    =     at tests/sources/functional/emits.move:67:16: multiple_same_incorrect
+    =     at tests/sources/functional/emits.move:67:51: multiple_same_incorrect
+    =         handle = <redacted>
 
 error: function does not emit the expected event
 
@@ -88,11 +82,9 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:26:5: simple_wrong_handle_incorrect
+    =     at tests/sources/functional/emits.move:27:51: simple_wrong_handle_incorrect
     =         handle = <redacted>,
-    =         _handle2 = <redacted>,
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/emits.move:27:16: simple_wrong_handle_incorrect
+    =         _handle2 = <redacted>
 
 error: function does not emit the expected event
 
@@ -102,6 +94,5 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:19:5: simple_wrong_msg_incorrect
-    =         handle = <redacted>,
-    =         result = <redacted>
-    =     at tests/sources/functional/emits.move:20:16: simple_wrong_msg_incorrect
+    =     at tests/sources/functional/emits.move:20:51: simple_wrong_msg_incorrect
+    =         handle = <redacted>

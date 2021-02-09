@@ -1,5 +1,5 @@
-// flag: --v2
 module TestNestedInvariants {
+
     spec module {
         pragma verify = true;
     }

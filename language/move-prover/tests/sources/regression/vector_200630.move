@@ -15,7 +15,7 @@ module TestVector {
 
         *int_ref = 42;
         spec {
-            assert int_ref == v[i].x;
+            assert 42 == v[i].x;
         };
         true
     }

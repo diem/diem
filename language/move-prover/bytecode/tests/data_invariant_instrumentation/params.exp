@@ -11,22 +11,12 @@ pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: &Test::R, $t2|_simp
 pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: Test::R, $t2|_simple_S: Test::S, $t3|_mut_R: Test::R): Test::R {
      var $t4: Test::R
      var $t5: &mut Test::R
-     var $t6: Test::S
-     var $t7: Test::S
-     # data invariant for `Test:R`
-  0: assume Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0)))
-     # data invariant for `Test:S`
-  1: $t6 := get_field<Test::R>.s($t0)
-  2: assume Gt(select Test::S.y($t6), 0)
-     # data invariant for `Test:R`
-  3: assume Gt(select Test::R.x($t1), select Test::S.y(select Test::R.s($t1)))
-     # data invariant for `Test:S`
-  4: $t7 := get_field<Test::R>.s($t1)
-  5: assume Gt(select Test::S.y($t7), 0)
-     # data invariant for `Test:S`
-  6: assume Gt(select Test::S.y($t2), 0)
-  7: $t4 := move($t3)
-  8: $t5 := borrow_local($t4)
-  9: label L1
- 10: return $t4
+  0: assume And(WellFormed($t0), And(Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0))), Gt(select Test::S.y(select Test::R.s($t0)), 0)))
+  1: assume And(WellFormed($t1), And(Gt(select Test::R.x($t1), select Test::S.y(select Test::R.s($t1))), Gt(select Test::S.y(select Test::R.s($t1)), 0)))
+  2: assume And(WellFormed($t2), Gt(select Test::S.y($t2), 0))
+  3: assume And(WellFormed($t3), And(Gt(select Test::R.x($t3), select Test::S.y(select Test::R.s($t3))), Gt(select Test::S.y(select Test::R.s($t3)), 0)))
+  4: $t4 := move($t3)
+  5: $t5 := borrow_local($t4)
+  6: label L1
+  7: return $t4
 }

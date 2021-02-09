@@ -19,7 +19,8 @@ use crate::spec_translator::SpecTranslator;
 
 use move_model::{
     ast::{ConditionKind, GlobalInvariant},
-    model::{ConditionTag, FunctionEnv, QualifiedId, StructId},
+    model::{ConditionTag, FunctionEnv, GlobalId, QualifiedId, StructId},
+    pragmas::CONDITION_ISOLATED_PROP,
 };
 use std::collections::BTreeSet;
 
@@ -89,26 +90,28 @@ impl<'a> Instrumenter<'a> {
         let old_code = std::mem::take(&mut self.builder.data.code);
 
         // Emit entrypoint assumptions if this is a verification entry.
-        if self.builder.data.variant == FunctionVariant::Verification {
-            self.instrument_entrypoint();
-        }
+        let assumed_at_update = if self.builder.data.variant == FunctionVariant::Verification {
+            self.instrument_entrypoint()
+        } else {
+            BTreeSet::new()
+        };
 
         // Generate new instrumented code.
         for bc in old_code {
-            self.instrument_bytecode(bc);
+            self.instrument_bytecode(bc, &assumed_at_update);
         }
     }
 
-    fn instrument_entrypoint(&mut self) {
+    fn instrument_entrypoint(&mut self) -> BTreeSet<GlobalId> {
         // Emit an assume of all invariants over memory touched by this function, and which
-        // stem from modules in the dependency graph, OR which are used in invariants which
-        // need to be asserted.
+        // stem from modules in the dependency graph.
         //
-        // In general, assumptions are only needed to assume for memory which this function
-        // can know about via its dependency graph, but not for some arbitrary other memory.
-        // However, there is an exception for those invariants which need to be asserted because
-        // memory is updated: those can stem from modules not in the dependency graph, and they
-        // need to be assumed at entry to make inductive verification possible.
+        // Also returns the set of invariant ids which are to be assumed before an update
+        // happens instead here at the entrypoint. It is more efficient to emit those assumes
+        // not until they are actually needed. Those invariants include (a) those which are
+        // marked by the user explicitly as `[isolated]` (b) those which are not declared
+        // in dependent modules and from which the code should therefore not depend on, apart
+        // of for the update itself.
         let env = self.builder.global_env();
         let mut invariants = BTreeSet::new();
         let mut invariants_for_modified_memory = BTreeSet::new();
@@ -119,20 +122,31 @@ impl<'a> Instrumenter<'a> {
             invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(*mem));
         }
 
+        let mut assumed_at_update = BTreeSet::new();
         let module_env = &self.builder.fun_env.module_env;
         let mut translated = SpecTranslator::translate_invariants(
             &mut self.builder,
             invariants.iter().filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
-                    inv.kind == ConditionKind::Invariant
-                        // Invariant needs to be either over modified memory, or declared in
-                        // the transitive dependencies.
-                        && (invariants_for_modified_memory.contains(id)
-                            || module_env.is_transitive_dependency(inv.declaring_module))
+                    if inv.kind == ConditionKind::Invariant {
+                        if module_env.is_transitive_dependency(inv.declaring_module)
+                            && !module_env
+                                .env
+                                .is_property_true(&inv.properties, CONDITION_ISOLATED_PROP)
+                                .unwrap_or(false)
+                        {
+                            true
+                        } else {
+                            assumed_at_update.insert(*id);
+                            false
+                        }
+                    } else {
+                        false
+                    }
                 })
             }),
         );
-        for (loc, cond) in std::mem::take(&mut translated.invariants) {
+        for (loc, _, cond) in std::mem::take(&mut translated.invariants) {
             self.builder.set_next_debug_comment(format!(
                 "global invariant {}",
                 loc.display(self.builder.global_env())
@@ -140,28 +154,37 @@ impl<'a> Instrumenter<'a> {
             self.builder
                 .emit_with(|id| Bytecode::Prop(id, PropKind::Assume, cond));
         }
+        assumed_at_update
     }
 
-    fn instrument_bytecode(&mut self, bc: Bytecode) {
+    fn instrument_bytecode(&mut self, bc: Bytecode, assumed_at_update: &BTreeSet<GlobalId>) {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
         match &bc {
             Call(_, _, WriteBack(GlobalRoot(mem)), ..) => {
-                self.emit_invariants_for_update(*mem, move |builder| {
+                self.emit_invariants_for_update(*mem, assumed_at_update, move |builder| {
                     builder.emit(bc);
                 })
             }
             Call(_, _, MoveTo(mid, sid, _), ..) | Call(_, _, MoveFrom(mid, sid, _), ..) => self
-                .emit_invariants_for_update(mid.qualified(*sid), move |builder| {
-                    builder.emit(bc);
-                }),
+                .emit_invariants_for_update(
+                    mid.qualified(*sid),
+                    assumed_at_update,
+                    move |builder| {
+                        builder.emit(bc);
+                    },
+                ),
             _ => self.builder.emit(bc),
         }
     }
 
-    fn emit_invariants_for_update<F>(&mut self, mem: QualifiedId<StructId>, emit_update: F)
-    where
+    fn emit_invariants_for_update<F>(
+        &mut self,
+        mem: QualifiedId<StructId>,
+        assumed_at_update: &BTreeSet<GlobalId>,
+        emit_update: F,
+    ) where
         F: FnOnce(&mut FunctionDataBuilder<'_>),
     {
         // Translate the invariants, computing any state to be saved as well. State saves are
@@ -170,7 +193,7 @@ impl<'a> Instrumenter<'a> {
         let mut translated =
             SpecTranslator::translate_invariants(&mut self.builder, invariants.iter().cloned());
 
-        // Emit all necessary state saves
+        // Emit all necessary state saves for 'update' invariants.
         self.builder
             .set_next_debug_comment("state save for global update invariants".to_string());
         for (mem, label) in std::mem::take(&mut translated.saved_memory) {
@@ -183,11 +206,21 @@ impl<'a> Instrumenter<'a> {
         }
         self.builder.clear_next_debug_comment();
 
+        // For all invariants which are assumed at update, emit an assume before the memory update.
+        for (_, _, cond) in translated
+            .invariants
+            .iter()
+            .filter(|(_, id, _)| assumed_at_update.contains(id))
+        {
+            self.builder
+                .emit_with(|id| Bytecode::Prop(id, PropKind::Assume, cond.clone()));
+        }
+
         // Emit the code which performs the update on `mem`.
         emit_update(&mut self.builder);
 
         // Emit assertions of translated invariants.
-        for (loc, cond) in std::mem::take(&mut translated.invariants) {
+        for (loc, _, cond) in std::mem::take(&mut translated.invariants) {
             self.builder.set_next_debug_comment(format!(
                 "global invariant {}",
                 loc.display(self.builder.global_env())

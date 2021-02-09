@@ -1,5 +1,5 @@
-// flag: --v2
 module TestAbortsIfWithCode {
+
     spec module {
         pragma verify = true;
     }

@@ -21,7 +21,7 @@ error: global memory invariant does not hold
     =     at tests/sources/functional/global_invariants.move:64:34: remove_R_invalid
     =         account = <redacted>,
     =         <redacted> = <redacted>
-    =     at tests/sources/functional/global_invariants.move:65:43: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:65:22: remove_R_invalid
 
 error: global memory invariant does not hold
 
@@ -34,4 +34,4 @@ error: global memory invariant does not hold
     =     at tests/sources/functional/global_invariants.move:55:34: remove_S_invalid
     =         account = <redacted>,
     =         <redacted> = <redacted>
-    =     at tests/sources/functional/global_invariants.move:56:43: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:56:22: remove_S_invalid

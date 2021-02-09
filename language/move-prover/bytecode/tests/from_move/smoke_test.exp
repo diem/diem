@@ -13,11 +13,6 @@ pub fun Signer::address_of($t0|s: &signer): address {
 
 
 [variant baseline]
-pub fun Signer::borrow_address($t0|s: &signer): &address {
-}
-
-
-[variant baseline]
 fun SmokeTest::arithmetic_ops($t0|a: u64): (u64, u64) {
      var $t1|c: u64
      var $t2: u64

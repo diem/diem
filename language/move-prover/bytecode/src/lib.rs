@@ -45,8 +45,10 @@ pub fn print_targets_for_test(
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
             for (variant, target) in targets.get_targets(&func_env) {
-                target.register_annotation_formatters_for_test();
-                text += &format!("\n[variant {}]\n{}\n", variant, target);
+                if !target.data.code.is_empty() {
+                    target.register_annotation_formatters_for_test();
+                    text += &format!("\n[variant {}]\n{}\n", variant, target);
+                }
             }
         }
     }
