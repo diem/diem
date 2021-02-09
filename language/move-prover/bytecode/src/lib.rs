@@ -8,6 +8,7 @@ use move_model::model::GlobalEnv;
 
 pub mod annotations;
 pub mod borrow_analysis;
+pub mod borrow_analysis_v2;
 pub mod clean_and_optimize;
 pub mod compositional_analysis;
 pub mod data_invariant_instrumentation;

@@ -71,11 +71,34 @@ impl<E: Clone + Ord + Sized + Debug> AbstractDomain for SetDomain<E> {
     }
 }
 
+impl<E: Clone + Ord> std::iter::FromIterator<E> for SetDomain<E> {
+    fn from_iter<I: IntoIterator<Item = E>>(iter: I) -> Self {
+        let mut s = SetDomain::default();
+        for e in iter {
+            s.insert(e);
+        }
+        s
+    }
+}
+
+impl<E: Clone + Ord> std::iter::IntoIterator for SetDomain<E> {
+    type Item = E;
+    type IntoIter = std::collections::btree_set::IntoIter<E>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 impl<E: Clone + Ord + Sized> SetDomain<E> {
     pub fn singleton(e: E) -> Self {
         let mut s = SetDomain::default();
         s.insert(e);
         s
+    }
+
+    pub fn of_set(s: BTreeSet<E>) -> Self {
+        Self(s)
     }
 }
 
