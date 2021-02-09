@@ -8,7 +8,7 @@ use crate::{
     transport::ConnectionMetadata,
 };
 use channel::{diem_channel, message_queues::QueueStyle};
-use diem_config::config::{Peer, PeerRole, PeerSet};
+use diem_config::config::{Peer, PeerRole, PeerSet, HANDSHAKE_VERSION};
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_logger::info;
 use diem_network_address::NetworkAddress;
@@ -23,6 +23,7 @@ const MAX_TEST_CONNECTIONS: usize = 3;
 const CONNECTIVITY_CHECK_INTERVAL: Duration = Duration::from_secs(5);
 const CONNECTION_DELAY: Duration = Duration::from_millis(100);
 const MAX_CONNECTION_DELAY: Duration = Duration::from_secs(60);
+const DEFAULT_BASE_ADDR: &str = "/ip4/127.0.0.1/tcp/9090";
 
 // TODO(philiphayes): just use `CONNECTION_DELAY + MAX_CONNNECTION_DELAY_JITTER`
 // when the const adds are stabilized, instead of this weird thing...
@@ -30,18 +31,46 @@ const MAX_DELAY_WITH_JITTER: Duration = Duration::from_millis(
     CONNECTION_DELAY.as_millis() as u64 + MAX_CONNECTION_DELAY_JITTER.as_millis() as u64,
 );
 
-fn gen_peer() -> (
-    PeerId,
-    x25519::PublicKey,
-    HashSet<x25519::PublicKey>,
-    NetworkAddress,
-) {
-    let peer_id = PeerId::random();
+fn network_address(addr_str: &'static str) -> NetworkAddress {
+    NetworkAddress::from_str(addr_str).unwrap()
+}
+fn network_address_with_pubkey(
+    addr_str: &'static str,
+    pubkey: x25519::PublicKey,
+) -> NetworkAddress {
+    network_address(addr_str).append_prod_protos(pubkey, HANDSHAKE_VERSION)
+}
+
+fn peer_id(index: usize) -> PeerId {
+    PeerId::new((index as u128).to_be_bytes())
+}
+
+fn test_peer(index: usize) -> (PeerId, Peer, x25519::PublicKey, NetworkAddress) {
+    test_peer_with_address(index, DEFAULT_BASE_ADDR)
+}
+
+fn test_peer_with_address(
+    index: usize,
+    addr_str: &'static str,
+) -> (PeerId, Peer, x25519::PublicKey, NetworkAddress) {
+    let peer_id = peer_id(index);
     let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
     let pubkeys = hashset! { pubkey };
-    let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-    let addr = addr.append_prod_protos(pubkey, diem_config::config::HANDSHAKE_VERSION);
-    (peer_id, pubkey, pubkeys, addr)
+    let addr = network_address_with_pubkey(addr_str, pubkey);
+    (
+        peer_id,
+        Peer::new(vec![addr.clone()], pubkeys, PeerRole::Validator),
+        pubkey,
+        addr,
+    )
+}
+
+fn update_peer_with_address(mut peer: Peer, addr_str: &'static str) -> (Peer, NetworkAddress) {
+    let keys: Vec<_> = peer.keys.iter().collect();
+    let key = *keys.first().unwrap();
+    let addr = network_address_with_pubkey(addr_str, *key);
+    peer.addresses = vec![addr.clone()];
+    (peer, addr)
 }
 
 struct TestHarness {
@@ -53,31 +82,7 @@ struct TestHarness {
 }
 
 impl TestHarness {
-    fn new(
-        eligible_peers: Vec<PeerId>,
-        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    ) -> (Self, ConnectivityManager<FixedInterval>) {
-        ::diem_logger::Logger::init_for_testing();
-
-        // Fills in the gaps for eligible peers. Eligible peers in tests aren't
-        // always the seeds.
-        let seeds: PeerSet = eligible_peers
-            .into_iter()
-            .map(|peer_id| {
-                let addrs: Vec<NetworkAddress> = seed_addrs
-                    .get(&peer_id)
-                    .map_or_else(Vec::new, |addr| addr.clone());
-                let mut pubkeys = addrs
-                    .iter()
-                    .filter_map(NetworkAddress::find_noise_proto)
-                    .collect::<HashSet<_>>();
-                if pubkeys.is_empty() {
-                    pubkeys.insert(x25519::PrivateKey::generate_for_testing().public_key());
-                }
-                (peer_id, Peer::new(addrs, pubkeys, PeerRole::Validator))
-            })
-            .collect();
-
+    fn new(seeds: PeerSet) -> (Self, ConnectivityManager<FixedInterval>) {
         let network_context = NetworkContext::mock();
         let time_service = TimeService::mock();
         let (connection_reqs_tx, connection_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 1, None);
@@ -294,26 +299,13 @@ impl TestHarness {
             .await
             .unwrap();
     }
-
-    async fn send_update_addresses(
-        &mut self,
-        src: DiscoverySource,
-        peer_addresses: HashMap<PeerId, Vec<NetworkAddress>>,
-    ) {
-        let peers = peer_addresses
-            .into_iter()
-            .map(|(peer_id, addresses)| (peer_id, Peer::from_addrs(PeerRole::Validator, addresses)))
-            .collect();
-        self.send_update_discovered_peers(src, peers).await;
-    }
 }
 
 #[test]
 fn connect_to_seeds_on_startup() {
-    let (seed_peer_id, _, _, seed_addr) = gen_peer();
-    let seed_addrs = hashmap! {seed_peer_id => vec![seed_addr.clone()]};
-    let eligible_peers = vec![seed_peer_id];
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (seed_peer_id, seed_peer, _, seed_addr) = test_peer(1);
+    let seeds = hashmap! {seed_peer_id => seed_peer.clone()};
+    let (mut mock, conn_mgr) = TestHarness::new(seeds.clone());
 
     let test = async move {
         // Peer manager receives a request to connect to the other peer.
@@ -322,18 +314,18 @@ fn connect_to_seeds_on_startup() {
         mock.expect_one_dial_success(seed_peer_id, seed_addr.clone())
             .await;
 
-        // Sending an UpdateAddresses with the same seed address should not
+        // Sending an UpdateDiscoveredPeers with the same seed address should not
         // trigger any dials.
-        let update = hashmap! {seed_peer_id => vec![seed_addr.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, seeds)
             .await;
         mock.trigger_connectivity_check().await;
         assert_eq!(0, mock.get_dial_queue_size().await);
 
         // Sending new address of seed peer
-        let new_seed_addr = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
-        let update = hashmap! {seed_peer_id => vec![new_seed_addr.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let (new_seed, new_seed_addr) =
+            update_peer_with_address(seed_peer, "/ip4/127.0.1.1/tcp/8080");
+        let update = hashmap! {seed_peer_id => new_seed};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // We expect the peer which changed its address to also disconnect.
@@ -355,17 +347,13 @@ fn connect_to_seeds_on_startup() {
 
 #[test]
 fn addr_change() {
-    let other_peer_id = PeerId::random();
-    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-    let eligible_peers = vec![other_peer_id];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // Sending address of other peer
-        let update = hashmap! {other_peer_id => vec![other_addr.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let update = hashmap! {other_peer_id => other_peer.clone()};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update.clone())
             .await;
 
         // Peer manager receives a request to connect to the other peer.
@@ -376,16 +364,16 @@ fn addr_change() {
 
         // Send request to connect to other peer at old address. ConnectivityManager should not
         // dial, since we are already connected at the new address.
-        let update = hashmap! {other_peer_id => vec![other_addr.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
         mock.trigger_connectivity_check().await;
         assert_eq!(0, mock.get_dial_queue_size().await);
 
         // Sending new address of other peer
-        let other_addr_new = NetworkAddress::from_str("/ip4/127.0.1.1/tcp/8080").unwrap();
-        let update = hashmap! {other_peer_id => vec![other_addr_new.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let (other_peer_new, other_addr_new) =
+            update_peer_with_address(other_peer, "/ip4/127.0.1.1/tcp/8080");
+        let update = hashmap! {other_peer_id => other_peer_new};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
         mock.trigger_connectivity_check().await;
         assert_eq!(1, mock.get_connected_size().await);
@@ -406,17 +394,13 @@ fn addr_change() {
 
 #[test]
 fn lost_connection() {
-    let other_peer_id = PeerId::random();
-    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-    let eligible_peers = vec![other_peer_id];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // Sending address of other peer
-        let update = hashmap! {other_peer_id => vec![other_addr.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let update = hashmap! {other_peer_id => other_peer};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // Peer manager receives a request to connect to the other peer.
@@ -441,19 +425,12 @@ fn lost_connection() {
 
 #[test]
 fn disconnect() {
-    let other_peer_id = PeerId::random();
-    let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkeys = hashset! {other_pubkey};
-    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-    let eligible_peers = vec![];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, other_peer, _, other_addr) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // Sending pubkey & address of other peer
-        let peer = Peer::new(vec![other_addr.clone()], other_pubkeys, PeerRole::Validator);
-        let peers = hashmap! {other_peer_id => peer};
+        let peers = hashmap! {other_peer_id => other_peer.clone()};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
 
@@ -463,12 +440,11 @@ fn disconnect() {
         mock.expect_one_dial_success(other_peer_id, other_addr.clone())
             .await;
 
-        // Sending request to make other peer ineligible
-        let peer = Peer::new(
-            vec![other_addr.clone()],
-            HashSet::new(),
-            PeerRole::Validator,
-        );
+        // Sending request to make other peer ineligible (by dropping the key)
+        let mut peer = other_peer;
+        peer.keys = HashSet::new();
+        peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
+
         let peers = hashmap! {other_peer_id => peer};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
@@ -484,19 +460,12 @@ fn disconnect() {
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    let other_peer_id = PeerId::random();
-    let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkeys = hashset! {other_pubkey};
-    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-    let eligible_peers = vec![];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, peer, _, other_addr) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // Sending pubkey set and addr of other peer
-        let peer = Peer::new(vec![other_addr.clone()], other_pubkeys, PeerRole::Validator);
-        let peers = hashmap! {other_peer_id => peer};
+        let peers = hashmap! {other_peer_id => peer.clone()};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
 
@@ -512,12 +481,10 @@ fn retry_on_failure() {
         mock.expect_one_dial_success(other_peer_id, other_addr.clone())
             .await;
 
-        // Sending request to make other peer ineligible
-        let peer = Peer::new(
-            vec![other_addr.clone()],
-            HashSet::new(),
-            PeerRole::Validator,
-        );
+        // Sending request to make other peer ineligible (by removing key)
+        let mut peer = peer;
+        peer.keys = HashSet::new();
+        peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
         let peers = hashmap! {other_peer_id => peer};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
@@ -540,19 +507,12 @@ fn retry_on_failure() {
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 #[test]
 fn no_op_requests() {
-    let other_peer_id = PeerId::random();
-    let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkeys = hashset! {other_pubkey};
-    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-
-    let eligible_peers = vec![];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, peer, _, other_addr) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // Sending pubkey set and addr of other peer
-        let peer = Peer::new(vec![other_addr.clone()], other_pubkeys, PeerRole::Validator);
-        let peers = hashmap! {other_peer_id => peer};
+        let peers = hashmap! {other_peer_id => peer.clone()};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
 
@@ -568,11 +528,9 @@ fn no_op_requests() {
         mock.trigger_connectivity_check().await;
 
         // Send request to make other peer ineligible.
-        let peer = Peer::new(
-            vec![other_addr.clone()],
-            HashSet::new(),
-            PeerRole::Validator,
-        );
+        let mut peer = peer;
+        peer.keys = HashSet::new();
+        peer.addresses = vec![network_address(DEFAULT_BASE_ADDR)];
         let peers = hashmap! {other_peer_id => peer};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
@@ -598,17 +556,13 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    let eligible_peers = vec![];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
-        let (peer_id_a, _, peer_a_keys, peer_a_addr) = gen_peer();
-        let (peer_id_b, _, peer_b_keys, peer_b_addr) = gen_peer();
+        let (peer_id_a, peer_a, _, peer_a_addr) = test_peer(1);
+        let (peer_id_b, peer_b, _, peer_b_addr) = test_peer(2);
 
         // Sending pubkey set and addr of peers
-        let peer_a = Peer::new(vec![peer_a_addr.clone()], peer_a_keys, PeerRole::Validator);
-        let peer_b = Peer::new(vec![peer_b_addr.clone()], peer_b_keys, PeerRole::Validator);
         let peers = hashmap! {peer_id_a => peer_a, peer_id_b => peer_b};
         mock.send_update_discovered_peers(DiscoverySource::OnChain, peers)
             .await;
@@ -638,20 +592,19 @@ fn backoff_on_failure() {
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    let other_peer_id = PeerId::random();
-    let eligible_peers = vec![other_peer_id];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
         // For this test, the peer advertises multiple listen addresses. Assume
         // that the first addr fails to connect while the second addr succeeds.
-        let other_addr_1 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let other_addr_2 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9091", pubkey);
+        let other_addr_2 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9092", pubkey);
+        peer.addresses = vec![other_addr_1.clone(), other_addr_2.clone()];
 
         // Sending address of other peer
-        let update = hashmap! {other_peer_id => vec![other_addr_1.clone(), other_addr_2.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let update = hashmap! {other_peer_id => peer};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // Assume that the first listen addr fails to connect.
@@ -674,18 +627,17 @@ fn multiple_addrs_basic() {
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    let other_peer_id = PeerId::random();
-    let eligible_peers = vec![other_peer_id];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
-        let other_addr_1 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let other_addr_2 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9091", pubkey);
+        let other_addr_2 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9092", pubkey);
+        peer.addresses = vec![other_addr_1.clone(), other_addr_2.clone()];
 
         // Sending address of other peer
-        let update = hashmap! {other_peer_id => vec![other_addr_1.clone(), other_addr_2.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let update = hashmap! {other_peer_id => peer};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // Assume that the first listen addr fails to connect.
@@ -712,19 +664,18 @@ fn multiple_addrs_wrapping() {
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    let other_peer_id = PeerId::random();
-    let eligible_peers = vec![other_peer_id];
-    let seed_addrs = HashMap::new();
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (other_peer_id, mut peer, pubkey, _) = test_peer(0);
+    let (mut mock, conn_mgr) = TestHarness::new(HashMap::new());
 
     let test = async move {
-        let other_addr_1 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap();
-        let other_addr_2 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
-        let other_addr_3 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9092").unwrap();
+        let other_addr_1 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9091", pubkey);
+        let other_addr_2 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9092", pubkey);
+        let other_addr_3 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9093", pubkey);
+        peer.addresses = vec![other_addr_1.clone(), other_addr_2, other_addr_3];
 
-        // Sending addresses of other peer
-        let update = hashmap! {other_peer_id => vec![other_addr_1.clone(), other_addr_2.clone(), other_addr_3.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        // Sending address of other peer
+        let update = hashmap! {other_peer_id => peer.clone()};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // Assume that the first listen addr fails to connect.
@@ -732,12 +683,13 @@ fn multiple_addrs_shrinking() {
         mock.trigger_pending_dials().await;
         mock.expect_one_dial_fail(other_peer_id, other_addr_1).await;
 
-        let other_addr_4 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9094").unwrap();
-        let other_addr_5 = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9095").unwrap();
+        let other_addr_4 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9094", pubkey);
+        let other_addr_5 = network_address_with_pubkey("/ip4/127.0.0.1/tcp/9095", pubkey);
+        peer.addresses = vec![other_addr_4.clone(), other_addr_5];
 
         // The peer issues a new, smaller set of listen addrs.
-        let update = hashmap! {other_peer_id => vec![other_addr_4.clone(), other_addr_5.clone()]};
-        mock.send_update_addresses(DiscoverySource::OnChain, update)
+        let update = hashmap! {other_peer_id => peer};
+        mock.send_update_discovered_peers(DiscoverySource::OnChain, update)
             .await;
 
         // After updating the addresses, we should dial the first new address,
@@ -752,16 +704,14 @@ fn multiple_addrs_shrinking() {
 
 #[test]
 fn public_connection_limit() {
-    let mut seed_addrs = HashMap::new();
-    let mut eligible_peers = Vec::new();
+    let mut seeds = HashMap::new();
 
-    for _ in 0..=MAX_TEST_CONNECTIONS {
-        let (peer_id, _, _, addr) = gen_peer();
-        seed_addrs.insert(peer_id, vec![addr]);
-        eligible_peers.push(peer_id);
+    for i in 0..=MAX_TEST_CONNECTIONS {
+        let (peer_id, peer, _, _) = test_peer(i);
+        seeds.insert(peer_id, peer);
     }
 
-    let (mut mock, conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (mut mock, conn_mgr) = TestHarness::new(seeds);
 
     let test = async move {
         // Should receive MAX_TEST_CONNECTIONS for each of the seed peers
@@ -782,17 +732,14 @@ fn public_connection_limit() {
 #[test]
 fn basic_update_discovered_peers() {
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let seed_addrs = HashMap::new();
-    let eligible_peers = Vec::new();
-    let (mock, mut conn_mgr) = TestHarness::new(eligible_peers, seed_addrs);
+    let (mock, mut conn_mgr) = TestHarness::new(HashMap::new());
     let trusted_peers = mock.trusted_peers;
 
     // sample some example data
-    let peer_id_a = PeerId::random();
-    let peer_id_b = PeerId::random();
-    let addr_a = NetworkAddress::mock();
-    let addr_b = NetworkAddress::mock();
-
+    let peer_id_a = peer_id(0);
+    let peer_id_b = peer_id(1);
+    let addr_a = network_address("/ip4/127.0.0.1/tcp/9090");
+    let addr_b = network_address("/ip4/127.0.0.1/tcp/9091");
     let pubkey_1 = x25519::PrivateKey::generate(&mut rng).public_key();
     let pubkey_2 = x25519::PrivateKey::generate(&mut rng).public_key();
 
