@@ -22,7 +22,7 @@ use diem_types::{
     account_config,
     block_metadata::BlockMetadata,
     transaction::{
-        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionOutput,
+        ChangeSet, Module, SignatureCheckedTransaction, Transaction, TransactionOutput,
         TransactionPayload, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
@@ -150,16 +150,16 @@ impl DiemVM {
         ))
     }
 
-    fn execute_script<R: RemoteCache>(
+    fn execute_script_or_script_function<R: RemoteCache>(
         &self,
         mut session: Session<R>,
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
-        script: &Script,
+        payload: &TransactionPayload,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-        fail_point!("move_adapter::execute_script", |_| {
+        fail_point!("move_adapter::execute_script_or_script_function", |_| {
             Err(VMStatus::Error(
                 StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
             ))
@@ -172,16 +172,30 @@ impl DiemVM {
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
                 .map_err(|e| e.into_vm_status())?;
-            session
-                .execute_script(
+
+            match payload {
+                TransactionPayload::Script(script) => session.execute_script(
                     script.code().to_vec(),
                     script.ty_args().to_vec(),
                     convert_txn_args(script.args()),
                     vec![txn_data.sender()],
                     cost_strategy,
                     log_context,
-                )
-                .map_err(|e| e.into_vm_status())?;
+                ),
+                TransactionPayload::ScriptFunction(script_fn) => session.execute_script_function(
+                    script_fn.module(),
+                    script_fn.function(),
+                    script_fn.ty_args().to_vec(),
+                    convert_txn_args(script_fn.args()),
+                    vec![txn_data.sender()],
+                    cost_strategy,
+                    log_context,
+                ),
+                TransactionPayload::Module(_) | TransactionPayload::WriteSet(_) => {
+                    return Err(VMStatus::Error(StatusCode::UNREACHABLE));
+                }
+            }
+            .map_err(|e| e.into_vm_status())?;
 
             charge_global_write_gas_usage(cost_strategy, &session, &txn_data.sender())?;
 
@@ -280,14 +294,16 @@ impl DiemVM {
         let mut cost_strategy = CostStrategy::transaction(gas_schedule, txn_data.max_gas_amount());
 
         let result = match txn.payload() {
-            TransactionPayload::Script(s) => self.execute_script(
-                session,
-                &mut cost_strategy,
-                &txn_data,
-                s,
-                &account_currency_symbol,
-                log_context,
-            ),
+            payload @ TransactionPayload::Script(_)
+            | payload @ TransactionPayload::ScriptFunction(_) => self
+                .execute_script_or_script_function(
+                    session,
+                    &mut cost_strategy,
+                    &txn_data,
+                    payload,
+                    &account_currency_symbol,
+                    log_context,
+                ),
             TransactionPayload::Module(m) => self.execute_module(
                 session,
                 &mut cost_strategy,
@@ -483,7 +499,9 @@ impl DiemVM {
             remote_cache,
             match txn.payload() {
                 TransactionPayload::WriteSet(writeset_payload) => writeset_payload,
-                TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
+                TransactionPayload::Module(_)
+                | TransactionPayload::Script(_)
+                | TransactionPayload::ScriptFunction(_) => {
                     log_context.alert();
                     error!(*log_context, "[diem_vm] UNREACHABLE");
                     return Ok(discard_error_vm_status(VMStatus::Error(

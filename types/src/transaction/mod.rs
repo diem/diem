@@ -44,7 +44,8 @@ mod transaction_argument;
 pub use change_set::ChangeSet;
 pub use module::Module;
 pub use script::{
-    ArgumentABI, Script, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+    ArgumentABI, Script, ScriptABI, ScriptFunction, ScriptFunctionABI, TransactionScriptABI,
+    TypeArgumentABI,
 };
 
 use std::ops::Deref;
@@ -135,6 +136,31 @@ impl RawTransaction {
             sender,
             sequence_number,
             payload: TransactionPayload::Script(script),
+            max_gas_amount,
+            gas_unit_price,
+            gas_currency_code,
+            expiration_timestamp_secs,
+            chain_id,
+        }
+    }
+
+    /// Create a new `RawTransaction` with a script function.
+    ///
+    /// A script transaction contains only code to execute. No publishing is allowed in scripts.
+    pub fn new_script_function(
+        sender: AccountAddress,
+        sequence_number: u64,
+        script_function: ScriptFunction,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+        gas_currency_code: String,
+        expiration_timestamp_secs: u64,
+        chain_id: ChainId,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::ScriptFunction(script_function),
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
@@ -265,6 +291,10 @@ impl RawTransaction {
             TransactionPayload::Script(script) => {
                 (get_transaction_name(script.code()), script.args())
             }
+            TransactionPayload::ScriptFunction(script_fn) => (
+                format!("{}::{}", script_fn.module(), script_fn.function()),
+                script_fn.args(),
+            ),
             TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
         };
         let mut f_args: String = "".to_string();
@@ -312,13 +342,15 @@ pub enum TransactionPayload {
     Script(Script),
     /// A transaction that publishes code.
     Module(Module),
+    /// A transaction that executes an existing script function published on-chain.
+    ScriptFunction(ScriptFunction),
 }
 
 impl TransactionPayload {
     pub fn should_trigger_reconfiguration_by_default(&self) -> bool {
         match self {
             Self::WriteSet(ws) => ws.should_trigger_reconfiguration_by_default(),
-            Self::Script(_) | Self::Module(_) => false,
+            Self::Script(_) | Self::ScriptFunction(_) | Self::Module(_) => false,
         }
     }
 }

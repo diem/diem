@@ -987,7 +987,9 @@ pub fn process_write_set(
                         bail!("Write set should be a subset of read set.")
                     }
                     Transaction::UserTransaction(txn) => match txn.payload() {
-                        TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
+                        TransactionPayload::Module(_)
+                        | TransactionPayload::Script(_)
+                        | TransactionPayload::ScriptFunction(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
                         TransactionPayload::WriteSet(_) => (),

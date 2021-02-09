@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::transaction::transaction_argument::TransactionArgument;
-use move_core_types::language_storage::{ModuleId, TypeTag};
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, TypeTag},
+};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -239,5 +242,46 @@ impl TypeArgumentABI {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+/// Call a Move script function.
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ScriptFunction {
+    module: ModuleId,
+    function: Identifier,
+    ty_args: Vec<TypeTag>,
+    args: Vec<TransactionArgument>,
+}
+
+impl ScriptFunction {
+    pub fn new(
+        module: ModuleId,
+        function: Identifier,
+        ty_args: Vec<TypeTag>,
+        args: Vec<TransactionArgument>,
+    ) -> Self {
+        ScriptFunction {
+            module,
+            function,
+            ty_args,
+            args,
+        }
+    }
+
+    pub fn module(&self) -> &ModuleId {
+        &self.module
+    }
+
+    pub fn function(&self) -> &IdentStr {
+        &self.function
+    }
+
+    pub fn ty_args(&self) -> &[TypeTag] {
+        &self.ty_args
+    }
+
+    pub fn args(&self) -> &[TransactionArgument] {
+        &self.args
     }
 }

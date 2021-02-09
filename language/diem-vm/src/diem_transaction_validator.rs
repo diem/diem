@@ -150,7 +150,8 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     let mut cost_strategy =
         CostStrategy::system(vm.get_gas_schedule(&log_context)?, GasUnits::new(0));
     let prologue_status = match transaction.payload() {
-        TransactionPayload::Script(_script) => {
+        TransactionPayload::Script(_) | TransactionPayload::ScriptFunction(_) => {
+            // NOTE: Script and ScriptFunction shares the same prologue
             vm.check_gas(&txn_data, &log_context)?;
             vm.run_script_prologue(
                 &mut session,

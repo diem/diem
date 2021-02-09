@@ -186,6 +186,12 @@ LedgerInfoWithV0:
 Module:
   STRUCT:
     - code: BYTES
+ModuleId:
+  STRUCT:
+    - address:
+        TYPENAME: AccountAddress
+    - name:
+        TYPENAME: Identifier
 MultiEd25519PublicKey:
   NEWTYPESTRUCT: BYTES
 MultiEd25519Signature:
@@ -218,6 +224,18 @@ RawTransaction:
 Script:
   STRUCT:
     - code: BYTES
+    - ty_args:
+        SEQ:
+          TYPENAME: TypeTag
+    - args:
+        SEQ:
+          TYPENAME: TransactionArgument
+ScriptFunction:
+  STRUCT:
+    - module:
+        TYPENAME: ModuleId
+    - function:
+        TYPENAME: Identifier
     - ty_args:
         SEQ:
           TYPENAME: TypeTag
@@ -330,6 +348,10 @@ TransactionPayload:
       Module:
         NEWTYPE:
           TYPENAME: Module
+    3:
+      ScriptFunction:
+        NEWTYPE:
+          TYPENAME: ScriptFunction
 TypeTag:
   ENUM:
     0:
