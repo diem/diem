@@ -50,7 +50,7 @@ num-variants = { path = "../common/num-variants", version = "0.1.0" }
 short-hex-str = { path = "../common/short-hex-str", version = "0.1.0" }
 
 [dev-dependencies]
-criterion = "0.3.3"
+criterion = "0.3.4"
 diem-network-address = { path = "./network-address", version = "0.1.0", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 maplit = "1.0.2"

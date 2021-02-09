@@ -32,7 +32,7 @@ serde = { version = "1.0.123", default-features = false }
 thiserror = "1.0.23"
 
 [dev-dependencies]
-criterion = "0.3.3"
+criterion = "0.3.4"
 tempfile = "3.2.0"
 proptest = "0.10.1"
 
