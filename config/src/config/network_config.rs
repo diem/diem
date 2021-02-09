@@ -361,6 +361,8 @@ pub type PeerSet = HashMap<PeerId, Peer>;
 /// PreferredUpstream -> Always upstream, overriding any other discovery
 /// ValidatorFullNode -> Always upstream for incoming connections (including other ValidatorFullNodes)
 /// Upstream -> Upstream, if no ValidatorFullNode or PreferredUpstream.  Useful for initial seed discovery
+/// Downstream -> Downstream, defining a controlled downstream that I always want to connect
+/// Known -> A known peer, but it has no particular role assigned to it
 /// Unknown -> Undiscovered peer, likely due to a non-mutually authenticated connection always downstream
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum PeerRole {
@@ -368,6 +370,8 @@ pub enum PeerRole {
     PreferredUpstream,
     ValidatorFullNode,
     Upstream,
+    Downstream,
+    Known,
     Unknown,
 }
 
