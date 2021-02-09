@@ -359,7 +359,8 @@ impl InternalNode {
         assert!(start < 16 && width.count_ones() == 1 && start % width == 0);
         assert!(width <= 16 && (start + width) <= 16);
         // A range with `start == 8` and `width == 4` will generate a mask 0b0000111100000000.
-        let mask = (((1 << width) - 1) << start) as u16;
+        // use as converting to smaller integer types when 'width == 16'
+        let mask = (((1u32 << width) - 1) << start) as u16;
         (bitmaps.0 & mask, bitmaps.1 & mask)
     }
 
