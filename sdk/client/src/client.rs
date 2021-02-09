@@ -5,7 +5,7 @@ use super::{
     request::{JsonRpcRequest, MethodRequest},
     response::{MethodResponse, Response},
     state::StateManager,
-    validate, validate_batch, BatchResponse,
+    validate, validate_batch, BatchResponse, USER_AGENT,
 };
 use crate::{
     error::WaitForTransactionError,
@@ -284,6 +284,7 @@ impl Client {
             .inner
             .post(&self.url)
             .json(payload)
+            .header(reqwest::header::USER_AGENT, USER_AGENT)
             .send()
             .await
             .map_err(Error::from_reqwest_error)?;

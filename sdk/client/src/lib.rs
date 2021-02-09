@@ -34,6 +34,10 @@ pub use diem_types::{account_address::AccountAddress, transaction::SignedTransac
 
 use serde::{Deserialize, Serialize};
 
+cfg_async_or_blocking! {
+    const USER_AGENT: &str = concat!("diem-client-sdk-rust / ", env!("CARGO_PKG_VERSION"));
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 enum JsonRpcVersion {
     #[serde(rename = "2.0")]

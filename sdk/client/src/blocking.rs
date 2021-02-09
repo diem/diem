@@ -7,7 +7,7 @@ use super::{
     request::{JsonRpcRequest, MethodRequest},
     response::{MethodResponse, Response},
     state::StateManager,
-    validate, validate_batch, BatchResponse,
+    validate, validate_batch, BatchResponse, USER_AGENT,
 };
 use crate::{
     error::WaitForTransactionError,
@@ -260,6 +260,7 @@ impl BlockingClient {
     fn send_impl<S: Serialize, T: DeserializeOwned>(&self, payload: &S) -> Result<T> {
         let mut request = ureq::post(&self.url)
             .timeout_connect(REQUEST_TIMEOUT)
+            .set("User-Agent", USER_AGENT)
             .build();
 
         let proxy = proxy::Proxy::new();
