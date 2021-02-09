@@ -23,7 +23,7 @@ COPY . /diem
 RUN ./docker/build-common.sh
 
 ### Production Image ###
-FROM debian:buster-20210208-slim@sha256:3ebfc83301d51295ca6473272395e0eb1e10b40cedfc7f7eff559e457c766e47 AS prod
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475 AS prod
 
 RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list && \
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye

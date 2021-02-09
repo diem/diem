@@ -23,7 +23,7 @@ COPY . /diem
 RUN ./docker/build-common.sh
 
 ### Pre-Production Image ###
-FROM debian:buster-20210208-slim@sha256:3ebfc83301d51295ca6473272395e0eb1e10b40cedfc7f7eff559e457c766e47 AS pre-prod
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475 AS pre-prod
 
 RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && apt-get clean && rm -r /var/lib/apt/lists/*
 
