@@ -16,6 +16,7 @@ pub enum Metadata {
     TravelRuleMetadata(TravelRuleMetadata),
     UnstructuredBytesMetadata(UnstructuredBytesMetadata),
     RefundMetadata(RefundMetadata),
+    CoinTradeMetadata(CoinTradeMetadata),
 }
 
 /// List of supported transaction metadata format versions for regular
@@ -113,4 +114,17 @@ pub enum RefundReason {
     InvalidSubaddress,
     UserInitiatedPartialRefund,
     UserInitiatedFullRefund,
+}
+
+/// List of supported transaction metadata format versions for coin trade transaction
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum CoinTradeMetadata {
+    CoinTradeMetadataV0(CoinTradeMetadataV0),
+}
+
+/// Transaction metadata format for coin trades (purchases/sells)
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CoinTradeMetadataV0 {
+    /// A list of trade_ids this transaction wants to settle
+    pub trade_ids: Vec<String>,
 }
