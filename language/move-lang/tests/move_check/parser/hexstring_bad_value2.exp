@@ -1,8 +1,0 @@
-error: 
-
-   ┌── tests/move_check/parser/hexstring_bad_value2.move:4:16 ───
-   │
- 4 │         x"bcdefg"
-   │                ^ Invalid hexadecimal character: 'g'
-   │
-

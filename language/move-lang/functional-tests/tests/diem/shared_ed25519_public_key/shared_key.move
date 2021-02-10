@@ -41,7 +41,7 @@ fun main(account: &signer) {
 script {
 use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
-    let invalid_pubkey = x"000";
+    let invalid_pubkey = x"0000";
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
 }
@@ -80,7 +80,7 @@ fun main(account: &signer) {
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
-    let invalid_pubkey = x"10000";
+    let invalid_pubkey = x"010000";
     SharedEd25519PublicKey::rotate_key(account, invalid_pubkey)
 }
 }

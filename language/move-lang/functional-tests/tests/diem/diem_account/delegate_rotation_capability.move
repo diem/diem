@@ -56,7 +56,7 @@ fun main(account: &signer) {
     SharedKeyRotation::rotate(
         account,
         {{alice}},
-        x"8a88082abf9fbb576bdb6969143ee6384066e363c48e041c8da1e08b9fc931f",
+        x"08a88082abf9fbb576bdb6969143ee6384066e363c48e041c8da1e08b9fc931f",
     );
 }
 }

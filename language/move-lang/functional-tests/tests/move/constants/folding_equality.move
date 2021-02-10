@@ -12,7 +12,7 @@ script {
     const EQ_F_U128: bool = 0 == 1;
     const EQ_F_BOOL: bool = false == true;
     const EQ_F_ADDR: bool = 0x42 == 0x43;
-    const EQ_F_HEX: bool = x"42" == x"422";
+    const EQ_F_HEX: bool = x"42" == x"0422";
     const EQ_F_BYTES: bool = b"hello" == b"XhelloX";
 
     const NEQ_T_U8: bool = 0 != 1;
@@ -20,7 +20,7 @@ script {
     const NEQ_T_U128: bool = 0 != 1;
     const NEQ_T_BOOL: bool = false != true;
     const NEQ_T_ADDR: bool = 0x42 != 0x43;
-    const NEQ_T_HEX: bool = x"42" != x"422";
+    const NEQ_T_HEX: bool = x"42" != x"0422";
     const NEQ_T_BYTES: bool = b"hello" != b"XhelloX";
 
     const NEQ_F_U8: bool = 0 != 0;

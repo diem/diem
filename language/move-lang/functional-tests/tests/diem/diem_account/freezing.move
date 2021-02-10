@@ -89,7 +89,7 @@ fun main(dr_account: &signer) {
         dr_account,
         {{vasp}},
         {{vasp::auth_key}},
-        x"A",
+        x"0A",
         true,
     );
 }
