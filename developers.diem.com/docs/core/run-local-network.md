@@ -34,9 +34,9 @@ You can run a local test validator network in two ways: using the Diem Core sour
 
 ### Using Docker
 
-1. Install Docker and Docker-Compose.
+1. Install [Docker](https://docs.docker.com/get-docker/) along with [Docker-Compose](https://docs.docker.com/compose/).
 2. Create a directory for your local test validator network.
-3. Download the validator testnet docker compose.
+3. Download the validator testnet [docker compose](https://github.com/diem/diem/blob/master/docker/compose/validator-testnet/docker-compose.yaml).
 4. Create configuration files in the same directory so that the data can be exported out of the docker container:
     ```
     # Linux / Mac
