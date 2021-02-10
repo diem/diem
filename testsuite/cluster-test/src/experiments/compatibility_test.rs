@@ -162,10 +162,12 @@ impl Experiment for CompatibilityTest {
             context.cluster.validator_instances().to_vec(),
             context.global_emit_job_request,
             0,
+            0,
         );
         let fullnode_txn_job = EmitJobRequest::for_instances(
             context.cluster.fullnode_instances().to_vec(),
             context.global_emit_job_request,
+            0,
             0,
         );
         let job_duration = Duration::from_secs(3);
@@ -206,7 +208,7 @@ impl Experiment for CompatibilityTest {
             .tx_emitter
             .emit_txn_for(
                 job_duration,
-                EmitJobRequest::for_instances(first_node, context.global_emit_job_request, 0),
+                EmitJobRequest::for_instances(first_node, context.global_emit_job_request, 0, 0),
             )
             .await
             .map_err(|e| anyhow::format_err!("Storage backwards compat broken: {}", e))?;

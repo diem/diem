@@ -118,6 +118,7 @@ impl Experiment for Reconfiguration {
                         instances,
                         context.global_emit_job_request,
                         0,
+                        0,
                     ))
                     .await?,
             )

@@ -129,6 +129,17 @@ impl ExperimentSuite {
         Ok(Self { experiments })
     }
 
+    fn new_invalid_tx_suite(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
+        ));
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::mix_invalid_tx(0, 10).build(cluster),
+        ));
+        Self { experiments }
+    }
+
     pub fn new_by_name(cluster: &Cluster, name: &str) -> Result<Self> {
         match name {
             "perf" => Ok(Self::new_perf_suite(cluster)),
@@ -136,6 +147,7 @@ impl ExperimentSuite {
             "twin" => Ok(Self::new_twin_suite(cluster)),
             "land_blocking" => Ok(Self::new_land_blocking_suite(cluster)),
             "land_blocking_compat" => Self::new_land_blocking_compat_suite(cluster),
+            "invalid" => Ok(Self::new_invalid_tx_suite(cluster)),
             other => Err(format_err!("Unknown suite: {}", other)),
         }
     }
