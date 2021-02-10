@@ -6,7 +6,7 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::dependencies;
+use bytecode_verifier::{cyclic_dependencies, dependencies};
 use compiled_stdlib::{
     legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
 };
@@ -24,9 +24,9 @@ use diem_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_status::KeptVMStatus,
+    vm_status::{KeptVMStatus, StatusCode},
 };
-use language_e2e_tests::executor::FakeExecutor;
+use language_e2e_tests::{data_store::FakeDataStore, executor::FakeExecutor};
 use mirai_annotations::checked_verify;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants},
@@ -40,7 +40,8 @@ use std::{
     str::FromStr,
 };
 use vm::{
-    errors::{Location, VMError},
+    access::ModuleAccess,
+    errors::{Location, PartialVMError, VMError},
     file_format::{CompiledModule, CompiledScript},
     views::ModuleView,
 };
@@ -230,7 +231,7 @@ impl fmt::Display for EvaluationLog {
 }
 
 fn fetch_script_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     script: &CompiledScript,
 ) -> Vec<CompiledModule> {
     let inner = script.as_inner();
@@ -240,32 +241,32 @@ fn fetch_script_dependencies(
             inner.identifiers[handle.name.0 as usize].clone(),
         )
     });
-    fetch_dependencies(exec, idents)
+    fetch_dependencies(data_store, idents)
 }
 
 fn fetch_module_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     module: &CompiledModule,
 ) -> Vec<CompiledModule> {
     let idents = ModuleView::new(module)
         .module_handles()
         .map(|handle_view| handle_view.module_id());
-    fetch_dependencies(exec, idents)
+    fetch_dependencies(data_store, idents)
 }
 
 fn fetch_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     idents: impl Iterator<Item = ModuleId>,
 ) -> Vec<CompiledModule> {
     // idents.into_inner().
     idents
-        .flat_map(|ident| fetch_dependency(exec, ident))
+        .flat_map(|ident| fetch_dependency(data_store, ident))
         .collect()
 }
 
-fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<CompiledModule> {
+fn fetch_dependency(data_store: &FakeDataStore, ident: ModuleId) -> Option<CompiledModule> {
     let ap = AccessPath::from(&ident);
-    let blob: Vec<u8> = exec.get_state_view().get(&ap).ok().flatten()?;
+    let blob: Vec<u8> = data_store.get(&ap).ok().flatten()?;
     let compiled: CompiledModule = CompiledModule::deserialize(&blob).ok()?;
     match bytecode_verifier::verify_module(&compiled) {
         Ok(_) => Some(compiled),
@@ -276,20 +277,40 @@ fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<Compiled
 /// Verify a script with its dependencies.
 pub fn verify_script(
     script: CompiledScript,
-    deps: &[CompiledModule],
+    data_store: &FakeDataStore,
 ) -> std::result::Result<CompiledScript, VMError> {
     bytecode_verifier::verify_script(&script)?;
-    dependencies::verify_script(&script, deps)?;
+
+    let imm_deps = fetch_script_dependencies(data_store, &script);
+    dependencies::verify_script(&script, &imm_deps)?;
+
     Ok(script)
 }
 
 /// Verify a module with its dependencies.
 pub fn verify_module(
     module: CompiledModule,
-    deps: &[CompiledModule],
+    data_store: &FakeDataStore,
 ) -> std::result::Result<CompiledModule, VMError> {
     bytecode_verifier::verify_module(&module)?;
-    dependencies::verify_module(&module, deps)?;
+
+    let imm_deps = fetch_module_dependencies(data_store, &module);
+    dependencies::verify_module(&module, &imm_deps)?;
+
+    cyclic_dependencies::verify_module(
+        &module,
+        |module_id| {
+            fetch_dependency(data_store, module_id.clone())
+                .map(|module| module.immediate_dependencies())
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+        },
+        |module_id| {
+            fetch_dependency(data_store, module_id.clone())
+                .map(|module| module.immediate_friends())
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+        },
+    )?;
+
     Ok(module)
 }
 
@@ -609,8 +630,7 @@ fn eval_transaction<TComp: Compiler>(
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Stage(Stage::Verifier));
             }
-            let deps = fetch_script_dependencies(exec, &compiled_script);
-            let compiled_script = match verify_script(compiled_script, &deps) {
+            let compiled_script = match verify_script(compiled_script, exec.get_state_view()) {
                 Ok(script) => script,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
@@ -660,8 +680,7 @@ fn eval_transaction<TComp: Compiler>(
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Stage(Stage::Verifier));
             }
-            let deps = fetch_module_dependencies(exec, &compiled_module);
-            let compiled_module = match verify_module(compiled_module, &deps) {
+            let compiled_module = match verify_module(compiled_module, exec.get_state_view()) {
                 Ok(module) => module,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
