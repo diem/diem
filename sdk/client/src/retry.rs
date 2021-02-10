@@ -15,7 +15,7 @@ pub struct Retry {
 
 impl Default for Retry {
     fn default() -> Self {
-        Self::new(5, Duration::from_millis(50))
+        Self::new(20, Duration::from_millis(500))
     }
 }
 
