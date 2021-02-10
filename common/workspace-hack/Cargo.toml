@@ -38,7 +38,7 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
+reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
 serde_json = { version = "1.0.62", features = ["default", "indexmap", "preserve_order", "std"] }
@@ -46,7 +46,7 @@ standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", features = ["attributes", "default", "log", "std", "tracing-attributes"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -81,7 +81,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
+reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
 serde_json = { version = "1.0.62", features = ["default", "indexmap", "preserve_order", "std"] }
@@ -91,7 +91,7 @@ syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clon
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.60", features = ["clone-impls", "default", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", features = ["attributes", "default", "log", "std", "tracing-attributes"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -123,7 +123,7 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
+reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
 serde_json = { version = "1.0.62", features = ["default", "indexmap", "preserve_order", "std"] }
@@ -131,7 +131,7 @@ standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", features = ["attributes", "default", "log", "std", "tracing-attributes"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
@@ -166,7 +166,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-reqwest = { version = "0.11.0", features = ["__tls", "async-compression", "blocking", "default", "default-tls", "gzip", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls", "tokio-util"] }
+reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
 serde_json = { version = "1.0.62", features = ["default", "indexmap", "preserve_order", "std"] }
@@ -176,7 +176,7 @@ syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clon
 syn-dff4ba8e3ae991db = { package = "syn", version = "1.0.60", features = ["clone-impls", "default", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
 tokio-util = { version = "0.6.3", features = ["codec", "compat", "default", "futures-io", "io"] }
-tracing = { version = "0.1.23", default-features = false, features = ["log", "std"] }
+tracing = { version = "0.1.23", features = ["attributes", "default", "log", "std", "tracing-attributes"] }
 warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-rustls", "tokio-tungstenite", "websocket"] }
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
