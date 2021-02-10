@@ -18,8 +18,10 @@ pub enum Error {
     IntegerOverflow(String),
     #[error("Received an invalid chunk request: {0}")]
     InvalidChunkRequest(String),
-    #[error("No peers are currently available!")]
-    NoAvailablePeers,
+    #[error("No peers are currently available: {0}")]
+    NoAvailablePeers(String),
+    #[error("No sync request was issued by consensus: {0}")]
+    NoSyncRequestFound(String),
     #[error("No transactions were committed, but received a commit notification!")]
     NoTransactionsCommitted,
     #[error("Received an old sync request for version {0}, but our known version is: {1}")]

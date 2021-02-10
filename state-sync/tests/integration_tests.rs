@@ -439,8 +439,8 @@ fn test_fullnode_catch_up_moving_target() {
     // Expected fullnode sync states (i.e., synced version and committed version)
     let expected_states = vec![
         (250, 0),
-        (500, 500),
-        (750, 500),
+        (500, 0),
+        (750, 0),
         (1000, 1000),
         (1250, 1000),
         (1500, 1000),

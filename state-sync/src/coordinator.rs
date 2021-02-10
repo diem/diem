@@ -387,11 +387,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             ));
         }
 
+        // Save the new sync request
         self.sync_request = Some(request);
-        Ok(self.send_chunk_request(
-            self.local_state.synced_version(),
+
+        // Send a chunk request for the sync target
+        let known_version = self.local_state.synced_version();
+        self.send_chunk_request_with_target(
+            known_version,
             self.local_state.trusted_epoch(),
-        )?)
+            self.create_sync_request_chunk_target(known_version)?,
+        )
     }
 
     /// Notifies consensus of the given commit response.
@@ -1127,6 +1132,70 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         counters::set_version(counters::VersionType::Highest, highest_version);
     }
 
+    /// Calculates the next version and epoch to request (assuming the given transaction list
+    /// and ledger info will be applied successfully). Note: if no ledger info is specified,
+    /// we assume the next chunk will be for our current epoch.
+    fn calculate_new_known_version_and_epoch(
+        &mut self,
+        txn_list_with_proof: TransactionListWithProof,
+        ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> Result<(u64, u64), Error> {
+        let new_version = self
+            .local_state
+            .synced_version()
+            .checked_add(txn_list_with_proof.len() as u64)
+            .ok_or_else(|| {
+                Error::IntegerOverflow("Potential state sync version has overflown".into())
+            })?;
+
+        let mut new_epoch = self.local_state.trusted_epoch();
+        if let Some(ledger_info) = ledger_info {
+            if ledger_info.ledger_info().version() == new_version
+                && ledger_info.ledger_info().ends_epoch()
+            {
+                // This chunk is going to finish the current epoch. Choose the next one.
+                new_epoch = new_epoch.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("Potential state sync epoch has overflown".into())
+                })?;
+            }
+        }
+
+        Ok((new_version, new_epoch))
+    }
+
+    /// Returns a chunk target for the highest available (full node synchronization).
+    fn create_highest_available_chunk_target(
+        &self,
+        target_ledger_info: Option<LedgerInfoWithSignatures>,
+    ) -> TargetType {
+        TargetType::HighestAvailable {
+            target_li: target_ledger_info,
+            timeout_ms: self.config.long_poll_timeout_ms,
+        }
+    }
+
+    /// Returns a chunk target for consensus request synchronization.
+    fn create_sync_request_chunk_target(&self, known_version: u64) -> Result<TargetType, Error> {
+        if let Some(sync_request) = &self.sync_request {
+            let target_version = sync_request.target.ledger_info().version();
+            if target_version <= known_version {
+                Err(Error::SyncedBeyondTarget(known_version, target_version))
+            } else {
+                Ok(TargetType::TargetLedgerInfo(sync_request.target.clone()))
+            }
+        } else {
+            Err(Error::NoSyncRequestFound(
+                "Unable to create a sync request chunk target".into(),
+            ))
+        }
+    }
+
+    /// Returns a chunk target for waypoint synchronization.
+    fn create_waypoint_chunk_target(&self) -> TargetType {
+        let waypoint_version = self.waypoint.version();
+        TargetType::Waypoint(waypoint_version)
+    }
+
     /// Processing chunk responses that carry a LedgerInfo that should be verified using the
     /// current local trusted validator set.
     fn process_response_with_verifiable_li(
@@ -1149,26 +1218,49 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 );
             }
         }
-        // Optimistically fetch the next chunk assuming the current chunk is going to be applied
-        // successfully.
-        let new_version = self
-            .local_state
-            .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
-            .ok_or_else(|| format_err!("New version has overflown!"))?;
-        let new_epoch = if response_li.ledger_info().version() == new_version
-            && response_li.ledger_info().ends_epoch()
-        {
-            // This chunk is going to finish the current epoch, optimistically request a chunk
-            // from the next epoch.
-            self.local_state
-                .trusted_epoch()
-                .checked_add(1)
-                .ok_or_else(|| format_err!("New epoch has overflown!"))?
+
+        // Optimistically calculate the new known version and epoch (assume the current chunk
+        // is applied successfully).
+        let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
+            txn_list_with_proof.clone(),
+            Some(response_li.clone()),
+        )?;
+
+        // Send the next chunk request based on the sync mode (sync request or highest available).
+        if self.sync_request.is_some() {
+            match self.create_sync_request_chunk_target(known_version) {
+                Ok(chunk_target) => {
+                    // Send the chunk request and log any errors. If errors are logged
+                    // continue processing the chunk.
+                    let _ = self.send_chunk_request_and_log_error(
+                        known_version,
+                        known_epoch,
+                        chunk_target,
+                        LogEntry::ProcessChunkResponse,
+                    );
+                }
+                Err(error) => {
+                    error!(LogSchema::new(LogEntry::SendChunkRequest).error(&error.into()));
+                }
+            }
         } else {
-            // Remain in the current epoch
-            self.local_state.trusted_epoch()
-        };
+            let mut new_target_ledger_info = None;
+            if let Some(target_ledger_info) = self.target_ledger_info.clone() {
+                if known_version < target_ledger_info.ledger_info().version() {
+                    new_target_ledger_info = Some(target_ledger_info);
+                }
+            }
+            // Send the chunk request and log any errors. If errors are logged
+            // continue processing the chunk.
+            let _ = self.send_chunk_request_and_log_error(
+                known_version,
+                known_epoch,
+                self.create_highest_available_chunk_target(new_target_ledger_info),
+                LogEntry::ProcessChunkResponse,
+            );
+        }
+
+        // Validate and verify chunk
         self.local_state.verify_ledger_info(&response_li)?;
         if let Some(new_highest_li) = new_highest_li.clone() {
             if new_highest_li != response_li {
@@ -1201,16 +1293,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             }
         }
 
-        // don't throw error for failed chunk request send, as this failure is not related to
-        // validity of the chunk response itself
-        if let Err(e) = self.send_chunk_request(synced_version, new_epoch) {
-            error!(LogSchema::event_log(
-                LogEntry::ProcessChunkResponse,
-                LogEvent::SendChunkRequestFail
-            )
-            .error(&e));
-        }
-
         Ok(())
     }
 
@@ -1225,36 +1307,22 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             !self.is_initialized(),
             "Response with a waypoint LI but we're already initialized"
         );
-        // Optimistically fetch the next chunk.
-        let new_version = self
-            .local_state
-            .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
-            .ok_or_else(|| format_err!("New version has overflown!"))?;
-        // The epoch in the optimistic request (= new_epoch) should be the next epoch if the current chunk
-        // is the last one in its epoch.
-        let next_epoch = self
-            .local_state
-            .trusted_epoch()
-            .checked_add(1)
-            .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
-        let new_epoch = end_of_epoch_li
-            .as_ref()
-            .map_or(self.local_state.trusted_epoch(), |li| {
-                if li.ledger_info().version() == new_version && li.ledger_info().ends_epoch() {
-                    next_epoch
-                } else {
-                    self.local_state.trusted_epoch()
-                }
-            });
-        if new_version < self.waypoint.version() {
-            if let Err(e) = self.send_chunk_request(new_version, new_epoch) {
-                error!(LogSchema::event_log(
-                    LogEntry::ProcessChunkResponse,
-                    LogEvent::SendChunkRequestFail
-                )
-                .error(&e));
-            }
+
+        // Optimistically calculate the new known version and epoch (assume the current chunk
+        // is applied successfully).
+        let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
+            txn_list_with_proof.clone(),
+            end_of_epoch_li.clone(),
+        )?;
+        if known_version < self.waypoint.version() {
+            // Send the chunk request and log any errors. If errors are logged
+            // continue processing the chunk.
+            let _ = self.send_chunk_request_and_log_error(
+                known_version,
+                known_epoch,
+                self.create_waypoint_chunk_target(),
+                LogEntry::ProcessChunkResponse,
+            );
         }
 
         // verify the end-of-epoch LI for the following before passing it to execution:
@@ -1268,7 +1336,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             .map(|li| self.local_state.verify_ledger_info(&li).map(|_| li))
             .transpose()?
             .filter(|li| {
-                li.ledger_info().version() == new_version && li.ledger_info().ends_epoch()
+                li.ledger_info().version() == known_version && li.ledger_info().ends_epoch()
             });
         self.waypoint.verify(waypoint_li.ledger_info())?;
         self.log_highest_seen_version(None);
@@ -1360,61 +1428,72 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             warn!(LogSchema::new(LogEntry::Timeout).version(known_version));
 
             let trusted_epoch = self.local_state.trusted_epoch();
-            if let Err(e) = self.send_chunk_request(known_version, trusted_epoch) {
-                error!(
-                    LogSchema::event_log(LogEntry::Timeout, LogEvent::SendChunkRequestFail)
-                        .version(known_version)
-                        .error(&e)
-                );
-            }
+            let chunk_target = if !self.is_initialized() {
+                self.create_waypoint_chunk_target()
+            } else if self.sync_request.is_some() {
+                self.create_sync_request_chunk_target(known_version)?
+            } else {
+                self.create_highest_available_chunk_target(self.target_ledger_info.clone())
+            };
+            self.send_chunk_request_and_log_error(
+                known_version,
+                trusted_epoch,
+                chunk_target,
+                LogEntry::Timeout,
+            )
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
-    /// Sends a chunk request with a given `known_version` and `known_epoch`
-    /// (might be chosen optimistically).
-    fn send_chunk_request(&mut self, known_version: u64, known_epoch: u64) -> Result<()> {
+    /// Sends a chunk request with a given `known_version`, `known_epoch` and `chunk_target`.
+    /// Immediately logs any errors returned by the operation using the given log entry.
+    fn send_chunk_request_and_log_error(
+        &mut self,
+        known_version: u64,
+        known_epoch: u64,
+        chunk_target: TargetType,
+        log_entry: LogEntry,
+    ) -> Result<(), Error> {
+        if let Err(error) =
+            self.send_chunk_request_with_target(known_version, known_epoch, chunk_target)
+        {
+            error!(
+                LogSchema::event_log(log_entry, LogEvent::SendChunkRequestFail)
+                    .version(known_version)
+                    .local_epoch(known_epoch)
+                    .error(&error.clone().into())
+            );
+            Err(error)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Sends a chunk request with a given `known_version`, `known_epoch` and `target`.
+    fn send_chunk_request_with_target(
+        &mut self,
+        known_version: u64,
+        known_epoch: u64,
+        target: TargetType,
+    ) -> Result<(), Error> {
         if self.request_manager.no_available_peers() {
             warn!(LogSchema::event_log(
                 LogEntry::SendChunkRequest,
                 LogEvent::MissingPeers
             ));
-            bail!("No peers to send chunk request to");
+            return Err(Error::NoAvailablePeers(
+                "No peers to send chunk request to!".into(),
+            ));
         }
-
-        let target = if !self.is_initialized() {
-            let waypoint_version = self.waypoint.version();
-            TargetType::Waypoint(waypoint_version)
-        } else {
-            match self.sync_request.as_ref() {
-                None => TargetType::HighestAvailable {
-                    target_li: self.target_ledger_info.clone(),
-                    timeout_ms: self.config.long_poll_timeout_ms,
-                },
-                Some(sync_req) => {
-                    let sync_target_version = sync_req.target.ledger_info().version();
-                    if sync_target_version <= known_version {
-                        // sync request is already fulfilled, so don't send chunk requests with this request as target
-                        debug!(LogSchema::event_log(
-                            LogEntry::SendChunkRequest,
-                            LogEvent::OldSyncRequest
-                        )
-                        .target_version(sync_target_version)
-                        .local_synced_version(known_version), "Sync request is already fulfilled, so no need to send chunk requests for this sync request");
-                        return Ok(());
-                    }
-                    TargetType::TargetLedgerInfo(sync_req.target.clone())
-                }
-            }
-        };
 
         let target_version = target
             .version()
             .unwrap_or_else(|| known_version.wrapping_add(1));
         counters::set_version(counters::VersionType::Target, target_version);
+
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
-        self.request_manager.send_chunk_request(req)
+        Ok(self.request_manager.send_chunk_request(req)?)
     }
 
     fn deliver_subscription(
@@ -1728,8 +1807,11 @@ mod tests {
         let (sync_request, _) = create_sync_request_at_version(1);
         let _ = validator_coordinator.process_sync_request(sync_request);
 
-        // Verify error is no longer returned (as consensus isn't running)
-        validator_coordinator.check_progress().unwrap();
+        // Verify the no available peers error is returned
+        let progress_result = validator_coordinator.check_progress();
+        if !matches!(progress_result, Err(Error::NoAvailablePeers(..))) {
+            panic!("Expected an err result but got: {:?}", progress_result);
+        }
 
         // Create validator coordinator with tiny state sync timeout
         let mut node_config = NodeConfig::default();
@@ -1743,7 +1825,7 @@ mod tests {
         let _ = validator_coordinator.process_sync_request(sync_request);
 
         // Verify sync request timeout notifies the callback
-        validator_coordinator.check_progress().unwrap();
+        validator_coordinator.check_progress().unwrap_err();
         let callback_result = callback_receiver.try_recv();
         if !matches!(callback_result, Ok(Some(Err(..)))) {
             panic!("Expected an err result but got: {:?}", callback_result);
@@ -1752,6 +1834,8 @@ mod tests {
         // TODO(joshlind): check request resend after timeout.
 
         // TODO(joshlind): check overflow error returns.
+
+        // TODO(joshlind): test that check progress passes when there are valid peers.
     }
 
     #[test]

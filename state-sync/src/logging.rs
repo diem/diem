@@ -122,7 +122,6 @@ pub enum LogEvent {
 
     // SendChunkRequest events
     MissingPeers,
-    OldSyncRequest,
     NetworkSendError,
     Success,
     ChunkRequestInfo,
