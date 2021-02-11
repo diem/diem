@@ -73,6 +73,8 @@ spec fun burn {
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED;
 
+    include Diem::BurnWithResourceCapEmits<Token>{preburn: global<Diem::Preburn<Token>>(preburn_address)};
+
     /// **Access Control:**
     /// Only the account with the burn capability can burn coins [[H3]][PERMISSION].
     include Diem::AbortsIfNoBurnCapability<Token>{account: account};

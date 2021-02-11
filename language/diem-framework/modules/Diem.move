@@ -287,6 +287,7 @@ module Diem {
     spec fun burn {
         include BurnAbortsIf<CoinType>;
         include BurnEnsures<CoinType>;
+        include BurnWithResourceCapEmits<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
     spec schema BurnAbortsIf<CoinType> {
         account: signer;
@@ -330,6 +331,7 @@ module Diem {
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
         include CancelBurnWithCapAbortsIf<CoinType>;
         include CancelBurnWithCapEnsures<CoinType>;
+        include CancelBurnWithCapEmits<CoinType>;
     }
 
     /// Mint a new `Diem` coin of `CoinType` currency worth `value`. The
@@ -533,6 +535,7 @@ module Diem {
         let preburn = global<Preburn<CoinType>>(Signer::spec_address_of(account));
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
         include PreburnEnsures<CoinType>{preburn: preburn, amount: coin.value};
+        include PreburnWithResourceEmits<CoinType>{preburn_address: Signer::spec_address_of(account)};
     }
 
     spec schema PreburnToAbortsIf<CoinType> {
@@ -568,6 +571,7 @@ module Diem {
         include AbortsIfNoPreburn<CoinType>;
         include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
         include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapEmits<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
     /// Permanently removes the coins held in the `Preburn` resource (in `to_burn` field)
@@ -726,6 +730,8 @@ module Diem {
         ensures preburn.to_burn.value == 0;
         let info = spec_currency_info<CoinType>();
         ensures info.total_value == old(info.total_value) - coin.value;
+        include PreburnWithResourceEmits<CoinType>{coin: coin, preburn_address: preburn_address};
+        include BurnWithResourceCapEmits<CoinType>{preburn: Preburn<CoinType>{to_burn: coin}};
     }
     spec schema BurnNowAbortsIf<CoinType> {
         coin: Diem<CoinType>;

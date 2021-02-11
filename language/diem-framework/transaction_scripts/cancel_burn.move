@@ -74,6 +74,8 @@ spec fun cancel_burn {
     /// The balance of `Token` at `preburn_address` should increase by the preburned amount.
     ensures balance_at_addr == old(balance_at_addr) + old(preburn_value_at_addr);
 
+    include Diem::CancelBurnWithCapEmits<Token>;
+
     aborts_with [check]
         Errors::REQUIRES_CAPABILITY,
         Errors::NOT_PUBLISHED,

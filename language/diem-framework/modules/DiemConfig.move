@@ -342,6 +342,7 @@ module DiemConfig {
                 update_field(old(config),
                     epoch, old(config.epoch) + 1),
                     last_reconfiguration_time, now);
+        include ReconfigureEmits;
     }
     /// The following schema describes aborts conditions which we do not want to be propagated to the verification
     /// of callers, and which are therefore marked as `concrete` to be only verified against the implementation.
@@ -363,6 +364,15 @@ module DiemConfig {
             && config.epoch < MAX_U64
             && current_time < config.last_reconfiguration_time
                 with Errors::INVALID_STATE;
+    }
+    spec schema ReconfigureEmits {
+        let config = global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        let now = DiemTimestamp::spec_now_microseconds();
+        let msg = NewEpochEvent {
+            epoch: config.epoch,
+        };
+        let handle = config.events;
+        emits msg to handle if (!spec_reconfigure_omitted() && now != old(config).last_reconfiguration_time);
     }
 
     /// Emit a `NewEpochEvent` event. This function will be invoked by genesis directly to generate the very first
