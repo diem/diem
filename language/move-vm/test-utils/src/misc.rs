@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Result};
+use move_core_types::effects::{ChangeSet, Event};
 use move_vm_runtime::data_cache::TransactionEffects;
-
-use crate::effects::{ChangeSet, Event};
 
 pub fn convert_txn_effects_to_move_changeset_and_events(
     txn_effects: TransactionEffects,

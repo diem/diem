@@ -6,7 +6,7 @@ use diem_framework::build_stdlib;
 use diem_transaction_replay::DiemDebugger;
 use diem_types::{account_address::AccountAddress, transaction::Version};
 use difference::Changeset;
-use move_vm_test_utils::ChangeSet;
+use move_core_types::effects::ChangeSet;
 use std::{fs, path::PathBuf};
 use structopt::StructOpt;
 

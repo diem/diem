@@ -1,12 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Error, Result};
-use move_core_types::{
+use crate::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
+use anyhow::{format_err, Error, Result};
 use std::collections::btree_map::{self, BTreeMap};
 
 /// A collection of changes to modules and resources under a Move account.

@@ -11,6 +11,7 @@ use diem_types::{
 };
 use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events};
 use move_core_types::{
+    effects::ChangeSet as MoveChanges,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
@@ -20,7 +21,7 @@ use move_core_types::{
 use move_vm_runtime::{
     data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM, session::Session,
 };
-use move_vm_test_utils::{ChangeSet as MoveChanges, DeltaStorage};
+use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use once_cell::sync::Lazy;
 use vm::CompiledModule;

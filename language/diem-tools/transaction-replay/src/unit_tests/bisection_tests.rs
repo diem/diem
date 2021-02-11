@@ -8,8 +8,7 @@ use diem_types::{
     account_config::AccountResource,
     event::{EventHandle, EventKey},
 };
-use move_core_types::move_resource::MoveResource;
-use move_vm_test_utils::ChangeSet;
+use move_core_types::{effects::ChangeSet, move_resource::MoveResource};
 use std::path::PathBuf;
 
 #[test]

@@ -15,10 +15,13 @@ use diem_validator_interface::{
 };
 use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, VMExecutor};
 use move_cli::OnDiskStateView;
-use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
+use move_core_types::{
+    effects::ChangeSet as MoveChanges,
+    gas_schedule::{GasAlgebra, GasUnits},
+};
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
-use move_vm_test_utils::{ChangeSet as MoveChanges, DeltaStorage};
+use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{

@@ -4,6 +4,7 @@
 use crate::compiler::{as_module, as_script, compile_units};
 use move_core_types::{
     account_address::AccountAddress,
+    effects::ChangeSet,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
@@ -12,7 +13,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{
-    convert_txn_effects_to_move_changeset_and_events, ChangeSet, DeltaStorage, InMemoryStorage,
+    convert_txn_effects_to_move_changeset_and_events, DeltaStorage, InMemoryStorage,
 };
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
