@@ -45,8 +45,10 @@ jobs:
           path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
-      - name: run unit tests
+      - name: build all unit test code.
         run: $pre_command && cargo x test --no-run --jobs ${max_threads} --unit #--changed-since "origin/$TARGET_BRANCH"
-      #        env:
-      #          TARGET_BRANCH: ${{ steps.changes.outputs.changes-target-branch }}
+        env:
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+          #TARGET_BRANCH: ${{ steps.changes.outputs.changes-target-branch }}
       - uses: ./.github/actions/build-teardown
