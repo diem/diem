@@ -1,6 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::config::RoleType;
+use crate::config::{PeerRole, RoleType};
 use diem_types::PeerId;
 use serde::{Deserialize, Serialize, Serializer};
 use short_hex_str::AsShortHexStr;
@@ -151,6 +151,83 @@ impl NetworkId {
 
     pub fn is_validator_network(&self) -> bool {
         matches!(self, NetworkId::Validator)
+    }
+
+    /// Roles for P2P relationships
+    pub fn p2p_roles(&self, role: &RoleType) -> &'static [PeerRole] {
+        match self {
+            NetworkId::Validator => &[PeerRole::Validator],
+            NetworkId::Public => &[],
+            NetworkId::Private(_) => {
+                if self.is_vfn_network() {
+                    match role {
+                        RoleType::Validator => &[],
+                        RoleType::FullNode => &[PeerRole::ValidatorFullNode],
+                    }
+                } else {
+                    &[]
+                }
+            }
+        }
+    }
+
+    /// Roles for a prioritization of relative upstreams
+    pub fn upstream_roles(&self, role: &RoleType) -> &'static [PeerRole] {
+        match self {
+            NetworkId::Validator => &[],
+            NetworkId::Public => &[
+                PeerRole::PreferredUpstream,
+                PeerRole::Upstream,
+                PeerRole::ValidatorFullNode,
+            ],
+            NetworkId::Private(_) => {
+                if self.is_vfn_network() {
+                    match role {
+                        RoleType::Validator => &[],
+                        RoleType::FullNode => &[PeerRole::Validator, PeerRole::ValidatorFullNode],
+                    }
+                } else {
+                    &[PeerRole::PreferredUpstream, PeerRole::Upstream]
+                }
+            }
+        }
+    }
+
+    /// Roles for a prioritization of relative downstreams
+    pub fn downstream_roles(&self, role: &RoleType) -> &'static [PeerRole] {
+        match self {
+            NetworkId::Validator => &[],
+            // In order to allow fallbacks, we must allow for nodes to accept ValidatorFullNodes
+            NetworkId::Public => &[
+                PeerRole::Downstream,
+                PeerRole::ValidatorFullNode,
+                PeerRole::Known,
+                PeerRole::Unknown,
+            ],
+            NetworkId::Private(_) => {
+                if self.is_vfn_network() {
+                    match role {
+                        RoleType::Validator => &[PeerRole::ValidatorFullNode],
+                        RoleType::FullNode => &[],
+                    }
+                } else {
+                    // It's a private network, disallow unknown peers
+                    &[PeerRole::Downstream, PeerRole::Known]
+                }
+            }
+        }
+    }
+
+    pub fn is_p2p_role(&self, remote_peer_role: &PeerRole, role: &RoleType) -> bool {
+        self.p2p_roles(role).contains(remote_peer_role)
+    }
+
+    pub fn is_upstream_role(&self, remote_peer_role: &PeerRole, role: &RoleType) -> bool {
+        self.upstream_roles(role).contains(remote_peer_role)
+    }
+
+    pub fn is_downstream_role(&self, remote_peer_role: &PeerRole, role: &RoleType) -> bool {
+        self.downstream_roles(role).contains(remote_peer_role)
     }
 
     pub fn as_str(&self) -> &str {
