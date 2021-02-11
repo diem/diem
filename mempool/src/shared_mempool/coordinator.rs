@@ -32,7 +32,6 @@ use futures::{
     StreamExt,
 };
 use std::{
-    ops::Deref,
     sync::Arc,
     time::{Duration, SystemTime},
 };
@@ -175,7 +174,7 @@ async fn handle_event<V>(
     match event {
         Event::NewPeer(metadata) => {
             counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["new_peer".to_string().deref()])
+                .with_label_values(&["new_peer"])
                 .inc();
             let origin = metadata.origin;
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
@@ -191,7 +190,7 @@ async fn handle_event<V>(
         }
         Event::LostPeer(metadata) => {
             counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["lost_peer".to_string().deref()])
+                .with_label_values(&["lost_peer"])
                 .inc();
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
             debug!(LogSchema::new(LogEntry::LostPeer)
@@ -205,7 +204,7 @@ async fn handle_event<V>(
         }
         Event::Message(peer_id, msg) => {
             counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["message".to_string().deref()])
+                .with_label_values(&["message"])
                 .inc();
             match msg {
                 MempoolSyncMsg::BroadcastTransactionsRequest {
