@@ -10,9 +10,10 @@ use std::fmt;
 /// for logging accordingly.
 #[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct NetworkContext {
+    /// The type of node
+    role: RoleType,
     #[serde(serialize_with = "NetworkId::serialize_str")]
     network_id: NetworkId,
-    role: RoleType,
     peer_id: PeerId,
 }
 
@@ -27,28 +28,28 @@ impl fmt::Display for NetworkContext {
         write!(
             f,
             "[{},{},{}]",
-            self.network_id.as_str(),
             self.role,
+            self.network_id.as_str(),
             self.peer_id.short_str(),
         )
     }
 }
 
 impl NetworkContext {
-    pub fn new(network_id: NetworkId, role: RoleType, peer_id: PeerId) -> NetworkContext {
+    pub fn new(role: RoleType, network_id: NetworkId, peer_id: PeerId) -> NetworkContext {
         NetworkContext {
-            network_id,
             role,
+            network_id,
             peer_id,
         }
     }
 
-    pub fn network_id(&self) -> &NetworkId {
-        &self.network_id
-    }
-
     pub fn role(&self) -> RoleType {
         self.role
+    }
+
+    pub fn network_id(&self) -> &NetworkId {
+        &self.network_id
     }
 
     pub fn peer_id(&self) -> PeerId {
@@ -58,8 +59,8 @@ impl NetworkContext {
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock_with_peer_id(peer_id: PeerId) -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self::new(
-            NetworkId::Validator,
             RoleType::Validator,
+            NetworkId::Validator,
             peer_id,
         ))
     }
@@ -67,8 +68,8 @@ impl NetworkContext {
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock() -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self::new(
-            NetworkId::Validator,
             RoleType::Validator,
+            NetworkId::Validator,
             PeerId::random(),
         ))
     }
@@ -147,6 +148,10 @@ impl NetworkId {
         matches!(self, NetworkId::Private(network) if network == VFN_NETWORK)
     }
 
+    pub fn is_validator_network(&self) -> bool {
+        matches!(self, NetworkId::Validator)
+    }
+
     pub fn as_str(&self) -> &str {
         match self {
             NetworkId::Validator => "Validator",
@@ -194,12 +199,13 @@ mod test {
 
     #[test]
     fn test_network_context_serialization() {
-        let role = RoleType::Validator;
         let peer_id = PeerId::random();
-        let context = NetworkContext::new(NetworkId::vfn_network(), role, peer_id);
+        let context = NetworkContext::new(RoleType::Validator, NetworkId::vfn_network(), peer_id);
         let expected = format!(
-            "---\nnetwork_id: {}\nrole: {}\npeer_id: {}\n",
-            VFN_NETWORK, role, peer_id
+            "---\nrole: {}\nnetwork_id: {}\npeer_id: {}\n",
+            RoleType::Validator,
+            VFN_NETWORK,
+            peer_id
         );
         assert_eq!(expected, serde_yaml::to_string(&context).unwrap());
     }

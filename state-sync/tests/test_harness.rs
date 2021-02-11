@@ -374,8 +374,8 @@ impl StateSyncEnvironment {
             let peer = self.peers[index].borrow();
             let auth_mode = AuthenticationMode::Mutual(peer.network_key.clone());
             let network_context = Arc::new(NetworkContext::new(
+                *role,
                 VALIDATOR_NETWORK.clone(),
-                RoleType::Validator,
                 peer.peer_id,
             ));
 

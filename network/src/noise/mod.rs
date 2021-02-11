@@ -43,16 +43,16 @@
 //!
 //! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
 //! let client_context = Arc::new(NetworkContext::new(
-//!     NetworkId::Validator,
 //!     RoleType::Validator,
+//!     NetworkId::Validator,
 //!     client_peer_id,
 //! ));
 //! let client = NoiseUpgrader::new(client_context, client_private, client_auth);
 //!
 //! let server_auth = HandshakeAuthMode::mutual(trusted_peers);
 //! let server_context = Arc::new(NetworkContext::new(
-//!     NetworkId::Validator,
 //!     RoleType::Validator,
+//!     NetworkId::Validator,
 //!     server_peer_id,
 //! ));
 //! let server = NoiseUpgrader::new(server_context, server_private, server_auth);

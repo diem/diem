@@ -228,27 +228,37 @@ impl NodeConfig {
     /// Paths used in the config are either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self, Error> {
         let mut config = Self::load_config(&input_path)?;
-        if config.base.role.is_validator() {
+
+        let input_dir = RootPath::new(input_path);
+        config.execution.load(&input_dir)?;
+
+        let mut config = config.validate_network_configs()?;
+        config.set_data_dir(config.data_dir().clone());
+        Ok(config)
+    }
+
+    /// Checks `NetworkConfig` setups so that they exist on proper networks
+    /// Additionally, handles any strange missing default cases
+    fn validate_network_configs(mut self) -> Result<NodeConfig, Error> {
+        if self.base.role.is_validator() {
             invariant(
-                config.validator_network.is_some(),
+                self.validator_network.is_some(),
                 "Missing a validator network config for a validator node".into(),
             )?;
         } else {
             invariant(
-                config.validator_network.is_none(),
+                self.validator_network.is_none(),
                 "Provided a validator network config for a full_node node".into(),
             )?;
         }
 
         let mut network_ids = HashSet::new();
-        let input_dir = RootPath::new(input_path);
-        config.execution.load(&input_dir)?;
-        if let Some(network) = &mut config.validator_network {
-            network.load(RoleType::Validator)?;
+        if let Some(network) = &mut self.validator_network {
+            network.load_validator_network()?;
             network_ids.insert(network.network_id.clone());
         }
-        for network in &mut config.full_node_networks {
-            network.load(RoleType::FullNode)?;
+        for network in &mut self.full_node_networks {
+            network.load_fullnode_network()?;
 
             // Check a validator network is not included in a list of full-node networks
             let network_id = &network.network_id;
@@ -258,8 +268,7 @@ impl NodeConfig {
             )?;
             network_ids.insert(network_id.clone());
         }
-        config.set_data_dir(config.data_dir().clone());
-        Ok(config)
+        Ok(self)
     }
 
     pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<(), Error> {
@@ -332,22 +341,26 @@ impl NodeConfig {
         self.test = Some(test);
     }
 
+    fn default_config(serialized: &str, path: &'static str) -> Self {
+        let config = Self::parse(serialized).unwrap_or_else(|e| panic!("Error in {}: {}", path, e));
+        config
+            .validate_network_configs()
+            .unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
     pub fn default_for_public_full_node() -> Self {
         let contents = std::include_str!("test_data/public_full_node.yaml");
-        let path = "default_for_public_full_node";
-        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+        Self::default_config(contents, "default_for_public_full_node")
     }
 
     pub fn default_for_validator() -> Self {
         let contents = std::include_str!("test_data/validator.yaml");
-        let path = "default_for_validator";
-        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+        Self::default_config(contents, "default_for_validator")
     }
 
     pub fn default_for_validator_full_node() -> Self {
         let contents = std::include_str!("test_data/validator_full_node.yaml");
-        let path = "default_for_validator_full_node";
-        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+        Self::default_config(contents, "default_for_validator_full_node")
     }
 }
 

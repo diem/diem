@@ -60,7 +60,7 @@ pub static DIEM_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
 });
 
 pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId, v: i64) {
-    if network_context.role().is_validator() {
+    if network_context.network_id().is_validator_network() {
         DIEM_NETWORK_PEER_CONNECTED
             .with_label_values(&[
                 network_context.role().as_str(),

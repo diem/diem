@@ -379,10 +379,10 @@ where
             .filter(|(_, (metadata, _))| metadata.origin == ConnectionOrigin::Inbound)
             .count();
         let outbound = total.saturating_sub(inbound);
-        let role = self.network_context.role().as_str();
 
+        // TODO: Work with PEs to update this to be a `NetworkId` rather than `RoleType`
         counters::DIEM_NETWORK_PEERS
-            .with_label_values(&[role, "connected"])
+            .with_label_values(&[self.network_context.role().as_str(), "connected"])
             .set(total as i64);
 
         counters::connections(&self.network_context, ConnectionOrigin::Inbound).set(inbound as i64);

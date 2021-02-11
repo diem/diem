@@ -117,29 +117,31 @@ fn parse_hex(src: &str) -> Result<Key, Error> {
 
 impl CheckValidatorSetEndpoints {
     pub fn execute(self) -> Result<String, Error> {
+        let is_validator = self.role.is_validator();
+
         // Following unwraps shouldn't fail as it is in memory
         let mut encryptor = Encryptor::new(Storage::InMemoryStorage(InMemoryStorage::new()));
         encryptor.initialize().unwrap();
-        let encryptor = match self.role {
-            RoleType::FullNode => encryptor,
-            RoleType::Validator => {
-                encryptor
-                    .add_key(self.version.unwrap(), self.key.unwrap())
-                    .unwrap();
-                encryptor
-                    .set_current_version(self.version.unwrap())
-                    .unwrap();
-                encryptor
-            }
+        let encryptor = if is_validator {
+            encryptor
+                .add_key(self.version.unwrap(), self.key.unwrap())
+                .unwrap();
+            encryptor
+                .set_current_version(self.version.unwrap())
+                .unwrap();
+            encryptor
+        } else {
+            encryptor
         };
 
         let client = JsonRpcClientWrapper::new(self.json_server);
         let validator_set = crate::validator_set::decode_validator_set(encryptor, client, None)?;
 
         for info in validator_set {
-            let address = match self.role {
-                RoleType::FullNode => info.fullnode_network_address.clone(),
-                RoleType::Validator => info.validator_network_address.clone(),
+            let address = if is_validator {
+                info.fullnode_network_address.clone()
+            } else {
+                info.validator_network_address.clone()
             };
             let check_endpoint = CheckEndpoint { address };
             match check_endpoint.execute() {

@@ -179,8 +179,8 @@ impl NetworkBuilder {
         };
 
         let network_context = Arc::new(NetworkContext::new(
-            config.network_id.clone(),
             role,
+            config.network_id.clone(),
             peer_id,
         ));
 
@@ -340,7 +340,8 @@ impl NetworkBuilder {
         channel_size: usize,
     ) -> &mut Self {
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let outbound_connection_limit = if let RoleType::FullNode = self.network_context.role() {
+        let outbound_connection_limit = if !self.network_context.network_id().is_validator_network()
+        {
             Some(max_outbound_connections)
         } else {
             None

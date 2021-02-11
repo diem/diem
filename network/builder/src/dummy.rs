@@ -111,6 +111,7 @@ pub struct DummyNetwork {
 /// The following sets up a 2 peer network and verifies connectivity.
 pub fn setup_network() -> DummyNetwork {
     let runtime = Runtime::new().unwrap();
+    let role = RoleType::Validator;
     let network_id = NetworkId::Validator;
     let chain_id = ChainId::default();
     let dialer_peer_id = PeerId::random();
@@ -141,8 +142,8 @@ pub fn setup_network() -> DummyNetwork {
 
     // Set up the listener network
     let network_context = Arc::new(NetworkContext::new(
+        role,
         network_id.clone(),
-        RoleType::Validator,
         listener_peer_id,
     ));
     let mut network_builder = NetworkBuilder::new_for_test(
@@ -169,11 +170,7 @@ pub fn setup_network() -> DummyNetwork {
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
 
     // Set up the dialer network
-    let network_context = Arc::new(NetworkContext::new(
-        network_id,
-        RoleType::Validator,
-        dialer_peer_id,
-    ));
+    let network_context = Arc::new(NetworkContext::new(role, network_id, dialer_peer_id));
 
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
