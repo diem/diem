@@ -144,9 +144,8 @@ impl<'a> SelectedInclude<'a> {
             let subsets = xctx.core().subsets()?;
 
             let name = name.as_ref();
-            // TODO: turn this into a subset in x.toml
             let subset = if name == "production" {
-                subsets.default_members()
+                subsets.production()
             } else {
                 subsets.get(name).ok_or_else(|| {
                     let known_subsets: Vec<_> = subsets.iter().map(|(name, _)| name).collect();

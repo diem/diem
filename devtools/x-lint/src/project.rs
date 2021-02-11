@@ -53,12 +53,12 @@ impl<'l> ProjectContext<'l> {
         self.core.project_root().join(path.as_ref())
     }
 
-    /// Returns information about the default workspace members.
+    /// Returns information about the production workspace members.
     ///
-    /// This includes all packages included by default in the default workspace members, but not
-    /// those that Cargo would ignore.
-    pub fn default_members(&self) -> Result<&WorkspaceSubset> {
-        Ok(self.core.subsets()?.default_members())
+    /// This includes all dependencies built with default features, but not those that Cargo
+    /// would ignore.
+    pub fn production_members(&self) -> Result<&WorkspaceSubset> {
+        Ok(self.core.subsets()?.production())
     }
 
     /// Returns Hakari information.

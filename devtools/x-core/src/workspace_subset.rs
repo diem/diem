@@ -10,19 +10,12 @@ use guppy::{
     },
     PackageId,
 };
-use serde::Deserialize;
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-};
-use toml::de;
+use std::collections::BTreeMap;
 
 /// Contains information about all the subsets specified in this workspace.
 #[derive(Clone, Debug)]
 pub struct WorkspaceSubsets<'g> {
-    // TODO: default members should become a subset in x.toml
-    default_members: WorkspaceSubset<'g>,
+    production: WorkspaceSubset<'g>,
     subsets: BTreeMap<String, WorkspaceSubset<'g>>,
 }
 
@@ -33,27 +26,15 @@ impl<'g> WorkspaceSubsets<'g> {
     /// * any platform
     /// * v2 resolver
     /// * no dev dependencies
-    pub fn new(
-        graph: &'g PackageGraph,
-        project_root: &Path,
-        config: &BTreeMap<String, SubsetConfig>,
-    ) -> Result<Self> {
+    pub fn new(graph: &'g PackageGraph, config: &BTreeMap<String, SubsetConfig>) -> Result<Self> {
+        // TODO: turn this into x.toml settings
         let mut cargo_opts = CargoOptions::new();
         cargo_opts
             .set_version(CargoResolverVersion::V2)
             .set_include_dev(false);
 
-        let default_members = Self::read_default_members(project_root)?;
-
-        // Look up default members by path.
-        let initial_packages = graph
-            .resolve_workspace_paths(&default_members)
-            .map_err(|err| SystemError::guppy("querying default members", err))?;
-        let default_members =
-            WorkspaceSubset::new(&initial_packages, StandardFeatures::Default, &cargo_opts);
-
         // For each of the subset configs, look up the packages by name.
-        let subsets = config
+        let mut subsets: BTreeMap<_, _> = config
             .iter()
             .map(|(name, config)| {
                 let initial_packages = graph
@@ -67,15 +48,21 @@ impl<'g> WorkspaceSubsets<'g> {
             })
             .collect::<Result<_, _>>()?;
 
+        let production = subsets
+            .remove("production")
+            .ok_or_else(|| SystemError::generic("missing subsets.production in x.toml", None))?;
+
         Ok(Self {
-            default_members,
+            production,
             subsets,
         })
     }
 
-    /// Returns information about default members.
-    pub fn default_members(&self) -> &WorkspaceSubset<'g> {
-        &self.default_members
+    /// Returns information about the production subset.
+    ///
+    /// This is a special subset which is tested for mutual exclusion against the test-only subset.
+    pub fn production(&self) -> &WorkspaceSubset<'g> {
+        &self.production
     }
 
     /// Returns information about the subset by name.
@@ -83,35 +70,11 @@ impl<'g> WorkspaceSubsets<'g> {
         self.subsets.get(name.as_ref())
     }
 
-    /// Iterate over all named subsets.
+    /// Iterate over all named subsets (other than the production subset).
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&'a str, &'a WorkspaceSubset<'g>)> + 'a {
         self.subsets
             .iter()
             .map(|(name, subset)| (name.as_str(), subset))
-    }
-
-    // ---
-    // Helper methods
-    // ---
-
-    fn read_default_members(project_root: &Path) -> Result<Vec<PathBuf>> {
-        #[derive(Deserialize)]
-        struct RootToml {
-            workspace: Workspace,
-        }
-
-        #[derive(Deserialize)]
-        struct Workspace {
-            #[serde(rename = "default-members")]
-            default_members: Vec<PathBuf>,
-        }
-
-        let root_toml = project_root.join("Cargo.toml");
-        let contents =
-            fs::read(&root_toml).map_err(|err| SystemError::io("reading root Cargo.toml", err))?;
-        let contents: RootToml = de::from_slice(&contents)
-            .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
-        Ok(contents.workspace.default_members)
     }
 }
 

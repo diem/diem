@@ -147,16 +147,15 @@ features = ["fuzzing"]
 # *** IMPORTANT ***
 #
 # Published developer tools (e.g. Move compiler) ARE part of the production Diem codebase.
-# They should be listed in the root Cargo.toml's default-members, not here!
+# They should be listed in subsets.production, not here!
 #
 # Before adding a new crate to this list, ensure that it is *actually* test-only. If not, add it
-# (or a crate that depends on it) to the root Cargo.toml's default-members list!
+# (or a crate that depends on it) to subsets.production.
 #
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 [workspace.test-only]
 members = [
     # Please keep this list in alphabetical order!
-
     "bytecode-verifier-tests",
     "cli",
     "cluster-test",
@@ -183,6 +182,7 @@ members = [
     "many-keys-stress-test",
     "memsocket",
     "module-generation",
+    "move-bytecode-viewer",
     "move-lang-functional-tests",
     "move-lang-ir-utils",
     "move-lang-test-utils",
@@ -201,6 +201,47 @@ members = [
 
 # Interesting subsets of the workspace, These are used for generating and
 # checking dependency summaries.
+
+[subsets.production]
+# The full list of binaries that form the "production Diem codebase". These should never include crates
+# that require fuzzing or test features: it is asserted that workspace.test-only and the non-dev dependencies
+# of this subset are disjoint.
+root-members = [
+    # Please keep this list in alphabetical order!
+
+    "backup-cli",
+    "compiler",
+    "db-bootstrapper",
+    "diagen",
+    "diem-events-fetcher",
+    "diem-faucet",
+    "diem-framework",
+    "diem-genesis-tool",
+    "diem-key-manager",
+    "diem-node",
+    "diem-operational-tool",
+    "diem-rate-limiter",
+    "diem-storage-inspector",
+    "diem-trace",
+    "diem-transaction-replay",
+    "diem-writeset-generator",
+    "diemsum",
+    "disassembler",
+    "execution-correctness",
+    "generate-key",
+    "genesis-viewer",
+    "move-cli",
+    "move-coverage",
+    "move-explain",
+    "move-lang",
+    "move-prover",
+    "safety-rules",
+    "seed-peer-generator",
+    "swiss-knife",
+    "transaction-builder-generator",
+
+    # Please keep this list in alphabetical order!
+]
 
 [subsets.lsr]
 # The Diem safety rules TCB.

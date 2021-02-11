@@ -317,7 +317,7 @@ As a consequence, it is recommended that you set up your test-only code in the f
 **For production crates:**
 
 Production crates are defined as the set of crates that create externally published artifacts, e.g. the Diem validator,
-the Move compiler, and so on.
+the Move compiler, and so on. Binary production crates are listed in `x.toml`'s `subsets.production`.
 
 For the sake of example, we'll consider you are defining a test-only helper function `foo` in `foo_crate`:
 

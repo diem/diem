@@ -35,7 +35,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
         ctx: &PackageContext<'l>,
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
-        let default_members = ctx.project_ctx().default_members()?;
+        let default_members = ctx.project_ctx().production_members()?;
         let package = ctx.metadata();
 
         let binary_kind = package
@@ -112,9 +112,9 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                 let msg = format!(
                     "{} {}",
                     indoc!(
-                        "library package, dependency of default members and test-only:
+                        "library package, dependency of x.toml's subsets.production and test-only:
                         * remove from test-only if production code
-                        * otherwise, ensure it is not a dependency of default members:",
+                        * otherwise, ensure it is not a dependency of subsets.production in x.toml:",
                     ),
                     reverse_str,
                 );
@@ -123,18 +123,18 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
             (None, WorkspaceStatus::RootMember, false) => {
                 // Library, listed in default members. It shouldn't be.
                 let msg = indoc!(
-                    "library package, listed in default-members:
+                    "library package, listed in x.toml's subsets.production:
                      * if test-only, add to test-only in x.toml instead
-                     * otherwise, remove it from default-members and make it a dependency of a binary"
+                     * otherwise, remove it from subsets.production and make it a dependency of a binary"
                 );
                 out.write(LintLevel::Error, msg);
             }
             (None, WorkspaceStatus::RootMember, true) => {
                 // Library, listed in default members and in test-only. It shouldn't be.
                 let msg = indoc!(
-                    "library package, listed in default-members and test-only:
-                     * if test-only, add to test-only in x.toml and remove from default-members
-                     * otherwise, remove it from both and make it a dependency of a default-member"
+                    "library package, listed in x.toml's subsets.production and test-only:
+                     * if test-only, add to test-only in x.toml and remove from subsets.production
+                     * otherwise, remove it from both and make it a dependency of subsets.production"
                 );
                 out.write(LintLevel::Error, msg);
             }
@@ -144,9 +144,9 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     "{} {}",
                     kind,
                     indoc!(
-                        "package, not listed in default-members:
+                        "package, not listed in x.toml's subsets.production:
                          * if test-only, add to test-only in x.toml
-                         * otherwise, list it in root Cargo.toml's default-members"
+                         * otherwise, list it in x.toml's subsets.production"
                     ),
                 );
                 out.write(LintLevel::Error, msg);
@@ -160,9 +160,9 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     "{} {}",
                     kind,
                     indoc!(
-                        "package, not listed in default-members:
-                         * list it in root Cargo.toml's default-members
-                         (note: dependency of a default member, so assumed to be a production crate)"
+                        "package, not listed in x.toml's subsets.production:
+                         * list it in x.toml's subsets.production
+                         (note: dependency of subsets.production, so assumed to be a production crate)"
                     ),
                 );
                 out.write(LintLevel::Error, msg)
@@ -173,9 +173,9 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     "{} {}",
                     kind,
                     indoc!(
-                        "package, not listed in default-members but a dependency, and in test-only:
+                        "package, a dependency of x.toml's subsets.production, and listed in test-only:
                          * remove it from test-only in x.toml, AND
-                         * list it in root Cargo.toml's default-members
+                         * list it in x.toml's subsets.production
                          (note: dependency of a default member, so assumed to be a production crate)"
                     ),
                 );
@@ -190,9 +190,9 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                     "{} {}",
                     kind,
                     indoc!(
-                        "package, listed in both default-members and test-only:
+                        "package, listed in both x.toml's subsets.production and test-only:
                          * remove it from test-only in x.toml
-                         (note: default member, so assumed to be a production crate)"
+                         (note: listed in subsets.production, so assumed to be a production crate)"
                     ),
                 );
                 out.write(LintLevel::Error, msg)

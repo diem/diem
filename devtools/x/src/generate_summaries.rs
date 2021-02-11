@@ -50,16 +50,14 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
 
     fs::create_dir_all(&out_dir)?;
 
-    // TODO: figure out a way to unify this with WorkspaceSubset.
-
     // Create summaries for:
 
     let mut summary_count = 0;
 
-    // * default members (default features)
-    // (note that we aren't using the build set from default_members() as it may have different
+    // * production (default features)
+    // (note that we aren't using the existing build set in WorkspaceSubset as it may have different
     // options)
-    let initials = subsets.default_members().initials().clone();
+    let initials = subsets.production().initials().clone();
     write_summary(
         "default",
         initials,

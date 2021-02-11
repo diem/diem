@@ -67,11 +67,11 @@ impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
             }
         }
 
-        let default_members = ctx.default_members()?;
+        let production_members = ctx.production_members()?;
 
         let banned_default_build = &self.config.default_build;
         for (package, message) in filter_ban(banned_default_build) {
-            if default_members.status_of(package.id()) != WorkspaceStatus::Absent {
+            if production_members.status_of(package.id()) != WorkspaceStatus::Absent {
                 out.write(
                     LintLevel::Error,
                     format!(
@@ -325,7 +325,7 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
         let package = ctx.metadata();
-        if !ctx.is_default_member() {
+        if !ctx.is_production() {
             return Ok(RunStatus::Skipped(SkipReason::UnsupportedPackage(
                 package.id(),
             )));

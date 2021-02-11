@@ -24,7 +24,7 @@ pub struct PackageContext<'l> {
     package_graph: &'l PackageGraph,
     workspace_path: &'l Path,
     metadata: PackageMetadata<'l>,
-    is_default_member: bool,
+    is_production: bool,
 }
 
 impl<'l> PackageContext<'l> {
@@ -34,13 +34,13 @@ impl<'l> PackageContext<'l> {
         workspace_path: &'l Path,
         metadata: PackageMetadata<'l>,
     ) -> Result<Self> {
-        let default_members = project_ctx.default_members()?;
+        let production_members = project_ctx.production_members()?;
         Ok(Self {
             project_ctx,
             package_graph,
             workspace_path,
             metadata,
-            is_default_member: default_members.status_of(metadata.id()) != WorkspaceStatus::Absent,
+            is_production: production_members.status_of(metadata.id()) != WorkspaceStatus::Absent,
         })
     }
 
@@ -64,9 +64,9 @@ impl<'l> PackageContext<'l> {
         &self.metadata
     }
 
-    /// Returns true if this is a default member of this workspace.
-    pub fn is_default_member(&self) -> bool {
-        self.is_default_member
+    /// Returns true if this is a production member of this workspace.
+    pub fn is_production(&self) -> bool {
+        self.is_production
     }
 }
 

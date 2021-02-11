@@ -31,7 +31,7 @@ impl PackageGraphPlus {
                 cmd.build_graph()
                     .map_err(|err| SystemError::guppy("building package graph", err))?,
             ),
-            move |graph| WorkspaceSubsets::new(graph, project_root, &ctx.config().subsets),
+            move |graph| WorkspaceSubsets::new(graph, &ctx.config().subsets),
         )
     }
 }

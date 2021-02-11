@@ -153,45 +153,6 @@ members = [
     "vm-validator",
 ]
 
-# NOTE: default-members is the complete list of binaries that form the "production Diem codebase". These members should
-# never include crates that require fuzzing features or test features. These are the crates we want built with no extra
-# test-only code included.
-#
-# For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
-default-members = [
-    "common/trace",
-    "common/rate-limiter",
-    "config/generate-key",
-    "config/management/genesis",
-    "config/management/operational",
-    "config/seed-peer-generator",
-    "consensus/safety-rules",
-    "client/faucet",
-    "client/swiss-knife",
-    "execution/db-bootstrapper",
-    "execution/execution-correctness",
-    "language/compiler",
-    "language/diem-framework",
-    "language/move-prover",
-    "language/move-prover/diagen",
-    "language/move-lang",
-    "language/tools/disassembler",
-    "language/tools/move-bytecode-viewer",
-    "language/tools/genesis-viewer",
-    "language/tools/move-cli",
-    "language/tools/move-coverage",
-    "language/diem-tools/diem-events-fetcher",
-    "language/diem-tools/transaction-replay",
-    "language/diem-tools/writeset-transaction-generator",
-    "language/tools/move-explain",
-    "language/transaction-builder/generator",
-    "diem-node",
-    "secure/key-manager",
-    "storage/backup/backup-cli",
-    "storage/diemsum",
-    "storage/inspector",
-]
-
 [profile.release]
 debug = true
 

@@ -56,6 +56,10 @@ pub enum SystemError {
         context: Cow<'static, str>,
         err: TargetSpecError,
     },
+    Generic {
+        context: Cow<'static, str>,
+        err: Option<Box<dyn error::Error + Send + Sync + 'static>>,
+    },
 }
 
 impl SystemError {
@@ -130,6 +134,16 @@ impl SystemError {
             err,
         }
     }
+
+    pub fn generic(
+        context: impl Into<Cow<'static, str>>,
+        err: impl Into<Option<Box<dyn error::Error + Send + Sync + 'static>>>,
+    ) -> Self {
+        SystemError::Generic {
+            context: context.into(),
+            err: err.into(),
+        }
+    }
 }
 
 impl fmt::Display for SystemError {
@@ -156,6 +170,7 @@ impl fmt::Display for SystemError {
             | SystemError::HakariCargoToml { context, .. }
             | SystemError::HakariTomlOut { context, .. }
             | SystemError::TargetSpec { context, .. } => write!(f, "while {}", context),
+            SystemError::Generic { context, .. } => write!(f, "{}", context),
         }
     }
 }
@@ -173,6 +188,9 @@ impl error::Error for SystemError {
             SystemError::HakariTomlOut { err, .. } => Some(err),
             SystemError::TargetSpec { err, .. } => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),
+            SystemError::Generic { err, .. } => err
+                .as_ref()
+                .map(|err| &**err as &(dyn error::Error + 'static)),
         }
     }
 }
