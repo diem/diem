@@ -61,7 +61,13 @@ fn gen_txn_to_commit<R: Rng>(
     )
 }
 
-pub fn run_benchmark(num_accounts: usize, total_version: u64, blob_size: usize, db_dir: PathBuf) {
+pub fn run_benchmark(
+    num_accounts: usize,
+    total_version: u64,
+    blob_size: usize,
+    db_dir: PathBuf,
+    prune_window: Option<u64>,
+) {
     if db_dir.exists() {
         fs::remove_dir_all(db_dir.join("diemdb")).unwrap();
     }
@@ -70,8 +76,8 @@ pub fn run_benchmark(num_accounts: usize, total_version: u64, blob_size: usize, 
 
     let db = DiemDB::open(
         &db_dir,
-        false, /* readonly */
-        None,  /* pruner */
+        false,        /* readonly */
+        prune_window, /* pruner */
         RocksdbConfig::default(),
     )
     .expect("DB should open.");
@@ -104,7 +110,10 @@ pub fn run_benchmark(num_accounts: usize, total_version: u64, blob_size: usize, 
 
     db.update_rocksdb_properties().unwrap();
     let db_size = DIEM_STORAGE_ROCKSDB_PROPERTIES
-        .with_label_values(&[JELLYFISH_MERKLE_NODE_CF_NAME, "diem_rocksdb_properties"])
+        .with_label_values(&[
+            JELLYFISH_MERKLE_NODE_CF_NAME,
+            "diem_rocksdb_live_sst_files_size_bytes",
+        ])
         .get();
     let data_size = DIEM_STORAGE_ROCKSDB_PROPERTIES
         .with_label_values(&[JELLYFISH_MERKLE_NODE_CF_NAME, "diem_rocksdb_cf_size_bytes"])
