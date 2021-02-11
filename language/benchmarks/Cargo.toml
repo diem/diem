@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-criterion = "0.3.3"
+criterion = "0.3.4"
 once_cell = "1.4.1"
 proptest = "0.10.1"
 
