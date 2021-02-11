@@ -12,12 +12,13 @@ type Map<K, V> = BTreeMap<K, V>;
 type Set<V> = BTreeSet<V>;
 pub type BlockId = CodeOffset;
 
+#[derive(Debug)]
 struct Block {
     successors: Vec<BlockId>,
     content: BlockContent,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum BlockContent {
     Basic {
         lower: CodeOffset,
@@ -32,27 +33,40 @@ pub struct StacklessControlFlowGraph {
     backward: bool,
 }
 
-const DUMMY_ENTRACE: BlockId = 0;
+const DUMMY_ENTRANCE: BlockId = 0;
 const DUMMY_EXIT: BlockId = 1;
 
 impl StacklessControlFlowGraph {
     pub fn new_forward(code: &[Bytecode]) -> Self {
         Self {
-            entry_block_id: DUMMY_ENTRACE,
+            entry_block_id: DUMMY_ENTRANCE,
             blocks: Self::collect_blocks(code),
             backward: false,
         }
     }
 
-    pub fn new_backward(code: &[Bytecode]) -> Self {
+    /// If from_all_blocks is false, perform backward analysis only from blocks that may exit.
+    /// If from_all_blocks is true, perform backward analysis from all blocks.
+    pub fn new_backward(code: &[Bytecode], from_all_blocks: bool) -> Self {
         let blocks = Self::collect_blocks(code);
         let mut block_id_to_predecessors: Map<BlockId, Vec<BlockId>> =
             blocks.keys().map(|block_id| (*block_id, vec![])).collect();
         for (block_id, block) in &blocks {
             for succ_block_id in &block.successors {
+                if from_all_blocks && *succ_block_id == DUMMY_EXIT {
+                    continue;
+                }
                 let predecessors = &mut block_id_to_predecessors.get_mut(&succ_block_id).unwrap();
                 predecessors.push(*block_id);
             }
+        }
+        if from_all_blocks {
+            let predecessors = &mut block_id_to_predecessors.get_mut(&DUMMY_EXIT).unwrap();
+            blocks.keys().for_each(|block_id| {
+                if *block_id != DUMMY_ENTRANCE && *block_id != DUMMY_EXIT {
+                    predecessors.push(*block_id);
+                }
+            });
         }
         Self {
             entry_block_id: DUMMY_EXIT,
@@ -124,7 +138,7 @@ impl StacklessControlFlowGraph {
         assert_eq!(block_entry, code.len() as CodeOffset);
         let entry_bb = *offset_to_key.get(&0).unwrap();
         blocks.insert(
-            DUMMY_ENTRACE,
+            DUMMY_ENTRANCE,
             Block {
                 successors: vec![entry_bb],
                 content: BlockContent::Dummy,
@@ -181,7 +195,7 @@ impl StacklessControlFlowGraph {
 
     pub fn exit_block(&self) -> BlockId {
         if self.backward {
-            DUMMY_ENTRACE
+            DUMMY_ENTRANCE
         } else {
             DUMMY_EXIT
         }
@@ -203,5 +217,13 @@ impl StacklessControlFlowGraph {
 
     pub fn is_dummmy(&self, block_id: BlockId) -> bool {
         matches!(self.blocks[&block_id].content, BlockContent::Dummy)
+    }
+
+    pub fn display(&self) {
+        println!("+=======================+");
+        println!("entry_block_id = {}", self.entry_block_id);
+        println!("blocks = {:?}", self.blocks);
+        println!("is_backward = {}", self.backward);
+        println!("+=======================+");
     }
 }

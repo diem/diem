@@ -81,9 +81,13 @@ where
                 StacklessControlFlowGraph::new_forward(&data.code)
             };
             let instrs = &data.code;
-            let state_map = self.analyze_function(initial_state, instrs, &cfg);
-            let exit_state = state_map[&cfg.exit_block()].post.clone();
-            data.annotations.set(self.to_summary(exit_state))
+            let state_map = self.analyze_function(initial_state.clone(), instrs, &cfg);
+            if let Some(exit_state) = state_map.get(&cfg.exit_block()) {
+                data.annotations
+                    .set(self.to_summary(exit_state.post.clone()))
+            } else {
+                data.annotations.set(self.to_summary(initial_state))
+            }
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives

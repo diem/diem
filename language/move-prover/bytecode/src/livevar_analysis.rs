@@ -113,7 +113,9 @@ impl LiveVarAnalysisProcessor {
         func_target: &FunctionTarget,
         code: &[Bytecode],
     ) -> BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset> {
-        let cfg = StacklessControlFlowGraph::new_backward(&code);
+        // Perform backward analysis from all blocks just in case some block
+        // cannot reach an exit block
+        let cfg = StacklessControlFlowGraph::new_backward(&code, true);
         let analyzer = LiveVarAnalysis::new(&func_target);
         let state_map = analyzer.analyze_function(
             LiveVarState {

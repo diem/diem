@@ -526,7 +526,7 @@ impl PropagateSplicedAnalysis {
     }
 
     fn run(self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
-        let cfg = StacklessControlFlowGraph::new_backward(instrs);
+        let cfg = StacklessControlFlowGraph::new_backward(instrs, false);
         let state_map = self.analyze_function(SplicedState::default(), instrs, &cfg);
         let mut data = self.state_per_instruction(state_map, instrs, &cfg, |before, after| {
             (before.clone(), after.clone())
