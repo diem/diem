@@ -6,8 +6,6 @@
 mod genesis_context;
 pub mod genesis_gas_schedule;
 
-use std::collections::BTreeMap;
-
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use diem_crypto::{
@@ -27,7 +25,7 @@ use diem_types::{
         authenticator::AuthenticationKey, ChangeSet, Script, Transaction, WriteSetPayload,
     },
 };
-use diem_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
+use diem_vm::{convert_changeset_and_events, data_cache::StateViewCache};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -37,7 +35,6 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{
-    data_cache::TransactionEffects,
     logging::{LogContext, NoContextLog},
     move_vm::MoveVM,
     session::Session,
@@ -45,6 +42,7 @@ use move_vm_runtime::{
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use std::collections::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
 use vm::CompiledModule;
 
@@ -89,16 +87,6 @@ pub fn encode_genesis_transaction(
             .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
         chain_id,
     )))
-}
-
-fn merge_txn_effects(
-    mut effects_1: TransactionEffects,
-    effects_2: TransactionEffects,
-) -> TransactionEffects {
-    effects_1.resources.extend(effects_2.resources);
-    effects_1.modules.extend(effects_2.modules);
-    effects_1.events.extend(effects_2.events);
-    effects_1
 }
 
 pub fn encode_genesis_change_set(
@@ -156,17 +144,18 @@ pub fn encode_genesis_change_set(
         create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
     }
 
-    let effects_1 = session.finish().unwrap();
+    let (mut changeset1, mut events1) = session.finish().unwrap();
 
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
     publish_stdlib(&mut session, &log_context, stdlib_module_map);
-    let effects_2 = session.finish().unwrap();
+    let (changeset2, events2) = session.finish().unwrap();
 
-    let effects = merge_txn_effects(effects_1, effects_2);
+    changeset1.squash(changeset2).unwrap();
+    events1.extend(events2);
 
-    let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();
+    let (write_set, events) = convert_changeset_and_events(changeset1, events1).unwrap();
 
     assert!(!write_set.iter().any(|(_, op)| op.is_deletion()));
     verify_genesis_write_set(&events);

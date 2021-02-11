@@ -26,8 +26,8 @@ use diem_types::{
     write_set::WriteSet,
 };
 use diem_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, DiemVMValidator,
-    VMExecutor, VMValidator,
+    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, DiemVMValidator, VMExecutor,
+    VMValidator,
 };
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
@@ -366,9 +366,9 @@ impl FakeExecutor {
                         e.into_vm_status()
                     )
                 });
-            let effects = session.finish().expect("Failed to generate txn effects");
-            let (writeset, _events) =
-                txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            let (changeset, events) = session.finish().expect("Failed to generate txn effects");
+            let (writeset, _events) = convert_changeset_and_events(changeset, events)
+                .expect("Failed to generate writeset");
             writeset
         };
         self.data_store.add_write_set(&write_set);
@@ -397,9 +397,9 @@ impl FakeExecutor {
                 &log_context,
             )
             .map_err(|e| e.into_vm_status())?;
-        let effects = session.finish().expect("Failed to generate txn effects");
+        let (changeset, events) = session.finish().expect("Failed to generate txn effects");
         let (writeset, _events) =
-            txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            convert_changeset_and_events(changeset, events).expect("Failed to generate writeset");
         Ok(writeset)
     }
 }

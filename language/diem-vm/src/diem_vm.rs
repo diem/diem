@@ -23,13 +23,14 @@ use diem_types::{
 use fail::fail_point;
 use move_core_types::{
     account_address::AccountAddress,
+    effects::{ChangeSet as MoveChangeSet, Event as MoveEvent},
     gas_schedule::{CostTable, GasAlgebra, GasUnits, InternalGasUnits},
     identifier::IdentStr,
+    language_storage::ModuleId,
     value::{serialize_values, MoveValue},
 };
-
 use move_vm_runtime::{
-    data_cache::{RemoteCache, TransactionEffects},
+    data_cache::RemoteCache,
     logging::{expect_no_verification_errors, LogContext},
     move_vm::MoveVM,
     session::Session,
@@ -468,52 +469,56 @@ impl<'a> DiemVMInternals<'a> {
     }
 }
 
-pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
+pub fn convert_changeset_and_events_cached<C: AccessPathCache>(
     ap_cache: &mut C,
-    effects: TransactionEffects,
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
 
-    for (addr, vals) in effects.resources {
-        for (struct_tag, val_opt) in vals {
+    for (addr, account_changeset) in changeset.accounts {
+        for (struct_tag, blob_opt) in account_changeset.resources {
             let ap = ap_cache.get_resource_path(addr, struct_tag);
-            let op = match val_opt {
+            let op = match blob_opt {
                 None => WriteOp::Deletion,
-                Some((ty_layout, val)) => {
-                    let blob = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
-                        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-                    ))?;
-
-                    WriteOp::Value(blob)
-                }
+                Some(blob) => WriteOp::Value(blob),
             };
+            ops.push((ap, op))
+        }
+
+        for (name, blob_opt) in account_changeset.modules {
+            let ap = ap_cache.get_module_path(ModuleId::new(addr, name));
+            let op = match blob_opt {
+                None => WriteOp::Deletion,
+                Some(blob) => WriteOp::Value(blob),
+            };
+
             ops.push((ap, op))
         }
     }
 
-    for (module_id, blob) in effects.modules {
-        ops.push((ap_cache.get_module_path(module_id), WriteOp::Value(blob)))
-    }
-
     let ws = WriteSetMut::new(ops)
         .freeze()
-        .map_err(|_| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
+        .map_err(|_| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
 
-    let events = effects
-        .events
+    let events = events
         .into_iter()
-        .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
-            let msg = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
-                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-            ))?;
+        .map(|(guid, seq_num, ty_tag, blob)| {
             let key = EventKey::try_from(guid.as_slice())
                 .map_err(|_| VMStatus::Error(StatusCode::EVENT_KEY_MISMATCH))?;
-            Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
+            Ok(ContractEvent::new(key, seq_num, ty_tag, blob))
         })
         .collect::<Result<Vec<_>, VMStatus>>()?;
 
     Ok((ws, events))
+}
+
+pub fn convert_changeset_and_events(
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
+) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
+    convert_changeset_and_events_cached(&mut (), changeset, events)
 }
 
 pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
@@ -550,8 +555,8 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         .sub(cost_strategy.remaining_gas())
         .get();
 
-    let effects = session.finish().map_err(|e| e.into_vm_status())?;
-    let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
+    let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+    let (write_set, events) = convert_changeset_and_events_cached(ap_cache, changeset, events)?;
 
     Ok(TransactionOutput::new(
         write_set,
@@ -559,12 +564,6 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         gas_used,
         TransactionStatus::Keep(status),
     ))
-}
-
-pub fn txn_effects_to_writeset_and_events(
-    effects: TransactionEffects,
-) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
-    txn_effects_to_writeset_and_events_cached(&mut (), effects)
 }
 
 #[test]

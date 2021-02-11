@@ -9,7 +9,7 @@ use diem_types::{
     account_config::{self, diem_root_address},
     transaction::{ChangeSet, Script, Version},
 };
-use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events};
+use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage};
 use move_core_types::{
     effects::ChangeSet as MoveChanges,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -125,7 +125,7 @@ where
 {
     let move_vm = MoveVM::new();
     let move_changes = move_module_changes(modules);
-    let mut effect = {
+    let (mut changeset, events) = {
         let state_view_storage = RemoteStorage::new(state_view);
         let exec_storage = DeltaStorage::new(&state_view_storage, &move_changes);
         let mut session = GenesisSession(move_vm.new_session(&exec_storage));
@@ -141,10 +141,10 @@ where
 
     for (module, bytes) in modules.iter().zip(bytes) {
         // TODO: Check compatibility between old and new modules.
-        effect.modules.push((module.self_id(), bytes.clone()));
+        changeset.publish_or_overwrite_module(module.self_id(), bytes.clone())
     }
 
-    let (writeset, events) = txn_effects_to_writeset_and_events(effect)
+    let (writeset, events) = convert_changeset_and_events(changeset, events)
         .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))
         .unwrap();
 

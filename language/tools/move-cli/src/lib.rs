@@ -9,12 +9,10 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
-    value::MoveTypeLayout,
     vm_status::StatusCode,
 };
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
-use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 use vm::{
     access::ModuleAccess,
@@ -271,21 +269,7 @@ impl OnDiskStateView {
         Ok(())
     }
 
-    /// Save `resource` on disk under the path `addr`/`tag`
     pub fn save_resource(
-        &self,
-        addr: AccountAddress,
-        tag: StructTag,
-        layout: MoveTypeLayout,
-        resource: Value,
-    ) -> Result<()> {
-        let bcs = resource
-            .simple_serialize(&layout)
-            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
-        self.save_resource_bytes(addr, tag, &bcs)
-    }
-
-    pub fn save_resource_bytes(
         &self,
         addr: AccountAddress,
         tag: StructTag,
@@ -303,13 +287,9 @@ impl OnDiskStateView {
         event_key: &[u8],
         event_sequence_number: u64,
         event_type: TypeTag,
-        event_layout: &MoveTypeLayout,
-        event_value: Value,
+        event_data: Vec<u8>,
     ) -> Result<()> {
         let key = EventKey::try_from(event_key)?;
-        let event_data = event_value
-            .simple_serialize(event_layout)
-            .ok_or_else(|| anyhow!("Failed to serialize event"))?;
         self.save_contract_event(ContractEvent::new(
             key,
             event_sequence_number,
@@ -362,13 +342,18 @@ impl OnDiskStateView {
     }
 
     /// Save all the modules in the local cache, re-generate mv_interfaces if required.
-    pub fn save_modules(&self, modules: &[(ModuleId, Vec<u8>)]) -> Result<()> {
-        for (module_id, module_bytes) in modules {
+    pub fn save_modules<'a>(
+        &self,
+        modules: impl IntoIterator<Item = &'a (ModuleId, Vec<u8>)>,
+    ) -> Result<()> {
+        let mut is_empty = true;
+        for (module_id, module_bytes) in modules.into_iter() {
             self.save_module(module_id, module_bytes)?;
+            is_empty = false;
         }
 
         // sync with build_dir for updates of mv_interfaces if new modules are added
-        if !modules.is_empty() {
+        if !is_empty {
             self.sync_interface_files()?;
         }
 

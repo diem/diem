@@ -193,6 +193,33 @@ impl ChangeSet {
         }
         Ok(())
     }
+
+    pub fn into_modules(self) -> impl Iterator<Item = (ModuleId, Option<Vec<u8>>)> {
+        self.accounts.into_iter().flat_map(|(addr, account)| {
+            account
+                .modules
+                .into_iter()
+                .map(move |(module_name, blob_opt)| (ModuleId::new(addr, module_name), blob_opt))
+        })
+    }
+
+    pub fn modules(&self) -> impl Iterator<Item = (AccountAddress, &Identifier, Option<&[u8]>)> {
+        self.accounts.iter().flat_map(|(addr, account)| {
+            let addr = *addr;
+            account.modules.iter().map(move |(module_name, blob_opt)| {
+                (addr, module_name, blob_opt.as_ref().map(|v| v.as_ref()))
+            })
+        })
+    }
+
+    pub fn resources(&self) -> impl Iterator<Item = (AccountAddress, &StructTag, Option<&[u8]>)> {
+        self.accounts.iter().flat_map(|(addr, account)| {
+            let addr = *addr;
+            account.resources.iter().map(move |(struct_tag, blob_opt)| {
+                (addr, struct_tag, blob_opt.as_ref().map(|v| v.as_ref()))
+            })
+        })
+    }
 }
 
 pub type Event = (Vec<u8>, u64, TypeTag, Vec<u8>);

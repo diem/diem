@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::{RemoteCache, TransactionDataCache, TransactionEffects},
+    data_cache::{RemoteCache, TransactionDataCache},
     logging::LogContext,
     runtime::VMRuntime,
 };
 use move_core_types::{
     account_address::AccountAddress,
+    effects::{ChangeSet, Event},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
 };
@@ -125,7 +126,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
     /// This function should always succeed with no user errors returned, barring invariant violations.
     ///
     /// This MUST NOT be called if there is a previous invocation that failed with an invariant violation.
-    pub fn finish(self) -> VMResult<TransactionEffects> {
+    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>)> {
         self.data_cache
             .into_effects()
             .map_err(|e| e.finish(Location::Undefined))

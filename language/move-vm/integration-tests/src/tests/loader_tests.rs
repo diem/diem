@@ -67,10 +67,10 @@ impl Adapter {
                 .publish_module(binary, WORKING_ACCOUNT, &mut cost_strategy, &log_context)
                 .unwrap_or_else(|_| panic!("failure publishing module: {:#?}", module));
         }
-        let data = session.finish().expect("failure getting write set");
-        for (module_id, module) in data.modules {
-            self.store.publish_or_overwrite_module(module_id, module);
-        }
+        let (changeset, _) = session.finish().expect("failure getting write set");
+        self.store
+            .apply(changeset)
+            .expect("failure applying write set");
     }
 
     fn call_functions(&self) {

@@ -13,7 +13,7 @@ use diem_types::{
 use diem_validator_interface::{
     DBDebuggerInterface, DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
-use diem_vm::{data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, VMExecutor};
+use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
 use move_cli::OnDiskStateView;
 use move_core_types::{
     effects::ChangeSet as MoveChanges,
@@ -158,7 +158,7 @@ impl DiemDebugger {
             match ap.get_path() {
                 access_path::Path::Resource(tag) => match op {
                     WriteOp::Deletion => state_view.delete_resource(addr, tag)?,
-                    WriteOp::Value(bytes) => state_view.save_resource_bytes(addr, tag, bytes)?,
+                    WriteOp::Value(bytes) => state_view.save_resource(addr, tag, bytes)?,
                 },
                 access_path::Path::Code(module_id) => match op {
                     WriteOp::Deletion => state_view.delete_module(&module_id)?,
@@ -183,7 +183,7 @@ impl DiemDebugger {
             match key {
                 access_path::Path::Code(m) => disk_view.save_module(&m, value)?,
                 access_path::Path::Resource(struct_tag) => {
-                    disk_view.save_resource_bytes(account, struct_tag, value)?
+                    disk_view.save_resource(account, struct_tag, value)?
                 }
             }
         }
@@ -282,10 +282,10 @@ impl DiemDebugger {
         let remote_storage = DeltaStorage::new(&state_view_storage, &move_changes);
         let mut session = move_vm.new_session(&remote_storage);
         f(&mut session).map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
-        let txn_effect = session
+        let (changeset, events) = session
             .finish()
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
-        let (write_set, events) = txn_effects_to_writeset_and_events(txn_effect)
+        let (write_set, events) = convert_changeset_and_events(changeset, events)
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
         Ok(ChangeSet::new(write_set, events))
     }
