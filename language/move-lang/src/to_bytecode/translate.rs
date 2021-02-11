@@ -703,7 +703,7 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
             exp_(context, code, ecode);
             code.push(sp(loc, B::Abort));
         }
-        C::Return(e) => {
+        C::Return { exp: e, .. } => {
             exp_(context, code, e);
             code.push(sp(loc, B::Ret));
         }
@@ -713,7 +713,7 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
                 code.push(sp(loc, B::Pop));
             }
         }
-        C::Jump(lbl) => code.push(sp(loc, B::Branch(label(lbl)))),
+        C::Jump { target, .. } => code.push(sp(loc, B::Branch(label(target)))),
         C::JumpIf {
             cond,
             if_true,

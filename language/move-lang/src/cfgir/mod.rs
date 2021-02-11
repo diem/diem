@@ -32,8 +32,6 @@ pub fn refine_inference_and_verify(
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    remove_no_ops::optimize(cfg);
-
     liveness::last_usage(errors, locals, cfg, infinite_loop_starts);
     let locals_states = locals::verify(errors, signature, acquires, locals, cfg);
 

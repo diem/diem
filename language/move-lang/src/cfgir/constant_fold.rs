@@ -36,11 +36,12 @@ fn optimize_cmd(sp!(_, cmd_): &mut Command) -> bool {
             let c2 = optimize_exp(el);
             c1 || c2
         }
-        C::Return(e) | C::Abort(e) | C::IgnoreAndPop { exp: e, .. } | C::JumpIf { cond: e, .. } => {
-            optimize_exp(e)
-        }
+        C::Return { exp: e, .. }
+        | C::Abort(e)
+        | C::IgnoreAndPop { exp: e, .. }
+        | C::JumpIf { cond: e, .. } => optimize_exp(e),
 
-        C::Jump(_) => false,
+        C::Jump { .. } => false,
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }

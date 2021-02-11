@@ -56,6 +56,14 @@ pub struct ModuleInfo {
     pub constants: UniqueMap<ConstantName, ConstantInfo>,
 }
 
+pub struct LoopInfo(LoopInfo_);
+
+enum LoopInfo_ {
+    NotInLoop,
+    BreakTypeUnknown,
+    BreakType(Box<Type>),
+}
+
 pub struct Context {
     pub modules: UniqueMap<ModuleIdent, ModuleInfo>,
 
@@ -68,8 +76,7 @@ pub struct Context {
     pub subst: Subst,
     pub constraints: Constraints,
 
-    pub in_loop: bool,
-    pub break_type: Option<Type>,
+    loop_info: LoopInfo,
 
     errors: Errors,
 }
@@ -103,17 +110,15 @@ impl Context {
             constraints: vec![],
             errors,
             locals: UniqueMap::new(),
-            in_loop: false,
-            break_type: None,
+            loop_info: LoopInfo(LoopInfo_::NotInLoop),
             modules,
         }
     }
 
     pub fn reset_for_module_item(&mut self) {
-        assert!(!self.in_loop, "ICE in_loop should be reset after the loop");
         assert!(
-            self.break_type.is_none(),
-            "ICE in_loop should be reset after the loop"
+            matches!(&self.loop_info, LoopInfo(LoopInfo_::NotInLoop)),
+            "ICE loop_info should be reset after the loop"
         );
         self.return_type = None;
         self.locals = UniqueMap::new();
@@ -319,6 +324,42 @@ impl Context {
             Some(m) => &self.module_info(m).constants,
         };
         constants.get(n).expect("ICE should have failed in naming")
+    }
+
+    pub fn in_loop(&self) -> bool {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop => false,
+            LoopInfo_::BreakTypeUnknown | LoopInfo_::BreakType(_) => true,
+        }
+    }
+
+    pub fn get_break_type(&self) -> Option<&Type> {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop | LoopInfo_::BreakTypeUnknown => None,
+            LoopInfo_::BreakType(t) => Some(&*t),
+        }
+    }
+
+    pub fn set_break_type(&mut self, t: Type) {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop => (),
+            LoopInfo_::BreakTypeUnknown | LoopInfo_::BreakType(_) => {
+                self.loop_info.0 = LoopInfo_::BreakType(Box::new(t))
+            }
+        }
+    }
+
+    pub fn enter_loop(&mut self) -> LoopInfo {
+        std::mem::replace(&mut self.loop_info, LoopInfo(LoopInfo_::BreakTypeUnknown))
+    }
+
+    // Reset loop info and return the loop's break type, if it has one
+    pub fn exit_loop(&mut self, old_info: LoopInfo) -> Option<Type> {
+        match std::mem::replace(&mut self.loop_info, old_info).0 {
+            LoopInfo_::NotInLoop => panic!("ICE exit_loop called while not in a loop"),
+            LoopInfo_::BreakTypeUnknown => None,
+            LoopInfo_::BreakType(t) => Some(*t),
+        }
     }
 }
 

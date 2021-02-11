@@ -112,12 +112,12 @@ mod count {
                 exp(context, er);
                 exp(context, el)
             }
-            C::Return(e)
+            C::Return { exp: e, .. }
             | C::Abort(e)
             | C::IgnoreAndPop { exp: e, .. }
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
-            C::Jump(_) => (),
+            C::Jump { .. } => (),
             C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
@@ -300,12 +300,12 @@ mod eliminate {
                 exp(context, er);
                 exp(context, el)
             }
-            C::Return(e)
+            C::Return { exp: e, .. }
             | C::Abort(e)
             | C::IgnoreAndPop { exp: e, .. }
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
-            C::Jump(_) => (),
+            C::Jump { .. } => (),
             C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
@@ -448,7 +448,12 @@ mod eliminate {
     fn unit(loc: Loc) -> Exp {
         H::exp(
             sp(loc, Type_::Unit),
-            sp(loc, UnannotatedExp_::Unit { trailing: false }),
+            sp(
+                loc,
+                UnannotatedExp_::Unit {
+                    case: UnitCase::Implicit,
+                },
+            ),
         )
     }
 }

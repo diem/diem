@@ -4,7 +4,7 @@
 use crate::{
     cfgir::{
         self,
-        ast::{self as G, BasicBlock, BasicBlocks},
+        ast::{self as G, BasicBlock, BasicBlocks, BlockInfo},
         cfg::BlockCFG,
     },
     errors::Errors,
@@ -34,7 +34,8 @@ struct Context {
     label_count: usize,
     blocks: BasicBlocks,
     block_ordering: BTreeMap<Label, usize>,
-    infinite_loop_starts: BTreeSet<Label>,
+    block_info: Vec<(Label, BlockInfo)>,
+    loop_stmt_bounds: BTreeMap<Label, Label>,
 }
 
 impl Context {
@@ -48,7 +49,8 @@ impl Context {
             label_count: 0,
             blocks: BasicBlocks::new(),
             block_ordering: BTreeMap::new(),
-            infinite_loop_starts: BTreeSet::new(),
+            block_info: vec![],
+            loop_stmt_bounds: BTreeMap::new(),
         }
     }
 
@@ -70,15 +72,25 @@ impl Context {
     fn insert_block(&mut self, lbl: Label, basic_block: BasicBlock) {
         assert!(self.block_ordering.insert(lbl, self.blocks.len()).is_none());
         assert!(self.blocks.insert(lbl, basic_block).is_none());
+        self.block_info.push((
+            lbl,
+            BlockInfo {
+                loop_stmt_end: self
+                    .loop_stmt_bounds
+                    .get(&lbl)
+                    .map(|end| G::LoopEnd::Target(*end)),
+            },
+        ));
     }
 
     // Returns the blocks inserted in insertion ordering
-    pub fn finish_blocks(&mut self) -> (Label, BasicBlocks, BTreeSet<Label>) {
+    pub fn finish_blocks(&mut self) -> (Label, BasicBlocks, Vec<(Label, BlockInfo)>) {
         self.next_label = None;
         let start = mem::replace(&mut self.start, None);
         let blocks = mem::replace(&mut self.blocks, BasicBlocks::new());
         let block_ordering = mem::replace(&mut self.block_ordering, BTreeMap::new());
-        let infinite_loop_starts = mem::replace(&mut self.infinite_loop_starts, BTreeSet::new());
+        let block_info = mem::replace(&mut self.block_info, vec![]);
+        self.loop_stmt_bounds = BTreeMap::new();
         self.label_count = 0;
         self.loop_begin = None;
         self.loop_end = None;
@@ -93,11 +105,22 @@ impl Context {
             .map(|(lbl, ordering)| (lbl, Label(ordering)))
             .collect();
         let (start, blocks) = G::remap_labels(&remapping, start.unwrap(), blocks);
-        let infinite_loop_starts = infinite_loop_starts
+        let block_info = block_info
             .into_iter()
-            .map(|orig| remapping[&orig])
+            .map(|(lbl, info)| {
+                let BlockInfo { loop_stmt_end } = info;
+                let loop_stmt_end = match loop_stmt_end {
+                    None => None,
+                    Some(G::LoopEnd::Target(end)) => Some(match remapping.get(&end) {
+                        None => G::LoopEnd::Unused,
+                        Some(e) => G::LoopEnd::Target(*e),
+                    }),
+                    Some(G::LoopEnd::Unused) => unreachable!(),
+                };
+                (remapping[&lbl], BlockInfo { loop_stmt_end })
+            })
             .collect();
-        (start, blocks, infinite_loop_starts)
+        (start, blocks, block_info)
     }
 }
 
@@ -207,10 +230,10 @@ fn constant_(
     const ICE_MSG: &str = "ICE invalid constant should have been blocked in typing";
 
     initial_block(context, block);
-    let (start, mut blocks, infinite_loop_starts) = context.finish_blocks();
-    assert!(infinite_loop_starts.is_empty(), ICE_MSG);
+    let (start, mut blocks, block_info) = context.finish_blocks();
 
-    let (mut cfg, errors) = BlockCFG::new(start, &mut blocks);
+    let (mut cfg, infinite_loop_starts, errors) = BlockCFG::new(start, &mut blocks, block_info);
+    assert!(infinite_loop_starts.is_empty(), ICE_MSG);
     assert!(errors.is_empty(), ICE_MSG);
 
     let mut fake_errors = vec![];
@@ -250,7 +273,7 @@ fn constant_(
     }
 
     let result = match return_cmd.value {
-        C::Return(e) => e,
+        C::Return { exp: e, .. } => e,
         _ => unreachable!(),
     };
     check_constant_value(context, &result);
@@ -315,16 +338,18 @@ fn function_body(
     assert!(context.start.is_none());
     assert!(context.blocks.is_empty());
     assert!(context.block_ordering.is_empty());
+    assert!(context.block_info.is_empty());
+    assert!(context.loop_stmt_bounds.is_empty());
     assert!(context.loop_begin.is_none());
     assert!(context.loop_end.is_none());
-    assert!(context.infinite_loop_starts.is_empty());
     let b_ = match tb_ {
         HB::Native => GB::Native,
         HB::Defined { locals, body } => {
             initial_block(context, body);
-            let (start, mut blocks, infinite_loop_starts) = context.finish_blocks();
+            let (start, mut blocks, block_info) = context.finish_blocks();
 
-            let (mut cfg, errors) = BlockCFG::new(start, &mut blocks);
+            let (mut cfg, infinite_loop_starts, errors) =
+                BlockCFG::new(start, &mut blocks, block_info);
             for e in errors {
                 context.error(e);
             }
@@ -375,7 +400,13 @@ fn block(context: &mut Context, mut cur_label: Label, blocks: H::Block) {
 
     match context.next_label {
         Some(next) if !basic_block.back().unwrap().value.is_terminal() => {
-            basic_block.push_back(sp(loc, C::Jump(next)));
+            basic_block.push_back(sp(
+                loc,
+                C::Jump {
+                    target: next,
+                    from_user: false,
+                },
+            ));
         }
         _ => (),
     }
@@ -452,7 +483,13 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
                 let loop_end = context.new_label();
 
                 // Jump to loop condition
-                basic_block.push_back(sp(loc, C::Jump(loop_cond)));
+                basic_block.push_back(sp(
+                    loc,
+                    C::Jump {
+                        target: loop_cond,
+                        from_user: false,
+                    },
+                ));
                 finish_block!(next_label: loop_cond);
 
                 // Loop condition and case to jump into loop or end
@@ -473,21 +510,23 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
             }
 
             S::Loop {
-                block: loop_block,
-                has_break,
-                has_return_abort,
+                block: loop_block, ..
             } => {
                 let loop_body = context.new_label();
                 let loop_end = context.new_label();
                 assert!(cur_label.0 < loop_body.0);
                 assert!(loop_body.0 < loop_end.0);
 
-                if !has_return_abort && !has_break {
-                    context.infinite_loop_starts.insert(loop_body);
-                }
+                context.loop_stmt_bounds.insert(loop_body, loop_end);
 
                 // Jump to loop
-                basic_block.push_back(sp(loc, C::Jump(loop_body)));
+                basic_block.push_back(sp(
+                    loc,
+                    C::Jump {
+                        target: loop_body,
+                        from_user: false,
+                    },
+                ));
                 finish_block!(next_label: loop_end);
 
                 // Loop body
@@ -502,10 +541,25 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
 fn command(context: &Context, sp!(_, hc_): &mut H::Command) {
     use H::Command_ as C;
     match hc_ {
-        C::Assign(_, _) | C::Mutate(_, _) | C::Abort(_) | C::Return(_) | C::IgnoreAndPop { .. } => {
+        C::Assign(_, _)
+        | C::Mutate(_, _)
+        | C::Abort(_)
+        | C::Return { .. }
+        | C::IgnoreAndPop { .. } => {}
+        C::Continue => {
+            *hc_ = C::Jump {
+                target: context.loop_begin.clone().unwrap(),
+                from_user: true,
+            }
         }
-        C::Continue => *hc_ = C::Jump(context.loop_begin.clone().unwrap()),
-        C::Break => *hc_ = C::Jump(context.loop_end.clone().unwrap()),
-        C::Jump(_) | C::JumpIf { .. } => panic!("ICE unexpected jump before translation to jumps"),
+        C::Break => {
+            *hc_ = C::Jump {
+                target: context.loop_end.clone().unwrap(),
+                from_user: true,
+            }
+        }
+        C::Jump { .. } | C::JumpIf { .. } => {
+            panic!("ICE unexpected jump before translation to jumps")
+        }
     }
 }

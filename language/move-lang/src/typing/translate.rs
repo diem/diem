@@ -1041,25 +1041,25 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (sp(eloc, Type_::Anything), TE::Abort(ecode))
         }
         NE::Break => {
-            if !context.in_loop {
+            if !context.in_loop() {
                 context.error(vec![(
                     eloc,
                     "Invalid usage of 'break'. 'break' can only be used inside a loop body",
                 )]);
             }
             let current_break_ty = sp(eloc, Type_::Unit);
-            let break_ty = match &context.break_type {
+            let break_ty = match context.get_break_type() {
                 None => current_break_ty,
                 Some(t) => {
                     let t = t.clone();
                     join(context, eloc, || "Invalid break.", current_break_ty, t)
                 }
             };
-            context.break_type = Some(break_ty);
+            context.set_break_type(break_ty);
             (sp(eloc, Type_::Anything), TE::Break)
         }
         NE::Continue => {
-            if !context.in_loop {
+            if !context.in_loop() {
                 context.error(vec![(
                     eloc,
                     "Invalid usage of 'continue'. 'continue' can only be used inside a loop body",
@@ -1223,11 +1223,9 @@ fn loop_body(
     is_loop: bool,
     nloop: Box<N::Exp>,
 ) -> (bool, Type, Box<T::Exp>) {
-    let old_in_loop = std::mem::replace(&mut context.in_loop, true);
-    let old_break_type = std::mem::replace(&mut context.break_type, None);
+    let old_loop_info = context.enter_loop();
     let eloop = exp(context, nloop);
-    context.in_loop = old_in_loop;
-    let break_type = std::mem::replace(&mut context.break_type, old_break_type);
+    let break_type_opt = context.exit_loop(old_loop_info);
 
     let lloc = eloop.exp.loc;
     subtype(
@@ -1237,11 +1235,11 @@ fn loop_body(
         eloop.ty.clone(),
         sp(lloc, Type_::Unit),
     );
-    let has_break = break_type.is_some();
+    let has_break = break_type_opt.is_some();
     let ty = if is_loop && !has_break {
         core::make_tvar(context, lloc)
     } else {
-        break_type.unwrap_or_else(|| sp(eloc, Type_::Unit))
+        break_type_opt.unwrap_or_else(|| sp(eloc, Type_::Unit))
     };
     (has_break, ty, eloop)
 }

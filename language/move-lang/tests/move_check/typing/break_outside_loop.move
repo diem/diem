@@ -5,4 +5,13 @@ module M {
         };
         break
     }
+
+    fun bar() {
+        break;
+    }
+
+    fun baz(x: u64): u64 {
+        if (x >= 5) break;
+        0
+    }
 }

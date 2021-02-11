@@ -121,7 +121,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             context.borrow_state.release_values(values);
         }
 
-        C::Return(e) => {
+        C::Return { exp: e, .. } => {
             let values = exp(context, e);
             let errors = context.borrow_state.return_(*loc, values);
             context.add_errors(errors);
@@ -131,7 +131,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             assert!(!value.is_ref());
             context.borrow_state.abort()
         }
-        C::Jump(_) => (),
+        C::Jump { .. } => (),
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }

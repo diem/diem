@@ -6,3 +6,19 @@ error:
    │         ^^^^^ Invalid usage of 'break'. 'break' can only be used inside a loop body
    │
 
+error: 
+
+    ┌── tests/move_check/typing/break_outside_loop.move:10:9 ───
+    │
+ 10 │         break;
+    │         ^^^^^ Invalid usage of 'break'. 'break' can only be used inside a loop body
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/break_outside_loop.move:14:21 ───
+    │
+ 14 │         if (x >= 5) break;
+    │                     ^^^^^ Invalid usage of 'break'. 'break' can only be used inside a loop body
+    │
+

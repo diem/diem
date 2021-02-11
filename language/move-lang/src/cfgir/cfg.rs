@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cfgir::ast::{BasicBlock, BasicBlocks},
+    cfgir::{
+        ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd},
+        remove_no_ops,
+    },
     errors::*,
-    hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_},
+    hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_, UnitCase},
     shared::ast_debug::*,
 };
 use move_ir_types::location::*;
@@ -36,22 +39,33 @@ pub struct BlockCFG<'a> {
 }
 
 impl<'a> BlockCFG<'a> {
-    pub fn new(start: Label, blocks: &'a mut BasicBlocks) -> (BlockCFG, Errors) {
+    // Returns
+    // - A CFG
+    // - A set of infinite loop heads
+    // - and any errors resulting from building the CFG
+    pub fn new(
+        start: Label,
+        blocks: &'a mut BasicBlocks,
+        block_info: Vec<(Label, BlockInfo)>,
+    ) -> (BlockCFG, BTreeSet<Label>, Errors) {
         let mut cfg = BlockCFG {
             start,
             blocks,
             successor_map: BTreeMap::new(),
             predecessor_map: BTreeMap::new(),
         };
+        remove_no_ops::optimize(&mut cfg);
 
         // no dead code
         let dead_code = cfg.recompute();
         let mut errors = Errors::new();
-        for (_label, block) in dead_code {
-            let err = dead_code_error(&block);
-            errors.push(err)
+        for (_lbl, block) in dead_code {
+            dead_code_error(&mut errors, &block)
         }
-        (cfg, errors)
+
+        let infinite_loop_starts = determine_infinite_loop_starts(&cfg, block_info);
+
+        (cfg, infinite_loop_starts, errors)
     }
 
     /// Recomputes successor/predecessor maps. returns removed, dead blocks
@@ -164,11 +178,12 @@ const DEAD_ERR_EXP: &str = "Invalid use of a divergent expression. The code foll
                             evaluation of this expression will be dead and should be removed. In \
                             some cases, this is necessary to prevent unused resource values.";
 
-fn dead_code_error(block: &BasicBlock) -> Error {
+fn dead_code_error(errors: &mut Errors, block: &BasicBlock) {
     let first_command = block.front().unwrap();
     match unreachable_loc(first_command) {
-        None => vec![(first_command.loc, DEAD_ERR_CMD.into())],
-        Some(loc) => vec![(loc, DEAD_ERR_EXP.into())],
+        Some(loc) => errors.push(vec![(loc, DEAD_ERR_EXP.into())]),
+        None if is_implicit_control_flow(&block) => (),
+        None => errors.push(vec![(first_command.loc, DEAD_ERR_CMD.into())]),
     }
 }
 
@@ -177,10 +192,11 @@ fn unreachable_loc(sp!(_, cmd_): &Command) -> Option<Loc> {
     match cmd_ {
         C::Assign(_, e) => unreachable_loc_exp(e),
         C::Mutate(el, er) => unreachable_loc_exp(el).or_else(|| unreachable_loc_exp(er)),
-        C::Return(e) | C::Abort(e) | C::IgnoreAndPop { exp: e, .. } | C::JumpIf { cond: e, .. } => {
-            unreachable_loc_exp(e)
-        }
-        C::Jump(_) => None,
+        C::Return { exp: e, .. }
+        | C::Abort(e)
+        | C::IgnoreAndPop { exp: e, .. }
+        | C::JumpIf { cond: e, .. } => unreachable_loc_exp(e),
+        C::Jump { .. } => None,
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
@@ -216,6 +232,116 @@ fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
 fn unreachable_loc_item(item: &ExpListItem) -> Option<Loc> {
     match item {
         ExpListItem::Single(e, _) | ExpListItem::Splat(_, e, _) => unreachable_loc_exp(e),
+    }
+}
+
+fn is_implicit_control_flow(block: &BasicBlock) -> bool {
+    use Command_ as C;
+    use UnannotatedExp_ as E;
+    block.len() == 1
+        && match &block.front().unwrap().value {
+            C::Jump { from_user, .. } => !*from_user,
+            C::Return { exp: e, from_user } if !*from_user => matches!(
+                &e.exp.value,
+                E::Unit {
+                    case: UnitCase::Implicit
+                }
+            ),
+            _ => false,
+        }
+}
+
+// Relying on the ordered block info (ordered in the linear ordering of the source code)
+// Determines the infinite loop starts
+// This cannot be determined in earlier passes due to dead code
+fn determine_infinite_loop_starts(
+    cfg: &BlockCFG,
+    block_info: Vec<(Label, BlockInfo)>,
+) -> BTreeSet<Label> {
+    // Filter dead code
+    let block_info = block_info
+        .into_iter()
+        .filter(|(lbl, _info)| cfg.blocks().contains_key(lbl))
+        .collect::<Vec<_>>();
+
+    // Fully populate infinite loop starts to be pruned later
+    // And for any block, determine the current loop
+    let mut infinite_loop_starts = BTreeSet::new();
+
+    let mut loop_stack: Vec<(Label, LoopEnd)> = vec![];
+    let mut current_loop_info = Vec::with_capacity(block_info.len());
+    for (lbl, info) in &block_info {
+        match loop_stack.last() {
+            Some((_, cur_loop_end)) if cur_loop_end.equals(*lbl) => {
+                loop_stack.pop();
+            }
+            _ => (),
+        }
+
+        let BlockInfo { loop_stmt_end } = info;
+        match loop_stmt_end {
+            None => (),
+            Some(end) => {
+                infinite_loop_starts.insert(*lbl);
+                loop_stack.push((*lbl, *end))
+            }
+        }
+
+        current_loop_info.push(loop_stack.last().cloned());
+    }
+
+    // Given the loop info for any block, determine which loops are infinite
+    // Each 'loop' based loop starts in the set, and is removed if it's break is used, or if a
+    // return or abort is used
+    let mut prev_opt: Option<Label> = None;
+    let zipped =
+        block_info
+            .into_iter()
+            .zip(current_loop_info)
+            .filter_map(|(block_info, cur_loop_opt)| {
+                cur_loop_opt.map(|cur_loop| (block_info, cur_loop))
+            });
+    for ((lbl, _info), (cur_loop_start, cur_loop_end)) in zipped {
+        debug_assert!(prev_opt.map(|prev| prev.0 < lbl.0).unwrap_or(true));
+        maybe_unmark_infinite_loop_starts(
+            &mut infinite_loop_starts,
+            cur_loop_start,
+            cur_loop_end,
+            &cfg.blocks()[&lbl],
+        );
+        prev_opt = Some(lbl);
+    }
+
+    infinite_loop_starts
+}
+
+fn maybe_unmark_infinite_loop_starts(
+    infinite_loop_starts: &mut BTreeSet<Label>,
+    cur_loop_start: Label,
+    cur_loop_end: LoopEnd,
+    block: &BasicBlock,
+) {
+    use Command_ as C;
+    // jumps/return/abort are only found at the end of the block
+    match &block.back().unwrap().value {
+        C::Jump { target, .. } if cur_loop_end.equals(*target) => {
+            infinite_loop_starts.remove(&cur_loop_start);
+        }
+        C::JumpIf {
+            if_true, if_false, ..
+        } if cur_loop_end.equals(*if_true) || cur_loop_end.equals(*if_false) => {
+            infinite_loop_starts.remove(&cur_loop_start);
+        }
+        C::Return { .. } | C::Abort(_) => {
+            infinite_loop_starts.remove(&cur_loop_start);
+        }
+
+        C::Jump { .. }
+        | C::JumpIf { .. }
+        | C::Assign(_, _)
+        | C::Mutate(_, _)
+        | C::IgnoreAndPop { .. } => (),
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 //**************************************************************************************************
