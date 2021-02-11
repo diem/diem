@@ -18,7 +18,7 @@ use diem_types::PeerId;
 use futures::{executor::block_on, future::join};
 use futures_util::io::AsyncReadExt;
 use once_cell::sync::Lazy;
-use rand_core::SeedableRng;
+use rand::SeedableRng;
 
 //
 // Corpus generation

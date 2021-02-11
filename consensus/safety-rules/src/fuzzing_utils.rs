@@ -28,7 +28,7 @@ use diem_types::{
 };
 use proptest::prelude::*;
 use rand::rngs::StdRng;
-use rand_core::SeedableRng;
+use rand::SeedableRng;
 
 const MAX_BLOCK_SIZE: usize = 10000;
 const MAX_NUM_ADDR_TO_VALIDATOR_INFO: usize = 10;

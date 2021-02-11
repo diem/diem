@@ -10,7 +10,7 @@ edition = "2018"
 once_cell = "1.4.1"
 rand = { version = "0.7.3", default-features = false }
 proptest = { version = "0.10.1", optional = true }
-rand_core = "0.5.1"
+rand_core = "0.6.1"
 
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
