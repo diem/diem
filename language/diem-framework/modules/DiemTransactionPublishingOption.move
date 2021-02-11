@@ -81,7 +81,7 @@ module DiemTransactionPublishingOption {
             || Vector::contains(&publish_option.script_allow_list, hash)
     }
     spec fun is_script_allowed {
-        include AbortsIfNoTransactionPublishingOption;
+        include !Roles::has_diem_root_role(account) && !transactions_halted() ==> DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
     }
     spec schema AbortsIfNoTransactionPublishingOption {
         include DiemTimestamp::is_genesis() ==> DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
@@ -94,7 +94,7 @@ module DiemTransactionPublishingOption {
         publish_option.module_publishing_allowed || Roles::has_diem_root_role(account)
     }
     spec fun is_module_allowed{
-        include AbortsIfNoTransactionPublishingOption;
+        include DiemConfig::AbortsIfNotPublished<DiemTransactionPublishingOption>{};
     }
 
     /// Allow the execution of arbitrary script or not.
