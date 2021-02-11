@@ -7,6 +7,8 @@
 #![allow(clippy::trivially_copy_pass_by_ref)]
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
+// Criterion API has changed, TODO: Remove parameterized groups, and bench()
+#![allow(deprecated)]
 
 //! Network Benchmarks
 //! ==================
