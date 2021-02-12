@@ -76,7 +76,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     }
 
     // Run again with cvc4
-    if !no_boogie && !read_env_var("CVC4_EXE").is_empty() && !cvc4blacklisted(path) {
+    if !no_boogie && !read_env_var("CVC4_EXE").is_empty() && !cvc4_deny_listed(path) {
         args.push("--use-cvc4".to_owned());
         options = Options::create_from_args(&args)?;
         options.setup_logging_for_test();
@@ -102,7 +102,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     Ok(())
 }
 
-fn cvc4blacklisted(path: &Path) -> bool {
+fn cvc4_deny_listed(path: &Path) -> bool {
     let path_str = path.to_str().unwrap();
     if path_str == "../diem-framework/modules/ValidatorOperatorConfig.move" ||
         path_str == "../diem-framework/modules/Option.move" ||
@@ -177,10 +177,22 @@ fn cvc4blacklisted(path: &Path) -> bool {
         path_str == "../diem-framework/modules/FixedPoint32.move" ||
         path_str == "../diem-framework/modules/Genesis.move" ||
         path_str == "../diem-framework/modules/DiemAccount.move" ||
+	path_str == "../diem-framework/transaction_scripts/update_exchange_rate.move" ||
+	path_str == "tests/sources/functional/script_incorrect.move" ||
+	path_str == "tests/sources/functional/emits.move" ||
+	path_str == "tests/sources/functional/friend.move" ||
+	path_str == "tests/sources/regression/set_200701.move" ||
+	path_str == "../diem-framework/modules/DiemBlock.move" ||
+	path_str == "../diem-framework/modules/ChainId.move" ||
+	path_str == "../diem-framework/modules/DiemVMConfig.move" ||
+	path_str == "../diem-framework/modules/SlidingNonce.move" ||
+	path_str == "../diem-framework/modules/TransactionFee.move" ||
+	path_str == "../diem-framework/modules/Roles.move" ||
+	path_str == "../diem-framework/modules/DiemTimestamp.move" ||
+	path_str == "../diem-framework/modules/DiemVersion.move" ||
+	path_str == "../diem-framework/modules/AccountLimits.move" || // This one takes over a minute
 
-        path_str == "../diem-framework/modules/AccountLimits.move" || // This one takes over a minute
-
-        true
+        false
     {
         return true;
     }
