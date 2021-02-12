@@ -1,6 +1,6 @@
 # This compose file supports running a faucet node that connects to the `validator-testnet`
 # compose's json-rpc endpoint. This should be started after that compose has been started.
-# The mint / faucet can be accessed at 127.0.0.1:8000
+# The faucet can be accessed at 127.0.0.1:8000
 #
 # Place the following files into the same directory:
 # * mint.key (also known as the diem_root_key)

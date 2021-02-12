@@ -83,7 +83,7 @@ updates:
       - "dependencies"
 
   - package-ecosystem: "docker"
-    directory: "/docker/mint"
+    directory: "/docker/faucet"
     schedule:
       interval: "daily"
     labels:

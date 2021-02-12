@@ -18,7 +18,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - bash docker/mint/build.sh
+      - bash docker/faucet/build.sh
   post_build:
     commands:
       - echo Build completed on `date`
