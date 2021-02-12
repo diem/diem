@@ -99,6 +99,6 @@ error:
     ┌── tests/move_check/expansion/restricted_struct_names.move:15:12 ───
     │
  15 │     struct Self {}
-    │            ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
+    │            ^^^^ Invalid struct name 'Self'. 'Self' is restricted and cannot be used to name a struct
     │
 

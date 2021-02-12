@@ -222,6 +222,13 @@ fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) 
 fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E::ModuleDefinition) {
     let P::ModuleDefinition { loc, name, members } = mdef;
     let _ = check_restricted_self_name(context, "module", &name.0);
+    if name.value().starts_with(|c| c == '_') {
+        let msg = format!(
+            "Invalid module name '{}'. Module names cannot start with '_'",
+            name,
+        );
+        context.error(vec![(name.loc(), msg)]);
+    }
 
     let name = name.0;
     let name_loc = name.loc;
@@ -303,9 +310,17 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 
     let mut constants = UniqueMap::new();
     for c in pconstants {
+        // TODO remove after Self rework
+        check_valid_module_member_name(context, ModuleMemberKind::Constant, c.name.0.clone());
         constant(context, &mut constants, c);
     }
 
+    // TODO remove after Self rework
+    check_valid_module_member_name(
+        context,
+        ModuleMemberKind::Function,
+        pfunction.name.0.clone(),
+    );
     let (function_name, function) = function_(context, pfunction);
     match &function.visibility {
         FunctionVisibility::Public(loc)
@@ -1879,14 +1894,26 @@ fn check_valid_module_member_name_impl(
         }
     }
     let lcase = case;
-    let ucase = &upper_first_letter(case);
     match member {
-        M::Function => (),
+        M::Function => {
+            if n.value.starts_with(|c| c == '_') {
+                let msg = format!(
+                    "Invalid {} name '{}'. {} names cannot start with '_'",
+                    lcase,
+                    n,
+                    upper_first_letter(case),
+                );
+                context.error(vec![(n.loc, msg)]);
+                return Err(());
+            }
+        }
         M::Constant | M::Struct | M::Schema => {
             if !is_valid_struct_constant_or_schema_name(&n.value) {
                 let msg = format!(
                     "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
-                    lcase, n, ucase,
+                    lcase,
+                    n,
+                    upper_first_letter(case),
                 );
                 context.error(vec![(n.loc, msg)]);
                 return Err(());
@@ -1897,20 +1924,20 @@ fn check_valid_module_member_name_impl(
     // TODO move these names to a more central place?
     check_restricted_names(
         context,
-        "module member",
+        lcase,
         n,
         crate::naming::ast::BuiltinFunction_::all_names(),
     )?;
     check_restricted_names(
         context,
-        "module member",
+        lcase,
         n,
         crate::naming::ast::BuiltinTypeName_::all_names(),
     )?;
 
     // Restricting Self for now in the case where we ever have impls
     // Otherwise, we could allow it
-    check_restricted_self_name(context, "module member", n)?;
+    check_restricted_self_name(context, lcase, n)?;
 
     Ok(())
 }

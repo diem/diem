@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/module_invalid_names.move:2:8 ───
+   │
+ 2 │ module _m {
+   │        ^^ Invalid module name '_m'. Module names cannot start with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/module_invalid_names.move:4:8 ───
+   │
+ 4 │ module _ {
+   │        ^ Invalid module name '_'. Module names cannot start with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/module_invalid_names.move:6:8 ───
+   │
+ 6 │ module ___ {
+   │        ^^^ Invalid module name '___'. Module names cannot start with '_'
+   │
+
