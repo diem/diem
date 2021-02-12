@@ -1,0 +1,38 @@
+error: 
+
+   ┌── tests/move_check/typing/recursive_local.move:4:13 ───
+   │
+ 4 │         let x;
+   │             ^ Could not infer this type. Try adding an annotation
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/recursive_local.move:5:9 ───
+   │
+ 5 │         x = (x, 0);
+   │         ^ Invalid assignment to local 'x'
+   ·
+ 4 │         let x;
+   │             - Unable to infer the type. Recursive type found.
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/recursive_local.move:5:9 ───
+   │
+ 5 │         x = (x, 0);
+   │         ^ Invalid type for local
+   ·
+ 5 │         x = (x, 0);
+   │             ------ Expected a single type, but found expression list type: '(_, u64)'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/recursive_local.move:5:14 ───
+   │
+ 5 │         x = (x, 0);
+   │              ^ Could not infer this type. Try adding an annotation
+   │
+

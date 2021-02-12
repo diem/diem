@@ -1399,12 +1399,13 @@ fn join_impl(
             }
         }
         (sp!(loc, Var(id)), other) | (other, sp!(loc, Var(id))) if subst.get(*id).is_none() => {
-            match join_bind_tvar(&mut subst, *loc, *id, other.clone()) {
-                Err(()) => Err(TypingError::Incompatible(
+            if join_bind_tvar(&mut subst, *loc, *id, other.clone())? {
+                Ok((subst, sp(*loc, Var(*id))))
+            } else {
+                Err(TypingError::Incompatible(
                     Box::new(sp(*loc, Var(*id))),
                     Box::new(other.clone()),
-                )),
-                Ok(()) => Ok((subst, sp(*loc, Var(*id)))),
+                ))
             }
         }
         (sp!(loc, Var(id)), other) => {
@@ -1481,9 +1482,10 @@ fn join_tvar(
     let (mut subst, new_ty) = join_impl(subst, case, &ty1, &ty2)?;
     match subst.get(new_tvar) {
         Some(sp!(tloc, _)) => Err(TypingError::RecursiveType(*tloc)),
-        None => match join_bind_tvar(&mut subst, loc2, new_tvar, new_ty) {
-            Ok(()) => Ok((subst, sp(loc2, Var(new_tvar)))),
-            Err(()) => {
+        None => {
+            if join_bind_tvar(&mut subst, loc2, new_tvar, new_ty)? {
+                Ok((subst, sp(loc2, Var(new_tvar))))
+            } else {
                 let ty1 = match ty1 {
                     sp!(loc, Anything) => sp(loc, Var(id1)),
                     t => t,
@@ -1494,7 +1496,7 @@ fn join_tvar(
                 };
                 Err(TypingError::Incompatible(Box::new(ty1), Box::new(ty2)))
             }
-        },
+        }
     }
 }
 
@@ -1505,16 +1507,43 @@ fn forward_tvar(subst: &Subst, id: TVar) -> TVar {
     }
 }
 
-fn join_bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: Type) -> Result<(), ()> {
+fn join_bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: Type) -> Result<bool, TypingError> {
+    assert!(
+        subst.get(tvar).is_none(),
+        "ICE join_bind_tvar called on bound tvar"
+    );
+
+    fn used_tvars(used: &mut BTreeMap<TVar, Loc>, sp!(loc, t_): &Type) {
+        use Type_ as T;
+        match t_ {
+            T::Var(v) => {
+                used.insert(*v, *loc);
+            }
+            T::Ref(_, inner) => used_tvars(used, inner),
+            T::Apply(_, _, inners) => inners
+                .iter()
+                .rev()
+                .for_each(|inner| used_tvars(used, inner)),
+            T::Unit | T::Param(_) | T::Anything | T::UnresolvedError => (),
+        }
+    }
+
     // check not necessary for soundness but improves error message structure
     if !check_num_tvar(&subst, loc, tvar, &ty) {
-        return Err(());
+        return Ok(false);
     }
+
+    let used = &mut BTreeMap::new();
+    used_tvars(used, &ty);
+    if let Some(_rec_loc) = used.get(&tvar) {
+        return Err(TypingError::RecursiveType(loc));
+    }
+
     match &ty.value {
         Type_::Anything => (),
         _ => subst.insert(tvar, ty),
     }
-    Ok(())
+    Ok(true)
 }
 
 fn check_num_tvar(subst: &Subst, loc: Loc, tvar: TVar, ty: &Type) -> bool {
