@@ -24,6 +24,7 @@ mod module_publishing;
 mod on_chain_configs;
 mod peer_to_peer;
 mod rotate_key;
+mod script_functions;
 mod scripts;
 mod transaction_builder;
 mod transaction_fees;
