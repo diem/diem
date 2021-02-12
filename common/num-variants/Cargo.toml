@@ -11,6 +11,6 @@ proc-macro = true
 
 [dependencies]
 syn = "1.0.58"
-quote = "1.0.8"
+quote = "1.0.9"
 proc-macro2 = "1.0.24"
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
