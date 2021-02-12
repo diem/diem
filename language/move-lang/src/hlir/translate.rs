@@ -1178,7 +1178,7 @@ fn exp_impl(
         }
         TE::TempBorrow(mut_, te) => {
             let eb = exp_(context, result, None, *te);
-            let tmp = match bind_exp(context, result, eb).exp.value {
+            let tmp = match bind_exp_impl(context, result, eb, true).exp.value {
                 HE::Move {
                     from_user: false,
                     var,
@@ -1268,13 +1268,7 @@ fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(Var, H::Sing
 }
 
 fn bind_exp(context: &mut Context, result: &mut Block, e: H::Exp) -> H::Exp {
-    if let H::UnannotatedExp_::Unreachable = &e.exp.value {
-        return e;
-    }
-    let loc = e.exp.loc;
-    let ty = e.ty.clone();
-    let tmps = make_temps(context, loc, ty.clone());
-    H::exp(ty, sp(loc, bind_exp_(result, loc, tmps, e)))
+    bind_exp_impl(context, result, e, false)
 }
 
 fn bind_exp_(
@@ -1283,8 +1277,36 @@ fn bind_exp_(
     tmps: Vec<(Var, H::SingleType)>,
     e: H::Exp,
 ) -> H::UnannotatedExp_ {
+    bind_exp_impl_(result, loc, tmps, e, false)
+}
+
+fn bind_exp_impl(
+    context: &mut Context,
+    result: &mut Block,
+    e: H::Exp,
+    bind_unreachable: bool,
+) -> H::Exp {
+    if matches!(&e.exp.value, H::UnannotatedExp_::Unreachable) && !bind_unreachable {
+        return e;
+    }
+    let loc = e.exp.loc;
+    let ty = e.ty.clone();
+    let tmps = make_temps(context, loc, ty.clone());
+    H::exp(
+        ty,
+        sp(loc, bind_exp_impl_(result, loc, tmps, e, bind_unreachable)),
+    )
+}
+
+fn bind_exp_impl_(
+    result: &mut Block,
+    loc: Loc,
+    tmps: Vec<(Var, H::SingleType)>,
+    e: H::Exp,
+    bind_unreachable: bool,
+) -> H::UnannotatedExp_ {
     use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as E};
-    if let H::UnannotatedExp_::Unreachable = &e.exp.value {
+    if matches!(&e.exp.value, H::UnannotatedExp_::Unreachable) && !bind_unreachable {
         return H::UnannotatedExp_::Unreachable;
     }
 
