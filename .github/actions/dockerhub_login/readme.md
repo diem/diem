@@ -78,7 +78,7 @@ Now on the keys.  There are several pub/private keys used to handle signing in D
 So let's cover the keys.
 
 * First there is an **org key** held by a member of the Diem Association in our case.
-* Second there is a **repositiory key**, aka a key that can must be signed by the **org key** and can be used to allow users to sign docker hub images bound for one **repository** ie:  validator, tools, mint, etc.
+* Second there is a **repositiory key**, aka a key that can must be signed by the **org key** and can be used to allow users to sign docker hub images bound for one **repository** ie:  validator, tools, faucet, etc.
 * Third the key used by this action will be neither of the above, it will be a third **user key** that must be signed by the holder of the
      **repository keys** to allow the signing of the docker image to be considered valid by this **user key**.
 

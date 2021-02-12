@@ -23,7 +23,7 @@ BUILD_PROJECTS=()
 
 while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
-    BUILD_PROJECTS=(diem-validator diem-cluster-test diem-init diem-mint diem-safety-rules diem-tools)
+    BUILD_PROJECTS=(diem-validator diem-cluster-test diem-init diem-faucet diem-safety-rules diem-tools)
     ;;
     # NOTE: This is used in land-blocking workflow `.github/workflows/land-blocking.yml`
     #       If you change the list of projects to be built for `--build-all-cti`, please
@@ -40,8 +40,8 @@ while [[ "$1" =~ ^- ]]; do case $1 in
   --build-init )
     BUILD_PROJECTS=(diem-init)
     ;;
-  --build-mint )
-    BUILD_PROJECTS=(diem-mint)
+  --build-faucet )
+      BUILD_PROJECTS=(diem-faucet)
     ;;
   --build-safety-rules )
     BUILD_PROJECTS=(diem-safety-rules)

@@ -62,9 +62,6 @@ DIR=$INPUT_NAME
 if [ "$INPUT_NAME" == "validator-tcb" ]; then
   DIR="safety-rules"
 fi
-if [ "$INPUT_NAME" == "faucet" ]; then
-  DIR="mint"
-fi
 #END DEALING WITH INCONSISTENT NAMING
 
 #Convert dashes to underscores to get tag names
