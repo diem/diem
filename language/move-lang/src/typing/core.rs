@@ -1167,7 +1167,11 @@ pub fn instantiate(context: &mut Context, sp!(loc, t_): Type) -> Type {
         Unit => Unit,
         UnresolvedError => UnresolvedError,
         Anything => make_tvar(context, loc).value,
-        Ref(mut_, b) => Ref(mut_, Box::new(instantiate(context, *b))),
+        Ref(mut_, b) => {
+            let inner = *b;
+            context.add_base_type_constraint(loc, "Invalid reference type", inner.clone());
+            Ref(mut_, Box::new(instantiate(context, inner)))
+        }
         Apply(kopt, n, ty_args) => instantiate_apply(context, loc, kopt, n, ty_args),
         x @ Param(_) => x,
         Var(_) => panic!("ICE instantiate type variable"),
