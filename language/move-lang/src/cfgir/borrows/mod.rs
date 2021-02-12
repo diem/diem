@@ -253,11 +253,12 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         E::BinopExp(e1, sp!(_, BinOp_::Eq), e2) | E::BinopExp(e1, sp!(_, BinOp_::Neq), e2) => {
             let v1 = assert_single_value(exp(context, e1));
             let v2 = assert_single_value(exp(context, e2));
+            // must check separately incase of using a local with an unassigned value
             if v1.is_ref() {
-                // derefrence releases the id and checks that it is readable
-                assert!(v2.is_ref());
                 let (errors, _) = context.borrow_state.dereference(e1.exp.loc, v1);
                 assert!(errors.is_empty(), "ICE eq freezing failed");
+            }
+            if v2.is_ref() {
                 let (errors, _) = context.borrow_state.dereference(e1.exp.loc, v2);
                 assert!(errors.is_empty(), "ICE eq freezing failed");
             }
