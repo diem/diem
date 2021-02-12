@@ -16,8 +16,8 @@ use diem_types::{
     chain_id::ChainId,
     event::EventHandle,
     transaction::{
-        authenticator::AuthenticationKey, Module, RawTransaction, Script, SignedTransaction,
-        TransactionPayload, WriteSetPayload,
+        authenticator::AuthenticationKey, Module, RawTransaction, Script, ScriptFunction,
+        SignedTransaction, TransactionPayload, WriteSetPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -233,6 +233,11 @@ impl TransactionBuilder {
 
     pub fn script(mut self, s: Script) -> Self {
         self.program = Some(TransactionPayload::Script(s));
+        self
+    }
+
+    pub fn script_function(mut self, f: ScriptFunction) -> Self {
+        self.program = Some(TransactionPayload::ScriptFunction(f));
         self
     }
 
