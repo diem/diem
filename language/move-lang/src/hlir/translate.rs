@@ -1572,7 +1572,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
 fn bind_for_short_circuit_sequence(seq: &T::Sequence) -> bool {
     use T::SequenceItem_ as TItem;
     seq.len() != 1
-        || match &seq[1].value {
+        || match &seq[0].value {
             TItem::Seq(e) => bind_for_short_circuit(e),
             item @ TItem::Declare(_) | item @ TItem::Bind(_, _, _) => {
                 panic!("ICE unexpected item in short circuit check: {:?}", item)
