@@ -235,7 +235,7 @@ fn check_acquire_listed<F>(
     }
 }
 
-pub fn check_global_access<'a, F>(
+fn check_global_access<'a, F>(
     context: &mut Context,
     loc: &Loc,
     msg: F,
@@ -297,6 +297,13 @@ where
                 ty_debug
             );
             context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
+            return None;
+        }
+        None => {
+            context.error(vec![(
+                *loc,
+                "Global storage operator cannot be used from a 'script' function",
+            )]);
             return None;
         }
         _ => (),

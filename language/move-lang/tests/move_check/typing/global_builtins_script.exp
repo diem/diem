@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/typing/global_builtins_script.move:6:5 ───
+   │
+ 6 │     borrow_global<DiemAccount::DiemAccount>(0x1);
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/global_builtins_script.move:7:5 ───
+   │
+ 7 │     move_to(account, withdraw_cap);
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
+   │
+
