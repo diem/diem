@@ -602,7 +602,7 @@ impl Loader {
     // This step performs all verification steps to load the module without loading it.
     // The module is not added to the code cache. It is simply published to the data cache.
     // See `verify_script()` for script verification steps.
-    pub(crate) fn verify_module_verify_no_missing_dependencies(
+    pub(crate) fn verify_module_for_publication(
         &self,
         module: &CompiledModule,
         data_store: &mut impl DataStore,
@@ -612,6 +612,43 @@ impl Loader {
         // module will NOT show up in `module_cache`. In the module republishing case, it means
         // that the old module is still in the `module_cache`, unless a new Loader is created,
         // which means that a new MoveVM instance needs to be created.
+        self.verify_module_verify_no_missing_dependencies(module, data_store, log_context)?;
+
+        // friendship is an upward edge in the dependencies DAG, so it has to be checked after the
+        // module is put into the bundle.
+        let friends = module.immediate_friends();
+        self.load_dependencies_verify_no_missing_dependencies(friends, data_store, log_context)?;
+        self.verify_module_cyclic_relations(module)
+
+        // NOTE: one might wonder why we don't need to worry about `module` (say M) being missing in
+        // the code cache? Obviously, if a `friend`, say module F, is being loaded and verified, and
+        // F may call into M; then M not being in the code cache will definitely lead to an error
+        // when verifying F because F depends on M.
+        //
+        // The answer is: given the current
+        // 1) *publish-one-module-at-a-time* model,
+        // 2) module compatibility checking scheme, and
+        // 3) how the code cache is maintained (insertion-only and no purging),
+        // we can indeed tolerate the cases where either M is not in the code cache or an old
+        // version of M is in the code cache. Here is the reason:
+        // - If F does not depends on M, then there is nothing we need to worry about. Loading and
+        //   verification of F will succeed (provided there is no other errors).
+        // - If F does depend on M, then there MUST BE an old version of M (say M') in the storage.
+        //   Loading and verifying F will load M' into the code cache (or retrieve M' if it is
+        //   already there). ==> But this is OK because the compatibility checking performed prior
+        //   to this function ensures that updating M' to M will not break compatibility! As a
+        //   result, we could tolerate the fact that F is verified against an old version of M'
+        //   with the guarantee that M is compatible with M'.
+        // - F cannot "suddenly" depend on M because we are not updating F under the current module
+        //   of publishing-one-module-at-a-time.
+    }
+
+    fn verify_module_verify_no_missing_dependencies(
+        &self,
+        module: &CompiledModule,
+        data_store: &mut impl DataStore,
+        log_context: &impl LogContext,
+    ) -> VMResult<()> {
         self.verify_module(module, data_store, true, log_context)
     }
 
@@ -640,14 +677,6 @@ impl Loader {
         } else {
             self.load_dependencies_expect_no_missing_dependencies(deps, data_store, log_context)?
         };
-
-        let friends = module.immediate_friends();
-        if verify_no_missing_modules {
-            self.load_dependencies_verify_no_missing_dependencies(friends, data_store, log_context)?
-        } else {
-            self.load_dependencies_expect_no_missing_dependencies(friends, data_store, log_context)?
-        };
-
         self.verify_module_dependencies(module, loaded_imm_deps)
     }
 
@@ -660,8 +689,10 @@ impl Loader {
             .iter()
             .map(|module| module.module())
             .collect();
-        dependencies::verify_module(module, imm_deps)?;
+        dependencies::verify_module(module, imm_deps)
+    }
 
+    fn verify_module_cyclic_relations(&self, module: &CompiledModule) -> VMResult<()> {
         let module_cache = self.module_cache.lock();
         cyclic_dependencies::verify_module(
             module,
@@ -822,9 +853,18 @@ impl Loader {
 
         let module = deserialize_and_verify_module(self, bytes, data_store, log_context)
             .map_err(|err| expect_no_verification_errors(err, log_context))?;
-        self.module_cache
+        let module_ref = self
+            .module_cache
             .lock()
-            .insert(id.clone(), module, log_context)
+            .insert(id.clone(), module, log_context)?;
+
+        // friendship is an upward edge in the dependencies DAG, so it has to be checked after the
+        // module is put into cache, otherwise it is a chicken-and-egg problem.
+        let friends = module_ref.module().immediate_friends();
+        self.load_dependencies_expect_no_missing_dependencies(friends, data_store, log_context)?;
+        self.verify_module_cyclic_relations(module_ref.module())?;
+
+        Ok(module_ref)
     }
 
     // Returns a verifier error if the module does not exist
