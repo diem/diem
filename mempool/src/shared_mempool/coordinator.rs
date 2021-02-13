@@ -63,7 +63,6 @@ pub(crate) async fn coordinator<V>(
         .map(|(network_id, events)| events.map(move |e| (network_id.clone(), e)))
         .collect();
     let mut events = select_all(smp_events).fuse();
-    let mempool = smp.mempool.clone();
     let mut scheduled_broadcasts = FuturesUnordered::new();
 
     // Use a BoundedExecutor to restrict only `workers_available` concurrent
@@ -78,7 +77,7 @@ pub(crate) async fn coordinator<V>(
                 handle_client_event(&mut smp, &bounded_executor, msg, callback).await;
             },
             msg = consensus_requests.select_next_some() => {
-                tasks::process_consensus_request(&mempool, msg).await;
+                tasks::process_consensus_request(&smp.mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
                 handle_state_sync_request(&mut smp, msg);
