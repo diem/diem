@@ -307,7 +307,7 @@ fn parse_module_access<F: FnOnce() -> String>(
 //**************************************************************************************************
 
 // Parse a function visibility modifier:
-//      FunctionVisibility = ( "public" ( "(" "script" ")" )? )?
+//      FunctionVisibility = ( "public" ( "(" "script" | "friend" ")" )? )?
 fn parse_function_visibility(tokens: &mut Lexer<'_>) -> Result<FunctionVisibility, Error> {
     let visibility = if tokens.peek() == Tok::Public {
         let start_loc = tokens.start_loc();
@@ -328,12 +328,14 @@ fn parse_function_visibility(tokens: &mut Lexer<'_>) -> Result<FunctionVisibilit
         match sub_public_vis {
             None => FunctionVisibility::Public(loc),
             Some(Tok::Script) => FunctionVisibility::Script(loc),
+            Some(Tok::Friend) => FunctionVisibility::Friend(loc),
             _ => {
                 let msg = format!(
                     "Invalid visibility modifier. \
-                    Consider removing it or using one of '{}' or '{}'",
+                    Consider removing it or using one of '{}', '{}', or '{}'",
                     FunctionVisibility::PUBLIC,
-                    FunctionVisibility::SCRIPT
+                    FunctionVisibility::SCRIPT,
+                    FunctionVisibility::FRIEND
                 );
                 return Err(vec![(loc, msg)]);
             }
@@ -2286,7 +2288,12 @@ fn parse_spec_pragma(tokens: &mut Lexer<'_>) -> Result<SpecBlockMember, Error> {
 //    SpecPragmaProperty = <Identifier> ( "=" Value | ModuleAccess )?
 fn parse_spec_property(tokens: &mut Lexer<'_>) -> Result<PragmaProperty, Error> {
     let start_loc = tokens.start_loc();
-    let name = parse_identifier(tokens)?;
+    let name = match consume_optional_token_with_loc(tokens, Tok::Friend)? {
+        // special treatment for `pragma friend = ...` as friend is a keyword
+        // TODO: this might violate the assumption that a keyword can never be a name.
+        Some(loc) => Name::new(loc, "friend".to_owned()),
+        None => parse_identifier(tokens)?,
+    };
     let value = if tokens.peek() == Tok::Equal {
         tokens.advance()?;
         match tokens.peek() {

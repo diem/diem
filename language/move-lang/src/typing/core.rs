@@ -277,7 +277,9 @@ impl Context {
             (Some(current_m), Some(current_f)) => {
                 let current_finfo = self.function_info(current_m, current_f);
                 match &current_finfo.visibility {
-                    FunctionVisibility::Public(_) | FunctionVisibility::Internal => false,
+                    FunctionVisibility::Public(_)
+                    | FunctionVisibility::Friend(_)
+                    | FunctionVisibility::Internal => false,
                     FunctionVisibility::Script(_) => true,
                 }
             }
@@ -797,9 +799,10 @@ pub fn make_function_type(
             if !in_current_module {
                 let internal_msg = format!(
                     "This function is internal to its module. \
-                    Only '{}' and '{}' functions can be called outside of their module",
+                    Only '{}', '{}', and '{}' functions can be called outside of their module",
                     FunctionVisibility::PUBLIC,
-                    FunctionVisibility::SCRIPT
+                    FunctionVisibility::SCRIPT,
+                    FunctionVisibility::FRIEND
                 );
                 context.error(vec![
                     (loc, format!("Invalid call to '{}::{}'", m, f)),
@@ -819,6 +822,14 @@ pub fn make_function_type(
                     (defined_loc, internal_msg),
                 ])
             }
+        }
+        FunctionVisibility::Friend(_) => {
+            // TODO: implement typing rule for calling a friend function
+            let internal_msg = "Calling a friend function is not implemented yet".to_owned();
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (defined_loc, internal_msg),
+            ])
         }
         FunctionVisibility::Public(_) => (),
     };

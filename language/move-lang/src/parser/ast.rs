@@ -149,6 +149,7 @@ pub struct FunctionSignature {
 pub enum FunctionVisibility {
     Public(Loc),
     Script(Loc),
+    Friend(Loc),
     Internal,
 }
 
@@ -767,6 +768,7 @@ impl BinOp_ {
 impl FunctionVisibility {
     pub const PUBLIC: &'static str = "public";
     pub const SCRIPT: &'static str = "public(script)";
+    pub const FRIEND: &'static str = "public(friend)";
     pub const INTERNAL: &'static str = "";
 }
 
@@ -810,6 +812,7 @@ impl fmt::Display for FunctionVisibility {
             match &self {
                 FunctionVisibility::Public(_) => FunctionVisibility::PUBLIC,
                 FunctionVisibility::Script(_) => FunctionVisibility::SCRIPT,
+                FunctionVisibility::Friend(_) => FunctionVisibility::FRIEND,
                 FunctionVisibility::Internal => FunctionVisibility::INTERNAL,
             }
         )

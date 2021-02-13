@@ -2400,6 +2400,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     // TODO: model script visibility properly
                     unimplemented!("Script visibility not supported yet")
                 }
+                PA::FunctionVisibility::Friend(..) => {
+                    // TODO: model friend visibility properly
+                    unimplemented!("Friend visibility not supported yet")
+                }
             }
         }
         let rex = Regex::new(&format!(

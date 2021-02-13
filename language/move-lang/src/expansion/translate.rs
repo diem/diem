@@ -305,7 +305,9 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 
     let (function_name, function) = function_(context, pfunction);
     match &function.visibility {
-        FunctionVisibility::Public(loc) | FunctionVisibility::Script(loc) => {
+        FunctionVisibility::Public(loc)
+        | FunctionVisibility::Script(loc)
+        | FunctionVisibility::Friend(loc) => {
             let msg = format!(
                 "Extraneous '{}' modifier. Script functions are always '{}'",
                 function.visibility,

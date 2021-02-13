@@ -78,6 +78,7 @@ pub enum Tok {
     Fun,
     Script,
     Const,
+    Friend,
 }
 
 impl fmt::Display for Tok {
@@ -154,6 +155,7 @@ impl fmt::Display for Tok {
             Fun => "fun",
             Script => "script",
             Const => "const",
+            Friend => "friend",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -487,6 +489,7 @@ fn get_name_token(name: &str) -> Tok {
         "else" => Tok::Else,
         "false" => Tok::False,
         "fun" => Tok::Fun,
+        "friend" => Tok::Friend,
         "if" => Tok::If,
         "invariant" => Tok::Invariant,
         "let" => Tok::Let,
