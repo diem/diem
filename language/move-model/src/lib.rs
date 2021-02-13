@@ -230,6 +230,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                     let expanded_module = ModuleDefinition {
                         loc,
                         is_source_module: true,
+                        friends: UniqueMap::new(),
                         structs: UniqueMap::new(),
                         constants,
                         functions,

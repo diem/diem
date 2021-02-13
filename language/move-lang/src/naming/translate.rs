@@ -10,7 +10,7 @@ use crate::{
     typing::core::{self, Subst},
 };
 use move_ir_types::location::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Context
@@ -37,6 +37,7 @@ impl ResolvedType {
 struct Context {
     errors: Errors,
     current_module: Option<ModuleIdent>,
+    involved_modules: BTreeSet<ModuleIdent>,
     scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>, usize)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
@@ -47,6 +48,7 @@ struct Context {
 impl Context {
     fn new(prog: &E::Program, errors: Errors) -> Self {
         use ResolvedType as RT;
+        let involved_modules = prog.modules.iter().map(|(mident, _)| mident).collect();
         let scoped_types = prog
             .modules
             .key_cloned_iter()
@@ -95,6 +97,7 @@ impl Context {
         Self {
             errors,
             current_module: None,
+            involved_modules,
             scoped_types,
             scoped_functions,
             scoped_constants,
@@ -114,6 +117,14 @@ impl Context {
 
     fn has_errors(&self) -> bool {
         !self.errors.is_empty()
+    }
+
+    fn resolve_module(&mut self, loc: Loc, m: &ModuleIdent) -> bool {
+        let resolved = self.involved_modules.contains(m);
+        if !resolved {
+            self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
+        }
+        resolved
     }
 
     fn resolve_module_type(
@@ -325,6 +336,9 @@ fn module(
 ) -> N::ModuleDefinition {
     context.current_module = Some(ident);
     let is_source_module = mdef.is_source_module;
+    let friends = mdef
+        .friends
+        .filter_map(|mident, f| friend(context, mident, f));
     let unscoped = context.save_unscoped();
     let structs = mdef.structs.map(|name, s| {
         context.restore_unscoped(unscoped.clone());
@@ -342,6 +356,7 @@ fn module(
     N::ModuleDefinition {
         is_source_module,
         dependency_order: 0,
+        friends,
         structs,
         functions,
         constants,
@@ -383,6 +398,17 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
         constants,
         function_name,
         function,
+    }
+}
+
+//**************************************************************************************************
+// Friends
+//**************************************************************************************************
+fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
+    if context.resolve_module(loc, &mident) {
+        Some(loc)
+    } else {
+        None
     }
 }
 

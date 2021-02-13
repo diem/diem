@@ -51,10 +51,12 @@ fn module(
     let N::ModuleDefinition {
         is_source_module,
         dependency_order,
+        friends,
         mut structs,
         functions: n_functions,
         constants: nconstants,
     } = mdef;
+    // TODO: translate friends
     structs
         .iter_mut()
         .for_each(|(_, _, s)| struct_def(context, s));
@@ -64,6 +66,7 @@ fn module(
     T::ModuleDefinition {
         is_source_module,
         dependency_order,
+        friends,
         structs,
         functions,
         constants,

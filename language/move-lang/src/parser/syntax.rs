@@ -1611,6 +1611,26 @@ fn parse_address_block(
 }
 
 //**************************************************************************************************
+// Friends
+//**************************************************************************************************
+
+// Parse a friend declaration:
+//      FriendDecl =
+//          "friend" <ModuleName> | <ModuleIdent> ";"
+fn parse_friend_decl(tokens: &mut Lexer<'_>) -> Result<Friend, Error> {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, Tok::Friend)?;
+    let friend = if tokens.peek() == Tok::AddressValue {
+        Friend_::QualifiedModule(parse_module_ident(tokens)?)
+    } else {
+        Friend_::Module(parse_module_name(tokens)?)
+    };
+    consume_token(tokens, Tok::Semicolon)?;
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
+    Ok(Friend { loc, value: friend })
+}
+
+//**************************************************************************************************
 // Modules
 //**************************************************************************************************
 
@@ -1675,8 +1695,9 @@ fn is_struct_definition(tokens: &mut Lexer<'_>) -> Result<bool, Error> {
 // Parse a module:
 //      Module =
 //          <DocComments> "module" <ModuleName> "{"
-//              <UseDecl>*
-//              ( <ConstantDecl> | <StructDefinition> | <FunctionDecl> | <Spec> )*
+//              ( <UseDecl> | <FriendDecl> |
+//                <ConstantDecl> | <StructDefinition> | <FunctionDecl> |
+//                <Spec> )*
 //          "}"
 fn parse_module(tokens: &mut Lexer<'_>) -> Result<ModuleDefinition, Error> {
     tokens.match_doc_comments();
@@ -1691,6 +1712,7 @@ fn parse_module(tokens: &mut Lexer<'_>) -> Result<ModuleDefinition, Error> {
         members.push(match tokens.peek() {
             Tok::Spec => ModuleMember::Spec(parse_spec_block(tokens)?),
             Tok::Use => ModuleMember::Use(parse_use_decl(tokens)?),
+            Tok::Friend => ModuleMember::Friend(parse_friend_decl(tokens)?),
             Tok::Const => ModuleMember::Constant(parse_constant(tokens)?),
             // TODO rework parsing modifiers
             _ if is_struct_definition(tokens)? => {

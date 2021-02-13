@@ -242,6 +242,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         "ICE there should be no aliases entering a module"
     );
 
+    let mut friends = UniqueMap::new();
     let mut functions = UniqueMap::new();
     let mut constants = UniqueMap::new();
     let mut structs = UniqueMap::new();
@@ -249,6 +250,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     for member in members {
         match member {
             P::ModuleMember::Use(_) => unreachable!(),
+            P::ModuleMember::Friend(f) => friend(context, &mut friends, f),
             P::ModuleMember::Function(mut f) => {
                 if !context.is_source_module {
                     f.body.value = P::FunctionBody_::Native
@@ -265,6 +267,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     let def = E::ModuleDefinition {
         loc,
         is_source_module: context.is_source_module,
+        friends,
         structs,
         constants,
         functions,
@@ -402,7 +405,7 @@ fn module_members(
                 }
                 _ => (),
             },
-            P::ModuleMember::Use(_) => (),
+            P::ModuleMember::Use(_) | P::ModuleMember::Friend(_) => (),
         };
     }
     members.add(mident, cur_members).unwrap();
@@ -437,6 +440,10 @@ fn aliases_from_member(
         P::ModuleMember::Use(u) => {
             use_(context, acc, u);
             None
+        }
+        f @ P::ModuleMember::Friend(_) => {
+            // friend declarations do not produce implicit aliases
+            Some(f)
         }
         P::ModuleMember::Function(f) => {
             let n = f.name.0.clone();
@@ -661,6 +668,49 @@ fn struct_fields(
         }
     }
     E::StructFields::Defined(field_map)
+}
+
+//**************************************************************************************************
+// Friends
+//**************************************************************************************************
+
+fn friend(context: &mut Context, friends: &mut UniqueMap<ModuleIdent, Loc>, pfriend: P::Friend) {
+    match friend_(context, pfriend) {
+        Some((mident, loc)) => {
+            if let Some(old_friend_loc) = friends.get(&mident) {
+                let msg = format!(
+                    "Duplicate friend declaration '{}'. Friend declarations in a module must be unique",
+                    mident
+                );
+                context.error(vec![
+                    (loc, msg),
+                    (*old_friend_loc, "Previously declared here".into()),
+                ]);
+            }
+            if let Err(_old_loc) = friends.add(mident, loc) {
+                assert!(context.has_errors());
+            };
+        }
+        None => assert!(context.has_errors()),
+    };
+}
+
+fn friend_(context: &mut Context, sp!(loc, pfriend): P::Friend) -> Option<(ModuleIdent, Loc)> {
+    assert!(context.exp_specs.is_empty());
+    let mident_opt = match pfriend {
+        P::Friend_::Module(mname) => match context.aliases.module_alias_get(&mname.0).cloned() {
+            None => {
+                context.error(vec![(
+                    mname.loc(),
+                    format!("Unbound module alias '{}'", mname),
+                )]);
+                None
+            }
+            Some(mident) => Some(mident),
+        },
+        P::Friend_::QualifiedModule(mident) => Some(mident),
+    };
+    mident_opt.map(|mident| (mident, loc))
 }
 
 //**************************************************************************************************

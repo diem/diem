@@ -51,6 +51,7 @@ pub struct ConstantInfo {
 }
 
 pub struct ModuleInfo {
+    pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, FunctionInfo>,
     pub constants: UniqueMap<ConstantName, ConstantInfo>,
@@ -96,6 +97,7 @@ impl Context {
                 signature: cdef.signature.clone(),
             });
             ModuleInfo {
+                friends: mdef.friends.clone(),
                 structs,
                 functions,
                 constants,
