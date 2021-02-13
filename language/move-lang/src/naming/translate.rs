@@ -116,6 +116,17 @@ impl Context {
         !self.errors.is_empty()
     }
 
+    fn resolve_module(&mut self, loc: Loc, m: &ModuleIdent) -> bool {
+        // NOTE: piggybacking on `scoped_functions` to provide a set of modules in the context。
+        // TODO: a better solution would be to have a single `BTreeMap<ModuleIdent, ModuleInfo>`
+        // in the context that can be used to resolve modules, types, and functions.
+        let resolved = self.scoped_functions.contains_key(m);
+        if !resolved {
+            self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
+        }
+        resolved
+    }
+
     fn resolve_module_type(
         &mut self,
         loc: Loc,
@@ -325,6 +336,9 @@ fn module(
 ) -> N::ModuleDefinition {
     context.current_module = Some(ident);
     let is_source_module = mdef.is_source_module;
+    let friends = mdef
+        .friends
+        .filter_map(|mident, f| friend(context, mident, f));
     let unscoped = context.save_unscoped();
     let structs = mdef.structs.map(|name, s| {
         context.restore_unscoped(unscoped.clone());
@@ -342,6 +356,7 @@ fn module(
     N::ModuleDefinition {
         is_source_module,
         dependency_order: 0,
+        friends,
         structs,
         functions,
         constants,
@@ -383,6 +398,17 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
         constants,
         function_name,
         function,
+    }
+}
+
+//**************************************************************************************************
+// Friends
+//**************************************************************************************************
+fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
+    if context.resolve_module(loc, &mident) {
+        Some(loc)
+    } else {
+        None
     }
 }
 

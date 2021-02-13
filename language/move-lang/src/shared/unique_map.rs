@@ -90,6 +90,21 @@ impl<K: TName, V> UniqueMap<K, V> {
         )
     }
 
+    pub fn filter_map<V2, F>(self, mut f: F) -> UniqueMap<K, V2>
+    where
+        F: FnMut(K, V) -> Option<V2>,
+    {
+        UniqueMap(
+            self.0
+                .into_iter()
+                .filter_map(|(k_, (loc, v))| {
+                    let v2_opt = f(K::add_loc(loc, k_.clone()), v);
+                    v2_opt.map(|v2| (k_, (loc, v2)))
+                })
+                .collect(),
+        )
+    }
+
     pub fn ref_map<V2, F>(&self, mut f: F) -> UniqueMap<K, V2>
     where
         F: FnMut(K, &V) -> V2,

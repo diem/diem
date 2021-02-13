@@ -46,6 +46,7 @@ pub struct Script {
 pub struct ModuleDefinition {
     pub loc: Loc,
     pub is_source_module: bool,
+    pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
     pub constants: UniqueMap<ConstantName, Constant>,
@@ -84,7 +85,6 @@ pub struct FunctionSignature {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-
 pub enum FunctionBody_ {
     Defined(Sequence),
     Native,
@@ -417,6 +417,7 @@ impl AstDebug for ModuleDefinition {
         let ModuleDefinition {
             loc: _loc,
             is_source_module,
+            friends,
             structs,
             functions,
             constants,
@@ -427,6 +428,10 @@ impl AstDebug for ModuleDefinition {
         } else {
             "library module"
         });
+        for (mident, _loc) in friends.key_cloned_iter() {
+            w.write(&format!("friend {};", mident));
+            w.new_line();
+        }
         for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();

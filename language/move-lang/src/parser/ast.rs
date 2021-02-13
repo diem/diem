@@ -105,8 +105,21 @@ pub enum ModuleMember {
     Struct(StructDefinition),
     Spec(SpecBlock),
     Use(Use),
+    Friend(Friend),
     Constant(Constant),
 }
+
+//**************************************************************************************************
+// Friends
+//**************************************************************************************************
+
+#[derive(Debug, PartialEq)]
+pub enum Friend_ {
+    Module(ModuleName),
+    QualifiedModule(ModuleIdent),
+}
+
+pub type Friend = Spanned<Friend_>;
 
 //**************************************************************************************************
 // Structs
@@ -903,6 +916,7 @@ impl AstDebug for ModuleMember {
             ModuleMember::Struct(s) => s.ast_debug(w),
             ModuleMember::Spec(s) => s.ast_debug(w),
             ModuleMember::Use(u) => u.ast_debug(w),
+            ModuleMember::Friend(f) => f.ast_debug(w),
             ModuleMember::Constant(c) => c.ast_debug(w),
         }
     }
@@ -927,6 +941,24 @@ impl AstDebug for Use {
                         }
                     })
                 })
+            }
+        }
+        w.write(";")
+    }
+}
+
+impl AstDebug for Friend {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Friend {
+            loc: _loc,
+            value: friend,
+        } = self;
+        match friend {
+            Friend_::Module(m_name) => {
+                w.write(&format!("friend {}", m_name));
+            }
+            Friend_::QualifiedModule(m_id) => {
+                w.write(&format!("friend {}", m_id));
             }
         }
         w.write(";")
