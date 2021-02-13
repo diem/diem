@@ -22,7 +22,7 @@ HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
 DOTNET_VERSION=3.1
-BOOGIE_VERSION=2.7.35
+BOOGIE_VERSION=2.8.25
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
