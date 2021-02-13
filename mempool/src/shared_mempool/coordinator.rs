@@ -22,7 +22,10 @@ use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_trace::prelude::*;
-use diem_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
+use diem_types::{
+    mempool_status::MempoolStatus, on_chain_config::OnChainConfigPayload,
+    transaction::SignedTransaction, vm_status::DiscardedVMStatus,
+};
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, FuturesUnordered},
@@ -73,42 +76,16 @@ pub(crate) async fn coordinator<V>(
         let _timer = counters::MAIN_LOOP.start_timer();
         ::futures::select! {
             (msg, callback) = client_events.select_next_some() => {
-                trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
-                // This timer measures how long it took for the bounded executor to *schedule* the
-                // task.
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                // This timer measures how long it took for the task to go from scheduled to started.
-                let task_start_timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
-                    .start_timer();
-                bounded_executor
-                .spawn(tasks::process_client_transaction_submission(
-                    smp.clone(),
-                    msg,
-                    callback,
-                    task_start_timer,
-                ))
-                .await;
+                handle_client_event(&mut smp, &bounded_executor, msg, callback).await;
             },
             msg = consensus_requests.select_next_some() => {
                 tasks::process_consensus_request(&mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
+                handle_state_sync_request(&mut smp, msg);
             }
             config_update = mempool_reconfig_events.select_next_some() => {
-                info!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Received));
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                bounded_executor
-                    .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
-                    .await;
+                handle_mempool_reconfig_event(&mut smp, &bounded_executor, config_update).await;
             },
             (peer, backoff) = scheduled_broadcasts.select_next_some() => {
                 tasks::execute_broadcast(peer, backoff, &mut smp, &mut scheduled_broadcasts, executor.clone());
@@ -123,6 +100,66 @@ pub(crate) async fn coordinator<V>(
         LogEntry::CoordinatorRuntime,
         LogEvent::Terminated
     ));
+}
+
+async fn handle_client_event<V>(
+    smp: &mut SharedMempool<V>,
+    bounded_executor: &BoundedExecutor,
+    msg: SignedTransaction,
+    callback: oneshot::Sender<anyhow::Result<(MempoolStatus, Option<DiscardedVMStatus>)>>,
+) where
+    V: TransactionValidation,
+{
+    trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
+    // This timer measures how long it took for the bounded executor to *schedule* the
+    // task.
+    let _timer = counters::TASK_SPAWN_LATENCY
+        .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
+        .start_timer();
+    // This timer measures how long it took for the task to go from scheduled to started.
+    let task_start_timer = counters::TASK_SPAWN_LATENCY
+        .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
+        .start_timer();
+    bounded_executor
+        .spawn(tasks::process_client_transaction_submission(
+            smp.clone(),
+            msg,
+            callback,
+            task_start_timer,
+        ))
+        .await;
+}
+
+fn handle_state_sync_request<V>(smp: &mut SharedMempool<V>, msg: CommitNotification)
+where
+    V: TransactionValidation,
+{
+    let _timer = counters::TASK_SPAWN_LATENCY
+        .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL])
+        .start_timer();
+    tokio::spawn(tasks::process_state_sync_request(smp.mempool.clone(), msg));
+}
+
+async fn handle_mempool_reconfig_event<V>(
+    smp: &mut SharedMempool<V>,
+    bounded_executor: &BoundedExecutor,
+    config_update: OnChainConfigPayload,
+) where
+    V: TransactionValidation,
+{
+    info!(LogSchema::event_log(
+        LogEntry::ReconfigUpdate,
+        LogEvent::Received
+    ));
+    let _timer = counters::TASK_SPAWN_LATENCY
+        .with_label_values(&[counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL])
+        .start_timer();
+    bounded_executor
+        .spawn(tasks::process_config_update(
+            config_update,
+            smp.validator.clone(),
+        ))
+        .await;
 }
 
 async fn handle_event<V>(
