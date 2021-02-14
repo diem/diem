@@ -140,7 +140,7 @@ Next, you may copy and execute the [Rust demo file](examples/rust/stdlib_demo.rs
 
 ### TypeScript/JavaScript
 
-To generate the TypeScript "module" `libra_stdlib` and its submodules into a target directory `$DEST`, run:
+To generate the TypeScript "module" `diemStdlib` and its submodules into a target directory `$DEST`, run:
 
 ```bash
 target/debug/generate-transaction-builders \
@@ -148,7 +148,7 @@ target/debug/generate-transaction-builders \
     --module-name diemStdlib \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
-    "language/stdlib/compiled/transaction_scripts/abi"
+    "language/diem-framework/compiled/transaction_scripts/abi"
 ```
 
 
