@@ -9,23 +9,22 @@ use serde_generate::{
     typescript, CodeGeneratorConfig,
 };
 
-use heck::{CamelCase, ShoutySnakeCase, MixedCase};
+use heck::{CamelCase, MixedCase, ShoutySnakeCase};
 use std::{
     collections::BTreeMap,
     io::{Result, Write},
     path::PathBuf,
 };
 /// Output transaction builders and decoders in TypeScript for the given ABIs.
-pub fn output(
-    out: &mut dyn Write,
-    abis: &[ScriptABI],
-) -> Result<()> {
+pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     write_script_calls(out, abis)?;
     write_helpers(out, abis)
 }
 
 fn write_stdlib_helper_interfaces(emitter: &mut TypeScriptEmitter<&mut dyn Write>) -> Result<()> {
-    writeln!(emitter.out, r#"
+    writeln!(
+        emitter.out,
+        r#"
 export interface TypeTagDef {{
   type: Types;
   arrayType?: TypeTagDef;
@@ -60,17 +59,14 @@ export enum Types {{
   Array,
   Struct
 }}
-"#)?;
+"#
+    )?;
 
     Ok(())
 }
 
-
 /// Output transaction helper functions for the given ABIs.
-fn write_helpers(
-    out: &mut dyn Write,
-    abis: &[ScriptABI],
-) -> Result<()> {
+fn write_helpers(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     let mut emitter = TypeScriptEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(2)),
     };
@@ -90,7 +86,10 @@ fn write_helpers(
     for abi in abis {
         emitter.output_code_constant(abi)?;
     }
-    writeln!(emitter.out, "\nstatic ScriptArgs: {{[name: string]: ScriptDef}} = {{")?;
+    writeln!(
+        emitter.out,
+        "\nstatic ScriptArgs: {{[name: string]: ScriptDef}} = {{"
+    )?;
     emitter.out.indent();
     for abi in abis {
         emitter.output_script_args_definition(abi)?;
@@ -108,24 +107,24 @@ fn write_helpers(
     for abi in abis {
         emitter.output_script_args_callbacks(abi)?;
     }
-    writeln!(emitter.out, "default: (type: keyof ScriptDecoders['User']) => void;")?;
+    writeln!(
+        emitter.out,
+        "default: (type: keyof ScriptDecoders['User']) => void;"
+    )?;
     emitter.out.unindent();
     writeln!(emitter.out, "}};")?;
     emitter.out.unindent();
     writeln!(emitter.out, "}};")
 }
 
-fn write_script_calls(
-    out: &mut dyn Write,
-    abis: &[ScriptABI],
-) -> Result<()> {
+fn write_script_calls(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("diemTypes");
     let script_registry: BTreeMap<_, _> = vec![(
         "ScriptCall".to_string(),
         common::make_abi_enum_container(abis),
     )]
-        .into_iter()
-        .collect();
+    .into_iter()
+    .collect();
     let mut comments: BTreeMap<_, _> = abis
         .iter()
         .map(|abi| {
@@ -157,8 +156,8 @@ struct TypeScriptEmitter<T> {
 }
 
 impl<T> TypeScriptEmitter<T>
-    where
-        T: Write,
+where
+    T: Write,
 {
     fn output_preamble(&mut self) -> Result<()> {
         writeln!(
@@ -181,8 +180,8 @@ import {{ BcsSerializer }} from '../bcs/bcsSerializer';
                 Self::quote_type_parameters(abi.ty_args()),
                 Self::quote_parameters(abi.args()),
             ]
-                .concat()
-                .join(", ")
+            .concat()
+            .join(", ")
         )?;
         self.out.indent();
         writeln!(
@@ -217,19 +216,31 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
                 .iter()
                 .enumerate()
                 .map(|(idx, _)| format!("script.ty_args[{}]", idx))
-                .collect::<Vec<_>>());
+                .collect::<Vec<_>>(),
+        );
         all_args.extend(
             abi.args()
                 .iter()
                 .enumerate()
-                .map(|(idx, arg)| format!("(script.args[{}] as {}).value", idx, Self::quote_transaction_argument_type(arg.type_tag())))
-                .collect::<Vec<_>>());
+                .map(|(idx, arg)| {
+                    format!(
+                        "(script.args[{}] as {}).value",
+                        idx,
+                        Self::quote_transaction_argument_type(arg.type_tag())
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
         self.out.indent();
-        writeln!(self.out, "return new ScriptCallVariant{}(", abi.name().to_camel_case())?;
+        writeln!(
+            self.out,
+            "return new ScriptCallVariant{}(",
+            abi.name().to_camel_case()
+        )?;
         self.out.indent();
         writeln!(self.out, "{}", all_args.join(",\n"))?;
         self.out.unindent();
-        writeln!(self.out, ");", )?;
+        writeln!(self.out, ");",)?;
         self.out.unindent();
         writeln!(self.out, "}}")?;
         Ok(())
@@ -251,24 +262,48 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
 
     fn output_script_args_definition(&mut self, abi: &ScriptABI) -> Result<()> {
         writeln!(self.out, "{}: {{", abi.name().to_camel_case())?;
-        writeln!(self.out, "  stdlibEncodeFunction: Stdlib.encode{}Script,", abi.name().to_camel_case())?;
-        writeln!(self.out, "  stdlibDecodeFunction: Stdlib.decode{}Script,", abi.name().to_camel_case())?;
-        writeln!(self.out, "  codeName: '{}',", abi.name().to_shouty_snake_case())?;
-        writeln!(self.out, "  description: \"{}\",", abi.doc().replace("\"", "\\\"").replace("\n", "\" + \n \""))?;
-        writeln!(self.out, "  typeArgs: [{}],",
-                 abi.ty_args()
-                     .iter()
-                     .map(|ty_arg| format!("\"{}\"", ty_arg.name()))
-                     .collect::<Vec<_>>()
-                     .join(", ")
+        writeln!(
+            self.out,
+            "  stdlibEncodeFunction: Stdlib.encode{}Script,",
+            abi.name().to_camel_case()
+        )?;
+        writeln!(
+            self.out,
+            "  stdlibDecodeFunction: Stdlib.decode{}Script,",
+            abi.name().to_camel_case()
+        )?;
+        writeln!(
+            self.out,
+            "  codeName: '{}',",
+            abi.name().to_shouty_snake_case()
+        )?;
+        writeln!(
+            self.out,
+            "  description: \"{}\",",
+            abi.doc().replace("\"", "\\\"").replace("\n", "\" + \n \"")
+        )?;
+        writeln!(
+            self.out,
+            "  typeArgs: [{}],",
+            abi.ty_args()
+                .iter()
+                .map(|ty_arg| format!("\"{}\"", ty_arg.name()))
+                .collect::<Vec<_>>()
+                .join(", ")
         )?;
         writeln!(self.out, "  args: [")?;
-        writeln!(self.out, "{}",
-                 abi.args()
-                     .iter()
-                     .map(|arg| format!("{{name: \"{}\", type: {}}}", arg.name(), Self::quote_script_arg_type(arg.type_tag())))
-                     .collect::<Vec<_>>()
-                     .join(", ")
+        writeln!(
+            self.out,
+            "{}",
+            abi.args()
+                .iter()
+                .map(|arg| format!(
+                    "{{name: \"{}\", type: {}}}",
+                    arg.name(),
+                    Self::quote_script_arg_type(arg.type_tag())
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
         )?;
         writeln!(self.out, "  ]")?;
         writeln!(self.out, "}},")?;
@@ -276,15 +311,34 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     }
 
     fn output_script_args_callbacks(&mut self, abi: &ScriptABI) -> Result<()> {
-        let mut args_with_types = abi.ty_args()
+        let mut args_with_types = abi
+            .ty_args()
             .iter()
-            .map(|ty_arg| format!("{}: DiemTypes.TypeTagVariantStruct", ty_arg.name().to_mixed_case()))
+            .map(|ty_arg| {
+                format!(
+                    "{}: DiemTypes.TypeTagVariantStruct",
+                    ty_arg.name().to_mixed_case()
+                )
+            })
             .collect::<Vec<_>>();
-        args_with_types.extend(abi.args()
-            .iter()
-            .map(|arg| format!("{}: {}", arg.name().to_mixed_case(), Self::quote_transaction_argument_type(arg.type_tag())))
-            .collect::<Vec<_>>());
-        writeln!(self.out, "{}: (type: string, {}) => void;", abi.name().to_camel_case(), args_with_types.join(", "))?;
+        args_with_types.extend(
+            abi.args()
+                .iter()
+                .map(|arg| {
+                    format!(
+                        "{}: {}",
+                        arg.name().to_mixed_case(),
+                        Self::quote_transaction_argument_type(arg.type_tag())
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
+        writeln!(
+            self.out,
+            "{}: (type: string, {}) => void;",
+            abi.name().to_camel_case(),
+            args_with_types.join(", ")
+        )?;
         Ok(())
     }
 
@@ -308,7 +362,8 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     }
 
     fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {
-        ty_args.iter()
+        ty_args
+            .iter()
             .map(|ty_arg| ty_arg.name().to_string())
             .collect::<Vec<_>>()
             .join(", ")
@@ -356,7 +411,11 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
-        format!("new {}({})", Self::quote_transaction_argument_type(type_tag), name)
+        format!(
+            "new {}({})",
+            Self::quote_transaction_argument_type(type_tag),
+            name
+        )
     }
 
     fn quote_script_arg_type(type_tag: &TypeTag) -> String {
@@ -399,10 +458,7 @@ impl crate::SourceInstaller for Installer {
         let dir_path = self.install_dir.join(name);
         std::fs::create_dir_all(&dir_path)?;
         let mut file = std::fs::File::create(dir_path.join("index.ts"))?;
-        output(
-            &mut file,
-            abis,
-        )?;
+        output(&mut file, abis)?;
         Ok(())
     }
 }
