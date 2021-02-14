@@ -110,11 +110,7 @@ fn main() {
                     .unwrap();
                 }
                 Language::TypeScript => {
-                    buildgen::typescript::output(
-                        &mut out,
-                        &abis,
-                    )
-                    .unwrap();
+                    buildgen::typescript::output(&mut out, &abis).unwrap();
                 }
             }
             return;
@@ -133,7 +129,9 @@ fn main() {
                 Language::Rust => Box::new(serdegen::rust::Installer::new(install_dir.clone())),
                 Language::Cpp => Box::new(serdegen::cpp::Installer::new(install_dir.clone())),
                 Language::Java => Box::new(serdegen::java::Installer::new(install_dir.clone())),
-                Language::TypeScript => Box::new(serdegen::typescript::Installer::new(install_dir.clone())),
+                Language::TypeScript => {
+                    Box::new(serdegen::typescript::Installer::new(install_dir.clone()))
+                }
                 Language::Go => Box::new(serdegen::golang::Installer::new(
                     install_dir.clone(),
                     options.serde_package_name.clone(),
