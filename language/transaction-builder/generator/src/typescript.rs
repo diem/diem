@@ -341,13 +341,13 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     fn quote_transaction_argument_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
-            Bool => format!("DiemTypes.TransactionArgumentVariantBool"),
-            U8 => format!("DiemTypes.TransactionArgumentVariantU8"),
-            U64 => format!("DiemTypes.TransactionArgumentVariantU64"),
-            U128 => format!("DiemTypes.TransactionArgumentVariantU128"),
-            Address => format!("DiemTypes.TransactionArgumentVariantAddress"),
+            Bool => "DiemTypes.TransactionArgumentVariantBool".to_string(),
+            U8 => "DiemTypes.TransactionArgumentVariantU8".to_string(),
+            U64 => "DiemTypes.TransactionArgumentVariantU64".to_string(),
+            U128 => "DiemTypes.TransactionArgumentVariantU128".to_string(),
+            Address => "DiemTypes.TransactionArgumentVariantAddress".to_string(),
             Vector(type_tag) => match type_tag.as_ref() {
-                U8 => format!("DiemTypes.TransactionArgumentVariantU8Vector"),
+                U8 => "DiemTypes.TransactionArgumentVariantU8Vector".to_string(),
                 _ => common::type_not_allowed(type_tag),
             },
 
@@ -362,11 +362,11 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     fn quote_script_arg_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
-            Bool => format!("{{type: Types.Boolean}}"),
-            U8 => format!("{{type: Types.U8}}"),
-            U64 => format!("{{type: Types.U64}}"),
-            U128 => format!("{{type: Types.U128}}"),
-            Address => format!("{{type: Types.Address}}"),
+            Bool => "{type: Types.Boolean}".to_string(),
+            U8 => "{type: Types.U8}".to_string(),
+            U64 => "{type: Types.U64}".to_string(),
+            U128 => "{type: Types.U128}".to_string(),
+            Address => "{type: Types.Address}".to_string(),
             Vector(type_tag) => format!("{{type: Types.Array, arrayType: {}}}", Self::quote_script_arg_type(type_tag)),
             Struct(struct_tag) => format!("{{type: Types.Struct, name: \"{}\", module: \"{}\", address: \"{}\", typeParams: [{}]}}",
                                           struct_tag.name,
