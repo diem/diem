@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/naming/friend_decl_unbound_module.move:3:5 ───
+   │
+ 3 │     friend 0x42::Nonexistent;
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^ Unbound module '0x42::Nonexistent'
+   │
+

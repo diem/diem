@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/friend_decl_address_only.move:3:16 ───
+   │
+ 3 │     friend 0x42;
+   │                ^ Unexpected ';'
+   ·
+ 3 │     friend 0x42;
+   │                - Expected '::'
+   │
+
