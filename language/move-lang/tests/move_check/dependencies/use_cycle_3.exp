@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/dependencies/cycle_3.move:95:16 ───
+    ┌── tests/move_check/dependencies/use_cycle_3.move:95:16 ───
     │
  95 │     fun foo(): 0x4::C::S {
     │                ^^^^^^^^^ Invalid use of module '0x4::C' in module '0x4::B'.

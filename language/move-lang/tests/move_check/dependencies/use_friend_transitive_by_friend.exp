@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/dependencies/use_friend_transitive_by_friend.move:14:5 ───
+    │
+ 14 │     friend 0x2::C;
+    │     ^^^^^^^^^^^^^^ Invalid friend of module '0x2::C' in module '0x2::B'.
+    ·
+ 14 │     friend 0x2::C;
+    │     -------------- Friending this module creates a dependency cycle: '0x2::B' may use '0x2::A' uses '0x2::C' may use '0x2::B'
+    │
+

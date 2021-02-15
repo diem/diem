@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/dependencies/intersecting_cycles.move:10:14 ───
+    ┌── tests/move_check/dependencies/intersecting_use_cycles.move:10:14 ───
     │
  10 │     fun c(): 0x2::C::S { abort 0 }
     │              ^^^^^^^^^ Invalid use of module '0x2::C' in module '0x2::B'.
