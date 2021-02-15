@@ -38,7 +38,7 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-rand_core = { version = "0.6.1", default-features = false, features = ["alloc", "getrandom", "std"] }
+rand_core = { version = "0.6.2", default-features = false, features = ["alloc", "getrandom", "std"] }
 reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -82,7 +82,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-rand_core = { version = "0.6.1", default-features = false, features = ["alloc", "getrandom", "std"] }
+rand_core = { version = "0.6.2", default-features = false, features = ["alloc", "getrandom", "std"] }
 reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -125,7 +125,7 @@ once_cell = { version = "1.5.2", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-rand_core = { version = "0.6.1", default-features = false, features = ["alloc", "getrandom", "std"] }
+rand_core = { version = "0.6.2", default-features = false, features = ["alloc", "getrandom", "std"] }
 reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -169,7 +169,7 @@ proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.7.3", features = ["alloc", "default", "getrandom", "getrandom_package", "libc", "rand_pcg", "small_rng", "std"] }
-rand_core = { version = "0.6.1", default-features = false, features = ["alloc", "getrandom", "std"] }
+rand_core = { version = "0.6.2", default-features = false, features = ["alloc", "getrandom", "std"] }
 reqwest = { version = "0.11.0", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }

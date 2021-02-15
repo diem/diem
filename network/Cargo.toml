@@ -20,7 +20,7 @@ pin-project = "1.0.5"
 proptest = { version = "0.10.1", default-features = true, optional = true }
 proptest-derive = { version = "0.2.0", optional = true }
 rand = { version = "0.7.3", features = ["small_rng"] }
-rand_core = { version = "0.6.1", optional = true }
+rand_core = { version = "0.6.2", optional = true }
 serde = { version = "1.0.123", default-features = false }
 serde_bytes = "0.11.5"
 thiserror = "1.0.23"
@@ -58,7 +58,7 @@ memsocket = { path = "./memsocket", version = "0.1.0" }
 network-builder = {path = "./builder", version = "0.1.0"}
 proptest = { version = "0.10.1", default-features = true }
 proptest-derive = { version = "0.2.0" }
-rand_core = "0.6.1"
+rand_core = "0.6.2"
 serial_test = "0.5.1"
 socket-bench-server = { path = "./socket-bench-server", version = "0.1.0" }
 
