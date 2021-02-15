@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/public_friend_main.move:2:1 ───
+   │
+ 2 │ public(friend) fun main() {
+   │ ^^^^^^^^^^^^^^ Extraneous 'public(friend)' modifier. Script functions are always 'public(script)'
+   │
+

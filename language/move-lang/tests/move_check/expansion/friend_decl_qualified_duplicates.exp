@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/expansion/friend_decl_qualified_duplicates.move:6:5 ───
+   │
+ 6 │     friend 0x42::A;
+   │     ^^^^^^^^^^^^^^^ Duplicate friend declaration '0x42::A'. Friend declarations in a module must be unique
+   ·
+ 5 │     friend 0x42::A;
+   │     --------------- Previously declared here
+   │
+

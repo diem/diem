@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/friend_decl_qualified_struct.move:7:19 ───
+   │
+ 7 │     friend 0x42::A::A;
+   │                   ^^ Unexpected '::'
+   ·
+ 7 │     friend 0x42::A::A;
+   │                   -- Expected ';'
+   │
+
