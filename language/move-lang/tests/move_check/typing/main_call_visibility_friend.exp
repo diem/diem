@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/typing/main_call_visibility_friend.move:9:5 ───
+   │
+ 9 │     0x2::X::foo()
+   │     ^^^^^^^^^^^^^ Invalid call to '0x2::X::foo'
+   ·
+ 3 │     public(friend) fun foo() {}
+   │     -------------- This function can only be called from a friend of module '0x2::X'
+   │
+

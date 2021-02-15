@@ -1,0 +1,33 @@
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_friend_invalid.move:18:49 ───
+    │
+ 18 │     public(friend) fun f_friend_call_friend() { X::f_friend() }
+    │                                                 ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_friend'
+    ·
+  5 │     public(friend) fun f_friend() {}
+    │     -------------- This function can only be called from a friend of module '0x2::X'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_friend_invalid.move:22:52 ───
+    │
+ 22 │     public(friend) fun f_friend_call_private_1() { X::f_private() }
+    │                                                    ^^^^^^^^^^^^^^ Invalid call to '0x2::X::f_private'
+    ·
+  4 │     fun f_private() {}
+    │         --------- This function is internal to its module. Only 'public', 'public(script)', and 'public(friend)' functions can be called outside of their module
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/module_call_visibility_friend_invalid.move:23:52 ───
+    │
+ 23 │     public(friend) fun f_friend_call_private_2() { Y::f_private() }
+    │                                                    ^^^^^^^^^^^^^^ Invalid call to '0x2::Y::f_private'
+    ·
+ 10 │     fun f_private() {}
+    │         --------- This function is internal to its module. Only 'public', 'public(script)', and 'public(friend)' functions can be called outside of their module
+    │
+
