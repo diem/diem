@@ -826,12 +826,25 @@ pub fn make_function_type(
             }
         }
         FunctionVisibility::Friend(_) => {
-            // TODO: implement typing rule for calling a friend function
-            let internal_msg = "Calling a friend function is not implemented yet".to_owned();
-            context.error(vec![
-                (loc, format!("Invalid call to '{}::{}'", m, f)),
-                (defined_loc, internal_msg),
-            ])
+            if !in_current_module {
+                let is_in_friend_list = match &context.current_module {
+                    None => false,
+                    Some(current_mident) => {
+                        let minfo = context.module_info(m);
+                        minfo.friends.contains_key(current_mident)
+                    }
+                };
+                if !is_in_friend_list {
+                    let internal_msg = format!(
+                        "This function can only be called from a friend of module '{}'",
+                        m
+                    );
+                    context.error(vec![
+                        (loc, format!("Invalid call to '{}::{}'", m, f)),
+                        (defined_loc, internal_msg),
+                    ])
+                }
+            }
         }
         FunctionVisibility::Public(_) => (),
     };
