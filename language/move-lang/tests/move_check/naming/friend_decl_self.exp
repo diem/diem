@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/naming/friend_decl_self.move:3:5 ───
+   │
+ 3 │     friend Self;
+   │     ^^^^^^^^^^^^ Invalid friend declaration
+   ·
+ 3 │     friend Self;
+   │     ------------ Cannot declare the module itself as a friend
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/friend_decl_self.move:9:5 ───
+   │
+ 9 │     friend 0x43::M;
+   │     ^^^^^^^^^^^^^^^ Invalid friend declaration
+   ·
+ 9 │     friend 0x43::M;
+   │     --------------- Cannot declare the module itself as a friend
+   │
+
