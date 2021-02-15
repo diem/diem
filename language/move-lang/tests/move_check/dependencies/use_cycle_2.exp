@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/dependencies/cycle_2.move:5:9 ───
+   ┌── tests/move_check/dependencies/use_cycle_2.move:5:9 ───
    │
  5 │         0x2::B::foo()
    │         ^^^^^^^^^^^^^ Invalid use of module '0x2::B' in module '0x2::A'.

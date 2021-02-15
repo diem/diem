@@ -17,27 +17,38 @@ use std::collections::BTreeMap;
 
 pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::ModuleDefinition>) {
     let imm_modules = &modules;
-    let context = &mut Context::new(imm_modules);
-    module_defs(context, modules);
-    let graph = &context.dependency_graph();
-    match petgraph_toposort(graph, None) {
+    let mut context = Context::new(imm_modules);
+    module_defs(&mut context, modules);
+
+    let Context { neighbors, .. } = context;
+    let graph = dependency_graph(&neighbors);
+    match petgraph_toposort(&graph, None) {
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
-            let error = cycle_error(context, cycle_ident);
-            errors.push(error)
+            let error = cycle_error(&neighbors, cycle_ident);
+            errors.push(error);
         }
         Ok(ordered_ids) => {
             let ordered_ids = ordered_ids.into_iter().cloned().collect::<Vec<_>>();
             for (order, mident) in ordered_ids.into_iter().rev().enumerate() {
-                modules.get_mut(&mident).unwrap().dependency_order = order
+                modules.get_mut(&mident).unwrap().dependency_order = order;
             }
         }
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+enum DepType {
+    Use,
+    Friend,
+}
+
 struct Context<'a> {
     modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>,
-    neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, Loc>>,
+    // A union of uses and friends:
+    // - if A uses B,    add edge A -> B
+    // - if A friends B, add edge B -> A
+    neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
     current_module: Option<ModuleIdent>,
 }
 
@@ -50,63 +61,105 @@ impl<'a> Context<'a> {
         }
     }
 
-    fn add_usage(&mut self, uses: &ModuleIdent, loc: Loc) {
-        if self.current_module.as_ref().unwrap() == uses || !self.modules.contains_key(uses) {
+    fn add_neighbor(&mut self, mident: ModuleIdent, dep_type: DepType, loc: Loc) {
+        let current_mident = self.current_module.clone().unwrap();
+        if current_mident == mident || !self.modules.contains_key(&mident) {
             return;
         }
+        let (node, new_neighbor) = match dep_type {
+            DepType::Use => (current_mident, mident),
+            DepType::Friend => (mident, current_mident),
+        };
 
         let m = self
             .neighbors
-            .entry(self.current_module.clone().unwrap())
+            .entry(node)
+            .or_insert_with(BTreeMap::new)
+            .entry(new_neighbor)
             .or_insert_with(BTreeMap::new);
-        if m.contains_key(uses) {
+        if m.contains_key(&dep_type) {
             return;
         }
-
-        m.insert(uses.clone(), loc);
+        m.insert(dep_type, loc);
     }
 
-    fn dependency_graph(&self) -> DiGraphMap<&ModuleIdent, ()> {
-        let edges = self
-            .neighbors
-            .iter()
-            .flat_map(|(parent, children)| children.iter().map(move |(child, _)| (parent, child)));
-        DiGraphMap::from_edges(edges)
+    fn add_usage(&mut self, mident: ModuleIdent, loc: Loc) {
+        self.add_neighbor(mident, DepType::Use, loc);
+    }
+
+    fn add_friend(&mut self, mident: ModuleIdent, loc: Loc) {
+        self.add_neighbor(mident, DepType::Friend, loc);
     }
 }
 
-fn cycle_error(context: &Context, cycle_ident: ModuleIdent) -> Error {
-    let cycle = shortest_cycle(&context.dependency_graph(), &cycle_ident);
+fn dependency_graph(
+    deps: &BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
+) -> DiGraphMap<&ModuleIdent, ()> {
+    let edges = deps
+        .iter()
+        .flat_map(|(parent, children)| children.iter().map(move |(child, _)| (parent, child)));
+    DiGraphMap::from_edges(edges)
+}
+
+fn cycle_error(
+    deps: &BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
+    cycle_ident: ModuleIdent,
+) -> Error {
+    let graph = dependency_graph(deps);
+    let cycle = shortest_cycle(&graph, &cycle_ident);
+
+    let mut cycle_strings: String = cycle
+        .windows(2)
+        .map(|pair| {
+            let node = pair[0];
+            let neighbor = pair[1];
+            let relations = deps.get(node).unwrap().get(neighbor).unwrap();
+            let verb = if relations.contains_key(&DepType::Use) {
+                "uses"
+            } else {
+                assert!(relations.contains_key(&DepType::Friend));
+                "is a friend of"
+            };
+            format!("'{}' {} ", node, verb)
+        })
+        .collect();
+    cycle_strings.push_str(&format!("'{}'", cycle.last().unwrap()));
 
     // For printing uses, sort the cycle by location (earliest first)
-    let cycle_strings = cycle
-        .iter()
-        .map(|m| format!("'{}'", m))
-        .collect::<Vec<_>>()
-        .join(" uses ");
+    let (dep_type, cycle_loc, node, neighbor) = best_cycle_loc(deps, cycle);
 
-    let (used_loc, user, used) = best_cycle_loc(context, cycle);
-
-    let use_msg = format!("Invalid use of module '{}' in module '{}'.", used, user);
-    let cycle_msg = format!(
-        "Using this module creates a dependency cycle: {}",
-        cycle_strings
-    );
-    vec![(used_loc, use_msg), (used_loc, cycle_msg)]
+    let (use_msg, cycle_msg) = match dep_type {
+        DepType::Use => (
+            format!("Invalid use of module '{}' in module '{}'.", neighbor, node),
+            format!(
+                "Using this module creates a dependency cycle: {}",
+                cycle_strings
+            ),
+        ),
+        DepType::Friend => (
+            format!("Invalid friend '{}' in module '{}'", node, neighbor),
+            format!(
+                "This friend relationship creates a dependency cycle: {}",
+                cycle_strings
+            ),
+        ),
+    };
+    vec![(cycle_loc, use_msg), (cycle_loc, cycle_msg)]
 }
 
 fn best_cycle_loc<'a>(
-    context: &'a Context,
+    deps: &'a BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
     cycle: Vec<&'a ModuleIdent>,
-) -> (Loc, &'a ModuleIdent, &'a ModuleIdent) {
+) -> (DepType, Loc, &'a ModuleIdent, &'a ModuleIdent) {
     let len = cycle.len();
     assert!(len >= 3);
     let first = cycle[0];
-    let user = cycle[len - 2];
-    let used = cycle[len - 1];
-    assert!(first == used);
-    let used_loc = context.neighbors.get(user).unwrap().get(used).unwrap();
-    (*used_loc, user, used)
+    let node = cycle[len - 2];
+    let neighbor = cycle[len - 1];
+    assert_eq!(first, neighbor);
+    let cycle_locs = deps.get(node).unwrap().get(neighbor).unwrap();
+    let (dep_type, loc) = cycle_locs.iter().next().unwrap();
+    (*dep_type, *loc, node, neighbor)
 }
 
 //**************************************************************************************************
@@ -121,6 +174,9 @@ fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, N::Module
 
 fn module(context: &mut Context, mident: ModuleIdent, mdef: &N::ModuleDefinition) {
     context.current_module = Some(mident);
+    mdef.friends
+        .key_cloned_iter()
+        .for_each(|(mident, loc)| context.add_friend(mident, *loc));
     mdef.structs
         .iter()
         .for_each(|(_, _, sdef)| struct_def(context, sdef));
@@ -157,7 +213,7 @@ fn function_acquires(_context: &mut Context, _acqs: &BTreeMap<StructName, Loc>) 
 fn type_name(context: &mut Context, sp!(loc, tn_): &N::TypeName) {
     use N::TypeName_ as TN;
     if let TN::ModuleType(m, _) = tn_ {
-        context.add_usage(m, *loc)
+        context.add_usage(m.clone(), *loc)
     }
 }
 
@@ -213,7 +269,7 @@ fn lvalues<'a>(context: &mut Context, al: impl IntoIterator<Item = &'a N::LValue
 fn lvalue(context: &mut Context, sp!(loc, a_): &N::LValue) {
     use N::LValue_ as L;
     if let L::Unpack(m, _, bs_opt, f) = a_ {
-        context.add_usage(m, *loc);
+        context.add_usage(m.clone(), *loc);
         types_opt(context, bs_opt);
         lvalues(context, f.iter().map(|(_, _, (_, b))| b));
     }
@@ -234,9 +290,9 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         | E::Copy(_)
         | E::Use(_) => (),
 
-        E::Constant(Some(m), _c) => context.add_usage(m, *loc),
+        E::Constant(Some(m), _c) => context.add_usage(m.clone(), *loc),
         E::ModuleCall(m, _, bs_opt, sp!(_, es_)) => {
-            context.add_usage(m, *loc);
+            context.add_usage(m.clone(), *loc);
             types_opt(context, bs_opt);
             es_.iter().for_each(|e| exp(context, e))
         }
@@ -271,7 +327,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         }
 
         E::Pack(m, _, bs_opt, fes) => {
-            context.add_usage(m, *loc);
+            context.add_usage(m.clone(), *loc);
             types_opt(context, bs_opt);
             fes.iter().for_each(|(_, _, (_, e))| exp(context, e))
         }
