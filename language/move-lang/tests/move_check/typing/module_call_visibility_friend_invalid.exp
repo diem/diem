@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/typing/module_call_visibility_friend_invalid.move:5:20 ───
+   │
+ 5 │     public(friend) f_friend() {}
+   │                    ^^^^^^^^ Unexpected 'f_friend'
+   ·
+ 5 │     public(friend) f_friend() {}
+   │                    -------- Expected 'fun'
+   │
+

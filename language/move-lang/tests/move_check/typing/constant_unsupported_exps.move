@@ -2,6 +2,7 @@ address 0x42 {
 module X {
     public fun f_public() {}
     public(script) fun f_script() {}
+    public(friend) fun f_friend() {}
     fun f_private() {}
 }
 
@@ -19,9 +20,11 @@ module M {
         &mut x;
         f_public();
         f_script();
+        f_friend();
         f_private();
         0x42::X::f_public();
         0x42::X::f_script();
+        0x42::X::f_friend();
         0x42::X::f_private();
         borrow_global<R>(0x42);
         borrow_global_mut<R>(0x42);
@@ -46,6 +49,7 @@ module M {
     };
     public fun f_public() {}
     public(script) fun f_script() {}
+    public(friend) fun f_friend() {}
     fun f_private() {}
 }
 }
