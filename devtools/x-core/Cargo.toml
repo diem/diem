@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 determinator = "0.2.1"
-guppy = "0.7.0"
+guppy = "0.7.1"
 indoc = "1.0.3"
 hakari = { version = "0.1.1", features = ["summaries"] }
 hex = "0.4.2"

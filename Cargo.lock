@@ -3319,9 +3319,9 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63cc63895eaea7ace65b2818019602b5d150556954e25048e5a1b56c0b0da4af"
+checksum = "e79685940e4d38bb0da993ba16485fc80895cff17d372702f7fc522b5c358a69"
 dependencies = [
  "cargo_metadata",
  "fixedbitset",
@@ -3342,10 +3342,11 @@ dependencies = [
 
 [[package]]
 name = "guppy-summaries"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e44283a7f83c77582b47e14e03d93a556fe06eefc3a0b32a65426f453d10c4d"
+checksum = "811b7332020d2a53cfe64049a52fd46d0761082b12d8b6b8f2c5b702f8bb2a24"
 dependencies = [
+ "cfg-if 1.0.0",
  "diffus",
  "semver 0.11.0",
  "serde",
@@ -6992,9 +6993,9 @@ checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
 
 [[package]]
 name = "target-spec"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "956c2aeccd9cc67a543e04559d46aedc8aa9cda15e5884bcfabb8217fd130e2a"
+checksum = "39920b3286e8e9585b3ba77becb3e682888f63b2be5326cd16264d8ad292d78e"
 dependencies = [
  "cfg-expr",
  "serde",
