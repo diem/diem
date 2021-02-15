@@ -405,9 +405,24 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
 // Friends
 //**************************************************************************************************
 fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
-    if context.resolve_module(loc, &mident) {
+    let current_mident = context.current_module.as_ref().unwrap();
+    if mident.value.0 != current_mident.value.0 {
+        // NOTE: in alignment with the bytecode verifier, this constraint is a policy decision
+        // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
+        // rely on the assumption that friend modules must reside within the same account address.
+        let msg = "Cannot declare modules out of the current address as a friend";
+        context.error(vec![(loc, "Invalid friend declaration"), (loc, msg)]);
+        None
+    } else if &mident == current_mident {
+        context.error(vec![
+            (loc, "Invalid friend declaration"),
+            (loc, "Cannot declare the module itself as a friend"),
+        ]);
+        None
+    } else if context.resolve_module(loc, &mident) {
         Some(loc)
     } else {
+        assert!(context.has_errors());
         None
     }
 }

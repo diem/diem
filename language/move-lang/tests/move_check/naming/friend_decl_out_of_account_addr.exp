@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/naming/friend_decl_out_of_account_addr.move:7:5 ───
+   │
+ 7 │     friend 0x2::M;
+   │     ^^^^^^^^^^^^^^ Invalid friend declaration
+   ·
+ 7 │     friend 0x2::M;
+   │     -------------- Cannot declare modules out of the current address as a friend
+   │
+
