@@ -32,7 +32,7 @@ use vm_validator::vm_validator::TransactionValidation;
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
 /// Peers that receive txns from this node.
-pub(crate) type PeerInfo = HashMap<PeerNetworkId, PeerSyncState>;
+pub(crate) type PeerSyncStates = HashMap<PeerNetworkId, PeerSyncState>;
 
 /// State of last sync with peer:
 /// `timeline_id` is position in log of ready transactions
@@ -47,7 +47,7 @@ pub(crate) struct PeerSyncState {
 pub(crate) struct PeerManager {
     upstream_config: UpstreamConfig,
     mempool_config: MempoolConfig,
-    peer_info: Mutex<PeerInfo>,
+    peer_states: Mutex<PeerSyncStates>,
     // The upstream peer to failover to if all peers in the primary upstream network are dead.
     // The number of failover peers is limited to 1 to avoid network competition in the failover networks.
     failover_peer: Mutex<Option<PeerNetworkId>>,
@@ -102,7 +102,7 @@ impl PeerManager {
         Self {
             mempool_config,
             upstream_config,
-            peer_info: Mutex::new(PeerInfo::new()),
+            peer_states: Mutex::new(PeerSyncStates::new()),
             failover_peer: Mutex::new(None),
             default_failovers: Mutex::new(HashSet::new()),
         }
@@ -110,14 +110,14 @@ impl PeerManager {
 
     // Returns true if `peer` is discovered for the first time, else false.
     pub fn add_peer(&self, peer: PeerNetworkId, origin: ConnectionOrigin) -> bool {
-        let mut peer_info = self.peer_info.lock();
-        let is_new_peer = !peer_info.contains_key(&peer);
+        let mut peer_states = self.peer_states.lock();
+        let is_new_peer = !peer_states.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(origin)) {
             counters::active_upstream_peers(&peer.raw_network_id()).inc();
             if peer.raw_network_id() == NetworkId::Validator {
                 // For a validator network, resume broadcasting from previous state.
                 // We can afford to not re-broadcast here since the transaction is already in a validator.
-                peer_info
+                peer_states
                     .entry(peer)
                     .or_insert(PeerSyncState {
                         timeline_id: 0,
@@ -129,7 +129,7 @@ impl PeerManager {
                 // For a non-validator network, potentially re-broadcast any transactions that have not been
                 // committed yet.
                 // This is to ensure better reliability of transactions reaching the validator network.
-                peer_info.insert(
+                peer_states.insert(
                     peer,
                     PeerSyncState {
                         timeline_id: 0,
@@ -139,13 +139,13 @@ impl PeerManager {
                 );
             }
         }
-        drop(peer_info);
+        drop(peer_states);
         self.update_failover();
         is_new_peer
     }
 
     pub fn disable_peer(&self, peer: PeerNetworkId) {
-        if let Some(state) = self.peer_info.lock().get_mut(&peer) {
+        if let Some(state) = self.peer_states.lock().get_mut(&peer) {
             counters::active_upstream_peers(&peer.raw_network_id()).dec();
             state.is_alive = false;
         }
@@ -157,7 +157,7 @@ impl PeerManager {
     }
 
     pub fn is_backoff_mode(&self, peer: &PeerNetworkId) -> bool {
-        self.peer_info
+        self.peer_states
             .lock()
             .get(peer)
             .expect("missing peer info for peer")
@@ -176,8 +176,8 @@ impl PeerManager {
         // Start timer for tracking broadcast latency.
         let start_time = Instant::now();
 
-        let mut peer_info = self.peer_info.lock();
-        let state = peer_info
+        let mut peer_states = self.peer_states.lock();
+        let state = peer_states
             .get_mut(&peer)
             .expect("missing peer info for peer");
 
@@ -345,8 +345,8 @@ impl PeerManager {
         // Declare `failover` as standalone to satisfy lifetime requirement.
         let mut failover = self.failover_peer.lock();
         let current_failover = failover.deref_mut();
-        let peer_info = self.peer_info.lock();
-        let active_peers_by_network = peer_info
+        let peer_states = self.peer_states.lock();
+        let active_peers_by_network = peer_states
             .iter()
             .filter_map(|(peer, state)| {
                 if state.is_alive {
@@ -404,7 +404,10 @@ impl PeerManager {
             if let Some(chosen) = current_failover {
                 if let Some(candidate) = &failover_candidate {
                     if chosen.raw_network_id() == candidate.raw_network_id()
-                        && peer_info.get(chosen).expect("missing peer state").is_alive
+                        && peer_states
+                            .get(chosen)
+                            .expect("missing peer state")
+                            .is_alive
                     {
                         // If current chosen failover peer is alive, then do not overwrite it
                         // with another live peer of the same network.
@@ -459,9 +462,9 @@ impl PeerManager {
             return;
         };
 
-        let mut peer_info = self.peer_info.lock();
+        let mut peer_states = self.peer_states.lock();
 
-        let sync_state = if let Some(state) = peer_info.get_mut(&peer) {
+        let sync_state = if let Some(state) = peer_states.get_mut(&peer) {
             state
         } else {
             counters::invalid_ack_inc(&peer, counters::UNKNOWN_PEER);
@@ -524,7 +527,7 @@ impl PeerManager {
                     .is_some()
             }
         } else {
-            self.peer_info.lock().contains_key(peer)
+            self.peer_states.lock().contains_key(peer)
         }
     }
 
