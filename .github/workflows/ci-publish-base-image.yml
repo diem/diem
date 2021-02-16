@@ -2,13 +2,15 @@ name: Publish Base CI Image To Dockerhub
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, release-*, gha-test-*]
     paths:
       [
         .github/workflows/ci-publish-base-image.yml,
         .github/actions/dockerhub_login/action.yml,
         docker/ci/github/Dockerfile,
         scripts/dev_setup.sh,
+        rust-toolchain,
+        cargo-toolchain,
       ]
 
 jobs:
@@ -16,12 +18,23 @@ jobs:
     runs-on: ubuntu-latest-xl
     continue-on-error: false
     env:
-      TAG: github-1
-      DOCKERHUB_ORG: libra
+      DOCKERHUB_ORG: diem
     steps:
       - uses: actions/checkout@v2
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: ci-publish-base-image.yml
       - name: build image
-        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }} .
+        run: docker build -f docker/ci/github/Dockerfile -t ${{ env.DOCKERHUB_ORG }}/build_environment:${{ steps.changes.outputs.changes-target-branch }} .
       - name: Sign in to dockerhub, install image signing cert.
         uses: ./.github/actions/dockerhub_login
         with:
@@ -31,6 +44,13 @@ jobs:
           key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
           key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
       - name: Push to dockerhub.
-        run: docker push --disable-content-trust=false ${{ env.DOCKERHUB_ORG }}/build_environment:${{ env.TAG }}
+        run: |
+          if [[ "$DOCKERHUB_LOGGED_IN" == true ]]; then
+            disable_content_trust=true
+            if [[ "$DOCKERHUB_CAN_SIGN" == true ]]; then
+              disable_content_trust=false
+            fi
+            docker push --disable-content-trust=${disable_content_trust} ${{ env.DOCKERHUB_ORG }}/build_environment:${{ steps.changes.outputs.changes-target-branch }}
+          fi
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}

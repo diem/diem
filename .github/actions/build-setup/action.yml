@@ -18,25 +18,6 @@ runs:
     - name: reconfigure container for gha runner
       shell: bash
       run: |
-        # prepare new user's home directory with symlink, mv takes a full minute.
-        # hard symlinks aren't allowed by os/docker.
-        # These lines exist so that the prior run of scripts/dev_setup.sh as root in the container build
-        # can be used as if they were installed in home directory (working_dir) setup by gha in the docker container.
-        ln -s /root/bin ${HOME}/bin
-        ln -s /root/.dotnet ${HOME}/.dotnet
-        ln -s /root/.rustup ${HOME}/.rustup
-        ln -s /root/.cargo ${HOME}/.cargo
-        ln -s /root/.local ${HOME}/.local
-        ln -s /root/.nuget ${HOME}/.nuget
-
-        # sccache setup
-        # Since sccache needs a standard location for cargo home and the build is currently configured in x.toml
-        # to expect /opt/cargo.  The standard source location expected by the build is handle by an extra docker
-        # mount point.
-        mkdir /opt || true
-        ln -s /root/.cargo /root/cargo
-        ln -s /root/cargo /opt/cargo
-
         # prepare move lang prover tooling.
         # By setting these values the dev-setup.sh script can detect already installed executables (and check versions).
         echo 'Z3_EXE='${HOME}/bin/z3 | tee -a $GITHUB_ENV
@@ -44,8 +25,8 @@ runs:
         echo 'BOOGIE_EXE='${HOME}/.dotnet/tools/boogie | tee -a $GITHUB_ENV
         echo "$HOME/bin" | tee -a $GITHUB_PATH
         echo "/opt/cargo/bin" | tee -a $GITHUB_PATH
-
-    - name: install common dependencies (should be ~ 10 seconds.)
+        echo 'CARGO_HOME=/opt/cargo/' | tee -a $GITHUB_ENV
+    - name: install common dependencies (should be ~ 10 seconds in a linux build, on mac it's a beast.)
       shell: bash
       run: scripts/dev_setup.sh -t -o -b -p -y
     - id: rust-environment
@@ -55,7 +36,6 @@ runs:
         echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
         echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV
         echo 'RUST_NIGHTLY='$(cat cargo-toolchain) | tee -a $GITHUB_ENV
-        echo 'CARGO_HOME=/opt/cargo/' | tee -a $GITHUB_ENV
 
         # Turn on the experimental feature resolver in cargo. See:
         # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
