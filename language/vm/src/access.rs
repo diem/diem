@@ -176,7 +176,7 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_defs
     }
 
-    fn friend_decls(&self) -> &[FriendDeclaration] {
+    fn friend_decls(&self) -> &[ModuleHandleIndex] {
         &self.as_module().as_inner().friend_decls
     }
 
@@ -200,7 +200,7 @@ pub trait ModuleAccess: Sync {
     fn friend_module_ids(&self) -> Vec<ModuleId> {
         self.friend_decls()
             .iter()
-            .map(|friend_decl| self.module_id_for_handle(self.module_handle_at(friend_decl.module)))
+            .map(|index| self.module_id_for_handle(self.module_handle_at(*index)))
             .collect()
     }
 }

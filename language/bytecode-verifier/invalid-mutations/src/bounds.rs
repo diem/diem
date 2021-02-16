@@ -312,7 +312,7 @@ impl ApplyOutOfBoundsContext {
                 self.module.field_handles[src_idx].owner = StructDefinitionIndex(new_idx)
             }
             (FriendDeclaration, ModuleHandle) => {
-                self.module.friend_decls[src_idx].module = ModuleHandleIndex(new_idx)
+                self.module.friend_decls[src_idx] = ModuleHandleIndex(new_idx)
             }
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }

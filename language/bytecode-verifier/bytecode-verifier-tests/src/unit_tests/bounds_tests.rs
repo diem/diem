@@ -140,9 +140,8 @@ fn invalid_struct_as_type_actual_in_exists() {
 #[test]
 fn invalid_friend() {
     let mut m = basic_test_module();
-    m.friend_decls.push(FriendDeclaration {
-        module: ModuleHandleIndex(m.module_handles.len() as TableIndex),
-    });
+    m.friend_decls
+        .push(ModuleHandleIndex(m.module_handles.len() as TableIndex));
     m.freeze().unwrap_err();
 }
 

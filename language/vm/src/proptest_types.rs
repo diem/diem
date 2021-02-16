@@ -24,9 +24,7 @@ use functions::{
     FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
 };
 
-use crate::proptest_types::types::{
-    FriendDeclarationGen, StDefnMaterializeState, StructDefinitionGen, StructHandleGen,
-};
+use crate::proptest_types::types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// Represents how large [`CompiledModule`] tables can be.
@@ -176,7 +174,7 @@ impl CompiledModuleStrategyGen {
         //
         // Friend generator
         //
-        let friends_strat = vec(FriendDeclarationGen::strategy(), 0..=self.size);
+        let friends_strat = vec(any::<PropIndex>(), 0..=self.size);
 
         // Note that prop_test only allows a tuple of length up to 10
         (
@@ -224,7 +222,11 @@ impl CompiledModuleStrategyGen {
                     // Friend Declarations
                     let friend_decl_set: HashSet<_> = friend_decl_gens
                         .into_iter()
-                        .map(|friend_decl_gen| friend_decl_gen.materialize(module_handles_len))
+                        .map(|friend_decl_gen| {
+                            ModuleHandleIndex(
+                                friend_decl_gen.index(module_handles_len) as TableIndex
+                            )
+                        })
                         .collect();
                     let friend_decls = friend_decl_set.into_iter().collect();
 

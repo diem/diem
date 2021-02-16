@@ -563,17 +563,6 @@ fn serialize_field_instantiation(
     Ok(())
 }
 
-/// Serializes a `FriendDeclaration`.
-///
-/// A `FriendDeclaration` gets serialized as follows:
-/// - `FriendDeclaration.module` as a ULEB128 (index into the `ModuleHandle` table)
-fn serialize_friend_declaration(
-    binary: &mut BinaryData,
-    friend_declaration: &FriendDeclaration,
-) -> Result<()> {
-    serialize_module_handle_index(binary, &friend_declaration.module)
-}
-
 /// Serializes a `Vec<StructDefinitionIndex>`.
 fn serialize_acquires(binary: &mut BinaryData, indices: &[StructDefinitionIndex]) -> Result<()> {
     serialize_acquires_count(binary, indices.len())?;
@@ -1281,13 +1270,13 @@ impl ModuleSerializer {
     fn serialize_friend_declarations(
         &mut self,
         binary: &mut BinaryData,
-        friend_declarations: &[FriendDeclaration],
+        friend_declarations: &[ModuleHandleIndex],
     ) -> Result<()> {
         if !friend_declarations.is_empty() {
             self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.friend_decls.0 = check_index_in_binary(binary.len())?;
-            for friend_declaration in friend_declarations {
-                serialize_friend_declaration(binary, friend_declaration)?;
+            for module in friend_declarations {
+                serialize_module_handle_index(binary, module)?;
             }
             self.friend_decls.1 = checked_calculate_table_size(binary, self.friend_decls.0)?;
         }

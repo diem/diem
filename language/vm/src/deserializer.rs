@@ -1175,11 +1175,11 @@ fn load_struct_definition_indices(
     Ok(indices)
 }
 
-/// Builds the `FriendDeclaration` table.
+/// Builds the `Vec<ModuleHandleIndex>` table serving as friend declarations.
 fn load_friend_decls(
     binary: &VersionedBinary,
     table: &Table,
-    friend_decls: &mut Vec<FriendDeclaration>,
+    friend_decls: &mut Vec<ModuleHandleIndex>,
 ) -> BinaryLoaderResult<()> {
     let start = table.offset as usize;
     let end = start
@@ -1188,7 +1188,7 @@ fn load_friend_decls(
     let mut cursor = binary.new_cursor(start, end);
     while cursor.position() < u64::from(table.count) {
         let module = load_module_handle_index(&mut cursor)?;
-        friend_decls.push(FriendDeclaration { module });
+        friend_decls.push(module);
     }
     Ok(())
 }

@@ -3,9 +3,8 @@
 
 use crate::{
     file_format::{
-        FieldDefinition, FriendDeclaration, IdentifierIndex, ModuleHandleIndex, SignatureToken,
-        StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
-        TypeSignature,
+        FieldDefinition, IdentifierIndex, ModuleHandleIndex, SignatureToken, StructDefinition,
+        StructFieldInformation, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
     },
     proptest_types::signature::{KindGen, SignatureTokenGen},
 };
@@ -222,23 +221,6 @@ impl FieldDefinitionGen {
         FieldDefinition {
             name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
             signature: TypeSignature(self.signature_gen.materialize(&state.struct_handles)),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct FriendDeclarationGen {
-    module_idx: PropIndex,
-}
-
-impl FriendDeclarationGen {
-    pub fn strategy() -> impl Strategy<Value = Self> {
-        (any::<PropIndex>()).prop_map(|module_idx| Self { module_idx })
-    }
-
-    pub fn materialize(self, module_len: usize) -> FriendDeclaration {
-        FriendDeclaration {
-            module: ModuleHandleIndex(self.module_idx.index(module_len) as TableIndex),
         }
     }
 }

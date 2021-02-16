@@ -338,15 +338,6 @@ pub struct FieldInstantiation {
     pub type_parameters: SignatureIndex,
 }
 
-/// A `FriendDeclaration` encapsulates information about a friend.
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
-pub struct FriendDeclaration {
-    /// Handle index to the friend module
-    pub module: ModuleHandleIndex,
-}
-
 /// A `StructDefinition` is a type definition. It either indicates it is native or defines all the
 /// user-specified fields declared on the type.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -1636,7 +1627,7 @@ pub struct CompiledModuleMut {
     pub field_handles: Vec<FieldHandle>,
 
     /// Friend declarations.
-    pub friend_decls: Vec<FriendDeclaration>,
+    pub friend_decls: Vec<ModuleHandleIndex>,
     /// Struct instantiations.
     pub struct_def_instantiations: Vec<StructDefInstantiation>,
     /// Function instantiations.
@@ -1728,7 +1719,7 @@ impl Arbitrary for CompiledModuleMut {
                 vec(any::<FunctionHandle>(), 0..=size),
             ),
             any::<ModuleHandleIndex>(),
-            vec(any::<FriendDeclaration>(), 0..=size),
+            vec(any::<ModuleHandleIndex>(), 0..=size),
             vec(any_with::<Signature>(size), 0..=size),
             (
                 vec(any::<Identifier>(), 0..=size),
