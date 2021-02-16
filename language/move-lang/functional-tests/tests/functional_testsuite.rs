@@ -45,7 +45,7 @@ impl<'a> MoveSourceCompiler<'a> {
         Result<Vec<CompiledUnit>, errors::Errors>,
     )> {
         let (files, pprog_and_comments_res) = move_lang::move_parse(
-            targets, &self.deps, None, /* sources_shadow_deps */ false,
+            targets, &self.deps, None, /* sources_shadow_deps */ true,
         )?;
         let (_comments, pprog) = match pprog_and_comments_res {
             Err(errors) => return Ok((files, Err(errors))),
@@ -91,7 +91,6 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         let cur_path = cur_file.path().to_str().unwrap().to_owned();
 
         let targets = &vec![cur_path.clone()];
-
         let (files, units_or_errors) = self.move_compile_with_stdlib(targets)?;
         let unit = match units_or_errors {
             Err(errors) => {

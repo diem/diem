@@ -1,0 +1,8 @@
+[0] Transaction(0)
+[1] Move VM Status: EXECUTED
+[2] Transaction Status: Keep(EXECUTED)
+[3] Transaction(1)
+[4] Move VM Status: EXECUTED
+[5] Transaction Status: Keep(EXECUTED)
+[6] Transaction(2)
+[7] VerificationError(ERROR { status_code: INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES })

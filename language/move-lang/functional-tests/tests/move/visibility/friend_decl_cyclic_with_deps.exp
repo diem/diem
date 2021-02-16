@@ -1,0 +1,5 @@
+[0] Transaction(0)
+[1] Move VM Status: EXECUTED
+[2] Transaction Status: Keep(EXECUTED)
+[3] Transaction(1)
+[4] "\n\nerror: \n\n   ┌── (file):4:24 ───\n   │\n 4 │     public fun foo() { N::foo() }\n   │                        ^^^^^^ Invalid use of module \'0xD98F86E3303C97B00313854B8314F51B::N\' in module \'0xD98F86E3303C97B00313854B8314F51B::M\'.\n   ·\n 4 │     public fun foo() { N::foo() }\n   │                        ------ Using this module creates a dependency cycle: \'0xD98F86E3303C97B00313854B8314F51B::N\' is a friend of \'0xD98F86E3303C97B00313854B8314F51B::M\' uses \'0xD98F86E3303C97B00313854B8314F51B::N\'\n   │\n\n\n"
