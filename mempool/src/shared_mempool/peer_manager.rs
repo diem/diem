@@ -19,6 +19,7 @@ use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
 use itertools::Itertools;
 use netcore::transport::ConnectionOrigin;
+use network::transport::ConnectionMetadata;
 use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use short_hex_str::AsShortHexStr;
@@ -42,6 +43,18 @@ pub(crate) struct PeerSyncState {
     pub timeline_id: u64,
     pub is_alive: bool,
     pub broadcast_info: BroadcastInfo,
+    pub metadata: ConnectionMetadata,
+}
+
+impl PeerSyncState {
+    pub fn new(metadata: ConnectionMetadata) -> Self {
+        PeerSyncState {
+            timeline_id: 0,
+            is_alive: true,
+            broadcast_info: BroadcastInfo::new(),
+            metadata,
+        }
+    }
 }
 
 pub(crate) struct PeerManager {
@@ -109,34 +122,25 @@ impl PeerManager {
     }
 
     // Returns true if `peer` is discovered for the first time, else false.
-    pub fn add_peer(&self, peer: PeerNetworkId, origin: ConnectionOrigin) -> bool {
+    pub fn add_peer(&self, peer: PeerNetworkId, metadata: ConnectionMetadata) -> bool {
         let mut peer_states = self.peer_states.lock();
         let is_new_peer = !peer_states.contains_key(&peer);
-        if self.is_upstream_peer(&peer, Some(origin)) {
+        if self.is_upstream_peer(&peer, Some(metadata.origin)) {
             counters::active_upstream_peers(&peer.raw_network_id()).inc();
             if peer.raw_network_id() == NetworkId::Validator {
                 // For a validator network, resume broadcasting from previous state.
                 // We can afford to not re-broadcast here since the transaction is already in a validator.
-                peer_states
-                    .entry(peer)
-                    .or_insert(PeerSyncState {
-                        timeline_id: 0,
-                        is_alive: true,
-                        broadcast_info: BroadcastInfo::new(),
-                    })
-                    .is_alive = true;
+                if is_new_peer {
+                    peer_states.insert(peer, PeerSyncState::new(metadata));
+                } else if let Some(peer_state) = peer_states.get_mut(&peer) {
+                    peer_state.is_alive = true;
+                    peer_state.metadata = metadata;
+                }
             } else {
                 // For a non-validator network, potentially re-broadcast any transactions that have not been
                 // committed yet.
                 // This is to ensure better reliability of transactions reaching the validator network.
-                peer_states.insert(
-                    peer,
-                    PeerSyncState {
-                        timeline_id: 0,
-                        is_alive: true,
-                        broadcast_info: BroadcastInfo::new(),
-                    },
-                );
+                peer_states.insert(peer, PeerSyncState::new(metadata));
             }
         }
         drop(peer_states);
@@ -147,6 +151,7 @@ impl PeerManager {
     pub fn disable_peer(&self, peer: PeerNetworkId) {
         if let Some(state) = self.peer_states.lock().get_mut(&peer) {
             counters::active_upstream_peers(&peer.raw_network_id()).dec();
+            // TODO: What about garbage collection?
             state.is_alive = false;
         }
 

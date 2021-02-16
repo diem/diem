@@ -172,7 +172,7 @@ async fn handle_event<V>(
             counters::shared_mempool_event_inc("new_peer");
             let origin = metadata.origin;
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
-            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), origin);
+            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), metadata);
             let is_upstream_peer = smp.peer_manager.is_upstream_peer(&peer, Some(origin));
             debug!(LogSchema::new(LogEntry::NewPeer)
                 .peer(&peer)
