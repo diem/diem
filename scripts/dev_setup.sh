@@ -52,7 +52,12 @@ function add_to_profile {
 function update_path_and_profile {
   touch "${HOME}"/.profile
   mkdir -p "${HOME}"/bin
-  add_to_profile "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\""
+  if [ -n "$CARGO_HOME" ]; then
+    add_to_profile "export CARGO_HOME=\"${CARGO_HOME}\""
+    add_to_profile "export PATH=\"${HOME}/bin:${CARGO_HOME}/bin:\$PATH\""
+  else
+    add_to_profile "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\""
+  fi
   if [[ "$INSTALL_PROVER" == "true" ]]; then
      add_to_profile "export DOTNET_ROOT=\$HOME/.dotnet"
      add_to_profile "export PATH=\"${HOME}/.dotnet/tools:\$PATH\""

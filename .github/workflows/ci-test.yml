@@ -77,7 +77,7 @@ jobs:
         with:
           webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - name: build image with dev-setup.sh
-        run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t libra/build_environment:test .
+        run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
   non-rust-lint:
     runs-on: ubuntu-latest
@@ -85,11 +85,12 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
     steps:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
       - uses: ./.github/actions/check-machine
         with:
           min-cpu: 2
@@ -111,7 +112,7 @@ jobs:
     needs: prepare
     #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     steps:
@@ -143,7 +144,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     steps:
@@ -172,7 +173,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     strategy:
@@ -249,7 +250,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     steps:
@@ -281,7 +282,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     steps:
@@ -304,7 +305,7 @@ jobs:
     needs: prepare
     if: ${{ needs.prepare.outputs.test-rust == 'true' }}
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
         - "/home/runner/work/diem/diem:/opt/git/diem"
     steps:
