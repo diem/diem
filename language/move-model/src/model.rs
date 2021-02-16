@@ -757,6 +757,7 @@ impl GlobalEnv {
             loc,
             spec_block_infos,
             used_modules: Default::default(),
+            friended_modules: Default::default(),
         });
     }
 
@@ -1160,6 +1161,9 @@ pub struct ModuleData {
 
     /// A cache for the modules used by this one.
     used_modules: RefCell<BTreeMap<bool, BTreeSet<ModuleId>>>,
+
+    /// A cache for the modules declared as friends by this one.
+    friended_modules: RefCell<Option<BTreeSet<ModuleId>>>,
 }
 
 impl ModuleData {
@@ -1181,6 +1185,7 @@ impl ModuleData {
             loc: Loc::default(),
             spec_block_infos: vec![],
             used_modules: Default::default(),
+            friended_modules: Default::default(),
         }
     }
 }
@@ -1238,9 +1243,14 @@ impl<'env> ModuleEnv<'env> {
     /// (including itself), friend modules are excluded from the return result.
     pub fn get_dependencies(&self) -> Vec<language_storage::ModuleId> {
         let compiled_module = &self.data.module;
-        let mut deps = self.data.module.immediate_dependencies();
+        let mut deps = compiled_module.immediate_dependencies();
         deps.push(compiled_module.self_id());
         deps
+    }
+
+    /// Return the set of language storage ModuleId's that this module declares as friends
+    pub fn get_friends(&self) -> Vec<language_storage::ModuleId> {
+        self.data.module.immediate_friends()
     }
 
     /// Returns the set of modules that use this one.
@@ -1308,6 +1318,23 @@ impl<'env> ModuleEnv<'env> {
             .borrow_mut()
             .insert(include_specs, usage.clone());
         usage
+    }
+
+    /// Returns the set of modules this one declares as friends.
+    pub fn get_friended_modules(&self) -> BTreeSet<ModuleId> {
+        self.data
+            .friended_modules
+            .borrow_mut()
+            .get_or_insert_with(|| {
+                // Determine modules used in bytecode from the compiled module.
+                self.get_friends()
+                    .into_iter()
+                    .map(|storage_id| self.env.to_module_name(&storage_id))
+                    .filter_map(|name| self.env.find_module(&name))
+                    .map(|env| env.get_id())
+                    .collect()
+            })
+            .clone()
     }
 
     /// Returns true if the given module is a transitive dependency of this one. The
