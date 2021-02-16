@@ -63,6 +63,8 @@ pub struct PerformanceBenchmarkParams {
     pub gas_price: u64,
     #[structopt(long, help = "Set periodic stat aggregator step")]
     pub periodic_stats: Option<u64>,
+    #[structopt(long, default_value = "0", help = "Set percentage of invalid tx")]
+    pub invalid_tx: u64,
 }
 
 pub struct PerformanceBenchmark {
@@ -78,6 +80,7 @@ pub struct PerformanceBenchmark {
     backup: bool,
     gas_price: u64,
     periodic_stats: Option<u64>,
+    invalid_tx: u64,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -94,6 +97,7 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price: 0,
             periodic_stats: None,
+            invalid_tx: 0,
         }
     }
 
@@ -108,6 +112,7 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price: 0,
             periodic_stats: None,
+            invalid_tx: 0,
         }
     }
 
@@ -122,6 +127,22 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price,
             periodic_stats: None,
+            invalid_tx: 0,
+        }
+    }
+
+    pub fn mix_invalid_tx(percent_nodes_down: usize, invalid_tx: u64) -> Self {
+        Self {
+            percent_nodes_down,
+            duration: DEFAULT_BENCH_DURATION,
+            trace: false,
+            trace_single: false,
+            tps: None,
+            use_logs_for_trace: false,
+            backup: false,
+            gas_price: 0,
+            periodic_stats: None,
+            invalid_tx,
         }
     }
 
@@ -161,6 +182,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             backup: self.backup,
             gas_price: self.gas_price,
             periodic_stats: self.periodic_stats,
+            invalid_tx: self.invalid_tx,
         }
     }
 }
@@ -184,11 +206,12 @@ impl Experiment for PerformanceBenchmark {
             self.up_fullnodes.clone()
         };
         let emit_job_request = match self.tps {
-            Some(tps) => EmitJobRequest::fixed_tps(instances, tps, self.gas_price),
+            Some(tps) => EmitJobRequest::fixed_tps(instances, tps, self.gas_price, self.invalid_tx),
             None => EmitJobRequest::for_instances(
                 instances,
                 context.global_emit_job_request,
                 self.gas_price,
+                self.invalid_tx,
             ),
         };
         let emit_txn = match self.periodic_stats {

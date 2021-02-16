@@ -312,7 +312,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
         wait_committed: !args.burst,
     };
     let duration = Duration::from_secs(args.duration);
-    let mut emitter = TxEmitter::new(cluster, args.vasp, args.invalid_tx);
+    let mut emitter = TxEmitter::new(cluster, args.vasp);
     let stats = emitter
         .emit_txn_for_with_stats(
             duration,
@@ -322,6 +322,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
                 workers_per_ac,
                 thread_params,
                 gas_price: 0,
+                invalid_tx: args.invalid_tx,
             },
             10,
         )
@@ -370,7 +371,7 @@ impl BasicSwarmUtil {
     }
 
     pub async fn diag(&self, vasp: bool) -> Result<()> {
-        let emitter = TxEmitter::new(&self.cluster, vasp, 0);
+        let emitter = TxEmitter::new(&self.cluster, vasp);
         let mut faucet_account: Option<AccountData> = None;
         let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
@@ -502,7 +503,7 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let tx_emitter = TxEmitter::new(&cluster, args.vasp, args.invalid_tx);
+        let tx_emitter = TxEmitter::new(&cluster, args.vasp);
         let github = GitHub::new();
         let report = SuiteReport::new();
         let global_emit_job_request = EmitJobRequest {
@@ -514,6 +515,7 @@ impl ClusterTestRunner {
                 wait_committed: !args.burst,
             },
             gas_price: 0,
+            invalid_tx: args.invalid_tx,
         };
         let emit_to_validator =
             if cluster.fullnode_instances().len() < cluster.validator_instances().len() {

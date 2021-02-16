@@ -103,7 +103,7 @@ impl Experiment for TwinValidators {
         }
         let instances = self.instances.clone();
         let emit_job_request =
-            EmitJobRequest::for_instances(instances, context.global_emit_job_request, 0);
+            EmitJobRequest::for_instances(instances, context.global_emit_job_request, 0, 0);
         info!("Starting txn generation");
         let stats = context
             .tx_emitter
