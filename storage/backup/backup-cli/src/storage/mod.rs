@@ -156,6 +156,8 @@ pub trait BackupStorage: Send + Sync {
     /// handle, or the same file handle when accessed later, so there's no need to return one. This
     /// also means a local cache must download each metadata file from remote at least once, to
     /// uncover potential storage glitch sooner.
+    /// Behavior on duplicated names is undefined, overwriting the content upon an existing name
+    /// is straightforward and acceptable.
     /// See `list_metadata_files`.
     async fn save_metadata_line(&self, name: &ShellSafeName, content: &TextLine) -> Result<()>;
     /// The backup system always asks for all metadata files and cache and build index on top of

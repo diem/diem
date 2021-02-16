@@ -98,5 +98,7 @@ pub async fn test_save_and_list_metadata_files_impl(
 }
 
 pub fn arb_metadata_files() -> impl Strategy<Value = Vec<(ShellSafeName, TextLine)>> {
-    vec(any::<(ShellSafeName, TextLine)>(), 0..10)
+    hash_map(any::<ShellSafeName>(), any::<TextLine>(), 0..10)
+        .prop_map(HashMap::into_iter)
+        .prop_map(Iterator::collect)
 }
