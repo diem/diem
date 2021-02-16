@@ -212,7 +212,7 @@ impl<'a> Context<'a> {
         IR::ModuleName::new(format!("{}::{}", address, name))
     }
 
-    fn translate_module_ident(ident: ModuleIdent) -> IR::ModuleIdent {
+    pub fn translate_module_ident(ident: ModuleIdent) -> IR::ModuleIdent {
         let (address, name) = ident.value;
         let name = Self::translate_module_name_(name);
         IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(

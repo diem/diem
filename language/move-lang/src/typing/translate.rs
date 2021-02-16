@@ -56,7 +56,6 @@ fn module(
         functions: n_functions,
         constants: nconstants,
     } = mdef;
-    // TODO: translate friends
     structs
         .iter_mut()
         .for_each(|(_, _, s)| struct_def(context, s));

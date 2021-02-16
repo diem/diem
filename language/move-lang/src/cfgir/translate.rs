@@ -156,16 +156,23 @@ fn module(
     module_ident: ModuleIdent,
     mdef: H::ModuleDefinition,
 ) -> (ModuleIdent, G::ModuleDefinition) {
-    let is_source_module = mdef.is_source_module;
-    let dependency_order = mdef.dependency_order;
-    let structs = mdef.structs;
-    let constants = mdef.constants.map(|name, c| constant(context, name, c));
-    let functions = mdef.functions.map(|name, f| function(context, name, f));
+    let H::ModuleDefinition {
+        is_source_module,
+        dependency_order,
+        friends,
+        structs,
+        functions: hfunctions,
+        constants: hconstants,
+    } = mdef;
+
+    let constants = hconstants.map(|name, c| constant(context, name, c));
+    let functions = hfunctions.map(|name, f| function(context, name, f));
     (
         module_ident,
         G::ModuleDefinition {
             is_source_module,
             dependency_order,
+            friends,
             structs,
             constants,
             functions,

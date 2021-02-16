@@ -172,14 +172,20 @@ fn module(
     module_ident: ModuleIdent,
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
-    let is_source_module = mdef.is_source_module;
-    let dependency_order = mdef.dependency_order;
+    let T::ModuleDefinition {
+        is_source_module,
+        dependency_order,
+        friends,
+        structs: tstructs,
+        functions: tfunctions,
+        constants: tconstants,
+    } = mdef;
 
-    let structs = mdef.structs.map(|name, s| struct_def(context, name, s));
+    let structs = tstructs.map(|name, s| struct_def(context, name, s));
     context.add_struct_fields(&structs);
 
-    let constants = mdef.constants.map(|name, c| constant(context, name, c));
-    let functions = mdef.functions.map(|name, f| function(context, name, f));
+    let constants = tconstants.map(|name, c| constant(context, name, c));
+    let functions = tfunctions.map(|name, f| function(context, name, f));
 
     context.structs = UniqueMap::new();
     (
@@ -187,6 +193,7 @@ fn module(
         H::ModuleDefinition {
             is_source_module,
             dependency_order,
+            friends,
             structs,
             constants,
             functions,

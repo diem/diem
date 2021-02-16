@@ -46,6 +46,7 @@ pub struct ModuleDefinition {
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
     pub dependency_order: usize,
+    pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -576,6 +577,7 @@ impl AstDebug for ModuleDefinition {
         let ModuleDefinition {
             is_source_module,
             dependency_order,
+            friends,
             structs,
             constants,
             functions,
@@ -586,6 +588,10 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
+        for (mident, _loc) in friends.key_cloned_iter() {
+            w.write(&format!("friend {};", mident));
+            w.new_line();
+        }
         for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
