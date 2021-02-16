@@ -36,6 +36,7 @@ function usage {
   echo "-t install build tools"
   echo "-o install operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
   echo "-y installs or updates Move prover tools: z3, cvc4, dotnet, boogie"
+  echo "-s installs or updates requirements to test code-generation for Move SDKs"
   echo "-v verbose mode"
   echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
   echo "This command must be called from the root folder of the Diem project."
@@ -64,6 +65,9 @@ function update_path_and_profile {
      add_to_profile "export Z3_EXE=$HOME/bin/z3"
      add_to_profile "export CVC4_EXE=$HOME/bin/cvc4"
      add_to_profile "export BOOGIE_EXE=$HOME/.dotnet/tools/boogie"
+  fi
+  if [[ "$INSTALL_CODEGEN" == "true" ]] && [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+     add_to_profile "export PATH=\$PATH:/usr/lib/golang/bin:\$GOBIN"
   fi
 }
 
@@ -428,6 +432,30 @@ function install_cvc4 {
   rm -rf "$TMPFILE"
 }
 
+function install_golang {
+    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+      if ! grep -q 'buster-backports main' /etc/apt/sources.list; then
+        (
+          echo "deb http://http.us.debian.org/debian/ buster-backports main"
+          echo "deb-src http://http.us.debian.org/debian/ buster-backports main"
+        ) | "${PRE_COMMAND[@]}" tee -a /etc/apt/sources.list
+        "${PRE_COMMAND[@]}" apt-get update
+      fi
+      "${PRE_COMMAND[@]}" apt-get install -y golang-1.14-go/buster-backports
+      "${PRE_COMMAND[@]}" ln -sf /usr/lib/go-1.14 /usr/lib/golang
+    else
+      install_pkg golang "$PACKAGE_MANAGER"
+    fi
+}
+
+function install_java {
+    if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+      "${PRE_COMMAND[@]}" apt-get install -y default-jdk
+    else
+      install_pkg java "$PACKAGE_MANAGER"
+    fi
+}
+
 function welcome_message {
 cat <<EOF
 Welcome to Diem!
@@ -477,6 +505,17 @@ Move prover tools (since -y was provided):
 EOF
   fi
 
+  if [[ "$INSTALL_CODEGEN" == "true" ]]; then
+cat <<EOF
+Codegen tools (since -s was provided):
+  * Clang
+  * Python3 (numpy, pyre-check)
+  * Golang
+  * Java
+  * Node-js/NPM
+EOF
+  fi
+
   if [[ "$INSTALL_PROFILE" == "true" ]]; then
 cat <<EOF
 Moreover, ~/.profile will be updated (since -p was provided).
@@ -495,9 +534,10 @@ INSTALL_BUILD_TOOLS=false;
 OPERATIONS=false;
 INSTALL_PROFILE=false;
 INSTALL_PROVER=false;
+INSTALL_CODEGEN=false;
 
 #parse args
-while getopts "btopvyh" arg; do
+while getopts "btopvysh" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
@@ -517,6 +557,9 @@ while getopts "btopvyh" arg; do
     y)
       INSTALL_PROVER="true"
       ;;
+    s)
+      INSTALL_CODEGEN="true"
+      ;;
     *)
       usage;
       exit 0;
@@ -531,7 +574,8 @@ fi
 if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
    [[ "$OPERATIONS" == "false" ]] && \
    [[ "$INSTALL_PROFILE" == "false" ]] && \
-   [[ "$INSTALL_PROVER" == "false" ]]; then
+   [[ "$INSTALL_PROVER" == "false" ]] && \
+   [[ "$INSTALL_CODEGEN" == "false" ]]; then
    INSTALL_BUILD_TOOLS="true"
 fi
 
@@ -602,7 +646,6 @@ if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
   install_pkg clang "$PACKAGE_MANAGER"
   install_pkg llvm "$PACKAGE_MANAGER"
 
-
   install_gcc_powerpc_linux_gnu "$PACKAGE_MANAGER"
   install_openssl_dev "$PACKAGE_MANAGER"
   install_pkg_config "$PACKAGE_MANAGER"
@@ -643,6 +686,24 @@ if [[ "$INSTALL_PROVER" == "true" ]]; then
   install_cvc4
   install_dotnet
   install_boogie
+fi
+
+if [[ "$INSTALL_CODEGEN" == "true" ]]; then
+  install_pkg clang "$PACKAGE_MANAGER"
+  install_pkg llvm "$PACKAGE_MANAGER"
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+    install_pkg python3-all-dev "$PACKAGE_MANAGER"
+    install_pkg python3-setuptools "$PACKAGE_MANAGER"
+    install_pkg python3-pip "$PACKAGE_MANAGER"
+  else
+    install_pkg python3 "$PACKAGE_MANAGER"
+  fi
+  install_pkg nodejs "$PACKAGE_MANAGER"
+  install_pkg npm "$PACKAGE_MANAGER"
+  install_java
+  install_golang
+  "${PRE_COMMAND[@]}" python3 -m pip install pyre-check==0.0.59
+  "${PRE_COMMAND[@]}" python3 -m pip install numpy==1.20.1
 fi
 
 [[ "${BATCH_MODE}" == "false" ]] && cat <<EOF
