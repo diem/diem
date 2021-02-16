@@ -62,6 +62,8 @@ pub enum InvalidTxType {
     Sender,
     /// invalid tx with receiver not on chain
     Receiver,
+    /// duplicate an exist tx
+    Duplication,
     /// Last element of enum, please add new case above
     MaxValue,
 }
@@ -629,7 +631,8 @@ fn get_invalid_type() -> InvalidTxType {
     match rng.gen_range(0, InvalidTxType::MaxValue as usize) {
         1 => InvalidTxType::Receiver,
         2 => InvalidTxType::Sender,
-        _ => InvalidTxType::ChainId,
+        3 => InvalidTxType::ChainId,
+        _ => InvalidTxType::Duplication,
     }
 }
 
@@ -638,11 +641,12 @@ fn invalid_tx(
     receiver: &AccountAddress,
     chain_id: ChainId,
     gas_price: u64,
+    reqs: &[SignedTransaction],
 ) -> SignedTransaction {
     let seed: [u8; 32] = OsRng.gen();
     let mut rng = StdRng::from_seed(seed);
     let mut invalid_account = gen_random_account(&mut rng);
-    let invalid_address = gen_random_account(&mut rng).address;
+    let invalid_address = invalid_account.address;
     match get_invalid_type() {
         InvalidTxType::Receiver => {
             gen_transfer_txn_request(sender, &invalid_address, SEND_AMOUNT, chain_id, gas_price)
@@ -656,6 +660,22 @@ fn invalid_tx(
         ),
         InvalidTxType::ChainId => {
             gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, ChainId::new(255), gas_price)
+        }
+        InvalidTxType::Duplication => {
+            // if this is the first tx, default to generate invalid tx with wrong chain id
+            // otherwise, make a duplication of an exist valid tx
+            if reqs.is_empty() {
+                gen_transfer_txn_request(
+                    sender,
+                    receiver,
+                    SEND_AMOUNT,
+                    ChainId::new(255),
+                    gas_price,
+                )
+            } else {
+                let random_index = rng.gen_range(0, reqs.len() as usize);
+                reqs[random_index].clone()
+            }
         }
         _ => panic!("wrong invalid type"),
     }
@@ -739,22 +759,19 @@ impl SubmissionWorker {
             .iter_mut()
             .choose_multiple(&mut rng, batch_size);
         let mut requests = Vec::with_capacity(accounts.len());
-        let mut invalid_size = if self.invalid_tx != 0 {
+        let invalid_size = if self.invalid_tx != 0 {
             // if enable mix invalid tx, at least 1 invalid tx per batch
             max(1, accounts.len() * self.invalid_tx as usize / 100)
         } else {
             0
         };
+        let mut num_valid_tx = accounts.len() - invalid_size;
         for sender in accounts {
             let receiver = self
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            if invalid_size > 0 {
-                let request = invalid_tx(sender, receiver, self.chain_id, gas_price);
-                requests.push(request);
-                invalid_size -= 1;
-            } else {
+            if num_valid_tx > 0 {
                 let request = gen_transfer_txn_request(
                     sender,
                     receiver,
@@ -762,6 +779,10 @@ impl SubmissionWorker {
                     self.chain_id,
                     gas_price,
                 );
+                requests.push(request);
+                num_valid_tx -= 1;
+            } else {
+                let request = invalid_tx(sender, receiver, self.chain_id, gas_price, &requests);
                 requests.push(request);
             }
         }
