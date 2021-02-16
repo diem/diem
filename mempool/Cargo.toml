@@ -38,6 +38,7 @@ network = { path = "../network", version = "0.1.0" }
 rand = "0.8.3"
 netcore = { path = "../network/netcore", version = "0.1.0" }
 serde_json = "1.0.62"
+short-hex-str = { path = "../common/short-hex-str", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }

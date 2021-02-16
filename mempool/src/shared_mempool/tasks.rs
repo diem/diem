@@ -28,6 +28,7 @@ use diem_types::{
 };
 use futures::{channel::oneshot, stream::FuturesUnordered};
 use rayon::prelude::*;
+use short_hex_str::AsShortHexStr;
 use std::{
     cmp,
     collections::HashSet,
@@ -83,9 +84,8 @@ pub(crate) async fn process_client_transaction_submission<V>(
     V: TransactionValidation,
 {
     timer.stop_and_record();
-    let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
-        .with_label_values(&[counters::CLIENT_LABEL, counters::CLIENT_LABEL])
-        .start_timer();
+    let _timer =
+        counters::process_txn_submit_latency_timer(counters::CLIENT_LABEL, counters::CLIENT_LABEL);
     let statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(&statuses, None);
@@ -113,12 +113,10 @@ pub(crate) async fn process_transaction_broadcast<V>(
     V: TransactionValidation,
 {
     timer.stop_and_record();
-    let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
-        .with_label_values(&[
-            &peer.raw_network_id().to_string(),
-            &peer.peer_id().to_string(),
-        ])
-        .start_timer();
+    let _timer = counters::process_txn_submit_latency_timer(
+        peer.raw_network_id().as_str(),
+        peer.peer_id().short_str().as_str(),
+    );
     let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
     log_txn_process_results(&results, Some(peer.clone()));
 
@@ -128,9 +126,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
     if let Err(e) = network_sender.send_to(peer.peer_id(), ack_response) {
-        counters::NETWORK_SEND_FAIL
-            .with_label_values(&[counters::ACK_TXNS])
-            .inc();
+        counters::network_send_fail_inc(counters::ACK_TXNS);
         error!(
             LogSchema::event_log(LogEntry::BroadcastACK, LogEvent::NetworkSendFail)
                 .peer(&peer)
@@ -176,27 +172,15 @@ pub(crate) fn update_ack_counter(
     retry: bool,
     backoff: bool,
 ) {
-    let network_id = peer.raw_network_id().to_string();
-    let peer_id = peer.peer_id().to_string();
     if retry {
-        counters::SHARED_MEMPOOL_ACK_TYPE_COUNT
-            .with_label_values(&[
-                &network_id,
-                &peer_id,
-                direction_label,
-                counters::RETRY_BROADCAST_LABEL,
-            ])
-            .inc();
+        counters::shared_mempool_ack_inc(peer, direction_label, counters::RETRY_BROADCAST_LABEL);
     }
     if backoff {
-        counters::SHARED_MEMPOOL_ACK_TYPE_COUNT
-            .with_label_values(&[
-                &network_id,
-                &peer_id,
-                direction_label,
-                counters::BACKPRESSURE_BROADCAST_LABEL,
-            ])
-            .inc();
+        counters::shared_mempool_ack_inc(
+            peer,
+            direction_label,
+            counters::BACKPRESSURE_BROADCAST_LABEL,
+        );
     }
 }
 
@@ -329,22 +313,24 @@ fn log_txn_process_results(results: &[SubmissionStatusBundle], sender: Option<Pe
                 vm_status = vm_status,
                 sender = sender,
             );
-            counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                .with_label_values(&[counters::VM_VALIDATION_LABEL, &network, &sender])
-                .inc();
+            counters::shared_mempool_transactions_processed_inc(
+                counters::VM_VALIDATION_LABEL,
+                &network,
+                &sender,
+            );
             continue;
         }
         match mempool_status.code {
-            MempoolStatusCode::Accepted => {
-                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                    .with_label_values(&[counters::SUCCESS_LABEL, &network, &sender])
-                    .inc();
-            }
-            _ => {
-                counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
-                    .with_label_values(&[&mempool_status.code.to_string(), &network, &sender])
-                    .inc();
-            }
+            MempoolStatusCode::Accepted => counters::shared_mempool_transactions_processed_inc(
+                counters::SUCCESS_LABEL,
+                &network,
+                &sender,
+            ),
+            _ => counters::shared_mempool_transactions_processed_inc(
+                &mempool_status.code.to_string(),
+                &network,
+                &sender,
+            ),
         }
     }
 }
@@ -361,9 +347,10 @@ pub(crate) async fn process_state_sync_request(
     debug!(
         LogSchema::event_log(LogEntry::StateSyncCommit, LogEvent::Received).state_sync_msg(&req)
     );
-    counters::MEMPOOL_SERVICE_TXNS
-        .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
-        .observe(req.transactions.len() as f64);
+    counters::mempool_service_transactions(
+        counters::COMMIT_STATE_SYNC_LABEL,
+        req.transactions.len(),
+    );
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     let result = if req.callback.send(Ok(CommitResponse::success())).is_err() {
         error!(LogSchema::event_log(
@@ -375,9 +362,7 @@ pub(crate) async fn process_state_sync_request(
         counters::REQUEST_SUCCESS_LABEL
     };
     let latency = start_time.elapsed();
-    counters::MEMPOOL_SERVICE_LATENCY
-        .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL, result])
-        .observe(latency.as_secs_f64());
+    counters::mempool_service_latency(counters::COMMIT_STATE_SYNC_LABEL, result, latency);
 }
 
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
@@ -401,9 +386,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 let block_size = cmp::max(max_block_size, 1);
                 txns = mempool.get_block(block_size, exclude_transactions);
             }
-            counters::MEMPOOL_SERVICE_TXNS
-                .with_label_values(&[counters::GET_BLOCK_LABEL])
-                .observe(txns.len() as f64);
+            counters::mempool_service_transactions(counters::GET_BLOCK_LABEL, txns.len());
             txns.len();
             let pulled_block = txns.drain(..).map(SignedTransaction::into).collect();
 
@@ -414,9 +397,10 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
             )
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
-            counters::MEMPOOL_SERVICE_TXNS
-                .with_label_values(&[counters::COMMIT_CONSENSUS_LABEL])
-                .observe(transactions.len() as f64);
+            counters::mempool_service_transactions(
+                counters::COMMIT_CONSENSUS_LABEL,
+                transactions.len(),
+            );
             commit_txns(mempool, transactions, 0, true).await;
             (
                 ConsensusResponse::CommitResponse(),
@@ -436,9 +420,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
         counters::REQUEST_SUCCESS_LABEL
     };
     let latency = start_time.elapsed();
-    counters::MEMPOOL_SERVICE_LATENCY
-        .with_label_values(&[counter_label, result])
-        .observe(latency.as_secs_f64());
+    counters::mempool_service_latency(counter_label, result, latency);
 }
 
 async fn commit_txns(

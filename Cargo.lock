@@ -1928,6 +1928,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "short-hex-str",
  "storage-interface",
  "storage-service",
  "subscription-service",

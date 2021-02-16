@@ -111,13 +111,11 @@ async fn handle_client_event<V>(
     trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
     // This timer measures how long it took for the bounded executor to *schedule* the
     // task.
-    let _timer = counters::TASK_SPAWN_LATENCY
-        .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
-        .start_timer();
+    let _timer =
+        counters::task_spawn_latency_timer(counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL);
     // This timer measures how long it took for the task to go from scheduled to started.
-    let task_start_timer = counters::TASK_SPAWN_LATENCY
-        .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
-        .start_timer();
+    let task_start_timer =
+        counters::task_spawn_latency_timer(counters::CLIENT_EVENT_LABEL, counters::START_LABEL);
     bounded_executor
         .spawn(tasks::process_client_transaction_submission(
             smp.clone(),
@@ -132,9 +130,8 @@ fn handle_state_sync_request<V>(smp: &mut SharedMempool<V>, msg: CommitNotificat
 where
     V: TransactionValidation,
 {
-    let _timer = counters::TASK_SPAWN_LATENCY
-        .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL])
-        .start_timer();
+    let _timer =
+        counters::task_spawn_latency_timer(counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL);
     tokio::spawn(tasks::process_state_sync_request(smp.mempool.clone(), msg));
 }
 
@@ -149,9 +146,9 @@ async fn handle_mempool_reconfig_event<V>(
         LogEntry::ReconfigUpdate,
         LogEvent::Received
     ));
-    let _timer = counters::TASK_SPAWN_LATENCY
-        .with_label_values(&[counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL])
-        .start_timer();
+    let _timer =
+        counters::task_spawn_latency_timer(counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL);
+
     bounded_executor
         .spawn(tasks::process_config_update(
             config_update,
@@ -172,9 +169,7 @@ async fn handle_event<V>(
 {
     match event {
         Event::NewPeer(metadata) => {
-            counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["new_peer"])
-                .inc();
+            counters::shared_mempool_event_inc("new_peer");
             let origin = metadata.origin;
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
             let is_new_peer = smp.peer_manager.add_peer(peer.clone(), origin);
@@ -188,9 +183,7 @@ async fn handle_event<V>(
             }
         }
         Event::LostPeer(metadata) => {
-            counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["lost_peer"])
-                .inc();
+            counters::shared_mempool_event_inc("lost_peer");
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
             debug!(LogSchema::new(LogEntry::LostPeer)
                 .peer(&peer)
@@ -202,9 +195,7 @@ async fn handle_event<V>(
             notify_subscribers(SharedMempoolNotification::PeerStateChange, &smp.subscribers);
         }
         Event::Message(peer_id, msg) => {
-            counters::SHARED_MEMPOOL_EVENTS
-                .with_label_values(&["message"])
-                .inc();
+            counters::shared_mempool_event_inc("message");
             match msg {
                 MempoolSyncMsg::BroadcastTransactionsRequest {
                     request_id,
@@ -218,20 +209,16 @@ async fn handle_event<V>(
                     };
                     // This timer measures how long it took for the bounded executor to
                     // *schedule* the task.
-                    let _timer = counters::TASK_SPAWN_LATENCY
-                        .with_label_values(&[
-                            counters::PEER_BROADCAST_EVENT_LABEL,
-                            counters::SPAWN_LABEL,
-                        ])
-                        .start_timer();
+                    let _timer = counters::task_spawn_latency_timer(
+                        counters::PEER_BROADCAST_EVENT_LABEL,
+                        counters::SPAWN_LABEL,
+                    );
                     // This timer measures how long it took for the task to go from scheduled
                     // to started.
-                    let task_start_timer = counters::TASK_SPAWN_LATENCY
-                        .with_label_values(&[
-                            counters::PEER_BROADCAST_EVENT_LABEL,
-                            counters::START_LABEL,
-                        ])
-                        .start_timer();
+                    let task_start_timer = counters::task_spawn_latency_timer(
+                        counters::PEER_BROADCAST_EVENT_LABEL,
+                        counters::START_LABEL,
+                    );
                     bounded_executor
                         .spawn(tasks::process_transaction_broadcast(
                             smp_clone,
@@ -260,9 +247,7 @@ async fn handle_event<V>(
             }
         }
         Event::RpcRequest(peer_id, _msg, _res_tx) => {
-            counters::UNEXPECTED_NETWORK_MSG_COUNT
-                .with_label_values(&[&network_id.network_id().to_string(), &peer_id.to_string()])
-                .inc();
+            counters::unexpected_msg_count_inc(&network_id.network_id(), &peer_id);
             sample!(
                 SampleRate::Duration(Duration::from_secs(60)),
                 warn!(LogSchema::new(LogEntry::UnexpectedNetworkMsg)

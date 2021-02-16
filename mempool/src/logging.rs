@@ -86,7 +86,7 @@ pub struct LogSchema<'a> {
     consensus_msg: Option<&'a ConsensusRequest>,
     #[schema(display)]
     state_sync_msg: Option<&'a CommitNotification>,
-    network_level: Option<u64>,
+    network_level: Option<usize>,
     upstream_network: Option<&'a NetworkId>,
     #[schema(debug)]
     batch_id: Option<&'a BatchId>,

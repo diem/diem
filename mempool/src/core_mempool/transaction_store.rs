@@ -157,21 +157,26 @@ impl TransactionStore {
     }
 
     fn track_indices(&self) {
-        counters::CORE_MEMPOOL_INDEX_SIZE
-            .with_label_values(&[counters::SYSTEM_TTL_INDEX_LABEL])
-            .set(self.system_ttl_index.size() as i64);
-        counters::CORE_MEMPOOL_INDEX_SIZE
-            .with_label_values(&[counters::EXPIRATION_TIME_INDEX_LABEL])
-            .set(self.expiration_time_index.size() as i64);
-        counters::CORE_MEMPOOL_INDEX_SIZE
-            .with_label_values(&[counters::PRIORITY_INDEX_LABEL])
-            .set(self.priority_index.size() as i64);
-        counters::CORE_MEMPOOL_INDEX_SIZE
-            .with_label_values(&[counters::PARKING_LOT_INDEX_LABEL])
-            .set(self.parking_lot_index.size() as i64);
-        counters::CORE_MEMPOOL_INDEX_SIZE
-            .with_label_values(&[counters::TIMELINE_INDEX_LABEL])
-            .set(self.timeline_index.size() as i64);
+        counters::core_mempool_index_size(
+            counters::SYSTEM_TTL_INDEX_LABEL,
+            self.system_ttl_index.size(),
+        );
+        counters::core_mempool_index_size(
+            counters::EXPIRATION_TIME_INDEX_LABEL,
+            self.expiration_time_index.size(),
+        );
+        counters::core_mempool_index_size(
+            counters::PRIORITY_INDEX_LABEL,
+            self.priority_index.size(),
+        );
+        counters::core_mempool_index_size(
+            counters::PARKING_LOT_INDEX_LABEL,
+            self.parking_lot_index.size(),
+        );
+        counters::core_mempool_index_size(
+            counters::TIMELINE_INDEX_LABEL,
+            self.timeline_index.size(),
+        );
     }
 
     /// Checks if Mempool is full.
