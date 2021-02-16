@@ -48,7 +48,7 @@ impl ExperimentParam for TwinValidatorsParams {
         let mut twin_validators = vec![];
         let mut rnd = rand::thread_rng();
         for _i in 0..self.pair {
-            twin_validators.push(instances.remove(rnd.gen_range(1, instances.len())));
+            twin_validators.push(instances.remove(rnd.gen_range(1..instances.len())));
         }
         Self::E {
             instances,

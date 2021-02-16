@@ -45,8 +45,8 @@ fn gen_txn_to_commit<R: Rng>(
             .expect("freeze cannot fail"),
         vec![],
     )));
-    let account1 = gen_account_from_index(rng.gen_range(0, max_accounts));
-    let account2 = gen_account_from_index(rng.gen_range(0, max_accounts));
+    let account1 = gen_account_from_index(rng.gen_range(0..max_accounts));
+    let account2 = gen_account_from_index(rng.gen_range(0..max_accounts));
     let mut states = HashMap::new();
     let blob1 = gen_random_blob(blob_size, rng);
     let blob2 = gen_random_blob(blob_size, rng);

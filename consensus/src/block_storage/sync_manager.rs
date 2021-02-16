@@ -325,7 +325,7 @@ impl BlockRetriever {
             return self.preferred_peer;
         }
 
-        let peer_idx = thread_rng().gen_range(0, peers.len());
+        let peer_idx = thread_rng().gen_range(0..peers.len());
         *peers.remove(peer_idx)
     }
 }

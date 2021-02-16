@@ -86,11 +86,11 @@ pub struct ModuleGenerator<'a> {
 
 impl<'a> ModuleGenerator<'a> {
     fn index(&mut self, bound: usize) -> usize {
-        self.gen.gen_range(0, bound)
+        self.gen.gen_range(0..bound)
     }
 
     fn identifier(&mut self) -> String {
-        let len = self.gen.gen_range(10, self.options.max_string_size);
+        let len = self.gen.gen_range(10..self.options.max_string_size);
         random_string(&mut self.gen, len)
     }
 
@@ -201,7 +201,7 @@ impl<'a> ModuleGenerator<'a> {
     fn struct_fields(&mut self, ty_params: &[(TypeVar, Kind)]) -> StructDefinitionFields {
         let num_fields = self
             .gen
-            .gen_range(self.options.min_fields, self.options.max_fields);
+            .gen_range(self.options.min_fields..self.options.max_fields);
         let fields: Fields<Type> = init!(num_fields, {
             (
                 Spanned::unsafe_no_loc(Field_::new(self.identifier())),
@@ -301,7 +301,7 @@ impl<'a> ModuleGenerator<'a> {
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
         let module_name = {
-            let len = gen.gen_range(10, options.max_string_size);
+            let len = gen.gen_range(10..options.max_string_size);
             random_string(gen, len)
         };
         let current_module = ModuleDefinition {

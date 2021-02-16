@@ -5,8 +5,6 @@
 //! over the ed25519 twisted Edwards curve as defined in [RFC8032](https://tools.ietf.org/html/rfc8032).
 //!
 //! Signature verification also checks and rejects non-canonical signatures.
-#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
-use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate::{
     ed25519::{
@@ -186,7 +184,7 @@ impl Uniform for MultiEd25519PrivateKey {
     where
         R: ::rand::RngCore + ::rand::CryptoRng,
     {
-        let num_of_keys = rng.gen_range(1, MAX_NUM_OF_KEYS + 1);
+        let num_of_keys = rng.gen_range(1..=MAX_NUM_OF_KEYS);
         let mut private_keys: Vec<Ed25519PrivateKey> = Vec::with_capacity(num_of_keys);
         for _ in 0..num_of_keys {
             private_keys.push(
@@ -196,7 +194,7 @@ impl Uniform for MultiEd25519PrivateKey {
                 .unwrap(),
             );
         }
-        let threshold = rng.gen_range(1, num_of_keys + 1) as u8;
+        let threshold = rng.gen_range(1..=num_of_keys) as u8;
         MultiEd25519PrivateKey {
             private_keys,
             threshold,

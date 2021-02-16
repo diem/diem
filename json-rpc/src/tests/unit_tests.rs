@@ -1639,5 +1639,6 @@ fn gen_string(len: usize) -> String {
     std::iter::repeat(())
         .map(|()| rng.sample(Alphanumeric))
         .take(len)
+        .map(char::from)
         .collect()
 }

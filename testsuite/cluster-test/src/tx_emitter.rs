@@ -628,7 +628,7 @@ struct SubmissionWorker {
 
 fn get_invalid_type() -> InvalidTxType {
     let mut rng = rand::thread_rng();
-    match rng.gen_range(0, InvalidTxType::MaxValue as usize) {
+    match rng.gen_range(0..InvalidTxType::MaxValue as usize) {
         1 => InvalidTxType::Receiver,
         2 => InvalidTxType::Sender,
         3 => InvalidTxType::ChainId,
@@ -673,7 +673,7 @@ fn invalid_tx(
                     gas_price,
                 )
             } else {
-                let random_index = rng.gen_range(0, reqs.len() as usize);
+                let random_index = rng.gen_range(0..reqs.len() as usize);
                 reqs[random_index].clone()
             }
         }

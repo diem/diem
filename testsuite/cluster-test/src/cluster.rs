@@ -174,7 +174,7 @@ impl Cluster {
         let mut sub = vec![];
         let mut rem = self.validator_instances.clone();
         for _ in 0..c {
-            let idx_remove = rng.gen_range(0, rem.len());
+            let idx_remove = rng.gen_range(0..rem.len());
             let instance = rem.remove(idx_remove);
             sub.push(instance);
         }
@@ -190,7 +190,7 @@ impl Cluster {
         let mut sub = vec![];
         let mut rem = self.fullnode_instances.clone();
         for _ in 0..c {
-            let idx_remove = rng.gen_range(0, rem.len());
+            let idx_remove = rng.gen_range(0..rem.len());
             let instance = rem.remove(idx_remove);
             sub.push(instance);
         }

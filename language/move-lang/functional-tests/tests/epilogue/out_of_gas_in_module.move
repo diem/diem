@@ -26,6 +26,6 @@ fun main() {
     Swapper::swap_it_up(10000)
 }
 }
-// check: "EXECUTION_FAILURE { status_code: OUT_OF_GAS, location: A4A46D1B1421502568A4A6AC326D7250::Swapper,"
+// check: "EXECUTION_FAILURE { status_code: OUT_OF_GAS, location: D98F86E3303C97B00313854B8314F51B::Swapper,"
 // check: "gas_used: 620,"
 // check: "Keep(OUT_OF_GAS)"

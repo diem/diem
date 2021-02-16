@@ -220,6 +220,7 @@ impl ClusterSwarmKube {
         let suffix = thread_rng()
             .sample_iter(&Alphanumeric)
             .take(10)
+            .map(char::from)
             .collect::<String>()
             .to_ascii_lowercase();
         let job_full_name = format!("{}-{}", job_name, suffix);
@@ -412,6 +413,7 @@ impl ClusterSwarmKube {
                 let suffix = thread_rng()
                     .sample_iter(&Alphanumeric)
                     .take(10)
+                    .map(char::from)
                     .collect::<String>()
                     .to_ascii_lowercase();
                 let job_name = format!("remove-network-effects-{}", suffix);

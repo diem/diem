@@ -1,9 +1,5 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
-use vanilla_curve25519_dalek as curve25519_dalek;
-#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
-use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate as diem_crypto;
 use crate::{

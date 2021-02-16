@@ -40,7 +40,7 @@ dependencies = [
  "diem-workspace-hack",
  "mirai-annotations",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
 ]
 
 [[package]]
@@ -300,7 +300,7 @@ dependencies = [
  "once_cell",
  "pin-project 1.0.5",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "reqwest",
  "serde",
@@ -892,7 +892,7 @@ dependencies = [
  "network-builder",
  "num_cpus",
  "once_cell",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "reqwest",
  "rusoto_autoscaling",
@@ -1026,7 +1026,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "safety-rules",
  "schemadb",
  "serde",
@@ -1309,27 +1309,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "curve25519-dalek"
-version = "3.0.2"
+name = "curve25519-dalek-fiat"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f627126b946c25a4638eec0ea634fc52506dea98db118aae985118ce7c3d723f"
-dependencies = [
- "byteorder",
- "digest 0.9.0",
- "rand_core 0.5.1",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "curve25519-dalek"
-version = "3.0.2"
-source = "git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat4#611127c2460937b61097caf867b7e518f4b78295"
+checksum = "44339b9ecede7f72a0d3b012bf9bb5a616dc8bfde23ce544e42da075c87198f0"
 dependencies = [
  "byteorder",
  "digest 0.9.0",
  "fiat-crypto",
- "rand_core 0.5.1",
+ "rand_core 0.6.2",
  "subtle",
  "zeroize",
 ]
@@ -1453,7 +1441,7 @@ dependencies = [
  "get_if_addrs",
  "log",
  "mirai-annotations",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "serde_yaml",
  "thiserror",
@@ -1470,21 +1458,19 @@ dependencies = [
  "byteorder",
  "bytes 1.0.1",
  "criterion",
- "curve25519-dalek 3.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "curve25519-dalek 3.0.2 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat4)",
+ "curve25519-dalek-fiat",
  "diem-crypto-derive",
  "diem-nibble",
  "diem-workspace-hack",
  "digest 0.9.0",
- "ed25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ed25519-dalek 1.0.1 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat6)",
+ "ed25519-dalek-fiat",
  "hex",
  "hkdf",
  "mirai-annotations",
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rand_core 0.6.2",
  "ripemd160",
  "serde",
@@ -1498,8 +1484,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak",
  "trybuild",
- "x25519-dalek 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "x25519-dalek 1.1.0 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat5)",
+ "x25519-dalek-fiat",
 ]
 
 [[package]]
@@ -1634,7 +1619,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rusty-fork",
  "safety-rules",
  "serde_json",
@@ -1668,7 +1653,7 @@ dependencies = [
  "diemdb",
  "executor",
  "generate-key",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "storage-interface",
  "structopt 0.3.21",
@@ -1720,7 +1705,7 @@ dependencies = [
  "num-traits",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "thiserror",
 ]
@@ -1759,7 +1744,7 @@ dependencies = [
  "network",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "reqwest",
  "scratchpad",
  "serde",
@@ -1786,7 +1771,7 @@ dependencies = [
  "diem-workspace-hack",
  "futures 0.3.12",
  "hex",
- "rand 0.7.3",
+ "rand 0.8.3",
  "reqwest",
  "serde",
  "serde_json",
@@ -1840,7 +1825,7 @@ dependencies = [
  "executor-types",
  "futures 0.3.12",
  "once_cell",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "storage-interface",
  "thiserror",
@@ -1927,7 +1912,7 @@ dependencies = [
  "network",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rayon",
  "serde",
  "serde_json",
@@ -1996,7 +1981,7 @@ dependencies = [
  "diem-secure-storage",
  "diem-workspace-hack",
  "move-core-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "thiserror",
 ]
@@ -2149,7 +2134,7 @@ dependencies = [
  "diem-vault-client",
  "diem-workspace-hack",
  "enum_dispatch",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "serde_json",
  "thiserror",
@@ -2215,7 +2200,7 @@ version = "0.1.0"
 dependencies = [
  "diem-workspace-hack",
  "hex",
- "rand 0.7.3",
+ "rand 0.8.3",
 ]
 
 [[package]]
@@ -2298,7 +2283,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "serde",
  "serde_bytes",
@@ -2379,13 +2364,12 @@ dependencies = [
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
- "ed25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ed25519-dalek 1.0.1 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat6)",
+ "ed25519-dalek-fiat",
  "hex",
  "hmac",
  "mirai-annotations",
  "pbkdf2",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "sha2",
  "thiserror",
@@ -2425,7 +2409,7 @@ dependencies = [
  "prost",
  "quote 0.6.13",
  "rand 0.7.3",
- "rand_core 0.6.2",
+ "rand 0.8.3",
  "reqwest",
  "rusty-fork",
  "serde",
@@ -2498,7 +2482,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "schemadb",
  "serde",
  "storage-interface",
@@ -2517,7 +2501,7 @@ dependencies = [
  "diemdb",
  "indicatif",
  "itertools 0.10.0",
- "rand 0.7.3",
+ "rand 0.8.3",
  "storage-interface",
  "structopt 0.3.21",
 ]
@@ -2673,27 +2657,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "ed25519-dalek"
-version = "1.0.1"
+name = "ed25519-dalek-fiat"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c762bae6dcaf24c4c84667b8579785430908723d5c889f469d76a41d59cc7a9d"
+checksum = "97c6ac152eba578c1c53d2cefe8ad02e239e3d6f971b0f1ef3cb54cd66037fa0"
 dependencies = [
- "curve25519-dalek 3.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curve25519-dalek-fiat",
  "ed25519",
- "rand 0.7.3",
- "serde",
- "sha2",
- "zeroize",
-]
-
-[[package]]
-name = "ed25519-dalek"
-version = "1.0.1"
-source = "git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat6#8ca0470c78f65c4f91b86e51cdc002675a41f573"
-dependencies = [
- "curve25519-dalek 3.0.2 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat4)",
- "ed25519",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "serde_bytes",
  "sha2",
@@ -2807,7 +2778,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "storage-client",
  "thiserror",
@@ -2844,7 +2815,7 @@ dependencies = [
  "move-core-types",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "scratchpad",
  "serde",
  "serde_json",
@@ -2869,7 +2840,7 @@ dependencies = [
  "executor",
  "executor-types",
  "itertools 0.10.0",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rayon",
  "storage-client",
  "storage-interface",
@@ -2893,7 +2864,7 @@ dependencies = [
  "diemdb",
  "executor",
  "executor-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "storage-interface",
  "storage-service",
  "tempfile",
@@ -3177,7 +3148,7 @@ dependencies = [
  "diem-workspace-hack",
  "move-core-types",
  "network",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "serde-reflection",
  "serde_yaml",
@@ -3192,7 +3163,7 @@ dependencies = [
  "diem-crypto",
  "diem-temppath",
  "diem-workspace-hack",
- "rand 0.7.3",
+ "rand 0.8.3",
 ]
 
 [[package]]
@@ -3936,7 +3907,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "vm",
  "vm-genesis",
 ]
@@ -4166,7 +4137,7 @@ dependencies = [
  "ir-to-bytecode",
  "move-core-types",
  "move-ir-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "vm",
 ]
 
@@ -4232,7 +4203,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "ref-cast",
  "regex",
  "serde",
@@ -4407,7 +4378,7 @@ dependencies = [
  "num 0.3.1",
  "once_cell",
  "pretty",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "serde",
  "serde_json",
@@ -4611,7 +4582,7 @@ dependencies = [
  "pin-project 1.0.5",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rand_core 0.6.2",
  "serde",
  "serde_bytes",
@@ -4646,7 +4617,7 @@ dependencies = [
  "netcore",
  "network",
  "network-simple-onchain-discovery",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "subscription-service",
  "tokio",
@@ -4672,7 +4643,7 @@ dependencies = [
  "netcore",
  "network",
  "once_cell",
- "rand 0.7.3",
+ "rand 0.8.3",
  "subscription-service",
  "tokio",
 ]
@@ -5469,7 +5440,7 @@ dependencies = [
  "rand_isaac",
  "rand_jitter",
  "rand_os",
- "rand_pcg 0.1.2",
+ "rand_pcg",
  "rand_xorshift 0.1.1",
  "winapi 0.3.9",
 ]
@@ -5485,14 +5456,13 @@ dependencies = [
  "rand_chacha 0.2.2",
  "rand_core 0.5.1",
  "rand_hc 0.2.0",
- "rand_pcg 0.2.1",
 ]
 
 [[package]]
 name = "rand"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18519b42a40024d661e1714153e9ad0c3de27cd495760ceb09710920f1098b1e"
+checksum = "0ef9e7e66b4468674bfcb0c81af8b7fa0bb154fa9f28eb840da5c447baeb8d7e"
 dependencies = [
  "libc",
  "rand_chacha 0.3.0",
@@ -5632,15 +5602,6 @@ checksum = "abf9b09b01790cfe0364f52bf32995ea3c39f4d2dd011eac241d2914146d0b44"
 dependencies = [
  "autocfg 0.1.7",
  "rand_core 0.4.2",
-]
-
-[[package]]
-name = "rand_pcg"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16abd0c1b639e9eb4d7c50c0b8100b0d0f849be2349829c740fe8e6eb4816429"
-dependencies = [
- "rand_core 0.5.1",
 ]
 
 [[package]]
@@ -6133,7 +6094,7 @@ dependencies = [
  "diem-workspace-hack",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "rand_core 0.6.2",
  "serde",
  "tempfile",
@@ -6248,7 +6209,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "hex",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde_yaml",
  "structopt 0.3.21",
  "thiserror",
@@ -6620,7 +6581,7 @@ dependencies = [
  "num 0.3.1",
  "num-traits",
  "once_cell",
- "rand 0.7.3",
+ "rand 0.8.3",
  "regex",
  "rust_decimal",
  "rusty-fork",
@@ -6644,7 +6605,7 @@ dependencies = [
  "netcore",
  "network",
  "network-builder",
- "rand 0.7.3",
+ "rand 0.8.3",
  "tokio",
  "tokio-util",
 ]
@@ -6717,7 +6678,7 @@ dependencies = [
  "network-builder",
  "once_cell",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "storage-interface",
  "storage-service",
@@ -6853,7 +6814,7 @@ dependencies = [
  "futures 0.3.12",
  "itertools 0.10.0",
  "proptest",
- "rand 0.7.3",
+ "rand 0.8.3",
  "storage-client",
  "storage-interface",
  "tokio",
@@ -6943,7 +6904,7 @@ dependencies = [
  "diem-workspace-hack",
  "hex",
  "move-core-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "serde",
  "serde_json",
  "structopt 0.3.21",
@@ -7018,7 +6979,7 @@ checksum = "dac1c663cfc93810f88aed9b8941d48cabf856a1b111c29a40439018d870eb22"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
- "rand 0.8.2",
+ "rand 0.8.3",
  "redox_syscall 0.2.4",
  "remove_dir_all",
  "winapi 0.3.9",
@@ -7098,7 +7059,7 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-types",
  "num_cpus",
- "rand 0.7.3",
+ "rand 0.8.3",
  "structopt 0.3.21",
  "vm",
 ]
@@ -7561,7 +7522,7 @@ dependencies = [
  "httparse",
  "input_buffer",
  "log",
- "rand 0.8.2",
+ "rand 0.8.3",
  "sha-1 0.9.3",
  "url",
  "utf-8",
@@ -7776,7 +7737,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "proptest-derive",
- "rand 0.7.3",
+ "rand 0.8.3",
  "transaction-builder",
  "vm",
 ]
@@ -7797,7 +7758,7 @@ dependencies = [
  "executor-test-helpers",
  "fail",
  "move-core-types",
- "rand 0.7.3",
+ "rand 0.8.3",
  "scratchpad",
  "storage-interface",
  "storage-service",
@@ -8097,23 +8058,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "x25519-dalek"
-version = "1.1.0"
+name = "x25519-dalek-fiat"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc614d95359fd7afc321b66d2107ede58b246b844cf5d8a0adcca413e439f088"
+checksum = "2f3519d56987103ef084eba6ddfc3be45b7eaee08f2d60bc8495cdca30362a32"
 dependencies = [
- "curve25519-dalek 3.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand_core 0.5.1",
- "zeroize",
-]
-
-[[package]]
-name = "x25519-dalek"
-version = "1.1.0"
-source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat5#266ea5a0c2b703a6fd75f47f24864413a17724f0"
-dependencies = [
- "curve25519-dalek 3.0.2 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat4)",
- "rand_core 0.5.1",
+ "curve25519-dalek-fiat",
+ "rand_core 0.6.2",
  "zeroize",
 ]
 
