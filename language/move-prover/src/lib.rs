@@ -83,7 +83,7 @@ pub fn run_move_prover<W: WriteColor>(
     }
     // Same for the error map generator
     if options.run_errmapgen {
-        return run_errmapgen(&env, &options, now);
+        return Ok(run_errmapgen(&env, &options, now));
     }
 
     let targets = create_and_process_bytecode(&options, &env);
@@ -204,7 +204,7 @@ fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Resul
     Ok(())
 }
 
-fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
+fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) {
     let mut generator = ErrmapGen::new(env, &options.errmapgen);
     let checking_elapsed = now.elapsed();
     info!("generating error map");
@@ -216,7 +216,6 @@ fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Re
         checking_elapsed.as_secs_f64(),
         (generating_elapsed - checking_elapsed).as_secs_f64()
     );
-    Ok(())
 }
 
 /// Adds the prelude to the generated output.

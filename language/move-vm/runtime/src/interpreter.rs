@@ -152,10 +152,7 @@ impl<L: LogContext> Interpreter<L> {
                 }
                 ExitCode::Call(fh_idx) => {
                     cost_strategy
-                        .charge_instr_with_size(
-                            Opcodes::CALL,
-                            AbstractMemorySize::new(1 as GasCarrier),
-                        )
+                        .charge_instr_with_size(Opcodes::CALL, AbstractMemorySize::new(1))
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_handle(fh_idx);
                     cost_strategy
@@ -180,14 +177,12 @@ impl<L: LogContext> Interpreter<L> {
                     current_frame = frame;
                 }
                 ExitCode::CallGeneric(idx) => {
-                    resolver
-                        .type_params_count(idx)
-                        .and_then(|arity| {
-                            cost_strategy.charge_instr_with_size(
-                                Opcodes::CALL_GENERIC,
-                                AbstractMemorySize::new((arity + 1) as GasCarrier),
-                            )
-                        })
+                    let arity = resolver.type_params_count(idx);
+                    cost_strategy
+                        .charge_instr_with_size(
+                            Opcodes::CALL_GENERIC,
+                            AbstractMemorySize::new((arity + 1) as GasCarrier),
+                        )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let ty_args = resolver
                         .instantiate_generic_function(idx, current_frame.ty_args())

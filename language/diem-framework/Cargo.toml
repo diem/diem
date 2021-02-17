@@ -12,6 +12,9 @@ publish = false
 [dependencies]
 anyhow = "1.0.38"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
+abigen = { path = "../move-prover/abigen" }
+docgen = { path = "../move-prover/docgen" }
+errmapgen = { path = "../move-prover/errmapgen" }
 move-lang = { path = "../move-lang" }
 move-prover = { path = "../move-prover" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }

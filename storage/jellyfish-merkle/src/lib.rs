@@ -278,8 +278,7 @@ where
             let version = first_version + idx as u64;
             value_set
                 .into_iter()
-                .map(|(key, value)| Self::put(key, value, version, &mut tree_cache))
-                .collect::<Result<_>>()?;
+                .try_for_each(|(key, value)| Self::put(key, value, version, &mut tree_cache))?;
             // Freezes the current cache to make all contents in the current cache immutable.
             tree_cache.freeze();
         }

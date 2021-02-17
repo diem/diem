@@ -510,8 +510,8 @@ where
         }
     }
 
-    async fn handle_outbound_request<'a>(
-        &'a mut self,
+    async fn handle_outbound_request(
+        &mut self,
         request: PeerRequest,
         write_reqs_tx: &mut channel::Sender<(
             NetworkMessage,

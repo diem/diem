@@ -203,9 +203,11 @@ proptest! {
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
-        let mut module = CompiledModuleMut::default();
-        module.identifiers = identifiers;
-        module.address_identifiers = address_identifiers;
+        let module = CompiledModuleMut {
+            identifiers,
+            address_identifiers,
+            ..Default::default()
+        };
 
         prop_assert_eq!(
             BoundsChecker::verify(&module).map_err(|e| e.major_status()),

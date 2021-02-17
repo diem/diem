@@ -1907,6 +1907,7 @@ impl Struct {
  *   transaction execution the dirty ones can be identified and wrote back to storage.
  *
  **************************************************************************************/
+#[allow(clippy::unnecessary_wraps)]
 impl GlobalValueImpl {
     fn cached(val: ValueImpl, status: GlobalDataStatus) -> PartialVMResult<Self> {
         match val {

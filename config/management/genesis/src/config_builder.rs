@@ -64,15 +64,16 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Association uploads the validator layout to shared storage.
     fn create_layout(&self) {
-        let mut layout = Layout::default();
-        layout.diem_root = DIEM_ROOT_SHARED_NS.into();
-        layout.treasury_compliance = DIEM_ROOT_SHARED_NS.into();
-        layout.owners = (0..self.num_validators)
-            .map(|i| (i.to_string() + OWNER_SHARED_NS))
-            .collect();
-        layout.operators = (0..self.num_validators)
-            .map(|i| (i.to_string() + OPERATOR_SHARED_NS))
-            .collect();
+        let layout = Layout {
+            owners: (0..self.num_validators)
+                .map(|i| (i.to_string() + OWNER_SHARED_NS))
+                .collect(),
+            operators: (0..self.num_validators)
+                .map(|i| (i.to_string() + OPERATOR_SHARED_NS))
+                .collect(),
+            diem_root: DIEM_ROOT_SHARED_NS.into(),
+            treasury_compliance: DIEM_ROOT_SHARED_NS.into(),
+        };
 
         let mut common_storage = self.storage_helper.storage(COMMON_NS.into());
         let layout_value = layout.to_toml().unwrap();

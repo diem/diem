@@ -33,7 +33,7 @@ use memsocket::MemorySocket;
 use netcore::transport::{
     boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt,
 };
-use std::{collections::HashMap, iter::FromIterator, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::compat::{
     FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt,
@@ -107,7 +107,7 @@ fn build_test_peer_manager(
         Arc::new(RwLock::new(HashMap::new())),
         peer_manager_request_rx,
         connection_reqs_rx,
-        HashMap::from_iter([(TEST_PROTOCOL, hello_tx)].iter().cloned()),
+        [(TEST_PROTOCOL, hello_tx)].iter().cloned().collect(),
         vec![conn_status_tx],
         constants::NETWORK_CHANNEL_SIZE,
         constants::MAX_CONCURRENT_NETWORK_REQS,

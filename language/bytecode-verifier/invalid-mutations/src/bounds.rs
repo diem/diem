@@ -127,7 +127,7 @@ impl OutOfBoundsMutation {
             Self::src_kind_strategy(),
             any::<PropIndex>(),
             any::<PropIndex>(),
-            0..16 as usize,
+            0..16_usize,
         )
             .prop_map(|(src_kind, src_idx, dst_kind_idx, offset)| {
                 let dst_kind = Self::dst_kind(src_kind, dst_kind_idx);
@@ -225,7 +225,7 @@ impl ApplyOutOfBoundsContext {
         mutations
             .iter()
             .zip(to_mutate)
-            .filter_map(move |(mutation, src_idx)| {
+            .map(move |(mutation, src_idx)| {
                 self.set_index(
                     src_kind,
                     src_idx,
@@ -250,7 +250,7 @@ impl ApplyOutOfBoundsContext {
         dst_kind: IndexKind,
         dst_count: usize,
         new_idx: TableIndex,
-    ) -> Option<PartialVMError> {
+    ) -> PartialVMError {
         use IndexKind::*;
 
         // These are default values, but some of the match arms below mutate them.
@@ -317,13 +317,11 @@ impl ApplyOutOfBoundsContext {
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }
 
-        Some(err.at_index(src_kind, src_idx as TableIndex))
+        err.at_index(src_kind, src_idx as TableIndex)
     }
 
     /// Returns the indexes of locals signatures that contain struct handles inside them.
-    fn sig_structs<'b>(
-        module: &'b CompiledModule,
-    ) -> impl Iterator<Item = (SignatureIndex, usize)> + 'b {
+    fn sig_structs(module: &CompiledModule) -> impl Iterator<Item = (SignatureIndex, usize)> + '_ {
         let module_view = ModuleView::new(module);
         module_view
             .signatures()

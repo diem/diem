@@ -238,7 +238,7 @@ fn publish(
 
     let num_modules = compiled_units
         .iter()
-        .filter(|u| matches!(u,  CompiledUnit::Module {..}))
+        .filter(|u| matches!(u, CompiledUnit::Module { .. }))
         .count();
     if verbose {
         println!("Found and compiled {} modules", num_modules)
@@ -288,7 +288,7 @@ fn publish(
             let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
             assert!(events.is_empty());
             if verbose {
-                explain_publish_changeset(&changeset, &state)?
+                explain_publish_changeset(&changeset, &state);
             }
             let modules: Vec<_> = changeset
                 .into_modules()
@@ -426,7 +426,7 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
     Ok(cost_strategy)
 }
 
-fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) -> Result<()> {
+fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) {
     // publish effects should contain no resources
     assert!(changeset.resources().next().is_none());
     for (addr, name, blob_opt) in changeset.modules() {
@@ -440,7 +440,6 @@ fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) -> 
             println!("Publishing a new module {}", module_id);
         }
     }
-    Ok(())
 }
 
 fn explain_execution_effects(

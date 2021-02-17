@@ -126,20 +126,32 @@ async fn test_get_metadata_by_version() {
 #[tokio::test]
 async fn test_network_error() {
     let client = Client::from_url("https://mustnotexisturl.xyz", Retry::default()).unwrap();
-    assert_err!(client.get_metadata().await, Error::NetworkError{..}, true);
+    assert_err!(
+        client.get_metadata().await,
+        Error::NetworkError { .. },
+        true
+    );
 }
 
 #[tokio::test]
 async fn test_invalid_http_status() {
     let client = Client::from_url("https://testnet.diem.com/unknown", Retry::default()).unwrap();
-    assert_err!(client.get_metadata().await, Error::InvalidHTTPStatus{..}, false);
+    assert_err!(
+        client.get_metadata().await,
+        Error::InvalidHTTPStatus { .. },
+        false
+    );
 }
 
 #[tokio::test]
 async fn test_invalid_http_response() {
     let client = setup(("get_metadata", json!([])), json!("invalid"));
 
-    assert_err!(client.get_metadata().await, Error::InvalidHTTPResponse{..}, true);
+    assert_err!(
+        client.get_metadata().await,
+        Error::InvalidHTTPResponse { .. },
+        true
+    );
 }
 
 #[tokio::test]
@@ -155,7 +167,11 @@ async fn test_invalid_rpc_response() {
         }),
     );
 
-    assert_err!(client.get_metadata().await, Error::InvalidRpcResponse{..}, false);
+    assert_err!(
+        client.get_metadata().await,
+        Error::InvalidRpcResponse { .. },
+        false
+    );
 }
 
 #[tokio::test]
@@ -174,7 +190,11 @@ async fn test_deserialize_result_error() {
         }),
     );
 
-    assert_err!(client.get_metadata().await, Error::DeserializeResponseJsonError{..}, true);
+    assert_err!(
+        client.get_metadata().await,
+        Error::DeserializeResponseJsonError { .. },
+        true
+    );
 }
 
 #[tokio::test]
@@ -193,7 +213,11 @@ async fn test_jsonrpc_error() {
         }),
     );
 
-    assert_err!(client.get_metadata().await, Error::JsonRpcError{..}, true);
+    assert_err!(
+        client.get_metadata().await,
+        Error::JsonRpcError { .. },
+        true
+    );
 }
 
 #[tokio::test]
@@ -209,7 +233,11 @@ async fn test_result_not_found() {
         }),
     );
 
-    assert_err!(client.get_metadata().await, Error::ResultNotFound{..}, false);
+    assert_err!(
+        client.get_metadata().await,
+        Error::ResultNotFound { .. },
+        false
+    );
 }
 
 #[tokio::test]
@@ -231,7 +259,11 @@ async fn test_submit_failed() {
         invalid_request_response(),
     );
 
-    assert_err!(client.submit(&signed_txn_sample()).await, Error::JsonRpcError{..}, true);
+    assert_err!(
+        client.submit(&signed_txn_sample()).await,
+        Error::JsonRpcError { .. },
+        true
+    );
 }
 
 #[tokio::test]
@@ -584,7 +616,11 @@ async fn test_wait_for_transaction_error_get_transaction_error() {
         .wait_for_transaction(&address, seq, expiration_time_secs, txn_hash, None, None)
         .await;
 
-    assert_err!(err, WaitForTransactionError::GetTransactionError{..}, true);
+    assert_err!(
+        err,
+        WaitForTransactionError::GetTransactionError { .. },
+        true
+    );
 }
 
 #[tokio::test]
@@ -602,7 +638,11 @@ async fn test_wait_for_transaction_error_hash_mismatch() {
         .wait_for_transaction(&address, seq, expiration_time_secs, txn_hash, None, None)
         .await;
 
-    assert_err!(err, WaitForTransactionError::TransactionHashMismatchError {..}, false);
+    assert_err!(
+        err,
+        WaitForTransactionError::TransactionHashMismatchError { .. },
+        false
+    );
 }
 
 #[tokio::test]
@@ -671,11 +711,7 @@ async fn test_wait_for_transaction_error_timeout() {
             Some(Duration::from_millis(20)), // delay
         )
         .await;
-    assert_err!(
-        err,
-        WaitForTransactionError::Timeout { .. },
-        false
-    );
+    assert_err!(err, WaitForTransactionError::Timeout { .. }, false);
 }
 
 #[tokio::test]

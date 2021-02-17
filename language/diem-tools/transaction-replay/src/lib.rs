@@ -129,8 +129,7 @@ impl DiemDebugger {
         let vm = DiemVM::new(&state_view);
         let cache = diem_vm::data_cache::StateViewCache::new(&state_view);
         let log_context = NoContextLog::new();
-        let mut txn_data = diem_vm::transaction_metadata::TransactionMetadata::default();
-        txn_data.sequence_number = match self
+        let sequence_number = match self
             .debugger
             .get_account_state_by_version(diem_root_address(), version)?
         {
@@ -140,7 +139,11 @@ impl DiemDebugger {
                 .sequence_number(),
             None => bail!("Diem root account blob doesn't exist"),
         };
-        txn_data.sender = diem_root_address();
+        let txn_data = diem_vm::transaction_metadata::TransactionMetadata {
+            sequence_number,
+            sender: diem_root_address(),
+            ..Default::default()
+        };
 
         let (_, output) = vm
             .execute_writeset_transaction(&cache, &payload, txn_data, &log_context)

@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
+use abigen::AbigenOptions;
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
+use docgen::DocgenOptions;
+use errmapgen::ErrmapOptions;
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
 use sha2::{Digest, Sha256};
@@ -275,39 +278,52 @@ fn build_doc(
     dep_path: &str,
     with_diagram: bool,
 ) {
-    let mut options = move_prover::cli::Options::default();
-    options.move_sources = sources.to_vec();
-    if !dep_path.is_empty() {
-        options.move_deps = vec![dep_path.to_string()]
-    }
-    options.verbosity_level = LevelFilter::Warn;
-    options.run_docgen = true;
-    // Take the defaults here for docgen. Changes in options should be applied there so
-    // command line and invocation here have same output.
-    options.docgen.root_doc_templates = templates;
-    if references_file.is_some() {
-        options.docgen.references_file = references_file;
-    }
-    if !doc_path.is_empty() {
-        options.docgen.doc_path = vec![doc_path.to_string()];
-    }
-    options.docgen.output_directory = output_path.to_string();
+    let options = move_prover::cli::Options {
+        move_sources: sources.to_vec(),
+        move_deps: if !dep_path.is_empty() {
+            vec![dep_path.to_string()]
+        } else {
+            vec![]
+        },
+        verbosity_level: LevelFilter::Warn,
+        run_docgen: true,
+        // Take the defaults here for docgen. Changes in options should be applied there so
+        // command line and invocation here have same output.
+        docgen: DocgenOptions {
+            doc_path: if !doc_path.is_empty() {
+                vec![doc_path.to_string()]
+            } else {
+                vec![]
+            },
+            root_doc_templates: templates,
+            references_file,
+            output_directory: output_path.to_string(),
+            include_dep_diagrams: with_diagram,
+            include_call_diagrams: with_diagram,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     options.setup_logging_for_test();
-    options.docgen.include_dep_diagrams = with_diagram;
-    options.docgen.include_call_diagrams = with_diagram;
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
 fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_script_path: &str) {
-    let mut options = move_prover::cli::Options::default();
-    options.move_sources = sources.to_vec();
-    if !dep_path.is_empty() {
-        options.move_deps = vec![dep_path.to_string()]
-    }
-    options.verbosity_level = LevelFilter::Warn;
-    options.run_abigen = true;
-    options.abigen.output_directory = output_path.to_string();
-    options.abigen.compiled_script_directory = compiled_script_path.to_string();
+    let options = move_prover::cli::Options {
+        move_sources: sources.to_vec(),
+        move_deps: if !dep_path.is_empty() {
+            vec![dep_path.to_string()]
+        } else {
+            vec![]
+        },
+        verbosity_level: LevelFilter::Warn,
+        run_abigen: true,
+        abigen: AbigenOptions {
+            output_directory: output_path.to_string(),
+            compiled_script_directory: compiled_script_path.to_string(),
+        },
+        ..Default::default()
+    };
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
@@ -321,14 +337,21 @@ pub fn get_packed_types_path() -> PathBuf {
 }
 
 fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
-    let mut options = move_prover::cli::Options::default();
-    options.move_sources = sources.to_vec();
-    if !dep_path.is_empty() {
-        options.move_deps = vec![dep_path.to_string()]
-    }
-    options.verbosity_level = LevelFilter::Warn;
-    options.run_errmapgen = true;
-    options.errmapgen.output_file = output_path.to_string();
+    let options = move_prover::cli::Options {
+        move_sources: sources.to_vec(),
+        move_deps: if !dep_path.is_empty() {
+            vec![dep_path.to_string()]
+        } else {
+            vec![]
+        },
+        verbosity_level: LevelFilter::Warn,
+        run_errmapgen: true,
+        errmapgen: ErrmapOptions {
+            output_file: output_path.to_string(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }

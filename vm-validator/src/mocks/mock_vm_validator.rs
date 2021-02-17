@@ -41,18 +41,17 @@ impl TransactionValidation for MockVMValidator {
         };
 
         let sender = txn.sender();
-        let account_dne_test_add = AccountAddress::try_from(&[0 as u8; AccountAddress::LENGTH])?;
-        let invalid_sig_test_add = AccountAddress::try_from(&[1 as u8; AccountAddress::LENGTH])?;
+        let account_dne_test_add = AccountAddress::try_from(&[0_u8; AccountAddress::LENGTH])?;
+        let invalid_sig_test_add = AccountAddress::try_from(&[1_u8; AccountAddress::LENGTH])?;
         let insufficient_balance_test_add =
-            AccountAddress::try_from(&[2 as u8; AccountAddress::LENGTH])?;
+            AccountAddress::try_from(&[2_u8; AccountAddress::LENGTH])?;
         let seq_number_too_new_test_add =
-            AccountAddress::try_from(&[3 as u8; AccountAddress::LENGTH])?;
+            AccountAddress::try_from(&[3_u8; AccountAddress::LENGTH])?;
         let seq_number_too_old_test_add =
-            AccountAddress::try_from(&[4 as u8; AccountAddress::LENGTH])?;
+            AccountAddress::try_from(&[4_u8; AccountAddress::LENGTH])?;
         let txn_expiration_time_test_add =
-            AccountAddress::try_from(&[5 as u8; AccountAddress::LENGTH])?;
-        let invalid_auth_key_test_add =
-            AccountAddress::try_from(&[6 as u8; AccountAddress::LENGTH])?;
+            AccountAddress::try_from(&[5_u8; AccountAddress::LENGTH])?;
+        let invalid_auth_key_test_add = AccountAddress::try_from(&[6_u8; AccountAddress::LENGTH])?;
         let ret = if sender == account_dne_test_add {
             Some(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
         } else if sender == invalid_sig_test_add {

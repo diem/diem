@@ -46,7 +46,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     options.setup_logging_for_test();
     if no_boogie {
         options.prover.generate_only = true;
-        if !NOT_CONFIGURED_WARNED.compare_and_swap(false, true, Ordering::Relaxed) {
+        if NOT_CONFIGURED_WARNED
+            .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
             warn!(
                 "Prover tools are not configured, verification tests will be skipped. \
         See https://github.com/diem/diem/tree/master/language/move-prover/doc/user/install.md \

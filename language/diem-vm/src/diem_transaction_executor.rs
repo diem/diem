@@ -419,9 +419,10 @@ impl DiemVM {
             ))
         });
 
-        let mut txn_data = TransactionMetadata::default();
-        txn_data.sender = account_config::reserved_vm_address();
-
+        let txn_data = TransactionMetadata {
+            sender: account_config::reserved_vm_address(),
+            ..Default::default()
+        };
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         let mut session = self.0.new_session(remote_cache);

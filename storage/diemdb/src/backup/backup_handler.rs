@@ -50,11 +50,11 @@ impl BackupHandler {
     }
 
     /// Gets an iterator that yields a range of transactions.
-    pub fn get_transaction_iter<'a>(
-        &'a self,
+    pub fn get_transaction_iter(
+        &self,
         start_version: Version,
         num_transactions: usize,
-    ) -> Result<impl Iterator<Item = Result<(Transaction, TransactionInfo, Vec<ContractEvent>)>> + 'a>
+    ) -> Result<impl Iterator<Item = Result<(Transaction, TransactionInfo, Vec<ContractEvent>)>> + '_>
     {
         let txn_iter = self
             .transaction_store
@@ -167,11 +167,11 @@ impl BackupHandler {
         Ok((txn_info, ledger_info))
     }
 
-    pub fn get_epoch_ending_ledger_info_iter<'a>(
-        &'a self,
+    pub fn get_epoch_ending_ledger_info_iter(
+        &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<impl Iterator<Item = Result<LedgerInfoWithSignatures>> + 'a> {
+    ) -> Result<impl Iterator<Item = Result<LedgerInfoWithSignatures>> + '_> {
         Ok(self
             .ledger_store
             .get_epoch_ending_ledger_info_iter(start_epoch, end_epoch)?

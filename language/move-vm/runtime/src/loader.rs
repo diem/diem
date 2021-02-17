@@ -91,16 +91,12 @@ impl ScriptCache {
             .map(|script| (script.entry_point(), script.parameter_tys.clone()))
     }
 
-    fn insert(
-        &mut self,
-        hash: HashValue,
-        script: Script,
-    ) -> PartialVMResult<(Arc<Function>, Vec<Type>)> {
+    fn insert(&mut self, hash: HashValue, script: Script) -> (Arc<Function>, Vec<Type>) {
         match self.get(&hash) {
-            Some(cached) => Ok(cached),
+            Some(cached) => cached,
             None => {
                 let script = self.scripts.insert(hash, script);
-                Ok((script.entry_point(), script.parameter_tys.clone()))
+                (script.entry_point(), script.parameter_tys.clone())
             }
         }
     }
@@ -467,9 +463,7 @@ impl Loader {
                 let ver_script =
                     self.deserialize_and_verify_script(script_blob, data_store, log_context)?;
                 let script = Script::new(ver_script, &hash_value, &self.module_cache.lock())?;
-                scripts
-                    .insert(hash_value, script)
-                    .map_err(|e| e.finish(Location::Script))?
+                scripts.insert(hash_value, script)
             }
         };
 
@@ -1016,15 +1010,12 @@ impl<'a> Resolver<'a> {
         Ok(instantiation)
     }
 
-    pub(crate) fn type_params_count(
-        &self,
-        idx: FunctionInstantiationIndex,
-    ) -> PartialVMResult<usize> {
+    pub(crate) fn type_params_count(&self, idx: FunctionInstantiationIndex) -> usize {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
         };
-        Ok(func_inst.instantiation.len())
+        func_inst.instantiation.len()
     }
 
     //

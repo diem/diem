@@ -1571,6 +1571,7 @@ dependencies = [
 name = "diem-framework"
 version = "0.1.0"
 dependencies = [
+ "abigen",
  "anyhow",
  "bcs",
  "bytecode-verifier",
@@ -1579,6 +1580,8 @@ dependencies = [
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
+ "docgen",
+ "errmapgen",
  "log",
  "move-lang",
  "move-prover",

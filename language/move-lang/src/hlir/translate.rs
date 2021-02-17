@@ -1550,18 +1550,31 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
     }
     macro_rules! hignored {
         ($loc:pat, $e:pat) => {
-            hcmd!(_, C::IgnoreAndPop { exp: H::Exp { exp: sp!($loc, $e), .. }, .. })
+            hcmd!(
+                _,
+                C::IgnoreAndPop {
+                    exp: H::Exp {
+                        exp: sp!($loc, $e),
+                        ..
+                    },
+                    ..
+                }
+            )
         };
     }
     macro_rules! trailing {
         ($uloc: pat) => {
-           hcmd!(
-               _,
-               C::IgnoreAndPop {
-                    exp: H::Exp { exp: sp!($uloc, E::Unit { trailing: true }), .. }, ..
+            hcmd!(
+                _,
+                C::IgnoreAndPop {
+                    exp: H::Exp {
+                        exp: sp!($uloc, E::Unit { trailing: true }),
+                        ..
+                    },
+                    ..
                 }
             )
-        }
+        };
     }
     macro_rules! trailing_returned {
         ($uloc:pat) => {
@@ -1607,14 +1620,32 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
         return;
     }
     match (&block[len - 2], &block[len - 1]) {
-        (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing!(uloc))
-        | (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing_returned!(uloc))
-            if divergent_block(if_block) && divergent_block(else_block) =>
-        {
+        (
+            sp!(
+                loc,
+                S::IfElse {
+                    if_block,
+                    else_block,
+                    ..
+                }
+            ),
+            trailing!(uloc),
+        )
+        | (
+            sp!(
+                loc,
+                S::IfElse {
+                    if_block,
+                    else_block,
+                    ..
+                }
+            ),
+            trailing_returned!(uloc),
+        ) if divergent_block(if_block) && divergent_block(else_block) => {
             invalid_trailing_unit!(context, *loc, *uloc)
         }
-        (sp!(loc, S::Loop { has_break, ..}), trailing!(uloc))
-        | (sp!(loc, S::Loop { has_break, ..}), trailing_returned!(uloc))
+        (sp!(loc, S::Loop { has_break, .. }), trailing!(uloc))
+        | (sp!(loc, S::Loop { has_break, .. }), trailing_returned!(uloc))
             if !has_break =>
         {
             invalid_trailing_unit!(context, *loc, *uloc)

@@ -280,9 +280,9 @@ impl InboundRpcs {
     /// Method for `Peer` actor to drive the pending inbound rpc tasks forward.
     /// The returned `Future` is a `FusedFuture` so it works correctly in a
     /// `futures::select!`.
-    pub fn next_completed_response<'a>(
-        &'a mut self,
-    ) -> impl Future<Output = Result<RpcResponse, RpcError>> + FusedFuture + 'a {
+    pub fn next_completed_response(
+        &mut self,
+    ) -> impl Future<Output = Result<RpcResponse, RpcError>> + FusedFuture + '_ {
         self.inbound_rpc_tasks.select_next_some()
     }
 
@@ -508,9 +508,9 @@ impl OutboundRpcs {
     /// Method for `Peer` actor to drive the pending outbound rpc tasks forward.
     /// The returned `Future` is a `FusedFuture` so it works correctly in a
     /// `futures::select!`.
-    pub fn next_completed_request<'a>(
-        &'a mut self,
-    ) -> impl Future<Output = (RequestId, Result<(f64, u64), RpcError>)> + FusedFuture + 'a {
+    pub fn next_completed_request(
+        &mut self,
+    ) -> impl Future<Output = (RequestId, Result<(f64, u64), RpcError>)> + FusedFuture + '_ {
         self.outbound_rpc_tasks.select_next_some()
     }
 

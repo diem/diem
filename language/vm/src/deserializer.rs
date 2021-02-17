@@ -263,10 +263,12 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
         content_len as usize,
     )?;
 
-    let mut script = CompiledScriptMut::default();
-    script.type_parameters = load_kinds(&mut cursor)?;
-    script.parameters = load_signature_index(&mut cursor)?;
-    script.code = load_code_unit(&mut cursor)?;
+    let mut script = CompiledScriptMut {
+        type_parameters: load_kinds(&mut cursor)?,
+        parameters: load_signature_index(&mut cursor)?,
+        code: load_code_unit(&mut cursor)?,
+        ..Default::default()
+    };
 
     build_compiled_script(&mut script, &table_contents, &tables)?;
 
@@ -289,8 +291,10 @@ fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModu
         content_len as usize,
     )?;
 
-    let mut module = CompiledModuleMut::default();
-    module.self_module_handle_idx = load_module_handle_index(&mut cursor)?;
+    let mut module = CompiledModuleMut {
+        self_module_handle_idx: load_module_handle_index(&mut cursor)?,
+        ..Default::default()
+    };
 
     build_compiled_module(&mut module, &table_contents, &tables)?;
 

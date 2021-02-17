@@ -71,9 +71,10 @@ where
     V: crate::TestValue,
 {
     pub fn new(allow_overwrite: bool) -> Self {
-        let mut res = Self::default();
-        res.allow_overwrite = allow_overwrite;
-        res
+        Self {
+            allow_overwrite,
+            ..Default::default()
+        }
     }
 
     pub fn put_node(&self, node_key: NodeKey, node: Node<V>) -> Result<()> {

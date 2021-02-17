@@ -30,9 +30,11 @@ pub struct BytecodeViewer {
 impl BytecodeViewer {
     pub fn new(source_map: SourceMap<Loc>, module: CompiledModule) -> Self {
         let source_mapping = SourceMapping::new(source_map, module.clone());
-        let mut options = DisassemblerOptions::default();
-        options.print_code = true;
-        options.print_basic_blocks = true;
+        let options = DisassemblerOptions {
+            print_code: true,
+            print_basic_blocks: true,
+            ..Default::default()
+        };
         let disassembled_string = Disassembler::new(source_mapping, options)
             .disassemble()
             .unwrap();

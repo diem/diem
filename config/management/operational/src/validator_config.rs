@@ -238,14 +238,16 @@ pub fn strip_address(address: &NetworkAddress) -> NetworkAddress {
         .as_slice()
         .iter()
         .filter(|protocol| {
-            matches!(protocol,
-            Protocol::Dns(_)
-            | Protocol::Dns4(_)
-            | Protocol::Dns6(_)
-            | Protocol::Ip4(_)
-            | Protocol::Ip6(_)
-            | Protocol::Memory(_)
-            | Protocol::Tcp(_))
+            matches!(
+                protocol,
+                Protocol::Dns(_)
+                    | Protocol::Dns4(_)
+                    | Protocol::Dns6(_)
+                    | Protocol::Ip4(_)
+                    | Protocol::Ip6(_)
+                    | Protocol::Memory(_)
+                    | Protocol::Tcp(_)
+            )
         })
         .cloned()
         .collect::<Vec<_>>();

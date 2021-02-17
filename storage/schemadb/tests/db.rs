@@ -21,8 +21,8 @@ define_schema!(TestSchema2, TestField, TestField, "TestCF2");
 struct TestField(u32);
 
 impl TestField {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
-        Ok(self.0.to_le_bytes().to_vec())
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_le_bytes().to_vec()
     }
 
     fn from_bytes(data: &[u8]) -> Result<Self> {
@@ -33,7 +33,7 @@ impl TestField {
 
 impl KeyCodec<TestSchema1> for TestField {
     fn encode_key(&self) -> Result<Vec<u8>> {
-        self.to_bytes()
+        Ok(self.to_bytes())
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
@@ -43,7 +43,7 @@ impl KeyCodec<TestSchema1> for TestField {
 
 impl ValueCodec<TestSchema1> for TestField {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.to_bytes()
+        Ok(self.to_bytes())
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
@@ -53,7 +53,7 @@ impl ValueCodec<TestSchema1> for TestField {
 
 impl KeyCodec<TestSchema2> for TestField {
     fn encode_key(&self) -> Result<Vec<u8>> {
-        self.to_bytes()
+        Ok(self.to_bytes())
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
@@ -63,7 +63,7 @@ impl KeyCodec<TestSchema2> for TestField {
 
 impl ValueCodec<TestSchema2> for TestField {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        self.to_bytes()
+        Ok(self.to_bytes())
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {

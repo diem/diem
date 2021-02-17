@@ -52,13 +52,13 @@ impl AbstractValue {
     /// Create a new primitive `AbstractValue` given its type; the kind will be `Copyable`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
         checked_precondition!(
-            match token {
-                SignatureToken::Struct(_) => false,
-                SignatureToken::StructInstantiation(_, _) => false,
-                SignatureToken::Reference(_) => false,
-                SignatureToken::MutableReference(_) => false,
-                _ => true,
-            },
+            !matches!(
+                token,
+                SignatureToken::Struct(_)
+                    | SignatureToken::StructInstantiation(_, _)
+                    | SignatureToken::Reference(_)
+                    | SignatureToken::MutableReference(_),
+            ),
             "AbstractValue::new_primitive must be applied with primitive type"
         );
         AbstractValue {
@@ -70,7 +70,10 @@ impl AbstractValue {
     /// Create a new reference `AbstractValue` given its type and kind
     pub fn new_reference(token: SignatureToken, kind: Kind) -> AbstractValue {
         checked_precondition!(
-            matches!(token, SignatureToken::Reference(_) | SignatureToken::MutableReference(_)),
+            matches!(
+                token,
+                SignatureToken::Reference(_) | SignatureToken::MutableReference(_)
+            ),
             "AbstractValue::new_reference must be applied with a reference type"
         );
         AbstractValue { token, kind }

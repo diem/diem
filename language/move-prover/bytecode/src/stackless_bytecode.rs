@@ -304,7 +304,10 @@ impl Bytecode {
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        matches!(self, Bytecode::Branch(..) | Bytecode::Call(_, _, _, _, Some(_)))
+        matches!(
+            self,
+            Bytecode::Branch(..) | Bytecode::Call(_, _, _, _, Some(_))
+        )
     }
 
     pub fn is_branch(&self) -> bool {

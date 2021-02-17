@@ -87,13 +87,8 @@ fn optimize_exp(e: &mut Exp) -> bool {
                 Some(v) => v,
                 None => return changed,
             };
-            match fold_unary_op(e.exp.loc, op, v) {
-                Some(folded) => {
-                    *e_ = folded;
-                    true
-                }
-                None => changed,
-            }
+            *e_ = fold_unary_op(e.exp.loc, op, v);
+            true
         }
 
         e_ @ E::BinopExp(_, _, _) => {
@@ -148,14 +143,14 @@ fn optimize_exp_item(item: &mut ExpListItem) -> bool {
 // Folding
 //**************************************************************************************************
 
-fn fold_unary_op(loc: Loc, sp!(_, op_): &UnaryOp, v: FoldableValue) -> Option<UnannotatedExp_> {
+fn fold_unary_op(loc: Loc, sp!(_, op_): &UnaryOp, v: FoldableValue) -> UnannotatedExp_ {
     use FoldableValue as FV;
     use UnaryOp_ as U;
     let folded = match (op_, v) {
         (U::Not, FV::Bool(b)) => FV::Bool(!b),
         (op_, v) => panic!("ICE unknown unary op. combo while folding: {} {:?}", op_, v),
     };
-    Some(evalue_(loc, folded))
+    evalue_(loc, folded)
 }
 
 fn fold_binary_op(
@@ -301,23 +296,23 @@ enum FoldableValue {
     Bytearray(Vec<u8>),
 }
 
-fn foldable_value(sp!(_, v_): &Value) -> Option<FoldableValue> {
+fn foldable_value(sp!(_, v_): &Value) -> FoldableValue {
     use FoldableValue as FV;
     use Value_ as V;
-    Some(match v_ {
+    match v_ {
         V::U8(u) => FV::U8(*u),
         V::U64(u) => FV::U64(*u),
         V::U128(u) => FV::U128(*u),
         V::Bool(b) => FV::Bool(*b),
         V::Address(a) => FV::Address(*a),
         V::Bytearray(b) => FV::Bytearray(b.clone()),
-    })
+    }
 }
 
 fn foldable_exp(e: &Exp) -> Option<FoldableValue> {
     use UnannotatedExp_ as E;
     match &e.exp.value {
-        E::Value(v) => foldable_value(v),
+        E::Value(v) => Some(foldable_value(v)),
         _ => None,
     }
 }

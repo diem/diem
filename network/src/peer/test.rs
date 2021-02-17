@@ -141,11 +141,11 @@ fn build_test_connected_peers(
     )
 }
 
-fn build_network_sink_stream<'a>(
-    connection: &'a mut MemorySocket,
+fn build_network_sink_stream(
+    connection: &mut MemorySocket,
 ) -> (
-    NetworkMessageSink<impl AsyncWrite + 'a>,
-    NetworkMessageStream<impl AsyncRead + 'a>,
+    NetworkMessageSink<impl AsyncWrite + '_>,
+    NetworkMessageStream<impl AsyncRead + '_>,
 ) {
     let (read_half, write_half) = tokio::io::split(connection.compat());
     let sink = NetworkMessageSink::new(write_half.compat_write(), MAX_FRAME_SIZE, None);

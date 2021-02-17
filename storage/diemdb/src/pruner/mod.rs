@@ -401,8 +401,7 @@ pub fn prune_state(
         let mut batch = SchemaBatch::new();
         indices
             .into_iter()
-            .map(|index| batch.delete::<JellyfishMerkleNodeSchema>(&index.node_key))
-            .collect::<Result<_>>()?;
+            .try_for_each(|index| batch.delete::<JellyfishMerkleNodeSchema>(&index.node_key))?;
         db.write_schemas(batch)?;
         Ok(new_least_readable_version)
     }

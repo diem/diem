@@ -363,13 +363,13 @@ where
     /// Inserts a new account at the position of the existing leaf node. We may need to create
     /// multiple internal nodes depending on the length of the common prefix of the existing key
     /// and the new key.
-    fn insert_at_leaf<'b>(
+    fn insert_at_leaf(
         &mut self,
         child_index: usize,
         existing_leaf: LeafNode<V>,
         new_key: HashValue,
         new_value: V,
-        mut remaining_nibbles: NibbleIterator<'b>,
+        mut remaining_nibbles: NibbleIterator<'_>,
     ) {
         let num_existing_partial_nodes = self.partial_nodes.len();
 

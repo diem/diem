@@ -14,7 +14,7 @@ use diem_types::{
 };
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashSet, iter::FromIterator};
+use std::collections::HashSet;
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (
@@ -167,9 +167,12 @@ impl ConsensusMock {
         let block = mempool.get_block(block_size, self.0.clone());
         self.0 = self
             .0
-            .union(&HashSet::from_iter(
-                block.iter().map(|t| (t.sender(), t.sequence_number())),
-            ))
+            .union(
+                &block
+                    .iter()
+                    .map(|t| (t.sender(), t.sequence_number()))
+                    .collect(),
+            )
             .cloned()
             .collect();
         block

@@ -507,7 +507,10 @@ impl Options {
 
     pub fn setup_logging_for_test(&self) {
         // Loggers are global static, so we have to protect against reinitializing.
-        if LOGGER_CONFIGURED.compare_and_swap(false, true, Ordering::Relaxed) {
+        if LOGGER_CONFIGURED
+            .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+            .is_err()
+        {
             return;
         }
         TEST_MODE.store(true, Ordering::Relaxed);

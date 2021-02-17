@@ -34,7 +34,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
         module
             .identifiers
             .push(Identifier::new(format!("string{}", i)).unwrap());
-        let str_pool_idx = IdentifierIndex::new(i + 1 as TableIndex);
+        let str_pool_idx = IdentifierIndex::new(i + 1);
         fields.push(FieldDefinition {
             name: str_pool_idx,
             signature: TypeSignature(SignatureToken::Bool),

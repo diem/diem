@@ -27,7 +27,7 @@ pub struct CodeUnitBoundsMutation {
 
 impl CodeUnitBoundsMutation {
     pub fn strategy() -> impl Strategy<Value = Self> {
-        (any::<PropIndex>(), any::<PropIndex>(), 0..16 as usize).prop_map(
+        (any::<PropIndex>(), any::<PropIndex>(), 0..16_usize).prop_map(
             |(function_def, bytecode, offset)| Self {
                 function_def,
                 bytecode,

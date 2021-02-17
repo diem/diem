@@ -106,7 +106,7 @@ pub fn run_model_builder(
 
     // Now that it is known that the program has no errors, run the spec checker on verified units
     // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, verified_units, expansion_ast)?;
+    run_spec_checker(&mut env, verified_units, expansion_ast);
     Ok(env)
 }
 
@@ -167,11 +167,7 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(
-    env: &mut GlobalEnv,
-    units: Vec<CompiledUnit>,
-    mut eprog: Program,
-) -> anyhow::Result<()> {
+fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Program) {
     let mut builder = ModelBuilder::new(env);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
@@ -275,7 +271,6 @@ fn run_spec_checker(
     }
     // After all specs have been processed, warn about any unused schemas.
     builder.warn_unused_schemas();
-    Ok(())
 }
 
 // =================================================================================================

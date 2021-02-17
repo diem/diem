@@ -446,7 +446,7 @@ fn run_transaction_exp_mode(
     transaction: SignedTransaction,
     log: &mut EvaluationLog,
     config: &TransactionConfig,
-) -> Result<()> {
+) {
     let mut outputs = exec
         .execute_block_and_keep_vm_status(vec![transaction])
         .unwrap();
@@ -490,8 +490,6 @@ fn run_transaction_exp_mode(
             checked_verify!(txn_output.write_set().is_empty());
         }
     }
-
-    Ok(())
 }
 
 /// Serializes the script then deserializes it.
@@ -638,7 +636,7 @@ fn eval_transaction<TComp: Compiler>(
                 make_script_transaction(&exec, &transaction.config, compiled_script)?;
 
             if global_config.exp_mode {
-                run_transaction_exp_mode(exec, script_transaction, log, &transaction.config)?;
+                run_transaction_exp_mode(exec, script_transaction, log, &transaction.config);
             } else {
                 let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction));
                 log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
@@ -689,7 +687,7 @@ fn eval_transaction<TComp: Compiler>(
                 make_module_transaction(&exec, &transaction.config, compiled_module)?;
 
             if global_config.exp_mode {
-                run_transaction_exp_mode(exec, module_transaction, log, &transaction.config)?;
+                run_transaction_exp_mode(exec, module_transaction, log, &transaction.config);
             } else {
                 let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction));
                 log.append(EvaluationOutput::Output(OutputType::TransactionOutput(

@@ -360,12 +360,11 @@ impl FunctionFrame {
         Ok(cur_loc_idx)
     }
 
-    fn push_loop(&mut self, start_loc: usize) -> Result<()> {
+    fn push_loop(&mut self, start_loc: usize) {
         self.loops.push(LoopInfo {
             start_loc,
             breaks: Vec::new(),
         });
-        Ok(())
     }
 
     fn pop_loop(&mut self) -> Result<()> {
@@ -1048,7 +1047,7 @@ fn compile_while(
     make_push_instr!(context, code);
     let cond_span = while_.cond.loc;
     let loop_start_loc = code.len();
-    function_frame.push_loop(loop_start_loc)?;
+    function_frame.push_loop(loop_start_loc);
     compile_expression(context, function_frame, code, while_.cond)?;
 
     let brfalse_loc = code.len();
@@ -1090,7 +1089,7 @@ fn compile_loop(
 ) -> Result<ControlFlowInfo> {
     make_push_instr!(context, code);
     let loop_start_loc = code.len();
-    function_frame.push_loop(loop_start_loc)?;
+    function_frame.push_loop(loop_start_loc);
 
     let body_cf_info = compile_block(context, function_frame, code, loop_.block.value)?;
     push_instr!(loop_.block.loc, Bytecode::Branch(loop_start_loc as u16));

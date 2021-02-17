@@ -197,7 +197,7 @@ impl EventStore {
         events
             .iter()
             .enumerate()
-            .map(|(idx, event)| {
+            .try_for_each::<_, Result<_>>(|(idx, event)| {
                 cs.batch.put::<EventSchema>(&(version, idx as u64), event)?;
                 cs.batch.put::<EventByKeySchema>(
                     &(*event.key(), event.sequence_number()),
@@ -208,19 +208,15 @@ impl EventStore {
                     &(idx as u64),
                 )?;
                 Ok(())
-            })
-            .collect::<Result<()>>()?;
+            })?;
 
         // EventAccumulatorSchema updates
         let event_hashes: Vec<HashValue> = events.iter().map(ContractEvent::hash).collect();
         let (root_hash, writes) = EmptyAccumulator::append(&EmptyReader, 0, &event_hashes)?;
-        writes
-            .into_iter()
-            .map(|(pos, hash)| {
-                cs.batch
-                    .put::<EventAccumulatorSchema>(&(version, pos), &hash)
-            })
-            .collect::<Result<()>>()?;
+        writes.into_iter().try_for_each(|(pos, hash)| {
+            cs.batch
+                .put::<EventAccumulatorSchema>(&(version, pos), &hash)
+        })?;
 
         Ok(root_hash)
     }

@@ -4,7 +4,7 @@
 use regex::Regex;
 use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet, VecDeque},
-    env, fs, io,
+    env, fs,
     path::{Path, PathBuf},
 };
 
@@ -135,7 +135,7 @@ fn generate(inp_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn locate_inp_out_dir() -> io::Result<(PathBuf, PathBuf)> {
+fn locate_inp_out_dir() -> (PathBuf, PathBuf) {
     // locate the language directory
     let lang_dir = env::current_exe()
         .unwrap()
@@ -153,16 +153,13 @@ fn locate_inp_out_dir() -> io::Result<(PathBuf, PathBuf)> {
     let inp_dir = lang_dir.join("stdlib/modules");
     let out_dir = lang_dir.join("move-prover/diagen/diagrams");
 
-    Ok((inp_dir, out_dir))
+    (inp_dir, out_dir)
 }
 
 fn main() {
-    if let Ok((inp_dir, out_dir)) = locate_inp_out_dir() {
-        let err = generate(inp_dir.as_path(), out_dir.as_path());
-        if let Err(err) = err {
-            println!("Error: {:?}", err);
-        }
-    } else {
-        println!("Error: Cannot locate the language directory.");
+    let (inp_dir, out_dir) = locate_inp_out_dir();
+    let err = generate(inp_dir.as_path(), out_dir.as_path());
+    if let Err(err) = err {
+        println!("Error: {:?}", err);
     }
 }

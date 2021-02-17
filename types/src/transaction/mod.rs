@@ -54,7 +54,9 @@ pub type Version = u64; // Height - also used for MVCC in StateDB
 pub const PRE_GENESIS_VERSION: Version = u64::max_value();
 
 /// RawTransaction is the portion of a transaction that a client signs.
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
+#[derive(
+    Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash,
+)]
 pub struct RawTransaction {
     /// Sender's address.
     sender: AccountAddress,

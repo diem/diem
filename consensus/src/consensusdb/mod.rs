@@ -109,12 +109,10 @@ impl ConsensusDB {
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
-            .map(|block| batch.put::<BlockSchema>(&block.id(), block))
-            .collect::<Result<()>>()?;
+            .try_for_each(|block| batch.put::<BlockSchema>(&block.id(), block))?;
         qc_data
             .iter()
-            .map(|qc| batch.put::<QCSchema>(&qc.certified_block().id(), qc))
-            .collect::<Result<()>>()?;
+            .try_for_each(|qc| batch.put::<QCSchema>(&qc.certified_block().id(), qc))?;
         self.commit(batch)
     }
 
@@ -126,13 +124,10 @@ impl ConsensusDB {
             return Err(anyhow::anyhow!("Consensus block ids is empty!").into());
         }
         let mut batch = SchemaBatch::new();
-        block_ids
-            .iter()
-            .map(|hash| {
-                batch.delete::<BlockSchema>(hash)?;
-                batch.delete::<QCSchema>(hash)
-            })
-            .collect::<Result<_>>()?;
+        block_ids.iter().try_for_each(|hash| {
+            batch.delete::<BlockSchema>(hash)?;
+            batch.delete::<QCSchema>(hash)
+        })?;
         self.commit(batch)
     }
 

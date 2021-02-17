@@ -754,24 +754,29 @@ impl KeyBackup {
         let now = chrono::Utc::now();
         let time_as_str = now.to_rfc3339();
 
-        let mut info = KeyBackupInfo::default();
-        info.key = Some(base64::encode(key_bytes));
-        info.public_key = Some(base64::encode(pub_key_bytes));
-        info.creation_time = now.timestamp_subsec_millis();
-        info.time = time_as_str.clone();
-
-        let mut key_backup = Self {
-            policy: KeyBackupPolicy::default(),
+        let info = KeyBackupInfo {
+            key: Some(base64::encode(key_bytes)),
+            public_key: Some(base64::encode(pub_key_bytes)),
+            creation_time: now.timestamp_subsec_millis(),
+            time: time_as_str.clone(),
+            ..Default::default()
         };
 
-        key_backup.policy.exportable = true;
-        key_backup.policy.min_decryption_version = 1;
-        key_backup.policy.latest_version = 1;
-        key_backup.policy.archive_version = 1;
-        key_backup.policy.backup_type = 2;
+        let mut key_backup = Self {
+            policy: KeyBackupPolicy {
+                exportable: true,
+                min_decryption_version: 1,
+                latest_version: 1,
+                archive_version: 1,
+                backup_type: 2,
+                backup_info: BackupInfo {
+                    time: time_as_str,
+                    version: 1,
+                },
+                ..Default::default()
+            },
+        };
         key_backup.policy.keys.insert(1, info);
-        key_backup.policy.backup_info.time = time_as_str;
-        key_backup.policy.backup_info.version = 1;
         key_backup
     }
 }

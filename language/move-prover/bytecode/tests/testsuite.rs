@@ -149,8 +149,10 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         env.report_errors(&mut error_writer);
         String::from_utf8_lossy(&error_writer.into_inner()).to_string()
     } else {
-        let mut options = ProverOptions::default();
-        options.stable_test_output = true;
+        let options = ProverOptions {
+            stable_test_output: true,
+            ..Default::default()
+        };
         env.set_extension(options);
         let dir_name = path
             .parent()

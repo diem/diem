@@ -413,7 +413,7 @@ impl GlobalEnv {
             file_idx_to_id.insert(file_idx, file_id);
             Loc::new(
                 file_id,
-                Span::from(ByteIndex(0 as u32)..ByteIndex(content.len() as u32)),
+                Span::from(ByteIndex(0_u32)..ByteIndex(content.len() as u32)),
             )
         };
         let unknown_loc = fake_loc("<unknown>");
@@ -1798,7 +1798,7 @@ impl<'env> StructEnv<'env> {
             .symbol_pool
             .string(self.module_env.get_name().name());
         let addr = self.module_env.get_name().addr();
-        name.as_ref() == "Vector" && addr == &BigUint::from(0 as u64)
+        name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
     }
 
     /// Determines whether this struct is a resource type.

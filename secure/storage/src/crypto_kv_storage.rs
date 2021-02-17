@@ -18,7 +18,7 @@ pub trait CryptoKVStorage: KVStorage {}
 impl<T: CryptoKVStorage> CryptoStorage for T {
     fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         // Generate and store the new named key pair
-        let (private_key, public_key) = new_ed25519_key_pair()?;
+        let (private_key, public_key) = new_ed25519_key_pair();
         self.import_private_key(name, private_key)?;
         Ok(public_key)
     }
@@ -79,7 +79,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
 
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         let private_key: Ed25519PrivateKey = self.get(name)?.value;
-        let (new_private_key, new_public_key) = new_ed25519_key_pair()?;
+        let (new_private_key, new_public_key) = new_ed25519_key_pair();
         self.set(&get_previous_version_name(name), private_key)?;
         self.set(name, new_private_key)?;
         Ok(new_public_key)
@@ -106,12 +106,12 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
 }
 
 /// Private helper method to generate a new ed25519 key pair using entropy from the OS.
-fn new_ed25519_key_pair() -> Result<(Ed25519PrivateKey, Ed25519PublicKey), Error> {
+fn new_ed25519_key_pair() -> (Ed25519PrivateKey, Ed25519PublicKey) {
     let mut seed_rng = OsRng;
     let mut rng = rand::rngs::StdRng::from_seed(seed_rng.gen());
     let private_key = Ed25519PrivateKey::generate(&mut rng);
     let public_key = private_key.public_key();
-    Ok((private_key, public_key))
+    (private_key, public_key)
 }
 
 /// Private helper method to get the name of the previous version of the given key pair, as held in

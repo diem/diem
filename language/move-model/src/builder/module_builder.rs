@@ -1902,7 +1902,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
                 let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE);
                 et.finalize_types();
-                let path_cond = self.extend_path_condition(&loc, path_cond, lhs_exp);
+                let path_cond = Some(self.extend_path_condition(&loc, path_cond, lhs_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -1945,7 +1945,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let c_exp = et.translate_exp(c, &BOOL_TYPE);
                 et.finalize_types();
                 let t_path_cond =
-                    self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone());
+                    Some(self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone()));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -1957,7 +1957,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 );
                 let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
                 let not_c_exp = Exp::Call(node_id, Operation::Not, vec![c_exp]);
-                let e_path_cond = self.extend_path_condition(&loc, path_cond, not_c_exp);
+                let e_path_cond = Some(self.extend_path_condition(&loc, path_cond, not_c_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -2230,17 +2230,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     }
 
     /// Extends a path condition for schema expression analysis.
-    fn extend_path_condition(
-        &mut self,
-        loc: &Loc,
-        path_cond: Option<Exp>,
-        exp: Exp,
-    ) -> Option<Exp> {
+    fn extend_path_condition(&mut self, loc: &Loc, path_cond: Option<Exp>, exp: Exp) -> Exp {
         if let Some(cond) = path_cond {
             let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
-            Some(Exp::Call(node_id, Operation::And, vec![cond, exp]))
+            Exp::Call(node_id, Operation::And, vec![cond, exp])
         } else {
-            Some(exp)
+            exp
         }
     }
 

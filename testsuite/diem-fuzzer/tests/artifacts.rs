@@ -35,8 +35,7 @@ fn test_artifact(artifact_path: &Path) -> datatest_stable::Result<()> {
                 );
             },
             || test_artifact_impl(artifact_path),
-        )
-        .expect("forking test failed");
+        )?;
     }
 
     Ok(())

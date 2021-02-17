@@ -105,7 +105,7 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
     let account_state_with_proof = gen.generate(proptest::prelude::any::<AccountStateWithProof>());
 
     let db = tests::MockDiemDB {
-        version: 1 as u64,
+        version: 1,
         genesis: std::collections::HashMap::new(),
         all_accounts: std::collections::HashMap::new(),
         all_txns: vec![],

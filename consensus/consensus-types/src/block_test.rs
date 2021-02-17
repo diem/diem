@@ -10,7 +10,7 @@ use crate::{
 };
 use diem_crypto::hash::HashValue;
 use diem_types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
-use std::{collections::BTreeMap, panic, sync::Arc};
+use std::{collections::BTreeMap, sync::Arc};
 
 #[test]
 fn test_genesis() {

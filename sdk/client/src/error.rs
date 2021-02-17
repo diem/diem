@@ -45,7 +45,7 @@ impl Error {
     pub fn is_retriable(&self) -> bool {
         match self.inner.kind {
             // internal server errors are retriable
-            Kind::HttpStatus(status) => status >= 500 && status <= 599,
+            Kind::HttpStatus(status) => (500..=599).contains(&status),
             Kind::Timeout | Kind::StaleResponse => true,
             Kind::RpcResponse
             | Kind::Request

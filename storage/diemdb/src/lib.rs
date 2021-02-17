@@ -551,12 +551,12 @@ impl DiemDB {
             .collect::<Result<Vec<_>>>()?;
 
         // Transaction updates. Gather transaction hashes.
-        zip_eq(first_version..=last_version, txns_to_commit)
-            .map(|(ver, txn_to_commit)| {
+        zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
+            |(ver, txn_to_commit)| {
                 self.transaction_store
                     .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
-            })
-            .collect::<Result<()>>()?;
+            },
+        )?;
 
         // Transaction accumulator updates. Get result root hash.
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)

@@ -75,7 +75,7 @@ fn mock_db() -> MockDiemDB {
     let mut all_accounts = HashMap::new();
     let mut all_txns = vec![];
     let mut events = vec![];
-    let mut timestamps = vec![0 as u64];
+    let mut timestamps = vec![0_u64];
 
     for (txns_to_commit, ledger_info_with_sigs) in &blocks {
         for (idx, txn) in txns_to_commit.iter().enumerate() {

@@ -186,11 +186,11 @@ fn create_test_cases() -> Vec<Test> {
                         "authentication_key": null,
                         "balances": [
                             {
-                                "amount": 0 as u64,
+                                "amount": 0_u64,
                                 "currency": "XDX"
                             },
                             {
-                                "amount": 9223370036854775807 as u64,
+                                "amount": 9223370036854775807_u64,
                                 "currency": "XUS"
                             },
                         ],
@@ -202,7 +202,7 @@ fn create_test_cases() -> Vec<Test> {
                             "type": "designated_dealer",
                             "base_url": "",
                             "compliance_key": "",
-                            "expiration_time": 18446744073709551615 as u64,
+                            "expiration_time": 18446744073709551615_u64,
                             "human_name": "moneybags",
                             "preburn_balances": [
                                 {
@@ -232,7 +232,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 997000000000 as u64, "currency": "XUS"}],
+                        "balances": [{"amount": 997000000000_u64, "currency": "XUS"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -242,7 +242,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "expiration_time": 18446744073709551615 as u64,
+                            "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 1,
                             "type": "parent_vasp"
@@ -266,7 +266,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 3000000000 as u64, "currency": "XUS"}],
+                        "balances": [{"amount": 3000000000_u64, "currency": "XUS"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -321,7 +321,7 @@ fn create_test_cases() -> Vec<Test> {
                         "events": [
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "XUS"},
+                                    "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
                                     "receiver": format!("{:#x}", &receiver.address),
                                     "sender": format!("{:#x}", &sender.address),
@@ -333,7 +333,7 @@ fn create_test_cases() -> Vec<Test> {
                             },
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "XUS"},
+                                    "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
                                     "receiver": format!("{:#x}", &receiver.address),
                                     "sender": format!("{:#x}", &sender.address),

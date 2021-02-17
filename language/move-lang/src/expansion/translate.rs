@@ -379,7 +379,16 @@ fn module_members(
             P::ModuleMember::Struct(s) => {
                 cur_members.insert(s.name.0.clone(), ModuleMemberKind::Struct);
             }
-            P::ModuleMember::Spec(sp!(_, SB { target, members, .. })) => match &target.value {
+            P::ModuleMember::Spec(
+                sp!(
+                    _,
+                    SB {
+                        target,
+                        members,
+                        ..
+                    }
+                ),
+            ) => match &target.value {
                 SBT::Schema(n, _) => {
                     cur_members.insert(n.clone(), ModuleMemberKind::Schema);
                 }
@@ -444,7 +453,14 @@ fn aliases_from_member(
             Some(P::ModuleMember::Struct(s))
         }
         P::ModuleMember::Spec(s) => {
-            let sp!(_, SB { target, members, .. }) = &s;
+            let sp!(
+                _,
+                SB {
+                    target,
+                    members,
+                    ..
+                }
+            ) = &s;
             match &target.value {
                 SBT::Schema(n, _) => {
                     check_name_and_add_implicit_alias!(ModuleMemberKind::Schema, n.clone());
@@ -784,13 +800,7 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
 
     let members = pmembers
         .into_iter()
-        .filter_map(|m| {
-            let m = spec_member(context, m);
-            if m.is_none() {
-                assert!(context.has_errors())
-            };
-            m
-        })
+        .map(|m| spec_member(context, m))
         .collect();
 
     context.set_to_outer_scope(old_aliases);
@@ -799,10 +809,7 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     sp(loc, E::SpecBlock_ { target, members })
 }
 
-fn spec_member(
-    context: &mut Context,
-    sp!(loc, pm): P::SpecBlockMember,
-) -> Option<E::SpecBlockMember> {
+fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {
     use E::SpecBlockMember_ as EM;
     use P::SpecBlockMember_ as PM;
     let em = match pm {
@@ -898,7 +905,7 @@ fn spec_member(
             EM::Pragma { properties }
         }
     };
-    Some(sp(loc, em))
+    sp(loc, em)
 }
 
 fn pragma_property(context: &mut Context, sp!(loc, pp_): P::PragmaProperty) -> E::PragmaProperty {

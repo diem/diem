@@ -467,7 +467,10 @@ fn dual_attestation_payment() {
 
         assert!(matches!(
             output.status().status(),
-            Ok(KeptVMStatus::MoveAbort(_, BAD_METADATA_SIGNATURE_ERROR_CODE))
+            Ok(KeptVMStatus::MoveAbort(
+                _,
+                BAD_METADATA_SIGNATURE_ERROR_CODE
+            ))
         ));
     }
 
