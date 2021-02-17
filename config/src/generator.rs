@@ -54,9 +54,11 @@ pub fn validator_swarm(
 }
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
-    let mut config = NodeConfig::default();
-    config.test = Some(TestConfig::open_module());
-    validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
+    let config = NodeConfig {
+        test: Some(TestConfig::open_module()),
+        ..Default::default()
+    };
+    validator_swarm(&config, nodes, [1u8; 32], true)
 }
 
 /// Convenience function that builds a `PeerSet` containing a single peer for testing
