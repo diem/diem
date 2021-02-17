@@ -316,7 +316,7 @@ impl StateSyncEnvironment {
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
 
-        peer.client = Some(bootstrapper.create_client());
+        peer.client = Some(bootstrapper.create_client(config.state_sync.client_commit_timeout_ms));
         peer.bootstrapper = Some(bootstrapper);
         peer.mempool = Some(MockSharedMempool::new(Some(mempool_requests)));
         peer.storage_proxy = Some(storage_proxy);

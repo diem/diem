@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct StateSyncConfig {
     // Size of chunk to request for state synchronization
     pub chunk_limit: u64,
+    // The timeout of the state sync client to process a commit notification (in milliseconds)
+    pub client_commit_timeout_ms: u64,
     // default timeout used for long polling to remote peer
     pub long_poll_timeout_ms: u64,
     // valid maximum chunk limit for sanity check
@@ -29,6 +31,7 @@ impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
             chunk_limit: 1000,
+            client_commit_timeout_ms: 5_000,
             long_poll_timeout_ms: 10_000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,

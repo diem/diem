@@ -64,10 +64,11 @@ fn build_inserter(
     lec_client: Box<dyn ExecutionCorrectness + Send + Sync>,
 ) -> TreeInserter {
     let (coordinator_sender, _coordinator_receiver) = mpsc::unbounded();
+    let client_commit_timeout_ms = config.state_sync.client_commit_timeout_ms;
 
     let state_computer = Arc::new(ExecutionProxy::new(
         lec_client,
-        StateSyncClient::new(coordinator_sender),
+        StateSyncClient::new(coordinator_sender, client_commit_timeout_ms),
     ));
 
     TreeInserter::new_with_store(

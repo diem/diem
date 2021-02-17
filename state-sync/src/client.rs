@@ -40,14 +40,20 @@ pub enum CoordinatorMessage {
 /// A client used for communicating with a StateSyncCoordinator.
 pub struct StateSyncClient {
     coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
+
+    /// Timeout for the StateSyncClient to receive an ack when executing commit().
+    commit_timeout_ms: u64,
 }
 
 impl StateSyncClient {
-    /// Timeout for the StateSyncClient to receive an ack when executing commit().
-    const COMMIT_TIMEOUT_SECS: u64 = 5;
-
-    pub fn new(coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>) -> Self {
-        Self { coordinator_sender }
+    pub fn new(
+        coordinator_sender: mpsc::UnboundedSender<CoordinatorMessage>,
+        commit_timeout_ms: u64,
+    ) -> Self {
+        Self {
+            coordinator_sender,
+            commit_timeout_ms,
+        }
     }
 
     /// Sync node's state to target ledger info (LI).
@@ -77,6 +83,8 @@ impl StateSyncClient {
     ) -> impl Future<Output = Result<()>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
+
+        let commit_timeout_ms = self.commit_timeout_ms;
         let notification = CommitNotification {
             callback: cb_sender,
             committed_transactions: committed_txns,
@@ -90,12 +98,7 @@ impl StateSyncClient {
                 )))
                 .await?;
 
-            match timeout(
-                Duration::from_secs(StateSyncClient::COMMIT_TIMEOUT_SECS),
-                cb_receiver,
-            )
-            .await
-            {
+            match timeout(Duration::from_millis(commit_timeout_ms), cb_receiver).await {
                 Err(_) => {
                     counters::COMMIT_FLOW_FAIL
                         .with_label_values(&[counters::STATE_SYNC_LABEL])

@@ -84,7 +84,7 @@ impl StateSyncBootstrapper {
         }
     }
 
-    pub fn create_client(&self) -> StateSyncClient {
-        StateSyncClient::new(self.coordinator_sender.clone())
+    pub fn create_client(&self, commit_timeout_secs: u64) -> StateSyncClient {
+        StateSyncClient::new(self.coordinator_sender.clone(), commit_timeout_secs)
     }
 }
