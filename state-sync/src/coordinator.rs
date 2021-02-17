@@ -43,8 +43,6 @@ use std::{
 use tokio::time::{interval, timeout};
 use tokio_stream::wrappers::IntervalStream;
 
-const MEMPOOL_COMMIT_ACK_TIMEOUT_SECS: u64 = 5;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {
     expiration_time: SystemTime,
@@ -573,7 +571,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 error
             )))
         } else if let Err(error) = timeout(
-            Duration::from_secs(MEMPOOL_COMMIT_ACK_TIMEOUT_SECS),
+            Duration::from_millis(self.config.mempool_commit_timeout_ms),
             callback_receiver,
         )
         .await
