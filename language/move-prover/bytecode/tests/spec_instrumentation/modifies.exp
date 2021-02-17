@@ -173,11 +173,10 @@ pub fun A::mutate_at($t0|addr: address) {
      var $t2: num
      var $t3: u64
      var $t4: &mut u64
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:17:5+115
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<A::S>(): WellFormed($rsc)
   2: @1 := save_mem(A::S)
-     # VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:18:17+17
+     # VC: caller does not have permission to modify `A::S` at given address at tests/spec_instrumentation/modifies.move:18:17+17
   3: assert CanModify<A::S>($t0)
   4: $t1 := borrow_global<A::S>($t0) on_abort goto 14 with $t2
   5: $t3 := 2
@@ -186,12 +185,13 @@ pub fun A::mutate_at($t0|addr: address) {
   8: write_back[Reference($t1)]($t4)
   9: write_back[A::S]($t1)
  10: label L1
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:24:9+27
+     # VC: function does not abort under this condition at tests/spec_instrumentation/modifies.move:24:9+27
  11: assert Not(Not(exists[@1]<A::S>($t0)))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:23:9+31
+     # VC: post-condition does not hold at tests/spec_instrumentation/modifies.move:23:9+31
  12: assert Eq<u64>(select A::S.x(global<A::S>($t0)), 2)
  13: return ()
  14: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:21:5+166
  15: assert Not(exists[@1]<A::S>($t0))
  16: abort($t2)
 }
@@ -208,13 +208,13 @@ pub fun A::read_at($t0|addr: address): u64 {
   3: $t1 := get_global<A::S>($t0) on_abort goto 9 with $t2
   4: $t3 := get_field<A::S>.x($t1)
   5: label L1
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/modifies.move:13:9+27
+     # VC: function does not abort under this condition at tests/spec_instrumentation/modifies.move:13:9+27
   6: assert Not(Not(exists[@0]<A::S>($t0)))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/modifies.move:14:9+36
+     # VC: post-condition does not hold at tests/spec_instrumentation/modifies.move:14:9+36
   7: assert Eq<u64>($t3, select A::S.x(global<A::S>($t0)))
   8: return $t3
   9: label L2
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/modifies.move:7:5+109
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/modifies.move:11:5+135
  10: assert Not(exists[@0]<A::S>($t0))
  11: abort($t2)
 }
@@ -241,7 +241,7 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
   9: label L3
  10: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
  11: assume WellFormed($t3)
-     # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:65:17+9
+     # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:65:17+9
  12: assert CanModify<B::T>($t0)
  13: $t2 := move_from<B::T>($t0) on_abort goto 25 with $t6
      # original call of opaque function: $t4 := A::read_at($t6)
@@ -285,7 +285,7 @@ pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
  11: assume WellFormed($t2)
  12: $t6 := 2
  13: $t7 := pack B::T($t6)
-     # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:52:9+7
+     # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:52:9+7
  14: assert CanModify<B::T>($t0)
  15: move_to<B::T>($t7, $t0) on_abort goto 27 with $t5
      # original call of opaque function: $t3 := A::read_at($t5)
@@ -327,7 +327,7 @@ pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
  10: assume Eq<u64>($t2, select A::S.x(global<A::S>($t1)))
  11: assume WellFormed($t2)
      # original call of opaque function: A::mutate_at($t4)
-     # VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:79:12+9
+     # VC: caller does not have permission to modify `A::S` at given address at tests/spec_instrumentation/modifies.move:79:9+19
  12: assert CanModify<A::S>($t0)
  13: assume Eq($t6, Not(exists<A::S>($t0)))
  14: if ($t6) goto 15 else goto 18
@@ -374,7 +374,7 @@ pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
   8: assume Eq<u64>($t1, select A::S.x(global<A::S>($t0)))
   9: assume WellFormed($t1)
      # original call of opaque function: A::mutate_at($t3)
-     # VC: `caller does not have permission to modify `A::S` at given address` at tests/spec_instrumentation/modifies.move:92:12+9
+     # VC: caller does not have permission to modify `A::S` at given address at tests/spec_instrumentation/modifies.move:92:9+18
  10: assert CanModify<A::S>($t0)
  11: assume Eq($t5, Not(exists<A::S>($t0)))
  12: if ($t5) goto 13 else goto 16
@@ -424,7 +424,7 @@ pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
   9: label L3
  10: assume Eq<u64>($t3, select A::S.x(global<A::S>($t1)))
  11: assume WellFormed($t3)
-     # VC: `caller does not have permission to modify `B::T` at given address` at tests/spec_instrumentation/modifies.move:38:17+17
+     # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:38:17+17
  12: assert CanModify<B::T>($t0)
  13: $t2 := borrow_global<B::T>($t0) on_abort goto 30 with $t6
  14: $t7 := 2

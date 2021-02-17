@@ -6,6 +6,9 @@ error: post-condition does not hold
  39 │      ensures exists<R>(Signer::spec_address_of(account));
     │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/resources.move:32:5: create_resource_incorrect
-    =     at tests/sources/functional/resources.move:33:30: create_resource_incorrect
+    =     at tests/sources/functional/resources.move:32: create_resource_incorrect
     =         account = <redacted>
+    =     at tests/sources/functional/resources.move:33: create_resource_incorrect
+    =     at tests/sources/functional/resources.move:36: create_resource_incorrect
+    =     at tests/sources/functional/resources.move:38
+    =     at tests/sources/functional/resources.move:39

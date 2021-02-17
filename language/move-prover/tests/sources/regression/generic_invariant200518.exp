@@ -6,12 +6,15 @@ error: post-condition does not hold
  65 │         invariant spec_addr_is_association(Signer::spec_address_of(sender));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/generic_invariant200518.move:23:5: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:25:24: remove_privilege
-    =         sender = <redacted>,
-    =         addr = <redacted>,
-    =         <redacted> = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:39:42: root_address
+    =     at tests/sources/regression/generic_invariant200518.move:23: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:65
+    =     at tests/sources/regression/generic_invariant200518.move:23: remove_privilege
+    =         sender = <redacted>
+    =         addr = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:25: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:39: root_address
     =         result = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:25:9: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:27:46: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:25: remove_privilege
+    =         <redacted> = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:28: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:65

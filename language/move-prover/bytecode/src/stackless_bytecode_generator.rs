@@ -6,7 +6,7 @@ use crate::{
     stackless_bytecode::{
         AssignKind, AttrId,
         Bytecode::{self},
-        Constant, Label, Operation, PropKind, SpecBlockId,
+        Constant, Label, Operation, PropKind,
     },
 };
 use itertools::Itertools;
@@ -33,11 +33,10 @@ pub struct StacklessBytecodeGenerator<'a> {
     local_types: Vec<Type>,
     code: Vec<Bytecode>,
     location_table: BTreeMap<AttrId, Loc>,
-    for_v2: bool,
 }
 
 impl<'a> StacklessBytecodeGenerator<'a> {
-    pub fn new(func_env: &'a FunctionEnv<'a>, for_v2: bool) -> Self {
+    pub fn new(func_env: &'a FunctionEnv<'a>) -> Self {
         let local_types = (0..func_env.get_local_count())
             .map(|i| func_env.get_local_type(i))
             .collect_vec();
@@ -49,7 +48,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             local_types,
             code: vec![],
             location_table: BTreeMap::new(),
-            for_v2,
         }
     }
 
@@ -79,14 +77,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
 
         // Generate bytecode.
-        let mut given_spec_blocks = BTreeMap::new();
         for (code_offset, bytecode) in original_code.iter().enumerate() {
-            self.generate_bytecode(
-                bytecode,
-                code_offset as CodeOffset,
-                &label_map,
-                &mut given_spec_blocks,
-            );
+            self.generate_bytecode(bytecode, code_offset as CodeOffset, &label_map);
         }
 
         // Eliminate fall-through for non-branching instructions
@@ -107,7 +99,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             self.func_env.get_return_types(),
             self.location_table,
             self.func_env.get_acquires_global_resources(),
-            given_spec_blocks,
         )
     }
 
@@ -146,7 +137,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         bytecode: &MoveBytecode,
         code_offset: CodeOffset,
         label_map: &BTreeMap<CodeOffset, Label>,
-        spec_blocks: &mut BTreeMap<SpecBlockId, CodeOffset>,
     ) {
         // Add label if defined at this code offset.
         if let Some(label) = label_map.get(&code_offset) {
@@ -156,24 +146,15 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
         // Handle spec block if defined at this code offset.
         if let Some(spec) = self.func_env.get_spec().on_impl.get(&code_offset) {
-            if self.for_v2 {
-                for cond in &spec.conditions {
-                    let attr_id = self.new_loc_attr_from_loc(cond.loc.clone());
-                    let kind = match cond.kind {
-                        ConditionKind::Assert => PropKind::Assert,
-                        ConditionKind::Assume => PropKind::Assume,
-                        _ => panic!("unsupported spec condition in code"),
-                    };
-                    self.code
-                        .push(Bytecode::Prop(attr_id, kind, cond.exp.clone()));
-                }
-            } else {
-                // Inject spec block instruction.
-                let block_id = SpecBlockId::new(spec_blocks.len());
-                spec_blocks.insert(block_id, code_offset);
-                let spec_block_attr_id = self.new_loc_attr(code_offset);
+            for cond in &spec.conditions {
+                let attr_id = self.new_loc_attr_from_loc(cond.loc.clone());
+                let kind = match cond.kind {
+                    ConditionKind::Assert => PropKind::Assert,
+                    ConditionKind::Assume => PropKind::Assume,
+                    _ => panic!("unsupported spec condition in code"),
+                };
                 self.code
-                    .push(Bytecode::SpecBlock(spec_block_attr_id, block_id));
+                    .push(Bytecode::Prop(attr_id, kind, cond.exp.clone()));
             }
 
             // If the current instruction is just a Nop, skip it. It has been generated to support

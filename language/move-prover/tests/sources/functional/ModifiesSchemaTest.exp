@@ -1,15 +1,19 @@
 Move prover returns: exiting with boogie verification errors
 error: caller does not have permission to modify `A::S` at given address
 
-    ┌── tests/sources/functional/ModifiesSchemaTest.move:12:16 ───
+    ┌── tests/sources/functional/ModifiesSchemaTest.move:31:9 ───
     │
- 12 │     public fun mutate_at(addr: address) acquires S {
-    │                ^^^^^^^^^
+ 31 │         mutate_at(addr2)
+    │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/ModifiesSchemaTest.move:29:5: mutate_at_wrapper2
-    =     at tests/sources/functional/ModifiesSchemaTest.move:12:16: mutate_at
+    =     at tests/sources/functional/ModifiesSchemaTest.move:29: mutate_at_wrapper2
+    =         addr1 = <redacted>
+    =         addr2 = <redacted>
+    =     at tests/sources/functional/ModifiesSchemaTest.move:30: mutate_at_wrapper2
+    =     at tests/sources/functional/ModifiesSchemaTest.move:12: mutate_at
     =         addr = <redacted>
-    =     at tests/sources/functional/ModifiesSchemaTest.move:13:17: mutate_at
+    =     at tests/sources/functional/ModifiesSchemaTest.move:13: mutate_at
     =         s = <redacted>
-    =     at tests/sources/functional/ModifiesSchemaTest.move:14:15: mutate_at
-    =     at tests/sources/functional/ModifiesSchemaTest.move:12:16: mutate_at
+    =     at tests/sources/functional/ModifiesSchemaTest.move:14: mutate_at
+    =     at tests/sources/functional/ModifiesSchemaTest.move:15: mutate_at
+    =     at tests/sources/functional/ModifiesSchemaTest.move:31: mutate_at_wrapper2

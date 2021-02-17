@@ -6,17 +6,22 @@ error: post-condition does not hold
  48 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model.move:39:5: hash_test1_incorrect
-    =     at tests/sources/functional/hash_model.move:41:24: hash_test1_incorrect
-    =         v1 = <redacted>,
-    =         v2 = <redacted>,
+    =     at tests/sources/functional/hash_model.move:48
+    =     at tests/sources/functional/hash_model.move:39: hash_test1_incorrect
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:41: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:41: hash_test1_incorrect
     =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model.move:42:24: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:42: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:42: hash_test1_incorrect
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:43:9: hash_test1_incorrect
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:44:5: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:43: hash_test1_incorrect
+    =         result_0 = <redacted>
+    =         result_1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:44: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:46
+    =     at tests/sources/functional/hash_model.move:48
 
 error: post-condition does not hold
 
@@ -25,14 +30,19 @@ error: post-condition does not hold
  91 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model.move:82:5: hash_test2_incorrect
-    =     at tests/sources/functional/hash_model.move:84:24: hash_test2_incorrect
-    =         v1 = <redacted>,
-    =         v2 = <redacted>,
+    =     at tests/sources/functional/hash_model.move:91
+    =     at tests/sources/functional/hash_model.move:82: hash_test2_incorrect
+    =         v1 = <redacted>
+    =         v2 = <redacted>
+    =     at tests/sources/functional/hash_model.move:84: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:84: hash_test2_incorrect
     =         h1 = <redacted>
-    =     at tests/sources/functional/hash_model.move:85:24: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:85: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:85: hash_test2_incorrect
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:86:9: hash_test2_incorrect
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:87:5: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:86: hash_test2_incorrect
+    =         result_0 = <redacted>
+    =         result_1 = <redacted>
+    =     at tests/sources/functional/hash_model.move:87: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:89
+    =     at tests/sources/functional/hash_model.move:91

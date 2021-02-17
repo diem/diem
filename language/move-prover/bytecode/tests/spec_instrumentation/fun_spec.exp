@@ -189,17 +189,17 @@ fun Test::branching_result($t0|is_div: bool, $t1|a: u64, $t2|b: u64): u64 {
  10: $t3 := *($t1, $t2) on_abort goto 17 with $t4
  11: label L3
  12: label L4
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:27:6+50
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:27:6+50
  13: assert Not(And($t0, Eq<u64>($t2, 0)))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:28:6+35
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:28:6+35
  14: assert Implies($t0, Eq<u64>($t3, Div($t1, $t2)))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:29:6+36
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:29:6+36
  15: assert Implies(Not($t0), Eq<u64>($t3, Mul($t1, $t2)))
  16: return $t3
  17: label L5
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:23:2+94
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:26:2+169
  18: assert And($t0, Eq<u64>($t2, 0))
-     # VC: `abort code not covered by any of the `aborts_if` or `aborts_with` clauses` at tests/spec_instrumentation/fun_spec.move:23:2+1
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:26:2+169
  19: assert And(And($t0, Eq<u64>($t2, 0)), Eq(-1, $t4))
  20: abort($t4)
 }
@@ -226,17 +226,17 @@ fun Test::implicit_and_explicit_abort($t0|a: u64, $t1|b: u64): u64 {
  11: label L2
  12: $t6 := /($t0, $t1) on_abort goto 18 with $t5
  13: label L3
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:9:6+25
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:9:6+25
  14: assert Not(Eq<u64>($t1, 0))
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:10:6+17
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:10:6+17
  15: assert Not(Eq<u64>($t0, 0))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:11:6+24
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:11:6+24
  16: assert Eq<u64>($t6, Div($t0, $t1))
  17: return $t6
  18: label L4
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:4:2+96
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:8:2+125
  19: assert Or(Eq<u64>($t1, 0), Eq<u64>($t0, 0))
-     # VC: `abort code not covered by any of the `aborts_if` or `aborts_with` clauses` at tests/spec_instrumentation/fun_spec.move:4:2+1
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:8:2+125
  20: assert Or(And(Eq<u64>($t1, 0), Eq(22, $t5)), Eq<u64>($t0, 0))
  21: abort($t5)
 }
@@ -252,17 +252,17 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
   2: $t2 := /($t0, $t1) on_abort goto 9 with $t3
   3: $t4 := %($t0, $t1) on_abort goto 9 with $t3
   4: label L1
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:18:6+40
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:18:6+40
   5: assert Not(Eq<u64>($t1, 0))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:19:6+26
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:19:6+26
   6: assert Eq<u64>($t2, Div($t0, $t1))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:20:6+26
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:20:6+26
   7: assert Eq<u64>($t4, Mod($t0, $t1))
   8: return ($t2, $t4)
   9: label L2
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:14:2+73
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:17:2+140
  10: assert Eq<u64>($t1, 0)
-     # VC: `abort code not covered by any of the `aborts_if` or `aborts_with` clauses` at tests/spec_instrumentation/fun_spec.move:14:2+1
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:17:2+140
  11: assert And(Eq<u64>($t1, 0), Eq(-1, $t3))
  12: abort($t3)
 }
@@ -291,17 +291,17 @@ fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
   9: write_back[Reference($t3)]($t9)
  10: write_back[LocalRoot($t2)]($t3)
  11: label L1
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:67:6+42
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:67:6+42
  12: assert Not(Eq<u64>(select Test::R.v($t0), 0))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:68:6+27
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:68:6+27
  13: assert Eq<u64>($t4, select Test::R.v($t0))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:69:6+28
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:69:6+28
  14: assert Eq<u64>(select Test::R.v($t2), Add(select Test::R.v($t0), 1))
  15: return ($t4, $t2)
  16: label L2
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:61:2+83
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
  17: assert Eq<u64>(select Test::R.v($t0), 0)
-     # VC: `abort code not covered by any of the `aborts_if` or `aborts_with` clauses` at tests/spec_instrumentation/fun_spec.move:61:2+1
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
  18: assert And(Eq<u64>(select Test::R.v($t0), 0), Eq(-1, $t8))
  19: abort($t8)
 }
@@ -313,7 +313,7 @@ fun Test::ref_param($t0|r: Test::R): u64 {
   0: assume WellFormed($t0)
   1: $t1 := get_field<Test::R>.v($t0)
   2: label L1
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:51:6+22
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:51:6+22
   3: assert Eq<u64>($t1, select Test::R.v($t0))
   4: return $t1
 }
@@ -325,7 +325,7 @@ fun Test::ref_param_return_ref($t0|r: Test::R): u64 {
   0: assume WellFormed($t0)
   1: $t1 := get_field<Test::R>.v($t0)
   2: label L1
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:58:6+22
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:58:6+22
   3: assert Eq<u64>($t1, select Test::R.v($t0))
   4: return $t1
 }
@@ -343,7 +343,6 @@ fun Test::resource_with_old($t0|val: u64) {
      var $t8: u64
      var $t9: u64
      var $t10: &mut u64
-     # VC: `abort not covered by any of the `aborts_if` clauses` at tests/spec_instrumentation/fun_spec.move:34:2+145
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
   2: assume Gt($t0, 0)
@@ -360,7 +359,7 @@ fun Test::resource_with_old($t0|val: u64) {
  13: goto 29
  14: label L2
  15: $t7 := 0x0
-     # VC: `caller does not have permission to modify `Test::R` at given address` at tests/spec_instrumentation/fun_spec.move:36:14+17
+     # VC: caller does not have permission to modify `Test::R` at given address at tests/spec_instrumentation/fun_spec.move:36:14+17
  16: assert CanModify<Test::R>($t7)
  17: $t1 := borrow_global<Test::R>($t7) on_abort goto 29 with $t6
  18: $t8 := get_field<Test::R>.v($t1)
@@ -370,16 +369,17 @@ fun Test::resource_with_old($t0|val: u64) {
  22: write_back[Reference($t1)]($t10)
  23: write_back[Test::R]($t1)
  24: label L3
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:41:6+34
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+34
  25: assert Not(Not(exists[@0]<Test::R>(0)))
-     # VC: `function does not abort under this condition` at tests/spec_instrumentation/fun_spec.move:42:6+57
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:42:6+57
  26: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
-     # VC: `post-condition does not hold` at tests/spec_instrumentation/fun_spec.move:43:6+56
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:43:6+56
  27: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
  28: return ()
  29: label L4
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+249
  30: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
-     # VC: `abort code not covered by any of the `aborts_if` or `aborts_with` clauses` at tests/spec_instrumentation/fun_spec.move:34:2+1
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+249
  31: assert Or(And(Not(exists[@0]<Test::R>(0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
  32: abort($t6)
 }

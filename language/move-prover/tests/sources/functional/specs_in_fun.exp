@@ -1,51 +1,54 @@
 Move prover returns: exiting with boogie verification errors
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun.move:45:13 ───
     │
  45 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:42:5: simple1_incorrect
-    =     at tests/sources/functional/specs_in_fun.move:43:9: simple1_incorrect
-    =         x = <redacted>,
+    =     at tests/sources/functional/specs_in_fun.move:42: simple1_incorrect
+    =         x = <redacted>
     =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:43: simple1_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:45: simple1_incorrect
 
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun.move:53:13 ───
     │
  53 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:49:5: simple2_incorrect
-    =     at tests/sources/functional/specs_in_fun.move:51:17: simple2_incorrect
-    =         x = <redacted>,
+    =     at tests/sources/functional/specs_in_fun.move:49: simple2_incorrect
+    =         x = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:51: simple2_incorrect
     =         y = <redacted>
-    =     at tests/sources/functional/specs_in_fun.move:53:13: simple2_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:53: simple2_incorrect
 
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun.move:60:13 ───
     │
  60 │             assert x > y;
     │             ^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:57:5: simple3_incorrect
-    =     at tests/sources/functional/specs_in_fun.move:59:13: simple3_incorrect
-    =         x = <redacted>,
+    =     at tests/sources/functional/specs_in_fun.move:57: simple3_incorrect
+    =         x = <redacted>
     =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:59: simple3_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:60: simple3_incorrect
 
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun.move:69:13 ───
     │
  69 │             assert z > 2*x;
     │             ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:64:5: simple4_incorrect
-    =     at tests/sources/functional/specs_in_fun.move:66:15: simple4_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>,
+    =     at tests/sources/functional/specs_in_fun.move:64: simple4_incorrect
+    =         x = <redacted>
+    =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:66: simple4_incorrect
     =         z = <redacted>
-    =     at tests/sources/functional/specs_in_fun.move:68:13: simple4_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:68: simple4_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:69: simple4_incorrect

@@ -1,44 +1,35 @@
 Move prover returns: exiting with boogie verification errors
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun_ref.move:74:13 ───
     │
  74 │             assert x == n;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun_ref.move:63:5: simple5
-    =     at tests/sources/functional/specs_in_fun_ref.move:64:17: simple5
-    =         n = <redacted>,
+    =     at tests/sources/functional/specs_in_fun_ref.move:80
+    =     at tests/sources/functional/specs_in_fun_ref.move:63: simple5
+    =         n = <redacted>
+    =     at tests/sources/functional/specs_in_fun_ref.move:64: simple5
     =         x = <redacted>
-    =     at tests/sources/functional/specs_in_fun_ref.move:67:13: simple5
-    =     at tests/sources/functional/specs_in_fun_ref.move:70:13: simple5
+    =     at tests/sources/functional/specs_in_fun_ref.move:67: simple5
+    =     at tests/sources/functional/specs_in_fun_ref.move:68: simple5
+    =     at tests/sources/functional/specs_in_fun_ref.move:70: simple5
+    =     at tests/sources/functional/specs_in_fun_ref.move:74: simple5
 
-error:  This assertion might not hold.
+error: unknown assertion failed
 
     ┌── tests/sources/functional/specs_in_fun_ref.move:96:13 ───
     │
  96 │             assert x == n;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun_ref.move:84:5: simple6
-    =     at tests/sources/functional/specs_in_fun_ref.move:85:17: simple6
-    =         n = <redacted>,
+    =     at tests/sources/functional/specs_in_fun_ref.move:102
+    =     at tests/sources/functional/specs_in_fun_ref.move:84: simple6
+    =         n = <redacted>
+    =     at tests/sources/functional/specs_in_fun_ref.move:85: simple6
     =         x = <redacted>
-    =     at tests/sources/functional/specs_in_fun_ref.move:88:13: simple6
-    =     at tests/sources/functional/specs_in_fun_ref.move:87:9: simple6
-
-error:  This loop invariant might not be maintained by the loop.
-
-     ┌── tests/sources/functional/specs_in_fun_ref.move:111:17 ───
-     │
- 111 │                 assert x == 0;
-     │                 ^^^^^^^^^^^^^^
-     │
-     =     at tests/sources/functional/specs_in_fun_ref.move:106:5: simple7
-     =     at tests/sources/functional/specs_in_fun_ref.move:107:17: simple7
-     =         n = <redacted>,
-     =         x = <redacted>
-     =     at tests/sources/functional/specs_in_fun_ref.move:110:13: simple7
-     =     at tests/sources/functional/specs_in_fun_ref.move:109:9: simple7
-     =         x = <redacted>
-     =     at tests/sources/functional/specs_in_fun_ref.move:115:19: simple7
+    =     at tests/sources/functional/specs_in_fun_ref.move:88: simple6
+    =     at tests/sources/functional/specs_in_fun_ref.move:89: simple6
+    =     at tests/sources/functional/specs_in_fun_ref.move:91: simple6
+    =     at tests/sources/functional/specs_in_fun_ref.move:87: simple6
+    =     at tests/sources/functional/specs_in_fun_ref.move:96: simple6

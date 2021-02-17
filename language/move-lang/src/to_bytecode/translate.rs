@@ -816,6 +816,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             exp(context, code, mcall.arguments);
             module_call(
                 context,
+                loc,
                 code,
                 mcall.module,
                 mcall.name,
@@ -913,13 +914,13 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
 
 fn module_call(
     context: &mut Context,
+    loc: Loc,
     code: &mut IR::BytecodeBlock,
     mident: ModuleIdent,
     fname: FunctionName,
     tys: Vec<H::BaseType>,
 ) {
     use IR::Bytecode_ as B;
-    let loc = fname.loc();
     let (m, n) = context.qualified_function_name(&mident, fname);
     code.push(sp(loc, B::Call(m, n, base_types(context, tys))))
 }

@@ -6,15 +6,19 @@ error: function does not abort under this condition
  69 │         aborts_if true;
     │         ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/references.move:61:5: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:62:13: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:63:13: mut_ref_incorrect
-    =         b = <redacted>,
+    =     at tests/sources/functional/references.move:62: mut_ref_incorrect
+    =         b = <redacted>
+    =     at tests/sources/functional/references.move:63: mut_ref_incorrect
     =         b_ref = <redacted>
-    =     at tests/sources/functional/references.move:43:5: mut_b
-    =     at tests/sources/functional/references.move:44:14: mut_b
+    =     at tests/sources/functional/references.move:64: mut_ref_incorrect
+    =     at <internal>:1
+    =     at tests/sources/functional/references.move:43: mut_b
     =         b = <redacted>
-    =     at tests/sources/functional/references.move:43:9: mut_b
-    =     at tests/sources/functional/references.move:65:9: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:66:18: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:44: mut_b
+    =     at tests/sources/functional/references.move:45: mut_b
+    =     at tests/sources/functional/references.move:64: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:65: mut_ref_incorrect
     =         b = <redacted>
+    =     at tests/sources/functional/references.move:66: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:67: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:69

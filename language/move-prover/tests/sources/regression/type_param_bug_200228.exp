@@ -6,8 +6,10 @@ error: post-condition does not hold
  12 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Balance<Tok_2>>(addr)); // original bug: proved by Prover, but should not be.
     │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug
-    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
-    =         addr = <redacted>,
+    =     at tests/sources/regression/type_param_bug_200228.move:6: type_param_bug
+    =         addr = <redacted>
+    =     at tests/sources/regression/type_param_bug_200228.move:7: type_param_bug
     =         result = <redacted>
-    =     at tests/sources/regression/type_param_bug_200228.move:8:3: type_param_bug
+    =     at tests/sources/regression/type_param_bug_200228.move:8: type_param_bug
+    =     at tests/sources/regression/type_param_bug_200228.move:11
+    =     at tests/sources/regression/type_param_bug_200228.move:12

@@ -6,7 +6,8 @@ error: post-condition does not hold
  29 │         ensures !result.b;
     │         ^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/consts.move:23:5: init_incorrect
-    =     at tests/sources/functional/consts.move:24:9: init_incorrect
+    =     at tests/sources/functional/consts.move:24: init_incorrect
     =         result = <redacted>
-    =     at tests/sources/functional/consts.move:25:5: init_incorrect
+    =     at tests/sources/functional/consts.move:25: init_incorrect
+    =     at tests/sources/functional/consts.move:28
+    =     at tests/sources/functional/consts.move:29

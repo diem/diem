@@ -28,7 +28,7 @@ module A {
 
     public fun mutate_at_wrapper2(addr1: address, addr2: address) acquires S {
         mutate_at(addr1);
-        mutate_at(addr2)  // TODO(wrwg): the source position of those calls in the bytecode is broken
+        mutate_at(addr2)
     }
     spec fun mutate_at_wrapper2 {
         pragma opaque = true;

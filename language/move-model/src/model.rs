@@ -160,7 +160,7 @@ pub type MoveIrLoc = move_ir_types::location::Loc;
 /// it is known to be defined in the environment, as it has been obtained also from the environment.
 
 /// Raw index type used in ids. 16 bits are sufficient currently.
-type RawIndex = u16;
+pub type RawIndex = u16;
 
 /// Identifier for a module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -351,8 +351,6 @@ pub struct GlobalEnv {
     /// The comments are represented as map from ByteIndex into string, where the index is the
     /// start position of the associated language item in the source.
     doc_comments: BTreeMap<FileId, BTreeMap<ByteIndex, String>>,
-    /// A map of locations to information about verification conditions at the location.
-    condition_infos: RefCell<BTreeMap<(Loc, ConditionTag), ConditionInfo>>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
@@ -400,41 +398,6 @@ pub struct GlobalEnv {
     extensions: BTreeMap<TypeId, Box<dyn Any>>,
 }
 
-/// Information about a verification condition stored in the environment.
-#[derive(Debug, Clone, Default)]
-pub struct ConditionInfo {
-    /// The message to print when the condition fails.
-    pub message: String,
-    /// Whether execution traces shall be printed if this condition fails.
-    pub omit_trace: bool,
-    /// Whether passing this condition is actually a failure.
-    pub negative_cond: bool,
-}
-
-/// A tag used to be associated with a condition info. Condition infos are
-/// identified in the environment by a pair of Loc and this type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ConditionTag {
-    Requires,
-    Ensures,
-    NegativeTest,
-}
-
-impl ConditionInfo {
-    pub fn for_message<S: Into<String>>(message: S) -> Self {
-        Self {
-            message: message.into(),
-            omit_trace: false,
-            negative_cond: false,
-        }
-    }
-
-    pub fn negative(mut self) -> Self {
-        self.negative_cond = true;
-        self
-    }
-}
-
 impl GlobalEnv {
     /// Creates a new environment.
     pub fn new() -> Self {
@@ -459,7 +422,6 @@ impl GlobalEnv {
         GlobalEnv {
             source_files,
             doc_comments: Default::default(),
-            condition_infos: Default::default(),
             unknown_loc,
             unknown_move_ir_loc,
             internal_loc,
@@ -599,19 +561,23 @@ impl GlobalEnv {
     }
 
     /// Returns file name and line/column position for a location, if available.
-    pub fn get_position(&self, loc: Loc) -> Option<(String, Location)> {
+    pub fn get_file_and_location(&self, loc: &Loc) -> Option<(String, Location)> {
+        self.get_location(loc).map(|line_column| {
+            (
+                self.source_files
+                    .name(loc.file_id())
+                    .to_string_lossy()
+                    .to_string(),
+                line_column,
+            )
+        })
+    }
+
+    /// Returns line/column position for a location, if available.
+    pub fn get_location(&self, loc: &Loc) -> Option<Location> {
         self.source_files
             .location(loc.file_id(), loc.span().start())
             .ok()
-            .map(|line_column| {
-                (
-                    self.source_files
-                        .name(loc.file_id())
-                        .to_string_lossy()
-                        .to_string(),
-                    line_column,
-                )
-            })
     }
 
     /// Return the source text for the given location.
@@ -911,7 +877,7 @@ impl GlobalEnv {
     }
 
     /// Return the module enclosing this location.
-    pub fn get_enclosing_module(&self, loc: Loc) -> Option<ModuleEnv<'_>> {
+    pub fn get_enclosing_module(&self, loc: &Loc) -> Option<ModuleEnv<'_>> {
         for data in &self.module_data {
             if data.loc.file_id() == loc.file_id()
                 && Self::enclosing_span(data.loc.span(), loc.span())
@@ -923,10 +889,10 @@ impl GlobalEnv {
     }
 
     /// Returns the function enclosing this location.
-    pub fn get_enclosing_function(&self, loc: Loc) -> Option<FunctionEnv<'_>> {
+    pub fn get_enclosing_function(&self, loc: &Loc) -> Option<FunctionEnv<'_>> {
         // Currently we do a brute-force linear search, may need to speed this up if it appears
         // to be a bottleneck.
-        let module_env = self.get_enclosing_module(loc.clone())?;
+        let module_env = self.get_enclosing_module(loc)?;
         for func_env in module_env.into_functions() {
             if Self::enclosing_span(func_env.get_loc().span(), loc.span()) {
                 return Some(func_env.clone());
@@ -936,8 +902,8 @@ impl GlobalEnv {
     }
 
     /// Returns the struct enclosing this location.
-    pub fn get_enclosing_struct(&self, loc: Loc) -> Option<StructEnv<'_>> {
-        let module_env = self.get_enclosing_module(loc.clone())?;
+    pub fn get_enclosing_struct(&self, loc: &Loc) -> Option<StructEnv<'_>> {
+        let module_env = self.get_enclosing_module(loc)?;
         for struct_env in module_env.into_structs() {
             if Self::enclosing_span(struct_env.get_loc().span(), loc.span()) {
                 return Some(struct_env);
@@ -1021,45 +987,6 @@ impl GlobalEnv {
             .get(&loc.file_id)
             .and_then(|comments| comments.get(&loc.span.start()).map(|s| s.as_str()))
             .unwrap_or("")
-    }
-
-    /// Get verification condition info associated with location and tag.
-    pub fn get_condition_info(&self, loc: &Loc, tag: ConditionTag) -> Option<ConditionInfo> {
-        self.condition_infos
-            .borrow()
-            .get(&(loc.clone(), tag))
-            .cloned()
-    }
-
-    /// Get all verification condition info associated with location.
-    pub fn get_condition_infos(&self, loc: &Loc) -> Vec<(ConditionTag, ConditionInfo)> {
-        self.condition_infos
-            .borrow()
-            .iter()
-            .filter_map(|((l, t), i)| {
-                if l == loc {
-                    Some((*t, i.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect_vec()
-    }
-
-    /// Set verification condition info.
-    pub fn set_condition_info(&self, loc: Loc, tag: ConditionTag, info: ConditionInfo) {
-        self.condition_infos.borrow_mut().insert((loc, tag), info);
-    }
-
-    /// Execute function on each condition info.
-    pub fn with_condition_infos<F>(&self, mut f: F)
-    where
-        F: FnMut(&(Loc, ConditionTag), &ConditionInfo),
-    {
-        self.condition_infos
-            .borrow()
-            .iter()
-            .for_each(|(l, i)| f(l, i))
     }
 
     /// Returns true if the boolean property is true.
@@ -1526,6 +1453,20 @@ impl<'env> ModuleEnv<'env> {
         module_env.into_function(FunId::new(self.env.symbol_pool.make(view.name().as_str())))
     }
 
+    /// Gets the function id from a definition index.
+    pub fn try_get_function_id(&self, idx: FunctionDefinitionIndex) -> Option<FunId> {
+        self.data.function_idx_to_id.get(&idx).cloned()
+    }
+
+    /// Gets the function definition index for the given function id. This is always defined.
+    pub fn get_function_def_idx(&self, fun_id: FunId) -> FunctionDefinitionIndex {
+        self.data
+            .function_data
+            .get(&fun_id)
+            .expect("function id defined")
+            .def_idx
+    }
+
     /// Gets a StructEnv in this module by name.
     pub fn find_struct(&self, name: Symbol) -> Option<StructEnv<'_>> {
         let id = StructId(name);
@@ -1569,15 +1510,6 @@ impl<'env> ModuleEnv<'env> {
 
     pub fn get_struct_by_def_idx(&self, idx: StructDefinitionIndex) -> StructEnv<'_> {
         self.get_struct(self.get_struct_id(idx))
-    }
-
-    /// Gets the function id from a definition index which must be valid for this environment.
-    pub fn get_function_id(&self, idx: FunctionDefinitionIndex) -> FunId {
-        *self
-            .data
-            .function_idx_to_id
-            .get(&idx)
-            .expect("undefined function definition index")
     }
 
     /// Gets a StructEnv by id, consuming this module env.
@@ -2260,6 +2192,16 @@ impl<'env> FunctionEnv<'env> {
         self.data.loc.clone()
     }
 
+    /// Returns the location of the specification block of this function. If the function has
+    /// none, returns that of the function itself.
+    pub fn get_spec_loc(&self) -> Loc {
+        if let Some(loc) = &self.data.spec.loc {
+            loc.clone()
+        } else {
+            self.get_loc()
+        }
+    }
+
     /// Returns the location of the bytecode at the given offset.
     pub fn get_bytecode_loc(&self, offset: u16) -> Loc {
         if let Ok(fmap) = self
@@ -2742,46 +2684,46 @@ impl<'env> FunctionEnv<'env> {
 // =================================================================================================
 /// # Formatting
 
-impl fmt::Display for ConditionTag {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ConditionTag::*;
-        match self {
-            Requires => write!(f, "requires"),
-            Ensures => write!(f, "ensures"),
-            NegativeTest => write!(f, "negative-test"),
-        }
-    }
-}
-
-impl fmt::Display for ConditionInfo {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`{}`", self.message)
-    }
-}
-
 pub struct LocDisplay<'env> {
     loc: &'env Loc,
     env: &'env GlobalEnv,
+    only_line: bool,
 }
 
 impl Loc {
     pub fn display<'env>(&'env self, env: &'env GlobalEnv) -> LocDisplay<'env> {
-        LocDisplay { loc: self, env }
+        LocDisplay {
+            loc: self,
+            env,
+            only_line: false,
+        }
+    }
+
+    pub fn display_line_only<'env>(&'env self, env: &'env GlobalEnv) -> LocDisplay<'env> {
+        LocDisplay {
+            loc: self,
+            env,
+            only_line: true,
+        }
     }
 }
 
 impl<'env> fmt::Display for LocDisplay<'env> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some((fname, pos)) = self.env.get_position(self.loc.clone()) {
-            let offset = self.loc.span.end() - self.loc.span.start();
-            write!(
-                f,
-                "at {}:{}:{}+{}",
-                fname,
-                pos.line + LineOffset(1),
-                pos.column + ColumnOffset(1),
-                offset,
-            )
+        if let Some((fname, pos)) = self.env.get_file_and_location(&self.loc) {
+            if self.only_line {
+                write!(f, "at {}:{}", fname, pos.line + LineOffset(1))
+            } else {
+                let offset = self.loc.span.end() - self.loc.span.start();
+                write!(
+                    f,
+                    "at {}:{}:{}+{}",
+                    fname,
+                    pos.line + LineOffset(1),
+                    pos.column + ColumnOffset(1),
+                    offset,
+                )
+            }
         } else {
             write!(f, "{:?}", self.loc)
         }

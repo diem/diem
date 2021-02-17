@@ -323,10 +323,10 @@ impl<'env> BoogieWrapper<'env> {
                         self.to_proper_source_location(self.get_locations(*orig_pos).1)?;
 
                     // If trace entry points to non-function location, skip
-                    self.env.get_enclosing_function(source_loc.clone())?;
+                    self.env.get_enclosing_function(&source_loc)?;
 
                     // Get file/location info; if not available, skip.
-                    let source_pos = self.env.get_position(source_loc.clone())?;
+                    let source_pos = self.env.get_position(&source_loc)?;
                     Some((orig_pos, source_loc, source_pos, kind, msg))
                 })
                 .dedup_by(|(_, _, source_pos1, _, _), (_, _, source_pos2, kind2, _)| {
@@ -506,7 +506,7 @@ impl<'env> BoogieWrapper<'env> {
             TraceKind::Pack => " (pack)",
             _ => "",
         };
-        if let Some(func_env) = self.env.get_enclosing_function(loc.clone()) {
+        if let Some(func_env) = self.env.get_enclosing_function(&loc) {
             let func_target = self.targets.get_annotated_target(&func_env);
             let func_name = format!(
                 "{}",
@@ -741,7 +741,7 @@ impl<'env> BoogieWrapper<'env> {
             .file_idx_to_id(cap.name("file").unwrap().as_str().parse::<u16>()?);
         let pos = ByteIndex::from(cap.name("pos").unwrap().as_str().parse::<u32>()?);
         let loc = Loc::new(file_id, Span::new(pos, pos + ByteOffset(1)));
-        if let Some(func) = self.env.get_enclosing_function(loc.clone()) {
+        if let Some(func) = self.env.get_enclosing_function(&loc) {
             match name {
                 "track_local" => {
                     let var_idx = cap.name("var").unwrap().as_str().parse::<usize>()?;
@@ -776,7 +776,7 @@ impl<'env> BoogieWrapper<'env> {
                     } else {
                         Some(val.parse::<i128>()?)
                     };
-                    if let Some((file, pos)) = self.env.get_position(loc) {
+                    if let Some((file, pos)) = self.env.get_position(&loc) {
                         let mark = AbortDescriptor {
                             module_id: func.module_env.get_id(),
                             func_id: func.get_id(),
@@ -931,7 +931,7 @@ impl Model {
                 let (mark, loc) = Self::extract_abort_marker(wrapper, k)?;
                 let pos = wrapper
                     .env
-                    .get_position(loc)
+                    .get_position(&loc)
                     .ok_or_else(Self::invalid_track_info)?;
                 self.tracked_aborts.insert((pos.0, pos.1.line), mark);
             }
@@ -986,7 +986,7 @@ impl Model {
             let loc = Self::extract_loc(wrapper, args)?;
             let func_env = wrapper
                 .env
-                .get_enclosing_function(loc.clone())
+                .get_enclosing_function(&loc)
                 .ok_or_else(Self::invalid_track_info)?;
             let func_target = wrapper
                 .targets
@@ -1023,7 +1023,7 @@ impl Model {
             let loc = Self::extract_loc(wrapper, args)?;
             let func_env = wrapper
                 .env
-                .get_enclosing_function(loc.clone())
+                .get_enclosing_function(&loc)
                 .ok_or_else(Self::invalid_track_info)?;
             let func_target = wrapper
                 .targets

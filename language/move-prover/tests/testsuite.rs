@@ -55,6 +55,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         }
     }
     options.prover.stable_test_output = true;
+    options.backend.stable_test_output = true;
 
     let mut error_writer = Buffer::no_color();
     let mut diags = match run_move_prover(&mut error_writer, options) {

@@ -49,7 +49,7 @@ pub fun Test::incr($t0|a: address) {
   9: @1 := save_mem(Test::R)
  10: write_back[Test::R]($t1)
      # global invariant at tests/global_invariant_instrumentation/update.move:7:9+82
-     # VC: `global memory invariant does not hold` at tests/global_invariant_instrumentation/update.move:7:9+82
+     # VC: global memory invariant does not hold at tests/global_invariant_instrumentation/update.move:7:9+82
  11: assert forall a: TypeDomain<address>(): Lt(select Test::R.x(global[@1]<Test::R>(a)), select Test::R.x(global<Test::R>(a)))
  12: label L1
  13: return ()

@@ -4,9 +4,10 @@
 //! Helpers for emitting Boogie code.
 
 use crate::options::BoogieOptions;
+use bytecode::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
-    ast::MemoryLabel,
+    ast::{MemoryLabel, TempIndex},
     model::{
         FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, QualifiedId, SpecFunId, StructEnv,
         StructId, SCRIPT_MODULE_NAME,
@@ -351,25 +352,54 @@ pub fn boogie_byte_blob(options: &BoogieOptions, val: &[u8]) -> String {
 }
 
 /// Construct a statement to debug track a local based on the Boogie attribute approach.
-pub fn boogie_debug_track_local_via_attrib(
-    file_idx: &str,
-    pos: &str,
-    var_idx: &str,
+pub fn boogie_debug_track_local(
+    fun_target: &FunctionTarget<'_>,
+    var_idx: TempIndex,
     value: &str,
 ) -> String {
+    let fun_def_idx = fun_target.func_env.get_def_idx();
     ensure_trace_info(format!(
         "$trace_local_temp := {};\n\
         assume {{:print \"$track_local({},{},{}):\", $trace_local_temp}} {} == {};",
-        value, file_idx, pos, var_idx, value, value,
+        value,
+        fun_target.func_env.module_env.get_id().to_usize(),
+        fun_def_idx,
+        var_idx,
+        value,
+        value,
     ))
 }
 
-/// Construct a statement to debug track an abort using the Boogie attribute approach.
-pub fn boogie_debug_track_abort_via_attrib(file_idx: &str, pos: &str, abort_code: &str) -> String {
+/// Construct a statement to debug track an abort.
+pub fn boogie_debug_track_abort(fun_target: &FunctionTarget<'_>, abort_code: &str) -> String {
+    let fun_def_idx = fun_target.func_env.get_def_idx();
     ensure_trace_info(format!(
         "$trace_abort_temp := i#$Integer({});\n\
         assume {{:print \"$track_abort({},{}):\", $trace_abort_temp}} {} == {};",
-        abort_code, file_idx, pos, abort_code, abort_code
+        abort_code,
+        fun_target.func_env.module_env.get_id().to_usize(),
+        fun_def_idx,
+        abort_code,
+        abort_code
+    ))
+}
+
+/// Construct a statement to debug track a return value.
+pub fn boogie_debug_track_return(
+    fun_target: &FunctionTarget<'_>,
+    ret_idx: usize,
+    value: &str,
+) -> String {
+    let fun_def_idx = fun_target.func_env.get_def_idx();
+    ensure_trace_info(format!(
+        "$trace_local_temp := {};\n\
+        assume {{:print \"$track_return({},{},{}):\", $trace_local_temp}} {} == {};",
+        value,
+        fun_target.func_env.module_env.get_id().to_usize(),
+        fun_def_idx,
+        ret_idx,
+        value,
+        value,
     ))
 }
 
@@ -378,6 +408,6 @@ pub fn boogie_debug_track_abort_via_attrib(file_idx: &str, pos: &str, abort_code
 /// let our tracking statements above not be forgotten, this trick ensures that they always
 /// appear in the trace.
 fn ensure_trace_info(s: String) -> String {
-    format!("if (true) {{\n   {}\n}}", s.replace("\n", "\n   "))
-    //s
+    //format!("if (true) {{\n   {}\n}}", s.replace("\n", "\n   "))
+    s
 }

@@ -8,7 +8,7 @@ use itertools::Itertools;
 use move_model::{
     ast,
     ast::{Exp, TempIndex, Value},
-    model::{ConditionTag, FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
+    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
     pragmas::ABORTS_IF_IS_PARTIAL_PRAGMA,
     ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
@@ -431,11 +431,8 @@ impl<'a> Instrumenter<'a> {
                 // Determine whether we want to emit this as an assertion or an assumption.
                 let prop_kind = match self.variant {
                     FunctionVariant::Verification => {
-                        self.builder.set_loc_and_vc_info(
-                            loc,
-                            ConditionTag::Requires,
-                            REQUIRES_FAILS_MESSAGE,
-                        );
+                        self.builder
+                            .set_loc_and_vc_info(loc, REQUIRES_FAILS_MESSAGE);
                         Assert
                     }
                     FunctionVariant::Baseline => Assume,
@@ -550,13 +547,8 @@ impl<'a> Instrumenter<'a> {
         if !is_partial {
             // If not partial, emit an assertion for the overall aborts condition.
             if let Some(cond) = self.spec.aborts_condition(&self.builder) {
-                // TODO(wrwg): we need a location for the spec block of this function.
-                //   The conditions don't give us a good indication because via
-                //   schemas, they can come from anywhere. For now we use the
-                //   function location.
-                let loc = self.builder.fun_env.get_loc();
-                self.builder
-                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, ABORT_NOT_COVERED);
+                let loc = self.builder.fun_env.get_spec_loc();
+                self.builder.set_loc_and_vc_info(loc, ABORT_NOT_COVERED);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond));
             }
         }
@@ -565,15 +557,9 @@ impl<'a> Instrumenter<'a> {
             // If any codes are specified, emit an assertion for the code condition.
             let actual_code = self.builder.mk_temporary(self.abort_local);
             if let Some(code_cond) = self.spec.aborts_code_condition(&self.builder, &actual_code) {
-                // TODO(wrwg): we can't use the same location as for the aborts conditions, because
-                //   of the way vc-info association works. Need to redesign this and attach info
-                //   about VC conditions directly to the asserts.
-                let loc = self.builder.fun_env.get_loc().at_start();
-                self.builder.set_loc_and_vc_info(
-                    loc,
-                    ConditionTag::Ensures,
-                    ABORTS_CODE_NOT_COVERED,
-                );
+                let loc = self.builder.fun_env.get_spec_loc();
+                self.builder
+                    .set_loc_and_vc_info(loc, ABORTS_CODE_NOT_COVERED);
                 self.builder
                     .emit_with(move |id| Prop(id, Assert, code_cond));
             }
@@ -630,30 +616,23 @@ impl<'a> Instrumenter<'a> {
         if self.variant == FunctionVariant::Verification {
             // Emit the negation of all aborts conditions.
             for (loc, abort_cond, _) in &self.spec.aborts {
-                self.builder.set_loc_and_vc_info(
-                    loc.clone(),
-                    ConditionTag::Ensures,
-                    ABORTS_IF_FAILS_MESSAGE,
-                );
+                self.builder
+                    .set_loc_and_vc_info(loc.clone(), ABORTS_IF_FAILS_MESSAGE);
                 let exp = self.builder.mk_not(abort_cond.clone());
                 self.builder.emit_with(|id| Prop(id, Assert, exp))
             }
 
             // Emit all post-conditions which must hold as we do not abort.
             for (loc, cond) in &self.spec.post {
-                self.builder.set_loc_and_vc_info(
-                    loc.clone(),
-                    ConditionTag::Ensures,
-                    ENSURES_FAILS_MESSAGE,
-                );
+                self.builder
+                    .set_loc_and_vc_info(loc.clone(), ENSURES_FAILS_MESSAGE);
                 self.builder
                     .emit_with(move |id| Prop(id, Assert, cond.clone()))
             }
 
             // Emit all event `emits` checks.
             for (loc, cond) in self.spec.emits_conditions(&self.builder) {
-                self.builder
-                    .set_loc_and_vc_info(loc, ConditionTag::Ensures, EMITS_FAILS_MESSAGE);
+                self.builder.set_loc_and_vc_info(loc, EMITS_FAILS_MESSAGE);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond))
             }
         }
@@ -679,7 +658,6 @@ impl<'a> Instrumenter<'a> {
             let env = self.builder.global_env();
             self.builder.set_loc_and_vc_info(
                 loc.clone(),
-                ConditionTag::Requires,
                 &modify_check_fails_message(env, memory, type_args),
             );
             let node_id = env.new_node(loc.clone(), BOOL_TYPE.clone());

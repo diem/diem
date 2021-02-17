@@ -6,14 +6,15 @@ error: post-condition does not hold
  50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/Escape.move:12:5: initialize
-    =     at tests/sources/regression/Escape.move:13:29: initialize
-    =         account = <redacted>,
+    =     at tests/sources/regression/Escape.move:12: initialize
+    =         account = <redacted>
+    =     at tests/sources/regression/Escape.move:13: initialize
     =         owner = <redacted>
-    =     at tests/sources/regression/Escape.move:14:25: initialize
+    =     at tests/sources/regression/Escape.move:14: initialize
     =         <redacted> = <redacted>
-    =     at tests/sources/regression/Escape.move:15:9: initialize
-    =     at tests/sources/regression/Escape.move:16:9: initialize
+    =     at tests/sources/regression/Escape.move:16: initialize
+    =     at tests/sources/regression/Escape.move:17: initialize
+    =     at tests/sources/regression/Escape.move:50
 
 error: post-condition does not hold
 
@@ -22,10 +23,12 @@ error: post-condition does not hold
  50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/Escape.move:24:5: install
-    =     at tests/sources/regression/Escape.move:25:9: install
-    =         account = <redacted>,
+    =     at tests/sources/regression/Escape.move:24: install
+    =         account = <redacted>
     =         thing = <redacted>
+    =     at tests/sources/regression/Escape.move:25: install
+    =     at tests/sources/regression/Escape.move:26: install
+    =     at tests/sources/regression/Escape.move:50
 
 error: post-condition does not hold
 
@@ -34,7 +37,7 @@ error: post-condition does not hold
  50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/Escape.move:19:4: new_outdoor_thing
-    =     at tests/sources/regression/Escape.move:20:9: new_outdoor_thing
+    =     at tests/sources/regression/Escape.move:20: new_outdoor_thing
     =         result = <redacted>
-    =     at tests/sources/regression/Escape.move:21:5: new_outdoor_thing
+    =     at tests/sources/regression/Escape.move:21: new_outdoor_thing
+    =     at tests/sources/regression/Escape.move:50

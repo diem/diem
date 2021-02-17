@@ -12,10 +12,7 @@ use itertools::Itertools;
 use move_model::{
     ast,
     ast::{Exp, LocalVarDecl, QuantKind, TempIndex, Value},
-    model::{
-        ConditionInfo, ConditionTag, FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId,
-        StructId,
-    },
+    model::{FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId},
     symbol::Symbol,
     ty::{Type, BOOL_TYPE, NUM_TYPE},
 };
@@ -27,6 +24,7 @@ pub struct FunctionDataBuilder<'env> {
     next_free_attr_index: usize,
     next_free_label_index: usize,
     current_loc: Loc,
+    next_vc_info: Option<String>,
     next_debug_comment: Option<String>,
 }
 
@@ -43,6 +41,7 @@ impl<'env> FunctionDataBuilder<'env> {
             next_free_attr_index,
             next_free_label_index,
             current_loc: fun_env.get_loc(),
+            next_vc_info: None,
             next_debug_comment: None,
         }
     }
@@ -73,9 +72,8 @@ impl<'env> FunctionDataBuilder<'env> {
     /// Sets the default location as well as information about verification conditions
     /// at this location. The later is stored in the global environment where it can later be
     /// retrieved based on location when mapping verification failures back to source level.
-    pub fn set_loc_and_vc_info(&mut self, loc: Loc, tag: ConditionTag, message: &str) {
-        self.global_env()
-            .set_condition_info(loc.clone(), tag, ConditionInfo::for_message(message));
+    pub fn set_loc_and_vc_info(&mut self, loc: Loc, message: &str) {
+        self.next_vc_info = Some(message.to_string());
         self.set_loc(loc);
     }
 
@@ -385,6 +383,9 @@ impl<'env> FunctionDataBuilder<'env> {
         F: FnOnce(AttrId) -> Bytecode,
     {
         let attr_id = self.new_attr();
+        if let Some(info) = std::mem::take(&mut self.next_vc_info) {
+            self.data.vc_infos.insert(attr_id, info);
+        }
         if let Some(comment) = std::mem::take(&mut self.next_debug_comment) {
             self.data.debug_comments.insert(attr_id, comment);
         }

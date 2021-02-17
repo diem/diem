@@ -6,7 +6,7 @@ error: post-condition does not hold
  13 │         ensures result == 2;
     │         ^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/opaque.move:8:5: opaque_incorrect
-    =     at tests/sources/functional/opaque.move:9:9: opaque_incorrect
-    =     at tests/sources/functional/opaque.move:10:5: opaque_incorrect
+    =     at tests/sources/functional/opaque.move:9: opaque_incorrect
     =         result = <redacted>
+    =     at tests/sources/functional/opaque.move:10: opaque_incorrect
+    =     at tests/sources/functional/opaque.move:13

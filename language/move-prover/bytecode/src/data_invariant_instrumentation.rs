@@ -22,7 +22,7 @@ use move_model::{
     ast,
     ast::{ConditionKind, Exp, QuantKind, TempIndex},
     exp_rewriter::ExpRewriter,
-    model::{ConditionTag, FunctionEnv, Loc, StructEnv},
+    model::{FunctionEnv, Loc, StructEnv},
     ty::Type,
 };
 
@@ -160,11 +160,8 @@ impl<'a> Instrumenter<'a> {
                 loc.display(self.builder.global_env())
             ));
             if kind == PropKind::Assert {
-                self.builder.set_loc_and_vc_info(
-                    loc,
-                    ConditionTag::Requires,
-                    INVARIANT_FAILS_MESSAGE,
-                );
+                self.builder
+                    .set_loc_and_vc_info(loc, INVARIANT_FAILS_MESSAGE);
             }
             self.builder.emit_with(|id| Bytecode::Prop(id, kind, inv));
         }

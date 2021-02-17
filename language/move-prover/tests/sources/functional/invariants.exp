@@ -6,7 +6,8 @@ error: data invariant does not hold
  16 │         invariant greater_one(x);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/invariants.move:42:5: invalid_R_pack
+    =     at tests/sources/functional/invariants.move:43: invalid_R_pack
+    =     at tests/sources/functional/invariants.move:16
 
 error: data invariant does not hold
 
@@ -15,14 +16,16 @@ error: data invariant does not hold
  16 │         invariant greater_one(x);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/invariants.move:112:5: lifetime_invalid_R
-    =     at tests/sources/functional/invariants.move:113:13: lifetime_invalid_R
-    =     at tests/sources/functional/invariants.move:114:13: lifetime_invalid_R
-    =         r = <redacted>,
+    =     at tests/sources/functional/invariants.move:113: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:16
+    =     at tests/sources/functional/invariants.move:113: lifetime_invalid_R
+    =         r = <redacted>
+    =     at tests/sources/functional/invariants.move:114: lifetime_invalid_R
     =         r_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:115:13: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:115: lifetime_invalid_R
     =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:116:18: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:116: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:16
 
 error: data invariant does not hold
 
@@ -31,17 +34,26 @@ error: data invariant does not hold
  150 │         invariant y > 1;
      │         ^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching
-     =     at tests/sources/functional/invariants.move:154:21: lifetime_invalid_S_branching
-     =         cond = <redacted>,
+     =     at tests/sources/functional/invariants.move:153: lifetime_invalid_S_branching
+     =         cond = <redacted>
+     =     at tests/sources/functional/invariants.move:154: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:143
+     =     at tests/sources/functional/invariants.move:154: lifetime_invalid_S_branching
      =         a = <redacted>
-     =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:155: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:150
+     =     at tests/sources/functional/invariants.move:155: lifetime_invalid_S_branching
      =         b = <redacted>
-     =     at tests/sources/functional/invariants.move:156:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:156: lifetime_invalid_S_branching
      =         a_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:157:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:157: lifetime_invalid_S_branching
      =         b_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching
-     =         <redacted> = <redacted>,
+     =     at tests/sources/functional/invariants.move:158: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:143
+     =     at tests/sources/functional/invariants.move:158: lifetime_invalid_S_branching
+     =         <redacted> = <redacted>
      =         x_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:160: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:143
+     =     at tests/sources/functional/invariants.move:163: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:150

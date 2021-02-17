@@ -832,6 +832,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &EA::SpecBlock) {
         use EA::SpecBlockMember_::*;
 
+        let block_loc = self.parent.env.to_loc(&block.loc);
+        self.update_spec(context, move |spec| spec.loc = Some(block_loc));
+
         assert!(self.spec_block_lets.is_empty());
 
         for member in &block.value.members {

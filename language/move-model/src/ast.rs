@@ -219,6 +219,8 @@ pub enum PropertyValue {
 /// Specification and properties associated with a language item.
 #[derive(Debug, Clone, Default)]
 pub struct Spec {
+    // The location of this specification, if available.
+    pub loc: Option<Loc>,
     // The set of conditions associated with this item.
     pub conditions: Vec<Condition>,
     // Any pragma properties associated with this item.

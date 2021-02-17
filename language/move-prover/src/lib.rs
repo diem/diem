@@ -4,19 +4,17 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    boogie_wrapper::BoogieWrapper,
-    bytecode_translator::BoogieTranslator,
     cli::{Options, INLINE_PRELUDE},
     prelude_template_helpers::StratificationHelper,
 };
 use abigen::Abigen;
 use anyhow::anyhow;
+use boogie_backend::{boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator};
 use bytecode::{
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
-    packed_types_analysis::PackedTypesProcessor,
     spec_instrumentation::SpecInstrumentationProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
@@ -39,14 +37,9 @@ use std::{
     time::Instant,
 };
 
-mod boogie_helpers;
-mod boogie_wrapper;
-mod bytecode_translator;
 pub mod cli;
 mod pipelines;
 mod prelude_template_helpers;
-mod prover_task_runner;
-mod spec_translator;
 
 // =================================================================================================
 // Entry Point
@@ -110,18 +103,8 @@ pub fn run_move_prover<W: WriteColor>(
     }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
-    if options.trans_v2 {
-        let mut translator = boogie_backend::bytecode_translator::BoogieTranslator::new(
-            &env,
-            &options.backend,
-            &targets,
-            &writer,
-        );
-        translator.translate();
-    } else {
-        let mut translator = BoogieTranslator::new(&env, &options, &targets, &writer);
-        translator.translate();
-    }
+    let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
+    translator.translate();
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
@@ -137,7 +120,7 @@ pub fn run_move_prover<W: WriteColor>(
             env: &env,
             targets: &targets,
             writer: &writer,
-            options: &options,
+            options: &options.backend,
             boogie_file_id,
         };
         boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
@@ -265,7 +248,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
     // Add function targets for all functions in the environment.
     for module_env in env.get_modules() {
         for func_env in module_env.get_functions() {
-            targets.add_target(&func_env, options.trans_v2)
+            targets.add_target(&func_env)
         }
     }
 
@@ -292,19 +275,13 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
     // Add processors in order they are executed.
-    if options.trans_v2 {
-        res.add_processor(DebugInstrumenter::new());
-    }
+    res.add_processor(DebugInstrumenter::new());
     pipelines::pipelines(options.experimental_pipeline)
         .into_iter()
         .for_each(|processor| res.add_processor(processor));
-    if options.trans_v2 {
-        res.add_processor(SpecInstrumentationProcessor::new());
-        res.add_processor(DataInvariantInstrumentationProcessor::new());
-        res.add_processor(GlobalInvariantInstrumentationProcessor::new());
-    } else {
-        res.add_processor(PackedTypesProcessor::new());
-    }
+    res.add_processor(SpecInstrumentationProcessor::new());
+    res.add_processor(DataInvariantInstrumentationProcessor::new());
+    res.add_processor(GlobalInvariantInstrumentationProcessor::new());
     res
 }
 

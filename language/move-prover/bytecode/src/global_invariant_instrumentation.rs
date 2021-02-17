@@ -19,7 +19,7 @@ use crate::spec_translator::SpecTranslator;
 
 use move_model::{
     ast::{ConditionKind, GlobalInvariant},
-    model::{ConditionTag, FunctionEnv, GlobalId, QualifiedId, StructId},
+    model::{FunctionEnv, GlobalId, QualifiedId, StructId},
     pragmas::CONDITION_ISOLATED_PROP,
 };
 use std::collections::BTreeSet;
@@ -225,11 +225,8 @@ impl<'a> Instrumenter<'a> {
                 "global invariant {}",
                 loc.display(self.builder.global_env())
             ));
-            self.builder.set_loc_and_vc_info(
-                loc,
-                ConditionTag::Requires,
-                GLOBAL_INVARIANT_FAILS_MESSAGE,
-            );
+            self.builder
+                .set_loc_and_vc_info(loc, GLOBAL_INVARIANT_FAILS_MESSAGE);
             self.builder
                 .emit_with(|id| Bytecode::Prop(id, PropKind::Assert, cond));
         }

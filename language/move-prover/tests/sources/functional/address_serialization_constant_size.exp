@@ -6,10 +6,14 @@ error: post-condition does not hold
  19 │         ensures len(BCS::serialize(mv1)) == len(BCS::serialize(mv2));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/address_serialization_constant_size.move:15:5: serialized_move_values_diff_len_incorrect
-    =     at tests/sources/functional/address_serialization_constant_size.move:16:15: serialized_move_values_diff_len_incorrect
-    =         mv1 = <redacted>,
-    =         mv2 = <redacted>,
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/address_serialization_constant_size.move:17:5: serialized_move_values_diff_len_incorrect
+    =     at tests/sources/functional/address_serialization_constant_size.move:20
+    =     at tests/sources/functional/address_serialization_constant_size.move:15: serialized_move_values_diff_len_incorrect
+    =         mv1 = <redacted>
+    =         mv2 = <redacted>
+    =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
+    =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
+    =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
+    =         result_0 = <redacted>
+    =         result_1 = <redacted>
+    =     at tests/sources/functional/address_serialization_constant_size.move:17: serialized_move_values_diff_len_incorrect
+    =     at tests/sources/functional/address_serialization_constant_size.move:19

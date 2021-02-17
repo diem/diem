@@ -493,6 +493,7 @@ name = "boogie-backend"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bytecode",
  "codespan",
  "codespan-reporting",
@@ -500,14 +501,21 @@ dependencies = [
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
+ "futures 0.3.12",
+ "handlebars",
  "itertools 0.10.0",
  "log",
  "move-core-types",
  "move-model",
  "move-prover-test-utils",
  "num 0.3.1",
+ "once_cell",
+ "pretty",
+ "rand 0.8.3",
+ "regex",
  "serde",
  "serde_json",
+ "tokio",
  "vm",
 ]
 

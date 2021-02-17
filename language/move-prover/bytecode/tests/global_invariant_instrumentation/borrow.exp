@@ -49,7 +49,7 @@ pub fun Test::borrow($t0|a: address) {
   9: write_back[Reference($t1)]($t6)
  10: write_back[Test::R]($t1)
      # global invariant at tests/global_invariant_instrumentation/borrow.move:7:9+57
-     # VC: `global memory invariant does not hold` at tests/global_invariant_instrumentation/borrow.move:7:9+57
+     # VC: global memory invariant does not hold at tests/global_invariant_instrumentation/borrow.move:7:9+57
  11: assert forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
  12: label L1
  13: return ()

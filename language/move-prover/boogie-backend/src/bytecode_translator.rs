@@ -22,14 +22,13 @@ use move_model::{
     pragmas::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, SEED_PRAGMA, TIMEOUT_PRAGMA},
     ty::{PrimitiveType, Type},
 };
-use vm::file_format::CodeOffset;
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_debug_track_abort_via_attrib, boogie_debug_track_local_via_attrib,
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
-        boogie_resource_memory_name, boogie_struct_name, boogie_type_value,
-        boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
+        boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
+        boogie_debug_track_return, boogie_field_name, boogie_function_name, boogie_local_type,
+        boogie_modifies_memory_name, boogie_resource_memory_name, boogie_struct_name,
+        boogie_type_value, boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -38,6 +37,7 @@ use bytecode::{
     function_target_pipeline::FunctionVariant,
     stackless_bytecode::{AbortAction, PropKind},
 };
+use codespan::LineIndex;
 use move_model::{ast::TempIndex, model::Loc};
 
 pub struct BoogieTranslator<'env> {
@@ -213,25 +213,25 @@ impl<'env> ModuleTranslator<'env> {
 
 impl<'env> ModuleTranslator<'env> {
     /// Translates the given function.
-    fn translate_function(&self, variant: FunctionVariant, func_target: &FunctionTarget<'_>) {
-        self.generate_function_sig(variant, &func_target);
-        self.generate_function_body(variant, &func_target);
+    fn translate_function(&self, variant: FunctionVariant, fun_target: &FunctionTarget<'_>) {
+        self.generate_function_sig(variant, &fun_target);
+        self.generate_function_body(variant, &fun_target);
         emitln!(self.writer);
     }
 
     /// Return a string for a boogie procedure header. Use inline attribute and name
     /// suffix as indicated by `entry_point`.
-    fn generate_function_sig(&self, variant: FunctionVariant, func_target: &FunctionTarget<'_>) {
-        let (args, rets) = self.generate_function_args_and_returns(func_target);
+    fn generate_function_sig(&self, variant: FunctionVariant, fun_target: &FunctionTarget<'_>) {
+        let (args, rets) = self.generate_function_args_and_returns(fun_target);
 
         let (suffix, attribs) = match variant {
             FunctionVariant::Baseline => ("", "{:inline 1} ".to_string()),
             FunctionVariant::Verification => {
-                let timeout = func_target
+                let timeout = fun_target
                     .func_env
                     .get_num_pragma(TIMEOUT_PRAGMA, || self.options.vc_timeout);
-                let attribs = if func_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
-                    let seed = func_target
+                let attribs = if fun_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
+                    let seed = fun_target
                         .func_env
                         .get_num_pragma(SEED_PRAGMA, || self.options.random_seed);
                     format!("{{:timeLimit {}}} {{:random_seed {}}} ", timeout, seed)
@@ -241,12 +241,12 @@ impl<'env> ModuleTranslator<'env> {
                 ("$verify", attribs)
             }
         };
-        self.writer.set_location(&func_target.get_loc());
+        self.writer.set_location(&fun_target.get_loc());
         emitln!(
             self.writer,
             "procedure {}{}{}({}) returns ({})",
             attribs,
-            boogie_function_name(func_target.func_env),
+            boogie_function_name(fun_target.func_env),
             suffix,
             args,
             rets,
@@ -256,18 +256,18 @@ impl<'env> ModuleTranslator<'env> {
     /// Generate boogie representation of function args and return args.
     fn generate_function_args_and_returns(
         &self,
-        func_target: &FunctionTarget<'_>,
+        fun_target: &FunctionTarget<'_>,
     ) -> (String, String) {
-        let args = func_target
+        let args = fun_target
             .get_type_parameters()
             .iter()
             .map(|TypeParameter(s, _)| {
-                format!("{}: $TypeValue", s.display(func_target.symbol_pool()))
+                format!("{}: $TypeValue", s.display(fun_target.symbol_pool()))
             })
-            .chain((0..func_target.get_parameter_count()).map(|i| {
-                let ty = func_target.get_local_type(i);
+            .chain((0..fun_target.get_parameter_count()).map(|i| {
+                let ty = fun_target.get_local_type(i);
                 // Boogie does not allow to assign to parameters, so we need to proxy them.
-                let prefix = if self.parameter_needs_to_be_mutable(func_target, i) {
+                let prefix = if self.parameter_needs_to_be_mutable(fun_target, i) {
                     "_$"
                 } else {
                     "$"
@@ -275,7 +275,7 @@ impl<'env> ModuleTranslator<'env> {
                 format!("{}t{}: {}", prefix, i, boogie_local_type(ty))
             }))
             .join(", ");
-        let rets = func_target
+        let rets = fun_target
             .get_return_types()
             .iter()
             .enumerate()
@@ -285,18 +285,18 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Generates boogie implementation body.
-    fn generate_function_body(&self, variant: FunctionVariant, func_target: &FunctionTarget<'_>) {
+    fn generate_function_body(&self, variant: FunctionVariant, fun_target: &FunctionTarget<'_>) {
         // Be sure to set back location to the whole function definition as a default.
-        self.writer.set_location(&func_target.get_loc().at_start());
+        self.writer.set_location(&fun_target.get_loc().at_start());
 
         emitln!(self.writer, "{");
         self.writer.indent();
 
         // Generate local variable declarations. They need to appear first in boogie.
         emitln!(self.writer, "// declare local variables");
-        let num_args = func_target.get_parameter_count();
-        for i in num_args..func_target.get_local_count() {
-            let local_type = func_target.get_local_type(i);
+        let num_args = fun_target.get_parameter_count();
+        for i in num_args..fun_target.get_local_count() {
+            let local_type = fun_target.get_local_type(i);
             emitln!(
                 self.writer,
                 "var $t{}: {}; // {}",
@@ -306,16 +306,16 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
         // Generate declarations for renamed parameters.
-        let proxied_parameters = self.get_mutable_parameters(func_target);
+        let proxied_parameters = self.get_mutable_parameters(fun_target);
         for (idx, ty) in &proxied_parameters {
             emitln!(self.writer, "var $t{}: {};", idx, boogie_local_type(ty));
         }
         // Generate declarations for modifies condition.
-        func_target.get_modify_targets().keys().for_each(|ty| {
+        fun_target.get_modify_targets().keys().for_each(|ty| {
             emitln!(
                 self.writer,
                 "var {}: {}",
-                boogie_modifies_memory_name(func_target.global_env(), *ty),
+                boogie_modifies_memory_name(fun_target.global_env(), *ty),
                 "[$TypeValueArray, int]bool;"
             );
         });
@@ -325,7 +325,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $trace_local_temp: $Value;");
 
         // Generate memory snapshot variable declarations.
-        let code = func_target.get_bytecode();
+        let code = fun_target.get_bytecode();
         let labels = code
             .iter()
             .filter_map(|bc| {
@@ -349,24 +349,25 @@ impl<'env> ModuleTranslator<'env> {
 
         // Initial assumptions
         if variant == FunctionVariant::Verification {
-            self.translate_verify_entry_assumptions(func_target);
+            self.translate_verify_entry_assumptions(fun_target);
         }
 
         // Generate bytecode
         emitln!(self.writer, "\n// bytecode translation starts here");
-        for (offset, bytecode) in code.iter().enumerate() {
-            self.translate_bytecode(func_target, offset as CodeOffset, bytecode);
+        let mut last_tracked_loc = None;
+        for bytecode in code.iter() {
+            self.translate_bytecode(fun_target, &mut last_tracked_loc, bytecode);
         }
 
         self.writer.unindent();
         emitln!(self.writer, "}");
     }
 
-    fn get_mutable_parameters(&self, func_target: &FunctionTarget<'_>) -> Vec<(TempIndex, Type)> {
-        (0..func_target.get_parameter_count())
+    fn get_mutable_parameters(&self, fun_target: &FunctionTarget<'_>) -> Vec<(TempIndex, Type)> {
+        (0..fun_target.get_parameter_count())
             .filter_map(|i| {
-                if self.parameter_needs_to_be_mutable(func_target, i) {
-                    Some((i, func_target.get_local_type(i).clone()))
+                if self.parameter_needs_to_be_mutable(fun_target, i) {
+                    Some((i, fun_target.get_local_type(i).clone()))
                 } else {
                     None
                 }
@@ -380,7 +381,7 @@ impl<'env> ModuleTranslator<'env> {
     /// we may need to assign to parameters.
     fn parameter_needs_to_be_mutable(
         &self,
-        _func_target: &FunctionTarget<'_>,
+        _fun_target: &FunctionTarget<'_>,
         _idx: TempIndex,
     ) -> bool {
         // For now, we just always say true. This could be optimized because the actual (known
@@ -389,7 +390,7 @@ impl<'env> ModuleTranslator<'env> {
         true
     }
 
-    fn translate_verify_entry_assumptions(&self, func_target: &FunctionTarget<'_>) {
+    fn translate_verify_entry_assumptions(&self, fun_target: &FunctionTarget<'_>) {
         emitln!(self.writer, "\n// verification entrypoint assumptions");
 
         // Prelude initialization
@@ -401,8 +402,8 @@ impl<'env> ModuleTranslator<'env> {
         // - for mutual references, by their exclusive access in Move.
         // - for immutable references, by that mutation is not possible, and they are equivalent
         //   to some given but arbitrary value.
-        for i in 0..func_target.get_parameter_count() {
-            let ty = func_target.get_local_type(i);
+        for i in 0..fun_target.get_parameter_count() {
+            let ty = fun_target.get_local_type(i);
             if ty.is_reference() {
                 emitln!(self.writer, "assume l#$Mutation($t{}) == $Param({});", i, i);
                 emitln!(self.writer, "assume size#Path(p#$Mutation($t{})) == 0;", i);
@@ -410,17 +411,17 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Initialize modify permissions.
-        self.initialize_modifies_permissions(func_target);
+        self.initialize_modifies_permissions(fun_target);
     }
 
     /// Initializes modifies permissions.
-    fn initialize_modifies_permissions(&self, func_target: &FunctionTarget<'_>) {
-        let env = func_target.global_env();
-        for (ty, targets) in func_target.get_modify_targets() {
+    fn initialize_modifies_permissions(&self, fun_target: &FunctionTarget<'_>) {
+        let env = fun_target.global_env();
+        for (ty, targets) in fun_target.get_modify_targets() {
             emit!(
                 self.writer,
                 "{} := {}",
-                boogie_modifies_memory_name(func_target.global_env(), *ty),
+                boogie_modifies_memory_name(fun_target.global_env(), *ty),
                 "$ConstMemoryDomain(false)"
             );
             for target in targets {
@@ -440,20 +441,36 @@ impl<'env> ModuleTranslator<'env> {
     /// Translates one bytecode instruction.
     fn translate_bytecode(
         &'env self,
-        func_target: &FunctionTarget<'_>,
-        _offset: u16,
+        fun_target: &FunctionTarget<'_>,
+        last_tracked_loc: &mut Option<(Loc, LineIndex)>,
         bytecode: &Bytecode,
     ) {
         use Bytecode::*;
         // Set location of this code in the CodeWriter.
-        let loc = func_target.get_bytecode_loc(bytecode.get_attr_id());
+        let attr_id = bytecode.get_attr_id();
+        let loc = fun_target.get_bytecode_loc(attr_id);
         self.writer.set_location(&loc);
+
+        // Print location.
         emitln!(
             self.writer,
             "// {} {}",
-            bytecode.display(func_target, &BTreeMap::default()),
+            bytecode.display(fun_target, &BTreeMap::default()),
             loc.display(self.module_env.env)
         );
+
+        // Print debug comments.
+        if let Some(comment) = fun_target.get_debug_comment(attr_id) {
+            emitln!(self.writer, "// {}", comment);
+        }
+
+        // Track location for execution traces.
+        if matches!(bytecode, Call(_, _, Operation::TraceAbort, ..)) {
+            // Ensure that aborts always has the precise location instead of the
+            // line-approximated one
+            *last_tracked_loc = None;
+        }
+        self.track_loc(fun_target, last_tracked_loc, &loc);
 
         // Helper function to get a a string for a local
         let str_local = |idx: usize| format!("$t{}", idx);
@@ -470,9 +487,19 @@ impl<'env> ModuleTranslator<'env> {
             SaveSpecVar(_, _label, _var) => {
                 panic!("spec var snapshot NYI")
             }
-            Prop(_, kind, exp) => match kind {
+            Prop(id, kind, exp) => match kind {
                 PropKind::Assert => {
                     emit!(self.writer, "assert ");
+                    let info = fun_target
+                        .get_vc_info(*id)
+                        .map(|s| s.as_str())
+                        .unwrap_or("unknown assertion failed");
+                    emit!(
+                        self.writer,
+                        "{{:msg \"assert_failed{}: {}\"}} ",
+                        self.loc_str(&loc),
+                        info
+                    );
                     self.spec_translator.translate_unboxed(exp);
                     emitln!(self.writer, ";");
                 }
@@ -512,7 +539,7 @@ impl<'env> ModuleTranslator<'env> {
                 else_target.as_usize(),
             ),
             Assign(_, dest, src, _) => {
-                if func_target.get_local_type(*dest).is_reference() {
+                if fun_target.get_local_type(*dest).is_reference() {
                     emitln!(
                         self.writer,
                         "call {} := $CopyOrMoveRef({});",
@@ -562,7 +589,7 @@ impl<'env> ModuleTranslator<'env> {
                             GlobalRoot(struct_decl) => {
                                 let memory = struct_decl.module_id.qualified(struct_decl.id);
                                 let memory_name = boogie_resource_memory_name(
-                                    func_target.global_env(),
+                                    fun_target.global_env(),
                                     memory,
                                     &None,
                                 );
@@ -645,7 +672,7 @@ impl<'env> ModuleTranslator<'env> {
                         let callee_env = self.module_env.env.get_module(*mid).into_function(*fid);
 
                         let args_str = std::iter::once(boogie_type_values(
-                            func_target.func_env.module_env.env,
+                            fun_target.func_env.module_env.env,
                             type_actuals,
                         ))
                         .chain(srcs.iter().map(|arg_idx| str_local(*arg_idx)))
@@ -670,9 +697,12 @@ impl<'env> ModuleTranslator<'env> {
                                 args_str
                             );
                         }
+                        // Clear the last track location after function call, as the call inserted
+                        // location tracks before it returns.
+                        *last_tracked_loc = None;
                     }
                     Pack(mid, sid, _type_actuals) => {
-                        let struct_env = func_target
+                        let struct_env = fun_target
                             .func_env
                             .module_env
                             .env
@@ -696,7 +726,7 @@ impl<'env> ModuleTranslator<'env> {
                         );
                     }
                     Unpack(mid, sid, _type_actuals) => {
-                        let struct_env = func_target
+                        let struct_env = fun_target
                             .func_env
                             .module_env
                             .env
@@ -721,7 +751,7 @@ impl<'env> ModuleTranslator<'env> {
                     BorrowField(mid, sid, _, field_offset) => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let struct_env = func_target
+                        let struct_env = fun_target
                             .func_env
                             .module_env
                             .env
@@ -739,14 +769,14 @@ impl<'env> ModuleTranslator<'env> {
                     GetField(mid, sid, _, field_offset) => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let struct_env = func_target
+                        let struct_env = fun_target
                             .func_env
                             .module_env
                             .env
                             .get_module(*mid)
                             .into_struct(*sid);
                         let field_env = &struct_env.get_field_by_offset(*field_offset);
-                        let is_ref = func_target.get_local_type(src).is_reference();
+                        let is_ref = fun_target.get_local_type(src).is_reference();
                         emitln!(
                             self.writer,
                             "call {} := {}({}, {});",
@@ -850,7 +880,7 @@ impl<'env> ModuleTranslator<'env> {
                     Havoc => {
                         let dest_str = str_local(dests[0]);
                         emitln!(self.writer, "havoc {};", dest_str);
-                        let ty = func_target.get_local_type(dests[0]);
+                        let ty = fun_target.get_local_type(dests[0]);
                         let check = boogie_well_formed_check(self.module_env.env, &dest_str, ty);
                         if !check.is_empty() {
                             emitln!(self.writer, &check);
@@ -900,14 +930,14 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        let unchecked = if func_target
+                        let unchecked = if fun_target
                             .is_pragma_true(ADDITION_OVERFLOW_UNCHECKED_PRAGMA, || false)
                         {
                             "_unchecked"
                         } else {
                             ""
                         };
-                        let add_type = match func_target.get_local_type(dest) {
+                        let add_type = match fun_target.get_local_type(dest) {
                             Type::Primitive(PrimitiveType::U8) => "U8".to_string(),
                             Type::Primitive(PrimitiveType::U64) => format!("U64{}", unchecked),
                             Type::Primitive(PrimitiveType::U128) => format!("U128{}", unchecked),
@@ -938,7 +968,7 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        let mul_type = match func_target.get_local_type(dest) {
+                        let mul_type = match fun_target.get_local_type(dest) {
                             Type::Primitive(PrimitiveType::U8) => "U8",
                             Type::Primitive(PrimitiveType::U64) => "U64",
                             Type::Primitive(PrimitiveType::U128) => "U128",
@@ -1106,19 +1136,19 @@ impl<'env> ModuleTranslator<'env> {
                     }
                     Destroy => {}
                     TraceLocal(idx) => {
-                        self.track_local(func_target, &loc, *idx, srcs[0]);
+                        self.track_local(fun_target, *idx, srcs[0]);
                     }
                     TraceReturn(i) => {
-                        self.track_return(func_target, &loc, *i, srcs[0]);
+                        self.track_return(fun_target, *i, srcs[0]);
                     }
-                    TraceAbort => self.track_abort(&loc, &str_local(srcs[0])),
+                    TraceAbort => self.track_abort(fun_target, &str_local(srcs[0])),
                 }
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(self.writer, "if ($abort_flag) {");
                     self.writer.indent();
                     let code_str = str_local(*code);
                     emitln!(self.writer, "{} := $Integer($abort_code);", code_str);
-                    self.track_abort(&loc, &code_str);
+                    self.track_abort(fun_target, &code_str);
                     emitln!(self.writer, "goto L{};", target.as_usize());
                     self.writer.unindent();
                     emitln!(self.writer, "}");
@@ -1131,7 +1161,7 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(*src)
                 );
                 emitln!(self.writer, "$abort_flag := true;");
-                for (i, ty) in func_target.get_return_types().iter().enumerate() {
+                for (i, ty) in fun_target.get_return_types().iter().enumerate() {
                     let ret_str = format!("$ret{}", i);
                     if ty.is_reference() {
                         emitln!(self.writer, "{} := $DefaultMutation;", &ret_str);
@@ -1146,72 +1176,64 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer);
     }
 
-    fn track_abort(&self, loc: &Loc, code_var: &str) {
-        let file_idx = self
-            .module_env
-            .env
-            .file_id_to_idx(loc.file_id())
-            .to_string();
-        let pos = loc.span().start().to_string();
-        let track = boogie_debug_track_abort_via_attrib(&file_idx, &pos, code_var);
-        if !track.is_empty() {
-            emitln!(self.writer, &track);
+    /// Track location for execution trace, avoiding to track the same line multiple times.
+    fn track_loc(
+        &self,
+        _fun_target: &FunctionTarget<'_>,
+        last_tracked_loc: &mut Option<(Loc, LineIndex)>,
+        loc: &Loc,
+    ) {
+        if let Some(l) = self.module_env.env.get_location(loc) {
+            if let Some((last_loc, last_line)) = last_tracked_loc {
+                if *last_line == l.line {
+                    // This line already tracked.
+                    return;
+                }
+                *last_loc = loc.clone();
+                *last_line = l.line;
+            } else {
+                *last_tracked_loc = Some((loc.clone(), l.line));
+            }
+            emitln!(
+                self.writer,
+                "assume {{:print \"$at{}\"}} true;",
+                self.loc_str(&loc)
+            );
         }
     }
 
+    fn track_abort(&self, fun_target: &FunctionTarget<'_>, code_var: &str) {
+        emitln!(self.writer, &boogie_debug_track_abort(fun_target, code_var));
+    }
+
     /// Generates an update of the debug information about temporary.
-    fn track_local(
-        &self,
-        func_target: &FunctionTarget<'_>,
-        loc: &Loc,
-        origin_idx: TempIndex,
-        idx: TempIndex,
-    ) {
+    fn track_local(&self, fun_target: &FunctionTarget<'_>, origin_idx: TempIndex, idx: TempIndex) {
         // In order to determine whether we need to dereference, use the type of the temporary
         // which actually holds the value, not the original temp we are tracing.
-        let ty = func_target.get_local_type(idx);
+        let ty = fun_target.get_local_type(idx);
         let mut value = format!("$t{}", idx);
         if ty.is_reference() {
             value = format!("$Dereference({})", value);
         }
-        let file_idx = func_target
-            .func_env
-            .module_env
-            .env
-            .file_id_to_idx(loc.file_id())
-            .to_string();
-        let pos = loc.span().start().to_string();
-        let local_idx = origin_idx.to_string();
-        let track = boogie_debug_track_local_via_attrib(&file_idx, &pos, &local_idx, &value);
+        let track = boogie_debug_track_local(fun_target, origin_idx, &value);
         emitln!(self.writer, &track);
     }
 
     /// Generates an update of the debug information about the return value at given location.
-    fn track_return(
-        &self,
-        func_target: &FunctionTarget<'_>,
-        loc: &Loc,
-        return_idx: usize,
-        idx: TempIndex,
-    ) {
-        let ty = func_target.get_local_type(idx);
+    fn track_return(&self, fun_target: &FunctionTarget<'_>, return_idx: usize, idx: TempIndex) {
+        let ty = fun_target.get_local_type(idx);
         let mut value = format!("$t{}", idx);
         if ty.is_reference() {
             value = format!("$Dereference({})", value);
         }
-        let file_idx = func_target
-            .func_env
-            .module_env
-            .env
-            .file_id_to_idx(loc.file_id())
-            .to_string();
-        let pos = loc.span().start().to_string();
-        // TODO(wrwg): we currently represent a return value as a local at virtual index
-        //   `local_count + return_idx` in the Boogie encoding. We should have a separate encoding
-        //   for return values to avoid this hack.
-        let return_idx =
-            usize::saturating_add(func_target.get_local_count(), return_idx).to_string();
-        let track = boogie_debug_track_local_via_attrib(&file_idx, &pos, &return_idx, &value);
-        emitln!(self.writer, &track);
+        emitln!(
+            self.writer,
+            &boogie_debug_track_return(fun_target, return_idx, &value)
+        );
+    }
+
+    fn loc_str(&self, loc: &Loc) -> String {
+        let file_idx = self.module_env.env.file_id_to_idx(loc.file_id());
+        format!("({},{},{})", file_idx, loc.span().start(), loc.span().end())
     }
 }
