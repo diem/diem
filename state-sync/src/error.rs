@@ -40,6 +40,8 @@ pub enum Error {
     ReceivedEmptyChunk(String),
     #[error("Receivd a non-sequential chunk from {0}. Known version: {1}, received: {2}")]
     ReceivedNonSequentialChunk(String, String, String),
+    #[error("Received an unexpected chunk type: {0}")]
+    ReceivedWrongChunkType(String),
     #[error("Synced beyond the target version. Synced version: {0}, target version: {1}")]
     SyncedBeyondTarget(Version, Version),
     #[error("State sync is uninitialized! Error: {0}")]

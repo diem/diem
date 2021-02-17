@@ -13,7 +13,7 @@ use crate::{
     request_manager::RequestManager,
     shared_components::SyncState,
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use diem_config::{
     config::{NodeConfig, PeerNetworkId, RoleType, StateSyncConfig},
     network_id::NodeNetworkId,
@@ -935,69 +935,30 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             ))
         });
 
-        // Check response comes from upstream peer
-        if !self.request_manager.is_known_upstream_peer(peer) {
-            counters::RESPONSE_FROM_DOWNSTREAM_COUNT
-                .with_label_values(&[
-                    &peer.raw_network_id().to_string(),
-                    &peer.peer_id().to_string(),
-                ])
-                .inc();
-            return Err(Error::ReceivedChunkFromDownstream(peer.to_string()));
-        }
-
-        // Check chunk is not empty
-        let txn_list_with_proof = response.txn_list_with_proof.clone();
-        let chunk_start_version =
-            txn_list_with_proof
-                .first_transaction_version
-                .ok_or_else(|| {
-                    self.request_manager.process_empty_chunk(&peer);
-                    Error::ReceivedEmptyChunk(peer.to_string())
-                })?;
-
-        // Check chunk starts at the correct version
-        let known_version = self.local_state.synced_version();
-        let expected_version = known_version
-            .checked_add(1)
-            .ok_or_else(|| Error::IntegerOverflow("Expected version has overflown!".into()))?;
-        if chunk_start_version != expected_version {
-            self.request_manager.process_chunk_version_mismatch(
-                peer,
-                chunk_start_version,
-                known_version,
-            )?;
-        }
-
         // Process the chunk based on the response type
+        let txn_list_with_proof = response.txn_list_with_proof.clone();
+        let chunk_size = response.txn_list_with_proof.len() as u64;
+        let known_version = self.local_state.synced_version();
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                self.process_response_with_verifiable_li(txn_list_with_proof.clone(), li, None)
+                self.process_response_with_verifiable_li(txn_list_with_proof, li, None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
                 highest_li,
             } => {
                 let highest_li = highest_li.unwrap_or_else(|| target_li.clone());
-                if target_li.ledger_info().version() > highest_li.ledger_info().version() {
-                    let error_message = format!(
-                        "Progressive ledger info received a target LI {} higher than highest LI {}",
-                        target_li, highest_li
-                    );
-                    Err(Error::ProcessInvalidChunk(error_message).into())
-                } else {
-                    self.process_response_with_verifiable_li(
-                        txn_list_with_proof.clone(),
-                        target_li,
-                        Some(highest_li),
-                    )
-                }
+                self.process_response_with_verifiable_li(
+                    txn_list_with_proof,
+                    target_li,
+                    Some(highest_li),
+                )
             }
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
                 end_of_epoch_li,
             } => self.process_response_with_waypoint_li(
-                txn_list_with_proof.clone(),
+                txn_list_with_proof,
                 waypoint_li,
                 end_of_epoch_li,
             ),
@@ -1008,7 +969,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         })?;
 
         // Update counters and logs with processed chunk information
-        let chunk_size = txn_list_with_proof.len() as u64;
         counters::STATE_SYNC_CHUNK_SIZE
             .with_label_values(&[
                 &peer.raw_network_id().to_string(),
@@ -1063,6 +1023,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             return Err(error);
         }
 
+        // Verify the chunk response is well formed before trying to process it.
+        self.verify_chunk_response_is_valid(&peer, &response)?;
+
         // Validate the response and store the chunk if possible.
         // Any errors thrown here should be for detecting bad chunks.
         match self.apply_chunk(peer, response.clone()) {
@@ -1109,6 +1072,136 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             );
             error
         })
+    }
+
+    fn verify_chunk_response_is_valid(
+        &mut self,
+        peer: &PeerNetworkId,
+        response: &GetChunkResponse,
+    ) -> Result<(), Error> {
+        // Verify response comes from upstream peer
+        if !self.request_manager.is_known_upstream_peer(peer) {
+            counters::RESPONSE_FROM_DOWNSTREAM_COUNT
+                .with_label_values(&[
+                    &peer.raw_network_id().to_string(),
+                    &peer.peer_id().to_string(),
+                ])
+                .inc();
+            self.request_manager.process_chunk_from_downstream(&peer);
+            return Err(Error::ReceivedChunkFromDownstream(peer.to_string()));
+        }
+
+        // Verify the chunk is not empty and that it starts at the correct version
+        if let Some(first_chunk_version) = response.txn_list_with_proof.first_transaction_version {
+            let known_version = self.local_state.synced_version();
+            let expected_version = known_version
+                .checked_add(1)
+                .ok_or_else(|| Error::IntegerOverflow("Expected version has overflown!".into()))?;
+
+            if first_chunk_version != expected_version {
+                self.request_manager.process_chunk_version_mismatch(
+                    &peer,
+                    first_chunk_version,
+                    known_version,
+                )?;
+            }
+        } else {
+            // The chunk is empty
+            self.request_manager.process_empty_chunk(&peer);
+            return Err(Error::ReceivedEmptyChunk(peer.to_string()));
+        }
+
+        // Verify the chunk has the expected type for the current syncing mode
+        match &response.response_li {
+            ResponseLedgerInfo::LedgerInfoForWaypoint {
+                waypoint_li,
+                end_of_epoch_li,
+            } => self.verify_ledger_info_for_waypoint(waypoint_li, end_of_epoch_li),
+            ResponseLedgerInfo::VerifiableLedgerInfo(response_li) => {
+                self.verify_verifiable_ledger_info(response_li)
+            }
+            ResponseLedgerInfo::ProgressiveLedgerInfo {
+                target_li,
+                highest_li,
+            } => self.verify_progressive_ledger_info(target_li, highest_li),
+        }
+    }
+
+    fn verify_progressive_ledger_info(
+        &mut self,
+        target_li: &LedgerInfoWithSignatures,
+        highest_li: &Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
+        if !self.is_initialized() || self.sync_request.is_some() {
+            return Err(Error::ReceivedWrongChunkType(
+                "Received a progressive ledger info, but we're either not initialized or have an active consensus sync request!".into(),
+            ));
+        }
+
+        // Valid responses should not have a highest ledger info less than target
+        if let Some(highest_li) = highest_li {
+            let target_version = target_li.ledger_info().version();
+            let highest_version = highest_li.ledger_info().version();
+            if target_version > highest_version {
+                let error_message = format!("Progressive ledger info has target version > highest version. Target: {}, highest: {}.",
+                                            target_version,
+                                            highest_version);
+                return Err(Error::ProcessInvalidChunk(error_message));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn verify_verifiable_ledger_info(
+        &mut self,
+        response_li: &LedgerInfoWithSignatures,
+    ) -> Result<(), Error> {
+        if !self.is_initialized() {
+            return Err(Error::ReceivedWrongChunkType(
+                "Received a verifiable ledger info, but we're not initialized!".into(),
+            ));
+        }
+
+        // Valid responses should not exceed the ledger info version of the sync request.
+        if let Some(sync_request) = self.sync_request.as_ref() {
+            let sync_request_version = sync_request.target.ledger_info().version();
+            let response_version = response_li.ledger_info().version();
+            if sync_request_version < response_version {
+                let error_message = format!("Verifiable ledger info version is higher than the sync target. Received: {}, requested: {}.",
+                                            response_version,
+                                            sync_request_version);
+                return Err(Error::ProcessInvalidChunk(error_message));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn verify_ledger_info_for_waypoint(
+        &mut self,
+        waypoint_li: &LedgerInfoWithSignatures,
+        end_of_epoch_li: &Option<LedgerInfoWithSignatures>,
+    ) -> Result<(), Error> {
+        if self.is_initialized() || self.sync_request.is_some() {
+            return Err(Error::ReceivedWrongChunkType(
+                "Received a waypoint ledger info, but we're already initialized!".into(),
+            ));
+        }
+
+        // Valid waypoint responses should not have an end_of_epoch_li version > waypoint_li
+        if let Some(end_of_epoch_li) = end_of_epoch_li {
+            let end_of_epoch_version = end_of_epoch_li.ledger_info().version();
+            let waypoint_version = waypoint_li.ledger_info().version();
+            if end_of_epoch_version > waypoint_version {
+                let error_message = format!("Waypoint ledger info version is less than the end_of_epoch_li version. Waypoint: {}, end_of_epoch_li: {}.",
+                                            waypoint_version,
+                                            end_of_epoch_version);
+                return Err(Error::ProcessInvalidChunk(error_message));
+            }
+        }
+
+        Ok(())
     }
 
     /// Logs the highest seen ledger info version based on the current syncing mode.
@@ -1201,22 +1294,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         txn_list_with_proof: TransactionListWithProof,
         response_li: LedgerInfoWithSignatures,
         new_highest_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
-        ensure!(
-            self.is_initialized(),
-            "Response with a non-waypoint LI while still not initialized"
-        );
-        if let Some(sync_req) = self.sync_request.as_ref() {
-            // Valid responses should not exceed the LI version of the request.
-            if sync_req.target.ledger_info().version() < response_li.ledger_info().version() {
-                bail!(
-                    "[state sync] Response has an LI version {} higher than requested version {}.",
-                    response_li.ledger_info().version(),
-                    sync_req.target.ledger_info().version(),
-                );
-            }
-        }
-
+    ) -> Result<(), Error> {
         // Optimistically calculate the new known version and epoch (assume the current chunk
         // is applied successfully).
         let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
@@ -1258,7 +1336,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             );
         }
 
-        // Validate and verify chunk
+        // Validate chunk ledger infos
         self.local_state.verify_ledger_info(&response_li)?;
         if let Some(new_highest_li) = new_highest_li.clone() {
             if new_highest_li != response_li {
@@ -1300,12 +1378,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         txn_list_with_proof: TransactionListWithProof,
         waypoint_li: LedgerInfoWithSignatures,
         end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
-        ensure!(
-            !self.is_initialized(),
-            "Response with a waypoint LI but we're already initialized"
-        );
-
+    ) -> Result<(), Error> {
         // Optimistically calculate the new known version and epoch (assume the current chunk
         // is applied successfully).
         let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
@@ -1323,22 +1396,38 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             );
         }
 
-        // verify the end-of-epoch LI for the following before passing it to execution:
-        // * verify end-of-epoch-li against local state
-        // * verify end-of-epoch-li's version corresponds to end-of-chunk version before
-        // passing it to execution
-        // * Executor expects that when it is passed an end-of-epoch LI, it is going to execute/commit
-        // transactions leading up to that end-of-epoch LI
-        // * verify end-of-epoch-li actually ends an epoch
-        let end_of_epoch_li = end_of_epoch_li
-            .map(|li| self.local_state.verify_ledger_info(&li).map(|_| li))
-            .transpose()?
-            .filter(|li| {
-                li.ledger_info().version() == known_version && li.ledger_info().ends_epoch()
-            });
+        // Verify the end_of_epoch_li against local state and ensure the version
+        // corresponds to the version at the end of the chunk.
+        // The executor expects that when it is passed an end_of_epoch_li to commit,
+        // it is going to execute/commit transactions leading up to that li, so we
+        // also verify that the end_of_epoch_li actually ends the epoch.
+        let end_of_epoch_li_to_commit = if let Some(end_of_epoch_li) = end_of_epoch_li {
+            self.local_state.verify_ledger_info(&end_of_epoch_li)?;
+
+            let ledger_info = end_of_epoch_li.ledger_info();
+            if !ledger_info.ends_epoch() {
+                return Err(Error::ProcessInvalidChunk(
+                    "Received waypoint ledger info with an end_of_epoch_li that does not end the epoch!".into(),
+                ));
+            }
+
+            // If we're now at the end of epoch version (i.e., known_version is the same as the
+            // end_of_epoch_li version), the end_of_epoch_li should be passed to storage so that we
+            // can commit the end_of_epoch_li. If not, storage should only sync the given chunk.
+            if ledger_info.version() == known_version {
+                Some(end_of_epoch_li)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         self.waypoint.verify(waypoint_li.ledger_info())?;
+
+        self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li_to_commit)?;
         self.log_highest_seen_version(None);
-        self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li)
+
+        Ok(())
     }
 
     // Assumes that the target LI has been already verified by the caller.
