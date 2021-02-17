@@ -54,7 +54,7 @@ jobs:
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
         with:
-          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh'
+          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh\|rust-toolchain\|cargo-toolchain'
       - id: website-changes
         name: find website changes.
         uses: ./.github/actions/matches
@@ -68,7 +68,7 @@ jobs:
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
       matrix:
-        target_os: [alpine, centos, github] #arch is broken, re-add when fixed: https://bugs.archlinux.org/task/69563
+        target_os: [alpine, centos, arch, github]
     steps:
       - uses: actions/checkout@v2
         with:
