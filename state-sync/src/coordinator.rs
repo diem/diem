@@ -1704,6 +1704,7 @@ mod tests {
         block_info::BlockInfo,
         chain_id::ChainId,
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+        proof::TransactionListProof,
         transaction::{
             RawTransaction, Script, SignedTransaction, Transaction, TransactionListWithProof,
             TransactionPayload, Version,
@@ -1984,7 +1985,7 @@ mod tests {
         // Create chunk requests with a known version higher than the target
         let known_version = 100;
         let target_version = 10;
-        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+        let chunk_requests = create_chunk_requests(
             known_version,
             current_epoch,
             chunk_limit,
@@ -1996,13 +1997,13 @@ mod tests {
         verify_all_chunk_requests_are_invalid(
             &mut validator_coordinator,
             &peer_network_id,
-            &[waypoint_request, target_request, highest_request],
+            &chunk_requests,
         );
 
         // Create chunk requests with a current epoch higher than the target epoch
         let known_version = 0;
         let current_epoch = 100;
-        let (_, target_request, highest_request) = create_chunk_requests(
+        let chunk_requests = create_chunk_requests(
             known_version,
             current_epoch,
             chunk_limit,
@@ -2014,12 +2015,12 @@ mod tests {
         verify_all_chunk_requests_are_invalid(
             &mut validator_coordinator,
             &peer_network_id,
-            &[target_request, highest_request],
+            &chunk_requests[1..2], // Ignore waypoint request
         );
 
         // Create chunk requests with a chunk limit size of 0 (which is a pointless request)
         let chunk_limit = 0;
-        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+        let chunk_requests = create_chunk_requests(
             known_version,
             current_epoch,
             chunk_limit,
@@ -2031,12 +2032,12 @@ mod tests {
         verify_all_chunk_requests_are_invalid(
             &mut validator_coordinator,
             &peer_network_id,
-            &[waypoint_request, target_request, highest_request],
+            &chunk_requests,
         );
 
         // Create chunk requests with a long poll timeout of 0 (which is a pointless request)
         let chunk_limit = 0;
-        let (waypoint_request, target_request, highest_request) = create_chunk_requests(
+        let chunk_requests = create_chunk_requests(
             known_version,
             current_epoch,
             chunk_limit,
@@ -2048,50 +2049,238 @@ mod tests {
         verify_all_chunk_requests_are_invalid(
             &mut validator_coordinator,
             &peer_network_id,
-            &[waypoint_request, target_request, highest_request],
+            &chunk_requests,
         );
     }
 
     #[test]
-    fn test_process_chunk_response_message() {
+    fn test_process_chunk_response_messages() {
         // Create a coordinator for a validator node
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
-        // Create a test chunk response message
-        let peer_network_id = PeerNetworkId::random();
-        let chunk_response_message = create_chunk_response_message(10);
+        // Create a peer and empty chunk responses
+        let peer_network_id = PeerNetworkId::random_validator();
+        let empty_chunk_responses = create_empty_chunk_responses(10);
 
-        // Verify a consensus error is returned when processing the chunk
-        let process_reponse = block_on(validator_coordinator.process_chunk_message(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            chunk_response_message.clone(),
-        ));
-        if !matches!(process_reponse, Err(Error::ConsensusIsExecuting)) {
-            panic!(
-                "Expected a consensus executing error but got: {:?}",
-                process_reponse
-            );
+        // Verify a consensus error is returned when processing each chunk
+        for chunk_response in &empty_chunk_responses {
+            let result = block_on(validator_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                chunk_response.clone(),
+            ));
+            if !matches!(result, Err(Error::ConsensusIsExecuting)) {
+                panic!("Expected consensus executing error, got: {:?}", result);
+            }
         }
 
-        // Make a sync request and verify a consensus error is not returned (because consensus has yielded).
-        // We should now get a downstream error, as the sender is downstream to us.
+        // Make a sync request (to force consensus to yield)
         let (sync_request, _) = create_sync_request_at_version(10);
         let _ = validator_coordinator.process_sync_request(sync_request);
-        let process_reponse = block_on(validator_coordinator.process_chunk_message(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            chunk_response_message,
-        ));
-        if !matches!(process_reponse, Err(Error::ReceivedChunkFromDownstream(..))) {
-            panic!(
-                "Expected a downstream chunk error but got: {:?}",
-                process_reponse
-            );
+
+        // Verify we now get a downstream error (as the peer is downstream to us)
+        for chunk_response in &empty_chunk_responses {
+            let result = block_on(validator_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                chunk_response.clone(),
+            ));
+            if !matches!(result, Err(Error::ReceivedChunkFromDownstream(..))) {
+                panic!("Expected a downstream error, but got: {:?}", result);
+            }
         }
 
-        // TODO(joshlind): test the more complex error failures and chunk validation procedures
-        // (e.g., empty chunk, invalid chunk, out of order chunk, unwanted chunk, unknown peer etc.)
+        // Add the peer to our upstreams
+        let _ = validator_coordinator.process_new_peer(
+            peer_network_id.network_id(),
+            peer_network_id.peer_id(),
+            ConnectionOrigin::Outbound,
+        );
+
+        // Verify we now get an empty chunk error
+        for chunk_response in &empty_chunk_responses {
+            let result = block_on(validator_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                chunk_response.clone(),
+            ));
+            if !matches!(result, Err(Error::ReceivedEmptyChunk(..))) {
+                panic!("Expected an empty chunk error, got: {:?}", result);
+            }
+        }
+
+        // Send a non-empty chunk with a version mismatch and verify a mismatch error is returned
+        let chunk_responses = create_non_empty_chunk_responses(10);
+        for chunk_response in &chunk_responses {
+            let result = block_on(validator_coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                chunk_response.clone(),
+            ));
+            if !matches!(result, Err(Error::ReceivedNonSequentialChunk(..))) {
+                panic!("Expected a non-sequential error, but got: {:?}", result);
+            }
+        }
+    }
+
+    #[test]
+    fn test_process_chunk_response_highest() {
+        // Create a coordinator for a full node
+        let mut full_node_coordinator = test_utils::create_full_node_coordinator();
+
+        // Create a peer for the node and add the peer as an upstream
+        let peer_network_id = PeerNetworkId::random_validator();
+        let _ = full_node_coordinator.process_new_peer(
+            peer_network_id.network_id(),
+            peer_network_id.peer_id(),
+            ConnectionOrigin::Outbound,
+        );
+
+        // Verify wrong chunk type for non-highest messages
+        let chunk_responses = create_non_empty_chunk_responses(1);
+        verify_all_chunk_responses_are_the_wrong_type(
+            &mut full_node_coordinator,
+            &peer_network_id,
+            &chunk_responses[0..1], // Ignore the target and highest chunk responses
+        );
+
+        // Verify highest known version must be greater than target version
+        let response_ledger_info = ResponseLedgerInfo::ProgressiveLedgerInfo {
+            target_li: create_ledger_info_at_version(100),
+            highest_li: Some(create_ledger_info_at_version(10)),
+        };
+        let highest_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut full_node_coordinator,
+            &peer_network_id,
+            &[highest_response],
+        );
+
+        // Verify invalid ledger infos are rejected
+        let response_ledger_info = ResponseLedgerInfo::ProgressiveLedgerInfo {
+            target_li: create_ledger_info_at_version(100),
+            highest_li: None,
+        };
+        let highest_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut full_node_coordinator,
+            &peer_network_id,
+            &[highest_response],
+        );
+    }
+
+    #[test]
+    fn test_process_chunk_response_target() {
+        // Create a coordinator for a validator
+        let mut validator_coordinator = test_utils::create_validator_coordinator();
+
+        // Create a peer for the node and add the peer as an upstream
+        let peer_network_id = PeerNetworkId::random_validator();
+        let _ = validator_coordinator.process_new_peer(
+            peer_network_id.network_id(),
+            peer_network_id.peer_id(),
+            ConnectionOrigin::Outbound,
+        );
+
+        // Make a sync request (to force consensus to yield)
+        let (sync_request, _) = create_sync_request_at_version(10);
+        let _ = validator_coordinator.process_sync_request(sync_request);
+
+        // Verify wrong chunk type for non-target messages
+        let mut chunk_responses = create_non_empty_chunk_responses(1);
+        let _ = chunk_responses.remove(1); // Ignore the target chunk response
+        verify_all_chunk_responses_are_the_wrong_type(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &chunk_responses,
+        );
+
+        // Verify ledger info version doesn't exceed sync request version
+        let ledger_info = create_ledger_info_at_version(100);
+        let response_ledger_info = ResponseLedgerInfo::VerifiableLedgerInfo(ledger_info);
+        let target_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[target_response],
+        );
+
+        // Verify invalid ledger infos are rejected
+        let ledger_info = create_ledger_info_at_version(5);
+        let response_ledger_info = ResponseLedgerInfo::VerifiableLedgerInfo(ledger_info);
+        let target_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[target_response],
+        );
+    }
+
+    #[test]
+    fn test_process_chunk_response_waypoint() {
+        // Create a coordinator for a validator node with waypoint version of 10
+        let waypoint_ledger_info = create_ledger_info_at_version(10);
+        let waypoint = Waypoint::new_any(&waypoint_ledger_info.ledger_info());
+        let mut validator_coordinator =
+            create_coordinator_with_config_and_waypoint(NodeConfig::default(), waypoint);
+
+        // Create a peer for the node and add the peer as an upstream
+        let peer_network_id = PeerNetworkId::random_validator();
+        let _ = validator_coordinator.process_new_peer(
+            peer_network_id.network_id(),
+            peer_network_id.peer_id(),
+            ConnectionOrigin::Outbound,
+        );
+
+        // Verify wrong chunk type for non-waypoint messages
+        let chunk_responses = create_non_empty_chunk_responses(1);
+        verify_all_chunk_responses_are_the_wrong_type(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &chunk_responses[1..=2], // Ignore the waypoint chunk response
+        );
+
+        // Verify end of epoch version is less than waypoint version
+        let response_ledger_info = ResponseLedgerInfo::LedgerInfoForWaypoint {
+            waypoint_li: create_ledger_info_at_version(10),
+            end_of_epoch_li: Some(create_ledger_info_at_version(100)),
+        };
+        let waypoint_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[waypoint_response],
+        );
+
+        // Verify that invalid waypoint ledger infos are rejected
+        let response_ledger_info = ResponseLedgerInfo::LedgerInfoForWaypoint {
+            waypoint_li: create_ledger_info_at_version(10),
+            end_of_epoch_li: Some(create_ledger_info_at_version(10)),
+        };
+        let waypoint_response = create_chunk_response_message(
+            response_ledger_info,
+            create_dummy_transaction_list_with_proof(1),
+        );
+        verify_all_chunk_responses_are_invalid(
+            &mut validator_coordinator,
+            &peer_network_id,
+            &[waypoint_response],
+        );
     }
 
     fn create_test_transaction() -> Transaction {
@@ -2143,14 +2332,14 @@ mod tests {
     }
 
     /// Creates a set of chunk requests (one for each type of possible request).
-    /// The returned request types are: (waypoint, target, highest).
+    /// The returned request types are: [waypoint, target, highest].
     fn create_chunk_requests(
         known_version: Version,
         current_epoch: u64,
         chunk_limit: u64,
         target_version: u64,
         timeout_ms: u64,
-    ) -> (StateSyncMessage, StateSyncMessage, StateSyncMessage) {
+    ) -> Vec<StateSyncMessage> {
         // Create a waypoint chunk request
         let target = TargetType::Waypoint(target_version);
         let waypoint_request =
@@ -2171,7 +2360,7 @@ mod tests {
         let target_request =
             create_chunk_request_message(known_version, current_epoch, chunk_limit, target);
 
-        (waypoint_request, target_request, highest_request)
+        vec![waypoint_request, target_request, highest_request]
     }
 
     fn create_chunk_request_message(
@@ -2184,33 +2373,116 @@ mod tests {
         StateSyncMessage::GetChunkRequest(Box::new(chunk_request))
     }
 
-    fn create_chunk_response_message(version: Version) -> StateSyncMessage {
-        let ledger_info = create_ledger_info_at_version(version);
-        let response_li = ResponseLedgerInfo::LedgerInfoForWaypoint {
-            waypoint_li: ledger_info.clone(),
-            end_of_epoch_li: Some(ledger_info),
-        };
+    fn create_dummy_transaction_list_with_proof(version: Version) -> TransactionListWithProof {
+        TransactionListWithProof::new(
+            vec![create_test_transaction()],
+            None,
+            Some(version),
+            TransactionListProof::new_empty(),
+        )
+    }
+
+    fn create_chunk_response_message(
+        response_ledger_info: ResponseLedgerInfo,
+        transaction_list_with_proof: TransactionListWithProof,
+    ) -> StateSyncMessage {
         let chunk_response =
-            GetChunkResponse::new(response_li, TransactionListWithProof::new_empty());
+            GetChunkResponse::new(response_ledger_info, transaction_list_with_proof);
         StateSyncMessage::GetChunkResponse(Box::new(chunk_response))
     }
 
+    fn create_empty_chunk_responses(version: Version) -> Vec<StateSyncMessage> {
+        create_chunk_responses(version, TransactionListWithProof::new_empty())
+    }
+
+    fn create_non_empty_chunk_responses(version: Version) -> Vec<StateSyncMessage> {
+        let transaction_list_with_proof = create_dummy_transaction_list_with_proof(version);
+        create_chunk_responses(version, transaction_list_with_proof)
+    }
+
+    /// Creates a set of chunk responses (one for each type of possible response).
+    /// The returned response types are: [waypoint, target, highest].
+    fn create_chunk_responses(
+        version: Version,
+        transaction_list_with_proof: TransactionListWithProof,
+    ) -> Vec<StateSyncMessage> {
+        let ledger_info_at_version = create_ledger_info_at_version(version);
+
+        // Create a waypoint chunk response
+        let response_ledger_info = ResponseLedgerInfo::LedgerInfoForWaypoint {
+            waypoint_li: ledger_info_at_version.clone(),
+            end_of_epoch_li: None,
+        };
+        let waypoint_response = create_chunk_response_message(
+            response_ledger_info,
+            transaction_list_with_proof.clone(),
+        );
+
+        // Create a highest chunk response
+        let response_ledger_info = ResponseLedgerInfo::ProgressiveLedgerInfo {
+            target_li: ledger_info_at_version.clone(),
+            highest_li: None,
+        };
+        let highest_response = create_chunk_response_message(
+            response_ledger_info,
+            transaction_list_with_proof.clone(),
+        );
+
+        // Create a target chunk response
+        let response_ledger_info = ResponseLedgerInfo::VerifiableLedgerInfo(ledger_info_at_version);
+        let target_response =
+            create_chunk_response_message(response_ledger_info, transaction_list_with_proof);
+
+        vec![waypoint_response, target_response, highest_response]
+    }
+
     fn verify_all_chunk_requests_are_invalid(
-        validator_coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
         peer_network_id: &PeerNetworkId,
         requests: &[StateSyncMessage],
     ) {
         for request in requests {
-            let process_result = block_on(validator_coordinator.process_chunk_message(
+            let result = block_on(coordinator.process_chunk_message(
                 peer_network_id.network_id(),
                 peer_network_id.peer_id(),
                 request.clone(),
             ));
-            if !matches!(process_result, Err(Error::InvalidChunkRequest(..))) {
-                panic!(
-                    "Expected a chunk request error but got: {:?}",
-                    process_result
-                );
+            if !matches!(result, Err(Error::InvalidChunkRequest(..))) {
+                panic!("Expected an invalid chunk request, but got: {:?}", result);
+            }
+        }
+    }
+
+    fn verify_all_chunk_responses_are_invalid(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        peer_network_id: &PeerNetworkId,
+        responses: &[StateSyncMessage],
+    ) {
+        for response in responses {
+            let result = block_on(coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                response.clone(),
+            ));
+            if !matches!(result, Err(Error::ProcessInvalidChunk(..))) {
+                panic!("Expected invalid chunk error, but got: {:?}", result);
+            }
+        }
+    }
+
+    fn verify_all_chunk_responses_are_the_wrong_type(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        peer_network_id: &PeerNetworkId,
+        responses: &[StateSyncMessage],
+    ) {
+        for response in responses {
+            let result = block_on(coordinator.process_chunk_message(
+                peer_network_id.network_id(),
+                peer_network_id.peer_id(),
+                response.clone(),
+            ));
+            if !matches!(result, Err(Error::ReceivedWrongChunkType(..))) {
+                panic!("Expected wrong type error, but got: {:?}", result);
             }
         }
     }
