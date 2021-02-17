@@ -1494,6 +1494,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(self.request_manager.send_chunk_request(req)?)
     }
 
+    // TODO(joshlind): update state sync to also return the highest version it knows about.
+    // This will require storing the target requested by the peer in the PendingRequestInfo.
     fn deliver_subscription(
         &mut self,
         peer: PeerNetworkId,
@@ -1503,7 +1505,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         self.deliver_chunk(
             peer,
             request_info.known_version,
-            ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
+            ResponseLedgerInfo::ProgressiveLedgerInfo {
+                target_li: response_li,
+                highest_li: None,
+            },
             request_info.limit,
         )
     }
