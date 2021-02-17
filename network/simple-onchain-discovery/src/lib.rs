@@ -21,6 +21,7 @@ use network::{
     logging::NetworkSchema,
 };
 use once_cell::sync::Lazy;
+use short_hex_str::AsShortHexStr;
 use std::{collections::HashSet, sync::Arc};
 use subscription_service::ReconfigSubscription;
 

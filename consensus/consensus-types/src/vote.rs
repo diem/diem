@@ -9,6 +9,7 @@ use diem_types::{
     validator_verifier::ValidatorVerifier,
 };
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::fmt::{Debug, Display, Formatter};
 
 /// Vote is the struct that is ultimately sent by the voter in response for

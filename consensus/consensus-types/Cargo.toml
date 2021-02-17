@@ -19,6 +19,7 @@ diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
 diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 
 
 [dev-dependencies]

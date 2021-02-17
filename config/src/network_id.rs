@@ -3,6 +3,7 @@
 use crate::config::RoleType;
 use diem_types::PeerId;
 use serde::{Deserialize, Serialize, Serializer};
+use short_hex_str::AsShortHexStr;
 use std::fmt;
 
 /// A grouping of common information between all networking code for logging.

@@ -71,6 +71,7 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
 };
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{cmp::PartialEq, collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;

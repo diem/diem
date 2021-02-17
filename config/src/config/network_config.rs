@@ -17,6 +17,7 @@ use rand::{
     Rng, SeedableRng,
 };
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,

@@ -50,6 +50,7 @@ diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 safety-rules = { path = "safety-rules", version = "0.1.0" }
+short-hex-str = { path = "../common/short-hex-str", version = "0.1.0" }
 state-sync = { path = "../state-sync", version = "0.1.0" }
 schemadb = { path = "../storage/schemadb", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }

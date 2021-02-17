@@ -1039,6 +1039,7 @@ dependencies = [
  "schemadb",
  "serde",
  "serde_json",
+ "short-hex-str",
  "state-sync",
  "storage-interface",
  "subscription-service",
@@ -1065,6 +1066,7 @@ dependencies = [
  "mirai-annotations",
  "proptest",
  "serde",
+ "short-hex-str",
 ]
 
 [[package]]
@@ -1452,6 +1454,7 @@ dependencies = [
  "rand 0.8.3",
  "serde",
  "serde_yaml",
+ "short-hex-str",
  "thiserror",
 ]
 
@@ -1487,7 +1490,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "sha3",
- "short-hex-str",
  "static_assertions",
  "thiserror",
  "tiny-keccak",
@@ -4218,8 +4220,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "short-hex-str",
- "static_assertions",
  "thiserror",
 ]
 
@@ -4653,6 +4653,7 @@ dependencies = [
  "network",
  "once_cell",
  "rand 0.8.3",
+ "short-hex-str",
  "subscription-service",
  "tokio",
 ]
@@ -6503,6 +6504,7 @@ dependencies = [
  "mirai-annotations",
  "proptest",
  "serde",
+ "static_assertions",
  "thiserror",
 ]
 

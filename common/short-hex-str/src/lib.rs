@@ -3,6 +3,7 @@
 
 use mirai_annotations::debug_checked_precondition;
 use serde::{Serialize, Serializer};
+use static_assertions::const_assert;
 use std::{fmt, str};
 use thiserror::Error;
 
@@ -95,6 +96,26 @@ fn hex_encode(src: &[u8], dst: &mut [u8]) {
         let (hi, lo) = byte2hex(*byte);
         out[0] = hi;
         out[1] = lo;
+    }
+}
+
+pub trait AsShortHexStr {
+    fn short_str(&self) -> ShortHexStr;
+}
+
+impl AsShortHexStr for [u8; 16] {
+    fn short_str(&self) -> ShortHexStr {
+        const_assert!(16 >= ShortHexStr::SOURCE_LENGTH);
+        ShortHexStr::try_from_bytes(self)
+            .expect("This can never fail since 16 >= ShortHexStr::SOURCE_LENGTH")
+    }
+}
+
+impl AsShortHexStr for [u8; 32] {
+    fn short_str(&self) -> ShortHexStr {
+        const_assert!(32 >= ShortHexStr::SOURCE_LENGTH);
+        ShortHexStr::try_from_bytes(self)
+            .expect("This can never fail since 32 >= ShortHexStr::SOURCE_LENGTH")
     }
 }
 

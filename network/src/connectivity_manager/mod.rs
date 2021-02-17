@@ -52,6 +52,7 @@ use rand::{
     seq::SliceRandom,
 };
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{
     cmp::min,
     collections::{hash_map::Entry, HashMap, HashSet},

@@ -42,6 +42,7 @@ use futures::{
 };
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 pub mod builder;

@@ -21,7 +21,7 @@ use diem_logger::trace;
 use diem_types::PeerId;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use netcore::transport::ConnectionOrigin;
-use short_hex_str::ShortHexStr;
+use short_hex_str::{AsShortHexStr, ShortHexStr};
 use std::{collections::HashMap, convert::TryFrom as _, fmt::Debug, sync::Arc};
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.

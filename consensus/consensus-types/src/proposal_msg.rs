@@ -5,6 +5,7 @@ use crate::{block::Block, common::Author, sync_info::SyncInfo};
 use anyhow::{anyhow, ensure, format_err, Context, Result};
 use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::fmt;
 
 /// ProposalMsg contains the required information for the proposer election protocol to make its

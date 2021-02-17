@@ -27,6 +27,7 @@ diem-types = {path = "../../types", version = "0.1.0"}
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 network = {path = "../../network", version = "0.1.0"}
+short-hex-str = { path = "../../common/short-hex-str" }
 subscription-service = { path = "../../common/subscription-service", version = "0.1.0" }
 
 [dev-dependencies]

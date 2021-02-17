@@ -6,6 +6,7 @@ use anyhow::ensure;
 use diem_crypto::hash::HashValue;
 use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::fmt;
 
 pub const MAX_BLOCKS_PER_REQUEST: u64 = 10;

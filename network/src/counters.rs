@@ -10,6 +10,7 @@ use diem_metrics::{
 use diem_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use once_cell::sync::Lazy;
+use short_hex_str::AsShortHexStr;
 
 // some type labels
 pub const REQUEST_LABEL: &str = "request";

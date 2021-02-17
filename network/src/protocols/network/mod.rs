@@ -26,6 +26,7 @@ use futures::{
 };
 use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::{cmp::min, marker::PhantomData, pin::Pin, time::Duration};
 
 pub trait Message: DeserializeOwned + Serialize {}

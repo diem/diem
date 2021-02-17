@@ -44,6 +44,7 @@ use futures::{
     FutureExt, SinkExt, TryFutureExt,
 };
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{fmt, panic, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 use tokio_util::compat::{

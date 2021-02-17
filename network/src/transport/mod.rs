@@ -25,6 +25,7 @@ use futures::{
 };
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{
     collections::BTreeMap,
     convert::TryFrom,

@@ -41,6 +41,7 @@ use futures::{
 };
 use netcore::transport::{ConnectionOrigin, Transport};
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt,

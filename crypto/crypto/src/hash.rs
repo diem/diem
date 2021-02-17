@@ -108,8 +108,6 @@ use once_cell::sync::{Lazy, OnceCell};
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
-use short_hex_str::ShortHexStr;
-use static_assertions::const_assert;
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
@@ -257,13 +255,6 @@ impl HashValue {
         })
     }
 
-    /// Returns first 4 bytes as hex-formatted string
-    pub fn short_str(&self) -> ShortHexStr {
-        const_assert!(HashValue::LENGTH >= ShortHexStr::SOURCE_LENGTH);
-        ShortHexStr::try_from_bytes(&self.hash)
-            .expect("This can never fail since HashValue::LENGTH >= ShortHexStr::SOURCE_LENGTH")
-    }
-
     /// Full hex representation of a given hash value.
     pub fn to_hex(&self) -> String {
         hex::encode(self.hash)
@@ -322,6 +313,14 @@ impl Default for HashValue {
 
 impl AsRef<[u8; HashValue::LENGTH]> for HashValue {
     fn as_ref(&self) -> &[u8; HashValue::LENGTH] {
+        &self.hash
+    }
+}
+
+impl std::ops::Deref for HashValue {
+    type Target = [u8; Self::LENGTH];
+
+    fn deref(&self) -> &Self::Target {
         &self.hash
     }
 }

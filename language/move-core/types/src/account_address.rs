@@ -11,8 +11,6 @@ use diem_crypto_derive::CryptoHasher;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
-use short_hex_str::ShortHexStr;
-use static_assertions::const_assert;
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 /// A struct that represents an account address.
@@ -35,14 +33,6 @@ impl AccountAddress {
         let mut rng = OsRng;
         let buf: [u8; Self::LENGTH] = rng.gen();
         Self(buf)
-    }
-
-    // Helpful in log messages
-    pub fn short_str(&self) -> ShortHexStr {
-        const_assert!(AccountAddress::LENGTH >= ShortHexStr::SOURCE_LENGTH);
-        ShortHexStr::try_from_bytes(&self.0).expect(
-            "This can never fail since AccountAddress::LENGTH >= ShortHexStr::SOURCE_LENGTH",
-        )
     }
 
     pub fn short_str_lossless(&self) -> String {
@@ -114,6 +104,14 @@ impl CryptoHash for AccountAddress {
 
 impl AsRef<[u8]> for AccountAddress {
     fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for AccountAddress {
+    type Target = [u8; Self::LENGTH];
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }

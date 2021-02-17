@@ -4,6 +4,7 @@
 use crate::network_id::{NetworkId, NodeNetworkId};
 use diem_types::PeerId;
 use serde::{Deserialize, Serialize};
+use short_hex_str::AsShortHexStr;
 use std::fmt;
 
 /// If a node considers a network 'upstream', the node will broadcast transactions (via mempool) to and
