@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{ensure, Result};
 use diem_logger::json_log::JsonLogEntry;
 use std::time::Instant;
 
@@ -9,19 +9,11 @@ pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
 pub const DIEM_TRACE: &str = "diem_trace";
 
-use std::{
-    collections::HashMap,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use once_cell::sync::OnceCell;
+use std::collections::HashMap;
 
-// This is poor's man AtomicReference from crossbeam
-// It have few unsafe lines, but does not require extra dependency
 // Sampling rate is the form of (nominator, denominator)
-static mut SAMPLING_CONFIG: Option<Sampling> = None;
-static DIEM_TRACE_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
-const UNINITIALIZED: usize = 0;
-const INITIALIZING: usize = 1;
-const INITIALIZED: usize = 2;
+static SAMPLING_CONFIG: OnceCell<Sampling> = OnceCell::new();
 
 struct Sampling(HashMap<&'static str, CategorySampling>);
 
@@ -398,26 +390,10 @@ fn abbreviate_crate(name: &str) -> &str {
     }
 }
 
-// This is exact copy of similar function in log crate
 /// Sets diem trace config
 pub fn set_diem_trace(config: &HashMap<String, String>) -> Result<()> {
-    match parse_sampling_config(config) {
-        Ok(sampling) => unsafe {
-            match DIEM_TRACE_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
-                UNINITIALIZED => {
-                    SAMPLING_CONFIG = Some(sampling);
-                    DIEM_TRACE_STATE.store(INITIALIZED, Ordering::SeqCst);
-                    Ok(())
-                }
-                INITIALIZING => {
-                    while DIEM_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                    bail!("Failed to initialize DIEM_TRACE_STATE");
-                }
-                _ => bail!("Failed to initialize DIEM_TRACE_STATE"),
-            }
-        },
-        Err(s) => bail!("Failed to parse sampling config: {}", s),
-    }
+    SAMPLING_CONFIG.get_or_try_init(|| parse_sampling_config(config))?;
+    Ok(())
 }
 
 fn parse_sampling_config(config: &HashMap<String, String>) -> Result<Sampling> {
@@ -441,24 +417,19 @@ fn parse_sampling_config(config: &HashMap<String, String>) -> Result<Sampling> {
 
 /// Checks if diem trace is enabled
 pub fn diem_trace_set() -> bool {
-    DIEM_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZED
+    SAMPLING_CONFIG.get().is_some()
 }
 
 pub fn is_selected(node: (&'static str, u64)) -> bool {
-    if !diem_trace_set() {
-        return false;
-    }
-    unsafe {
-        match &SAMPLING_CONFIG {
-            Some(Sampling(sampling)) => {
-                if let Some(sampling_rate) = sampling.get(node.0) {
-                    node.1 % sampling_rate.denominator < sampling_rate.nominator
-                } else {
-                    // assume no sampling if sampling category is not found and return true
-                    true
-                }
+    match SAMPLING_CONFIG.get() {
+        Some(Sampling(sampling)) => {
+            if let Some(sampling_rate) = sampling.get(node.0) {
+                node.1 % sampling_rate.denominator < sampling_rate.nominator
+            } else {
+                // assume no sampling if sampling category is not found and return true
+                true
             }
-            None => false,
         }
+        None => false,
     }
 }
