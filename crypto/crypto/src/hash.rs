@@ -101,7 +101,6 @@
 #![allow(clippy::integer_arithmetic)]
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
-use diem_nibble::Nibble;
 use mirai_annotations::*;
 use once_cell::sync::{Lazy, OnceCell};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -128,8 +127,6 @@ impl HashValue {
     pub const LENGTH: usize = 32;
     /// The length of the hash in bits.
     pub const LENGTH_IN_BITS: usize = Self::LENGTH * 8;
-    /// The length of the hash in nibbles.
-    pub const LENGTH_IN_NIBBLES: usize = Self::LENGTH * 2;
 
     /// Create a new [`HashValue`] from a byte array.
     pub fn new(hash: [u8; HashValue::LENGTH]) -> Self {
@@ -238,21 +235,6 @@ impl HashValue {
             .zip(other.iter_bits())
             .take_while(|(x, y)| x == y)
             .count()
-    }
-
-    /// Returns the length of common prefix of `self` and `other` in nibbles.
-    pub fn common_prefix_nibbles_len(&self, other: HashValue) -> usize {
-        self.common_prefix_bits_len(other) / 4
-    }
-
-    /// Returns the `index`-th nibble.
-    pub fn get_nibble(&self, index: usize) -> Nibble {
-        precondition!(index < HashValue::LENGTH);
-        Nibble::from(if index % 2 == 0 {
-            self[index / 2] >> 4
-        } else {
-            self[index / 2] & 0x0F
-        })
     }
 
     /// Full hex representation of a given hash value.
