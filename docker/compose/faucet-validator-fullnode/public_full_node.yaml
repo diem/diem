@@ -12,6 +12,7 @@ execution:
     # waypoint without a corresponding genesis, the file location should be an empty path.
     genesis_file_location: "/opt/diem/etc/genesis.blob"
 
+
 full_node_networks:
       # Disabled for testnet
     - discovery_method: "onchain"
@@ -23,7 +24,7 @@ full_node_networks:
       #seeds:
       #  D4C4FB4956D899E55289083F45AC5D84:
       #     addresses:
-      #      - "/dns4/72.16.1.3/tcp/8080/ln-noise-ik/11293338b72a0a801580481be5bb8bbed8e0f74c2c3c8e8ee58650753db4794d/ln-handshake/0"
+      #      - "/dns4/172.16.1.3/tcp/8080/ln-noise-ik/11293338b72a0a801580481be5bb8bbed8e0f74c2c3c8e8ee58650753db4794d/ln-handshake/0"
       #    role: "ValidatorFullNode"
 
 json_rpc:

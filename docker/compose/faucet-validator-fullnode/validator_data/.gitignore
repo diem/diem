@@ -3,4 +3,4 @@
 
 # ... except for this one and the root key
 !.gitignore
-!diem_root_key
+!mint.key
