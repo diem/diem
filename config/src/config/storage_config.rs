@@ -16,6 +16,7 @@ use std::{
 pub struct RocksdbConfig {
     pub max_open_files: i32,
     pub max_total_wal_size: u64,
+    pub num_levels: i32,
 }
 
 impl Default for RocksdbConfig {
@@ -28,6 +29,8 @@ impl Default for RocksdbConfig {
             // families are updated at non-uniform frequencies.
             #[allow(clippy::integer_arithmetic)] // TODO: remove once clippy lint fixed
             max_total_wal_size: 1u64 << 30,
+            // Default num_levels: 7
+            num_levels:7,
         }
     }
 }

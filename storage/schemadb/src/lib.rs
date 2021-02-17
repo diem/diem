@@ -258,7 +258,7 @@ impl DB {
             db_opts,
             path,
             column_families.iter().map(|cf_name| {
-                let mut cf_opts = rocksdb::Options::default();
+                let mut cf_opts = db_opts.clone();
                 cf_opts.set_compression_type(rocksdb::DBCompressionType::Lz4);
                 rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
             }),

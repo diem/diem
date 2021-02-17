@@ -138,6 +138,7 @@ fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
     let mut db_opts = Options::default();
     db_opts.set_max_open_files(config.max_open_files);
     db_opts.set_max_total_wal_size(config.max_total_wal_size);
+    db_opts.set_num_levels(config.num_levels);
     db_opts
 }
 
