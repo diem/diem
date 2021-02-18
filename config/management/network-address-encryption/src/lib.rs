@@ -275,6 +275,8 @@ mod tests {
             None,
             None,
             true,
+            None,
+            None,
         ));
         let mut encryptor = Encryptor::new(storage);
         encryptor.initialize().unwrap();

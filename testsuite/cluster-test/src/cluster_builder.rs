@@ -370,6 +370,8 @@ impl ClusterBuilder {
                 None,
                 None,
                 true,
+                None,
+                None,
             ));
             if validator_index == 0 {
                 vault_storage.create_key(DIEM_ROOT_KEY).map_err(|e| {

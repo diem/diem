@@ -178,6 +178,8 @@ mod tests {
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
                 disable_cas: None,
+                connection_timeout_ms: None,
+                response_timeout_ms: None,
             }),
             validator_backend: SecureBackend::Vault(VaultConfig {
                 namespace: None,
@@ -186,6 +188,8 @@ mod tests {
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
                 disable_cas: None,
+                connection_timeout_ms: None,
+                response_timeout_ms: None,
             }),
         };
 
