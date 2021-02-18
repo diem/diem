@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.38"
 bytes = "1.0.1"
 tokio = { version = "1.2.0", features = ["full"] }
-reqwest = { version = "0.11.0", features = ["blocking", "json"], default_features = false }
+reqwest = { version = "0.11.1", features = ["blocking", "json"], default_features = false }
 warp = "0.3.0"
 
 diem-logger = { path = "../logger", version = "0.1.0" }
