@@ -233,29 +233,11 @@ pub enum StrongEdge {
     Offset(usize),
 }
 
-impl std::fmt::Display for StrongEdge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StrongEdge::Empty => write!(f, "E"),
-            StrongEdge::Offset(offset) => write!(f, "{}", offset),
-        }
-    }
-}
-
 /// A borrow edge -- used in memory operations
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub enum BorrowEdge {
     Weak,
     Strong(StrongEdge),
-}
-
-impl std::fmt::Display for BorrowEdge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BorrowEdge::Weak => write!(f, "*"),
-            BorrowEdge::Strong(se) => write!(f, "{}", se),
-        }
-    }
 }
 
 /// A specification property kind.
@@ -547,6 +529,24 @@ impl Bytecode {
             bytecode: self,
             func_target,
             label_offsets,
+        }
+    }
+}
+
+impl std::fmt::Display for BorrowEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BorrowEdge::Weak => write!(f, "*"),
+            BorrowEdge::Strong(se) => write!(f, "{}", se),
+        }
+    }
+}
+
+impl std::fmt::Display for StrongEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StrongEdge::Empty => write!(f, "E"),
+            StrongEdge::Offset(offset) => write!(f, "{}", offset),
         }
     }
 }
