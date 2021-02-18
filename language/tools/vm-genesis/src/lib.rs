@@ -191,7 +191,7 @@ fn exec_function(
                 function_name,
                 e.into_vm_status()
             )
-        })
+        });
 }
 
 fn exec_script(

@@ -243,7 +243,7 @@ impl VMRuntime {
             .create_signers_and_arguments(&params, senders, args)
             .map_err(|err| err.finish(Location::Undefined))?;
         // run the script
-        Interpreter::entrypoint(
+        let return_vals = Interpreter::entrypoint(
             main,
             ty_args,
             signers_and_args,
@@ -251,7 +251,97 @@ impl VMRuntime {
             cost_strategy,
             &self.loader,
             log_context,
-        )
+        )?;
+
+        if !return_vals.is_empty() {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(
+                        "scripts cannot have return values -- this should not happen".to_string(),
+                    )
+                    .finish(Location::Undefined),
+            );
+        }
+
+        Ok(())
+    }
+
+    fn execute_function_impl<F>(
+        &self,
+        module: &ModuleId,
+        function_name: &IdentStr,
+        ty_args: Vec<TypeTag>,
+        make_args: F,
+        is_script_execution: bool,
+        data_store: &mut impl DataStore,
+        cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
+    ) -> VMResult<Vec<Vec<u8>>>
+    where
+        F: FnOnce(&VMRuntime, &[Type]) -> PartialVMResult<Vec<Value>>,
+    {
+        let (func, ty_args, params, return_tys) = self.loader.load_function(
+            function_name,
+            module,
+            &ty_args,
+            is_script_execution,
+            data_store,
+            log_context,
+        )?;
+
+        let return_layouts = return_tys
+            .iter()
+            .map(|ty| {
+                self.loader.type_to_type_layout(ty).map_err(|_err| {
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message(
+                            "cannot be called with non-serializable return type".to_string(),
+                        )
+                        .finish(Location::Undefined)
+                })
+            })
+            .collect::<VMResult<Vec<_>>>()?;
+
+        let params = params
+            .into_iter()
+            .map(|ty| ty.subst(&ty_args))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
+
+        let args = make_args(self, &params).map_err(|err| err.finish(Location::Undefined))?;
+
+        let return_vals = Interpreter::entrypoint(
+            func,
+            ty_args,
+            args,
+            data_store,
+            cost_strategy,
+            &self.loader,
+            log_context,
+        )?;
+
+        if return_layouts.len() != return_vals.len() {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!(
+                        "declared {} return types, but got {} return values",
+                        return_layouts.len(),
+                        return_vals.len()
+                    ))
+                    .finish(Location::Undefined),
+            );
+        }
+
+        let mut serialized_vals = vec![];
+        for (val, layout) in return_vals.into_iter().zip(return_layouts.iter()) {
+            serialized_vals.push(val.simple_serialize(&layout).ok_or_else(|| {
+                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message("failed to serialize return values".to_string())
+                    .finish(Location::Undefined)
+            })?)
+        }
+
+        Ok(serialized_vals)
     }
 
     // See Session::execute_script_function for what contracts to follow.
@@ -265,28 +355,15 @@ impl VMRuntime {
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
-    ) -> VMResult<()> {
-        let (func, ty_args, params) = self.loader.load_function(
-            function_name,
+    ) -> VMResult<Vec<Vec<u8>>> {
+        self.execute_function_impl(
             module,
-            &ty_args,
-            true, // is_script_execution
-            data_store,
-            log_context,
-        )?;
-
-        let signers_and_args = self
-            .create_signers_and_arguments(&params, senders, args)
-            .map_err(|err| err.finish(Location::Undefined))?;
-
-        // run the function
-        Interpreter::entrypoint(
-            func,
+            function_name,
             ty_args,
-            signers_and_args,
+            move |runtime, params| runtime.create_signers_and_arguments(params, senders, args),
+            true,
             data_store,
             cost_strategy,
-            &self.loader,
             log_context,
         )
     }
@@ -301,37 +378,15 @@ impl VMRuntime {
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
-    ) -> VMResult<()> {
-        // load the function in the given module, perform verification of the module and
-        // its dependencies if the module was not loaded
-        let (func, ty_args, params) = self.loader.load_function(
-            function_name,
+    ) -> VMResult<Vec<Vec<u8>>> {
+        self.execute_function_impl(
             module,
-            &ty_args,
-            false, // is_script_execution
-            data_store,
-            log_context,
-        )?;
-
-        let params = params
-            .into_iter()
-            .map(|ty| ty.subst(&ty_args))
-            .collect::<PartialVMResult<Vec<_>>>()
-            .map_err(|err| err.finish(Location::Undefined))?;
-
-        // check the arguments provided are of restricted types
-        let args = self
-            .deserialize_args(&params, args)
-            .map_err(|err| err.finish(Location::Undefined))?;
-
-        // run the function
-        Interpreter::entrypoint(
-            func,
+            function_name,
             ty_args,
-            args,
+            move |runtime, params| runtime.deserialize_args(params, args),
+            false,
             data_store,
             cost_strategy,
-            &self.loader,
             log_context,
         )
     }

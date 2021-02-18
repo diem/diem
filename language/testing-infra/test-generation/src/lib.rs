@@ -131,7 +131,8 @@ fn execute_function_in_module<S: StateView>(
                     &mut cost_strategy,
                     &log_context,
                 )
-                .map_err(|e| e.into_vm_status())
+                .map_err(|e| e.into_vm_status())?;
+            Ok(())
         })
     }
 }

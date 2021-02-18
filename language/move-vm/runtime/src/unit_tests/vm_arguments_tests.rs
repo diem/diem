@@ -298,7 +298,8 @@ fn call_script_function_with_args_ty_args_signers(
         signers,
         &mut cost_strategy,
         &log_context,
-    )
+    )?;
+    Ok(())
 }
 
 fn call_script_function(

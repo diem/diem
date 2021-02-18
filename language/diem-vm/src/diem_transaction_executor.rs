@@ -444,6 +444,7 @@ impl DiemVM {
                 &mut cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .or_else(|e| {
                 expect_only_successful_execution(e, BLOCK_PROLOGUE.as_str(), log_context)
             })?;

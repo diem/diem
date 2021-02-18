@@ -44,7 +44,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Vec<u8>>,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Vec<u8>>> {
         self.runtime.execute_function(
             module,
             function_name,
@@ -89,7 +89,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         senders: Vec<AccountAddress>,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Vec<u8>>> {
         self.runtime.execute_script_function(
             module,
             function_name,

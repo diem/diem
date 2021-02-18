@@ -239,6 +239,7 @@ impl DiemVMImpl {
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
@@ -278,6 +279,7 @@ impl DiemVMImpl {
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
@@ -319,6 +321,7 @@ impl DiemVMImpl {
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_epilogue_error(err, log_context))
     }
@@ -354,6 +357,7 @@ impl DiemVMImpl {
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|e| {
                 expect_only_successful_execution(e, USER_EPILOGUE_NAME.as_str(), log_context)
@@ -390,6 +394,7 @@ impl DiemVMImpl {
                 &mut cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
@@ -418,6 +423,7 @@ impl DiemVMImpl {
                 &mut cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
             .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|e| {
                 expect_only_successful_execution(e, WRITESET_EPILOGUE_NAME.as_str(), log_context)

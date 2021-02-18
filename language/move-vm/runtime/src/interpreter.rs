@@ -22,7 +22,7 @@ use move_vm_types::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
 };
-use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
+use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
 use vm::{
     errors::*,
     file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
@@ -78,7 +78,7 @@ impl<L: LogContext> Interpreter<L> {
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
         log_context: &L,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Value>> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new(log_context.clone());
@@ -104,7 +104,7 @@ impl<L: LogContext> Interpreter<L> {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Value>> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
         self.execute_main(loader, data_store, cost_strategy, function, ty_args, args)
@@ -126,7 +126,7 @@ impl<L: LogContext> Interpreter<L> {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Value>> {
         let mut locals = Locals::new(function.local_count());
         for (i, value) in args.into_iter().enumerate() {
             locals
@@ -147,7 +147,7 @@ impl<L: LogContext> Interpreter<L> {
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                     } else {
-                        return Ok(());
+                        return Ok(mem::replace(&mut self.operand_stack.0, vec![]));
                     }
                 }
                 ExitCode::Call(fh_idx) => {

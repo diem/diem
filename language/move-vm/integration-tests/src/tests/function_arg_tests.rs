@@ -76,7 +76,9 @@ fn run(
         args,
         &mut cost_strategy,
         &context,
-    )
+    )?;
+
+    Ok(())
 }
 
 fn expect_err(params: &[&str], args: Vec<MoveValue>, expected_status: StatusCode) {

@@ -565,7 +565,7 @@ impl Loader {
         is_script_execution: bool,
         data_store: &mut impl DataStore,
         log_context: &impl LogContext,
-    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>)> {
+    ) -> VMResult<(Arc<Function>, Vec<Type>, Vec<Type>, Vec<Type>)> {
         let module = self.load_module_verify_not_missing(module_id, data_store, log_context)?;
         let idx = self
             .module_cache
@@ -573,8 +573,17 @@ impl Loader {
             .resolve_function_by_name(function_name, module_id)
             .map_err(|err| err.finish(Location::Undefined))?;
         let func = self.module_cache.lock().function_at(idx);
+
         let parameter_tys = func
             .parameters
+            .0
+            .iter()
+            .map(|tok| self.module_cache.lock().make_type(module.module(), tok))
+            .collect::<PartialVMResult<Vec<_>>>()
+            .map_err(|err| err.finish(Location::Undefined))?;
+
+        let return_tys = func
+            .return_
             .0
             .iter()
             .map(|tok| self.module_cache.lock().make_type(module.module(), tok))
@@ -594,7 +603,7 @@ impl Loader {
             script_signature::verify_module_script_function(compiled_module, function_name)?;
         }
 
-        Ok((func, type_params, parameter_tys))
+        Ok((func, type_params, parameter_tys, return_tys))
     }
 
     // Entry point for module publishing (`MoveVM::publish_module`).

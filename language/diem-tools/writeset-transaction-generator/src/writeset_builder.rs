@@ -57,7 +57,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
                     function_name,
                     e.into_vm_status()
                 )
-            })
+            });
     }
 
     pub fn exec_script(&mut self, sender: AccountAddress, script: &Script) {
