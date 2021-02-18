@@ -12,6 +12,8 @@ pub struct ConsensusConfig {
     pub contiguous_rounds: u32,
     pub max_block_size: u64,
     pub max_pruned_blocks_in_mem: usize,
+    // Timeout for consensus to get an ack from mempool for executed transactions (in milliseconds)
+    pub mempool_executed_txn_timeout_ms: u64,
     // Timeout for consensus to pull transactions from mempool and get a response (in milliseconds)
     pub mempool_txn_pull_timeout_ms: u64,
     pub round_initial_timeout_ms: u64,
@@ -31,6 +33,7 @@ impl Default for ConsensusConfig {
             max_block_size: 1000,
             max_pruned_blocks_in_mem: 100,
             mempool_txn_pull_timeout_ms: 1000,
+            mempool_executed_txn_timeout_ms: 1000,
             round_initial_timeout_ms: 1000,
             proposer_type: ConsensusProposerType::LeaderReputation(LeaderReputationConfig {
                 active_weights: 99,

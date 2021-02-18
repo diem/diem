@@ -25,7 +25,8 @@ const NO_TXN_DELAY: u64 = 30;
 pub struct MempoolProxy {
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     poll_count: u64,
-
+    /// Timeout for consensus to get an ack from mempool for executed transactions (in milliseconds)
+    mempool_executed_txn_timeout_ms: u64,
     /// Timeout for consensus to pull transactions from mempool and get a response (in milliseconds)
     mempool_txn_pull_timeout_ms: u64,
 }
@@ -35,6 +36,7 @@ impl MempoolProxy {
         consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
         poll_count: u64,
         mempool_txn_pull_timeout_ms: u64,
+        mempool_executed_txn_timeout_ms: u64,
     ) -> Self {
         assert!(
             poll_count > 0,
@@ -44,6 +46,7 @@ impl MempoolProxy {
             consensus_to_mempool_sender,
             poll_count,
             mempool_txn_pull_timeout_ms,
+            mempool_executed_txn_timeout_ms,
         }
     }
 
@@ -158,7 +161,11 @@ impl TxnManager for MempoolProxy {
 
         if let Err(e) = monitor!(
             "notify_mempool",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(
+                Duration::from_millis(self.mempool_executed_txn_timeout_ms),
+                callback_rcv
+            )
+            .await
         ) {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e).into())
         } else {
