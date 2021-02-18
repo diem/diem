@@ -25,12 +25,16 @@ const NO_TXN_DELAY: u64 = 30;
 pub struct MempoolProxy {
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     poll_count: u64,
+
+    /// Timeout for consensus to pull transactions from mempool and get a response (in milliseconds)
+    mempool_txn_pull_timeout_ms: u64,
 }
 
 impl MempoolProxy {
     pub fn new(
         consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
         poll_count: u64,
+        mempool_txn_pull_timeout_ms: u64,
     ) -> Self {
         assert!(
             poll_count > 0,
@@ -39,6 +43,7 @@ impl MempoolProxy {
         Self {
             consensus_to_mempool_sender,
             poll_count,
+            mempool_txn_pull_timeout_ms,
         }
     }
 
@@ -57,7 +62,11 @@ impl MempoolProxy {
         // wait for response
         match monitor!(
             "pull_txn",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(
+                Duration::from_millis(self.mempool_txn_pull_timeout_ms),
+                callback_rcv
+            )
+            .await
         ) {
             Err(_) => {
                 Err(anyhow::anyhow!("[consensus] did not receive GetBlockResponse on time").into())

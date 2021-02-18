@@ -42,6 +42,7 @@ pub fn start_consensus(
     let txn_manager = Arc::new(MempoolProxy::new(
         consensus_to_mempool_sender,
         node_config.consensus.mempool_poll_count,
+        node_config.consensus.mempool_txn_pull_timeout_ms,
     ));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
     let state_computer = Arc::new(ExecutionProxy::new(
