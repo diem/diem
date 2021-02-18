@@ -19,7 +19,7 @@ use crate::spec_translator::SpecTranslator;
 
 use move_model::{
     ast::{ConditionKind, GlobalInvariant},
-    model::{FunctionEnv, GlobalId, QualifiedId, StructId},
+    model::{FunctionEnv, GlobalEnv, GlobalId, QualifiedId, StructId},
     pragmas::CONDITION_ISOLATED_PROP,
 };
 use std::collections::BTreeSet;
@@ -62,6 +62,27 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessor {
 
     fn name(&self) -> String {
         "global_invariant_instrumenter".to_string()
+    }
+
+    fn initialize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
+        // This function can be used to compute any needed information ahead
+        // of the time `process` is called for each individual function.
+        //
+        // In order to iterate over all functions in targets, one can use code as below:
+        //
+        //   let mut analysis_info = AnalysisInfo::new();
+        //   for (qfun_id, variant) in targets.get_funs_and_variants() {
+        //       let fun_env = env.get_module(qfun_id.module_id).into_function(qfun_id.id);
+        //       let fun_target = targets.get_target(&fun_env, variant);
+        //       << Do something with fun_env/fun_target >>
+        //   }
+        //   // Store the computed info into an extension in the environment
+        //   env.set_extension(analysis_info);
+        //
+        // One can then use in `process` the following to retrieve the analysis result.
+        //
+        //   let analysis_info = env.get_extension::<AnalysisInfo>();
+        //   ...
     }
 }
 
