@@ -1,6 +1,5 @@
 # Ignore all files in this dir...
 *
 
-# ... except for this one and the root key
+# ... except for this one
 !.gitignore
-!mint.key
