@@ -233,10 +233,12 @@ impl<'a> EliminateMutRefs<'a> {
         use BorrowNode::*;
         use Operation::*;
         match oper {
-            WriteBack(LocalRoot(dest)) => {
-                WriteBack(LocalRoot(self.transform_index_for_local_root(dest)))
+            WriteBack(LocalRoot(dest), edge) => {
+                WriteBack(LocalRoot(self.transform_index_for_local_root(dest)), edge)
             }
-            WriteBack(Reference(dest)) => WriteBack(Reference(self.transform_index(dest))),
+            WriteBack(Reference(dest), edge) => {
+                WriteBack(Reference(self.transform_index(dest)), edge)
+            }
             _ => oper,
         }
     }

@@ -6,7 +6,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
-        AttrId, BorrowNode,
+        AttrId, BorrowEdge, BorrowNode,
         Bytecode::{self, *},
         Operation,
     },
@@ -263,7 +263,7 @@ impl<'a> Instrumenter<'a> {
                     instrumented_bytecodes.push(Bytecode::Call(
                         self.clone_attr(attr_id),
                         vec![],
-                        Operation::WriteBack(parent.clone()),
+                        Operation::WriteBack(parent.clone(), BorrowEdge::Weak),
                         vec![*idx],
                         None,
                     ));

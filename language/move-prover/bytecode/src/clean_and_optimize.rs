@@ -88,7 +88,7 @@ impl<'a> TransferFunctions for Optimizer<'a> {
                 WriteRef => {
                     state.unwritten.insert(Reference(srcs[0]));
                 }
-                WriteBack(Reference(dest)) => {
+                WriteBack(Reference(dest), _) => {
                     if state.unwritten.contains(&Reference(srcs[0])) {
                         state.unwritten.insert(Reference(*dest));
                     }
@@ -131,7 +131,7 @@ impl<'a> Optimizer<'a> {
                 }
             }
             // Remove unnecessary WriteBack
-            if let Call(_, _, WriteBack(_), srcs, _) = &instr {
+            if let Call(_, _, WriteBack(_, _), srcs, _) = &instr {
                 if let Some(unwritten) =
                     data.get(&(code_offset as CodeOffset)).map(|d| &d.unwritten)
                 {

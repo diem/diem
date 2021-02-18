@@ -183,7 +183,7 @@ impl<'a> Instrumenter<'a> {
         use Bytecode::*;
         use Operation::*;
         match &bc {
-            Call(_, _, WriteBack(GlobalRoot(mem)), ..) => {
+            Call(_, _, WriteBack(GlobalRoot(mem), _), ..) => {
                 self.emit_invariants_for_update(*mem, assumed_at_update, move |builder| {
                     builder.emit(bc);
                 })

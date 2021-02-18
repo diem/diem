@@ -114,7 +114,7 @@ pub enum Operation {
     Havoc,
 
     // Memory model
-    WriteBack(BorrowNode),
+    WriteBack(BorrowNode, BorrowEdge),
     Splice(BTreeMap<usize, TempIndex>),
     UnpackRef,
     PackRef,
@@ -173,7 +173,7 @@ impl Operation {
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
             Operation::Havoc => false,
-            Operation::WriteBack(_) => false,
+            Operation::WriteBack(_, _) => false,
             Operation::Splice(_) => false,
             Operation::UnpackRef => false,
             Operation::PackRef => false,
@@ -222,6 +222,38 @@ impl BorrowNode {
             Some(*idx)
         } else {
             None
+        }
+    }
+}
+
+/// A borrow edge with a known offset -- used in memory operations
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum StrongEdge {
+    Empty,
+    Offset(usize),
+}
+
+impl std::fmt::Display for StrongEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StrongEdge::Empty => write!(f, "E"),
+            StrongEdge::Offset(offset) => write!(f, "{}", offset),
+        }
+    }
+}
+
+/// A borrow edge -- used in memory operations
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum BorrowEdge {
+    Weak,
+    Strong(StrongEdge),
+}
+
+impl std::fmt::Display for BorrowEdge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BorrowEdge::Weak => write!(f, "*"),
+            BorrowEdge::Strong(se) => write!(f, "{}", se),
         }
     }
 }
@@ -411,17 +443,17 @@ impl Bytecode {
         match self {
             Load(attr, dst, cons) => Load(attr, f(false, dst), cons),
             Assign(attr, dest, src, kind) => Assign(attr, f(false, dest), f(true, src), kind),
-            Call(attr, _, WriteBack(LocalRoot(dest)), srcs, aa) => Call(
+            Call(attr, _, WriteBack(LocalRoot(dest), edge), srcs, aa) => Call(
                 attr,
                 vec![],
-                WriteBack(LocalRoot(f(false, dest))),
+                WriteBack(LocalRoot(f(false, dest)), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),
-            Call(attr, _, WriteBack(Reference(dest)), srcs, aa) => Call(
+            Call(attr, _, WriteBack(Reference(dest), edge), srcs, aa) => Call(
                 attr,
                 vec![],
-                WriteBack(Reference(f(false, dest))),
+                WriteBack(Reference(f(false, dest)), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),
@@ -483,8 +515,8 @@ impl Bytecode {
         };
         match self {
             Assign(_, dest, ..) | Load(_, dest, ..) => vec![*dest],
-            Call(_, _, WriteBack(LocalRoot(dest)), _, aa)
-            | Call(_, _, WriteBack(Reference(dest)), _, aa) => add_abort(vec![*dest], aa),
+            Call(_, _, WriteBack(LocalRoot(dest), _), _, aa)
+            | Call(_, _, WriteBack(Reference(dest), _), _, aa) => add_abort(vec![*dest], aa),
             Call(_, _, WriteRef, srcs, aa) => add_abort(vec![srcs[0]], aa),
             Call(_, dests, Function(..), srcs, aa) => {
                 let mut res = dests.clone();
@@ -787,7 +819,7 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             UnpackRefDeep => {
                 write!(f, "unpack_ref_deep")?;
             }
-            WriteBack(node) => write!(f, "write_back[{}]", node.display(self.func_target))?,
+            WriteBack(node, _) => write!(f, "write_back[{}]", node.display(self.func_target))?,
             Splice(map) => write!(
                 f,
                 "splice[{}]",

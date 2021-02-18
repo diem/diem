@@ -582,7 +582,7 @@ impl<'env> ModuleTranslator<'env> {
                     UnpackRef | UnpackRefDeep | PackRef | PackRefDeep => {
                         // No effect
                     }
-                    WriteBack(dest) => {
+                    WriteBack(dest, _) => {
                         use BorrowNode::*;
                         let src = srcs[0];
                         match dest {

@@ -10,7 +10,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnnotation,
-    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation},
+    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation, StrongEdge},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
@@ -20,29 +20,6 @@ use move_model::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
-
-/// This enum denotes strong edges in the borrow graph
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub enum StrongEdge {
-    Empty,
-    Offset(usize),
-}
-
-impl std::fmt::Display for StrongEdge {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StrongEdge::Empty => write!(f, "E"),
-            StrongEdge::Offset(offset) => write!(f, "{}", offset),
-        }
-    }
-}
-
-/// An ede in the borrow graph
-#[derive(Eq, PartialEq)]
-pub enum BorrowEdge {
-    Weak,
-    Strong(StrongEdge),
-}
 
 /// Borrow graph edge abstract domain.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
