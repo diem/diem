@@ -12,7 +12,7 @@ fn test_examples_in_readme() -> std::io::Result<()> {
     let file = std::io::BufReader::new(std::fs::File::open("README.md")?);
     let quotes = get_bash_quotes(file)?;
     // Check that we have the expected number of examples starting with "```bash".
-    assert_eq!(quotes.len(), 9);
+    assert_eq!(quotes.len(), 10);
 
     let mut quotes = quotes.into_iter();
 

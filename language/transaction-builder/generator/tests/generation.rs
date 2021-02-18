@@ -78,42 +78,30 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
         EXPECTED_OUTPUT
     );
 
-    // This temporarily requires a checkout of serde-reflection.git next to diem.git
-    // Hopefully, numpy's next release will include typeshed (.pyi) files and we will only
-    // require a local install of numpy (on top of python3 and pyre).
-    let status = Command::new("cp")
-        .arg("-r")
-        .arg("../../../../serde-reflection/serde-generate/runtime/python/typeshed")
-        .arg(dir.path())
-        .status()
-        .unwrap();
-    assert!(status.success());
+    let site_packages = Command::new("python3")
+        .arg("-c")
+        .arg("import os; import numpy; print(os.path.dirname(numpy.__path__[0]), end='')")
+        .output()
+        .unwrap()
+        .stdout;
 
-    let mut pyre_config = std::fs::File::create(dir.path().join(".pyre_configuration")).unwrap();
-    writeln!(
-        &mut pyre_config,
-        r#"{{
-  "source_directories": [
-    "src"
-  ],
-  "search_path": [
-    "typeshed"
-  ]
-}}"#,
-    )
-    .unwrap();
+    let local_bin_path = which::which("pyre")
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
 
     let status = Command::new("pyre")
         .current_dir(dir.path())
-        // Work around configuration issue with Pyre 0.0.53
+        .arg("--source-directory")
+        .arg("src")
+        .arg("--noninteractive")
+        .arg("--binary")
+        .arg(local_bin_path.join("pyre.bin"))
         .arg("--typeshed")
-        .arg(
-            which::which("pyre")
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join("../lib/pyre_check/typeshed"),
-        )
+        .arg(local_bin_path.join("../lib/pyre_check/typeshed"))
+        .arg("--search-path")
+        .arg(String::from_utf8_lossy(&site_packages).as_ref())
         .arg("check")
         .status()
         .unwrap();
