@@ -81,6 +81,7 @@ members = [
     "language/move-lang/ir-utils",
     "language/move-lang/test-utils",
     "language/move-model",
+    "language/move-package",
     "language/move-prover",
     "language/move-prover/abigen",
     "language/move-prover/boogie-backend",

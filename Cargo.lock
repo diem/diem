@@ -1583,6 +1583,7 @@ dependencies = [
  "errmapgen",
  "log",
  "move-lang",
+ "move-package",
  "move-prover",
  "rayon",
  "sha2",
@@ -4355,6 +4356,23 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "vm",
+]
+
+[[package]]
+name = "move-package"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "bytecode-verifier",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "include_dir",
+ "move-core-types",
+ "once_cell",
+ "sha2",
  "vm",
 ]
 

@@ -16,6 +16,7 @@ abigen = { path = "../move-prover/abigen" }
 docgen = { path = "../move-prover/docgen" }
 errmapgen = { path = "../move-prover/errmapgen" }
 move-lang = { path = "../move-lang" }
+move-package = { path = "../move-package" }
 move-prover = { path = "../move-prover" }
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
