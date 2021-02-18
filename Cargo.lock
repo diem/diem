@@ -3843,9 +3843,9 @@ checksum = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 
 [[package]]
 name = "kube"
-version = "0.50.0"
+version = "0.50.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "459b1593a538fd0bb77e7133fdd3158c55e183affd0926337fa873986a741e0b"
+checksum = "33ce7a69993c5da7c4ed2d5d61fe980a995a249a8155385a01aa963653f8af7f"
 dependencies = [
  "Inflector",
  "base64 0.13.0",
@@ -7376,15 +7376,15 @@ dependencies = [
 
 [[package]]
 name = "tower"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd7b451959622e21de79261673d658a0944b835012c58c51878ea55957fb51a"
+checksum = "713c629c07a3a97f741c140e474e7304294fabec66a43a33f0832e98315ab07f"
 dependencies = [
  "futures-core",
  "futures-util",
  "pin-project 1.0.5",
  "tokio",
- "tokio-stream",
+ "tokio-util",
  "tower-layer",
  "tower-service",
  "tracing",
