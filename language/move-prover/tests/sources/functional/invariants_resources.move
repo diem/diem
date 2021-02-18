@@ -28,11 +28,6 @@ module TestInvariants {
         borrow_global<R<T>>(a).x
     }
     spec fun get_invalid {
-        // TODO(refactoring): This test seems to sometime succeed not producing an error when run
-        //   via `cargo test`. However, we cannot reproduce this on the command line, or with
-        //   `check_stability.sh <source> 100`. It might be an issue with the test driver or a crash
-        //   downstream in z3 which is not reported back in tests
-        pragma verify = false;
         ensures result < 1;
     }
 }

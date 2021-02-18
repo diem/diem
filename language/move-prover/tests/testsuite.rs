@@ -15,7 +15,7 @@ use move_prover_test_utils::{
 
 use datatest_stable::Requirements;
 #[allow(unused_imports)]
-use log::{debug, warn};
+use log::{debug, info, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
@@ -79,8 +79,17 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         }
     }
 
-    // Run again with cvc4
-    if !no_boogie && !read_env_var("CVC4_EXE").is_empty() && !cvc4_deny_listed(path) {
+    // Run again with cvc4 if TEST_CVC4 is set and UPBL (update baselines) is not set.
+    // We do not run CVC4 based tests by default because the way how things are setup,
+    // they would always be run in CI and make verification roughly 2x slower because all tools
+    // are installed in CI and on user machines and `CVC4_EXE` is always set.
+    if !read_env_var("MVP_TEST_CVC4").is_empty()
+        && read_env_var("UPBL").is_empty()
+        && !no_boogie
+        && !read_env_var("CVC4_EXE").is_empty()
+        && !cvc4_deny_listed(path)
+    {
+        info!("running with cvc4");
         args.push("--use-cvc4".to_owned());
         options = Options::create_from_args(&args)?;
         options.setup_logging_for_test();
@@ -130,6 +139,7 @@ fn cvc4_deny_listed(path: &Path) -> bool {
         path_str == "../diem-framework/modules/DesignatedDealer.move" ||
         path_str == "tests/sources/functional/marketcap.move" ||
         path_str == "tests/sources/functional/invariants.move" ||
+        path_str == "tests/sources/functional/invariants_resources.move" ||
         path_str == "tests/sources/functional/module_invariants.move" ||
         path_str == "tests/sources/functional/ModifiesSchemaTest.move" ||
         path_str == "tests/sources/functional/resources.move" ||
@@ -138,6 +148,7 @@ fn cvc4_deny_listed(path: &Path) -> bool {
         path_str == "tests/sources/functional/aborts_if_with_code.move" ||
         path_str == "tests/sources/functional/address_serialization_constant_size.move" ||
         path_str == "../diem-framework/transaction_scripts/set_validator_config_and_reconfigure.move" ||
+        path_str == "../diem-framework/burn.move" ||
         path_str == "tests/sources/functional/global_invariants.move" ||
         path_str == "tests/sources/functional/nested_invariants.move" ||
         path_str == "../diem-framework/transaction_scripts/rotate_authentication_key_with_recovery_address.move" ||
