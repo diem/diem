@@ -1,16 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Context, Result};
 use diem_logger::json_log::JsonLogEntry;
-use std::time::Instant;
+use once_cell::sync::OnceCell;
+use std::{collections::HashMap, time::Instant};
 
 pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
 pub const DIEM_TRACE: &str = "diem_trace";
-
-use once_cell::sync::OnceCell;
-use std::collections::HashMap;
 
 // Sampling rate is the form of (nominator, denominator)
 static SAMPLING_CONFIG: OnceCell<Sampling> = OnceCell::new();
@@ -390,9 +388,23 @@ fn abbreviate_crate(name: &str) -> &str {
     }
 }
 
-/// Sets diem trace config
+/// Sets diem trace config.
+///
+/// This should only be called once.
 pub fn set_diem_trace(config: &HashMap<String, String>) -> Result<()> {
-    SAMPLING_CONFIG.get_or_try_init(|| parse_sampling_config(config))?;
+    // Ensure that this function is called just once. OnceCell guarantees that its initializer is
+    // called exactly once.
+    let mut initializer_called = false;
+    SAMPLING_CONFIG
+        .get_or_try_init(|| {
+            initializer_called = true;
+            parse_sampling_config(config)
+        })
+        .with_context(|| "failed to parse sampling config")?;
+
+    if !initializer_called {
+        bail!("failed to initialize: set_diem_trace called multiple times")
+    }
     Ok(())
 }
 
