@@ -15,7 +15,7 @@ hex = "0.4.2"
 rand = "0.8.3"
 serde_yaml = "0.8.17"
 structopt = "0.3.21"
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 
 bcs = "0.1.2"
 diem-config = { path = "..", version = "0.1.0" }

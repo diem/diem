@@ -23,7 +23,7 @@ rand = { version = "0.8.3", features = ["small_rng"] }
 rand_core = { version = "0.6.2", optional = true }
 serde = { version = "1.0.123", default-features = false }
 serde_bytes = "0.11.5"
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 tokio = { version = "1.2.0", features = ["full"] }
 tokio-retry = "0.2.0"
 tokio-stream = "0.1.3"

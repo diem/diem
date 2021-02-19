@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 base64 = "0.13.0"
 serde = { version = "1.0.123", features = ["rc"], default-features = false }
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 
 bcs = "0.1.2"
 diem-global-constants = { path = "../../global-constants", version = "0.1.0"}

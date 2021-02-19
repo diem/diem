@@ -19,7 +19,7 @@ proptest-derive = { version = "0.2.0", default-features = false, optional = true
 ref-cast = "1.0.6"
 serde = { version = "1.0.123", default-features = false }
 serde_bytes = "0.11.5"
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 once_cell = "1.4.1"
 
 bcs = "0.1.2"

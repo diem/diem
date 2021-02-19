@@ -29,7 +29,7 @@ diem-types = { path = "../../types", version = "0.1.0" }
 diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 serde = { version = "1.0.123", default-features = false }
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 
 [dev-dependencies]
 criterion = "0.3.4"

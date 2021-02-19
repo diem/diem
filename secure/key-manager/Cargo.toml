@@ -14,7 +14,7 @@ anyhow = "1.0.38"
 bcs = "0.1.2"
 once_cell = "1.4.1"
 serde = { version = "1.0.123", features = ["rc"], default-features = false }
-thiserror = "1.0.23"
+thiserror = "1.0.24"
 
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 diem-config = { path = "../../config", version = "0.1.0"}
