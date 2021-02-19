@@ -243,11 +243,12 @@ jobs:
           fi
           if [[ $num_fails != 0 ]]; then
             echo -e "$num_fails test(s) failed:\n${failed_tests}"
+          else
+            echo -e "No issues detected in this build". > ${MESSAGE_PAYLOAD_FILE}
           fi
           exit $num_fails
       - name: "Send Message"
         uses: ./.github/actions/slack-file
-        if: ${{ failure() }}
         with:
           payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
           webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}

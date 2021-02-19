@@ -13,7 +13,7 @@ runs:
   steps:
     - run: |
         build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-        ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f "${PAYLOAD_FILE}" -u "${build_url}"
+        ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f "${PAYLOAD_FILE}" -u "${build_url}" -d
       shell: bash
       env:
         PAYLOAD_FILE: ${{ inputs.payload-file }}
