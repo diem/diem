@@ -9,9 +9,13 @@ use crate::{
     tests::common::{batch_add_signed_txn, TestTransaction},
     CommitNotification, CommittedTransaction, ConsensusRequest,
 };
-use channel::{self, diem_channel, message_queues::QueueStyle};
+use channel::{
+    self, diem_channel,
+    diem_channel::{Receiver, Sender},
+    message_queues::QueueStyle,
+};
 use diem_config::{
-    config::{NetworkConfig, NodeConfig, RoleType, UpstreamConfig},
+    config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_infallible::{Mutex, RwLock};
@@ -35,18 +39,25 @@ use network::{
         conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
-    protocols::network::{NewNetworkEvents, NewNetworkSender},
+    protocols::network::{NetworkEvents, NewNetworkEvents, NewNetworkSender},
     transport::ConnectionMetadata,
     DisconnectReason, ProtocolId,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
+    hash::Hash,
     sync::Arc,
 };
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
+
+type NetworkHandle = (
+    NodeNetworkId,
+    MempoolNetworkSender,
+    NetworkEvents<MempoolSyncMsg>,
+);
 
 #[derive(Default)]
 struct SharedMempoolNetwork {
@@ -58,97 +69,103 @@ struct SharedMempoolNetwork {
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
-    peer_ids: HashMap<PeerId, PeerId>,
+    /// A mapping of secondary `PeerId` on other network interfaces to the main `PeerId`
+    main_peer_ids: HashMap<PeerId, PeerId>,
 }
 
-// Start a shared mempool for a node `peer_id` with config `config`
-// and add it to `smp` network.
-fn init_single_shared_mempool(
+fn setup_peer_mempool(
     smp: &mut SharedMempoolNetwork,
-    peer_id: PeerId,
-    network_id: NetworkId,
+    main_network_id: NetworkId,
+    main_peer_id: PeerId,
     config: NodeConfig,
 ) {
-    let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
-    let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
-    let (network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
-    let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
-    let network_sender = MempoolNetworkSender::new(
-        PeerManagerRequestSender::new(network_reqs_tx),
-        ConnectionRequestSender::new(connection_reqs_tx),
-    );
-    let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
-    let (sender, subscriber) = unbounded();
-    let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
-    let network_handles = vec![(
-        NodeNetworkId::new(network_id, 0),
-        network_sender,
-        network_events,
-    )];
-    let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
-    let (_state_sync_sender, state_sync_events) = mpsc::channel(1_024);
-    let (_reconfig_events, reconfig_events_receiver) = diem_channel::new(QueueStyle::LIFO, 1, None);
-
-    let runtime = Builder::new_multi_thread()
-        .thread_name("shared-mem")
-        .enable_all()
-        .build()
-        .expect("[shared mempool] failed to create runtime");
-    start_shared_mempool(
-        runtime.handle(),
-        &config,
-        Arc::clone(&mempool),
-        network_handles,
-        ac_endpoint_receiver,
-        consensus_events,
-        state_sync_events,
-        reconfig_events_receiver,
-        Arc::new(MockDbReader),
-        Arc::new(RwLock::new(MockVMValidator)),
-        vec![sender],
-    );
-
-    smp.mempools.insert(peer_id, mempool);
-    smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
-    smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
-    smp.network_conn_event_notifs_txs
-        .insert(peer_id, conn_status_tx);
-    smp.subscribers.insert(peer_id, subscriber);
-    smp.runtimes.insert(peer_id, runtime);
+    setup_peer_mempool_inner(smp, main_network_id, main_peer_id, None, None, config);
 }
 
-// First PeerId in `network_ids` will be key in SharedMempoolNetwork.
-fn init_smp_multiple_networks(
+fn setup_peer_mempool_with_fallback(
     smp: &mut SharedMempoolNetwork,
-    network_ids: Vec<(NetworkId, PeerId)>,
+    main_network_id: NetworkId,
+    main_peer_id: PeerId,
+    fallback_network_id: NetworkId,
+    fallback_peer_id: PeerId,
     config: NodeConfig,
 ) {
-    let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
+    setup_peer_mempool_inner(
+        smp,
+        main_network_id,
+        main_peer_id,
+        Some(fallback_network_id),
+        Some(fallback_peer_id),
+        config,
+    );
+}
 
-    let mut network_handles = vec![];
-    for (idx, (network_id, peer_id)) in network_ids.iter().enumerate() {
-        let (network_reqs_tx, network_reqs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
-        let (connection_reqs_tx, _) = diem_channel::new(QueueStyle::FIFO, 8, None);
-        let (network_notifs_tx, network_notifs_rx) = diem_channel::new(QueueStyle::FIFO, 8, None);
-        let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
-        let network_sender = MempoolNetworkSender::new(
-            PeerManagerRequestSender::new(network_reqs_tx),
-            ConnectionRequestSender::new(connection_reqs_tx),
-        );
-        let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
-        network_handles.push((
-            NodeNetworkId::new(network_id.clone(), idx),
-            network_sender,
-            network_events,
-        ));
+fn setup_peer_mempool_inner(
+    smp: &mut SharedMempoolNetwork,
+    main_network_id: NetworkId,
+    main_peer_id: PeerId,
+    fallback_network_id: Option<NetworkId>,
+    fallback_peer_id: Option<PeerId>,
+    config: NodeConfig,
+) {
+    let mut network_ids = vec![];
+    let main_peer_network_id = PeerNetworkId(NodeNetworkId::new(main_network_id, 0), main_peer_id);
+    network_ids.push(main_peer_network_id);
 
-        smp.network_reqs_rxs.insert(*peer_id, network_reqs_rx);
-        smp.network_notifs_txs.insert(*peer_id, network_notifs_tx);
-        smp.network_conn_event_notifs_txs
-            .insert(*peer_id, conn_status_tx);
+    if let Some(fallback_network_id) = fallback_network_id {
+        let fallback_peer_id = fallback_peer_id.unwrap();
+        let fallback_peer_network_id =
+            PeerNetworkId(NodeNetworkId::new(fallback_network_id, 1), fallback_peer_id);
+        network_ids.push(fallback_peer_network_id);
     }
 
+    let network_handles = setup_peer_network_interfaces(smp, network_ids.clone());
+    start_peer_mempool(smp, network_ids, network_handles, config);
+}
+fn fifo_diem_channel<T, V>() -> (Sender<T, V>, Receiver<T, V>)
+where
+    T: Clone + Eq + Hash,
+{
+    static MAX_QUEUE_SIZE: usize = 8;
+    diem_channel::new(QueueStyle::FIFO, MAX_QUEUE_SIZE, None)
+}
+
+fn setup_peer_network_interfaces(
+    smp: &mut SharedMempoolNetwork,
+    networks: Vec<PeerNetworkId>,
+) -> Vec<NetworkHandle> {
+    networks
+        .iter()
+        .map(|peer_network_id| {
+            let peer_id = peer_network_id.peer_id();
+
+            let (network_reqs_tx, network_reqs_rx) = fifo_diem_channel();
+            let (connection_reqs_tx, _) = fifo_diem_channel();
+            let (network_notifs_tx, network_notifs_rx) = fifo_diem_channel();
+            let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
+            let network_sender = MempoolNetworkSender::new(
+                PeerManagerRequestSender::new(network_reqs_tx),
+                ConnectionRequestSender::new(connection_reqs_tx),
+            );
+            let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
+
+            smp.network_reqs_rxs.insert(peer_id, network_reqs_rx);
+            smp.network_notifs_txs.insert(peer_id, network_notifs_tx);
+            smp.network_conn_event_notifs_txs
+                .insert(peer_id, conn_status_tx);
+
+            (peer_network_id.network_id(), network_sender, network_events)
+        })
+        .collect()
+}
+
+fn start_peer_mempool(
+    smp: &mut SharedMempoolNetwork,
+    network_ids: Vec<PeerNetworkId>,
+    network_handles: Vec<NetworkHandle>,
+    config: NodeConfig,
+) {
+    let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
     let (sender, subscriber) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
@@ -178,8 +195,9 @@ fn init_smp_multiple_networks(
     smp.subscribers.insert(main_peer_id, subscriber);
     smp.mempools.insert(main_peer_id, mempool);
     smp.runtimes.insert(main_peer_id, runtime);
-    for (_network_id, alter_peer_id) in network_ids.into_iter().skip(1) {
-        smp.peer_ids.insert(alter_peer_id, main_peer_id);
+    for other_peer_id in network_ids.into_iter().skip(1) {
+        smp.main_peer_ids
+            .insert(other_peer_id.peer_id(), main_peer_id);
     }
 }
 
@@ -208,7 +226,7 @@ impl SharedMempoolNetwork {
             config.mempool.max_broadcasts_per_peer =
                 max_broadcasts_per_peer.unwrap_or(config.mempool.max_broadcasts_per_peer);
 
-            init_single_shared_mempool(&mut smp, peer_id, NetworkId::Validator, config);
+            setup_peer_mempool(&mut smp, NetworkId::Validator, peer_id, config);
 
             peers.push(peer_id);
         }
@@ -241,7 +259,7 @@ impl SharedMempoolNetwork {
         if let Some(capacity_per_user) = validator_account_txn_limit {
             config.mempool.capacity_per_user = capacity_per_user;
         }
-        init_single_shared_mempool(&mut smp, validator, NetworkId::vfn_network(), config);
+        setup_peer_mempool(&mut smp, NetworkId::vfn_network(), validator, config);
 
         let mut fn_config = NodeConfig::random_with_template(1, &NodeConfig::default(), &mut rng);
         fn_config.base.role = RoleType::FullNode;
@@ -253,7 +271,7 @@ impl SharedMempoolNetwork {
         let mut upstream_config = UpstreamConfig::default();
         upstream_config.networks.push(NetworkId::vfn_network());
         fn_config.upstream = upstream_config;
-        init_single_shared_mempool(&mut smp, full_node, NetworkId::vfn_network(), fn_config);
+        setup_peer_mempool(&mut smp, NetworkId::vfn_network(), full_node, fn_config);
 
         (smp, validator, full_node)
     }
@@ -312,13 +330,13 @@ impl SharedMempoolNetwork {
     }
 
     fn wait_for_event(&mut self, peer_id: &PeerId, event: SharedMempoolNotification) {
-        let main_peer_id = self.peer_ids.get(peer_id).unwrap_or(peer_id);
+        let main_peer_id = self.main_peer_ids.get(peer_id).unwrap_or(peer_id);
         let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
         assert_eq!(block_on(subscriber.next()).unwrap(), event);
     }
 
     fn check_no_events(&mut self, peer_id: &PeerId) {
-        let main_peer_id = self.peer_ids.get(peer_id).unwrap_or(peer_id);
+        let main_peer_id = self.main_peer_ids.get(peer_id).unwrap_or(peer_id);
         let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
 
         assert!(subscriber.select_next_some().now_or_never().is_none());
@@ -740,23 +758,23 @@ fn test_vfn_multi_network() {
     pfn_config.upstream.networks = vec![NetworkId::Public];
 
     let mut smp = SharedMempoolNetwork::default();
-    init_smp_multiple_networks(
+    setup_peer_mempool_with_fallback(
         &mut smp,
-        vec![
-            (NetworkId::vfn_network(), vfn_0),
-            (NetworkId::Public, vfn_0_public_network_id),
-        ],
+        NetworkId::vfn_network(),
+        vfn_0,
+        NetworkId::Public,
+        vfn_0_public_network_id,
         vfn_0_config,
     );
-    init_smp_multiple_networks(
+    setup_peer_mempool_with_fallback(
         &mut smp,
-        vec![
-            (NetworkId::vfn_network(), vfn_1),
-            (NetworkId::Public, vfn_1_public_network_id),
-        ],
+        NetworkId::vfn_network(),
+        vfn_1,
+        NetworkId::Public,
+        vfn_1_public_network_id,
         vfn_1_config,
     );
-    init_single_shared_mempool(&mut smp, pfn, NetworkId::Public, pfn_config);
+    setup_peer_mempool(&mut smp, NetworkId::Public, pfn, pfn_config);
 
     // Vfn 0 discovers pfn as inbound
     smp.send_new_peer_event(&vfn_0_public_network_id, &pfn, true);
@@ -809,18 +827,18 @@ fn test_fn_failover() {
     fn_3_config.mempool.default_failovers = 0;
 
     let mut smp = SharedMempoolNetwork::default();
-    init_single_shared_mempool(&mut smp, v_0, NetworkId::Validator, v0_config);
-    init_smp_multiple_networks(
+    setup_peer_mempool(&mut smp, NetworkId::Validator, v_0, v0_config);
+    setup_peer_mempool_with_fallback(
         &mut smp,
-        vec![
-            (NetworkId::vfn_network(), fn_0),
-            (NetworkId::Public, fn_0_fallback_network_id),
-        ],
+        NetworkId::vfn_network(),
+        fn_0,
+        NetworkId::Public,
+        fn_0_fallback_network_id,
         fn_0_config,
     );
-    init_single_shared_mempool(&mut smp, fn_1, NetworkId::Public, fn_1_config);
-    init_single_shared_mempool(&mut smp, fn_2, NetworkId::Public, fn_2_config);
-    init_single_shared_mempool(&mut smp, fn_3, NetworkId::Public, fn_3_config);
+    setup_peer_mempool(&mut smp, NetworkId::Public, fn_1, fn_1_config);
+    setup_peer_mempool(&mut smp, NetworkId::Public, fn_2, fn_2_config);
+    setup_peer_mempool(&mut smp, NetworkId::Public, fn_3, fn_3_config);
 
     // Fn_0 discovers primary and fallback upstream peers
     smp.send_new_peer_event(&fn_0, &v_0, true);
