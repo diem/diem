@@ -122,20 +122,12 @@ impl PeerManager {
         let is_new_peer = !peer_states.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(metadata.origin)) {
             counters::active_upstream_peers(&peer.raw_network_id()).inc();
-            if peer.raw_network_id() == NetworkId::Validator {
-                // For a validator network, resume broadcasting from previous state.
-                // We can afford to not re-broadcast here since the transaction is already in a validator.
-                if is_new_peer {
-                    peer_states.insert(peer, PeerSyncState::new(metadata));
-                } else if let Some(peer_state) = peer_states.get_mut(&peer) {
-                    peer_state.is_alive = true;
-                    peer_state.metadata = metadata;
-                }
-            } else {
-                // For a non-validator network, potentially re-broadcast any transactions that have not been
-                // committed yet.
-                // This is to ensure better reliability of transactions reaching the validator network.
+            // If we have a new peer, let's insert new data, otherwise, let's just update the current state
+            if is_new_peer {
                 peer_states.insert(peer, PeerSyncState::new(metadata));
+            } else if let Some(peer_state) = peer_states.get_mut(&peer) {
+                peer_state.is_alive = true;
+                peer_state.metadata = metadata;
             }
         }
         drop(peer_states);
@@ -143,13 +135,22 @@ impl PeerManager {
         is_new_peer
     }
 
+    /// Disables a peer if it can be restarted, otherwise removes it
     pub fn disable_peer(&self, peer: PeerNetworkId) {
-        if let Some(state) = self.peer_states.lock().get_mut(&peer) {
-            counters::active_upstream_peers(&peer.raw_network_id()).dec();
-            // TODO: What about garbage collection?
-            state.is_alive = false;
+        // Validators can be restarted ata  later time
+        // TODO: Determine why there's this optimization
+        // TODO: What about garbage collection of validators
+        if peer.raw_network_id().is_validator_network() {
+            if let Some(state) = self.peer_states.lock().get_mut(&peer) {
+                state.is_alive = false;
+            }
+        } else {
+            // All other nodes have their state immediately restarted anyways, so let's free them
+            // TODO: Why is the Validator optimization not applied here
+            self.peer_states.lock().remove(&peer);
         }
 
+        // Always remove from failovers
         {
             self.default_failovers.lock().remove(&peer);
         }
@@ -157,12 +158,12 @@ impl PeerManager {
     }
 
     pub fn is_backoff_mode(&self, peer: &PeerNetworkId) -> bool {
-        self.peer_states
-            .lock()
-            .get(peer)
-            .expect("missing peer info for peer")
-            .broadcast_info
-            .backoff_mode
+        if let Some(state) = self.peer_states.lock().get(peer) {
+            state.broadcast_info.backoff_mode
+        } else {
+            // If we don't have sync state, we shouldn't backoff
+            false
+        }
     }
 
     pub fn execute_broadcast<V>(
@@ -177,9 +178,12 @@ impl PeerManager {
         let start_time = Instant::now();
 
         let mut peer_states = self.peer_states.lock();
-        let state = peer_states
-            .get_mut(&peer)
-            .expect("missing peer info for peer");
+        let state = if let Some(state) = peer_states.get_mut(&peer) {
+            state
+        } else {
+            // If we don't have any info about the node, we shouldn't broadcast to it
+            return;
+        };
 
         // Only broadcast to peer that is both alive and picked.
         if !state.is_alive || !self.is_picked_peer(&peer) {
