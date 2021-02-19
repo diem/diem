@@ -41,6 +41,8 @@ pub enum Error {
     ValidatorNotInSet(String),
     #[error("Vote proposal missing expected signature")]
     VoteProposalSignatureNotFound,
+    #[error("execution signature present, but no public key to validate it")]
+    ExecutionSignatureButNoPublicKey,
 }
 
 impl From<bcs::Error> for Error {

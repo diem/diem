@@ -347,6 +347,8 @@ impl SafetyRules {
                 .ok_or(Error::VoteProposalSignatureNotFound)?
                 .verify(vote_proposal, public_key)
                 .map_err(|error| Error::InternalError(error.to_string()))?;
+        } else if execution_signature.is_some() {
+            return Err(Error::ExecutionSignatureButNoPublicKey);
         }
 
         let proposed_block = vote_proposal.block();
