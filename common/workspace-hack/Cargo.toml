@@ -54,7 +54,7 @@ zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"]
 [target.x86_64-unknown-linux-gnu.build-dependencies]
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
-cc = { version = "1.0.66", default-features = false, features = ["jobserver", "parallel"] }
+cc = { version = "1.0.67", default-features = false, features = ["jobserver", "parallel"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
@@ -141,7 +141,7 @@ zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"]
 [target.x86_64-apple-darwin.build-dependencies]
 byteorder = { version = "1.4.2", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
-cc = { version = "1.0.66", default-features = false, features = ["jobserver", "parallel"] }
+cc = { version = "1.0.67", default-features = false, features = ["jobserver", "parallel"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
