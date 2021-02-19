@@ -7,11 +7,14 @@ mod genesis_context;
 pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    stdlib_modules as compiled_stdlib_modules, transaction_scripts::StdlibScript,
+};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
 };
+use diem_framework::stdlib_modules as fresh_stdlib_modules;
 use diem_types::{
     account_address,
     account_config::{
@@ -82,19 +85,19 @@ pub fn encode_genesis_transaction(
         &treasury_compliance_key,
         operator_assignments,
         operator_registrations,
-        stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(), // Must use compiled stdlib,
+        compiled_stdlib_modules().bytes_iter(), // Must use compiled stdlib,
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
         chain_id,
     )))
 }
 
-pub fn encode_genesis_change_set(
+pub fn encode_genesis_change_set<'a>(
     diem_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
-    stdlib_modules: &[Vec<u8>],
+    stdlib_modules: impl Iterator<Item = &'a Vec<u8>>,
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> ChangeSet {
@@ -500,13 +503,13 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
-pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
-    generate_test_genesis(
-        &stdlib_modules(stdlib_options).bytes_vec(),
-        VMPublishingOption::open(),
-        None,
-    )
-    .0
+pub fn generate_genesis_change_set_for_testing(use_fresh_modules: bool) -> ChangeSet {
+    let stdlib = if use_fresh_modules {
+        fresh_stdlib_modules()
+    } else {
+        compiled_stdlib_modules()
+    };
+    generate_test_genesis(stdlib.bytes_iter(), VMPublishingOption::open(), None).0
 }
 
 pub fn test_genesis_transaction() -> Transaction {
@@ -516,7 +519,7 @@ pub fn test_genesis_transaction() -> Transaction {
 
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
     generate_test_genesis(
-        &stdlib_modules(StdLibOptions::Compiled).bytes_vec(),
+        compiled_stdlib_modules().bytes_iter(),
         VMPublishingOption::locked(StdlibScript::allowlist()),
         count,
     )
@@ -577,8 +580,8 @@ impl Validator {
     }
 }
 
-pub fn generate_test_genesis(
-    stdlib_modules: &[Vec<u8>],
+pub fn generate_test_genesis<'a>(
+    stdlib_modules: impl Iterator<Item = &'a Vec<u8>>,
     vm_publishing_option: VMPublishingOption,
     count: Option<usize>,
 ) -> (ChangeSet, Vec<Validator>) {

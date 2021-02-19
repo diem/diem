@@ -8,7 +8,7 @@ use diem_types::{
     transaction::{Transaction, WriteSetPayload},
 };
 
-use compiled_stdlib::{stdlib_modules as stdlib, StdLibModules, StdLibOptions};
+use compiled_stdlib::stdlib_modules as stdlib;
 use diem_writeset_generator::{
     create_release, encode_custom_script, encode_halt_network_payload,
     encode_remove_validators_payload, verify_release,
@@ -81,14 +81,9 @@ fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
 fn stdlib_modules() -> Vec<(Vec<u8>, CompiledModule)> {
     // Need to filter out Genesis module similiar to what is done in vmgenesis to make sure Genesis
     // module isn't published on-chain.
-    let StdLibModules {
-        bytes_opt,
-        compiled_modules,
-    } = stdlib(StdLibOptions::Compiled);
-    bytes_opt
-        .unwrap()
+    stdlib()
+        .bytes_and_modules()
         .iter()
-        .zip(compiled_modules)
         .filter(|(_bytes, module)| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
         .map(|(bytes, module)| (bytes.clone(), module.clone()))
         .collect()

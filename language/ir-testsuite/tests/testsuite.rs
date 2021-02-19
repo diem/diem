@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_types::account_address::AccountAddress;
 use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
@@ -62,11 +62,7 @@ impl Compiler for IRCompiler {
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
     testsuite::functional_tests(
-        IRCompiler::new(
-            stdlib_modules(StdLibOptions::Compiled)
-                .compiled_modules
-                .to_vec(),
-        ),
+        IRCompiler::new(stdlib_modules().modules_iter().cloned().collect()),
         path,
     )
 }

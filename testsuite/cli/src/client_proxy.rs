@@ -7,7 +7,6 @@ use crate::{
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
-use compiled_stdlib::StdLibOptions;
 use compiler::Compiler;
 use diem_client::{views, WaitForTransactionError};
 use diem_crypto::{
@@ -639,7 +638,9 @@ impl ClientProxy {
         match self.diem_root_account {
             Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::WriteSet(WriteSetPayload::Direct(
-                    transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
+                    transaction_builder::encode_stdlib_upgrade_transaction(
+                        /* use_fresh_modules */ true,
+                    ),
                 )),
                 is_blocking,
             ),

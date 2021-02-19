@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use bytecode_verifier::{verify_module, verify_script};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_types::account_address::AccountAddress;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -146,7 +146,5 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    stdlib_modules(StdLibOptions::Compiled)
-        .compiled_modules
-        .to_vec()
+    stdlib_modules().modules_iter().cloned().collect()
 }

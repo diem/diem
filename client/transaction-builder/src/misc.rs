@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    stdlib_modules as compiled_stdlib_modules, transaction_scripts::StdlibScript,
+};
+use diem_framework::stdlib_modules as fresh_stdlib_modules;
 use diem_types::{
     access_path::AccessPath,
     block_metadata::BlockMetadata,
@@ -18,14 +21,17 @@ pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transactio
 }
 
 /// Update WriteSet
-pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
+pub fn encode_stdlib_upgrade_transaction(use_fresh_modules: bool) -> ChangeSet {
     let mut write_set = WriteSetMut::new(vec![]);
-    let stdlib_modules = compiled_stdlib::stdlib_modules(option);
-    let bytes = stdlib_modules.bytes_vec();
-    for (module, bytes) in stdlib_modules.compiled_modules.iter().zip(bytes) {
+    let stdlib_modules = if use_fresh_modules {
+        fresh_stdlib_modules()
+    } else {
+        compiled_stdlib_modules()
+    };
+    for (bytes, module) in stdlib_modules.bytes_and_modules() {
         write_set.push((
             AccessPath::code_access_path(module.self_id()),
-            WriteOp::Value(bytes),
+            WriteOp::Value(bytes.clone()),
         ));
     }
     ChangeSet::new(

@@ -968,15 +968,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "bytecode-verifier",
  "diem-crypto",
- "diem-framework",
  "diem-types",
  "diem-workspace-hack",
  "include_dir",
+ "move-package",
  "once_cell",
  "sha2",
- "vm",
 ]
 
 [[package]]
@@ -1585,6 +1583,7 @@ dependencies = [
  "move-lang",
  "move-package",
  "move-prover",
+ "once_cell",
  "rayon",
  "sha2",
  "transaction-builder-generator",
@@ -2407,6 +2406,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-sink",
+ "futures-task",
  "futures-util",
  "hyper",
  "itertools 0.10.0",
@@ -3014,6 +3014,7 @@ dependencies = [
  "datatest-stable",
  "diem-config",
  "diem-crypto",
+ "diem-framework",
  "diem-state-view",
  "diem-types",
  "diem-vm",
@@ -4366,13 +4367,9 @@ dependencies = [
  "anyhow",
  "bcs",
  "bytecode-verifier",
- "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
- "include_dir",
  "move-core-types",
- "once_cell",
- "sha2",
  "vm",
 ]
 
@@ -7477,6 +7474,7 @@ version = "0.1.0"
 dependencies = [
  "bcs",
  "compiled-stdlib",
+ "diem-framework",
  "diem-proptest-helpers",
  "diem-types",
  "diem-workspace-hack",
@@ -7756,6 +7754,7 @@ dependencies = [
  "compiled-stdlib",
  "diem-config",
  "diem-crypto",
+ "diem-framework",
  "diem-network-address",
  "diem-proptest-helpers",
  "diem-state-view",

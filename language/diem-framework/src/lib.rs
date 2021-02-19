@@ -9,6 +9,8 @@ use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
+use move_package::package::{CompiledPackage, VerifiedPackage};
+use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -63,6 +65,17 @@ pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scr
 /// Where to write generated transaction builders.
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
     "../../client/transaction-builder/src/stdlib.rs";
+
+// The current stdlib that is freshly built.
+static PACKAGE_NAME: &str = "diem-framework";
+
+static PACKAGE_MOVELANG_STDLIB: Lazy<VerifiedPackage> = Lazy::new(|| {
+    let compiled_modules = build_stdlib().into_iter().map(|(_, module)| module);
+    CompiledPackage::from_compilation(PACKAGE_NAME.to_owned(), compiled_modules)
+        .unwrap_or_else(|_| panic!("{} modules failed to deserialize", PACKAGE_NAME))
+        .verify(vec![])
+        .unwrap_or_else(|_| panic!("{} modules failed to verify", PACKAGE_NAME))
+});
 
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
@@ -143,6 +156,13 @@ pub fn script_files() -> Vec<String> {
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()
+}
+
+// TODO: in theory, the package building process can be used to replace the `build_stdlib` function
+// as well, but let's keep the `build_stdlib` flow as it is for now until we are comfortable with
+// the package deal.
+pub fn stdlib_modules() -> &'static VerifiedPackage {
+    &*PACKAGE_MOVELANG_STDLIB
 }
 
 pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {

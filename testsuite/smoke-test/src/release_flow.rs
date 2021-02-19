@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy};
-use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_types::{chain_id::ChainId, transaction::TransactionPayload};
 use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
 use diem_writeset_generator::{
@@ -17,16 +17,7 @@ fn test_move_release_flow() {
     let validator_interface = JsonRpcDebuggerInterface::new(&url).unwrap();
 
     let chain_id = ChainId::test();
-    let StdLibModules {
-        bytes_opt: old_modules_bytes,
-        compiled_modules: old_compiled_modules,
-    } = stdlib_modules(StdLibOptions::Compiled);
-    let old_modules = old_modules_bytes
-        .unwrap()
-        .iter()
-        .cloned()
-        .zip(old_compiled_modules.iter().cloned())
-        .collect::<Vec<_>>();
+    let old_modules = stdlib_modules().bytes_and_modules();
 
     let release_modules = release_modules();
 
@@ -42,7 +33,7 @@ fn test_move_release_flow() {
     // Verifying the generated payload against release modules should pass.
     verify_release(chain_id, url.clone(), &payload_1, &release_modules).unwrap();
     // Verifying the generated payload against older modules should pass due to hash mismatch.
-    assert!(verify_release(chain_id, url.clone(), &payload_1, &old_modules).is_err());
+    assert!(verify_release(chain_id, url.clone(), &payload_1, old_modules).is_err());
 
     // Commit the release
     client

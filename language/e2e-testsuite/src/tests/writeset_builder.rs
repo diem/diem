@@ -42,8 +42,7 @@ fn build_upgrade_writeset() {
         |session| {
             session.set_diem_version(11);
         },
-        &[module_bytes],
-        &[module.clone()],
+        &[(module_bytes, module.clone())],
     );
 
     let writeset_txn = genesis_account

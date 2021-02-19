@@ -126,3 +126,17 @@ impl CompiledPackage {
         })
     }
 }
+
+impl VerifiedPackage {
+    pub fn bytes_iter(&self) -> impl Iterator<Item = &Vec<u8>> {
+        self.modules_with_bytes.iter().map(|(bytes, _)| bytes)
+    }
+
+    pub fn modules_iter(&self) -> impl Iterator<Item = &CompiledModule> {
+        self.modules_with_bytes.iter().map(|(_, module)| module)
+    }
+
+    pub fn bytes_and_modules(&self) -> &[(Vec<u8>, CompiledModule)] {
+        self.modules_with_bytes.as_slice()
+    }
+}

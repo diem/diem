@@ -6,7 +6,7 @@ use crate::{
     module_cache::ModuleCache,
 };
 use anyhow::{anyhow, Result};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_types::account_address::AccountAddress;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
@@ -32,8 +32,7 @@ impl<'a> Resolver<'a> {
     pub fn new(state: &'a dyn RemoteCache, use_stdlib: bool) -> Self {
         let cache = ModuleCache::new();
         if use_stdlib {
-            let modules = stdlib_modules(StdLibOptions::Compiled).compiled_modules;
-            for module in modules {
+            for module in stdlib_modules().modules_iter() {
                 cache.insert(module.self_id(), module.clone());
             }
         }

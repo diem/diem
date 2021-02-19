@@ -9,9 +9,7 @@ use crate::{
     golden_outputs::GoldenOutputs,
     keygen::KeyGen,
 };
-use compiled_stdlib::{
-    stdlib_modules, transaction_scripts::StdlibScript, StdLibModules, StdLibOptions,
-};
+use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript};
 use diem_crypto::HashValue;
 use diem_state_view::StateView;
 use diem_types::{
@@ -75,7 +73,7 @@ impl FakeExecutor {
 
     pub fn allowlist_genesis() -> Self {
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
+            stdlib_modules().bytes_iter(),
             None,
             VMPublishingOption::locked(StdlibScript::allowlist()),
         )
@@ -88,12 +86,7 @@ impl FakeExecutor {
         if !publishing_options.is_open_script() {
             panic!("Allowlisted transactions are not supported as a publishing option")
         }
-
-        Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
-            None,
-            publishing_options,
-        )
+        Self::custom_genesis(stdlib_modules().bytes_iter(), None, publishing_options)
     }
 
     /// Creates an executor in which no genesis state has been applied yet.
@@ -114,13 +107,7 @@ impl FakeExecutor {
     /// initialization done.
     pub fn stdlib_only_genesis() -> Self {
         let mut genesis = Self::no_genesis();
-        let StdLibModules {
-            bytes_opt,
-            compiled_modules,
-        } = stdlib_modules(StdLibOptions::Compiled);
-        let bytes = bytes_opt.unwrap();
-        assert!(bytes.len() == compiled_modules.len());
-        for (module, bytes) in compiled_modules.iter().zip(bytes) {
+        for (bytes, module) in stdlib_modules().bytes_and_modules() {
             let id = module.self_id();
             genesis.add_module(&id, bytes.to_vec());
         }
@@ -128,13 +115,13 @@ impl FakeExecutor {
     }
 
     /// Creates fresh genesis from the stdlib modules passed in.
-    pub fn custom_genesis(
-        genesis_modules: &[Vec<u8>],
+    pub fn custom_genesis<'a>(
+        genesis_modules: impl Iterator<Item = &'a Vec<u8>>,
         validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {
         let genesis = vm_genesis::generate_test_genesis(
-            &genesis_modules,
+            genesis_modules,
             publishing_options,
             validator_accounts,
         );

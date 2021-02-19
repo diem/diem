@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::format_err;
-use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
@@ -117,13 +117,13 @@ fn move_module_changes<'a>(modules: impl IntoIterator<Item = &'a CompiledModule>
 pub fn build_changeset<S: StateView, F>(
     state_view: &S,
     procedure: F,
-    bytes: &[Vec<u8>],
-    modules: &[CompiledModule],
+    bytes_and_modules: &[(Vec<u8>, CompiledModule)],
 ) -> ChangeSet
 where
     F: FnOnce(&mut GenesisSession<DeltaStorage<RemoteStorage<S>>>),
 {
     let move_vm = MoveVM::new();
+    let modules = bytes_and_modules.iter().map(|(_, m)| m);
     let move_changes = move_module_changes(modules);
     let (mut changeset, events) = {
         let state_view_storage = RemoteStorage::new(state_view);
@@ -139,7 +139,7 @@ where
             .unwrap()
     };
 
-    for (module, bytes) in modules.iter().zip(bytes) {
+    for (bytes, module) in bytes_and_modules {
         // TODO: Check compatibility between old and new modules.
         changeset.publish_or_overwrite_module(module.self_id(), bytes.clone())
     }
@@ -152,9 +152,5 @@ where
 }
 
 pub fn build_stdlib_upgrade_changeset<S: StateView>(state_view: &S) -> ChangeSet {
-    let StdLibModules {
-        bytes_opt,
-        compiled_modules,
-    } = stdlib_modules(StdLibOptions::Compiled);
-    build_changeset(state_view, |_| {}, bytes_opt.unwrap(), compiled_modules)
+    build_changeset(state_view, |_| {}, stdlib_modules().bytes_and_modules())
 }

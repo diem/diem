@@ -15,6 +15,7 @@ serde = { version = "1.0.123", features = ["derive"] }
 compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }
 bcs = "0.1.2"
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+diem-framework = { path = "../../language/diem-framework", version = "0.1.0" }
 diem-types = { path = "../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 

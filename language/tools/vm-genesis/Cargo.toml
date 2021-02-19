@@ -18,6 +18,7 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 bcs = "0.1.2"
 diem-config = { path = "../../../config", version = "0.1.0" }
 diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
+diem-framework = { path = "../../diem-framework",  version = "0.1.0" }
 diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 diem-types = { path = "../../../types", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }

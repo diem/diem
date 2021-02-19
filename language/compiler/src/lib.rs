@@ -10,7 +10,7 @@ mod unit_tests;
 
 use anyhow::Result;
 use bytecode_source_map::source_map::SourceMap;
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
+use compiled_stdlib::stdlib_modules;
 use diem_types::{account_address::AccountAddress, account_config};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -114,9 +114,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps: Vec<CompiledModule> = stdlib_modules(StdLibOptions::Compiled)
-                .compiled_modules
-                .to_vec();
+            let mut deps: Vec<_> = stdlib_modules().modules_iter().cloned().collect();
             deps.extend(extra_deps);
             deps
         }
