@@ -351,21 +351,23 @@ impl SafetyRules {
 
         let proposed_block = vote_proposal.block();
         let mut safety_data = self.persistent_storage.safety_data()?;
+
         self.verify_epoch(proposed_block.epoch(), &safety_data)?;
+
+        // if already voted on this round, send back the previous vote
+        // note: this needs to happen after verifying the epoch as we just check the round here
+        if let Some(vote) = safety_data.last_vote.clone() {
+            if vote.vote_data().proposed().round() == proposed_block.round() {
+                return Ok(vote);
+            }
+        }
+
         self.verify_qc(proposed_block.quorum_cert())?;
         proposed_block
             .validate_signature(&self.epoch_state()?.verifier)
             .map_err(|error| Error::InternalError(error.to_string()))?;
 
         self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
-        // if already voted on this round, send back the previous vote.
-        if let Some(vote) = safety_data.last_vote.clone() {
-            if vote.vote_data().proposed().round() == proposed_block.round() {
-                safety_data.last_voted_round = proposed_block.round();
-                self.persistent_storage.set_safety_data(safety_data)?;
-                return Ok(vote);
-            }
-        }
         self.verify_and_update_last_vote_round(
             proposed_block.block_data().round(),
             &mut safety_data,
