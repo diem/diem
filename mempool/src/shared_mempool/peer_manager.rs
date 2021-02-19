@@ -20,12 +20,11 @@ use diem_types::transaction::SignedTransaction;
 use itertools::Itertools;
 use netcore::transport::ConnectionOrigin;
 use network::transport::ConnectionMetadata;
-use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use short_hex_str::AsShortHexStr;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
-    ops::{Add, DerefMut},
+    ops::Add,
     time::{Duration, Instant, SystemTime},
 };
 use vm_validator::vm_validator::TransactionValidation;
@@ -61,9 +60,6 @@ pub(crate) struct PeerManager {
     upstream_config: UpstreamConfig,
     mempool_config: MempoolConfig,
     peer_states: Mutex<PeerSyncStates>,
-    // The upstream peer to failover to if all peers in the primary upstream network are dead.
-    // The number of failover peers is limited to 1 to avoid network competition in the failover networks.
-    failover_peer: Mutex<Option<PeerNetworkId>>,
     // The set of `mempool_config.default_failover` number of peers in the non-primary networks to
     // broadcast to in addition to the primary network when the primary network is up.
     default_failovers: Mutex<HashSet<PeerNetworkId>>,
@@ -116,7 +112,6 @@ impl PeerManager {
             mempool_config,
             upstream_config,
             peer_states: Mutex::new(PeerSyncStates::new()),
-            failover_peer: Mutex::new(None),
             default_failovers: Mutex::new(HashSet::new()),
         }
     }
@@ -348,8 +343,6 @@ impl PeerManager {
         }
 
         // Declare `failover` as standalone to satisfy lifetime requirement.
-        let mut failover = self.failover_peer.lock();
-        let current_failover = failover.deref_mut();
         let peer_states = self.peer_states.lock();
         let active_peers_by_network = peer_states
             .iter()
@@ -383,71 +376,6 @@ impl PeerManager {
                         }
                     }
                 }
-            }
-        }
-
-        let primary_upstream = self
-            .upstream_config
-            .networks
-            .get(0)
-            .expect("missing primary upstream network");
-        if active_peers_by_network.get(primary_upstream).is_none() {
-            // There are no live peers in the primary upstream network - pick a failover peer.
-
-            let mut failover_candidate = None;
-            // Find the highest-pref'ed network (based on preference defined in upstream config)
-            // with any live peer and pick a peer from that network.
-            for failover_network in self.upstream_config.networks[1..].iter() {
-                if let Some(active_peers) = active_peers_by_network.get(failover_network) {
-                    failover_candidate = active_peers.choose(&mut rand::thread_rng());
-                    if failover_candidate.is_some() {
-                        break;
-                    }
-                }
-            }
-
-            if let Some(chosen) = current_failover {
-                if let Some(candidate) = &failover_candidate {
-                    if chosen.raw_network_id() == candidate.raw_network_id()
-                        && peer_states
-                            .get(chosen)
-                            .expect("missing peer state")
-                            .is_alive
-                    {
-                        // If current chosen failover peer is alive, then do not overwrite it
-                        // with another live peer of the same network.
-                        // For mempool broadcasts, broadcasting to the same peer consistently makes
-                        // faster progress.
-                        return;
-                    }
-                }
-            }
-            *current_failover = failover_candidate.cloned().cloned();
-        } else {
-            // There is at least one peer alive in the primary upstream network, so don't pick
-            // a failover peer.
-            *current_failover = None;
-        }
-
-        // Log/update metric for the updated failover network.
-        match failover.as_ref() {
-            Some(peer) => {
-                let failover_network = peer.raw_network_id();
-                if let Some(network_preference) = self
-                    .upstream_config
-                    .get_upstream_preference(failover_network.clone())
-                {
-                    info!(LogSchema::new(LogEntry::UpstreamNetwork)
-                        .upstream_network(&failover_network)
-                        .network_level(network_preference));
-                    counters::upstream_network(network_preference);
-                }
-            }
-            None => {
-                info!(LogSchema::new(LogEntry::UpstreamNetwork)
-                    .upstream_network(primary_upstream)
-                    .network_level(PRIMARY_NETWORK_PREFERENCE));
-                counters::upstream_network(PRIMARY_NETWORK_PREFERENCE);
             }
         }
     }
@@ -555,23 +483,7 @@ impl PeerManager {
             return true;
         }
 
-        let failover = self.failover_peer.lock();
-        if let Some(failover_peer) = failover.as_ref() {
-            // In failover mode (i.e. primary network is down).
-            // broadcast to all peers in the same network as this chosen upstream failover peer.
-
-            // NOTE: originally mempool should only broadcast to one peer in the failover network. This is
-            // to avoid creating too much competition for traffic in the failover network, which is in most
-            // cases also used by other public clients
-            // However, currently for VFN's public on-chain discovery, there is the unfortunate possibility
-            // that it might discover and select itself as an upstream fallback peer, so the txns will be
-            // self-broadcasted and make no actual progress.
-            // So until self-connection is actively checked against for in the networking layer, mempool
-            // will temporarily broadcast to all peers in its selected failover network as well
-            failover_peer.raw_network_id() == peer.raw_network_id()
-        } else {
-            // if primary network is up, broadcast to all default_failovers in addition to it
-            self.default_failovers.lock().contains(peer)
-        }
+        // if primary network is up, broadcast to all default_failovers in addition to it
+        self.default_failovers.lock().contains(peer)
     }
 }
