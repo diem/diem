@@ -4,10 +4,11 @@
 #![forbid(unsafe_code)]
 
 use bytecode::{
-    borrow_analysis::BorrowAnalysisProcessor, clean_and_optimize::CleanAndOptimizeProcessor,
-    eliminate_imm_refs::EliminateImmRefsProcessor, eliminate_mut_refs::EliminateMutRefsProcessor,
+    borrow_analysis::BorrowAnalysisProcessor, borrow_analysis_v2,
+    clean_and_optimize::CleanAndOptimizeProcessor, eliminate_imm_refs::EliminateImmRefsProcessor,
+    eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::FunctionTargetProcessor, livevar_analysis::LiveVarAnalysisProcessor,
-    memory_instrumentation::MemoryInstrumentationProcessor,
+    memory_instrumentation::MemoryInstrumentationProcessor, memory_instrumentation_v2,
     reaching_def_analysis::ReachingDefProcessor, usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
 };
@@ -29,7 +30,17 @@ pub fn pipelines(experimental_pipeline: bool) -> Vec<Box<dyn FunctionTargetProce
     }
     // Enter your pipeline here
     else {
-        panic!("No experimental pipeline set");
+        vec![
+            EliminateImmRefsProcessor::new(),
+            EliminateMutRefsProcessor::new(),
+            ReachingDefProcessor::new(),
+            LiveVarAnalysisProcessor::new(),
+            borrow_analysis_v2::BorrowAnalysisProcessor::new(),
+            memory_instrumentation_v2::MemoryInstrumentationProcessor::new(),
+            CleanAndOptimizeProcessor::new(),
+            UsageProcessor::new(),
+            VerificationAnalysisProcessor::new(),
+        ]
     };
     vec
 }
