@@ -69,9 +69,8 @@ impl<'env> FunctionDataBuilder<'env> {
         self.current_loc = loc;
     }
 
-    /// Sets the default location as well as information about verification conditions
-    /// at this location. The later is stored in the global environment where it can later be
-    /// retrieved based on location when mapping verification failures back to source level.
+    /// Sets the default location as well as information about the verification condition
+    /// message associated with the next instruction generated with `emit_with`.
     pub fn set_loc_and_vc_info(&mut self, loc: Loc, message: &str) {
         self.next_vc_info = Some(message.to_string());
         self.set_loc(loc);

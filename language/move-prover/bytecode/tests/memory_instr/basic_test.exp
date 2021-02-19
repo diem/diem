@@ -390,20 +390,19 @@ fun TestPackref::test7($t0|b: bool) {
   5: $t3 := borrow_local($t1)
   6: if ($t4) goto 9 else goto 7
   7: label L1
-  8: goto 14
+  8: goto 13
   9: label L0
  10: destroy($t3)
  11: write_back[LocalRoot($t1)]($t3)
  12: $t3 := borrow_local($t2)
- 13: goto 14
- 14: label L2
- 15: $t7 := 0
- 16: $t8 := read_ref($t3)
- 17: $t8 := TestPackref::test3($t8, $t7)
- 18: write_ref($t3, $t8)
- 19: write_back[LocalRoot($t1)]($t3)
- 20: write_back[LocalRoot($t2)]($t3)
- 21: return ()
+ 13: label L2
+ 14: $t7 := 0
+ 15: $t8 := read_ref($t3)
+ 16: $t8 := TestPackref::test3($t8, $t7)
+ 17: write_ref($t3, $t8)
+ 18: write_back[LocalRoot($t1)]($t3)
+ 19: write_back[LocalRoot($t2)]($t3)
+ 20: return ()
 }
 
 
@@ -437,58 +436,55 @@ fun TestPackref::test8($t0|b: bool, $t1|n: u64, $t2|r_ref: TestPackref::R): Test
   6: $t11 := 4
   7: $t4 := pack TestPackref::R($t11)
   8: $t5 := borrow_local($t4)
-  9: goto 10
- 10: label L7
- 11: $t12 := 0
- 12: $t13 := <($t12, $t7)
- 13: if ($t13) goto 16 else goto 14
- 14: label L1
- 15: goto 37
- 16: label L0
- 17: destroy($t5)
- 18: write_back[LocalRoot($t3)]($t5)
- 19: write_back[LocalRoot($t4)]($t5)
- 20: $t14 := 2
- 21: $t15 := /($t7, $t14)
- 22: $t16 := 0
- 23: $t17 := ==($t15, $t16)
- 24: if ($t17) goto 27 else goto 25
- 25: label L4
- 26: goto 30
- 27: label L3
- 28: $t5 := borrow_local($t3)
- 29: goto 33
- 30: label L5
- 31: $t5 := borrow_local($t4)
- 32: goto 33
- 33: label L6
- 34: $t18 := 1
- 35: $t7 := -($t7, $t18)
- 36: goto 10
- 37: label L2
- 38: if ($t6) goto 41 else goto 39
- 39: label L9
- 40: goto 51
- 41: label L8
- 42: destroy($t5)
- 43: write_back[LocalRoot($t3)]($t5)
- 44: write_back[LocalRoot($t4)]($t5)
- 45: $t19 := 0
- 46: $t20 := read_ref($t9)
- 47: $t20 := TestPackref::test3($t20, $t19)
- 48: write_ref($t9, $t20)
- 49: write_back[LocalRoot($t8)]($t9)
- 50: goto 61
- 51: label L10
- 52: destroy($t9)
- 53: write_back[LocalRoot($t8)]($t9)
- 54: $t21 := 0
- 55: $t20 := read_ref($t5)
- 56: $t20 := TestPackref::test3($t20, $t21)
- 57: write_ref($t5, $t20)
- 58: write_back[LocalRoot($t3)]($t5)
- 59: write_back[LocalRoot($t4)]($t5)
- 60: goto 61
- 61: label L11
- 62: return $t8
+  9: label L7
+ 10: $t12 := 0
+ 11: $t13 := <($t12, $t7)
+ 12: if ($t13) goto 15 else goto 13
+ 13: label L1
+ 14: goto 35
+ 15: label L0
+ 16: destroy($t5)
+ 17: write_back[LocalRoot($t3)]($t5)
+ 18: write_back[LocalRoot($t4)]($t5)
+ 19: $t14 := 2
+ 20: $t15 := /($t7, $t14)
+ 21: $t16 := 0
+ 22: $t17 := ==($t15, $t16)
+ 23: if ($t17) goto 26 else goto 24
+ 24: label L4
+ 25: goto 29
+ 26: label L3
+ 27: $t5 := borrow_local($t3)
+ 28: goto 31
+ 29: label L5
+ 30: $t5 := borrow_local($t4)
+ 31: label L6
+ 32: $t18 := 1
+ 33: $t7 := -($t7, $t18)
+ 34: goto 9
+ 35: label L2
+ 36: if ($t6) goto 39 else goto 37
+ 37: label L9
+ 38: goto 49
+ 39: label L8
+ 40: destroy($t5)
+ 41: write_back[LocalRoot($t3)]($t5)
+ 42: write_back[LocalRoot($t4)]($t5)
+ 43: $t19 := 0
+ 44: $t20 := read_ref($t9)
+ 45: $t20 := TestPackref::test3($t20, $t19)
+ 46: write_ref($t9, $t20)
+ 47: write_back[LocalRoot($t8)]($t9)
+ 48: goto 58
+ 49: label L10
+ 50: destroy($t9)
+ 51: write_back[LocalRoot($t8)]($t9)
+ 52: $t21 := 0
+ 53: $t20 := read_ref($t5)
+ 54: $t20 := TestPackref::test3($t20, $t21)
+ 55: write_ref($t5, $t20)
+ 56: write_back[LocalRoot($t3)]($t5)
+ 57: write_back[LocalRoot($t4)]($t5)
+ 58: label L11
+ 59: return $t8
 }

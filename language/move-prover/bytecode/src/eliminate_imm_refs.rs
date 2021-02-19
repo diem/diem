@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_target::{FunctionData, FunctionTarget},
+    function_data_builder::FunctionDataBuilder,
+    function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{
-        AssignKind,
-        Bytecode::{self, *},
-        Operation::*,
-    },
+    stackless_bytecode::{AssignKind, Bytecode, Operation},
 };
-use move_model::{model::FunctionEnv, ty::Type};
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 
 pub struct EliminateImmRefsProcessor {}
 
@@ -25,31 +22,11 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionData,
+        data: FunctionData,
     ) -> FunctionData {
-        let code = std::mem::take(&mut data.code);
-        data.code = code
-            .into_iter()
-            .map(|bytecode| {
-                EliminateImmRefs::new(&FunctionTarget::new(func_env, &data))
-                    .transform_bytecode(bytecode)
-            })
-            .collect();
-        let local_types = std::mem::take(&mut data.local_types);
-        data.local_types = local_types
-            .into_iter()
-            .map(|ty| {
-                EliminateImmRefs::new(&FunctionTarget::new(func_env, &data)).transform_type(ty)
-            })
-            .collect();
-        let return_types = std::mem::take(&mut data.return_types);
-        data.return_types = return_types
-            .into_iter()
-            .map(|ty| {
-                EliminateImmRefs::new(&FunctionTarget::new(func_env, &data)).transform_type(ty)
-            })
-            .collect();
-        data
+        let mut elim = EliminateImmRefs::new(FunctionDataBuilder::new(func_env, data));
+        elim.run();
+        elim.builder.data
     }
 
     fn name(&self) -> String {
@@ -58,12 +35,26 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
 }
 
 pub struct EliminateImmRefs<'a> {
-    func_target: &'a FunctionTarget<'a>,
+    builder: FunctionDataBuilder<'a>,
 }
 
 impl<'a> EliminateImmRefs<'a> {
-    fn new(func_target: &'a FunctionTarget) -> Self {
-        Self { func_target }
+    fn new(builder: FunctionDataBuilder<'a>) -> Self {
+        Self { builder }
+    }
+
+    fn run(&mut self) {
+        for bc in std::mem::take(&mut self.builder.data.code) {
+            self.transform_bytecode(bc);
+        }
+        self.builder.data.local_types = std::mem::take(&mut self.builder.data.local_types)
+            .into_iter()
+            .map(|ty| self.transform_type(ty))
+            .collect();
+        self.builder.data.return_types = std::mem::take(&mut self.builder.data.return_types)
+            .into_iter()
+            .map(|ty| self.transform_type(ty))
+            .collect();
     }
 
     fn transform_type(&self, ty: Type) -> Type {
@@ -74,74 +65,48 @@ impl<'a> EliminateImmRefs<'a> {
         }
     }
 
-    fn transform_bytecode(&self, bytecode: Bytecode) -> Bytecode {
-        match &bytecode {
+    fn is_imm_ref(&self, idx: TempIndex) -> bool {
+        self.builder
+            .get_target()
+            .get_local_type(idx)
+            .is_immutable_reference()
+    }
+
+    fn transform_bytecode(&mut self, bytecode: Bytecode) {
+        use Bytecode::*;
+        use Operation::*;
+        match bytecode {
             Call(attr_id, dests, op, srcs, aa) => match op {
-                ReadRef => {
-                    let src = srcs[0];
-                    let dest = dests[0];
-                    if self
-                        .func_target
-                        .get_local_type(src)
-                        .is_immutable_reference()
-                    {
-                        Assign(*attr_id, dest, src, AssignKind::Move)
-                    } else {
-                        bytecode
-                    }
+                ReadRef if self.is_imm_ref(srcs[0]) => {
+                    self.builder
+                        .emit(Assign(attr_id, dests[0], srcs[0], AssignKind::Move));
                 }
-                FreezeRef => Call(*attr_id, dests.to_vec(), ReadRef, srcs.to_vec(), None),
-                BorrowLoc => {
-                    let src = srcs[0];
-                    let dest = dests[0];
-                    if self
-                        .func_target
-                        .get_local_type(dest)
-                        .is_immutable_reference()
-                    {
-                        Assign(*attr_id, dest, src, AssignKind::Copy)
-                    } else {
-                        bytecode
-                    }
+                FreezeRef => self.builder.emit(Call(attr_id, dests, ReadRef, srcs, None)),
+                BorrowLoc if self.is_imm_ref(dests[0]) => {
+                    self.builder
+                        .emit(Assign(attr_id, dests[0], srcs[0], AssignKind::Copy));
                 }
-                BorrowField(mid, sid, type_actuals, field_offset) => {
-                    if self
-                        .func_target
-                        .get_local_type(dests[0])
-                        .is_immutable_reference()
-                    {
-                        Call(
-                            *attr_id,
-                            dests.to_vec(),
-                            GetField(*mid, *sid, type_actuals.to_vec(), *field_offset),
-                            srcs.to_vec(),
-                            aa.clone(),
-                        )
-                    } else {
-                        bytecode
-                    }
+                BorrowField(mid, sid, type_actuals, offset) if self.is_imm_ref(dests[0]) => {
+                    self.builder.emit(Call(
+                        attr_id,
+                        dests,
+                        GetField(mid, sid, type_actuals, offset),
+                        srcs,
+                        aa,
+                    ));
                 }
-                BorrowGlobal(mid, sid, type_actuals) => {
-                    let dest = dests[0];
-                    if self
-                        .func_target
-                        .get_local_type(dest)
-                        .is_immutable_reference()
-                    {
-                        Call(
-                            *attr_id,
-                            dests.to_vec(),
-                            GetGlobal(*mid, *sid, type_actuals.to_vec()),
-                            srcs.to_vec(),
-                            aa.clone(),
-                        )
-                    } else {
-                        bytecode
-                    }
+                BorrowGlobal(mid, sid, type_actuals) if self.is_imm_ref(dests[0]) => {
+                    self.builder.emit(Call(
+                        attr_id,
+                        dests,
+                        GetGlobal(mid, sid, type_actuals),
+                        srcs,
+                        aa,
+                    ));
                 }
-                _ => bytecode,
+                _ => self.builder.emit(Call(attr_id, dests, op, srcs, aa)),
             },
-            _ => bytecode,
-        }
+            _ => self.builder.emit(bytecode),
+        };
     }
 }

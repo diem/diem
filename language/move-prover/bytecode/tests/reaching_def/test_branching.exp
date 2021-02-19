@@ -48,14 +48,13 @@ fun TestBranching::branching($t0|cond: bool): u64 {
   5: label L0
   6: $t4 := 3
   7: $t1 := $t4
-  8: goto 13
+  8: goto 12
   9: label L2
  10: $t5 := 4
  11: $t1 := $t5
- 12: goto 13
- 13: label L3
- 14: $t6 := move($t1)
- 15: $t2 := $t1
- 16: $t7 := copy($t2)
- 17: return $t2
+ 12: label L3
+ 13: $t6 := move($t1)
+ 14: $t2 := $t1
+ 15: $t7 := copy($t2)
+ 16: return $t2
 }
