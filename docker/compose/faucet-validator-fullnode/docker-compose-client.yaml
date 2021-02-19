@@ -1,0 +1,41 @@
+# This compose file launches a client which will interact with the faucet and full_node.
+# This requires everything in the `docker-compose.yaml` in this folder to already be running
+# The faucet can be accessed at 127.0.0.1:8000
+
+version: "3.8"
+services:
+
+    client:
+      image: libra/client:devnet
+      stdin_open: true # docker run -i
+      tty: true        # docker run -t
+      networks:
+        shared:
+          ipv4_address: 172.16.1.5
+      volumes:
+        - type: bind
+          source: ./validator_data/waypoint.txt
+          target: /opt/diem/etc/waypoint.txt
+          read_only: true
+        - type: bind
+          source: ./validator_data/full_node_0_operator
+          target: /opt/diem/etc/full_node_0_operator
+      entrypoint: /bin/bash
+      command: >
+        -c '
+          sleep 3;
+          echo "Waypoint: `cat /opt/diem/etc/waypoint.txt`\n"
+          /opt/diem/bin/diem_client \
+            --url http://172.16.1.4:8081 \
+            --faucet-url http://172.16.1.3:8000 \
+            --chain-id TESTING \
+            --waypoint `cat /opt/diem/etc/waypoint.txt`
+        '
+
+
+networks:
+    shared:
+        name: "diem-docker-compose-shared"
+        ipam:
+          config:
+            - subnet: 172.16.1.0/24

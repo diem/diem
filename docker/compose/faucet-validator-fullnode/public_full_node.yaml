@@ -1,38 +1,38 @@
 base:
-    # This is the location Diem will store its database. It is backed by a dedicated docker volume
-    # for persistence.
+    # This is the location Diem will store its database.
+    # It is backed by a dedicated docker volume for persistence.
     data_dir: "/opt/diem/data"
-    role: "full_node"
+    role: full_node
     waypoint:
         # This is a checkpoint into the blockchain for added security.
         from_file: "/opt/diem/etc/waypoint.txt"
 
 execution:
-    # Path to a genesis transaction. Note, this must be paired with a waypoint. If you update your
-    # waypoint without a corresponding genesis, the file location should be an empty path.
+    # Path to a genesis transaction. Note, this must be paired with a waypoint.
     genesis_file_location: "/opt/diem/etc/genesis.blob"
 
 
 full_node_networks:
-      # Disabled for testnet
-    - discovery_method: "onchain"
+    - discovery_method: "none"
       # The network must have a listen address to specify protocols. This runs it locally to
       # prevent remote, incoming connections.
       listen_address: "/ip4/127.0.0.1/tcp/6180"
-      network_id: "public"
-      # Testnet does not have the right discovery entry points on-chain so this is used instead
-      #seeds:
-      #  D4C4FB4956D899E55289083F45AC5D84:
-      #     addresses:
-      #      - "/dns4/172.16.1.3/tcp/8080/ln-noise-ik/11293338b72a0a801580481be5bb8bbed8e0f74c2c3c8e8ee58650753db4794d/ln-handshake/0"
-      #    role: "ValidatorFullNode"
+      mutual_authentication: false
+      network_id:
+        private: vfn
+
+      seeds:
+        B5B333AABBF92E78524E2129B722EACA:
+          addresses:
+            - "/ip4/172.16.1.2/tcp/7180/ln-noise-ik/ba6e022da6e58f4a422578b0e6a726cfbb81de6bca543cd0e1166a1fc48af218/ln-handshake/0"
+          role: "ValidatorFullNode"
 
 json_rpc:
     # This specifies your JSON-RPC endpoint. Intentionally on public so that Docker can export it.
-    address: 0.0.0.0:8080
+    address: 0.0.0.0:8081
 
-# Do not modify this value as it dictates upstream peers, those which receive outgoing transactions
-# and funnel downward the latest blockchain state.
+# Upstream Peers: those to whom we forward any transactions we get,
+#                 and from which we request chunk updates (the latest blockchain state)
 upstream:
-    networks:
-        - public
+  networks:
+    - private: vfn
