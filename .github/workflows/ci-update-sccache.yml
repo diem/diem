@@ -1,4 +1,4 @@
-name: osx-sccache
+name: ci-update-sccache
 
 on:
   push:
@@ -13,7 +13,7 @@ env:
   pre_command: cd /opt/git/diem/
 
 jobs:
-  update-sccache:
+  update-sccache-osx:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -22,15 +22,11 @@ jobs:
           # On `push` this value will be empty and will "do-the-right-thing"
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
-      - uses: ./.github/actions/check-machine
-        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - id: changes
         name: determine changes
         uses: ./.github/actions/changes
         with:
-          workflow-file: ci-test.yml
+          workflow-file: ci-update-sccache.yml
       - id: rust-changes
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
@@ -46,9 +42,13 @@ jobs:
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
       - name: build all unit test code.
-        run: $pre_command && cargo x test --no-run --jobs ${max_threads} --unit #--changed-since "origin/$TARGET_BRANCH"
+        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
+        run: |
+          $pre_command && cargo x test --no-run --jobs ${max_threads} --unit
+          echo stats:
+          sccache -s
         env:
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
           SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
-          #TARGET_BRANCH: ${{ steps.changes.outputs.changes-target-branch }}
       - uses: ./.github/actions/build-teardown
+        if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
