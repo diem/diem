@@ -1,0 +1,98 @@
+{
+  "consensus": {
+    "last_update": 1613766226,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "consensus_account": {
+    "last_update": 1613766226,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "diem_root": {
+    "last_update": 1613759934,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "diem_root_account": {
+    "last_update": 1613759934,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "execution": {
+    "last_update": 1613776143,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "execution_account": {
+    "last_update": 1613776143,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "fullnode_network": {
+    "last_update": 1613766267,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "fullnode_network_account": {
+    "last_update": 1613766267,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "genesis-waypoint": {
+    "data": "GetResponse",
+    "last_update": 1613770982,
+    "value": "0:23dd499059a655ef4de2a8a0662105233cdaeb7df9e63bb0ddcb23f2ae37d668"
+  },
+  "operator": {
+    "last_update": 1613759935,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "operator_account": {
+    "data": "GetResponse",
+    "last_update": 1613769466,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "owner": {
+    "data": "GetResponse",
+    "last_update": 1613759936,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "owner_account": {
+    "data": "GetResponse",
+    "last_update": 1613769605,
+    "value": "BD2BDB299FEF878BD97D8009C67565CF"
+  },
+  "treasury_compliance": {
+    "last_update": 1613760242,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "treasury_compliance_account": {
+    "last_update": 1613760242,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "validator_network": {
+    "last_update": 1613766318,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "validator_network_account": {
+    "last_update": 1613766318,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "validator_network_address_keys": {
+    "last_update": 1613768410,
+    "value": {
+      "current": 0,
+      "keys": {
+        "0": "o/Q6rShKwxrXsN4yyIffnM3RSxgtd/5jf09B8n4us+Q="
+      }
+    }
+  },
+  "waypoint": {
+    "data": "GetResponse",
+    "last_update": 1613770982,
+    "value": "0:23dd499059a655ef4de2a8a0662105233cdaeb7df9e63bb0ddcb23f2ae37d668"
+  },
+  "safety_data": {
+    "data": "GetResponse",
+    "last_update": 1613773160,
+    "value": {
+      "epoch": 0,
+      "last_vote": null,
+      "last_voted_round": 0,
+      "preferred_round": 0
+    }
+  }
+}
