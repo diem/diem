@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     on_chain_config::DiemVersion,
     transaction::{Script, TransactionArgument, TransactionStatus},
@@ -34,7 +34,9 @@ fn initial_diem_version() {
     let txn = account
         .transaction()
         .script(Script::new(
-            StdlibScript::UpdateDiemVersion.compiled_bytes().into_vec(),
+            LegacyStdlibScript::UpdateDiemVersion
+                .compiled_bytes()
+                .into_vec(),
             vec![],
             vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))
@@ -65,7 +67,9 @@ fn drop_txn_after_reconfiguration() {
     let txn = account
         .transaction()
         .script(Script::new(
-            StdlibScript::UpdateDiemVersion.compiled_bytes().into_vec(),
+            LegacyStdlibScript::UpdateDiemVersion
+                .compiled_bytes()
+                .into_vec(),
             vec![],
             vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))

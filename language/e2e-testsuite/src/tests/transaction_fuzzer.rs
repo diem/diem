@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::account_config;
 use language_e2e_tests::{
     account::{self, Account},
@@ -72,10 +72,10 @@ proptest! {
         for (i, txn) in txns.into_iter().enumerate() {
             let script = txn.encode();
             let (account, account_sequence_number) = accounts.get_mut(i % num_accounts).unwrap();
-            let script_is_rotate = StdlibScript::try_from(script.code()).map(|script|
-                script == StdlibScript::RotateAuthenticationKey ||
-                script == StdlibScript::RotateAuthenticationKeyWithNonce ||
-                script == StdlibScript::RotateAuthenticationKeyWithRecoveryAddress
+            let script_is_rotate = LegacyStdlibScript::try_from(script.code()).map(|script|
+                script == LegacyStdlibScript::RotateAuthenticationKey ||
+                script == LegacyStdlibScript::RotateAuthenticationKeyWithNonce ||
+                script == LegacyStdlibScript::RotateAuthenticationKeyWithRecoveryAddress
             ).unwrap_or(false);
             let output = executor.execute_transaction(
                 account.transaction()

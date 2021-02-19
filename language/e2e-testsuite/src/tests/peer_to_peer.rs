@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     account_config::{self, ReceivedPaymentEvent, SentPaymentEvent},
     on_chain_config::VMPublishingOption,
@@ -94,7 +94,7 @@ fn single_peer_to_peer_with_padding() {
     let transfer_amount = 1_000;
     let padded_script = {
         let mut script_mut = CompiledScript::deserialize(
-            &StdlibScript::PeerToPeerWithMetadata
+            &LegacyStdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
         )

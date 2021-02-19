@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use compiler::Compiler;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_types::{
@@ -106,7 +106,7 @@ fn verify_simple_payment() {
     args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U8Vector(vec![]));
 
-    let p2p_script = StdlibScript::PeerToPeerWithMetadata
+    let p2p_script = LegacyStdlibScript::PeerToPeerWithMetadata
         .compiled_bytes()
         .into_vec();
 
@@ -1148,7 +1148,7 @@ fn charge_gas_invalid_args() {
         .account()
         .transaction()
         .script(Script::new(
-            StdlibScript::PeerToPeerWithMetadata
+            LegacyStdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
             vec![account_config::xus_tag()],

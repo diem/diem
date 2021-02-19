@@ -16,11 +16,11 @@ use std::{convert::TryFrom, fmt, path::PathBuf};
 // This includes the script ABIs as binaries. We must use this hack to work around
 // a problem with Docker, which does not copy over the Move source files that would be be used to
 // produce these binaries at runtime.
-const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("transaction_scripts/abi");
+const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("legacy/transaction_scripts/abi");
 
 /// All of the Move transaction scripts that can be executed on the Diem blockchain
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub enum StdlibScript {
+pub enum LegacyStdlibScript {
     AddCurrencyToAccount,
     AddRecoveryRotationCapability,
     AddScriptAllowList,
@@ -58,11 +58,11 @@ pub enum StdlibScript {
     // ...add new scripts here
 }
 
-impl StdlibScript {
+impl LegacyStdlibScript {
     /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
     /// StdlibScript enum)
     pub fn all() -> Vec<Self> {
-        use StdlibScript::*;
+        use LegacyStdlibScript::*;
         vec![
             AddCurrencyToAccount,
             AddRecoveryRotationCapability,
@@ -105,7 +105,7 @@ impl StdlibScript {
     /// Construct the allowlist of script hashes used to determine whether a transaction script can
     /// be executed on the Diem blockchain
     pub fn allowlist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
-        StdlibScript::all()
+        LegacyStdlibScript::all()
             .iter()
             .map(|script| *script.compiled_bytes().hash().as_ref())
             .collect()
@@ -165,7 +165,7 @@ impl CompiledBytes {
     }
 }
 
-impl TryFrom<&[u8]> for StdlibScript {
+impl TryFrom<&[u8]> for LegacyStdlibScript {
     type Error = Error;
 
     /// Return `Some(<script_name>)` if  `code_bytes` is the bytecode of one of the standard library
@@ -180,9 +180,9 @@ impl TryFrom<&[u8]> for StdlibScript {
     }
 }
 
-impl fmt::Display for StdlibScript {
+impl fmt::Display for LegacyStdlibScript {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use StdlibScript::*;
+        use LegacyStdlibScript::*;
         write!(
             f,
             "{}",
@@ -233,17 +233,17 @@ mod test {
     use super::*;
 
     // This includes the compiled script binaries.
-    const COMPILED_TXN_SCRIPTS_DIR: Dir = include_dir!("transaction_scripts");
+    const COMPILED_TXN_SCRIPTS_DIR: Dir = include_dir!("legacy/transaction_scripts");
 
     #[test]
     fn test_file_correspondence() {
         // Make sure that every compiled file under transaction_scripts is represented in
         // StdlibScript::all() (and vice versa).
         let files = COMPILED_TXN_SCRIPTS_DIR.files();
-        let scripts = StdlibScript::all();
+        let scripts = LegacyStdlibScript::all();
         for file in files {
             assert!(
-                StdlibScript::is(file.contents()),
+                LegacyStdlibScript::is(file.contents()),
                 "File {} missing from StdlibScript enum",
                 file.path().display()
             )
@@ -263,11 +263,11 @@ mod test {
     #[test]
     fn test_names() {
         // Make sure that the names listed here matches the function names in the code.
-        for script in StdlibScript::all() {
+        for script in LegacyStdlibScript::all() {
             assert_eq!(
                 script.name(),
                 script.abi().name(),
-                "The main function in language/diem-framework/transaction_scripts/{}.move is named `{}` instead of `{}`. Please fix the issue and re-run (cd language/diem-framework && cargo run --release)",
+                "The main function in language/diem-framework/transaction_scripts/{}.move is named `{}` instead of `{}`.",
                 script.name(),
                 script.abi().name(),
                 script.name(),
@@ -278,10 +278,10 @@ mod test {
     #[test]
     fn test_docs() {
         // Make sure that scripts have non-empty documentation.
-        for script in StdlibScript::all() {
+        for script in LegacyStdlibScript::all() {
             assert!(
                 !script.abi().doc().is_empty(),
-                "The main function in language/diem-framework/transaction_scripts/{}.move does not have a `///` inline doc comment. Please fix the issue and re-run (cd language/diem-framework && cargo run --release)",
+                "The main function in language/diem-framework/transaction_scripts/{}.move does not have a `///` inline doc comment.",
                 script.name(),
             );
         }

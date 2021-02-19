@@ -10,7 +10,7 @@ use crate::{
     keygen::KeyGen,
 };
 use compiled_stdlib::{
-    stdlib_modules, transaction_scripts::StdlibScript, StdLibModules, StdLibOptions,
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibModules, StdLibOptions,
 };
 use diem_crypto::HashValue;
 use diem_state_view::StateView;
@@ -77,7 +77,7 @@ impl FakeExecutor {
         Self::custom_genesis(
             stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
             None,
-            VMPublishingOption::locked(StdlibScript::allowlist()),
+            VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
         )
     }
 

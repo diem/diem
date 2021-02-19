@@ -3,7 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-pub mod transaction_scripts;
+pub mod legacy;
+pub mod tmp_new_transaction_script_builders;
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use diem_framework::build_stdlib;

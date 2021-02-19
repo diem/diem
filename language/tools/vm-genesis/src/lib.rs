@@ -7,7 +7,9 @@ mod genesis_context;
 pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
+};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
@@ -84,7 +86,7 @@ pub fn encode_genesis_transaction(
         operator_registrations,
         stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(), // Must use compiled stdlib,
         vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
+            .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
         chain_id,
     )))
 }
@@ -517,7 +519,7 @@ pub fn test_genesis_transaction() -> Transaction {
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
     generate_test_genesis(
         &stdlib_modules(StdLibOptions::Compiled).bytes_vec(),
-        VMPublishingOption::locked(StdlibScript::allowlist()),
+        VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
         count,
     )
 }

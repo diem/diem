@@ -55,14 +55,14 @@ pub const PACKED_TYPES_DIR: &str = "packed_types";
 pub const PACKED_TYPES_FILENAME: &str = "packed_types";
 pub const PACKED_TYPES_EXTENSION: &str = "txt";
 
+/// TODO: These paths are temporary only
 /// The output path under which compiled script files can be found
 pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
 /// The output path for transaction script ABIs.
 pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
-
 /// Where to write generated transaction builders.
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
-    "../../client/transaction-builder/src/stdlib.rs";
+    "compiled/src/tmp_new_transaction_script_builders.rs";
 
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {

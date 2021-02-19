@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{legacy::transaction_scripts::LegacyStdlibScript, StdLibOptions};
 use diem_types::{
     access_path::AccessPath,
     block_metadata::BlockMetadata,
@@ -38,7 +38,7 @@ pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
 /// Returns a user friendly mnemonic for the transaction type if the transaction is
 /// for a known, white listed, transaction.
 pub fn get_transaction_name(code: &[u8]) -> String {
-    StdlibScript::try_from(code).map_or("<unknown transaction>".to_string(), |name| {
+    LegacyStdlibScript::try_from(code).map_or("<unknown transaction>".to_string(), |name| {
         format!("{}_transaction", name)
     })
 }

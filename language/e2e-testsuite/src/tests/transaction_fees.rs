@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_types::{
     account_config::{self, BurnEvent, XUS_NAME},
@@ -62,7 +62,7 @@ fn burn_txn_fees() {
             sender
                 .transaction()
                 .script(Script::new(
-                    StdlibScript::RotateAuthenticationKey
+                    LegacyStdlibScript::RotateAuthenticationKey
                         .compiled_bytes()
                         .into_vec(),
                     vec![],

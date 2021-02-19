@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_crypto::HashValue;
 use diem_types::{
     account_config::{
@@ -719,7 +719,7 @@ impl From<AccountRole> for AccountRoleView {
 
 impl From<&Script> for ScriptView {
     fn from(script: &Script) -> Self {
-        let name = StdlibScript::try_from(script.code())
+        let name = LegacyStdlibScript::try_from(script.code())
             .map_or("unknown".to_string(), |name| format!("{}", name));
         let ty_args: Vec<String> = script
             .ty_args()

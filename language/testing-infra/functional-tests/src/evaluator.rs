@@ -7,7 +7,9 @@ use crate::{
     errors::*,
 };
 use bytecode_verifier::dependencies;
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
+};
 use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use diem_state_view::StateView;
 use diem_types::{
@@ -44,7 +46,7 @@ use vm::{
 };
 
 static PRECOMPILED_TXN_SCRIPTS: Lazy<HashMap<String, CompiledScript>> = Lazy::new(|| {
-    StdlibScript::all()
+    LegacyStdlibScript::all()
         .into_iter()
         .map(|script| {
             let name = script.name();
