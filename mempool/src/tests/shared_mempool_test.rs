@@ -15,7 +15,7 @@ use channel::{
     message_queues::QueueStyle,
 };
 use diem_config::{
-    config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig},
+    config::{NodeConfig, PeerNetworkId, UpstreamConfig},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use diem_infallible::{Mutex, RwLock};
@@ -69,31 +69,31 @@ struct SharedMempoolNetwork {
     network_conn_event_notifs_txs: HashMap<PeerId, conn_notifs_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
     subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
-    /// A mapping of secondary `PeerId` on other network interfaces to the main `PeerId`
-    main_peer_ids: HashMap<PeerId, PeerId>,
+    /// A mapping of secondary `PeerId` on other network interfaces to the primary `PeerId`
+    primary_peer_ids: HashMap<PeerId, PeerId>,
 }
 
 fn setup_peer_mempool(
     smp: &mut SharedMempoolNetwork,
-    main_network_id: NetworkId,
-    main_peer_id: PeerId,
+    primary_network_id: NetworkId,
+    primary_peer_id: PeerId,
     config: NodeConfig,
 ) {
-    setup_peer_mempool_inner(smp, main_network_id, main_peer_id, None, None, config);
+    setup_peer_mempool_inner(smp, primary_network_id, primary_peer_id, None, None, config);
 }
 
 fn setup_peer_mempool_with_fallback(
     smp: &mut SharedMempoolNetwork,
-    main_network_id: NetworkId,
-    main_peer_id: PeerId,
+    primary_network_id: NetworkId,
+    primary_peer_id: PeerId,
     fallback_network_id: NetworkId,
     fallback_peer_id: PeerId,
     config: NodeConfig,
 ) {
     setup_peer_mempool_inner(
         smp,
-        main_network_id,
-        main_peer_id,
+        primary_network_id,
+        primary_peer_id,
         Some(fallback_network_id),
         Some(fallback_peer_id),
         config,
@@ -102,15 +102,16 @@ fn setup_peer_mempool_with_fallback(
 
 fn setup_peer_mempool_inner(
     smp: &mut SharedMempoolNetwork,
-    main_network_id: NetworkId,
-    main_peer_id: PeerId,
+    primary_network_id: NetworkId,
+    primary_peer_id: PeerId,
     fallback_network_id: Option<NetworkId>,
     fallback_peer_id: Option<PeerId>,
     config: NodeConfig,
 ) {
-    let mut network_ids = vec![];
-    let main_peer_network_id = PeerNetworkId(NodeNetworkId::new(main_network_id, 0), main_peer_id);
-    network_ids.push(main_peer_network_id);
+    let mut network_ids = vec![PeerNetworkId(
+        NodeNetworkId::new(primary_network_id, 0),
+        primary_peer_id,
+    )];
 
     if let Some(fallback_network_id) = fallback_network_id {
         let fallback_peer_id = fallback_peer_id.unwrap();
@@ -122,6 +123,7 @@ fn setup_peer_mempool_inner(
     let network_handles = setup_peer_network_interfaces(smp, network_ids.clone());
     start_peer_mempool(smp, network_ids, network_handles, config);
 }
+
 fn fifo_diem_channel<T, V>() -> (Sender<T, V>, Receiver<T, V>)
 where
     T: Clone + Eq + Hash,
@@ -191,13 +193,13 @@ fn start_peer_mempool(
         vec![sender],
     );
 
-    let main_peer_id = network_ids[0].clone().1;
-    smp.subscribers.insert(main_peer_id, subscriber);
-    smp.mempools.insert(main_peer_id, mempool);
-    smp.runtimes.insert(main_peer_id, runtime);
+    let primary_peer_id = network_ids[0].clone().1;
+    smp.subscribers.insert(primary_peer_id, subscriber);
+    smp.mempools.insert(primary_peer_id, mempool);
+    smp.runtimes.insert(primary_peer_id, runtime);
     for other_peer_id in network_ids.into_iter().skip(1) {
-        smp.main_peer_ids
-            .insert(other_peer_id.peer_id(), main_peer_id);
+        smp.primary_peer_ids
+            .insert(other_peer_id.peer_id(), primary_peer_id);
     }
 }
 
@@ -214,9 +216,11 @@ impl SharedMempoolNetwork {
 
         let mut rng = StdRng::from_seed([0u8; 32]);
         for idx in 0..validator_nodes_count {
-            let mut config =
-                NodeConfig::random_with_template(idx as u32, &NodeConfig::default(), &mut rng);
-            config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
+            let mut config = NodeConfig::random_with_template(
+                idx as u32,
+                &NodeConfig::default_for_validator(),
+                &mut rng,
+            );
             let peer_id = config.validator_network.as_ref().unwrap().peer_id();
             config.mempool.shared_mempool_batch_size = broadcast_batch_size;
             // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
@@ -247,7 +251,8 @@ impl SharedMempoolNetwork {
         let full_node = PeerId::random();
 
         let mut rng = StdRng::from_seed([0u8; 32]);
-        let mut config = NodeConfig::random_with_template(0, &NodeConfig::default(), &mut rng);
+        let mut config =
+            NodeConfig::random_with_template(0, &NodeConfig::default_for_validator(), &mut rng);
 
         config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         config.mempool.shared_mempool_backoff_interval_ms = 50;
@@ -261,8 +266,11 @@ impl SharedMempoolNetwork {
         }
         setup_peer_mempool(&mut smp, NetworkId::vfn_network(), validator, config);
 
-        let mut fn_config = NodeConfig::random_with_template(1, &NodeConfig::default(), &mut rng);
-        fn_config.base.role = RoleType::FullNode;
+        let mut fn_config = NodeConfig::random_with_template(
+            1,
+            &NodeConfig::default_for_validator_full_node(),
+            &mut rng,
+        );
         fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         fn_config.mempool.shared_mempool_backoff_interval_ms = 50;
         // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
@@ -330,14 +338,14 @@ impl SharedMempoolNetwork {
     }
 
     fn wait_for_event(&mut self, peer_id: &PeerId, event: SharedMempoolNotification) {
-        let main_peer_id = self.main_peer_ids.get(peer_id).unwrap_or(peer_id);
-        let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
+        let primary_peer_id = self.primary_peer_ids.get(peer_id).unwrap_or(peer_id);
+        let subscriber = self.subscribers.get_mut(primary_peer_id).unwrap();
         assert_eq!(block_on(subscriber.next()).unwrap(), event);
     }
 
     fn check_no_events(&mut self, peer_id: &PeerId) {
-        let main_peer_id = self.main_peer_ids.get(peer_id).unwrap_or(peer_id);
-        let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
+        let primary_peer_id = self.primary_peer_ids.get(peer_id).unwrap_or(peer_id);
+        let subscriber = self.subscribers.get_mut(primary_peer_id).unwrap();
 
         assert!(subscriber.select_next_some().now_or_never().is_none());
     }
@@ -747,14 +755,11 @@ fn test_vfn_multi_network() {
     let vfn_1_public_network_id = PeerId::random();
     let pfn = PeerId::random();
 
-    let mut vfn_0_config = NodeConfig::default();
-    vfn_0_config.base.role = RoleType::FullNode;
+    let mut vfn_0_config = NodeConfig::default_for_validator_full_node();
     vfn_0_config.mempool.shared_mempool_batch_size = 1;
     vfn_0_config.upstream.networks = vec![NetworkId::vfn_network(), NetworkId::Public];
-    let mut vfn_1_config = NodeConfig::default();
-    vfn_1_config.base.role = RoleType::FullNode;
-    let mut pfn_config = NodeConfig::default();
-    pfn_config.base.role = RoleType::FullNode;
+    let vfn_1_config = NodeConfig::default_for_validator_full_node();
+    let mut pfn_config = NodeConfig::default_for_public_full_node();
     pfn_config.upstream.networks = vec![NetworkId::Public];
 
     let mut smp = SharedMempoolNetwork::default();
@@ -810,20 +815,16 @@ fn test_fn_failover() {
     let fn_3 = PeerId::random();
     let fallback_peers = vec![fn_1, fn_2, fn_3];
 
-    let v0_config = NodeConfig::default();
-    let mut fn_0_config = NodeConfig::default();
-    fn_0_config.base.role = RoleType::FullNode;
+    let v0_config = NodeConfig::default_for_validator();
+    let mut fn_0_config = NodeConfig::default_for_validator_full_node();
     fn_0_config.mempool.default_failovers = 0;
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config.upstream.networks = vec![NetworkId::vfn_network(), NetworkId::Public];
-    let mut fn_1_config = NodeConfig::default();
-    fn_1_config.base.role = RoleType::FullNode;
+    let mut fn_1_config = NodeConfig::default_for_public_full_node();
     fn_1_config.mempool.default_failovers = 0;
-    let mut fn_2_config = NodeConfig::default();
-    fn_2_config.base.role = RoleType::FullNode;
+    let mut fn_2_config = NodeConfig::default_for_public_full_node();
     fn_2_config.mempool.default_failovers = 0;
-    let mut fn_3_config = NodeConfig::default();
-    fn_3_config.base.role = RoleType::FullNode;
+    let mut fn_3_config = NodeConfig::default_for_public_full_node();
     fn_3_config.mempool.default_failovers = 0;
 
     let mut smp = SharedMempoolNetwork::default();
