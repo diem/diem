@@ -3,14 +3,21 @@
 
 #![forbid(unsafe_code)]
 
+mod archived_files;
 pub mod transaction_scripts;
+#[cfg(test)]
+mod unit_tests;
 
+use anyhow::Result;
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
-use diem_framework::build_stdlib;
+use diem_framework::{build_stdlib, filter_move_bytecode_files, utils::iterate_directory};
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fs::read};
 use vm::{access::ModuleAccess, file_format::CompiledModule};
+
+pub use archived_files::GitHash;
+use std::path::PathBuf;
 
 pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";
 
@@ -22,6 +29,7 @@ static FRESH_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> =
 // This needs to be a string literal due to restrictions imposed by include_bytes.
 /// The compiled library needs to be included in the Rust binary due to Docker deployment issues.
 /// This is why we include it here.
+pub const COMPILED_STDLIB_PATH: &str = "stdlib";
 pub const COMPILED_STDLIB_DIR: Dir = include_dir!("stdlib");
 
 pub const ERROR_DESCRIPTIONS: &[u8] =
@@ -38,40 +46,12 @@ pub const ERROR_DESCRIPTIONS: &[u8] =
 // option to `stdlib_modules`.
 static COMPILED_MOVELANG_STDLIB_WITH_BYTES: Lazy<(Vec<Vec<u8>>, Vec<CompiledModule>)> =
     Lazy::new(|| {
-        let modules: BTreeMap<&str, (Vec<u8>, CompiledModule)> = COMPILED_STDLIB_DIR
-            .files()
-            .iter()
-            .map(|file| {
-                let name = file.path().to_str().unwrap();
-                let bytes = file.contents().to_vec();
-                let module = CompiledModule::deserialize(&bytes).unwrap();
-                (name, (bytes, module))
-            })
-            .collect();
-
-        let mut module_bytes = vec![];
-        let mut verified_modules = vec![];
-        for (_, (bytes, module)) in modules.into_iter() {
-            verify_module(&module).expect("stdlib module failed to verify");
-            dependencies::verify_module(&module, &verified_modules)
-                .expect("stdlib module dependency failed to verify");
-            module_bytes.push(bytes);
-            verified_modules.push(module);
-        }
-        let modules_by_id: BTreeMap<_, _> = verified_modules
-            .iter()
-            .map(|module| (module.self_id(), module))
-            .collect();
-        for module in modules_by_id.values() {
-            cyclic_dependencies::verify_module(module, |module_id| {
-                Ok(modules_by_id
-                    .get(module_id)
-                    .expect("missing module in stdlib")
-                    .immediate_module_dependencies())
-            })
-            .expect("stdlib module has cyclic dependencies");
-        }
-        (module_bytes, verified_modules)
+        stdlib_modules_from_names_and_bytes(COMPILED_STDLIB_DIR.files().iter().map(|file| {
+            (
+                file.path().to_str().unwrap().to_owned(),
+                file.contents().to_vec(),
+            )
+        }))
     });
 
 /// An enum specifying whether the compiled stdlib/scripts should be used or freshly built versions
@@ -106,6 +86,41 @@ impl StdLibModules {
                 .collect(),
         }
     }
+}
+
+fn stdlib_modules_from_names_and_bytes<'a>(
+    files: impl Iterator<Item = (String, Vec<u8>)>,
+) -> (Vec<Vec<u8>>, Vec<CompiledModule>) {
+    let modules: BTreeMap<String, (Vec<u8>, CompiledModule)> = files
+        .map(|(name, bytes)| {
+            let module = CompiledModule::deserialize(&bytes).unwrap();
+            (name, (bytes, module))
+        })
+        .collect();
+
+    let mut module_bytes = vec![];
+    let mut verified_modules = vec![];
+    for (_, (bytes, module)) in modules.into_iter() {
+        verify_module(&module).expect("stdlib module failed to verify");
+        dependencies::verify_module(&module, &verified_modules)
+            .expect("stdlib module dependency failed to verify");
+        module_bytes.push(bytes);
+        verified_modules.push(module);
+    }
+    let modules_by_id: BTreeMap<_, _> = verified_modules
+        .iter()
+        .map(|module| (module.self_id(), module))
+        .collect();
+    for module in modules_by_id.values() {
+        cyclic_dependencies::verify_module(module, |module_id| {
+            Ok(modules_by_id
+                .get(module_id)
+                .expect("missing module in stdlib")
+                .immediate_module_dependencies())
+        })
+        .expect("stdlib module has cyclic dependencies");
+    }
+    (module_bytes, verified_modules)
 }
 
 /// Returns a reference to the standard library. Depending upon the `option` flag passed in
@@ -147,4 +162,17 @@ pub fn env_stdlib_modules() -> StdLibModules {
 /// used.
 pub fn use_compiled() -> bool {
     std::env::var(NO_USE_COMPILED).is_err()
+}
+
+pub fn old_stdlib_modules(hash: GitHash) -> Result<(Vec<Vec<u8>>, Vec<CompiledModule>)> {
+    let archived_stdlib =
+        crate::archived_files::get_archived_files(&PathBuf::from(COMPILED_STDLIB_PATH), hash)?;
+    Ok(stdlib_modules_from_names_and_bytes(
+        filter_move_bytecode_files(iterate_directory(archived_stdlib.path())).filter_map(|path| {
+            Some((
+                path.to_str().unwrap().to_owned(),
+                read(path.as_path()).ok()?,
+            ))
+        }),
+    ))
 }
