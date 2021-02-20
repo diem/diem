@@ -113,17 +113,21 @@ impl Vote {
     }
 
     /// Generate Timeout with the highest quorum cert.
-    pub fn generate_timeout(&self, quorum_cert: QuorumCert) -> Timeout {
+    pub fn generate_timeout(&self, quorum_cert: &QuorumCert) -> Timeout {
         Timeout::new(
             self.epoch(),
             self.vote_data().proposed().round(),
-            quorum_cert,
+            quorum_cert.certified_block().round(),
         )
     }
 
     /// Returns the Timeout and corresponding signatures
     pub fn timeout_and_signature(&self) -> Option<(Timeout, Ed25519Signature)> {
         self.timeout.clone()
+    }
+
+    pub fn timeout(&self) -> Option<&Timeout> {
+        self.timeout.as_ref().map(|(t, _)| t)
     }
 
     /// Return the epoch of the vote
@@ -154,14 +158,17 @@ impl Vote {
             .verify(self.author(), &self.ledger_info, &self.signature)
             .context("Failed to verify Vote")?;
         if let Some((timeout, timeout_signature)) = &self.timeout {
-            // verify the QC
-            timeout
-                .quorum_cert()
-                .verify(validator)
-                .context("Failed to verify QC in Timeout Vote")?;
+            ensure!(
+                timeout.epoch() == self.epoch(),
+                "Timeout in vote has different epoch"
+            );
+            ensure!(
+                timeout.round() == self.vote_data.proposed().round(),
+                "Timeout in vote has different round"
+            );
             // verify the message
             validator
-                .verify(self.author(), &timeout.signed_repr(), timeout_signature)
+                .verify(self.author(), timeout, timeout_signature)
                 .context("Failed to verify Timeout signature")?;
         }
         // Let us verify the vote data as well

@@ -137,6 +137,10 @@ fn generate_sync_info(
         ledger_info,
     );
     let commit_cert = quorum_cert.clone();
-    let timeout_cert = TimeoutCertificate::new(Timeout::new(1, timeout_round, quorum_cert.clone()));
+    let timeout_cert = TimeoutCertificate::new(Timeout::new(
+        1,
+        timeout_round,
+        quorum_cert.certified_block().round(),
+    ));
     SyncInfo::new(quorum_cert, commit_cert, Some(timeout_cert))
 }

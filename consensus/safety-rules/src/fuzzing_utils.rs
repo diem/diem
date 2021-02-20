@@ -151,9 +151,9 @@ prop_compose! {
     )(
         epoch in any::<u64>(),
         round in any::<u64>(),
-        quorum_cert in arb_quorum_cert(),
+        hqc_round in any::<u64>(),
     ) -> Timeout {
-        Timeout::new(epoch, round, quorum_cert)
+        Timeout::new(epoch, round, hqc_round)
     }
 }
 

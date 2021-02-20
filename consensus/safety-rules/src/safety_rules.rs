@@ -10,7 +10,6 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     t_safety_rules::TSafetyRules,
 };
-use consensus_types::timeout::TimeoutForSigning;
 use consensus_types::timeout_certificate::TimeoutCertificate;
 use consensus_types::{
     block::Block,
@@ -34,7 +33,6 @@ use diem_types::{
     ledger_info::LedgerInfo, waypoint::Waypoint,
 };
 use serde::Serialize;
-use std::cmp::Ordering;
 
 /// @TODO consider a cache of verified QCs to cut down on verification costs
 pub struct SafetyRules {
@@ -43,6 +41,10 @@ pub struct SafetyRules {
     export_consensus_key: bool,
     validator_signer: Option<ConfigurableValidatorSigner>,
     epoch_state: Option<EpochState>,
+}
+
+fn next_round(round: Round) -> Result<Round, Error> {
+    u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round))
 }
 
 impl SafetyRules {
@@ -124,8 +126,6 @@ impl SafetyRules {
         let block1 = proposed_block.quorum_cert().certified_block().round();
 
         // verify 2-chain rule
-        let next_round =
-            |round: u64| u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round));
         let commit = next_round(block1)? == block2;
 
         // create a ledger info
@@ -138,59 +138,24 @@ impl SafetyRules {
         Ok(LedgerInfo::new(commit_info, consensus_data_hash))
     }
 
-    /// Second voting rule
-    fn verify_and_update_preferred_round(
+    fn update_preferred_round(
         &mut self,
         quorum_cert: &QuorumCert,
-        timeout_cert: Option<&TimeoutCertificate>,
         safety_data: &mut SafetyData,
-    ) -> Result<bool, Error> {
+    ) -> bool {
         let preferred_round = safety_data.preferred_round;
         let one_chain_round = quorum_cert.certified_block().round();
-        // let two_chain_round = quorum_cert.parent_block().round();
 
-        match one_chain_round.cmp(&preferred_round) {
-            // unlock with timeout cert
-            Ordering::Less => match timeout_cert.filter(|tc| tc.hqc_round() == one_chain_round) {
-                Some(_) => {
-                    safety_data.preferred_round = one_chain_round;
-                    Ok(true)
-                }
-                None => Err(Error::IncorrectPreferredRound(
-                    one_chain_round,
-                    preferred_round,
-                )),
-            },
-            Ordering::Greater => {
-                safety_data.preferred_round = one_chain_round;
-                info!(
-                    SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
-                        .preferred_round(safety_data.preferred_round)
-                );
-                Ok(true)
-            }
-            Ordering::Equal => Ok(false),
+        if one_chain_round > preferred_round {
+            safety_data.preferred_round = one_chain_round;
+            info!(
+                SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
+                    .preferred_round(safety_data.preferred_round)
+            );
+            true
+        } else {
+            false
         }
-
-        // let updated = match two_chain_round.cmp(&preferred_round) {
-        //     Ordering::Greater => {
-        //         safety_data.preferred_round = two_chain_round;
-        //         info!(
-        //             SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
-        //                 .preferred_round(safety_data.preferred_round)
-        //         );
-        //         true
-        //     }
-        //     Ordering::Less => {
-        //         trace!(
-        //         "2-chain round {} is lower than preferred round {} but 1-chain round {} is higher.",
-        //         two_chain_round, preferred_round, one_chain_round
-        //     );
-        //         false
-        //     }
-        //     Ordering::Equal => false,
-        // };
-        // Ok(updated)
     }
 
     /// This verifies whether the author of one proposal is the validator signer
@@ -235,6 +200,26 @@ impl SafetyRules {
         );
 
         Ok(())
+    }
+
+    /// Second voting rule
+    fn verify_voting_rule(
+        &self,
+        block: &Block,
+        maybe_tc: Option<&TimeoutCertificate>,
+    ) -> Result<(), Error> {
+        let block_round = block.block_data().round();
+        let parent_round = block.quorum_cert().certified_block().round();
+        if block_round == next_round(parent_round)? {
+            return Ok(());
+        }
+        if let Some(tc) = maybe_tc {
+            if block_round == next_round(tc.round())? && parent_round >= tc.hqc_round() {
+                return Ok(());
+            }
+        }
+        // TODO: update errors
+        return Err(Error::IncorrectPreferredRound(block_round, parent_round));
     }
 
     /// This verifies a QC has valid signatures.
@@ -343,7 +328,7 @@ impl SafetyRules {
                         author,
                         expected_key,
                     ));
-                    self.sign(&TimeoutForSigning::new(0, 0, 0))
+                    self.sign(&Timeout::new(0, 0, 0))
                         .map(|_signature| ())
                         .map_err(|error| Error::ValidatorKeyNotFound(error.to_string()))
                 }
@@ -390,35 +375,33 @@ impl SafetyRules {
             .validate_signature(&self.epoch_state()?.verifier)
             .map_err(|error| Error::InternalError(error.to_string()))?;
 
-        self.verify_and_update_preferred_round(
-            proposed_block.quorum_cert(),
-            timeout_cert,
-            &mut safety_data,
-        )?;
         // if already voted on this round, send back the previous vote.
         if let Some(vote) = safety_data.last_vote.clone() {
             if vote.vote_data().proposed().round() == proposed_block.round() {
                 return Ok(vote);
             }
         }
-
-        self.verify_qc(proposed_block.quorum_cert())?;
-        proposed_block
-            .validate_signature(&self.epoch_state()?.verifier)
-            .map_err(|error| Error::InternalError(error.to_string()))?;
-
-        self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
+        // first voting rule
         self.verify_and_update_last_vote_round(
             proposed_block.block_data().round(),
             &mut safety_data,
         )?;
+        // second voting rule
+        self.verify_voting_rule(&proposed_block, timeout_cert)?;
+
+        let vote_data = self.extension_check(vote_proposal)?;
+        self.update_preferred_round(proposed_block.quorum_cert(), &mut safety_data);
 
         // Construct and sign vote
-        let vote_data = self.extension_check(vote_proposal)?;
-        let author = self.signer()?.author();
-        let ledger_info = self.construct_ledger_info(proposed_block, vote_data.hash())?;
-        let signature = self.sign(&ledger_info)?;
-        let vote = Vote::new_with_signature(vote_data, author, ledger_info, signature);
+        let mut ledger_info_placeholder =
+            self.construct_ledger_info(proposed_block, vote_data.hash())?;
+        let signature = self.sign(&ledger_info_placeholder)?;
+        let vote = Vote::new_with_signature(
+            vote_data,
+            self.signer()?.author(),
+            ledger_info_placeholder,
+            signature,
+        );
 
         safety_data.last_vote = Some(vote.clone());
         self.persistent_storage.set_safety_data(safety_data)?;
@@ -442,11 +425,7 @@ impl SafetyRules {
         }
 
         self.verify_qc(block_data.quorum_cert())?;
-        if self.verify_and_update_preferred_round(
-            block_data.quorum_cert(),
-            None,
-            &mut safety_data,
-        )? {
+        if self.update_preferred_round(block_data.quorum_cert(), &mut safety_data) {
             self.persistent_storage.set_safety_data(safety_data)?;
         }
 
@@ -461,9 +440,8 @@ impl SafetyRules {
 
         let mut safety_data = self.persistent_storage.safety_data()?;
         self.verify_epoch(timeout.epoch(), &safety_data)?;
-        self.verify_qc(timeout.quorum_cert())?;
 
-        if timeout.round() <= safety_data.preferred_round {
+        if timeout.hqc_round() < safety_data.preferred_round {
             return Err(Error::IncorrectPreferredRound(
                 timeout.round(),
                 safety_data.preferred_round,
@@ -478,12 +456,9 @@ impl SafetyRules {
         if timeout.round() > safety_data.last_voted_round {
             self.verify_and_update_last_vote_round(timeout.round(), &mut safety_data)?;
         }
-        if timeout.hqc_round() > safety_data.preferred_round {
-            self.verify_and_update_preferred_round(timeout.quorum_cert(), None, &mut safety_data)?;
-        }
         self.persistent_storage.set_safety_data(safety_data)?;
 
-        let signature = self.sign(&timeout.signed_repr())?;
+        let signature = self.sign(timeout)?;
         Ok(signature)
     }
 }

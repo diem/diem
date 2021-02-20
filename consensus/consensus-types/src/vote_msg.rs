@@ -54,6 +54,11 @@ impl VoteMsg {
             self.vote().epoch() == self.sync_info.epoch(),
             "VoteMsg has different epoch"
         );
+        // ensure the hqc_round is not greater than the hqc, it may be less if the node receives new qc
+        // after timeout but it doesn't affect the max of 2f+1 in TimeoutCert
+        if let Some(t) = self.vote().timeout() {
+            ensure!(t.hqc_round() <= self.sync_info.highest_certified_round());
+        }
         // We're not verifying SyncInfo here yet: we are going to verify it only in case we need
         // it. This way we avoid verifying O(n) SyncInfo messages while aggregating the votes
         // (O(n^2) signature verifications).

@@ -502,7 +502,7 @@ fn new_round_on_timeout_certificate() {
     let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![], 2, 2, genesis_qc.clone(), &node.signer);
-    let timeout = Timeout::new(1, 1, genesis_qc.clone());
+    let timeout = Timeout::new(1, 1, 0);
     let timeout_signature = timeout.sign(&node.signer);
 
     let mut tc = TimeoutCertificate::new(timeout.clone());
@@ -637,7 +637,7 @@ fn recover_on_restart() {
     // insert a few successful proposals
     for i in 1..=num_proposals {
         let proposal = inserter.create_block_with_qc(genesis_qc.clone(), i, i, vec![]);
-        let timeout = Timeout::new(1, i - 1, genesis_qc.clone());
+        let timeout = Timeout::new(1, i - 1, 0);
         let mut tc = TimeoutCertificate::new(timeout.clone());
         let signature = timeout.sign(inserter.signer());
         tc.add(inserter.signer().author(), timeout, signature);

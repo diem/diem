@@ -180,7 +180,7 @@ impl LeaderReputation {
 impl ProposerElection for LeaderReputation {
     fn get_valid_proposer(&self, round: Round) -> Author {
         // TODO: configure the round gap
-        let target_round = if round >= 4 { round - 4 } else { 0 };
+        let target_round = if round >= 3 { round - 3 } else { 0 };
         let sliding_window = self.backend.get_block_metadata(target_round);
         let mut weights = self.heuristic.get_weights(&self.proposers, &sliding_window);
         assert_eq!(weights.len(), self.proposers.len());

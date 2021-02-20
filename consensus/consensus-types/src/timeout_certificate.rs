@@ -1,12 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::timeout::TimeoutForSigning;
 use crate::{
     common::{Author, Round},
     timeout::Timeout,
 };
-use anyhow::{anyhow, Context};
+use anyhow::{ensure, Context};
 use diem_crypto::ed25519::Ed25519Signature;
 use diem_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
@@ -27,9 +26,10 @@ impl fmt::Display for TimeoutCertificate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "TimeoutCertificate[epoch: {}, round: {}]",
+            "TimeoutCertificate[epoch: {}, round: {}, hqc_round: {}]",
             self.timeout.epoch(),
             self.timeout.round(),
+            self.timeout.hqc_round(),
         )
     }
 }
@@ -45,30 +45,22 @@ impl TimeoutCertificate {
 
     /// Verifies the signatures for each validator, it signs on the timeout round and the highest qc round.
     pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
-        // Verify the highest quorum cert validity.
-        self.timeout.quorum_cert().verify(validator)?;
-        let qc_round = self.timeout.quorum_cert().certified_block().round();
-        let mut highest_round = None;
+        // Verify enough signatures
+        validator.check_voting_power(self.signatures.keys())?;
         // Verify each node's timeout attestation.
+        let mut highest_signed_round = 0;
         for (author, (hqc_round, signature)) in &self.signatures {
-            let t = TimeoutForSigning {
-                epoch: self.timeout.epoch(),
-                round: self.timeout.round(),
-                hqc_round: *hqc_round,
-            };
+            let t = Timeout::new(self.timeout.epoch(), self.timeout.round(), *hqc_round);
             validator
                 .verify(*author, &t, signature)
                 .context("Failed to verify TimeoutCertificate")?;
-            highest_round = Some(std::cmp::max(highest_round.unwrap_or(0), *hqc_round));
+            highest_signed_round = std::cmp::max(*hqc_round, highest_signed_round);
         }
-        match highest_round {
-            Some(round) if round == qc_round => Ok(()),
-            signed_round => Err(anyhow!(
-                "Inconsistent hqc round, qc has round {}, highest signed round {:?}",
-                qc_round,
-                signed_round,
-            )),
-        }
+        ensure!(
+            highest_signed_round == self.timeout.hqc_round(),
+            "Mismatched highest qc round"
+        );
+        Ok(())
     }
 
     /// Returns the epoch of the timeout certificate

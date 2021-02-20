@@ -455,10 +455,8 @@ impl RoundManager {
             }
         };
 
-        // TODO: need update if hqc changed?
         if !timeout_vote.is_timeout() {
-            let timeout = timeout_vote
-                .generate_timeout(self.block_store.highest_quorum_cert().as_ref().clone());
+            let timeout = timeout_vote.generate_timeout(&self.block_store.highest_quorum_cert());
             let signature = self
                 .safety_rules
                 .sign_timeout(&timeout)
@@ -582,7 +580,7 @@ impl RoundManager {
             .block_store
             .highest_timeout_cert()
             .filter(|tc| {
-                tc.round() == executed_block.round()
+                tc.round() + 1 == executed_block.round()
                     && executed_block.quorum_cert().certified_block().round() + 1
                         != executed_block.round()
             })

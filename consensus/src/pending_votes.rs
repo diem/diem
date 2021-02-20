@@ -340,7 +340,7 @@ mod tests {
         );
 
         // submit the same vote but enhanced with a timeout -> VoteAdded
-        let timeout = vote1_author_0.generate_timeout(qc.clone());
+        let timeout = vote1_author_0.generate_timeout(&qc);
         let signature = timeout.sign(&signers[0]);
         vote1_author_0.add_timeout(timeout, signature);
 
@@ -359,7 +359,7 @@ mod tests {
         );
 
         // if that vote is now enhanced with a timeout signature -> NewTimeoutCertificate
-        let timeout = vote2_author_1.generate_timeout(qc);
+        let timeout = vote2_author_1.generate_timeout(&qc);
         let signature = timeout.sign(&signers[1]);
         vote2_author_1.add_timeout(timeout, signature);
         match pending_votes.insert_vote(&vote2_author_1, &validator) {
