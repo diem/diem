@@ -63,12 +63,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 0,
             )
         } else {
-            EmitJobRequest::for_instances(
-                context.cluster.fullnode_instances().to_vec(),
-                context.global_emit_job_request,
-                0,
-                0,
-            )
+            EmitJobRequest::fixed_tps(context.cluster.fullnode_instances().to_vec(), 10, 0, 0)
         };
         let stats = context
             .tx_emitter
