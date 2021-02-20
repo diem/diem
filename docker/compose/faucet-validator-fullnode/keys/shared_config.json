@@ -9,15 +9,28 @@
     "last_update": 1613769467,
     "value": "ee1aa49a4459dfe813a3cf6eb882041230c7b2558469de81f87c9bf23bf10a03"
   },
+  "testing/owner_account": {
+    "data": "GetResponse",
+    "last_update": 1613769605,
+    "value": "BD2BDB299FEF878BD97D8009C67565CF"
+  },
   "testing/validator_operator": {
     "data": "GetResponse",
     "last_update": 1613769467,
     "value": "testing"
   },
+  "testing/validator_network": {
+    "last_update": 1613766318,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
   "diem/treasury_compliance": {
     "data": "GetResponse",
     "last_update": 1613771279,
     "value": "ee1aa49a4459dfe813a3cf6eb882041230c7b2558469de81f87c9bf23bf10a03"
+  },
+  "testing/fullnode_network": {
+    "last_update": 1613766267,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
   },
   "common/layout": {
     "data": "GetResponse",

@@ -1,75 +1,55 @@
 {
-  "consensus": {
-    "last_update": 1613766226,
+  "validator_network": {
+    "last_update": 1613766318,
     "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
-  },
-  "consensus_account": {
-    "last_update": 1613766226,
-    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
-  },
-  "diem_root": {
-    "last_update": 1613759934,
-    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
-  },
-  "diem_root_account": {
-    "last_update": 1613759934,
-    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
-  },
-  "execution": {
-    "last_update": 1613776143,
-    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
-  },
-  "execution_account": {
-    "last_update": 1613776143,
-    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
-  },
-  "fullnode_network": {
-    "last_update": 1613766267,
-    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
-  },
-  "fullnode_network_account": {
-    "last_update": 1613766267,
-    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
-  },
-  "genesis-waypoint": {
-    "data": "GetResponse",
-    "last_update": 1613770982,
-    "value": "0:23dd499059a655ef4de2a8a0662105233cdaeb7df9e63bb0ddcb23f2ae37d668"
-  },
-  "operator": {
-    "last_update": 1613759935,
-    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
-  },
-  "operator_account": {
-    "data": "GetResponse",
-    "last_update": 1613769466,
-    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
   },
   "owner": {
     "data": "GetResponse",
     "last_update": 1613759936,
     "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
   },
-  "owner_account": {
-    "data": "GetResponse",
-    "last_update": 1613769605,
-    "value": "BD2BDB299FEF878BD97D8009C67565CF"
+  "execution_account": {
+    "last_update": 1613776143,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
   },
-  "treasury_compliance": {
-    "last_update": 1613760242,
+  "operator": {
+    "last_update": 1613759935,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "consensus": {
+    "last_update": 1613766226,
     "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
   },
   "treasury_compliance_account": {
     "last_update": 1613760242,
     "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
   },
-  "validator_network": {
-    "last_update": 1613766318,
+  "fullnode_network": {
+    "last_update": 1613766267,
     "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
   },
   "validator_network_account": {
     "last_update": 1613766318,
     "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "consensus_account": {
+    "last_update": 1613766226,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "operator_account": {
+    "data": "GetResponse",
+    "last_update": 1613769466,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "safety_data": {
+    "data": "GetResponse",
+    "last_update": 1613773160,
+    "value": {
+      "epoch": 0,
+      "last_vote": null,
+      "last_voted_round": 0,
+      "preferred_round": 0
+    }
   },
   "validator_network_address_keys": {
     "last_update": 1613768410,
@@ -80,19 +60,343 @@
       }
     }
   },
+  "execution": {
+    "last_update": 1613776143,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "fullnode_network_account": {
+    "last_update": 1613766267,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
+  "treasury_compliance": {
+    "last_update": 1613760242,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "diem_root": {
+    "last_update": 1613759934,
+    "value": "7f6f2ccdb23f2abb7b69278e947c01c6160a31cf02c19d06d0f6e5ab1d768b95"
+  },
+  "diem_root_account": {
+    "last_update": 1613759934,
+    "value": "66092DB9F48C5E2EA4D9D0D03D0B6ECC"
+  },
   "waypoint": {
+    "data": "GetResponse",
+    "last_update": 1613781078,
+    "value": "0:23dd499059a655ef4de2a8a0662105233cdaeb7df9e63bb0ddcb23f2ae37d668"
+  },
+  "genesis-waypoint": {
     "data": "GetResponse",
     "last_update": 1613770982,
     "value": "0:23dd499059a655ef4de2a8a0662105233cdaeb7df9e63bb0ddcb23f2ae37d668"
   },
-  "safety_data": {
+  "owner_account": {
     "data": "GetResponse",
-    "last_update": 1613773160,
+    "last_update": 1613769605,
+    "value": "BD2BDB299FEF878BD97D8009C67565CF"
+  },
+  "validator_config": {
+    "data": "GetResponse",
+    "last_update": 1613769605,
     "value": {
-      "epoch": 0,
-      "last_vote": null,
-      "last_voted_round": 0,
-      "preferred_round": 0
+      "UserTransaction": {
+        "authenticator": {
+          "Ed25519": {
+            "public_key": "ee1aa49a4459dfe813a3cf6eb882041230c7b2558469de81f87c9bf23bf10a03",
+            "signature": "47b881f56953a26cfdc431c886d84a95363c2ecec11709e752f2e9666c6ea9a0de665655f5c4a1365067444f8f882da8bc304cfa1e765db7d42d313f252d170f"
+          }
+        },
+        "raw_txn": {
+          "chain_id": 4,
+          "expiration_timestamp_secs": 1613773205,
+          "gas_currency_code": "XUS",
+          "gas_unit_price": 0,
+          "max_gas_amount": 1000000,
+          "payload": {
+            "Script": {
+              "args": [
+                {
+                  "Address": "BD2BDB299FEF878BD97D8009C67565CF"
+                },
+                {
+                  "U8Vector": [
+                    238,
+                    26,
+                    164,
+                    154,
+                    68,
+                    89,
+                    223,
+                    232,
+                    19,
+                    163,
+                    207,
+                    110,
+                    184,
+                    130,
+                    4,
+                    18,
+                    48,
+                    199,
+                    178,
+                    85,
+                    132,
+                    105,
+                    222,
+                    129,
+                    248,
+                    124,
+                    155,
+                    242,
+                    59,
+                    241,
+                    10,
+                    3
+                  ]
+                },
+                {
+                  "U8Vector": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    62,
+                    66,
+                    8,
+                    65,
+                    149,
+                    159,
+                    237,
+                    61,
+                    250,
+                    201,
+                    27,
+                    61,
+                    48,
+                    15,
+                    164,
+                    0,
+                    59,
+                    100,
+                    25,
+                    36,
+                    157,
+                    48,
+                    251,
+                    3,
+                    166,
+                    141,
+                    48,
+                    19,
+                    61,
+                    247,
+                    132,
+                    98,
+                    28,
+                    105,
+                    86,
+                    216,
+                    199,
+                    175,
+                    25,
+                    83,
+                    105,
+                    67,
+                    247,
+                    113,
+                    36,
+                    59,
+                    25,
+                    100,
+                    238,
+                    242,
+                    163,
+                    111,
+                    142,
+                    165,
+                    11,
+                    242,
+                    30,
+                    43,
+                    189,
+                    123,
+                    132,
+                    141,
+                    178
+                  ]
+                },
+                {
+                  "U8Vector": [
+                    1,
+                    45,
+                    4,
+                    0,
+                    172,
+                    16,
+                    1,
+                    4,
+                    5,
+                    38,
+                    24,
+                    7,
+                    32,
+                    201,
+                    18,
+                    151,
+                    5,
+                    51,
+                    150,
+                    35,
+                    100,
+                    198,
+                    130,
+                    119,
+                    241,
+                    66,
+                    101,
+                    35,
+                    96,
+                    19,
+                    118,
+                    31,
+                    236,
+                    213,
+                    193,
+                    55,
+                    247,
+                    130,
+                    171,
+                    127,
+                    225,
+                    17,
+                    175,
+                    199,
+                    11,
+                    8,
+                    0
+                  ]
+                }
+              ],
+              "code": [
+                161,
+                28,
+                235,
+                11,
+                1,
+                0,
+                0,
+                0,
+                5,
+                1,
+                0,
+                2,
+                3,
+                2,
+                5,
+                5,
+                7,
+                11,
+                7,
+                18,
+                27,
+                8,
+                45,
+                16,
+                0,
+                0,
+                0,
+                1,
+                0,
+                1,
+                0,
+                5,
+                6,
+                12,
+                5,
+                10,
+                2,
+                10,
+                2,
+                10,
+                2,
+                0,
+                15,
+                86,
+                97,
+                108,
+                105,
+                100,
+                97,
+                116,
+                111,
+                114,
+                67,
+                111,
+                110,
+                102,
+                105,
+                103,
+                10,
+                115,
+                101,
+                116,
+                95,
+                99,
+                111,
+                110,
+                102,
+                105,
+                103,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                7,
+                11,
+                0,
+                10,
+                1,
+                11,
+                2,
+                11,
+                3,
+                11,
+                4,
+                17,
+                0,
+                2
+              ],
+              "ty_args": []
+            }
+          },
+          "sender": "66092DB9F48C5E2EA4D9D0D03D0B6ECC",
+          "sequence_number": 0
+        }
+      }
     }
   }
 }

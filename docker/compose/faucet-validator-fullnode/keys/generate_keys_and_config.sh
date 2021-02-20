@@ -44,7 +44,6 @@ create_key fullnode_network | extend_keyfile
 create_key validator_network | extend_keyfile
 
 # Add the special value for `validator_network_address_keys`
-#TODO: REPLACE WITH 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' BEFORE MERGING!
 (
   cat <<EOF
   {
@@ -53,7 +52,7 @@ create_key validator_network | extend_keyfile
       "value": {
         "current": 0,
         "keys": {
-          "0": "o/Q6rShKwxrXsN4yyIffnM3RSxgtd/5jf09B8n4us+Q="
+          "0": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         }
       }
     }

@@ -1,38 +1,43 @@
 base:
-    # This is the location Diem will store its database.
-    # It is backed by a dedicated docker volume for persistence.
-    data_dir: "/opt/diem/data"
-    role: full_node
-    waypoint:
-        # This is a checkpoint into the blockchain for added security.
-        from_file: "/opt/diem/etc/waypoint.txt"
+  # This is the location Diem will store its database.
+  # It is backed by a dedicated docker volume for persistence.
+  data_dir: "/opt/diem/data"
+  role: full_node
+  waypoint:
+    # This is a checkpoint into the blockchain for added security.
+    from_file: "/opt/diem/etc/waypoint.txt"
 
 execution:
-    # Path to a genesis transaction. Note, this must be paired with a waypoint.
-    genesis_file_location: "/opt/diem/etc/genesis.blob"
+  # Path to a genesis transaction. Note, this must be paired with a waypoint.
+  genesis_file_location: "/opt/diem/etc/genesis.blob"
 
 
 full_node_networks:
-    - discovery_method: "none"
-      # The network must have a listen address to specify protocols. This runs it locally to
-      # prevent remote, incoming connections.
-      listen_address: "/ip4/127.0.0.1/tcp/6180"
-      mutual_authentication: false
-      network_id:
-        private: vfn
+  - discovery_method: "none"
+    # The network must have a listen address to specify protocols. This runs it locally to
+    # prevent remote, incoming connections.
+    listen_address: "/ip4/127.0.0.1/tcp/6180"
+    mutual_authentication: false
+    network_id:
+      private: vfn
 
-      seeds:
-        B5B333AABBF92E78524E2129B722EACA:
-          addresses:
-            - "/ip4/172.16.1.2/tcp/7180/ln-noise-ik/ba6e022da6e58f4a422578b0e6a726cfbb81de6bca543cd0e1166a1fc48af218/ln-handshake/0"
-          role: "ValidatorFullNode"
+    seeds:
+      BD2BDB299FEF878BD97D8009C67565CF:
+        addresses:
+          - "/ip4/172.16.1.2/tcp/7180/ln-noise-ik/c912970533962364c68277f14265236013761fecd5c137f782ab7fe111afc70b/ln-handshake/0"
+        role: "ValidatorFullNode"
 
 json_rpc:
-    # This specifies your JSON-RPC endpoint. Intentionally on public so that Docker can export it.
-    address: 0.0.0.0:8081
+  # This specifies your JSON-RPC endpoint. Intentionally on public so that Docker can export it.
+  address: 0.0.0.0:8081
 
 # Upstream Peers: those to whom we forward any transactions we get,
 #                 and from which we request chunk updates (the latest blockchain state)
 upstream:
   networks:
     - private: vfn
+
+logger:
+  chan_size: 10000
+  is_async: true
+  level: WARN

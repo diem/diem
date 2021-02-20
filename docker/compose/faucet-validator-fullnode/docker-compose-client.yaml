@@ -14,12 +14,9 @@ services:
           ipv4_address: 172.16.1.5
       volumes:
         - type: bind
-          source: ./validator_data/waypoint.txt
+          source: ./keys/waypoint.txt
           target: /opt/diem/etc/waypoint.txt
           read_only: true
-        - type: bind
-          source: ./validator_data/full_node_0_operator
-          target: /opt/diem/etc/full_node_0_operator
       entrypoint: /bin/bash
       command: >
         -c '

@@ -2,14 +2,6 @@
 # compose's json-rpc endpoint. This should be started after that compose has been started.
 # The faucet can be accessed at 127.0.0.1:8000
 #
-# Place the following files into the same directory:
-# * mint.key (also known as the diem_root_key)
-# * waypoint.txt
-#
-# Additional notes:
-# * Images can be found at https://hub.docker.com/r/diem/faucet/tags, obtain the latest tag and
-# update below.
-
 
 # Run client with:
 # docker-compose -f docker-compose-client.yaml run client
@@ -24,91 +16,96 @@
 version: "3.8"
 services:
 
-    # The validator node. This runs inside the validator network (named "vfn")
-    validator:
-        image: libra/validator:devnet
-        cpus: 0.5
-        cpuset: "0"
-        networks:
-            shared:
-                ipv4_address: 172.16.1.2
-        volumes:
-            - type: bind
-              source: ./validator_data
-              target: /opt/diem/var
-        command: [ "/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var" ]
-        ports:
-            - "8080:8080"
+  # The validator node. This runs inside the validator network (named "vfn")
+  validator:
+    image: libra/validator:devnet
+    cpus: 0.5
+    cpuset: "0"
+    networks:
+      shared:
+        ipv4_address: 172.16.1.2
+    volumes:
+      - type: bind
+        source: ./keys/
+        target: /opt/diem/keys/
+        read_only: true
+      - type: bind
+        source: ./validator_node.yaml
+        target: /opt/diem/etc/validator_node.yaml
+        read_only: true
+    command: >
+      /bin/bash -c "
+           mkdir -p /opt/diem/etc/;
+           cp /opt/diem/keys/* /opt/diem/etc/;
+          /opt/diem/bin/diem-node --config /opt/diem/etc/validator_node.yaml
+        "
+    ports:
+      - "8080:8080"
 
-    # This is a validator fullnode: responsible for forwarding transactions to the validator,
-    #                               and receiving blockchain updates from the validator
-    fullnode:
-      image: libra/validator:devnet
-      depends_on:
-        - validator
-      networks:
-        shared:
-          ipv4_address: 172.16.1.4
-      volumes:
-        - type: bind
-          source: ./validator_data/full_node_0_operator
-          target: /opt/diem/etc/full_node_0_operator
-          read_only: true
-        - type: bind
-          source: ./validator_data/0/genesis.blob
-          target: /opt/diem/etc/genesis.blob
-          read_only: true
-        - type: bind
-          source: ./validator_data/waypoint.txt
-          target: /opt/diem/etc/waypoint.txt
-          read_only: true
-        - type: bind
-          source: ./public_full_node.yaml
-          target: /opt/diem/etc/node.yaml
-          read_only: true
-      command: >
-        /bin/bash -c "
-            sleep 3;
-            /opt/diem/bin/diem-node -f /opt/diem/etc/node.yaml
-          "
-      ports:
-        - "8081:8081"
 
-    # The faucet is a special feature for testing, through which you can create new currency
-    faucet:
-        image: libra/faucet:devnet
-        depends_on:
-            - validator
-            - fullnode
-        environment:
-            AC_HOST: "172.16.1.4"
-            AC_PORT: "8081"
-            CFG_CHAIN_ID: "TESTING"
-        networks:
-            shared:
-                ipv4_address: 172.16.1.3
-        volumes:
-            - type: bind
-              source: ./validator_data/mint.key
-              target: /opt/diem/etc/mint.key
-              read_only: true
-        command: >
-          /bin/bash -c "
-              sleep 3;
-              /opt/diem/bin/diem-faucet \
-              --address 0.0.0.0 \
-              --port 8000 \
-              --chain-id TESTING \
-              --mint-key-file-path /opt/diem/etc/mint.key \
-              --server-url http://172.16.1.4:8081
-            "
-        ports:
-            - "8000:8000"
+  # This is a validator fullnode: responsible for forwarding transactions to the validator,
+  #                               and receiving blockchain updates from the validator
+  fullnode:
+    image: libra/validator:devnet
+    depends_on:
+      - validator
+    networks:
+      shared:
+        ipv4_address: 172.16.1.4
+    volumes:
+      - type: bind
+        source: ./keys/
+        target: /opt/diem/keys/
+        read_only: true
+      - type: bind
+        source: ./public_full_node.yaml
+        target: /opt/diem/etc/public_full_node.yaml
+        read_only: true
+    command: >
+      /bin/bash -c "
+          sleep 3;
+          mkdir -p /opt/diem/etc/;
+          cp /opt/diem/keys/* /opt/diem/etc/;
+          /opt/diem/bin/diem-node --config /opt/diem/etc/public_full_node.yaml
+        "
+    ports:
+      - "8081:8081"
+
+  # The faucet is a special feature for testing, through which you can create new currency
+  faucet:
+    image: libra/faucet:devnet
+    depends_on:
+      - validator
+      - fullnode
+    environment:
+      AC_HOST: "172.16.1.4"
+      AC_PORT: "8081"
+      CFG_CHAIN_ID: "TESTING"
+    networks:
+      shared:
+        ipv4_address: 172.16.1.3
+    volumes:
+      - type: bind
+        source: ./keys/mint.key
+        target: /opt/diem/etc/mint.key
+        read_only: true
+    command: >
+      /bin/bash -c "
+          sleep 3;
+          /opt/diem/bin/diem-faucet \
+          --address 0.0.0.0 \
+          --port 8000 \
+          --chain-id TESTING \
+          --mint-key-file-path /opt/diem/etc/mint.key \
+          --server-url http://172.16.1.4:8081
+        "
+    ports:
+      - "8000:8000"
 
 
 networks:
-    shared:
-        name: "diem-docker-compose-shared"
-        ipam:
-          config:
-            - subnet: 172.16.1.0/24
+  shared:
+    name: "diem-docker-compose-shared"
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
