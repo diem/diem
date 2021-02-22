@@ -179,7 +179,7 @@ impl<'a> Instrumenter<'a> {
 
     fn new_attr_id(&mut self, loc: Loc) -> AttrId {
         let attr_id = AttrId::new(self.next_attr_id);
-        self.next_attr_id += 1;
+        self.next_attr_id = usize::saturating_add(self.next_attr_id, 1);
         self.new_locations.insert(attr_id, loc);
         attr_id
     }
