@@ -13,4 +13,4 @@ edition = "2018"
 crossbeam = "0.8.0"
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 proptest = "0.10.1"
-proptest-derive = "0.2.0"
+proptest-derive = "0.3.0"

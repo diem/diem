@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 aes-gcm = "0.8.0"
 proptest = { version = "0.10.1", optional = true }
-proptest-derive = { version = "0.2.0", optional = true }
+proptest-derive = { version = "0.3.0", optional = true }
 serde = { version = "1.0.123", default-features = false }
 serde_bytes = "0.11.5"
 static_assertions = "1.1.0"
@@ -26,7 +26,7 @@ move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 [dev-dependencies]
 anyhow = "1.0.38"
 proptest = "0.10.1"
-proptest-derive = "0.2.0"
+proptest-derive = "0.3.0"
 
 diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 

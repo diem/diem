@@ -32,7 +32,7 @@ diem-vm = { path = "../../diem-vm", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.10.1"
-proptest-derive = "0.2.0"
+proptest-derive = "0.3.0"
 diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
 
 [features]
