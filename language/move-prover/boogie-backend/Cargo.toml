@@ -25,7 +25,7 @@ pretty = "0.10.0"
 regex = "1.4.3"
 rand = "0.8.3"
 futures = "0.3.12"
-handlebars = "3.5.2"
+handlebars = "3.5.3"
 tokio = { version = "1.2.0", features = ["full"] }
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
