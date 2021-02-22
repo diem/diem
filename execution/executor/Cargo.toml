@@ -34,10 +34,10 @@ diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" 
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 
-proptest = { version = "0.10.1", optional = true }
+proptest = { version = "1.0.0", optional = true }
 
 [dev-dependencies]
-proptest = "0.10.1"
+proptest = "1.0.0"
 rand = "0.8.3"
 
 compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }

@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 mirai-annotations = { version = "1.10.1", default-features = false }
-proptest = { version = "0.10.1", optional = true }
+proptest = { version = "1.0.0", optional = true }
 serde = { version = "1.0.123", default-features = false }
 
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
@@ -23,7 +23,7 @@ short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 
 
 [dev-dependencies]
-proptest = "0.10.1"
+proptest = "1.0.0"
 
 diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 

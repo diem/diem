@@ -25,7 +25,7 @@ move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 vm-genesis = { path = "../../tools/vm-genesis", version = "0.1.0" }
 diem-vm = { path = "../../diem-vm", version = "0.1.0" }
-proptest = "0.10.1"
+proptest = "1.0.0"
 proptest-derive = "0.3.0"
 diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
 diem-config =  { path = "../../../config", version = "0.1.0" }
