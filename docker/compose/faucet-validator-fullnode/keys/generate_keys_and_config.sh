@@ -25,7 +25,7 @@ create_key() {
   # SEED=${2}
   NOW=$(date +%s)
   KEY=$(cargo run -p swiss-knife -- generate-test-ed25519-keypair --seed 0)
-  echo "$KEY" | jq -c ".data | { ${NAME}: { last_update:${NOW}, value: .private_key }, ${NAME}_account: { last_update:${NOW}, value: .diem_account_address } }"
+  echo "$KEY" | jq ".data | { ${NAME}: { last_update:${NOW}, value: .private_key }, ${NAME}_account: { last_update:${NOW}, value: .diem_account_address } }"
 }
 
 extend_keyfile() {
@@ -42,6 +42,9 @@ create_key consensus | extend_keyfile
 create_key execution | extend_keyfile
 create_key fullnode_network | extend_keyfile
 create_key validator_network | extend_keyfile
+
+# Write out the peer_id (account addr) and public key we'll use later from the fullnode
+cat "$KEYFILE" | jq -r ".owner_account.value" >"$DIR/owner_account_addr.txt"
 
 # Add the special value for `validator_network_address_keys`
 (
@@ -77,7 +80,6 @@ EOF
   }
 EOF
 ) | extend_keyfile
-
 
 # # # # # # # # # # # # # # # # # # # #
 #  Run config + create genesis block  #
