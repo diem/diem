@@ -80,7 +80,7 @@ jobs:
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
   non-rust-lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-xl
     timeout-minutes: 10
     needs: prepare
     if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
