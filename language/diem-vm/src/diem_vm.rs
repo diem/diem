@@ -31,7 +31,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{
-    data_cache::RemoteCache,
+    data_cache::MoveStorage,
     logging::{expect_no_verification_errors, LogContext},
     move_vm::MoveVM,
     session::Session,
@@ -205,9 +205,9 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into `SCRIPT_PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_script_prologue<R: RemoteCache>(
+    pub(crate) fn run_script_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
@@ -246,9 +246,9 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_module_prologue<R: RemoteCache>(
+    pub(crate) fn run_module_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
         log_context: &impl LogContext,
@@ -286,9 +286,9 @@ impl DiemVMImpl {
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_success_epilogue<R: RemoteCache>(
+    pub(crate) fn run_success_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
@@ -328,9 +328,9 @@ impl DiemVMImpl {
 
     /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
     /// stored in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_failure_epilogue<R: RemoteCache>(
+    pub(crate) fn run_failure_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         gas_status: &mut GasStatus,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
@@ -366,9 +366,9 @@ impl DiemVMImpl {
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `WRITESET_MODULE` on chain.
-    pub(crate) fn run_writeset_prologue<R: RemoteCache>(
+    pub(crate) fn run_writeset_prologue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         txn_data: &TransactionMetadata,
         log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
@@ -400,9 +400,9 @@ impl DiemVMImpl {
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
     /// in the `WRITESET_MODULE` on chain.
-    pub(crate) fn run_writeset_epilogue<R: RemoteCache>(
+    pub(crate) fn run_writeset_epilogue<S: MoveStorage>(
         &self,
-        session: &mut Session<R>,
+        session: &mut Session<S>,
         txn_data: &TransactionMetadata,
         should_trigger_reconfiguration: bool,
         log_context: &impl LogContext,
@@ -428,7 +428,7 @@ impl DiemVMImpl {
             })
     }
 
-    pub fn new_session<'r, R: RemoteCache>(&self, r: &'r R) -> Session<'r, '_, R> {
+    pub fn new_session<'r, R: MoveStorage>(&self, r: &'r R) -> Session<'r, '_, R> {
         self.move_vm.new_session(r)
     }
 }
@@ -526,7 +526,7 @@ pub fn convert_changeset_and_events(
     convert_changeset_and_events_cached(&mut (), changeset, events)
 }
 
-pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
+pub(crate) fn charge_global_write_gas_usage<R: MoveStorage>(
     gas_status: &mut GasStatus,
     session: &Session<R>,
     sender: &AccountAddress,
@@ -543,9 +543,9 @@ pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
         .map_err(|p_err| p_err.finish(Location::Undefined).into_vm_status())
 }
 
-pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
+pub(crate) fn get_transaction_output<A: AccessPathCache, S: MoveStorage>(
     ap_cache: &mut A,
-    session: Session<R>,
+    session: Session<S>,
     gas_left: GasUnits<GasCarrier>,
     txn_data: &TransactionMetadata,
     status: KeptVMStatus,

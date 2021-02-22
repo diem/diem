@@ -11,7 +11,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
-use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
+use move_vm_runtime::{data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
 use move_vm_types::gas_schedule::GasStatus;
 
@@ -532,7 +532,7 @@ struct BogusStorage {
     bad_status_code: StatusCode,
 }
 
-impl RemoteCache for BogusStorage {
+impl MoveStorage for BogusStorage {
     fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         Err(PartialVMError::new(self.bad_status_code).finish(Location::Undefined))
     }

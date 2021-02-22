@@ -18,7 +18,7 @@ use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
 };
-use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::MoveStorage;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
@@ -107,7 +107,7 @@ impl StateView for FakeDataStore {
     }
 }
 
-impl RemoteCache for FakeDataStore {
+impl MoveStorage for FakeDataStore {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_module(module_id)
     }

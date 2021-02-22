@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::{RemoteCache, TransactionDataCache},
+    data_cache::{MoveStorage, TransactionDataCache},
     logging::LogContext,
     runtime::VMRuntime,
 };
@@ -15,12 +15,12 @@ use move_core_types::{
 };
 use move_vm_types::gas_schedule::GasStatus;
 
-pub struct Session<'r, 'l, R> {
+pub struct Session<'r, 'l, S> {
     pub(crate) runtime: &'l VMRuntime,
-    pub(crate) data_cache: TransactionDataCache<'r, 'l, R>,
+    pub(crate) data_cache: TransactionDataCache<'r, 'l, S>,
 }
 
-impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
+impl<'r, 'l, S: MoveStorage> Session<'r, 'l, S> {
     /// Execute a Move function with the given arguments. This is mainly designed for an external
     /// environment to invoke system logic written in Move.
     ///

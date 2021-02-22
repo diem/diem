@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use crate::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
+use crate::{data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM};
 use move_binary_format::{
     errors::{PartialVMResult, VMResult},
     file_format::{
@@ -237,7 +237,7 @@ impl RemoteStore {
     }
 }
 
-impl RemoteCache for RemoteStore {
+impl MoveStorage for RemoteStore {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         Ok(self.modules.get(module_id).cloned())
     }

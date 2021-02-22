@@ -19,7 +19,7 @@ use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
 };
-use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::MoveStorage;
 use std::collections::btree_map::BTreeMap;
 
 /// A local cache for a given a `StateView`. The cache is private to the Diem layer
@@ -107,7 +107,7 @@ impl<'block> StateView for StateViewCache<'block> {
     }
 }
 
-impl<'block> RemoteCache for StateViewCache<'block> {
+impl<'block> MoveStorage for StateViewCache<'block> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_module(module_id)
     }
@@ -142,7 +142,7 @@ impl<'a, S: StateView> RemoteStorage<'a, S> {
     }
 }
 
-impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
+impl<'a, S: StateView> MoveStorage for RemoteStorage<'a, S> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         // REVIEW: cache this?
         let ap = AccessPath::from(module_id);

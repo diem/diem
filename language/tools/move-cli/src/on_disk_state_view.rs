@@ -18,7 +18,7 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
-use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::MoveStorage;
 use petgraph::graphmap::DiGraphMap;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 
@@ -412,7 +412,7 @@ impl OnDiskStateView {
     }
 }
 
-impl RemoteCache for OnDiskStateView {
+impl MoveStorage for OnDiskStateView {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         self.get_module_bytes(module_id)
             .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined))

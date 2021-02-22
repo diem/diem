@@ -8,7 +8,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
 };
-use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::MoveStorage;
 // use move_vm_txn_effect_converter::convert_txn_effects_to_move_changeset_and_events;
 use move_binary_format::errors::{PartialVMResult, VMResult};
 use std::collections::{btree_map, BTreeMap};
@@ -23,7 +23,7 @@ impl BlankStorage {
     }
 }
 
-impl RemoteCache for BlankStorage {
+impl MoveStorage for BlankStorage {
     fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         Ok(None)
     }
@@ -45,7 +45,7 @@ pub struct DeltaStorage<'a, 'b, S> {
     delta: &'b ChangeSet,
 }
 
-impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
+impl<'a, 'b, S: MoveStorage> MoveStorage for DeltaStorage<'a, 'b, S> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         if let Some(account_storage) = self.delta.accounts().get(module_id.address()) {
             if let Some(blob_opt) = account_storage.modules().get(module_id.name()) {
@@ -71,7 +71,7 @@ impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
     }
 }
 
-impl<'a, 'b, S: RemoteCache> DeltaStorage<'a, 'b, S> {
+impl<'a, 'b, S: MoveStorage> DeltaStorage<'a, 'b, S> {
     pub fn new(base: &'a S, delta: &'b ChangeSet) -> Self {
         Self { base, delta }
     }
@@ -185,7 +185,7 @@ impl InMemoryStorage {
     }
 }
 
-impl RemoteCache for InMemoryStorage {
+impl MoveStorage for InMemoryStorage {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         if let Some(account_storage) = self.accounts.get(module_id.address()) {
             return Ok(account_storage.modules.get(module_id.name()).cloned());

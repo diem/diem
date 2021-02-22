@@ -21,7 +21,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     move_resource::MoveResource,
 };
-use move_vm_runtime::{data_cache::RemoteCache, session::Session};
+use move_vm_runtime::{data_cache::MoveStorage, logging::LogContext, session::Session};
 
 use crate::logging::AdapterLogSchema;
 
@@ -71,6 +71,7 @@ impl VMValidator for DiemVMValidator {
     ) -> VMValidatorResult {
         let _timer = TXN_VALIDATION_SECONDS.start_timer();
         let txn_sender = transaction.sender();
+        let log_context = AdapterLogSchema::new(state_view.id(), 0);
 
         let txn = if let Ok(t) = transaction.check_signature() {
             t
@@ -92,6 +93,7 @@ impl VMValidator for DiemVMValidator {
             &txn,
             &remote_cache,
             true,
+            &log_context,
         ) {
             Ok((price, _)) => (None, price),
             Err(err) => (Some(err.status_code()), 0),
@@ -120,12 +122,13 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
     GovernanceRole::NonGovernanceRole
 }
 
-pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
+pub(crate) fn validate_signature_checked_transaction<S: MoveStorage>(
     vm: &DiemVMImpl,
-    mut session: &mut Session<R>,
+    mut session: &mut Session<S>,
     transaction: &SignatureCheckedTransaction,
-    remote_cache: &StateViewCache<'_>,
+    remote_cache: &S,
     allow_too_new: bool,
+    log_context: &impl LogContext,
 ) -> Result<(u64, Identifier), VMStatus> {
     let gas_price = transaction.gas_unit_price();
     let currency_code_string = transaction.gas_currency_code();
@@ -136,7 +139,7 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
         }
     };
 
-    let normalized_gas_price = match get_currency_info(&currency_code, &remote_cache) {
+    let normalized_gas_price = match get_currency_info(&currency_code, remote_cache) {
         Ok(info) => info.convert_to_xdx(gas_price),
         Err(err) => {
             return Err(err);
@@ -144,11 +147,10 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     };
 
     let txn_data = TransactionMetadata::new(transaction);
-    let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
     let prologue_status = match transaction.payload() {
         TransactionPayload::Script(_) => {
-            vm.check_gas(&txn_data, &log_context)?;
-            vm.run_script_prologue(&mut session, &txn_data, &currency_code, &log_context)
+            vm.check_gas(&txn_data, log_context)?;
+            vm.run_script_prologue(&mut session, &txn_data, &currency_code, log_context)
         }
         TransactionPayload::ScriptFunction(_) => {
             // gate the behavior until the Diem version is ready
@@ -156,15 +158,15 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
                 return Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING));
             }
             // NOTE: Script and ScriptFunction shares the same prologue
-            vm.check_gas(&txn_data, &log_context)?;
-            vm.run_script_prologue(&mut session, &txn_data, &currency_code, &log_context)
+            vm.check_gas(&txn_data, log_context)?;
+            vm.run_script_prologue(&mut session, &txn_data, &currency_code, log_context)
         }
         TransactionPayload::Module(_module) => {
-            vm.check_gas(&txn_data, &log_context)?;
-            vm.run_module_prologue(&mut session, &txn_data, &currency_code, &log_context)
+            vm.check_gas(&txn_data, log_context)?;
+            vm.run_module_prologue(&mut session, &txn_data, &currency_code, log_context)
         }
         TransactionPayload::WriteSet(_cs) => {
-            vm.run_writeset_prologue(&mut session, &txn_data, &log_context)
+            vm.run_writeset_prologue(&mut session, &txn_data, log_context)
         }
     };
 
@@ -178,12 +180,14 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     Ok((normalized_gas_price, currency_code))
 }
 
-fn get_currency_info(
+fn get_currency_info<S: MoveStorage>(
     currency_code: &IdentStr,
-    remote_cache: &StateViewCache,
+    remote_cache: &S,
 ) -> Result<CurrencyInfoResource, VMStatus> {
-    let currency_info_path = CurrencyInfoResource::resource_path_for(currency_code.to_owned());
-    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
+    if let Ok(Some(blob)) = remote_cache.get_resource(
+        &account_config::diem_root_address(),
+        &CurrencyInfoResource::struct_tag_for(currency_code.to_owned()),
+    ) {
         let x = bcs::from_bytes::<CurrencyInfoResource>(&blob)
             .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
         Ok(x)

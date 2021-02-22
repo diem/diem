@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::{RemoteCache, TransactionDataCache},
+    data_cache::{MoveStorage, TransactionDataCache},
     interpreter::Interpreter,
     loader::Loader,
     logging::LogContext,
@@ -47,7 +47,7 @@ impl VMRuntime {
         }
     }
 
-    pub fn new_session<'r, R: RemoteCache>(&self, remote: &'r R) -> Session<'r, '_, R> {
+    pub fn new_session<'r, S: MoveStorage>(&self, remote: &'r S) -> Session<'r, '_, S> {
         Session {
             runtime: self,
             data_cache: TransactionDataCache::new(remote, &self.loader),

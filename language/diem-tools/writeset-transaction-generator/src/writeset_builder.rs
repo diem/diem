@@ -16,13 +16,13 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{
-    data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM, session::Session,
+    data_cache::MoveStorage, logging::NoContextLog, move_vm::MoveVM, session::Session,
 };
 use move_vm_types::gas_schedule::GasStatus;
 
-pub struct GenesisSession<'r, 'l, R>(Session<'r, 'l, R>);
+pub struct GenesisSession<'r, 'l, S>(Session<'r, 'l, S>);
 
-impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
+impl<'r, 'l, S: MoveStorage> GenesisSession<'r, 'l, S> {
     pub fn exec_func(
         &mut self,
         module_name: &str,

@@ -20,7 +20,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag, TypeTag},
     value::{MoveStruct, MoveValue},
 };
-use move_vm_runtime::data_cache::RemoteCache;
+use move_vm_runtime::data_cache::MoveStorage;
 use std::{
     collections::btree_map::BTreeMap,
     convert::TryInto,
@@ -59,18 +59,18 @@ pub enum AnnotatedMoveValue {
 
 pub struct MoveValueAnnotator<'a> {
     cache: Resolver<'a>,
-    _data_view: &'a dyn RemoteCache,
+    _data_view: &'a dyn MoveStorage,
 }
 
 impl<'a> MoveValueAnnotator<'a> {
-    pub fn new(view: &'a dyn RemoteCache) -> Self {
+    pub fn new(view: &'a dyn MoveStorage) -> Self {
         Self {
             cache: Resolver::new(view, true),
             _data_view: view,
         }
     }
 
-    pub fn new_no_stdlib(view: &'a dyn RemoteCache) -> Self {
+    pub fn new_no_stdlib(view: &'a dyn MoveStorage) -> Self {
         Self {
             cache: Resolver::new(view, false),
             _data_view: view,
@@ -291,7 +291,7 @@ impl StateView for NullStateView {
     }
 }
 
-impl RemoteCache for NullStateView {
+impl MoveStorage for NullStateView {
     fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         Ok(None)
     }
