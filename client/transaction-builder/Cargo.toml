@@ -9,7 +9,7 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-once_cell = "1.4.1"
+once_cell = "1.6.0"
 serde = { version = "1.0.123", features = ["derive"] }
 
 compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }

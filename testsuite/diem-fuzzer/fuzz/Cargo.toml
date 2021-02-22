@@ -16,7 +16,7 @@ cargo-fuzz = true
 libfuzzer-sys = "=0.3.2"
 diem-fuzzer = { path = "..", version = "0.1.0" }
 diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-once_cell = "1.4.1"
+once_cell = "1.6.0"
 
 # Prevent this from interfering with workspaces
 
