@@ -93,8 +93,6 @@ jobs:
       - uses: ./.github/actions/build-setup
       - uses: ./.github/actions/check-machine
         with:
-          min-cpu: 2
-          min-ram: 7
           webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - name: shell lints
         run: |
