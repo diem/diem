@@ -17,7 +17,7 @@ chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime"
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.0", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
-crossbeam-utils = { version = "0.8.1", features = ["default", "lazy_static", "std"] }
+crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -59,7 +59,7 @@ chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime"
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.0", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
-crossbeam-utils = { version = "0.8.1", features = ["default", "lazy_static", "std"] }
+crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -104,7 +104,7 @@ chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime"
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.0", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
-crossbeam-utils = { version = "0.8.1", features = ["default", "lazy_static", "std"] }
+crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
@@ -146,7 +146,7 @@ chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime"
 clap = { version = "2.33.3", features = ["ansi_term", "atty", "color", "default", "strsim", "suggestions", "vec_map"] }
 crossbeam-channel = { version = "0.5.0", features = ["crossbeam-utils", "default", "std"] }
 crossbeam-deque = { version = "0.8.0", features = ["crossbeam-epoch", "crossbeam-utils", "default", "std"] }
-crossbeam-utils = { version = "0.8.1", features = ["default", "lazy_static", "std"] }
+crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "std"] }
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
