@@ -1,11 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Filtering definitions for controlling what modules and levels are logged
+
 use crate::{Level, Metadata};
 use std::{env, str::FromStr};
 
 pub struct FilterParseError;
 
+/// A definition of the most verbose `Level` allowed, or completely off.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LevelFilter {
     Off,
@@ -49,6 +52,7 @@ impl From<Level> for LevelFilter {
     }
 }
 
+/// A builder for `Filter` deriving it's `Directive`s from specified modules
 #[derive(Default, Debug)]
 pub struct Builder {
     directives: Vec<Directive>,
@@ -118,6 +122,7 @@ impl Builder {
     }
 }
 
+/// A logging filter to determine which logs to keep or remove based on `Directive`s
 #[derive(Debug)]
 pub struct Filter {
     directives: Vec<Directive>,
@@ -140,6 +145,7 @@ impl Filter {
     }
 }
 
+/// A `Filter` directive for which logs to keep based on a module `name` based filter
 #[derive(Debug)]
 struct Directive {
     name: Option<String>,

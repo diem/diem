@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Macros for sending logs at predetermined log `Level`s
+
+/// Log at the given level, it's recommended to use a specific level macro instead
 #[macro_export]
 macro_rules! log {
     // Entry, Log Level + stuff
@@ -24,6 +27,7 @@ macro_rules! log {
     }};
 }
 
+/// Log at the `trace` level
 #[macro_export]
 macro_rules! trace {
     ($($arg:tt)+) => {
@@ -31,6 +35,7 @@ macro_rules! trace {
     };
 }
 
+/// Log at the `debug` level
 #[macro_export]
 macro_rules! debug {
     ($($arg:tt)+) => {
@@ -38,6 +43,7 @@ macro_rules! debug {
     };
 }
 
+/// Log at the `info` level
 #[macro_export]
 macro_rules! info {
     ($($arg:tt)+) => {
@@ -45,6 +51,7 @@ macro_rules! info {
     };
 }
 
+/// Log at the `warn` level
 #[macro_export]
 macro_rules! warn {
     ($($arg:tt)+) => {
@@ -52,6 +59,7 @@ macro_rules! warn {
     };
 }
 
+/// Log at the `error` level
 #[macro_export]
 macro_rules! error {
     ($($arg:tt)+) => {

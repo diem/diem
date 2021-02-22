@@ -1,5 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
+//! Implementations for sending logs to external log processes e.g. Logstash
+//!
+//! Handles sending logs under disconnects, and retries.  Tries to continue to make progress on a
+//! log but eventually drops older logs to continue to make progress on newer logs.
+
 use crate::counters::{STRUCT_LOG_CONNECT_ERROR_COUNT, STRUCT_LOG_TCP_CONNECT_COUNT};
 use std::{
     io,

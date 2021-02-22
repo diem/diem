@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Implementation of writing logs to both local printers (e.g. stdout) and remote loggers
+//! (e.g. Logstash)
+
 use crate::{
     counters::{
         PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_BYTES, SENT_STRUCT_LOG_COUNT,
@@ -27,9 +30,11 @@ use std::{
 };
 
 const RUST_LOG: &str = "RUST_LOG";
+/// Default size of log write channel, if the channel is full, logs will be dropped
 pub const CHANNEL_SIZE: usize = 10000;
 const NUM_SEND_RETRIES: u8 = 1;
 
+/// A single log entry emitted by a logging macro with associated metadata
 #[derive(Debug, Serialize)]
 pub struct LogEntry {
     #[serde(flatten)]
@@ -115,6 +120,7 @@ impl LogEntry {
     }
 }
 
+/// A builder for a `DiemLogger`, configures what, where, and how to write logs.
 pub struct DiemLoggerBuilder {
     channel_size: usize,
     level: Level,
@@ -238,8 +244,11 @@ impl DiemLoggerBuilder {
     }
 }
 
+/// A combination of `Filter`s to control where logs are written
 struct DiemFilter {
+    /// The local printer `Filter` to control what is logged in text output
     local_filter: Filter,
+    /// The remote logging `Filter` to control what is sent to external logging
     remote_filter: Filter,
 }
 
@@ -249,6 +258,7 @@ impl DiemFilter {
     }
 }
 
+///
 pub struct DiemLogger {
     sender: Option<SyncSender<LoggerServiceEvent>>,
     printer: Option<Box<dyn Writer>>,
@@ -326,6 +336,8 @@ enum LoggerServiceEvent {
     Flush(SyncSender<()>),
 }
 
+/// A service for running a log listener, that will continually export logs through a local printer
+/// or to a `DiemLogger` for external logging.
 struct LoggerService {
     receiver: Receiver<LoggerServiceEvent>,
     address: Option<String>,

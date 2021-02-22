@@ -1,13 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Implement periodic sampling for logs
+//! Periodic sampling for logs, metrics, and other use cases through a simple macro
 
 use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{Duration, SystemTime},
 };
 
+/// The rate at which a `sample!` macro will run it's given function
 #[derive(Debug)]
 pub enum SampleRate {
     /// Only sample a single time during a window of time. This rate only has a resolution in
@@ -21,6 +22,7 @@ pub enum SampleRate {
     Always,
 }
 
+/// An internal struct that can be checked if a sample is ready for the `sample!` macro
 pub struct Sampling {
     rate: SampleRate,
     state: AtomicU64,
@@ -77,6 +79,8 @@ impl Sampling {
     }
 }
 
+/// Samples a given function at a `SampleRate`, useful for periodically emitting logs or metrics on
+/// high throughput pieces of code.
 #[macro_export]
 macro_rules! sample {
     ($sample_rate:expr, $($args:expr)+ ,) => {
