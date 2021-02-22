@@ -1,7 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_crypto::ed25519::Ed25519PublicKey;
+use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
+
 use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use diem_types::{account_address::AccountAddress, waypoint::Waypoint};
 use structopt::StructOpt;
@@ -51,6 +52,30 @@ impl PrintKey {
         let storage = config.validator_backend();
         let key_name = Box::leak(self.key_name.into_boxed_str());
         storage.ed25519_public_from_private(key_name)
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub struct PrintXKey {
+    #[structopt(flatten)]
+    config: ConfigPath,
+    /// The key name in storage
+    #[structopt(long)]
+    key_name: String,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
+}
+
+impl PrintXKey {
+    pub fn execute(self) -> Result<x25519::PublicKey, Error> {
+        let config = self
+            .config
+            .load()?
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
+
+        let storage = config.validator_backend();
+        let key_name = Box::leak(self.key_name.into_boxed_str());
+        storage.x25519_public_from_private(key_name)
     }
 }
 
