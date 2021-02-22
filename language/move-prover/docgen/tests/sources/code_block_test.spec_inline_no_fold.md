@@ -22,7 +22,7 @@ code block
 then <code>inline code</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="code_block_test.md#main">main</a>()
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="code_block_test.md#main">main</a>()
 </code></pre>
 
 

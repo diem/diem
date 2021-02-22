@@ -97,7 +97,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 * <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="burn_with_amount.md#burn_with_amount">burn_with_amount</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="burn_with_amount.md#burn_with_amount">burn_with_amount</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64)
 </code></pre>
 
 

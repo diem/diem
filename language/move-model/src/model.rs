@@ -2374,20 +2374,22 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(OPAQUE_PRAGMA, || false)
     }
 
-    /// Returns true if this function is public.
-    pub fn is_public(&self) -> bool {
-        // The main function of a script is implicitly public
-        self.module_env.is_script_module()
-            || match self.definition_view().visibility() {
-                Visibility::Public => true,
-                Visibility::Script => unimplemented!("Script visibility not yet supported"),
-                // TODO: for simplicity, we may treat `public(friend)` the same way as `public`
-                // based on the fact that they both expose the function to external modules. We may
-                // want to change the function name from `is_public` to `is_exposed` or have
-                // iner-grained return values (instead of just a bool) to indicate visibility.
-                Visibility::Friend => unimplemented!("Friend visibility not yet supported"),
-                Visibility::Private => false,
-            }
+    /// Returns the visibility of this function.
+    pub fn visibility(&self) -> Visibility {
+        if self.module_env.is_script_module() {
+            // the main function of e script has script visibility
+            Visibility::Script
+        } else {
+            self.definition_view().visibility()
+        }
+    }
+
+    /// Returns true if this function can ever be called by some other modules.
+    pub fn is_exposed(&self) -> bool {
+        match self.visibility() {
+            Visibility::Public | Visibility::Script | Visibility::Friend => true,
+            Visibility::Private => false,
+        }
     }
 
     /// Returns true if invariants are declared disabled in body of function
@@ -2634,7 +2636,13 @@ impl<'env> FunctionEnv<'env> {
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value specified by default_scope.
         let default = || match default_scope {
-            VerificationScope::Public => self.is_public(),
+            // TODO: by using `is_exposed`, we essentially mark all of Public, Script, Friend to be
+            // in the verification scope because they are "exposed" functions in this module.
+            // But please check whether the treatment here is OK.
+            //
+            // Another suggestion might be to change `VerificationScope::Public` to
+            // `VerificationScope::Exposed` to better match the meaning
+            VerificationScope::Public => self.is_exposed(),
             VerificationScope::All => true,
             VerificationScope::None => false,
         };

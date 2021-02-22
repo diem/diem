@@ -91,7 +91,7 @@ being <code>preburn_address</code>.
 * <code><a href="transaction_script_documentation.md#preburn">Script::preburn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="cancel_burn_with_amount.md#cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token&gt;(account: &signer, preburn_address: address, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="cancel_burn_with_amount.md#cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token&gt;(account: &signer, preburn_address: address, amount: u64)
 </code></pre>
 
 

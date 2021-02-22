@@ -806,7 +806,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 * <code><a href="transaction_script_documentation.md#create_recovery_address">Script::create_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
 </code></pre>
 
 
@@ -968,7 +968,7 @@ This script does not assign the validator operator to any validator accounts but
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_validator_operator_account">create_validator_operator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1111,7 +1111,7 @@ but only creates the account.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_validator_account">create_validator_account</a>(dr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1253,7 +1253,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 * <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1392,7 +1392,7 @@ account.
 * <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1524,7 +1524,7 @@ already have a <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_B
 * <code><a href="transaction_script_documentation.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
 </code></pre>
 
 
@@ -1645,7 +1645,7 @@ resource stored under the account at <code>recovery_address</code>.
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
 </code></pre>
 
 
@@ -1754,7 +1754,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 * <code><a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">Script::rotate_shared_ed25519_public_key</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1855,7 +1855,7 @@ may be used as a recovery account for those accounts.
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#create_recovery_address">create_recovery_address</a>(account: &signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#create_recovery_address">create_recovery_address</a>(account: &signer)
 </code></pre>
 
 
@@ -1963,7 +1963,7 @@ delegated its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Ke
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2088,7 +2088,7 @@ delegated its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_Ke
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2216,7 +2216,7 @@ public key, and <code>account</code> must not have previously delegated its
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">Script::rotate_authentication_key_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2351,7 +2351,7 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAcc
 * <code><a href="transaction_script_documentation.md#rotate_authentication_key_with_nonce_admin">Script::rotate_authentication_key_with_nonce_admin</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2481,7 +2481,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 * <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2590,7 +2590,7 @@ rotates the authentication key using the capability stored in <code>account</cod
 * <code><a href="transaction_script_documentation.md#publish_shared_ed25519_public_key">Script::publish_shared_ed25519_public_key</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#rotate_shared_ed25519_public_key">rotate_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2721,7 +2721,7 @@ Successful execution of this script emits two events:
 * <code><a href="transaction_script_documentation.md#add_currency_to_account">Script::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2886,7 +2886,7 @@ or does not have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_Valid
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#add_validator_and_reconfigure">add_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -3025,7 +3025,7 @@ only "locally" under the <code>validator_account</code> account address.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3165,7 +3165,7 @@ is not in the validator set.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -3306,7 +3306,7 @@ on-chain with the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x
 * <code><a href="transaction_script_documentation.md#register_validator_config">Script::register_validator_config</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3467,7 +3467,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -3612,7 +3612,7 @@ the system is initiated by this script.
 * <code><a href="transaction_script_documentation.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -3768,7 +3768,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 * <code><a href="transaction_script_documentation.md#burn_txn_fees">Script::burn_txn_fees</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
 </code></pre>
 
 
@@ -3902,7 +3902,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 * <code>Script::cancel_burn</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
 </code></pre>
 
 
@@ -4014,7 +4014,7 @@ resource published under the <code>designated_dealer_address</code>.
 * <code><a href="transaction_script_documentation.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -4155,7 +4155,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 * <code><a href="transaction_script_documentation.md#unfreeze_account">Script::unfreeze_account</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
 </code></pre>
 
 
@@ -4247,7 +4247,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 * <code><a href="transaction_script_documentation.md#freeze_account">Script::freeze_account</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
 </code></pre>
 
 
@@ -4330,7 +4330,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../../modul
 * <code><a href="transaction_script_documentation.md#update_minting_ability">Script::update_minting_ability</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_xdx_limit: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_xdx_limit: u64)
 </code></pre>
 
 
@@ -4425,7 +4425,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 * <code><a href="transaction_script_documentation.md#update_minting_ability">Script::update_minting_ability</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
 </code></pre>
 
 
@@ -4554,7 +4554,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 * <code><a href="transaction_script_documentation.md#update_exchange_rate">Script::update_exchange_rate</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: &signer, allow_minting: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: &signer, allow_minting: bool)
 </code></pre>
 
 
@@ -4639,7 +4639,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemVersion.md#0x1_DiemVersion_EINVALID_MAJOR_VERSION_NUMBER">DiemVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code> | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="transaction_script_documentation.md#update_diem_version">update_diem_version</a>(account: &signer, sliding_nonce: u64, major: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="transaction_script_documentation.md#update_diem_version">update_diem_version</a>(account: &signer, sliding_nonce: u64, major: u64)
 </code></pre>
 
 

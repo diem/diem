@@ -2636,6 +2636,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "vm",
 ]
 
 [[package]]

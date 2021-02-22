@@ -17,7 +17,7 @@ use move_model::{
 use crate::function_target_pipeline::FunctionVariant;
 use move_model::ast::TempIndex;
 use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Range};
-use vm::file_format::CodeOffset;
+use vm::file_format::{CodeOffset, Visibility};
 
 /// A FunctionTarget is a drop-in replacement for a FunctionEnv which allows to rewrite
 /// and analyze bytecode and parameter/local types. It encapsulates a FunctionEnv and information
@@ -154,9 +154,14 @@ impl<'env> FunctionTarget<'env> {
         self.func_env.is_opaque()
     }
 
-    /// Returns true if this function is public.
-    pub fn is_public(&self) -> bool {
-        self.func_env.is_public()
+    /// Returns the visibility of this function
+    pub fn visibility(&self) -> Visibility {
+        self.func_env.visibility()
+    }
+
+    /// Returns true if this function is exposed.
+    pub fn is_exposed(&self) -> bool {
+        self.func_env.is_exposed()
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).
@@ -429,7 +434,12 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         write!(
             f,
             "{}fun {}::{}",
-            if self.is_public() { "pub " } else { "" },
+            match self.visibility() {
+                Visibility::Public => "pub ",
+                Visibility::Script => "pub(script) ",
+                Visibility::Friend => "pub(friend) ",
+                Visibility::Private => "",
+            },
             self.func_env
                 .module_env
                 .get_name()

@@ -30,6 +30,7 @@ use std::{
     process::{Command, Stdio},
     rc::Rc,
 };
+use vm::file_format::Visibility;
 
 const KEYWORDS: &[&str] = &[
     "abort",
@@ -657,7 +658,7 @@ impl<'env> Docgen<'env> {
 
         let funs = module_env
             .get_functions()
-            .filter(|f| self.options.include_private_fun || f.is_public())
+            .filter(|f| self.options.include_private_fun || f.is_exposed())
             .sorted_by(|a, b| Ord::cmp(&a.get_loc(), &b.get_loc()))
             .collect_vec();
         if !funs.is_empty() {
@@ -1081,7 +1082,12 @@ impl<'env> Docgen<'env> {
     /// Generates documentation for a function signature.
     fn function_header_display(&self, func_env: &FunctionEnv<'_>) -> String {
         let name = self.name_string(func_env.get_name());
-        let visibility = if func_env.is_public() { "public " } else { "" };
+        let visibility = match func_env.visibility() {
+            Visibility::Public => "public ",
+            Visibility::Script => "public(script) ",
+            Visibility::Friend => "public(friend) ",
+            Visibility::Private => "",
+        };
         let tctx = &self.type_display_context_for_fun(&func_env);
         let params = func_env
             .get_parameters()

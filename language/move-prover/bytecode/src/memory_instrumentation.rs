@@ -118,7 +118,9 @@ impl<'a> Instrumenter<'a> {
                 .env
                 .get_module(*mid)
                 .into_function(*fid);
-            if callee_env.is_public() {
+            // TODO: this will instrument not only `public` functions, but also `public(script)`
+            // and `public(friend)` as well.
+            if callee_env.is_exposed() {
                 let pack_refs: Vec<&TempIndex> = srcs
                     .iter()
                     .filter(|idx| self.is_pack_ref_ty(self.func_target.get_local_type(**idx)))
