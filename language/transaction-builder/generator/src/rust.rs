@@ -226,7 +226,7 @@ pub fn decode(script: &Script) -> Option<ScriptCall> {{
         let prefix = " ".repeat(indentation) + "/// ";
         let empty_line = "\n".to_string() + &" ".repeat(indentation) + "///\n";
         let text = textwrap::indent(doc, &prefix).replace("\n\n", &empty_line);
-        write!(self.out, "\n{}", text)
+        write!(self.out, "\n{}\n", text)
     }
 
     fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {

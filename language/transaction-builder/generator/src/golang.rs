@@ -166,7 +166,7 @@ func DecodeScript(script *diemtypes.Script) (ScriptCall, error) {{
     fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
         writeln!(
             self.out,
-            "\n{}func Encode{}Script({}) diemtypes.Script {{",
+            "\n{}\nfunc Encode{}Script({}) diemtypes.Script {{",
             Self::quote_doc(abi.doc()),
             abi.name().to_camel_case(),
             [

@@ -345,7 +345,7 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
     fn quote_doc(doc: &str) -> String {
         let doc = crate::common::prepare_doc_string(doc);
         let text = textwrap::indent(&doc, " * ").replace("\n\n", "\n *\n");
-        format!("/**\n{} */\n", text)
+        format!("/**\n{}\n */\n", text)
     }
 
     fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
