@@ -33,12 +33,12 @@ use diem_crypto::{
     traits::*,
     HashValue,
 };
-use diem_proptest_helpers::Index;
 use move_core_types::language_storage::TypeTag;
 use proptest::{
     collection::{vec, SizeRange},
     option,
     prelude::*,
+    sample::Index,
 };
 use proptest_derive::Arbitrary;
 use serde_json::Value;

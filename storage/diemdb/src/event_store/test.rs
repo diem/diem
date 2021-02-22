@@ -174,7 +174,7 @@ proptest! {
             .into_iter()
             .map(|gens| {
                 gens.into_iter()
-                    .map(|(index, gen)| gen.materialize(index, &mut universe))
+                    .map(|(index, gen)| gen.materialize(*index, &mut universe))
                     .collect()
             })
             .collect();

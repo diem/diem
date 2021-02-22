@@ -31,7 +31,6 @@ diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 diem-infallible = { path = "../common/infallible", version = "0.1.0" }
 diem-network-address = { path = "../network/network-address", version = "0.1.0" }
-diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 fallible = { path = "../common/fallible" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
@@ -44,9 +43,8 @@ serde_json = "1.0.62"
 
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 diem-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
-diem-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0", features = ["fuzzing"]  }
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "diem-proptest-helpers", "diem-crypto/fuzzing", "diem-network-address/fuzzing", "move-core-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "diem-crypto/fuzzing", "diem-network-address/fuzzing", "move-core-types/fuzzing"]

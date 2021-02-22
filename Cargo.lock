@@ -2291,7 +2291,6 @@ dependencies = [
  "diem-crypto-derive",
  "diem-infallible",
  "diem-network-address",
- "diem-proptest-helpers",
  "diem-workspace-hack",
  "fallible",
  "hex",

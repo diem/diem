@@ -160,7 +160,7 @@ fn init_store(
     let txns = gens
         .into_iter()
         .map(|(index, gen)| {
-            Transaction::UserTransaction(gen.materialize(index, &mut universe).into_inner())
+            Transaction::UserTransaction(gen.materialize(*index, &mut universe).into_inner())
         })
         .collect::<Vec<_>>();
 
