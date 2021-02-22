@@ -8,25 +8,26 @@ use 0x1::SlidingNonce;
 ///
 /// # Technical Description
 /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// `new_key` must be a valid authentication key that corresponds to an ed25519
+/// public key, and `account` must not have previously delegated its
+/// `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name            | Type         | Description                                                                                                  |
-/// | ------          | ------       | -------------                                                                                                |
+/// | Name            | Type         | Description                                                                                                 |
+/// | ------          | ------       | -------------                                                                                               |
 /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
+/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
+/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                               | Description                                                                                                |
-/// | ----------------           | --------------                                             | -------------                                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                             | A `SlidingNonce` resource is not published under `dr_account`.                                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                       |
+/// | Error Category             | Error Reason                                              | Description                                                                                                |
+/// | ----------------           | --------------                                            | -------------                                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                            | A `SlidingNonce` resource is not published under `dr_account`.                                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                            | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                            | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                   | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                        |
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
 ///
 /// # Related Scripts

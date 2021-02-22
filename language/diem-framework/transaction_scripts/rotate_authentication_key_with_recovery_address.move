@@ -14,20 +14,20 @@ use 0x1::RecoveryAddress;
 /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name               | Type         | Description                                                                                                                    |
-/// | ------             | ------       | -------------                                                                                                                  |
-/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
+/// | Name               | Type         | Description                                                                                                                   |
+/// | ------             | ------       | -------------                                                                                                                 |
+/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
 /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
-/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
-/// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
+/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
+/// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                  | Description                                                                                                                                          |
-/// | ----------------           | --------------                                | -------------                                                                                                                                        |
-/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
+/// | Error Category             | Error Reason                                 | Description                                                                                                                                         |
+/// | ----------------           | --------------                               | -------------                                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`         | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                  |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`        | The address of `account` is not `recovery_address` or `to_recover`.                                                                                 |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`  | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key`

@@ -6,21 +6,22 @@ use 0x1::DiemAccount;
 /// be sent by any account.
 ///
 /// # Technical Description
-/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+/// field to `new_key`. `new_key` must be a valid authentication key that
+/// corresponds to an ed25519 public key, and `account` must not have previously
+/// delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name      | Type         | Description                                                 |
 /// | ------    | ------       | -------------                                               |
 /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-/// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
+/// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                               | Description                                                                              |
-/// | ----------------           | --------------                                             | -------------                                                                            |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.     |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
+/// | Error Category             | Error Reason                                              | Description                                                                         |
+/// | ----------------           | --------------                                            | -------------                                                                       |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key_with_nonce`

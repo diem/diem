@@ -1732,10 +1732,10 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 ##### Parameters
 
-| Name         | Type         | Description                                                                               |
-| ------       | ------       | -------------                                                                             |
-| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction.                           |
-| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key for <code>account</code>' authentication key to be rotated to and stored. |
+| Name         | Type         | Description                                                                                        |
+| ------       | ------       | -------------                                                                                      |
+| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction.                                    |
+| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | A valid 32-byte Ed25519 public key for <code>account</code>'s authentication key to be rotated to and stored. |
 
 
 <a name="@Common_Abort_Conditions_87"></a>
@@ -1930,9 +1930,10 @@ be sent by any account.
 
 ##### Technical Description
 
-Rotate the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
-<code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+Rotate the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
+field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
+corresponds to an ed25519 public key, and <code>account</code> must not have previously
+delegated its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_96"></a>
@@ -1942,17 +1943,17 @@ its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationC
 | Name      | Type         | Description                                                 |
 | ------    | ------       | -------------                                               |
 | <code>account</code> | <code>&signer</code>    | Signer reference of the sending account of the transaction. |
-| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.            |
+| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.            |
 
 
 <a name="@Common_Abort_Conditions_97"></a>
 
 ##### Common Abort Conditions
 
-| Error Category             | Error Reason                                               | Description                                                                              |
-| ----------------           | --------------                                             | -------------                                                                            |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.     |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                         |
+| Error Category             | Error Reason                                              | Description                                                                         |
+| ----------------           | --------------                                            | -------------                                                                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                    |
 
 
 <a name="@Related_Scripts_98"></a>
@@ -2049,9 +2050,10 @@ Compliance or Diem Root accounts).
 
 ##### Technical Description
 
-Rotates the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
-<code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+Rotates the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
+field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
+corresponds to an ed25519 public key, and <code>account</code> must not have previously
+delegated its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_101"></a>
@@ -2062,7 +2064,7 @@ its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationC
 | ------          | ------       | -------------                                                              |
 | <code>account</code>       | <code>&signer</code>    | Signer reference of the sending account of the transaction.                |
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
-| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.                           |
+| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                           |
 
 
 <a name="@Common_Abort_Conditions_102"></a>
@@ -2176,33 +2178,34 @@ only be sent by the Diem Root account as a write set transaction.
 ##### Technical Description
 
 Rotate the <code>account</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
-<code>new_key</code> must be a valid ed25519 public key, and <code>account</code> must not have previously delegated
-its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+<code>new_key</code> must be a valid authentication key that corresponds to an ed25519
+public key, and <code>account</code> must not have previously delegated its
+<code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_106"></a>
 
 ##### Parameters
 
-| Name            | Type         | Description                                                                                                  |
-| ------          | ------       | -------------                                                                                                |
+| Name            | Type         | Description                                                                                                 |
+| ------          | ------       | -------------                                                                                               |
 | <code>dr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-| <code>account</code>       | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.                |
+| <code>account</code>       | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.               |
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
-| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for <code>account</code>.                                                             |
+| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                            |
 
 
 <a name="@Common_Abort_Conditions_107"></a>
 
 ##### Common Abort Conditions
 
-| Error Category             | Error Reason                                               | Description                                                                                                |
-| ----------------           | --------------                                             | -------------                                                                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                             | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                             |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                             | The <code>sliding_nonce</code> in <code>dr_account</code> is too old and it's impossible to determine if it's duplicated or not. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                             | The <code>sliding_nonce</code> in <code>dr_account</code> is too far in the future.                                              |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                    | The <code>sliding_nonce</code> in<code> dr_account</code> has been previously recorded.                                          |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.                       |
+| Error Category             | Error Reason                                              | Description                                                                                                |
+| ----------------           | --------------                                            | -------------                                                                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>                            | A <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is not published under <code>dr_account</code>.                                             |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>                            | The <code>sliding_nonce</code> in <code>dr_account</code> is too old and it's impossible to determine if it's duplicated or not. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>                            | The <code>sliding_nonce</code> in <code>dr_account</code> is too far in the future.                                              |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code>                   | The <code>sliding_nonce</code> in<code> dr_account</code> has been previously recorded.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED">DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</a></code> | <code>account</code> has already delegated/extracted its <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.                        |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                                           |
 
 
@@ -2321,24 +2324,24 @@ that contains <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAcc
 
 ##### Parameters
 
-| Name               | Type         | Description                                                                                                                    |
-| ------             | ------       | -------------                                                                                                                  |
-| <code>account</code>          | <code>&signer</code>    | Signer reference of the sending account of the transaction.                                                                    |
+| Name               | Type         | Description                                                                                                                   |
+| ------             | ------       | -------------                                                                                                                 |
+| <code>account</code>          | <code>&signer</code>    | Signer reference of the sending account of the transaction.                                                                   |
 | <code>recovery_address</code> | <code>address</code>    | Address where <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> that holds <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> is published. |
-| <code>to_recover</code>       | <code>address</code>    | The address of the account whose authentication key will be updated.                                                           |
-| <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for the account at the <code>to_recover</code> address.                                                 |
+| <code>to_recover</code>       | <code>address</code>    | The address of the account whose authentication key will be updated.                                                          |
+| <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New authentication key to be used for the account at the <code>to_recover</code> address.                                                |
 
 
 <a name="@Common_Abort_Conditions_112"></a>
 
 ##### Common Abort Conditions
 
-| Error Category             | Error Reason                                  | Description                                                                                                                                          |
-| ----------------           | --------------                                | -------------                                                                                                                                        |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>          | <code>recovery_address</code> does not have a <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource published under it.                                                   |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">RecoveryAddress::ECANNOT_ROTATE_KEY</a></code>         | The address of <code>account</code> is not <code>recovery_address</code> or <code>to_recover</code>.                                                                                  |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">RecoveryAddress::EACCOUNT_NOT_RECOVERABLE</a></code>   | <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>  is not in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code>  resource published under <code>recovery_address</code>. |
-| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                     |
+| Error Category             | Error Reason                                 | Description                                                                                                                                         |
+| ----------------           | --------------                               | -------------                                                                                                                                       |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>         | <code>recovery_address</code> does not have a <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource published under it.                                                  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">RecoveryAddress::ECANNOT_ROTATE_KEY</a></code>        | The address of <code>account</code> is not <code>recovery_address</code> or <code>to_recover</code>.                                                                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">RecoveryAddress::EACCOUNT_NOT_RECOVERABLE</a></code>  | <code>to_recover</code>'s <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>  is not in the <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code>  resource published under <code>recovery_address</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                    |
 
 
 <a name="@Related_Scripts_113"></a>

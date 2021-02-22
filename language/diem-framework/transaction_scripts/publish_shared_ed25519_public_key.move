@@ -13,10 +13,10 @@ use 0x1::SharedEd25519PublicKey;
 /// `account` under `account`.
 ///
 /// # Parameters
-/// | Name         | Type         | Description                                                                               |
-/// | ------       | ------       | -------------                                                                             |
-/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
-/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
+/// | Name         | Type         | Description                                                                                        |
+/// | ------       | ------       | -------------                                                                                      |
+/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+/// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                                               | Description                                                                                         |

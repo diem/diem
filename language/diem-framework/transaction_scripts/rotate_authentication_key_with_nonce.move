@@ -8,16 +8,17 @@ use 0x1::SlidingNonce;
 /// Compliance or Diem Root accounts).
 ///
 /// # Technical Description
-/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+/// field to `new_key`. `new_key` must be a valid authentication key that
+/// corresponds to an ed25519 public key, and `account` must not have previously
+/// delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name            | Type         | Description                                                                |
 /// | ------          | ------       | -------------                                                              |
 /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                           |
+/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                               | Description                                                                                |
