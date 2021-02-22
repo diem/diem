@@ -20,7 +20,7 @@ use move_core_types::{
     language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::MoveStorage;
-use std::{borrow::Cow, collections::btree_map::BTreeMap};
+use std::{borrow::Cow, collections::btree_map::BTreeMap, sync::Mutex};
 
 /// A local cache for a given a `StateView`. The cache is private to the Diem layer
 /// but can be used as a one shot cache for systems that need a simple `RemoteCache`
@@ -38,6 +38,8 @@ use std::{borrow::Cow, collections::btree_map::BTreeMap};
 pub struct StateViewCache<'a> {
     data_view: &'a dyn StateView,
     data_map: BTreeMap<AccessPath, Option<Vec<u8>>>,
+    reads: Mutex<Vec<AccessPath>>,
+    record_reads: bool,
 }
 
 impl<'a> StateViewCache<'a> {
@@ -47,6 +49,8 @@ impl<'a> StateViewCache<'a> {
         StateViewCache {
             data_view,
             data_map: BTreeMap::new(),
+            record_reads: false,
+            reads: Mutex::new(Vec::new()),
         }
     }
 
@@ -67,10 +71,30 @@ impl<'a> StateViewCache<'a> {
         }
     }
 
+    pub fn new_recorder(data_view: &'a dyn StateView) -> Self {
+        StateViewCache {
+            data_view,
+            data_map: BTreeMap::new(),
+            record_reads: true,
+            reads: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn read_set(&self) -> Vec<AccessPath> {
+        if !self.record_reads {
+            panic!("NOT CONFIGURED TO RECORD READS");
+        }
+        self.reads.lock().unwrap().iter().cloned().collect()
+    }
+
     pub fn get_bytes(&self, access_path: &AccessPath) -> anyhow::Result<Option<Cow<[u8]>>> {
         fail_point!("move_adapter::data_cache::get", |_| Err(format_err!(
             "Injected failure in data_cache::get"
         )));
+
+        if self.record_reads {
+            self.reads.lock().unwrap().push(access_path.clone());
+        }
 
         match self.data_map.get(access_path) {
             Some(opt_data) => Ok(opt_data.as_ref().map(|v| Cow::Borrowed(v.as_ref()))),

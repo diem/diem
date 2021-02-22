@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
+// #![forbid(unsafe_code)]
 
 //! # The VM runtime
 //!
@@ -112,6 +112,7 @@ pub mod foreign_contracts;
 
 mod diem_vm;
 mod errors;
+mod parallel_executor;
 pub mod transaction_metadata;
 
 pub mod diem_transaction_executor;

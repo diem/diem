@@ -647,29 +647,18 @@ impl DiemVM {
 
     pub(crate) fn execute_block_impl(
         &self,
-        transactions: Vec<Transaction>,
+        signature_verified_block: Vec<PreprocessedTransaction>,
         data_cache: &mut StateViewCache,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-        let count = transactions.len();
+        let count = signature_verified_block.len();
         let mut result = vec![];
         let mut should_restart = false;
 
         info!(
             AdapterLogSchema::new(data_cache.id(), 0),
             "Executing block, transaction count: {}",
-            transactions.len()
+            signature_verified_block.len()
         );
-
-        let signature_verified_block: Vec<PreprocessedTransaction>;
-        {
-            // Verify the signatures of all the transactions in parallel.
-            // This is time consuming so don't wait and do the checking
-            // sequentially while executing the transactions.
-            signature_verified_block = transactions
-                .into_par_iter()
-                .map(preprocess_transaction)
-                .collect();
-        }
 
         for (idx, txn) in signature_verified_block.into_iter().enumerate() {
             let log_context = AdapterLogSchema::new(data_cache.id(), idx);
@@ -777,7 +766,19 @@ impl DiemVM {
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let mut state_view_cache = StateViewCache::new(state_view);
         let vm = DiemVM::new(&state_view_cache);
-        vm.execute_block_impl(transactions, &mut state_view_cache)
+
+        let signature_verified_block: Vec<PreprocessedTransaction>;
+        {
+            // Verify the signatures of all the transactions in parallel.
+            // This is time consuming so don't wait and do the checking
+            // sequentially while executing the transactions.
+            signature_verified_block = transactions
+                .into_par_iter()
+                .map(preprocess_transaction)
+                .collect();
+        }
+
+        vm.execute_block_impl(signature_verified_block, &mut state_view_cache)
     }
 }
 
@@ -804,7 +805,7 @@ pub(crate) fn preprocess_transaction(txn: Transaction) -> PreprocessedTransactio
     }
 }
 
-fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
+pub(crate) fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
     let new_epoch_event_key = diem_types::on_chain_config::new_epoch_event_key();
     vm_output
         .events()
@@ -841,7 +842,23 @@ impl VMExecutor for DiemVM {
             ))
         });
 
-        let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
+        // let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
+        let mut cache = StateViewCache::new(state_view);
+
+        let signature_verified_block: Vec<PreprocessedTransaction>;
+        {
+            // Verify the signatures of all the transactions in parallel.
+            // This is time consuming so don't wait and do the checking
+            // sequentially while executing the transactions.
+            signature_verified_block = transactions
+                .into_par_iter()
+                .map(preprocess_transaction)
+                .collect();
+        }
+
+        let output = crate::parallel_executor::parallel_transaction_executor::ParallelTransactionExecutor::new()
+            .execute_transactions_parallel(signature_verified_block, &mut cache)?;
+
         Ok(output
             .into_iter()
             .map(|(_vm_status, txn_output)| txn_output)
