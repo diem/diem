@@ -4,7 +4,7 @@
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::{
     errors::JsonRpcError,
-    util::vm_status_view_from_kept_vm_status,
+    util::{transaction_data_view_from_transaction, vm_status_view_from_kept_vm_status},
     views::{
         AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
         EventWithProofView, MetadataView, StateProofView, TransactionView, TransactionsProofsView,
@@ -396,7 +396,7 @@ async fn get_transactions(
             version: start_version + v as u64,
             hash: tx.hash().into(),
             bytes: bcs::to_bytes(&tx)?.into(),
-            transaction: tx.into(),
+            transaction: transaction_data_view_from_transaction(tx),
             events,
             vm_status: vm_status_view_from_kept_vm_status(info.status()),
             gas_used: info.gas_used(),
@@ -477,7 +477,7 @@ async fn get_account_transaction(
             version: tx_version,
             hash: tx.transaction.hash().into(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: tx.transaction.into(),
+            transaction: transaction_data_view_from_transaction(tx.transaction),
             events,
             vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),
@@ -623,7 +623,7 @@ async fn get_account_transactions(
             version: tx.version,
             hash: tx.transaction.hash().into(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: tx.transaction.into(),
+            transaction: transaction_data_view_from_transaction(tx.transaction),
             events,
             vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),

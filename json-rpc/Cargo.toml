@@ -25,6 +25,7 @@ reqwest = { version = "0.11.1", features = ["blocking", "json"], default_feature
 proptest = { version = "1.0.0", optional = true }
 
 bcs = "0.1.2"
+compiled-stdlib = { path = "../language/diem-framework/compiled",  version = "0.1.0" }
 diem-config = { path = "../config", version = "0.1.0" }
 diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 diemdb = { path = "../storage/diemdb", version = "0.1.0", optional = true }

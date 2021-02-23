@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_crypto::HashValue;
 use diem_types::{
     account_config::{
@@ -16,19 +15,15 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
-    transaction::{Script, Transaction, TransactionArgument, TransactionPayload},
 };
 use move_core_types::{
-    account_address::AccountAddress,
-    identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
+    account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag,
     move_resource::MoveResource,
 };
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
-    default::Default,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -567,54 +562,10 @@ pub struct ScriptView {
 }
 
 impl ScriptView {
-    fn unknown() -> Self {
+    pub fn unknown() -> Self {
         ScriptView {
             r#type: "unknown".to_string(),
             ..Default::default()
-        }
-    }
-}
-
-impl From<Transaction> for TransactionDataView {
-    fn from(tx: Transaction) -> Self {
-        match tx {
-            Transaction::BlockMetadata(t) => TransactionDataView::BlockMetadata {
-                timestamp_usecs: t.timestamp_usec(),
-            },
-            Transaction::GenesisTransaction(_) => TransactionDataView::WriteSet {},
-            Transaction::UserTransaction(t) => {
-                let script_hash = match t.payload() {
-                    TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
-                    _ => HashValue::zero(),
-                };
-
-                let script_bytes: BytesView = match t.payload() {
-                    TransactionPayload::Script(s) => bcs::to_bytes(s).unwrap_or_default(),
-                    _ => vec![],
-                }
-                .into();
-
-                let script: ScriptView = match t.payload() {
-                    TransactionPayload::Script(s) => s.into(),
-                    _ => ScriptView::unknown(),
-                };
-
-                TransactionDataView::UserTransaction {
-                    sender: t.sender().into(),
-                    signature_scheme: t.authenticator().scheme().to_string(),
-                    signature: t.authenticator().signature_bytes().into(),
-                    public_key: t.authenticator().public_key_bytes().into(),
-                    sequence_number: t.sequence_number(),
-                    chain_id: t.chain_id().id(),
-                    max_gas_amount: t.max_gas_amount(),
-                    gas_unit_price: t.gas_unit_price(),
-                    gas_currency: t.gas_currency_code().to_string(),
-                    expiration_timestamp_secs: t.expiration_timestamp_secs(),
-                    script_hash: script_hash.into(),
-                    script_bytes,
-                    script,
-                }
-            }
         }
     }
 }
@@ -668,54 +619,6 @@ impl From<AccountRole> for AccountRoleView {
                 ),
             },
         }
-    }
-}
-
-impl From<&Script> for ScriptView {
-    fn from(script: &Script) -> Self {
-        let name = LegacyStdlibScript::try_from(script.code())
-            .map_or("unknown".to_string(), |name| format!("{}", name));
-        let ty_args: Vec<String> = script
-            .ty_args()
-            .iter()
-            .map(|type_tag| match type_tag {
-                TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
-                tag => format!("{}", tag),
-            })
-            .collect();
-        let mut view = ScriptView {
-            r#type: name.clone(),
-            code: Some(script.code().into()),
-            arguments: Some(
-                script
-                    .args()
-                    .iter()
-                    .map(|arg| format!("{:?}", &arg))
-                    .collect(),
-            ),
-            type_arguments: Some(ty_args.clone()),
-            ..Default::default()
-        };
-
-        // handle legacy fields, backward compatible
-        if name == "peer_to_peer_with_metadata" {
-            if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
-                &script.args()[..]
-            {
-                view.receiver = Some(receiver.into());
-                view.amount = Some(*amount);
-                view.currency = Some(
-                    ty_args
-                        .get(0)
-                        .unwrap_or(&"unknown_currency".to_string())
-                        .to_string(),
-                );
-                view.metadata = Some(BytesView::from(metadata));
-                view.metadata_signature = Some(BytesView::from(metadata_signature));
-            }
-        }
-
-        view
     }
 }
 

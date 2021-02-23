@@ -1803,7 +1803,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
@@ -2411,6 +2410,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-sink",
+ "futures-task",
  "futures-util",
  "hyper",
  "itertools 0.10.0",
