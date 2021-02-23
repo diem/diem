@@ -5,8 +5,8 @@ custom_edit_url: https://github.com/diem/diem/edit/master/docker/compose/README.
 ---
 
 This directory contains the following compose configurations:
-* **validator-testnet**: creates a single validator test network
-* **faucet**: creates a faucet that directly connects to validator-testnet
+* **validator-testnet**: creates a single validator test network, and a faucet that directly connects to it
+* **client**: creates a client which connects to the above validator/faucet
 
 To use these compositions:
 1. [Download](https://docs.docker.com/install/) and install Docker and Docker Compose (comes with Docker for Mac and Windows).
@@ -14,17 +14,14 @@ To use these compositions:
 3. Run `docker-compose up`
 
 To build your own complete testnet:
-1. Start the **validator-testnet**:
+1. Start the **validator-testnet** and **faucet**:
     1. Enter the **validator-testnet** directory `cd validator-testnet`
     2. Start the composition `docker-compose up -d`
     3. Return to the compose directory: `cd ..`
-2. Start **faucet**:
-    1. Enter the **faucet** directory: `cd faucet`
-    2. Start the composition `docker-compose up -d`
-    3. Return to the compose directory: `cd ..`
-3. Enjoy your testnet:
+ 2. Enjoy your testnet:
     1. Faucet will be available at http://127.0.0.1:8000
     2. JSON-RPC will be available at http://127.0.0.1:8080
+
 
 If you would like to run the CLI client and interact with your testnet:
    1. Ensure the **validator-testnet** and the **faucet** are running
@@ -34,3 +31,5 @@ If you would like to run the CLI client and interact with your testnet:
 
 If you would like to clear the validator/blockchain data and start from scratch, either remove the docker volume `diem-shared`,
 or run `docker-compose run validator rm -rf '/opt/diem/var/*'` from the **validator-testnet** directory.
+
+To clear just the validator logs, run  `docker-compose run validator rm -rf '/opt/diem/var/validator.log'`

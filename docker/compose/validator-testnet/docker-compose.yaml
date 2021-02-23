@@ -1,14 +1,17 @@
-# This compose file defines a single validator node test network. In addition, it offers the
-# following facilities:
+# This compose file defines a single validator node test network,
+# along with a faucet that connects to it over json-rpc.
+# In addition, it offers the following facilities:
 # * JSON-RPC endpoint at http://127.0.0.1:8080.
 # * chain_id of 4 / TESTING
-#
+# * The faucet can be accessed at 127.0.0.1:8000
+
 # Additional information:
 # * If you use this compose for different Diem Networks, you will need remove the db volume first.
 # * If you would like to use the current Diem version within this repository, execute the
-# `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
-# * Images can be found at https://hub.docker.com/r/diem/validator/tags, obtain the latest tag and
-# update below.
+#     `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
+# * Validator images can be found at https://hub.docker.com/r/libra/faucet/tags
+# * Faucet images can be found at https://hub.docker.com/r/libra/validator/tags
+
 version: "3.8"
 services:
     validator:
@@ -25,6 +28,46 @@ services:
         command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
         ports:
             - "8080:8080"
+
+    faucet:
+      image: libra/faucet:devnet
+      depends_on:
+        - validator
+      environment:
+        AC_HOST: "172.16.1.3"
+        AC_PORT: "8080"
+        CFG_CHAIN_ID: "TESTING"
+      networks:
+        shared:
+          ipv4_address: 172.16.1.2
+      volumes:
+        - type: volume
+          source: diem-shared
+          target: /opt/diem/var
+      command: >
+        /bin/bash -c "
+            for i in {1..10}
+            do
+                if [[ -s /opt/diem/var/mint.key ]]
+                then
+                    /opt/diem/bin/diem-faucet \
+                        --address 0.0.0.0 \
+                        --port 8000 \
+                        --chain-id TESTING \
+                        --mint-key-file-path /opt/diem/var/mint.key \
+                        --server-url http://172.16.1.3:8080
+                    exit $$?
+                else
+                    echo 'Validator has not populated mint.key yet. Is it running?'
+                    sleep 1
+                fi
+            done
+            exit 1
+          "
+      ports:
+        - "8000:8000"
+
+
 networks:
     shared:
         name: "diem-docker-compose-shared"
