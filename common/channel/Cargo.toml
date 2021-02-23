@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-futures = "0.3.12"
+futures = "0.3.13"
 diem-metrics = { path = "../metrics", version = "0.1.0" }
 diem-infallible = { path = "../infallible", version = "0.1.0" }
 diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

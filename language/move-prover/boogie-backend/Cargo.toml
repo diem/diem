@@ -24,7 +24,7 @@ once_cell = "1.6.0"
 pretty = "0.10.0"
 regex = "1.4.3"
 rand = "0.8.3"
-futures = "0.3.12"
+futures = "0.3.13"
 handlebars = "3.5.3"
 tokio = { version = "1.2.0", features = ["full"] }
 codespan = "0.8.0"

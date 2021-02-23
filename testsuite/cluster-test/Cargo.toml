@@ -62,7 +62,7 @@ seed-peer-generator = { path = "../../config/seed-peer-generator", version = "0.
 state-sync = { path = "../../state-sync", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
-futures = "0.3.12"
+futures = "0.3.13"
 tokio = { version = "1.2.0", features = ["full"] }
 async-trait = "0.1.42"
 
