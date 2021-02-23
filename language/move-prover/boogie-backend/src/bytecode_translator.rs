@@ -12,7 +12,7 @@ use log::{debug, info, log, warn, Level};
 use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
-    stackless_bytecode::{BorrowNode, Bytecode, Constant, Operation},
+    stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, Operation, StrongEdge},
     verification_analysis,
 };
 use move_model::{
@@ -582,7 +582,7 @@ impl<'env> ModuleTranslator<'env> {
                     UnpackRef | UnpackRefDeep | PackRef | PackRefDeep => {
                         // No effect
                     }
-                    WriteBack(dest, _) => {
+                    WriteBack(dest, edge) => {
                         use BorrowNode::*;
                         let src = srcs[0];
                         match dest {
@@ -593,31 +593,64 @@ impl<'env> ModuleTranslator<'env> {
                                     memory,
                                     &None,
                                 );
+                                let func = match edge {
+                                    BorrowEdge::Weak => "WritebackToGlobalWeak",
+                                    BorrowEdge::Strong(StrongEdge::Empty) => {
+                                        "WritebackToGlobalStrong"
+                                    }
+                                    BorrowEdge::Strong(StrongEdge::Offset(_)) => {
+                                        panic!("Strong global writeback has offset")
+                                    }
+                                };
                                 emitln!(
                                     self.writer,
-                                    "call {} := $WritebackToGlobal({}, {});",
+                                    "call {} := ${}({}, {});",
                                     memory_name,
+                                    func,
                                     memory_name,
                                     str_local(src),
                                 );
                             }
                             LocalRoot(idx) => {
+                                let func = match edge {
+                                    BorrowEdge::Weak => "WritebackToValueWeak",
+                                    BorrowEdge::Strong(StrongEdge::Empty) => {
+                                        "WritebackToValueStrong"
+                                    }
+                                    BorrowEdge::Strong(StrongEdge::Offset(_)) => {
+                                        panic!("Strong local writeback has offset")
+                                    }
+                                };
                                 emitln!(
                                     self.writer,
-                                    "call {} := $WritebackToValue({}, {}, {});",
+                                    "call {} := ${}({}, {}, {});",
                                     str_local(*idx),
+                                    func,
                                     str_local(src),
                                     idx,
                                     str_local(*idx)
                                 );
                             }
                             Reference(idx) => {
+                                let (func, thirdarg): (&str, String) = match edge {
+                                    BorrowEdge::Weak => {
+                                        ("WritebackToReferenceWeak", "".to_string())
+                                    }
+                                    BorrowEdge::Strong(StrongEdge::Empty) => {
+                                        ("WritebackToReferenceStrongEmp", "".to_string())
+                                    }
+                                    BorrowEdge::Strong(StrongEdge::Offset(offset)) => {
+                                        ("WritebackToReferenceStrongOff", format!(", {}", offset))
+                                    }
+                                };
                                 emitln!(
                                     self.writer,
-                                    "call {} := $WritebackToReference({}, {});",
+                                    "call {} := ${}({}, {}{});",
                                     str_local(*idx),
+                                    func,
                                     str_local(src),
-                                    str_local(*idx)
+                                    str_local(*idx),
+                                    thirdarg
                                 );
                             }
                         }

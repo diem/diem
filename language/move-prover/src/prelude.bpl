@@ -873,7 +873,7 @@ procedure {:inline 1} $CopyOrMoveValue(local: $Value) returns (dst: $Value)
     dst := local;
 }
 
-procedure {:inline 1} $WritebackToGlobal(m: $Memory, src: $Mutation) returns (m': $Memory)
+procedure {:inline 1} $WritebackToGlobalWeak(m: $Memory, src: $Mutation) returns (m': $Memory)
 {
     var l: $Location;
     var ta: $TypeValueArray;
@@ -891,7 +891,7 @@ procedure {:inline 1} $WritebackToGlobal(m: $Memory, src: $Mutation) returns (m'
     }
 }
 
-procedure {:inline 1} $WritebackToValue(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
+procedure {:inline 1} $WritebackToValueWeak(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $UpdateValue(p#$Mutation(src), 0, vdst, v#$Mutation(src));
@@ -900,7 +900,7 @@ procedure {:inline 1} $WritebackToValue(src: $Mutation, idx: int, vdst: $Value) 
     }
 }
 
-procedure {:inline 1} $WritebackToReference(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
+procedure {:inline 1} $WritebackToReferenceWeak(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
 {
     var srcPath, dstPath: $Path;
 
@@ -911,6 +911,67 @@ procedure {:inline 1} $WritebackToReference(src: $Mutation, dst: $Mutation) retu
                     l#$Mutation(dst),
                     dstPath,
                     $UpdateValue(srcPath, size#$Path(dstPath), v#$Mutation(dst), v#$Mutation(src)));
+    } else {
+        dst' := dst;
+    }
+}
+
+procedure {:inline 1} $WritebackToGlobalStrong(m: $Memory, src: $Mutation) returns (m': $Memory)
+{
+    var l: $Location;
+    var ta: $TypeValueArray;
+    var a: int;
+    var v: $Value;
+
+    l := l#$Mutation(src);
+    if (is#$Global(l)) {
+        ta := ts#$Global(l);
+        a := a#$Global(l);
+        v := v#$Mutation(src);
+        m' := $Memory(domain#$Memory(m), contents#$Memory(m)[ta, a := v]);
+    } else {
+        m' := m;
+    }
+}
+
+procedure {:inline 1} $WritebackToValueStrong(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
+{
+    if (l#$Mutation(src) == $Local(idx)) {
+        vdst' := v#$Mutation(src);
+    } else {
+        vdst' := vdst;
+    }
+}
+
+procedure {:inline 1} $WritebackToReferenceStrongEmp(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
+{
+    var srcPath, dstPath: $Path;
+
+    srcPath := p#$Mutation(src);
+    dstPath := p#$Mutation(dst);
+    if (l#$Mutation(dst) == l#$Mutation(src) && size#$Path(dstPath) <= size#$Path(srcPath) && $IsPathPrefix(dstPath, srcPath)) {
+        dst' := $Mutation(
+                    l#$Mutation(dst),
+                    dstPath,
+                    v#$Mutation(dst));
+    } else {
+        dst' := dst;
+    }
+}
+
+procedure {:inline 1} $WritebackToReferenceStrongOff(src: $Mutation, dst: $Mutation, edge: $FieldName)
+returns (dst': $Mutation)
+{
+    var srcPath, dstPath: $Path;
+
+    srcPath := p#$Mutation(src);
+    dstPath := p#$Mutation(dst);
+    if (l#$Mutation(dst) == l#$Mutation(src)) {
+        dst' := $Mutation(
+                    l#$Mutation(dst),
+                    dstPath,
+                    $Vector($UpdateValueArray(v#$Vector(v#$Mutation(dst)), edge, v#$Mutation(src)))
+                    );
     } else {
         dst' := dst;
     }
