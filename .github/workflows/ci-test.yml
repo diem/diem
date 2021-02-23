@@ -68,7 +68,7 @@ jobs:
     if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
     strategy:
       matrix:
-        target_os: [alpine, centos, github] #arch is broken, re-add when fixed: https://bugs.archlinux.org/task/69563
+        target_os: [alpine, centos, arch, github]
     steps:
       - uses: actions/checkout@v2
         with:
