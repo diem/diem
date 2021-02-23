@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_json_rpc_types::views::{MoveAbortExplanationView, VMStatusView};
+use diem_types::vm_status::{AbortLocation, KeptVMStatus};
+
 /// Helper macros. Used to simplify adding new RpcHandler to Registry
 /// `registry` - name of local registry variable
 /// `name`  - name for the rpc method
@@ -40,4 +43,41 @@ macro_rules! register_rpc_method {
             }),
         );
     };
+}
+
+pub fn vm_status_view_from_kept_vm_status(status: &KeptVMStatus) -> VMStatusView {
+    match status {
+        KeptVMStatus::Executed => VMStatusView::Executed,
+        KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
+        KeptVMStatus::MoveAbort(loc, abort_code) => {
+            let explanation = if let AbortLocation::Module(module_id) = loc {
+                move_explain::get_explanation(module_id, *abort_code).map(|context| {
+                    MoveAbortExplanationView {
+                        category: context.category.code_name,
+                        category_description: context.category.code_description,
+                        reason: context.reason.code_name,
+                        reason_description: context.reason.code_description,
+                    }
+                })
+            } else {
+                None
+            };
+
+            VMStatusView::MoveAbort {
+                explanation,
+                location: loc.to_string(),
+                abort_code: *abort_code,
+            }
+        }
+        KeptVMStatus::ExecutionFailure {
+            location,
+            function,
+            code_offset,
+        } => VMStatusView::ExecutionFailure {
+            location: location.to_string(),
+            function_index: *function,
+            code_offset: *code_offset,
+        },
+        KeptVMStatus::MiscellaneousError => VMStatusView::MiscellaneousError,
+    }
 }

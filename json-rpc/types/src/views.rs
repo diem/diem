@@ -17,14 +17,12 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Script, Transaction, TransactionArgument, TransactionPayload},
-    vm_status::KeptVMStatus,
 };
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
-    vm_status::AbortLocation,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -428,26 +426,6 @@ impl std::fmt::Display for MoveAbortExplanationView {
     }
 }
 
-impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
-    type Error = ();
-    fn try_from(status: &KeptVMStatus) -> Result<MoveAbortExplanationView, Self::Error> {
-        match status {
-            KeptVMStatus::MoveAbort(AbortLocation::Module(module_id), abort_code) => {
-                let error_context = move_explain::get_explanation(module_id, *abort_code);
-                error_context
-                    .map(|context| MoveAbortExplanationView {
-                        category: context.category.code_name,
-                        category_description: context.category.code_description,
-                        reason: context.reason.code_name,
-                        reason_description: context.reason.code_description,
-                    })
-                    .ok_or(())
-            }
-            _ => Err(()),
-        }
-    }
-}
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
@@ -499,30 +477,6 @@ impl std::fmt::Display for VMStatusView {
             VMStatusView::VerificationError => write!(f, "Verification Error"),
             VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
             VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
-        }
-    }
-}
-
-impl From<&KeptVMStatus> for VMStatusView {
-    fn from(status: &KeptVMStatus) -> Self {
-        match status {
-            KeptVMStatus::Executed => VMStatusView::Executed,
-            KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
-            KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusView::MoveAbort {
-                explanation: MoveAbortExplanationView::try_from(status).ok(),
-                location: loc.to_string(),
-                abort_code: *abort_code,
-            },
-            KeptVMStatus::ExecutionFailure {
-                location,
-                function,
-                code_offset,
-            } => VMStatusView::ExecutionFailure {
-                location: location.to_string(),
-                function_index: *function,
-                code_offset: *code_offset,
-            },
-            KeptVMStatus::MiscellaneousError => VMStatusView::MiscellaneousError,
         }
     }
 }
