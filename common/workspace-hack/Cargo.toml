@@ -23,7 +23,7 @@ fail = { version = "0.4.0", default-features = false, features = ["failpoints"] 
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
@@ -64,7 +64,7 @@ fail = { version = "0.4.0", default-features = false, features = ["failpoints"] 
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
@@ -108,7 +108,7 @@ fail = { version = "0.4.0", default-features = false, features = ["failpoints"] 
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
@@ -149,7 +149,7 @@ fail = { version = "0.4.0", default-features = false, features = ["failpoints"] 
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
