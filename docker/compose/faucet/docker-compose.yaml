@@ -2,10 +2,6 @@
 # compose's json-rpc endpoint. This should be started after that compose has been started.
 # The faucet can be accessed at 127.0.0.1:8000
 #
-# Place the following files into the same directory:
-# * mint.key (also known as the diem_root_key)
-# * waypoint.txt
-#
 # Additional notes:
 # * Images can be found at https://hub.docker.com/r/diem/faucet/tags, obtain the latest tag and
 # update below.
