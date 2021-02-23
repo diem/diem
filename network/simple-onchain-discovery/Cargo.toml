@@ -21,7 +21,6 @@ diem-config = { path = "../../config"}
 diem-crypto = {path = "../../crypto/crypto"}
 diem-logger = {path = "../../common/logger"}
 diem-metrics = {path = "../../common/metrics"}
-diem-network-address = {path = "../network-address"}
 diem-network-address-encryption = {path = "../../config/management/network-address-encryption"}
 diem-types = {path = "../../types"}
 diem-workspace-hack = { path = "../../common/workspace-hack" }
@@ -31,7 +30,6 @@ short-hex-str = { path = "../../common/short-hex-str" }
 subscription-service = { path = "../../common/subscription-service" }
 
 [dev-dependencies]
-diem-network-address = {path = "../network-address", features = ["fuzzing"]}
 diem-config = { path = "../../config", features = ["testing"]}
 netcore = { path = "../netcore", features = ["testing"] }
 rand = "0.8.3"

@@ -13,8 +13,11 @@ use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
-use diem_network_address::{NetworkAddress, Protocol};
-use diem_types::{chain_id::ChainId, transaction::Transaction};
+use diem_types::{
+    chain_id::ChainId,
+    network_address::{NetworkAddress, Protocol},
+    transaction::Transaction,
+};
 use std::net::{Ipv4Addr, ToSocketAddrs};
 use structopt::StructOpt;
 

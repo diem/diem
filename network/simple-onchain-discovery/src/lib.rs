@@ -265,10 +265,9 @@ mod tests {
         x25519::PrivateKey,
         PrivateKey as PK, Uniform,
     };
-    use diem_network_address::NetworkAddress;
     use diem_types::{
-        on_chain_config::OnChainConfig, validator_config::ValidatorConfig,
-        validator_info::ValidatorInfo, PeerId,
+        network_address::NetworkAddress, on_chain_config::OnChainConfig,
+        validator_config::ValidatorConfig, validator_info::ValidatorInfo, PeerId,
     };
     use futures::executor::block_on;
     use rand::{rngs::StdRng, SeedableRng};

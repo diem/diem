@@ -12,10 +12,6 @@ use diem_crypto::{
 };
 use diem_infallible::RwLock;
 use diem_mempool::mocks::MockSharedMempool;
-use diem_network_address::{
-    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
-    parse_memory, NetworkAddress, Protocol,
-};
 use diem_time_service::TimeService;
 use diem_types::{
     account_address::AccountAddress,
@@ -25,6 +21,10 @@ use diem_types::{
     contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    network_address::{
+        encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
+        parse_memory, NetworkAddress, Protocol,
+    },
     on_chain_config::ValidatorSet,
     proof::TransactionListProof,
     test_helpers::transaction_test_helpers::get_test_signed_txn,

@@ -7,9 +7,11 @@ use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
 use diem_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
-use diem_network_address::{NetworkAddress, Protocol};
 use diem_network_address_encryption::Encryptor;
-use diem_types::account_address::AccountAddress;
+use diem_types::{
+    account_address::AccountAddress,
+    network_address::{NetworkAddress, Protocol},
+};
 use serde::Serialize;
 use std::{convert::TryFrom, str::FromStr};
 use structopt::StructOpt;

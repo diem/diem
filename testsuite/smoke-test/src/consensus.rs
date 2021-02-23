@@ -12,9 +12,8 @@ use crate::{
 use diem_client::views::VMStatusView;
 use diem_config::config::SecureBackend;
 use diem_global_constants::OWNER_ACCOUNT;
-use diem_network_address::NetworkAddress;
 use diem_secure_storage::{KVStorage, Storage};
-use diem_types::account_address::AccountAddress;
+use diem_types::{account_address::AccountAddress, network_address::NetworkAddress};
 use std::{convert::TryInto, str::FromStr};
 
 #[test]

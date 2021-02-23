@@ -23,10 +23,9 @@ use diem_crypto::x25519::PublicKey;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
-use diem_network_address::NetworkAddress;
 use diem_network_address_encryption::Encryptor;
 use diem_time_service::TimeService;
-use diem_types::chain_id::ChainId;
+use diem_types::{chain_id::ChainId, network_address::NetworkAddress};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     logging::NetworkSchema,

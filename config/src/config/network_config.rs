@@ -8,10 +8,11 @@ use crate::{
     utils,
 };
 use diem_crypto::{x25519, Uniform};
-use diem_network_address::NetworkAddress;
 use diem_network_address_encryption::Encryptor;
 use diem_secure_storage::{CryptoStorage, KVStorage, Storage};
-use diem_types::{transaction::authenticator::AuthenticationKey, PeerId};
+use diem_types::{
+    network_address::NetworkAddress, transaction::authenticator::AuthenticationKey, PeerId,
+};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,

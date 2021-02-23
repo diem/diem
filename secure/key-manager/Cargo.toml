@@ -21,7 +21,6 @@ diem-config = { path = "../../config"}
 diem-crypto = { path = "../../crypto/crypto" }
 diem-global-constants = { path = "../../config/global-constants"}
 diem-logger = { path = "../../common/logger" }
-diem-network-address = { path = "../../network/network-address" }
 diem-client = { path = "../../sdk/client", features = ["blocking"], default-features = false }
 diem-secure-push-metrics = { path = "../push-metrics" }
 diem-secure-storage = { path = "../storage" }

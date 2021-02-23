@@ -3,8 +3,10 @@
 
 //! TCP Transport
 use crate::transport::Transport;
-use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress};
-use diem_types::PeerId;
+use diem_types::{
+    network_address::{parse_dns_tcp, parse_ip_tcp, parse_tcp, IpFilter, NetworkAddress},
+    PeerId,
+};
 use futures::{
     future::{self, Either, Future},
     io::{AsyncRead, AsyncWrite},
@@ -95,7 +97,7 @@ impl Transport for TcpTransport {
         let proxy = Proxy::new();
 
         let proxy_addr = {
-            use diem_network_address::Protocol::*;
+            use diem_types::network_address::Protocol::*;
 
             let addr = match protos.first() {
                 Some(Ip4(ip)) => proxy.https(&ip.to_string()),

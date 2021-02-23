@@ -22,13 +22,12 @@ diem-config = { path = ".." }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-client = { path = "../../sdk/client", features = ["blocking"], default-features = false }
 diem-logger = { path = "../../common/logger" }
-diem-network-address = { path = "../../network/network-address" }
 diem-temppath = { path = "../../common/temppath" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dev-dependencies]
-diem-network-address = {path = "../../network/network-address", features = ["fuzzing"]}
+diem-types = {path = "../../types", features = ["fuzzing"]}
 
 [features]
 default = []

@@ -12,9 +12,8 @@ use diem_config::{
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use diem_infallible::RwLock;
 use diem_metrics::IntCounterVec;
-use diem_network_address::NetworkAddress;
 use diem_time_service::TimeService;
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_types::{chain_id::ChainId, network_address::NetworkAddress, PeerId};
 use futures::{executor::block_on, StreamExt};
 use netcore::transport::ConnectionOrigin;
 use network::{

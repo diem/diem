@@ -46,7 +46,6 @@ diem-logger = { path = "../../common/logger" }
 diem-management = { path = "../../config/management", features = ["testing"] }
 diem-mempool = { path = "../../mempool" }
 diem-infallible = { path = "../../common/infallible" }
-diem-network-address = { path = "../../network/network-address" }
 diem-network-address-encryption = { path = "../../config/management/network-address-encryption" }
 diem-node = { path = "../../diem-node" }
 diem-operational-tool = {path = "../../config/management/operational", features = ["testing"] }

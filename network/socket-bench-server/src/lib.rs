@@ -6,7 +6,7 @@
 use diem_config::network_id::NetworkContext;
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use diem_logger::prelude::*;
-use diem_network_address::NetworkAddress;
+use diem_types::network_address::NetworkAddress;
 use futures::{
     future::Future,
     io::{AsyncRead, AsyncWrite},

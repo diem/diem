@@ -24,10 +24,9 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_infallible::RwLock;
-use diem_network_address::NetworkAddress;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_time_service::TimeService;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{channel::oneshot, io::AsyncWriteExt, stream::StreamExt};
 use memsocket::MemorySocket;
 use netcore::transport::{

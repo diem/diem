@@ -9,11 +9,10 @@ use anyhow::Error;
 use diem_client::BlockingClient;
 use diem_config::config::{Peer, PeerRole, PeerSet};
 use diem_logger::prelude::*;
-use diem_network_address::NetworkAddress;
 use diem_types::{
     account_config::diem_root_address, account_state::AccountState,
-    account_state_blob::AccountStateBlob, on_chain_config::ValidatorSet,
-    validator_info::ValidatorInfo, PeerId,
+    account_state_blob::AccountStateBlob, network_address::NetworkAddress,
+    on_chain_config::ValidatorSet, validator_info::ValidatorInfo, PeerId,
 };
 
 /// Retrieve the Fullnode seed peers from JSON-RPC

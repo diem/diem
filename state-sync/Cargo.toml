@@ -30,7 +30,6 @@ diem-infallible = { path = "../common/infallible" }
 diem-logger = { path = "../common/logger" }
 diem-mempool = { path = "../mempool"}
 diem-metrics = { path = "../common/metrics" }
-diem-network-address = { path = "../network/network-address", optional = true }
 diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 diem-temppath = { path = "../common/temppath" }
 diem-types = { path = "../types" }
@@ -56,7 +55,6 @@ compiled-stdlib = { path = "../language/diem-framework/compiled" }
 diem-crypto = { path = "../crypto/crypto" }
 diem-genesis-tool = {path = "../config/management/genesis", features = ["testing"] }
 diem-mempool = { path = "../mempool", features = ["fuzzing"] }
-diem-network-address = { path = "../network/network-address", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers" }
 diemdb = { path = "../storage/diemdb" }
 executor-test-helpers = { path = "../execution/executor-test-helpers" }
@@ -71,4 +69,4 @@ diem-time-service = { path = "../common/time-service", features = ["testing"] }
 [features]
 default = []
 failpoints = ["fail/failpoints"]
-fuzzing = ["vm-genesis", "proptest", "executor-test-helpers", "diem-network-address/fuzzing", "diem-config/fuzzing", "diem-mempool/fuzzing", "diem-types/fuzzing", "diem-proptest-helpers", "memsocket/fuzzing"]
+fuzzing = ["vm-genesis", "proptest", "executor-test-helpers", "diem-config/fuzzing", "diem-mempool/fuzzing", "diem-types/fuzzing", "diem-proptest-helpers", "memsocket/fuzzing"]

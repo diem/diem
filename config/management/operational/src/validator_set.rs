@@ -4,9 +4,8 @@
 use crate::{json_rpc::JsonRpcClientWrapper, validator_config::DecryptedValidatorConfig};
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
-use diem_network_address::NetworkAddress;
 use diem_network_address_encryption::Encryptor;
-use diem_types::account_address::AccountAddress;
+use diem_types::{account_address::AccountAddress, network_address::NetworkAddress};
 use serde::Serialize;
 use structopt::StructOpt;
 

@@ -17,7 +17,6 @@ tokio-util = { version = "0.6.3", features = ["compat", "codec"] }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-config = { path = "../../config" }
 diem-logger = { path = "../../common/logger" }
-diem-network-address = { path = "../network-address" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 memsocket = { path = "../memsocket" }

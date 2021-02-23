@@ -11,8 +11,10 @@ use crate::{
 use diem_config::config;
 use diem_crypto::{ed25519::Ed25519PublicKey, x25519};
 use diem_management::{error::Error, secure_backend::DISK};
-use diem_network_address::NetworkAddress;
-use diem_types::{account_address::AccountAddress, chain_id::ChainId, waypoint::Waypoint};
+use diem_types::{
+    account_address::AccountAddress, chain_id::ChainId, network_address::NetworkAddress,
+    waypoint::Waypoint,
+};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "diem-operational-tool";

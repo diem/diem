@@ -38,7 +38,6 @@ diem-crypto-derive = { path = "../crypto/crypto-derive" }
 diem-infallible = { path = "../common/infallible" }
 diem-logger = { path = "../common/logger" }
 diem-metrics = { path = "../common/metrics" }
-diem-network-address = { path = "./network-address" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 diem-rate-limiter = { path = "../common/rate-limiter"}
 diem-time-service = { path = "../common/time-service", features = ["async"] }
@@ -51,8 +50,8 @@ short-hex-str = { path = "../common/short-hex-str" }
 
 [dev-dependencies]
 criterion = "0.3.4"
-diem-network-address = { path = "./network-address", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers" }
+diem-types = { path = "../types", features = ["fuzzing"] }
 maplit = "1.0.2"
 memsocket = { path = "./memsocket" }
 network-builder = {path = "./builder"}
@@ -64,7 +63,7 @@ socket-bench-server = { path = "./socket-bench-server" }
 
 [features]
 default = []
-fuzzing = ["bitvec/fuzzing", "diem-crypto/fuzzing", "diem-network-address/fuzzing", "diem-proptest-helpers", "diem-time-service/testing", "diem-types/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
+fuzzing = ["bitvec/fuzzing", "diem-crypto/fuzzing", "diem-types/fuzzing", "diem-proptest-helpers", "diem-time-service/testing", "diem-types/fuzzing", "memsocket/testing", "netcore/fuzzing", "proptest", "proptest-derive", "rand_core"]
 testing = ["diem-config/testing", "diem-time-service/testing", "memsocket/testing", "netcore/testing"]
 
 [[bench]]

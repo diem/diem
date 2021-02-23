@@ -25,7 +25,6 @@ diem-crypto-derive = { path = "../../crypto/crypto-derive"}
 diem-types = { path = "../../types", features=["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 network = { path = "../../network" }
-diem-network-address = { path = "../../network/network-address", features=["fuzzing"] }
 move-core-types = { path = "../../language/move-core/types", features=["fuzzing"] }
 
 [[bin]]

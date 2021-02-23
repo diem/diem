@@ -49,11 +49,10 @@ storage-service = { path = "../storage/storage-service", optional = true }
 proptest = "1.0.0"
 
 diem-config = { path = "../config", features = ["fuzzing"] }
-diem-network-address = { path = "../network/network-address" }
 network = { path = "../network", features = ["fuzzing"] }
 storage-interface = { path = "../storage/storage-interface", features = ["fuzzing"] }
 
 [features]
 default = []
 failpoints = ["fail/failpoints", "vm-validator/failpoints"]
-fuzzing = ["proptest", "diem-types/fuzzing", "storage-interface/fuzzing", "diem-config/fuzzing",]
+fuzzing = ["proptest", "diem-types/fuzzing", "storage-interface/fuzzing", "diem-config/fuzzing"]

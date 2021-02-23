@@ -115,7 +115,6 @@ members = [
     "network/builder",
     "network/memsocket",
     "network/netcore",
-    "network/network-address",
     "network/simple-onchain-discovery",
     "network/socket-bench-server",
     "sdk/client",

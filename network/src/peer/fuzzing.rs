@@ -14,10 +14,9 @@ use crate::{
 };
 use channel::{diem_channel, message_queues::QueueStyle};
 use diem_config::{config::PeerRole, network_id::NetworkContext};
-use diem_network_address::NetworkAddress;
 use diem_proptest_helpers::ValueGenerator;
 use diem_time_service::TimeService;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{executor::block_on, future, io::AsyncReadExt, sink::SinkExt, stream::StreamExt};
 use memsocket::MemorySocket;
 use netcore::transport::ConnectionOrigin;

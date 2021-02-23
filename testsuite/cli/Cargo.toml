@@ -34,7 +34,6 @@ diem-client = { path = "../../sdk/client" }
 diem-infallible = { path = "../../common/infallible" }
 diem-logger =  { path = "../../common/logger" }
 diem-metrics = { path = "../../common/metrics" }
-diem-network-address = { path = "../../network/network-address" }
 diem-types = { path = "../../types" }
 diem-temppath = { path = "../../common/temppath/" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }

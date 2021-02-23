@@ -24,7 +24,6 @@ diem-crypto = { path = "../../crypto/crypto" }
 diem-infallible = { path = "../../common/infallible" }
 diem-logger = { path = "../../common/logger" }
 diem-metrics = {path = "../../common/metrics"}
-diem-network-address = { path = "../network-address" }
 diem-network-address-encryption = {path = "../../config/management/network-address-encryption"}
 diem-secure-storage = { path = "../../secure/storage" }
 diem-time-service = { path = "../../common/time-service", features = ["async"] }

@@ -24,7 +24,6 @@ diem-config = { path = "../.."}
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-global-constants = { path = "../../global-constants" }
 diem-management = { path = ".." }
-diem-network-address = { path = "../../../network/network-address" }
 diem-network-address-encryption = {path = "../network-address-encryption"}
 diem-secure-storage = { path = "../../../secure/storage" }
 diem-types = { path = "../../../types" }

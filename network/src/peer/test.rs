@@ -25,9 +25,8 @@ use crate::{
 use bytes::Bytes;
 use channel::{self, diem_channel, message_queues::QueueStyle};
 use diem_config::{config::PeerRole, network_id::NetworkContext};
-use diem_network_address::NetworkAddress;
 use diem_time_service::{MockTimeService, TimeService};
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{
     channel::oneshot,
     future::{self, FutureExt},

@@ -15,9 +15,12 @@ use diem_config::{
 };
 use diem_crypto::x25519;
 use diem_logger::prelude::*;
-use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use diem_time_service::{timeout, TimeService, TimeServiceTrait};
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_types::{
+    chain_id::ChainId,
+    network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress},
+    PeerId,
+};
 use futures::{
     future::{Future, FutureExt},
     io::{AsyncRead, AsyncWrite},
@@ -431,7 +434,7 @@ where
     fn parse_dial_addr(
         addr: &NetworkAddress,
     ) -> io::Result<(NetworkAddress, x25519::PublicKey, u8)> {
-        use diem_network_address::Protocol::*;
+        use diem_types::network_address::Protocol::*;
 
         let protos = addr.as_slice();
 

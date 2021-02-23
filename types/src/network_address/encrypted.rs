@@ -1,13 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{NetworkAddress, ParseError};
+use crate::{
+    account_address::AccountAddress,
+    network_address::{NetworkAddress, ParseError},
+};
 use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
 };
 use diem_crypto::{compat::Sha3_256, hkdf::Hkdf};
-use move_core_types::account_address::AccountAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -44,7 +46,7 @@ pub const TEST_SHARED_VAL_NETADDR_KEY_VERSION: KeyVersion = 0;
 /// also equal to the hash value `SHA3-256(b"DIEM_ENCRYPTED_NETWORK_ADDRESS_SALT")`.
 ///
 /// ```
-/// use diem_network_address::encrypted::HKDF_SALT;
+/// use diem_types::network_address::encrypted::HKDF_SALT;
 /// use diem_crypto::hash::HashValue;
 ///
 /// let derived_salt = HashValue::sha3_256_of(b"DIEM_ENCRYPTED_NETWORK_ADDRESS_SALT");
@@ -297,7 +299,6 @@ impl Arbitrary for EncNetworkAddress {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::NetworkAddress;
 
     // Ensure that modifying the ciphertext or associated data causes a decryption
     // error.

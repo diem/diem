@@ -3,9 +3,11 @@
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_genesis_tool::{command::Command, layout::Layout};
 use diem_management::{error::Error, secure_backend::DISK};
-use diem_network_address::NetworkAddress;
 use diem_operational_tool::command::Command as OperationalCommand;
-use diem_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
+use diem_types::{
+    chain_id::ChainId, network_address::NetworkAddress, transaction::Transaction,
+    waypoint::Waypoint,
+};
 use std::path::Path;
 use structopt::StructOpt;
 use tokio::task::spawn_blocking;

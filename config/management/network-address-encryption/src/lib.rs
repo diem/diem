@@ -5,15 +5,18 @@
 
 use diem_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
 use diem_infallible::RwLock;
-use diem_network_address::{
-    encrypted::{
-        EncNetworkAddress, Key, KeyVersion, TEST_SHARED_VAL_NETADDR_KEY,
-        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress,
-};
 use diem_secure_storage::{Error as StorageError, KVStorage, Storage};
-use move_core_types::account_address::AccountAddress;
+use diem_types::{
+    account_address::AccountAddress,
+    network_address::{
+        self,
+        encrypted::{
+            EncNetworkAddress, Key, KeyVersion, TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        },
+        NetworkAddress,
+    },
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -27,7 +30,7 @@ pub enum Error {
     #[error("Failed (de)serializing validator_network_address_keys")]
     BCSError(#[from] bcs::Error),
     #[error("NetworkAddress parse error {0}")]
-    ParseError(#[from] diem_network_address::ParseError),
+    ParseError(#[from] network_address::ParseError),
     #[error("Failed reading validator_network_address_keys from storage")]
     StorageError(#[from] StorageError),
     #[error("The specified version does not exist in validator_network_address_keys: {0}")]
@@ -215,7 +218,7 @@ mod tests {
         encryptor.initialize().unwrap();
 
         let mut rng = rand::rngs::StdRng::from_seed(OsRng.gen());
-        let mut key = [0; diem_network_address::encrypted::KEY_LEN];
+        let mut key = [0; network_address::encrypted::KEY_LEN];
         rng.fill_bytes(&mut key);
         encryptor.add_key(0, key).unwrap();
         encryptor.set_current_version(0).unwrap();
@@ -281,7 +284,7 @@ mod tests {
         let mut encryptor = Encryptor::new(storage);
         encryptor.initialize().unwrap();
         let mut rng = rand::rngs::StdRng::from_seed(OsRng.gen());
-        let mut key = [0; diem_network_address::encrypted::KEY_LEN];
+        let mut key = [0; network_address::encrypted::KEY_LEN];
         rng.fill_bytes(&mut key);
         encryptor.add_key(0, key).unwrap();
         encryptor.set_current_version(0).unwrap();

@@ -22,10 +22,9 @@ use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
-use diem_network_address::NetworkAddress;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_time_service::TimeService;
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_types::{chain_id::ChainId, network_address::NetworkAddress, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
 use netcore::transport::{
@@ -278,7 +277,7 @@ impl PeerManagerBuilder {
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
-        use diem_network_address::Protocol::*;
+        use diem_types::network_address::Protocol::*;
 
         let transport_context = self
             .transport_context

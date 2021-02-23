@@ -10,11 +10,11 @@ use diem_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     storage::StorageWrapper as Storage,
 };
-use diem_network_address::NetworkAddress;
 use diem_temppath::TempPath;
 use diem_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
-    on_chain_config::ValidatorSet, validator_config::ValidatorConfig, waypoint::Waypoint,
+    network_address::NetworkAddress, on_chain_config::ValidatorSet,
+    validator_config::ValidatorConfig, waypoint::Waypoint,
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;

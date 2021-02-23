@@ -45,8 +45,7 @@ use criterion::{
     PlotConfiguration, Throughput,
 };
 use diem_logger::prelude::*;
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{
     executor::block_on,
     io::{AsyncRead, AsyncWrite},

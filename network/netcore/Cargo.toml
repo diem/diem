@@ -19,17 +19,15 @@ tokio-util = { version = "0.6.3", features = ["compat"] }
 url = { version = "2.2.1" }
 
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-diem-network-address = { path = "../network-address" }
 diem-types = { path = "../../types" }
 memsocket = { path = "../memsocket", optional = true }
 proxy = { path = "../../common/proxy" }
 
 [dev-dependencies]
 diem-logger = { path = "../../common/logger" }
-diem-network-address = { path = "../network-address", features = ["fuzzing"] }
 memsocket = { path = "../memsocket" }
 
 [features]
 default = []
-fuzzing = ["memsocket/fuzzing"]
+fuzzing = ["memsocket/fuzzing", "diem-types/fuzzing"]
 testing = ["memsocket/testing"]

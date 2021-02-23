@@ -4,12 +4,12 @@
 use crate::json_rpc::JsonRpcClientWrapper;
 use diem_config::config::RoleType;
 use diem_management::error::Error;
-use diem_network_address::{
+use diem_network_address_encryption::Encryptor;
+use diem_secure_storage::{InMemoryStorage, Storage};
+use diem_types::network_address::{
     encrypted::{Key, KeyVersion, KEY_LEN},
     NetworkAddress,
 };
-use diem_network_address_encryption::Encryptor;
-use diem_secure_storage::{InMemoryStorage, Storage};
 use fallible::copy_from_slice::copy_slice_to_vec;
 use std::{
     io::{Read, Write},
@@ -157,8 +157,7 @@ impl CheckValidatorSetEndpoints {
 #[cfg(test)]
 pub mod tests {
     use crate::test_helper::OperationalTool;
-    use diem_network_address::NetworkAddress;
-    use diem_types::chain_id::ChainId;
+    use diem_types::{chain_id::ChainId, network_address::NetworkAddress};
     use std::str::FromStr;
 
     #[test]
