@@ -21,11 +21,11 @@ crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "st
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.13", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
-futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
+futures-channel = { version = "0.3.13", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
-futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
-futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
+futures-sink = { version = "0.3.13", features = ["alloc", "default", "std"] }
+futures-util = { version = "0.3.13", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
@@ -34,7 +34,6 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
@@ -62,11 +61,11 @@ crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "st
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.13", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
-futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
+futures-channel = { version = "0.3.13", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
-futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
-futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
+futures-sink = { version = "0.3.13", features = ["alloc", "default", "std"] }
+futures-util = { version = "0.3.13", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
@@ -75,7 +74,6 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
@@ -106,11 +104,11 @@ crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "st
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.13", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
-futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
+futures-channel = { version = "0.3.13", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
-futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
-futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
+futures-sink = { version = "0.3.13", features = ["alloc", "default", "std"] }
+futures-util = { version = "0.3.13", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
@@ -119,7 +117,6 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
@@ -147,11 +144,11 @@ crossbeam-utils = { version = "0.8.2", features = ["default", "lazy_static", "st
 either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.13", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
-futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
+futures-channel = { version = "0.3.13", features = ["alloc", "default", "futures-sink", "sink", "std"] }
 futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
-futures-io = { version = "0.3.12", features = ["default", "std"] }
-futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
-futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
+futures-io = { version = "0.3.13", features = ["default", "std"] }
+futures-sink = { version = "0.3.13", features = ["alloc", "default", "std"] }
+futures-util = { version = "0.3.13", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
@@ -160,7 +157,6 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
