@@ -64,6 +64,13 @@ impl<'env> FunctionDataBuilder<'env> {
         idx
     }
 
+    /// Add a return parameter.
+    pub fn add_return(&mut self, ty: Type) -> usize {
+        let idx = self.data.return_types.len();
+        self.data.return_types.push(ty);
+        idx
+    }
+
     /// Sets the default location.
     pub fn set_loc(&mut self, loc: Loc) {
         self.current_loc = loc;

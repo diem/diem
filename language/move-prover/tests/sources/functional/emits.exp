@@ -7,11 +7,10 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:106: conditional_missing_condition_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:106: conditional_missing_condition_incorrect
      =         x = <redacted>
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:107: conditional_missing_condition_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:110: conditional_missing_condition_incorrect
      =     at tests/sources/functional/emits.move:112
 
@@ -23,15 +22,12 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:141: conditional_multiple_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:141: conditional_multiple_incorrect
      =         b = <redacted>
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:142: conditional_multiple_incorrect
-     =     at tests/sources/functional/emits.move:142: conditional_multiple_incorrect
-     =     at tests/sources/functional/emits.move:143: conditional_multiple_incorrect
      =     at tests/sources/functional/emits.move:143: conditional_multiple_incorrect
      =     at tests/sources/functional/emits.move:144: conditional_multiple_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:147: conditional_multiple_incorrect
      =     at tests/sources/functional/emits.move:149
      =     at tests/sources/functional/emits.move:150
@@ -45,15 +41,12 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:171: conditional_multiple_same_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:171: conditional_multiple_same_incorrect
      =         b = <redacted>
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:172: conditional_multiple_same_incorrect
-     =     at tests/sources/functional/emits.move:172: conditional_multiple_same_incorrect
-     =     at tests/sources/functional/emits.move:173: conditional_multiple_same_incorrect
      =     at tests/sources/functional/emits.move:173: conditional_multiple_same_incorrect
      =     at tests/sources/functional/emits.move:174: conditional_multiple_same_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:177: conditional_multiple_same_incorrect
      =     at tests/sources/functional/emits.move:179
      =     at tests/sources/functional/emits.move:180
@@ -67,11 +60,10 @@ error: function does not emit the expected event
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/emits.move:97: conditional_wrong_condition_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:97: conditional_wrong_condition_incorrect
      =         x = <redacted>
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:98: conditional_wrong_condition_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:101: conditional_wrong_condition_incorrect
      =     at tests/sources/functional/emits.move:103
 
@@ -83,13 +75,11 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:47: multiple_incorrect
-    =     at <internal>:1
-    =     at tests/sources/functional/emits.move:47: multiple_incorrect
     =         handle = <redacted>
     =     at tests/sources/functional/emits.move:48: multiple_incorrect
-    =     at tests/sources/functional/emits.move:48: multiple_incorrect
     =     at tests/sources/functional/emits.move:49: multiple_incorrect
     =     at tests/sources/functional/emits.move:49: multiple_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:50: multiple_incorrect
     =     at tests/sources/functional/emits.move:52
     =     at tests/sources/functional/emits.move:53
@@ -103,11 +93,10 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:66: multiple_same_incorrect
-    =     at <internal>:1
-    =     at tests/sources/functional/emits.move:66: multiple_same_incorrect
     =         handle = <redacted>
     =     at tests/sources/functional/emits.move:67: multiple_same_incorrect
     =     at tests/sources/functional/emits.move:67: multiple_same_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:68: multiple_same_incorrect
     =     at tests/sources/functional/emits.move:70
     =     at tests/sources/functional/emits.move:71
@@ -122,13 +111,11 @@ error: emitted event not covered by any of `emits` clauses
      │ ╰─────^
      │
      =     at tests/sources/functional/emits.move:214: partial_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:214: partial_incorrect
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:215: partial_incorrect
-     =     at tests/sources/functional/emits.move:215: partial_incorrect
      =     at tests/sources/functional/emits.move:216: partial_incorrect
      =     at tests/sources/functional/emits.move:216: partial_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:217: partial_incorrect
      =     at tests/sources/functional/emits.move:219
      =     at tests/sources/functional/emits.move:218
@@ -141,12 +128,12 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:26: simple_wrong_handle_incorrect
-    =     at <internal>:1
-    =     at tests/sources/functional/emits.move:26: simple_wrong_handle_incorrect
     =         handle = <redacted>
     =         _handle2 = <redacted>
     =     at tests/sources/functional/emits.move:27: simple_wrong_handle_incorrect
     =     at tests/sources/functional/emits.move:27: simple_wrong_handle_incorrect
+    =         handle = <redacted>
+    =         _handle2 = <redacted>
     =     at tests/sources/functional/emits.move:28: simple_wrong_handle_incorrect
     =     at tests/sources/functional/emits.move:30
 
@@ -158,11 +145,10 @@ error: function does not emit the expected event
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/emits.move:19: simple_wrong_msg_incorrect
-    =     at <internal>:1
-    =     at tests/sources/functional/emits.move:19: simple_wrong_msg_incorrect
     =         handle = <redacted>
     =     at tests/sources/functional/emits.move:20: simple_wrong_msg_incorrect
     =     at tests/sources/functional/emits.move:20: simple_wrong_msg_incorrect
+    =         handle = <redacted>
     =     at tests/sources/functional/emits.move:21: simple_wrong_msg_incorrect
     =     at tests/sources/functional/emits.move:23
 
@@ -176,12 +162,10 @@ error: emitted event not covered by any of `emits` clauses
      │ ╰─────^
      │
      =     at tests/sources/functional/emits.move:234: strict_incorrect
-     =     at <internal>:1
-     =     at tests/sources/functional/emits.move:234: strict_incorrect
      =         handle = <redacted>
      =     at tests/sources/functional/emits.move:235: strict_incorrect
-     =     at tests/sources/functional/emits.move:235: strict_incorrect
      =     at tests/sources/functional/emits.move:236: strict_incorrect
      =     at tests/sources/functional/emits.move:236: strict_incorrect
+     =         handle = <redacted>
      =     at tests/sources/functional/emits.move:237: strict_incorrect
      =     at tests/sources/functional/emits.move:238

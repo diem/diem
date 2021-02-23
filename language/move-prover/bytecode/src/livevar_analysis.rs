@@ -64,11 +64,14 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
             return data;
         }
 
+        let next_free_label = data.next_free_label_index();
+        let next_free_attr = data.next_free_attr_index();
         let code = std::mem::take(&mut data.code);
         let func_target = FunctionTarget::new(func_env, &data);
 
         // Call 1st time
-        let (code, _) = Self::analyze_and_transform(&func_target, code);
+        let (code, _) =
+            Self::analyze_and_transform(&func_target, next_free_label, next_free_attr, code);
 
         // Eliminate unused locals after dead code elimination.
         let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
@@ -101,10 +104,12 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
 impl LiveVarAnalysisProcessor {
     fn analyze_and_transform(
         func_target: &FunctionTarget,
+        next_free_label: usize,
+        next_free_attr: usize,
         code: Vec<Bytecode>,
     ) -> (Vec<Bytecode>, BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset>) {
         let annotations = Self::analyze(func_target, &code);
-        let mut analyzer = LiveVarAnalysis::new(&func_target);
+        let mut analyzer = LiveVarAnalysis::new(&func_target, next_free_label, next_free_attr);
         let new_bytecode = analyzer.transform_code(&annotations, code);
         (new_bytecode, annotations)
     }
@@ -116,7 +121,7 @@ impl LiveVarAnalysisProcessor {
         // Perform backward analysis from all blocks just in case some block
         // cannot reach an exit block
         let cfg = StacklessControlFlowGraph::new_backward(&code, true);
-        let analyzer = LiveVarAnalysis::new(&func_target);
+        let analyzer = LiveVarAnalysis::new(&func_target, 0, 0);
         let state_map = analyzer.analyze_function(
             LiveVarState {
                 livevars: BTreeSet::new(),
@@ -197,11 +202,11 @@ impl LiveVarState {
 }
 
 impl<'a> LiveVarAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget) -> Self {
+    fn new(func_target: &'a FunctionTarget, next_label_id: usize, next_attr_id: usize) -> Self {
         Self {
             func_target,
-            next_label_id: 0,
-            next_attr_id: 0,
+            next_label_id,
+            next_attr_id,
         }
     }
 
@@ -214,8 +219,6 @@ impl<'a> LiveVarAnalysis<'a> {
         let mut transformed_code = vec![];
         let mut new_bytecodes = vec![];
         let mut skip_next = false;
-        self.next_label_id = code.len();
-        self.next_attr_id = code.len();
         for code_offset in 0..code.len() {
             if skip_next {
                 skip_next = false;

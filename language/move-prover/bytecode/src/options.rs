@@ -43,8 +43,6 @@ pub struct ProverOptions {
     pub num_instances: usize,
     /// Whether to run Boogie instances sequentially.
     pub sequential_task: bool,
-    /// Run negative verification checks.
-    pub negative_checks: bool,
 }
 
 impl Default for ProverOptions {
@@ -65,7 +63,6 @@ impl Default for ProverOptions {
             dump_bytecode: false,
             num_instances: 1,
             sequential_task: false,
-            negative_checks: false,
         }
     }
 }

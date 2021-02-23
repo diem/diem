@@ -199,6 +199,7 @@ impl BorrowInfo {
     }
 
     fn add_edge(&mut self, parent: BorrowNode, child: BorrowNode) -> bool {
+        assert_ne!(parent, child);
         if self.unchecked_nodes.contains(&parent) {
             // If the parent node is unchecked, so is the child node.
             self.unchecked_nodes.insert(child.clone());
@@ -405,19 +406,55 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.unchecked_nodes.insert(child_node.clone());
                         }
                     }
-                    Function(..) => {
-                        for src in srcs
-                            .iter()
-                            .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
-                        {
-                            let src_node = self.borrow_node(*src);
-                            for dest in dests
-                                .iter()
-                                .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
-                            {
-                                let dest_node = self.borrow_node(*dest);
-                                state.add_node(dest_node.clone());
-                                state.add_edge(src_node.clone(), dest_node);
+                    Function(mid, fid, ..) => {
+                        // Create a borrow edge for all &mut parameters to the
+                        // corresponding return value.
+                        let callee_env = self
+                            .func_target
+                            .global_env()
+                            .get_module(*mid)
+                            .into_function(*fid);
+                        let mut ret_idx = callee_env.get_return_count();
+                        for src in srcs.iter().filter(|idx| {
+                            self.func_target
+                                .get_local_type(**idx)
+                                .is_mutable_reference()
+                        }) {
+                            let dest = dests[ret_idx];
+                            ret_idx = usize::saturating_add(ret_idx, 1);
+                            if *src != dest {
+                                let src_node = self.borrow_node(*src);
+                                let dest_node = self.borrow_node(dest);
+                                if livevar_annotation_at.after.contains(&dest) {
+                                    state.add_node(dest_node.clone());
+                                }
+                                state.add_edge(src_node, dest_node);
+                            }
+                        }
+                        // For all proper &mut ref return values (that is those which are not
+                        // introduced for &mut parameters), create a borrow edge from all &mut
+                        // parameters. This reflects the current borrow semantics of Move.
+                        // We do not known from which input parameter the returned reference
+                        // borrows, so we must assume it could be any of them.
+                        // TODO: this is one place where we could do better via inter-procedural
+                        //   analysis.
+                        for ret_idx in (0..callee_env.get_return_count()).filter(|ret_idx| {
+                            callee_env.get_return_type(*ret_idx).is_mutable_reference()
+                        }) {
+                            let dest = dests[ret_idx];
+                            let dest_node = self.borrow_node(dest);
+                            for src in srcs.iter().filter(|idx| {
+                                self.func_target
+                                    .get_local_type(**idx)
+                                    .is_mutable_reference()
+                            }) {
+                                if *src != dest {
+                                    let src_node = self.borrow_node(*src);
+                                    if livevar_annotation_at.after.contains(&dest) {
+                                        state.add_node(dest_node.clone());
+                                    }
+                                    state.add_edge(src_node, dest_node.clone());
+                                }
                             }
                         }
                     }

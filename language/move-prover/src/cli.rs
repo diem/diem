@@ -356,10 +356,14 @@ impl Options {
                     .long("use-cvc4")
                     .help("use cvc4 solver instead of z3")
             ).arg(
-                Arg::with_name("experimental_pipeline")
-                    .long("experimental_pipeline")
-                    .short("e")
-                    .help("whether to run experimental pipeline")
+            Arg::with_name("experimental_pipeline")
+                .long("experimental_pipeline")
+                .short("e")
+                .help("whether to run experimental pipeline")
+            ).arg(
+                Arg::with_name("exp_mut_param")
+                    .long("exp-mut-param")
+                    .help("exp_mut_param experiment")
         )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
@@ -474,9 +478,6 @@ impl Options {
         }
         if matches.is_present("inv_v2") {
             options.inv_v2 = true;
-        }
-        if matches.is_present("negative") {
-            options.prover.negative_checks = true;
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;

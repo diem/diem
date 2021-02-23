@@ -428,14 +428,14 @@ impl Bytecode {
             Call(attr, _, WriteBack(LocalRoot(dest), edge), srcs, aa) => Call(
                 attr,
                 vec![],
-                WriteBack(LocalRoot(f(false, dest)), edge),
+                WriteBack(LocalRoot(f(true, dest)), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),
             Call(attr, _, WriteBack(Reference(dest), edge), srcs, aa) => Call(
                 attr,
                 vec![],
-                WriteBack(Reference(f(false, dest)), edge),
+                WriteBack(Reference(f(true, dest)), edge),
                 map(true, f, srcs),
                 map_abort(f, aa),
             ),

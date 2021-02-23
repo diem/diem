@@ -55,7 +55,7 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
 ============ after pipeline `reaching_def` ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: TestMutRefs::R): (u64, TestMutRefs::R) {
+pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -67,28 +67,25 @@ pub fun TestMutRefs::unpack($t0|r: TestMutRefs::R): (u64, TestMutRefs::R) {
      var $t9: u64
      var $t10: &mut u64
      var $t11: u64
-     var $t12: TestMutRefs::R
-     var $t13: &mut TestMutRefs::R
-  0: $t12 := move($t0)
-  1: $t13 := borrow_local($t12)
-  2: $t4 := move($t13)
-  3: $t2 := $t13
-  4: $t5 := move($t13)
-  5: $t6 := borrow_field<TestMutRefs::R>.value($t13)
-  6: $t3 := $t6
-  7: $t7 := copy($t3)
-  8: $t8 := read_ref($t3)
-  9: $t1 := $t8
- 10: $t9 := 0
- 11: $t10 := move($t3)
- 12: write_ref($t3, $t9)
- 13: $t11 := copy($t1)
- 14: return ($t1, $t12)
+  0: $t4 := copy($t0)
+  1: $t2 := $t0
+  2: $t5 := move($t0)
+  3: $t6 := borrow_field<TestMutRefs::R>.value($t0)
+  4: $t3 := $t6
+  5: $t7 := copy($t6)
+  6: $t8 := read_ref($t6)
+  7: $t1 := $t8
+  8: $t9 := 0
+  9: $t10 := move($t6)
+ 10: write_ref($t6, $t9)
+ 11: $t11 := copy($t8)
+ 12: trace_local[r]($t0)
+ 13: return ($t8, $t0)
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: TestMutRefs::R): (u64, TestMutRefs::R) {
+pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -98,18 +95,15 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: TestMutRefs::R): (u64, TestMutRefs:
      var $t7: &mut u64
      var $t8: u64
      var $t9: u64
-     var $t10: TestMutRefs::R
-     var $t11: &mut TestMutRefs::R
-  0: $t10 := move($t0)
-  1: $t11 := borrow_local($t10)
-  2: $t4 := move($t11)
-  3: $t2 := $t11
-  4: $t5 := move($t11)
-  5: $t6 := borrow_field<TestMutRefs::R>.value($t11)
-  6: $t3 := $t6
-  7: $t7 := move($t3)
-  8: $t8 := read_ref($t3)
-  9: $t1 := $t8
- 10: $t9 := copy($t1)
- 11: return ($t1, $t10)
+  0: $t4 := copy($t0)
+  1: $t2 := $t0
+  2: $t5 := move($t0)
+  3: $t6 := borrow_field<TestMutRefs::R>.value($t0)
+  4: $t3 := $t6
+  5: $t7 := move($t6)
+  6: $t8 := read_ref($t6)
+  7: $t1 := $t8
+  8: $t9 := copy($t8)
+  9: trace_local[r]($t0)
+ 10: return ($t8, $t0)
 }

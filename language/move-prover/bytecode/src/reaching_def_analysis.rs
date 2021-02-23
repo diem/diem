@@ -30,24 +30,13 @@ pub enum Def {
 #[derive(Default)]
 pub struct ReachingDefAnnotation(BTreeMap<CodeOffset, BTreeMap<TempIndex, BTreeSet<Def>>>);
 
-pub struct ReachingDefProcessor {
-    /// If true, user locals will not be renamed during copy propagation.
-    preserve_user_locals: bool,
-}
+pub struct ReachingDefProcessor {}
 
 type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
 
 impl ReachingDefProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(ReachingDefProcessor {
-            preserve_user_locals: true,
-        })
-    }
-
-    pub fn new_no_preserve_user_locals() -> Box<Self> {
-        Box::new(ReachingDefProcessor {
-            preserve_user_locals: false,
-        })
+        Box::new(ReachingDefProcessor {})
     }
 
     /// Returns Some(temp, def) if temp has a unique reaching definition and None otherwise.
@@ -87,12 +76,41 @@ impl ReachingDefProcessor {
         code: Vec<Bytecode>,
         defs: &ReachingDefAnnotation,
     ) -> Vec<Bytecode> {
+        use Bytecode::*;
+        use Operation::*;
         let mut res = vec![];
         for (pc, bytecode) in code.into_iter().enumerate() {
             let no_defs = BTreeMap::new();
             let reaching_defs = defs.0.get(&(pc as CodeOffset)).unwrap_or(&no_defs);
             let mut propagate = |local| Self::get_propagated_local(local, reaching_defs);
-            res.push(bytecode.remap_src_vars(target, &mut propagate));
+            match bytecode {
+                Call(attr_id, dests, Function(mid, fid, targs), srcs, aa) => {
+                    // Treat propagation for dests in function calls which stem from
+                    // &mut instrumentation as srcs. Consider `f(&mut)`; a call `f(x)` will be
+                    // transformed into `x := f(x)`. If the x on the rhs is propagated we also
+                    // want to change the x on the lhs. Otherwise we get quite some degenerated
+                    // code from copy propagation which creates unnecessary WriteBack instructions
+                    // (albeit still semantically correct).
+                    let callee_env = target.global_env().get_module(mid).into_function(fid);
+                    let mut new_dests = vec![];
+                    for (i, dest) in dests.into_iter().enumerate() {
+                        if i >= callee_env.get_return_count() {
+                            // This dest results from &mut instrumentation.
+                            new_dests.push(propagate(dest));
+                        } else {
+                            new_dests.push(dest);
+                        }
+                    }
+                    res.push(Call(
+                        attr_id,
+                        new_dests,
+                        Function(mid, fid, targs),
+                        srcs.into_iter().map(propagate).collect(),
+                        aa.map(|a| AbortAction(a.0, propagate(a.1))),
+                    ));
+                }
+                _ => res.push(bytecode.remap_src_vars(target, &mut propagate)),
+            }
         }
         res
     }
@@ -110,16 +128,6 @@ impl ReachingDefProcessor {
             })
             .collect()
     }
-
-    /// Determines whether code is suitable for copy propagation. Currently we cannot
-    /// do this for code with embedded spec blocks, because those refer to locals
-    /// which might be substituted via copy propagation.
-    /// TODO(wrwg): verify that spec blocks are the actual cause, it could be also a bug elsewhere.
-    ///     Currently functional/verify_vector fails without this and it uses spec blocks all
-    ///     over the place.
-    fn suitable_for_copy_propagation(&self, code: &[Bytecode]) -> bool {
-        !code.iter().any(|bc| matches!(bc, Bytecode::SpecBlock(..)))
-    }
 }
 
 impl FunctionTargetProcessor for ReachingDefProcessor {
@@ -129,14 +137,13 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
     ) -> FunctionData {
-        if func_env.is_native() || !self.suitable_for_copy_propagation(&data.code) {
+        if func_env.is_native() {
             // Nothing to do
             data
         } else {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let analyzer = ReachingDefAnalysis {
-                target: FunctionTarget::new(func_env, &data),
-                preserve_user_locals: self.preserve_user_locals,
+                _target: FunctionTarget::new(func_env, &data),
                 borrowed_locals: self.borrowed_locals(&data.code),
             };
             let block_state_map = analyzer.analyze_function(
@@ -171,8 +178,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 }
 
 struct ReachingDefAnalysis<'a> {
-    target: FunctionTarget<'a>,
-    preserve_user_locals: bool,
+    _target: FunctionTarget<'a>,
     borrowed_locals: BTreeSet<TempIndex>,
 }
 
@@ -194,18 +200,7 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
         match instr {
             Assign(_, dest, src, _) => {
                 state.kill(*dest);
-                // On `self.preserve_user_locals`, only define aliases for temporaries.
-                // Also don't alias proxied parameters. The later is currently needed because the
-                // Boogie backend does not allow to write to such values, which happens via
-                // WriteBack instructions.
-                // TODO(refactoring): this can be removed once the old boogie backend is retired,
-                //   as in the new world, we emit `trace_local` instructions before this phase,
-                //   and this way remember user local names.
-                if !self.borrowed_locals.contains(dest)
-                    && (!self.preserve_user_locals
-                        || self.target.is_temporary(*dest)
-                            && self.target.get_proxy_index(*src).is_none())
-                {
+                if !self.borrowed_locals.contains(dest) && !self.borrowed_locals.contains(src) {
                     state.def_alias(*dest, *src);
                 }
             }

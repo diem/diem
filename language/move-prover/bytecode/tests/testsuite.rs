@@ -11,11 +11,11 @@ use bytecode::{
     clean_and_optimize::CleanAndOptimizeProcessor,
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
-    eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
+    mut_ref_instrumentation::MutRefInstrumenter,
     options::ProverOptions,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
@@ -37,23 +37,23 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(EliminateImmRefsProcessor::new());
             Ok(Some(pipeline))
         }
-        "eliminate_mut_refs" => {
+        "mut_ref_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             Ok(Some(pipeline))
         }
         "reaching_def" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             Ok(Some(pipeline))
         }
         "livevar" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             Ok(Some(pipeline))
@@ -61,7 +61,7 @@ fn get_tested_transformation_pipeline(
         "borrow" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());
@@ -70,7 +70,7 @@ fn get_tested_transformation_pipeline(
         "memory_instr" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());
@@ -80,7 +80,7 @@ fn get_tested_transformation_pipeline(
         "clean_and_optimize" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());
@@ -91,7 +91,7 @@ fn get_tested_transformation_pipeline(
         "spec_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());
@@ -105,7 +105,7 @@ fn get_tested_transformation_pipeline(
         "data_invariant_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());
@@ -121,7 +121,7 @@ fn get_tested_transformation_pipeline(
         "global_invariant_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
-            pipeline.add_processor(EliminateMutRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
             pipeline.add_processor(BorrowAnalysisProcessor::new());

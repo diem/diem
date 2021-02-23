@@ -25,7 +25,7 @@ use crate::{
     usage_analysis, verification_analysis,
 };
 use move_model::ast::QuantKind;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
@@ -189,6 +189,7 @@ impl<'a> Instrumenter<'a> {
         // Translate the specification. This deals with elimination of `old(..)` expressions,
         // as well as replaces `result_n` references with `ret_locals`.
         let spec = SpecTranslator::translate_fun_spec(
+            options,
             false,
             &mut builder,
             fun_env,
@@ -217,7 +218,7 @@ impl<'a> Instrumenter<'a> {
         // elimination (live vars). This cleans up some redundancy created by
         // the instrumentation scheme.
         let mut data = instrumenter.builder.data;
-        let reach_def = ReachingDefProcessor::new_no_preserve_user_locals();
+        let reach_def = ReachingDefProcessor::new();
         let live_vars = LiveVarAnalysisProcessor::new_no_annotate();
         data = reach_def.process(targets, fun_env, data);
         live_vars.process(targets, fun_env, data)
@@ -277,6 +278,8 @@ impl<'a> Instrumenter<'a> {
                 self.builder
                     .emit_with(|attr_id| SaveSpecVar(attr_id, *label, *spec_var));
             }
+            let saved_params = self.spec.saved_params.clone();
+            self.emit_save_for_old(&saved_params);
         }
 
         // Instrument and generate new code
@@ -397,6 +400,7 @@ impl<'a> Instrumenter<'a> {
         let callee_env = env.get_module(mid).into_function(fid);
         let callee_opaque = callee_env.is_opaque();
         let mut callee_spec = SpecTranslator::translate_fun_spec(
+            self.options,
             true,
             &mut self.builder,
             &callee_env,
@@ -466,6 +470,10 @@ impl<'a> Instrumenter<'a> {
             ));
             self.can_abort = true;
         } else {
+            // Emit saves for parameters used in old(..) context. Those can be referred
+            // to in aborts conditions, and must be initialized before evaluating those.
+            self.emit_save_for_old(&callee_spec.saved_params);
+
             // Translate the abort condition. If the abort_cond_temp_opt is None, it indicates
             // that the abort condition is known to be false, so we can skip the abort handling.
             let (abort_cond_temp_opt, code_cond) = self.generate_abort_opaque_cond(&callee_spec);
@@ -488,7 +496,7 @@ impl<'a> Instrumenter<'a> {
                 self.can_abort = true;
             }
 
-            // Emit all necessary state saves
+            // Emit memory state saves
             for (mem, label) in std::mem::take(&mut callee_spec.saved_memory) {
                 self.builder.emit_with(|id| SaveMem(id, label, mem));
             }
@@ -514,6 +522,26 @@ impl<'a> Instrumenter<'a> {
                     vec![self.builder.mk_temporary(dest)],
                 );
                 self.builder.emit_with(move |id| Prop(id, Assume, exp));
+            }
+        }
+    }
+
+    fn emit_save_for_old(&mut self, vars: &BTreeMap<TempIndex, TempIndex>) {
+        use Bytecode::*;
+        for (idx, saved_idx) in vars {
+            if self.builder.data.local_types[*idx].is_reference() {
+                self.builder.emit_with(|attr_id| {
+                    Call(
+                        attr_id,
+                        vec![*saved_idx],
+                        Operation::ReadRef,
+                        vec![*idx],
+                        None,
+                    )
+                })
+            } else {
+                self.builder
+                    .emit_with(|attr_id| Assign(attr_id, *saved_idx, *idx, AssignKind::Copy))
             }
         }
     }

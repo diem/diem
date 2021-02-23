@@ -31,28 +31,29 @@ pub fun Test::incr($t0|a: address) {
 [variant verification]
 pub fun Test::incr($t0|a: address) {
      var $t1|r: &mut Test::R
-     var $t2: num
-     var $t3: u64
+     var $t2: &mut Test::R
+     var $t3: num
      var $t4: u64
      var $t5: u64
-     var $t6: &mut u64
+     var $t6: u64
+     var $t7: &mut u64
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
-  2: $t1 := borrow_global<Test::R>($t0) on_abort goto 14 with $t2
-  3: $t3 := get_field<Test::R>.x($t1)
-  4: $t4 := 1
-  5: $t5 := +($t3, $t4) on_abort goto 14 with $t2
-  6: $t6 := borrow_field<Test::R>.x($t1)
-  7: write_ref($t6, $t5)
-  8: write_back[Reference($t1)]($t6)
+  2: $t2 := borrow_global<Test::R>($t0) on_abort goto 14 with $t3
+  3: $t4 := get_field<Test::R>.x($t2)
+  4: $t5 := 1
+  5: $t6 := +($t4, $t5) on_abort goto 14 with $t3
+  6: $t7 := borrow_field<Test::R>.x($t2)
+  7: write_ref($t7, $t6)
+  8: write_back[Reference($t2)]($t7)
      # state save for global update invariants
   9: @1 := save_mem(Test::R)
- 10: write_back[Test::R]($t1)
+ 10: write_back[Test::R]($t2)
      # global invariant at tests/global_invariant_instrumentation/update.move:7:9+82
      # VC: global memory invariant does not hold at tests/global_invariant_instrumentation/update.move:7:9+82
  11: assert forall a: TypeDomain<address>(): Lt(select Test::R.x(global[@1]<Test::R>(a)), select Test::R.x(global<Test::R>(a)))
  12: label L1
  13: return ()
  14: label L2
- 15: abort($t2)
+ 15: abort($t3)
 }

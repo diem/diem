@@ -304,7 +304,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     // Add processors in order they are executed.
 
     res.add_processor(DebugInstrumenter::new());
-    pipelines::pipelines(options.experimental_pipeline)
+    pipelines::pipelines(options)
         .into_iter()
         .for_each(|processor| res.add_processor(processor));
     res.add_processor(SpecInstrumentationProcessor::new());

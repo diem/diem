@@ -32,5 +32,6 @@ error: function does not abort under this condition
     =     at tests/sources/functional/loops.move:48: iter10_no_abort_incorrect
     =         i = <redacted>
     =     at tests/sources/functional/loops.move:50: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:49: iter10_no_abort_incorrect
     =     at tests/sources/functional/loops.move:56: iter10_no_abort_incorrect
     =     at tests/sources/functional/loops.move:58

@@ -37,7 +37,7 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         // Run optimizer
         let instrs = std::mem::take(&mut data.code);
         let new_instrs = Optimizer {
-            _target: &FunctionTarget::new(func_env, &data),
+            target: &FunctionTarget::new(func_env, &data),
         }
         .run(instrs);
         data.code = new_instrs;
@@ -72,7 +72,7 @@ impl AbstractDomain for AnalysisState {
 }
 
 struct Optimizer<'a> {
-    _target: &'a FunctionTarget<'a>,
+    target: &'a FunctionTarget<'a>,
 }
 
 impl<'a> TransferFunctions for Optimizer<'a> {
@@ -83,13 +83,24 @@ impl<'a> TransferFunctions for Optimizer<'a> {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
-        if let Call(_, _, oper, srcs, _) = instr {
+        if let Call(_, dests, oper, srcs, _) = instr {
             match oper {
                 WriteRef => {
                     state.unwritten.insert(Reference(srcs[0]));
                 }
                 WriteBack(Reference(dest), _) => {
                     if state.unwritten.contains(&Reference(srcs[0])) {
+                        state.unwritten.insert(Reference(*dest));
+                    }
+                }
+                Function(mid, fid, _) => {
+                    // Mark returns from functions which stem from &mut parameters as unwritten.
+                    let callee_env = self
+                        .target
+                        .global_env()
+                        .get_module(*mid)
+                        .into_function(*fid);
+                    for dest in dests.iter().skip(callee_env.get_return_count()) {
                         state.unwritten.insert(Reference(*dest));
                     }
                 }

@@ -762,9 +762,13 @@ function {:inline} $UpdateFieldRaw(val: $ValueArray, field: $FieldName, new_valu
 }
 
 
-// Dereferences a reference.
+// Dereferences a mutation.
 function {:inline} $Dereference(ref: $Mutation): $Value {
     v#$Mutation(ref)
+}
+
+function {:inline} $UpdateMutation(m: $Mutation, v: $Value): $Mutation {
+    $Mutation(l#$Mutation(m), p#$Mutation(m), v)
 }
 
 // ============================================================================================
@@ -1277,17 +1281,21 @@ procedure {:inline 1} $Vector_is_empty(ta: $TypeValue, v: $Value) returns (b: $V
     b := $Boolean($vlen(v) == 0);
 }
 
-procedure {:inline 1} $Vector_push_back(ta: $TypeValue, v: $Value, val: $Value) returns (v': $Value) {
+procedure {:inline 1} $Vector_push_back(ta: $TypeValue, m: $Mutation, val: $Value) returns (m': $Mutation) {
+    var v: $Value;
+    v := $Dereference(m);
     assume is#$Vector(v);
-    v' := $push_back_vector(v, val);
+    m' := $UpdateMutation(m, $push_back_vector(v, val));
 }
 
 function {:inline 1} $Vector_$push_back(ta: $TypeValue, v: $Value, val: $Value): $Value {
     $push_back_vector(v, val)
 }
 
-procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $Value, v': $Value) {
+procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, m: $Mutation) returns (e: $Value, m': $Mutation) {
+    var v: $Value;
     var len: int;
+    v := $Dereference(m);
     assume is#$Vector(v);
     len := $vlen(v);
     if (len == 0) {
@@ -1295,22 +1303,26 @@ procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $V
         return;
     }
     e := $select_vector(v, len-1);
-    v' := $pop_back_vector(v);
+    m' := $UpdateMutation(m, $pop_back_vector(v));
 }
 
 function {:inline 1} $Vector_$pop_back(ta: $TypeValue, v: $Value): $Value {
     $select_vector(v, $vlen(v)-1)
 }
 
-procedure {:inline 1} $Vector_append(ta: $TypeValue, v: $Value, other: $Value) returns (v': $Value) {
+procedure {:inline 1} $Vector_append(ta: $TypeValue, m: $Mutation, other: $Value) returns (m': $Mutation) {
+    var v: $Value;
+    v := $Dereference(m);
     assume is#$Vector(v);
     assume is#$Vector(other);
-    v' := $append_vector(v, other);
+    m' := $UpdateMutation(m, $append_vector(v, other));
 }
 
-procedure {:inline 1} $Vector_reverse(ta: $TypeValue, v: $Value) returns (v': $Value) {
+procedure {:inline 1} $Vector_reverse(ta: $TypeValue, m: $Mutation) returns (m': $Mutation) {
+    var v: $Value;
+    v := $Dereference(m);
     assume is#$Vector(v);
-    v' := $reverse_vector(v);
+    m' := $UpdateMutation(m, $reverse_vector(v));
 }
 
 procedure {:inline 1} $Vector_length(ta: $TypeValue, v: $Value) returns (l: $Value) {
@@ -1339,19 +1351,26 @@ function {:inline 1} $Vector_$borrow(ta: $TypeValue, v: $Value, i: $Value): $Val
     $select_vector(v, i#$Integer(i))
 }
 
-procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Value) returns (dst: $Mutation, v': $Value)
+procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, m: $Mutation, index: $Value) returns (dst: $Mutation, m': $Mutation)
 {{backend.type_requires}} is#$Integer(index);
 {
     var i_ind: int;
+    var v: $Value;
+    var p: $Path;
+    var size: int;
 
+    v := $Dereference(m);
     i_ind := i#$Integer(index);
     assume is#$Vector(v);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         call $ExecFailureAbort();
         return;
     }
-    dst := $Mutation($Local(0), $Path(p#$Path($EmptyPath)[0 := i_ind], 1), $select_vector(v, i_ind));
-    v' := v;
+    p := p#$Mutation(m);
+    size := size#$Path(p);
+    p := $Path(p#$Path(p)[size := i_ind], size+1);
+    dst := $Mutation(l#$Mutation(m), p, $select_vector(v, i_ind));
+    m' := m;
 }
 
 function {:inline 1} $Vector_$borrow_mut(ta: $TypeValue, v: $Value, i: $Value): $Value {
@@ -1364,11 +1383,13 @@ procedure {:inline 1} $Vector_destroy_empty(ta: $TypeValue, v: $Value) {
     }
 }
 
-procedure {:inline 1} $Vector_swap(ta: $TypeValue, v: $Value, i: $Value, j: $Value) returns (v': $Value)
+procedure {:inline 1} $Vector_swap(ta: $TypeValue, m: $Mutation, i: $Value, j: $Value) returns (m': $Mutation)
 {{backend.type_requires}} is#$Integer(i) && is#$Integer(j);
 {
+    var v: $Value;
     var i_ind: int;
     var j_ind: int;
+    v := $Dereference(m);
     assume is#$Vector(v);
     i_ind := i#$Integer(i);
     j_ind := i#$Integer(j);
@@ -1376,17 +1397,20 @@ procedure {:inline 1} $Vector_swap(ta: $TypeValue, v: $Value, i: $Value, j: $Val
         call $ExecFailureAbort();
         return;
     }
-    v' := $swap_vector(v, i_ind, j_ind);
+    m' := $UpdateMutation(m, $swap_vector(v, i_ind, j_ind));
 }
 
 function {:inline 1} $Vector_$swap(ta: $TypeValue, v: $Value, i: $Value, j: $Value): $Value {
     $swap_vector(v, i#$Integer(i), i#$Integer(j))
 }
 
-procedure {:inline 1} $Vector_remove(ta: $TypeValue, v: $Value, i: $Value) returns (e: $Value, v': $Value)
+procedure {:inline 1} $Vector_remove(ta: $TypeValue, m: $Mutation, i: $Value) returns (e: $Value, m': $Mutation)
 {{backend.type_requires}} is#$Integer(i);
 {
     var i_ind: int;
+    var v: $Value;
+
+    v := $Dereference(m);
 
     assume is#$Vector(v);
     i_ind := i#$Integer(i);
@@ -1395,15 +1419,17 @@ procedure {:inline 1} $Vector_remove(ta: $TypeValue, v: $Value, i: $Value) retur
         return;
     }
     e := $select_vector(v, i_ind);
-    v' := $remove_vector(v, i_ind);
+    m' := $UpdateMutation(m, $remove_vector(v, i_ind));
 }
 
-procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, v: $Value, i: $Value) returns (e: $Value, v': $Value)
+procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, m: $Mutation, i: $Value) returns (e: $Value, m': $Mutation)
 {{backend.type_requires}} is#$Integer(i);
 {
     var i_ind: int;
     var len: int;
+    var v: $Value;
 
+    v := $Dereference(m);
     assume is#$Vector(v);
     i_ind := i#$Integer(i);
     len := $vlen(v);
@@ -1412,7 +1438,7 @@ procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, v: $Value, i: $Value) 
         return;
     }
     e := $select_vector(v, i_ind);
-    v' := $pop_back_vector($swap_vector(v, i_ind, len-1));
+    m' := $UpdateMutation(m, $pop_back_vector($swap_vector(v, i_ind, len-1)));
 }
 
 procedure {:inline 1} $Vector_contains(ta: $TypeValue, v: $Value, e: $Value) returns (res: $Value)  {
@@ -1634,12 +1660,13 @@ procedure {:inline 1} $Event_publish_generator(account: $Value) {
 
 // This boogie procedure is the model of `emit_event`. This model abstracts away the `counter` behavior, thus not
 // mutating (or increasing) `counter`.
-procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Value) returns (res: $Value) {
+
+procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Mutation, msg: $Value) returns (res: $Mutation) {
     var guid: $Value;
     // TODO: The literal `1` is used as the field name here although `$Event_EventHandle_guid` is the right one to use.
     // It's because `$Event_EventHandle_guid` is not available until the Event module is translated, and we know that
     // $Event_EventHandle_guid == 1 once it is translated.
-    guid := $SelectField(handler, 1);
+    guid := $SelectField($Dereference(handler), 1);
     call $Event_write_to_event_store(t, guid, $Integer(0), msg);
     res := handler;
 }

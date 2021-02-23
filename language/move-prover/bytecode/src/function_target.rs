@@ -54,12 +54,6 @@ pub struct FunctionData {
     pub local_types: Vec<Type>,
     /// The return types.
     pub return_types: Vec<Type>,
-    /// TODO(wrwg): document what this is for
-    pub param_proxy_map: BTreeMap<usize, usize>,
-    /// A map from mut ref input parameters to the generated output parameters.
-    pub ref_param_proxy_map: BTreeMap<usize, usize>,
-    /// A map from mut ref output parameters to the input parameters.
-    pub ref_param_return_map: BTreeMap<usize, usize>,
     /// The set of global resources acquired by  this function.
     pub acquires_global_resources: Vec<StructId>,
     /// A map from byte code attribute to source code location.
@@ -278,55 +272,31 @@ impl<'env> FunctionTarget<'env> {
         &self.data.acquires_global_resources
     }
 
-    /// Gets index of return parameter for a reference input parameter
-    pub fn get_return_index(&self, idx: usize) -> Option<&usize> {
-        self.data.ref_param_return_map.get(&idx)
+    /// Gets index of return parameter for a reference input parameter, or None, if this is
+    /// not a reference parameter.
+    pub fn get_mut_ref_return_index(&self, idx: usize) -> Option<usize> {
+        self.get_mut_ref_mapping().get(&idx).cloned()
     }
 
-    /// For a return index, return the reference input parameter. Inverse of
-    /// `get_return_index`.
-    pub fn get_input_for_return_index(&self, idx: usize) -> Option<&usize> {
-        // We do a brute force linear search. This may need to be changed if we are dealing
-        // with truly large (like generated) parameter lists.
-        for (ref_idx, ret_idx) in &self.data.ref_param_return_map {
-            if *ret_idx == idx {
-                return Some(ref_idx);
+    /// Returns a map from &mut parameters to the return indices associated with them
+    /// *after* &mut instrumentation. By convention, the return values are appended after
+    /// the regular function parameters, in the order they are in the parameter list.
+    pub fn get_mut_ref_mapping(&self) -> BTreeMap<TempIndex, usize> {
+        let mut res = BTreeMap::new();
+        let mut ret_index = self.func_env.get_return_count();
+        for idx in 0..self.get_parameter_count() {
+            if self.get_local_type(idx).is_mutable_reference() {
+                res.insert(idx, ret_index);
+                ret_index = usize::saturating_add(ret_index, 1);
             }
         }
-        None
+        res
     }
 
-    /// TODO(wrwg): better document what this does, it seems to be related to loop invariants.
-    pub fn get_proxy_index(&self, idx: usize) -> Option<&usize> {
-        self.data.param_proxy_map.get(&idx)
-    }
-
-    /// Gets index of mutable proxy variable for an input ref parameter
-    pub fn get_ref_proxy_index(&self, idx: usize) -> Option<&usize> {
-        self.data.ref_param_proxy_map.get(&idx)
-    }
-
-    /// Reverse of `get_ref_proxy_index`.
-    pub fn get_reverse_ref_proxy_index(&self, idx: usize) -> Option<&usize> {
-        // We do a brute force linear search.
-        for (ref_idx, proxy_idx) in &self.data.ref_param_proxy_map {
-            if *proxy_idx == idx {
-                return Some(ref_idx);
-            }
-        }
-        None
-    }
-
-    /// Returns true if this is an unchecked parameter. Such a parameter (currently) stems
-    /// from a `&mut` parameter in Move which has been converted to in/out parameters in the
-    /// transformation pipeline, provided this is a private function.
-    pub fn is_unchecked_param(&self, idx: TempIndex) -> bool {
-        (!self.is_public() || !self.call_ends_lifetime()) && self.get_ref_proxy_index(idx).is_some()
-    }
-
-    /// Returns whether a call to this function ends lifetime of input references
-    pub fn call_ends_lifetime(&self) -> bool {
-        self.is_public() && self.get_return_types().iter().all(|ty| !ty.is_reference())
+    /// Returns true if this is an unchecked parameter.
+    pub fn is_unchecked_param(&self, _idx: TempIndex) -> bool {
+        // This is currently disabled, may want to turn on again so keeping the logic.
+        false
     }
 
     /// Gets modify targets for a type
@@ -359,9 +329,6 @@ impl FunctionData {
             code,
             local_types,
             return_types,
-            param_proxy_map: Default::default(),
-            ref_param_proxy_map: Default::default(),
-            ref_param_return_map: Default::default(),
             acquires_global_resources,
             locations,
             debug_comments: Default::default(),
@@ -399,18 +366,11 @@ impl FunctionData {
     }
 
     /// Apply a variable renaming to this data, adjusting internal data structures.
-    pub fn rename_vars<F>(&mut self, f: &F)
+    pub fn rename_vars<F>(&mut self, _f: &F)
     where
         F: Fn(TempIndex) -> TempIndex,
     {
-        self.param_proxy_map = std::mem::take(&mut self.param_proxy_map)
-            .into_iter()
-            .map(|(x, y)| (f(x), f(y)))
-            .collect();
-        self.ref_param_proxy_map = std::mem::take(&mut self.ref_param_proxy_map)
-            .into_iter()
-            .map(|(x, y)| (f(x), f(y)))
-            .collect();
+        // Nothing to do currently.
     }
 
     /// Fork this function data, without annotations, and mark it as the given
@@ -422,9 +382,6 @@ impl FunctionData {
             code: self.code.clone(),
             local_types: self.local_types.clone(),
             return_types: self.return_types.clone(),
-            param_proxy_map: self.param_proxy_map.clone(),
-            ref_param_proxy_map: self.ref_param_proxy_map.clone(),
-            ref_param_return_map: self.ref_param_return_map.clone(),
             acquires_global_resources: self.acquires_global_resources.clone(),
             locations: self.locations.clone(),
             debug_comments: self.debug_comments.clone(),

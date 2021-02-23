@@ -12,7 +12,6 @@ use log::{debug, info, log, warn, Level};
 use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
-    loop_analysis::LoopAnnotation,
     stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, Operation, StrongEdge},
     verification_analysis,
 };
@@ -407,7 +406,7 @@ impl<'env> ModuleTranslator<'env> {
             let ty = fun_target.get_local_type(i);
             if ty.is_reference() {
                 emitln!(self.writer, "assume l#$Mutation($t{}) == $Param({});", i, i);
-                emitln!(self.writer, "assume size#Path(p#$Mutation($t{})) == 0;", i);
+                emitln!(self.writer, "assume size#$Path(p#$Mutation($t{})) == 0;", i);
             }
         }
 
@@ -529,6 +528,7 @@ impl<'env> ModuleTranslator<'env> {
             Label(_, label) => {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
+                /*
                 // TODO: revisit whether we can express what is needed here on bytecode level
                 let annotated_func_target = self.targets.get_annotated_target(fun_target.func_env);
                 let loop_annotation = annotated_func_target
@@ -552,6 +552,7 @@ impl<'env> ModuleTranslator<'env> {
                         }
                     }
                 }
+                 */
                 self.writer.indent();
             }
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),

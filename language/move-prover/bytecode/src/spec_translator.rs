@@ -17,7 +17,7 @@ use move_model::{
     ty::Type,
 };
 
-use crate::function_data_builder::FunctionDataBuilder;
+use crate::{function_data_builder::FunctionDataBuilder, options::ProverOptions};
 use move_model::{
     model::GlobalId,
     pragmas::{CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP},
@@ -26,6 +26,7 @@ use move_model::{
 
 /// A helper which reduces specification conditions to assume/assert statements.
 pub struct SpecTranslator<'a, 'b> {
+    pub options: &'b ProverOptions,
     /// The builder for the function we are currently translating. Note this is not
     /// necessarily the same as the function for which we translate specs.
     pub builder: &'b mut FunctionDataBuilder<'a>,
@@ -35,14 +36,13 @@ pub struct SpecTranslator<'a, 'b> {
     type_args: &'b [Type],
     /// An optional substitution for parameters of the above function.
     param_substitution: Option<&'b [TempIndex]>,
+    /// An optional substitution for parameters
     /// A substitution for return vales.
     ret_locals: &'b [TempIndex],
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
     shadowed: Vec<BTreeSet<Symbol>>,
     /// The translated spec.
     result: TranslatedSpec,
-    /// Whether we are translating in a post-state (ensures)
-    at_post: bool,
 }
 
 /// Represents a translated spec.
@@ -50,6 +50,7 @@ pub struct SpecTranslator<'a, 'b> {
 pub struct TranslatedSpec {
     pub saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
     pub saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
+    pub saved_params: BTreeMap<TempIndex, TempIndex>,
     pub pre: Vec<(Loc, Exp)>,
     pub post: Vec<(Loc, Exp)>,
     pub aborts: Vec<(Loc, Exp, Option<Exp>)>,
@@ -193,6 +194,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
     /// The later two parameters are used to instantiate a function specification for a given
     /// call context.
     pub fn translate_fun_spec(
+        options: &'b ProverOptions,
         for_call: bool,
         builder: &'b mut FunctionDataBuilder<'a>,
         fun_env: &'b FunctionEnv<'a>,
@@ -201,6 +203,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         ret_locals: &'b [TempIndex],
     ) -> TranslatedSpec {
         let mut translator = SpecTranslator {
+            options,
             builder,
             fun_env,
             type_args,
@@ -208,7 +211,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ret_locals,
             shadowed: Default::default(),
             result: Default::default(),
-            at_post: false,
         };
         translator.translate_spec(for_call);
         translator.result
@@ -217,11 +219,13 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
     /// Translates a set of invariants. If there are any references to `old(...)` they
     /// will be rewritten and respective memory/spec var saves will be generated.
     pub fn translate_invariants(
+        options: &'b ProverOptions,
         builder: &'b mut FunctionDataBuilder<'a>,
         invariants: impl Iterator<Item = &'b GlobalInvariant>,
     ) -> TranslatedSpec {
         let fun_env = builder.fun_env;
         let mut translator = SpecTranslator {
+            options,
             builder,
             fun_env,
             type_args: &[],
@@ -229,7 +233,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ret_locals: Default::default(),
             shadowed: Default::default(),
             result: Default::default(),
-            at_post: false,
         };
         for inv in invariants {
             let exp = translator.translate_exp(&inv.cond, false);
@@ -275,13 +278,11 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .filter_kind(ConditionKind::Requires)
             .filter(is_applicable)
         {
-            self.at_post = false;
             let exp = self.translate_exp(&cond.exp, false);
             self.result.pre.push((cond.loc.clone(), exp));
         }
 
         let translate_aborts_in_old = !for_call;
-        self.at_post = translate_aborts_in_old;
         for cond in spec
             .filter_kind(ConditionKind::AbortsIf)
             .filter(is_applicable)
@@ -295,7 +296,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             self.result.aborts.push((cond.loc.clone(), exp, code_opt));
         }
 
-        self.at_post = translate_aborts_in_old;
         for cond in spec
             .filter_kind(ConditionKind::AbortsWith)
             .filter(is_applicable)
@@ -322,7 +322,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             ));
         }
 
-        self.at_post = true;
         for cond in spec
             .filter_kind(ConditionKind::Ensures)
             .filter(is_applicable)
@@ -331,7 +330,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             self.result.post.push((cond.loc.clone(), exp));
         }
 
-        self.at_post = false;
         for cond in spec
             .filter_kind(ConditionKind::Modifies)
             .filter(is_applicable)
@@ -340,7 +338,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             self.result.modifies.push((cond.loc.clone(), exp));
         }
 
-        self.at_post = true;
         for cond in spec.filter_kind(ConditionKind::Emits).filter(is_applicable) {
             let event_exp = self.translate_exp(&cond.exp, false);
             let handle_exp = self.translate_exp(&cond.additional_exps[0], false);
@@ -359,25 +356,14 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         use move_model::ast::{Exp::*, Operation::*};
         match exp {
             Temporary(node_id, idx) => {
-                // Compute the effective name of parameter.
-                let mut_ret_opt = self.get_ret_proxy(*idx);
-                let effective_idx = match (in_old || !self.at_post, mut_ret_opt) {
-                    (false, Some(mut_ret_idx)) => {
-                        // We access a &mut outside of old context. Map it to the according return
-                        // parameter. Notice the result of ret_locals[idx] needs to be interpreted
-                        // in the builders function env, because we are substituting locals of the
-                        // built function for parameters used by the function spec of this function.
-                        self.ret_locals[mut_ret_idx]
-                    }
-                    _ => {
-                        // We either access a regular parameter, or a &mut in old context, which is
-                        // treated like a regular parameter.
-                        if let Some(map) = self.param_substitution {
-                            map[*idx]
-                        } else {
-                            *idx
-                        }
-                    }
+                // Compute the effective index.
+                let effective_idx = if in_old {
+                    // We access a param inside of old context. We need to create
+                    // a temporary to save their value at function entry, and deliver this
+                    // temporary here.
+                    self.save_param(self.apply_param_substitution(*idx))
+                } else {
+                    self.apply_param_substitution(*idx)
                 };
                 // The type of this temporary might be different than the node's type w.r.t.
                 // references. Create a new node id with the effective type.
@@ -514,6 +500,15 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         }
     }
 
+    /// Apply parameter substitution if present.
+    fn apply_param_substitution(&self, idx: TempIndex) -> TempIndex {
+        if let Some(map) = self.param_substitution {
+            map[idx]
+        } else {
+            idx
+        }
+    }
+
     /// Instantiate this expression node's type information with the provided type arguments.
     /// This returns a new node id for the instantiation, if one is needed, otherwise the given
     /// one.
@@ -532,19 +527,6 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             let node_id = env.new_node(loc, ty);
             env.set_node_instantiation(node_id, inst);
             node_id
-        }
-    }
-
-    /// If the parameter is a &mut, return the proxy return parameter which was introduced by
-    /// memory instrumentation for it.
-    fn get_ret_proxy(&self, idx: TempIndex) -> Option<usize> {
-        if self.fun_env.get_local_type(idx).is_mutable_reference() {
-            let mut_ref_pos = (0..idx)
-                .filter(|i| self.fun_env.get_local_type(*i).is_mutable_reference())
-                .count();
-            Some(usize::checked_add(self.fun_env.get_return_count(), mut_ref_pos).unwrap())
-        } else {
-            None
         }
     }
 
@@ -601,5 +583,17 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .saved_memory
             .entry(qid)
             .or_insert_with(|| builder.global_env().new_global_id())
+    }
+
+    fn save_param(&mut self, idx: TempIndex) -> TempIndex {
+        if let Some(saved) = self.result.saved_params.get(&idx) {
+            *saved
+        } else {
+            let saved = self
+                .builder
+                .new_temp(self.builder.data.local_types[idx].skip_reference().clone());
+            self.result.saved_params.insert(idx, saved);
+            saved
+        }
     }
 }

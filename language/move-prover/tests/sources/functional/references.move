@@ -35,6 +35,13 @@ module TestReferences {
         ensures result == r[i];
     }
 
+    fun increment(r: &mut u64) {
+        *r = *r + 1
+    }
+    spec fun increment {
+        ensures r == old(r) + 1;
+    }
+
 
     // -----------------------------
     // References as local variables
@@ -83,5 +90,28 @@ module TestReferences {
     }
     spec fun withdrawal_capability_address {
         ensures result == cap.account_address;
+    }
+
+    // ---------------------------
+    // References of vector elements
+    // ---------------------------
+
+    fun mutate_vector(): vector<u64> {
+        let v = Vector::empty();
+        Vector::push_back(&mut v, 1);
+        let r = Vector::borrow_mut(&mut v, 0);
+        *r = 0;
+        v
+    }
+    spec fun mutate_vector {
+        ensures result[0] == 0;
+    }
+
+    fun mutate_vector_param(v: &mut vector<u64>) {
+        let r = Vector::borrow_mut(v, 0);
+        *r = *r + 1;
+    }
+    spec fun mutate_vector_param {
+        ensures v[0] == old(v[0]) + 1;
     }
 }

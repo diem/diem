@@ -87,7 +87,7 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessor {
 }
 
 struct Instrumenter<'a> {
-    _options: &'a ProverOptions,
+    options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
 }
 
@@ -98,10 +98,7 @@ impl<'a> Instrumenter<'a> {
         data: FunctionData,
     ) -> FunctionData {
         let builder = FunctionDataBuilder::new(fun_env, data);
-        let mut instrumenter = Instrumenter {
-            _options: options,
-            builder,
-        };
+        let mut instrumenter = Instrumenter { options, builder };
         instrumenter.instrument();
         instrumenter.builder.data
     }
@@ -146,6 +143,7 @@ impl<'a> Instrumenter<'a> {
         let mut assumed_at_update = BTreeSet::new();
         let module_env = &self.builder.fun_env.module_env;
         let mut translated = SpecTranslator::translate_invariants(
+            self.options,
             &mut self.builder,
             invariants.iter().filter_map(|id| {
                 env.get_global_invariant(*id).filter(|inv| {
@@ -211,8 +209,11 @@ impl<'a> Instrumenter<'a> {
         // Translate the invariants, computing any state to be saved as well. State saves are
         // necessary for update invariants which contain the `old(..)` expressions.
         let invariants = self.get_verified_invariants_for_mem(mem);
-        let mut translated =
-            SpecTranslator::translate_invariants(&mut self.builder, invariants.iter().cloned());
+        let mut translated = SpecTranslator::translate_invariants(
+            self.options,
+            &mut self.builder,
+            invariants.iter().cloned(),
+        );
 
         // Emit all necessary state saves for 'update' invariants.
         self.builder

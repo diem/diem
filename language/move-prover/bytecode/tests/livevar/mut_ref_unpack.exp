@@ -55,45 +55,41 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
 ============ after pipeline `livevar` ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: TestMutRefs::R): (u64, TestMutRefs::R) {
+pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
-     var $t4: TestMutRefs::R
-     var $t5: &mut TestMutRefs::R
+     var $t4: &mut u64
+     var $t5: u64
      var $t6: u64
      # live vars: r
-  0: $t4 := move($t0)
-     # live vars: $t4
-  1: $t5 := borrow_local($t4)
-     # live vars: $t4, $t5
-  2: $t3 := borrow_field<TestMutRefs::R>.value($t5)
-     # live vars: value, $t4
-  3: $t1 := read_ref($t3)
-     # live vars: result, value, $t4
-  4: $t6 := 0
-     # live vars: result, value, $t4, $t6
-  5: write_ref($t3, $t6)
-     # live vars: result, $t4
-  6: return ($t1, $t4)
+  0: $t4 := borrow_field<TestMutRefs::R>.value($t0)
+     # live vars: r, $t4
+  1: $t5 := read_ref($t4)
+     # live vars: r, $t4, $t5
+  2: $t6 := 0
+     # live vars: r, $t4, $t5, $t6
+  3: write_ref($t4, $t6)
+     # live vars: r, $t5
+  4: trace_local[r]($t0)
+     # live vars: r, $t5
+  5: return ($t5, $t0)
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: TestMutRefs::R): (u64, TestMutRefs::R) {
+pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
-     var $t4: TestMutRefs::R
-     var $t5: &mut TestMutRefs::R
+     var $t4: &mut u64
+     var $t5: u64
      # live vars: r
-  0: $t4 := move($t0)
-     # live vars: $t4
-  1: $t5 := borrow_local($t4)
-     # live vars: $t4, $t5
-  2: $t3 := borrow_field<TestMutRefs::R>.value($t5)
-     # live vars: value, $t4
-  3: $t1 := read_ref($t3)
-     # live vars: result, $t4
-  4: return ($t1, $t4)
+  0: $t4 := borrow_field<TestMutRefs::R>.value($t0)
+     # live vars: r, $t4
+  1: $t5 := read_ref($t4)
+     # live vars: r, $t5
+  2: trace_local[r]($t0)
+     # live vars: r, $t5
+  3: return ($t5, $t0)
 }

@@ -269,41 +269,41 @@ fun Test::multiple_results($t0|a: u64, $t1|b: u64): (u64, u64) {
 
 
 [variant verification]
-fun Test::mut_ref_param($t0|r: Test::R): (u64, Test::R) {
+fun Test::mut_ref_param($t0|r: &mut Test::R): (u64, &mut Test::R) {
      var $t1|x: u64
      var $t2: Test::R
-     var $t3: &mut Test::R
+     var $t3: u64
      var $t4: u64
      var $t5: u64
      var $t6: u64
-     var $t7: u64
-     var $t8: num
-     var $t9: &mut u64
+     var $t7: num
+     var $t8: &mut u64
+     var $t9: &mut Test::R
   0: assume WellFormed($t0)
-  1: $t2 := move($t0)
-  2: $t3 := borrow_local($t2)
-  3: $t4 := get_field<Test::R>.v($t3)
-  4: $t5 := get_field<Test::R>.v($t3)
-  5: $t6 := 1
-  6: $t7 := -($t5, $t6) on_abort goto 16 with $t8
-  7: $t9 := borrow_field<Test::R>.v($t3)
-  8: write_ref($t9, $t7)
-  9: write_back[Reference($t3)]($t9)
- 10: write_back[LocalRoot($t2)]($t3)
+  1: $t2 := read_ref($t0)
+  2: $t3 := get_field<Test::R>.v($t0)
+  3: $t4 := get_field<Test::R>.v($t0)
+  4: $t5 := 1
+  5: $t6 := -($t4, $t5) on_abort goto 16 with $t7
+  6: $t8 := borrow_field<Test::R>.v($t0)
+  7: write_ref($t8, $t6)
+  8: write_back[Reference($t0)]($t8)
+  9: trace_local[r]($t0)
+ 10: $t9 := move($t0)
  11: label L1
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:67:6+42
- 12: assert Not(Eq<u64>(select Test::R.v($t0), 0))
+ 12: assert Not(Eq<u64>(select Test::R.v($t2), 0))
      # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:68:6+27
- 13: assert Eq<u64>($t4, select Test::R.v($t0))
+ 13: assert Eq<u64>($t3, select Test::R.v($t2))
      # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:69:6+28
- 14: assert Eq<u64>(select Test::R.v($t2), Add(select Test::R.v($t0), 1))
- 15: return ($t4, $t2)
+ 14: assert Eq<u64>(select Test::R.v($t0), Add(select Test::R.v($t2), 1))
+ 15: return ($t3, $t9)
  16: label L2
      # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
- 17: assert Eq<u64>(select Test::R.v($t0), 0)
+ 17: assert Eq<u64>(select Test::R.v($t2), 0)
      # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:66:2+142
- 18: assert And(Eq<u64>(select Test::R.v($t0), 0), Eq(-1, $t8))
- 19: abort($t8)
+ 18: assert And(Eq<u64>(select Test::R.v($t2), 0), Eq(-1, $t7))
+ 19: abort($t7)
 }
 
 
@@ -340,9 +340,10 @@ fun Test::resource_with_old($t0|val: u64) {
      var $t5: u64
      var $t6: num
      var $t7: address
-     var $t8: u64
+     var $t8: &mut Test::R
      var $t9: u64
-     var $t10: &mut u64
+     var $t10: u64
+     var $t11: &mut u64
   0: assume WellFormed($t0)
   1: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
   2: assume Gt($t0, 0)
@@ -361,13 +362,13 @@ fun Test::resource_with_old($t0|val: u64) {
  15: $t7 := 0x0
      # VC: caller does not have permission to modify `Test::R` at given address at tests/spec_instrumentation/fun_spec.move:36:14+17
  16: assert CanModify<Test::R>($t7)
- 17: $t1 := borrow_global<Test::R>($t7) on_abort goto 29 with $t6
- 18: $t8 := get_field<Test::R>.v($t1)
- 19: $t9 := +($t8, $t0) on_abort goto 29 with $t6
- 20: $t10 := borrow_field<Test::R>.v($t1)
- 21: write_ref($t10, $t9)
- 22: write_back[Reference($t1)]($t10)
- 23: write_back[Test::R]($t1)
+ 17: $t8 := borrow_global<Test::R>($t7) on_abort goto 29 with $t6
+ 18: $t9 := get_field<Test::R>.v($t8)
+ 19: $t10 := +($t9, $t0) on_abort goto 29 with $t6
+ 20: $t11 := borrow_field<Test::R>.v($t8)
+ 21: write_ref($t11, $t10)
+ 22: write_back[Reference($t8)]($t11)
+ 23: write_back[Test::R]($t8)
  24: label L3
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+34
  25: assert Not(Not(exists[@0]<Test::R>(0)))
