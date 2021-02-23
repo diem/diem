@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use diem_crypto::{hash::CryptoHash, HashValue};
 use hex::FromHex;
 use proptest::prelude::*;
 use std::{
@@ -54,15 +53,6 @@ fn test_address() {
         )
     });
 
-    let hash_vec =
-        &Vec::from_hex("6403c4906e79cf4536edada922040805c6a8d0e735fa4516a9cc40038bd125c8")
-            .expect("You must provide a valid Hex format");
-
-    let mut hash = [0u8; 32];
-    let bytes = &hash_vec[..32];
-    hash.copy_from_slice(&bytes);
-
-    assert_eq!(address.hash(), HashValue::new(hash));
     assert_eq!(address.as_ref().to_vec(), hex);
 }
 

@@ -38,11 +38,13 @@ pub static KEYPAIRS: Lazy<(
 
     let initiator_private_key = x25519::PrivateKey::generate(&mut rng);
     let initiator_public_key = initiator_private_key.public_key();
-    let initiator_peer_id = PeerId::from_identity_public_key(initiator_public_key);
+    let initiator_peer_id =
+        diem_types::account_address::from_identity_public_key(initiator_public_key);
 
     let responder_private_key = x25519::PrivateKey::generate(&mut rng);
     let responder_public_key = responder_private_key.public_key();
-    let responder_peer_id = PeerId::from_identity_public_key(responder_public_key);
+    let responder_peer_id =
+        diem_types::account_address::from_identity_public_key(responder_public_key);
 
     (
         (

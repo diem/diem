@@ -216,11 +216,13 @@ impl NetworkConfig {
             Identity::None => {
                 let mut rng = StdRng::from_seed(OsRng.gen());
                 let key = x25519::PrivateKey::generate(&mut rng);
-                let peer_id = PeerId::from_identity_public_key(key.public_key());
+                let peer_id =
+                    diem_types::account_address::from_identity_public_key(key.public_key());
                 self.identity = Identity::from_config(key, peer_id);
             }
             Identity::FromConfig(config) => {
-                let peer_id = PeerId::from_identity_public_key(config.key.public_key());
+                let peer_id =
+                    diem_types::account_address::from_identity_public_key(config.key.public_key());
                 if config.peer_id == PeerId::ZERO {
                     config.peer_id = peer_id;
                 }

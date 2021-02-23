@@ -4236,8 +4236,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "diem-crypto",
- "diem-crypto-derive",
  "diem-workspace-hack",
  "hex",
  "mirai-annotations",

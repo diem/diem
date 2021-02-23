@@ -367,7 +367,9 @@ impl NoiseUpgrader {
                     None => {
                         // if not, verify that their peerid is constructed correctly from their public key
                         let derived_remote_peer_id =
-                            PeerId::from_identity_public_key(remote_public_key);
+                            diem_types::account_address::from_identity_public_key(
+                                remote_public_key,
+                            );
                         if derived_remote_peer_id != remote_peer_id {
                             Err(NoiseHandshakeError::ClientPeerIdMismatch(
                                 remote_peer_short,
@@ -509,8 +511,10 @@ mod test {
             let server_auth = HandshakeAuthMode::mutual(trusted_peers);
             (client_auth, server_auth, client_peer_id, server_peer_id)
         } else {
-            let client_peer_id = PeerId::from_identity_public_key(client_public_key);
-            let server_peer_id = PeerId::from_identity_public_key(server_public_key);
+            let client_peer_id =
+                diem_types::account_address::from_identity_public_key(client_public_key);
+            let server_peer_id =
+                diem_types::account_address::from_identity_public_key(server_public_key);
             (
                 HandshakeAuthMode::server_only(),
                 HandshakeAuthMode::server_only(),

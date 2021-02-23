@@ -286,7 +286,7 @@ mod tests {
         let consensus_pubkey = consensus_private_key.public_key();
         let pubkey = test_pubkey([0u8; 32]);
         let different_pubkey = test_pubkey([1u8; 32]);
-        let peer_id = PeerId::from_identity_public_key(pubkey);
+        let peer_id = diem_types::account_address::from_identity_public_key(pubkey);
 
         // Build up the Reconfig Listener
         let (conn_mgr_reqs_tx, _rx) = channel::new_test(1);

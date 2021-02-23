@@ -36,7 +36,7 @@ use diem_logger::prelude::*;
 use diem_state_view::StateViewId;
 use diem_trace::prelude::*;
 use diem_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, HashAccountAddress},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,

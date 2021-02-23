@@ -3,14 +3,11 @@
 
 use crate::DbReader;
 use anyhow::{format_err, Result};
-use diem_crypto::{
-    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
-    HashValue,
-};
+use diem_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use diem_state_view::{StateView, StateViewId};
 use diem_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
+    account_address::{AccountAddress, HashAccountAddress},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     proof::SparseMerkleProof,

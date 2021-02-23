@@ -14,12 +14,12 @@ use crate::{
     },
 };
 use anyhow::Result;
-use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_crypto::HashValue;
 use diem_jellyfish_merkle::{
     node_type::NodeKey, JellyfishMerkleTree, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
 use diem_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, HashAccountAddress},
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,

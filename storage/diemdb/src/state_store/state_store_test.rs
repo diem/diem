@@ -3,10 +3,12 @@
 
 use super::*;
 use crate::{pruner, DiemDB};
-use diem_crypto::hash::CryptoHash;
 use diem_jellyfish_merkle::restore::JellyfishMerkleRestore;
 use diem_temppath::TempPath;
-use diem_types::{account_address::AccountAddress, account_state_blob::AccountStateBlob};
+use diem_types::{
+    account_address::{AccountAddress, HashAccountAddress},
+    account_state_blob::AccountStateBlob,
+};
 use proptest::{collection::hash_map, prelude::*};
 
 fn put_account_state_set(
