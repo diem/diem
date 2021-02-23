@@ -22,7 +22,7 @@ either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
-futures-core = { version = "0.3.12", features = ["alloc", "default", "std"] }
+futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
 futures-io = { version = "0.3.12", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
@@ -63,7 +63,7 @@ either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
-futures-core = { version = "0.3.12", features = ["alloc", "default", "std"] }
+futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
 futures-io = { version = "0.3.12", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
@@ -107,7 +107,7 @@ either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
-futures-core = { version = "0.3.12", features = ["alloc", "default", "std"] }
+futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
 futures-io = { version = "0.3.12", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
@@ -148,7 +148,7 @@ either = { version = "1.6.1", features = ["default", "use_std"] }
 fail = { version = "0.4.0", default-features = false, features = ["failpoints"] }
 futures = { version = "0.3.12", features = ["alloc", "async-await", "default", "executor", "futures-executor", "std"] }
 futures-channel = { version = "0.3.12", features = ["alloc", "default", "futures-sink", "sink", "std"] }
-futures-core = { version = "0.3.12", features = ["alloc", "default", "std"] }
+futures-core = { version = "0.3.13", features = ["alloc", "default", "std"] }
 futures-io = { version = "0.3.12", features = ["default", "std"] }
 futures-sink = { version = "0.3.12", features = ["alloc", "default", "std"] }
 futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-await-macro", "channel", "default", "futures-channel", "futures-io", "futures-macro", "futures-sink", "io", "memchr", "proc-macro-hack", "proc-macro-nested", "sink", "slab", "std"] }
