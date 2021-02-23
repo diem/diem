@@ -3,7 +3,6 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use fallible::copy_from_slice::copy_slice_to_vec;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -42,14 +41,8 @@ impl EventKey {
 
     /// Get the account address part in this event key
     pub fn get_creator_address(&self) -> AccountAddress {
-        let mut arr_bytes = [0u8; AccountAddress::LENGTH];
-        copy_slice_to_vec(
-            &self.0[EventKey::LENGTH - AccountAddress::LENGTH..],
-            &mut arr_bytes,
-        )
-        .expect("get_creator_address failed");
-
-        AccountAddress::new(arr_bytes)
+        AccountAddress::try_from(&self.0[EventKey::LENGTH - AccountAddress::LENGTH..])
+            .expect("get_creator_address failed")
     }
 
     /// If this is the `ith` EventKey` created by `get_creator_address()`, return `i`

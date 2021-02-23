@@ -2291,7 +2291,6 @@ dependencies = [
  "diem-infallible",
  "diem-network-address",
  "diem-workspace-hack",
- "fallible",
  "hex",
  "itertools 0.10.0",
  "mirai-annotations",
