@@ -21,25 +21,37 @@ services:
             shared:
                 ipv4_address: 172.16.1.2
         volumes:
-            - type: bind
-              source: ./mint.key
-              target: /opt/diem/etc/mint.key
-        command: [
-            "/opt/diem/bin/diem-faucet",
-            "--address",
-            "0.0.0.0",
-            "--port",
-            "8000",
-            "--chain-id",
-            "TESTING",
-            "--mint-key-file-path",
-            "/opt/diem/etc/mint.key",
-            "--server-url",
-            "http://172.16.1.3:8080"
-        ]
+            - type: volume
+              source: diem-shared
+              target: /opt/diem/var
+        command: >
+            /bin/bash -c "
+                for i in {1..10}
+                do
+                    if [[ -s /opt/diem/var/mint.key ]]
+                    then
+                        /opt/diem/bin/diem-faucet \
+                            --address 0.0.0.0 \
+                            --port 8000 \
+                            --chain-id TESTING \
+                            --mint-key-file-path /opt/diem/var/mint.key \
+                            --server-url http://172.16.1.3:8080
+                        exit $$?
+                    else
+                        echo 'Validator has not populated mint.key yet. Is it running?'
+                        sleep 1
+                    fi
+                done
+                exit 1
+              "
         ports:
             - "8000:8000"
+
 networks:
     shared:
         external: true
         name: "diem-docker-compose-shared"
+
+volumes:
+    diem-shared:
+        name: diem-shared

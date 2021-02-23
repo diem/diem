@@ -25,17 +25,8 @@ services:
                 ipv4_address: 172.16.1.3
         volumes:
             - type: volume
-              source: db
+              source: diem-shared
               target: /opt/diem/var
-            - type: bind
-              source: ./genesis.blob
-              target: /opt/diem/var/0/genesis.blob
-            - type: bind
-              source: ./diem_root_key
-              target: /opt/diem/var/mint.key
-            - type: bind
-              source: ./waypoint.txt
-              target: /opt/diem/var/waypoint.txt
         command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
         ports:
             - "8080:8080"
@@ -45,5 +36,7 @@ networks:
         ipam:
           config:
             - subnet: 172.16.1.0/24
+
 volumes:
-    db:
+  diem-shared:
+    name: diem-shared

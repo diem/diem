@@ -14,18 +14,23 @@ To use these compositions:
 3. Run `docker-compose up`
 
 To build your own complete testnet:
-0. Review both **validator-testnet** and **faucet** docker-compose.yaml and ensure the image points to the same tagged image.
 1. Start the **validator-testnet**:
     1. Enter the **validator-testnet** directory `cd validator-testnet`
     2. Start the composition `docker-compose up -d`
-    3. Confirm that waypoint.txt is not empty
-    4. Return to the compose directory: `cd ..`
+    3. Return to the compose directory: `cd ..`
 2. Start **faucet**:
     1. Enter the **faucet** directory: `cd faucet`
-    2. Copy the testnet waypoint: `cp ../validator-testnet/waypoint.txt .`
-    3. Copy the testnet diem_root_key as the mint.key: `cp ../validator-testnet/diem_root_key mint.key`
-    4. Start the composition `docker-compose up -d`
-    5. Return to the compose directory: `cd ..`
+    2. Start the composition `docker-compose up -d`
+    3. Return to the compose directory: `cd ..`
 3. Enjoy your testnet:
     1. Faucet will be available at http://127.0.0.1:8000
     2. JSON-RPC will be available at http://127.0.0.1:8080
+
+If you would like to run the CLI client and interact with your testnet:
+   1. Ensure the **validator-testnet** and the **faucet** are running
+   2. Enter the **client** directory `cd client`
+   3. Start the composition with **`run`, not `up`**: `docker-compose run client`
+   4. You should be in an interactive session in the CLI. Type `h` and press `enter` to see commands
+
+If you would like to clear the validator/blockchain data and start from scratch, either remove the docker volume `diem-shared`,
+or run `docker-compose run validator rm -rf '/opt/diem/var/*'` from the **validator-testnet** directory.

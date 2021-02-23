@@ -1,0 +1,46 @@
+# This compose file launches a client which will interact with the faucet and validator.
+# The faucet can be accessed at 127.0.0.1:8000
+
+version: "3.8"
+services:
+
+  client:
+    image: libra/client:devnet
+    networks:
+      shared:
+        ipv4_address: 172.16.1.5
+    volumes:
+      - type: volume
+        source: diem-shared
+        target: /opt/diem/var
+    entrypoint: /bin/bash
+    command: >
+        -c '
+          for i in {1..10}
+          do
+              if [[ -s /opt/diem/var/waypoint.txt ]]
+              then
+                  echo "Waypoint: `cat /opt/diem/var/waypoint.txt`\n"
+                  /opt/diem/bin/diem_client \
+                      --url http://172.16.1.3:8080 \
+                      --faucet-url http://172.16.1.2:8000 \
+                      --chain-id TESTING \
+                      --waypoint `cat /opt/diem/var/waypoint.txt`
+                  exit $$?
+              else
+                  echo "Validator has not populated waypoint.txt yet. Is it running?"
+                  sleep 1
+              fi
+          done
+          exit 1
+        '
+networks:
+  shared:
+    name: "diem-docker-compose-shared"
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
+
+volumes:
+  diem-shared:
+    name: diem-shared
