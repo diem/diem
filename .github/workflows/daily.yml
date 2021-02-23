@@ -29,7 +29,7 @@ jobs:
         run: cargo install --force cargo-audit
       - name: audit crates
         run: |
-          $CARGO $CARGOFLAGS audit >> $MESSAGE_PAYLOAD_FILE
+          $CARGO $CARGOFLAGS audit --ignore RUSTSEC-2021-0020 >> $MESSAGE_PAYLOAD_FILE
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_AUDIT }}
