@@ -477,11 +477,13 @@ fn test_fullnode_catch_up_moving_target() {
 }
 
 #[test]
-#[ignore] // TODO: https://github.com/diem/diem/issues/5771
 fn test_fn_failover() {
     let mut env = StateSyncEnvironment::new(5);
 
+    // Start a validator
     env.start_validator_peer(0, true);
+
+    // Start a fullnode with two upstream networks
     env.setup_state_sync_peer(
         1,
         default_handler(),
@@ -493,7 +495,7 @@ fn test_fn_failover() {
         Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
 
-    // start up 3 publicly available VFN
+    // Start up 3 PFNs
     env.start_fullnode_peer(2, true);
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
@@ -504,13 +506,13 @@ fn test_fn_failover() {
     let fullnode_2 = env.get_state_sync_peer(3);
     let fullnode_3 = env.get_state_sync_peer(4);
 
-    // connect everyone
+    // Grab the nodes peer id's
     let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
     let fn_0_vfn_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
-    let fn_0_public_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
-    let fn_1_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
-    let fn_2_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
-    let fn_3_peer_id = fullnode_3.get_peer_id(PFN_NETWORK.clone());
+    let fn_0_pfn_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let fn_1_pfn_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+    let fn_2_pfn_peer_id = fullnode_1.get_peer_id(PFN_NETWORK.clone());
+    let fn_3_pfn_peer_id = fullnode_3.get_peer_id(PFN_NETWORK.clone());
 
     drop(validator);
     drop(fullnode_0);
@@ -521,181 +523,192 @@ fn test_fn_failover() {
     // Validator discovers fullnode 0
     send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
 
-    // public network:
-    // fn_0 sends new peer event to all its upstream public peers
-    let upstream_peer_ids = [fn_1_peer_id, fn_2_peer_id, fn_3_peer_id];
+    // Set up the PFN network: fullnode 0 sends a new peer event to all upstream PFNs
+    let upstream_peer_ids = [fn_1_pfn_peer_id, fn_2_pfn_peer_id, fn_3_pfn_peer_id];
     for peer in upstream_peer_ids.iter() {
-        send_connection_notifications(&mut env, *peer, fn_0_public_peer_id, true);
+        send_connection_notifications(&mut env, *peer, fn_0_pfn_peer_id, true);
     }
 
-    // commit some txns on v
-    // check that fn_0 sends chunk requests to v only
-    for num_commit in 1..=5 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            // we just directly sync up the storage of all the upstream peers of fn_0
-            // for ease of testing
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(recipient, validator_peer_id);
-        env.assert_no_message_sent(fn_0_public_peer_id);
-        // deliver validator's chunk response
-        if num_commit < 5 {
-            env.deliver_msg(validator_peer_id);
-        }
-    }
+    // Commit transactions on the validator and verify that fullnode 0 sends chunk requests
+    // to the validator only.
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        1,
+        &[fn_0_vfn_peer_id],
+        &[validator_peer_id],
+        &[fn_0_pfn_peer_id],
+        false,
+    );
 
-    // Bring down the validator connection to fullnode 0
+    // Bring down the validator connection to fullnode 0 and deliver the last chunk response
     send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, false);
+    env.deliver_msg(responding_peer_id);
 
-    // deliver chunk response to fn_0 after the lost peer event
-    // so that the next chunk request is guaranteed to be sent after the lost peer event
-    env.deliver_msg(validator_peer_id);
+    // Check that fullnode 0 sends chunk requests to the PFNs only
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        2,
+        &[fn_0_pfn_peer_id],
+        &upstream_peer_ids,
+        &[fn_0_vfn_peer_id],
+        false,
+    );
 
-    // check that vfn sends chunk requests to the failover FNs only
-    let mut last_fallback_recipient = None;
-    for num_commit in 6..=10 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
-        assert!(upstream_peer_ids.contains(&recipient));
-        env.assert_no_message_sent(fn_0_vfn_peer_id);
-        // deliver validator's chunk response
-        if num_commit < 10 {
-            let (chunk_response_recipient, _) = env.deliver_msg(recipient);
-            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
-        } else {
-            last_fallback_recipient = Some(recipient);
-        }
-    }
+    // Disconnect fullnode 0 from fullnode 1 and fullnode 2
+    send_connection_notifications(&mut env, fn_1_pfn_peer_id, fn_0_pfn_peer_id, false);
+    send_connection_notifications(&mut env, fn_2_pfn_peer_id, fn_0_pfn_peer_id, false);
 
-    // Disconnect fullnode 1 and fullnode 0
-    send_connection_notifications(&mut env, fn_1_peer_id, fn_0_public_peer_id, false);
+    // Deliver the last chunk response to fullnode 0
+    let (chunk_response_recipient, _) = env.deliver_msg(responding_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_pfn_peer_id);
 
-    // Disconnect fullnode 2 and fullnode 0
-    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, false);
+    // Verify fullnode 0 only broadcasts to the single live fallback peer (fullnode 3)
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        3,
+        &[fn_0_pfn_peer_id],
+        &[fn_3_pfn_peer_id],
+        &[fn_0_vfn_peer_id],
+        false,
+    );
 
-    // deliver chunk response to fn_0 after the lost peer events
-    // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let (chunk_response_recipient, _) = env.deliver_msg(last_fallback_recipient.unwrap());
-    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
+    // Disconnect fullnode 0 and fullnode 3 and deliver the last chunk response
+    send_connection_notifications(&mut env, fn_3_pfn_peer_id, fn_0_pfn_peer_id, false);
+    let (chunk_response_recipient, _) = env.deliver_msg(responding_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_pfn_peer_id);
 
-    // check we only broadcast to the single live fallback peer (fn_3)
-    for num_commit in 11..=15 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
-        assert_eq!(recipient, fn_3_peer_id);
-        env.assert_no_message_sent(fn_0_vfn_peer_id);
-        // deliver validator's chunk response
-        if num_commit < 15 {
-            let (chunk_response_recipient, _) = env.deliver_msg(fn_3_peer_id);
-            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
-        }
-    }
-
-    // Disconnect fullnode 3 and fullnode 0
-    send_connection_notifications(&mut env, fn_3_peer_id, fn_0_public_peer_id, false);
-
-    // deliver chunk response to fn_0 after the lost peer events
-    // so that the next chunk request is guaranteed to be sent after the lost peer events
-    let (chunk_response_recipient, _) = env.deliver_msg(fn_3_peer_id);
-    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
-
-    // check no sync requests are sent (all upstream are down)
+    // Verify that no sync requests are sent (as all upstream peers are down)
     env.assert_no_message_sent(fn_0_vfn_peer_id);
-    env.assert_no_message_sent(fn_0_public_peer_id);
+    env.assert_no_message_sent(fn_0_pfn_peer_id);
 
-    // Connect fullnode 2 and fullnode 0
-    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, true);
+    // Connect fullnode 0 and fullnode 2
+    send_connection_notifications(&mut env, fn_2_pfn_peer_id, fn_0_pfn_peer_id, true);
 
-    // check we only broadcast to the single live fallback peer (fn_2)
-    for num_commit in 16..=20 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_public_peer_id);
-        assert_eq!(recipient, fn_2_peer_id);
-        env.assert_no_message_sent(fn_0_vfn_peer_id);
-        // deliver validator's chunk response
-        if num_commit < 20 {
-            let (chunk_response_recipient, _) = env.deliver_msg(fn_2_peer_id);
-            assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
-        }
-    }
+    // Verify that we only broadcast to the single live fallback peer (fullnode 2)
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        4,
+        &[fn_0_pfn_peer_id],
+        &[fn_2_pfn_peer_id],
+        &[fn_0_vfn_peer_id],
+        false,
+    );
 
-    // Connect validator and fullnode 0
+    // Connect fullnode 0 and validator and deliver the last chunk response
     send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
+    let (chunk_response_recipient, _) = env.deliver_msg(responding_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_pfn_peer_id);
 
-    let (chunk_response_recipient, _) = env.deliver_msg(fn_2_peer_id);
-    assert_eq!(chunk_response_recipient, fn_0_public_peer_id);
+    // Check that fullnode 0 sends chunk requests to the validator and fullnode 2
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        5,
+        &[fn_0_vfn_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_2_pfn_peer_id],
+        &[],
+        false,
+    );
 
-    // check that vfn sends chunk requests to v only, not fallback upstream
-    for num_commit in 21..=25 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(recipient, validator_peer_id);
-        env.assert_no_message_sent(fn_0_public_peer_id);
-        if num_commit < 25 {
-            // deliver validator's chunk response
-            env.deliver_msg(validator_peer_id);
+    // Bring back all PFNs and deliver the last chunk response
+    for peer in &[fn_1_pfn_peer_id, fn_3_pfn_peer_id] {
+        send_connection_notifications(&mut env, *peer, fn_0_pfn_peer_id, true);
+    }
+    env.deliver_msg(responding_peer_id);
+
+    // Check that fullnode 0 sends chunk requests to the validator and fullnode 2
+    // (because of optimistic fetch)
+    let responding_peer_id = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        6,
+        &[fn_0_vfn_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_2_pfn_peer_id],
+        &[],
+        false,
+    );
+
+    // Deliver the last chunk response and verify that fullnode 0 is the target
+    let (chunk_response_recipient, _) = env.deliver_msg(responding_peer_id);
+    assert_eq!(chunk_response_recipient, fn_0_pfn_peer_id);
+
+    // Check that fullnode 0 sends chunk requests to the validator only
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        7,
+        &[fn_0_vfn_peer_id],
+        &[validator_peer_id, fn_2_pfn_peer_id],
+        &[fn_0_pfn_peer_id],
+        false,
+    );
+}
+
+// This test helper is used to execute a commit (at commit_version) on a validator node. It
+// verifies that requesting_peers send chunk requests to one of the specified
+// target_peers, and that the inactive_peers don't send any chunk requests.
+// Note: if skip_all_responses is true, this helper doesn't deliver a single chunk response to
+// the requesting_peer. Otherwise, all responses are sent, except the chunk from the last
+// responding node. In all cases, we return the peer_id of the last node that should have
+// responded to the requesting_peer so that it can be used to deliver the last chunk manually.
+fn execute_commit_and_verify_chunk_requests(
+    env: &mut StateSyncEnvironment,
+    commit_version: u64,
+    requesting_peers: &[PeerId],
+    target_peers: &[PeerId],
+    inactive_peers: &[PeerId],
+    skip_all_responses: bool,
+) -> PeerId {
+    let validator_index = 0;
+    let pfn_indices = [2, 3, 4];
+
+    // Execute a new commit at the next version
+    env.get_state_sync_peer(validator_index)
+        .commit(commit_version);
+
+    // Automatically sync up all PFNs to the validator's state
+    for pfn in &pfn_indices {
+        env.clone_storage(validator_index, *pfn);
+    }
+
+    // Deliver the chunk requests and verify the target recipients
+    let mut request_recipients = vec![];
+    for requesting_peer in requesting_peers {
+        let (recipient, _) = env.deliver_msg(*requesting_peer);
+        assert!(target_peers.contains(&recipient));
+        request_recipients.push(recipient);
+    }
+
+    // Verify no requests are sent by the inactive_peers
+    for inactive_peer in inactive_peers {
+        env.assert_no_message_sent(*inactive_peer);
+    }
+
+    if skip_all_responses {
+        // Return the last recipient
+        return *request_recipients.last().unwrap();
+    } else {
+        // Deliver the chunk responses (except for the last chunk)
+        let number_of_recipients = request_recipients.len();
+        for (recipient_id, recipient) in request_recipients.iter().enumerate() {
+            if recipient_id < number_of_recipients - 1 {
+                env.deliver_msg(*recipient);
+            } else {
+                // Don't deliver the last chunk
+                return *recipient;
+            }
         }
     }
 
-    // bring back all fallback
-    let upstream_peers_to_revive = [
-        env.get_state_sync_peer(2)
-            .get_peer_id(VFN_NETWORK_2.clone()),
-        env.get_state_sync_peer(4)
-            .get_peer_id(VFN_NETWORK_2.clone()),
-    ];
-    for peer in upstream_peers_to_revive.iter() {
-        send_connection_notifications(&mut env, *peer, fn_0_public_peer_id, true);
-    }
-
-    // deliver validator's chunk response after fallback peers are revived
-    env.deliver_msg(validator_peer_id);
-
-    // check that we only broadcast to v
-    // check that vfn sends chunk requests to v only, not fallback upstream
-    for num_commit in 26..=30 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        for public_upstream in 2..=4 {
-            env.clone_storage(0, public_upstream);
-        }
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(recipient, validator_peer_id);
-        env.assert_no_message_sent(fn_0_public_peer_id);
-        // deliver validator's chunk response
-        env.deliver_msg(validator_peer_id);
-    }
+    panic!("Unexpected code path in test helper! No chunk responses were sent?");
 }
 
 #[test]
-#[ignore]
 fn test_multicast_failover() {
     let mut env = StateSyncEnvironment::new(5);
 
+    // Start a validator
     env.start_validator_peer(0, true);
 
-    // set up node with more than 2 upstream networks, which is more than in standard prod setting
-    // just to be safe
-    let multicast_timeout_ms = 5_000;
+    // Start a fullnode with two upstream networks
+    let multicast_timeout_ms = 3_000;
     env.setup_state_sync_peer(
         1,
         default_handler(),
@@ -711,7 +724,7 @@ fn test_multicast_failover() {
         ]),
     );
 
-    // setup the other FN upstream peer
+    // Start up 3 FNs
     env.start_fullnode_peer(2, true);
     env.start_fullnode_peer(3, true);
     env.start_fullnode_peer(4, true);
@@ -721,167 +734,120 @@ fn test_multicast_failover() {
     let fullnode_1 = env.get_state_sync_peer(2);
     let fullnode_2 = env.get_state_sync_peer(3);
 
-    // connect everyone
+    // Grab the nodes peer id's
     let validator_peer_id = validator.get_peer_id(VFN_NETWORK.clone());
     let fn_0_vfn_peer_id = fullnode_0.get_peer_id(VFN_NETWORK.clone());
-    let fn_0_second_peer_id = fullnode_0.get_peer_id(VFN_NETWORK_2.clone());
-    let fn_0_public_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
-    let fn_1_peer_id = fullnode_1.get_peer_id(VFN_NETWORK_2.clone());
-    let fn_2_peer_id = fullnode_2.get_peer_id(PFN_NETWORK.clone());
+    let fn_0_vfn_2_peer_id = fullnode_0.get_peer_id(VFN_NETWORK_2.clone());
+    let fn_0_pfn_peer_id = fullnode_0.get_peer_id(PFN_NETWORK.clone());
+    let fn_1_vfn_2_peer_id = fullnode_1.get_peer_id(VFN_NETWORK_2.clone());
+    let fn_2_pfn_peer_id = fullnode_2.get_peer_id(PFN_NETWORK.clone());
 
     drop(validator);
     drop(fullnode_0);
     drop(fullnode_1);
     drop(fullnode_2);
 
-    // Validator discovers fullnode 0
+    // Fullnode 0 discovers validator, fullnode 1 and fullnode 2
     send_connection_notifications(&mut env, validator_peer_id, fn_0_vfn_peer_id, true);
+    send_connection_notifications(&mut env, fn_1_vfn_2_peer_id, fn_0_vfn_2_peer_id, true);
+    send_connection_notifications(&mut env, fn_2_pfn_peer_id, fn_0_pfn_peer_id, true);
 
-    // Fullnode 0 discovers fullnode 1
-    send_connection_notifications(&mut env, fn_1_peer_id, fn_0_second_peer_id, true);
+    // Verify that fullnode 0 only broadcasts to the single validator peer
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        1,
+        &[fn_0_vfn_peer_id],
+        &[validator_peer_id],
+        &[fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        true,
+    );
 
-    // Fullnode 2 discovers fullnode 0
-    send_connection_notifications(&mut env, fn_2_peer_id, fn_0_public_peer_id, true);
-
-    for num_commit in 1..=3 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        // deliver fn_0's chunk request
-        let (recipient, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(recipient, validator_peer_id);
-        env.assert_no_message_sent(fn_0_second_peer_id);
-        env.assert_no_message_sent(fn_0_public_peer_id);
-        // deliver validator's chunk response
-        if num_commit < 3 {
-            env.deliver_msg(validator_peer_id);
-        }
-    }
-
-    // we don't deliver the validator's last chunk response
-    // wait for fn_0's chunk request to time out
+    // Wait for fullnode 0's chunk request to time out
     std::thread::sleep(std::time::Duration::from_millis(multicast_timeout_ms));
 
-    // commit some with
-    for num_commit in 4..=7 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        env.clone_storage(0, 2);
-        env.get_state_sync_peer(2)
-            .wait_for_version(num_commit * 5, None);
+    // Verify that fullnode 0 broadcasts to the validator peer and the fallback peer
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        2,
+        &[fn_0_vfn_2_peer_id, fn_0_vfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id],
+        &[fn_0_pfn_peer_id],
+        true,
+    );
 
-        // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(primary, validator_peer_id);
-        let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
-        assert_eq!(secondary, fn_1_peer_id);
-        env.assert_no_message_sent(fn_0_public_peer_id);
-
-        // deliver validator's chunk response
-        if num_commit < 7 {
-            env.deliver_msg(fn_1_peer_id);
-        }
-    }
-
-    // we don't deliver the validator's or the secondary vfn network's last chunk response
-    // wait for fn_0's chunk request to time out
+    // Wait for fullnode 0's chunk request to time out again
     std::thread::sleep(std::time::Duration::from_millis(multicast_timeout_ms));
 
-    for num_commit in 8..=11 {
-        env.get_state_sync_peer(0).commit(num_commit * 5);
-        env.clone_storage(0, 2);
-        env.get_state_sync_peer(2)
-            .wait_for_version(num_commit * 5, None);
-        env.clone_storage(0, 3);
-        env.get_state_sync_peer(3)
-            .wait_for_version(num_commit * 5, None);
+    // Verify that fullnode 0 broadcasts to the validator peer and both fallback peers
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        3,
+        &[fn_0_vfn_peer_id, fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[],
+        true,
+    );
 
-        // check that fn_0 sends chunk requests to both primary (vfn) and fallback ("second") network
-        let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-        assert_eq!(primary, validator_peer_id);
-        let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
-        assert_eq!(secondary, fn_1_peer_id);
-        let (public, _) = env.deliver_msg(fn_0_public_peer_id);
-        assert_eq!(public, fn_2_peer_id);
-
-        // deliver third fallback's chunk response
-        env.deliver_msg(fn_2_peer_id);
-    }
-
-    // Test case: deliver chunks from all upstream with third fallback as first responder
-    // Expected: next chunk request should still be sent to all upstream because validator did not deliver response first
+    // Deliver chunks from the 3 nodes (VFN delivers before validator)
+    env.deliver_msg(fn_2_pfn_peer_id);
+    env.deliver_msg(fn_1_vfn_2_peer_id);
     env.deliver_msg(validator_peer_id);
-    env.deliver_msg(fn_1_peer_id);
 
-    let mut num_commit = 12;
-    env.get_state_sync_peer(0).commit(num_commit * 5);
-    env.clone_storage(0, 2);
-    env.get_state_sync_peer(2)
-        .wait_for_version(num_commit * 5, None);
-    env.clone_storage(0, 3);
-    env.get_state_sync_peer(3)
-        .wait_for_version(num_commit * 5, None);
+    // Verify that fullnode 0 still broadcasts to the validator peer and both fallback peers
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        4,
+        &[fn_0_vfn_peer_id, fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[],
+        true,
+    );
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-    assert_eq!(primary, validator_peer_id);
-    env.assert_no_message_sent(fn_0_vfn_peer_id);
-    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
-    assert_eq!(secondary, fn_1_peer_id);
-    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
-    assert_eq!(public, fn_2_peer_id);
-
-    // Test case: deliver chunks from all upstream with secondary fallback as first responder
-    // Expected: next chunk request should still be multicasted to all upstream because primary did not deliver response first
-    env.deliver_msg(fn_1_peer_id);
+    // Deliver chunks from the 3 nodes (PFN delivers before validator)
+    env.deliver_msg(fn_2_pfn_peer_id);
+    env.deliver_msg(fn_1_vfn_2_peer_id);
     env.deliver_msg(validator_peer_id);
-    env.deliver_msg(fn_2_peer_id);
 
-    num_commit += 1;
-    env.get_state_sync_peer(0).commit(num_commit * 5);
-    env.clone_storage(0, 2);
-    env.get_state_sync_peer(2)
-        .wait_for_version(num_commit * 5, None);
-    env.clone_storage(0, 3);
-    env.get_state_sync_peer(3)
-        .wait_for_version(num_commit * 5, None);
+    // Verify that fullnode 0 still broadcasts to the validator peer and both fallback peers
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        5,
+        &[fn_0_vfn_peer_id, fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[],
+        true,
+    );
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-    assert_eq!(primary, validator_peer_id);
-    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
-    assert_eq!(secondary, fn_1_peer_id);
-    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
-    assert_eq!(public, fn_2_peer_id);
-
-    // Test case: deliver chunks from all upstream with primary as first responder
-    // Expected: next chunk request should only be sent to primary network
+    // Deliver chunks from all nodes (with the validator as the first responder)
     env.deliver_msg(validator_peer_id);
-    env.deliver_msg(fn_1_peer_id);
-    env.deliver_msg(fn_2_peer_id);
+    env.deliver_msg(fn_1_vfn_2_peer_id);
+    env.deliver_msg(fn_2_pfn_peer_id);
 
-    num_commit += 1;
-    env.get_state_sync_peer(0).commit(num_commit * 5);
-    env.clone_storage(0, 2);
-    env.get_state_sync_peer(2)
-        .wait_for_version(num_commit * 5, None);
-    env.clone_storage(0, 3);
-    env.get_state_sync_peer(3)
-        .wait_for_version(num_commit * 5, None);
+    // Verify that fullnode 0 still broadcasts to the validator peer and both fallback peers
+    // as optimistic fetch hasn't processed the response from the validator
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        6,
+        &[fn_0_vfn_peer_id, fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[],
+        true,
+    );
 
-    // because of optimistic chunk requesting, request will still be multicasted to all failover
-    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-    assert_eq!(primary, validator_peer_id);
-    let (secondary, _) = env.deliver_msg(fn_0_second_peer_id);
-    assert_eq!(secondary, fn_1_peer_id);
-    let (public, _) = env.deliver_msg(fn_0_public_peer_id);
-    assert_eq!(public, fn_2_peer_id);
-
-    // check that next chunk request is only be sent to primary network, i.e.
-    // multicasting is over
+    // Deliver chunks from all nodes (with the validator as the first responder)
     env.deliver_msg(validator_peer_id);
-    env.deliver_msg(fn_1_peer_id);
-    env.deliver_msg(fn_2_peer_id);
+    env.deliver_msg(fn_1_vfn_2_peer_id);
+    env.deliver_msg(fn_2_pfn_peer_id);
 
-    let (primary, _) = env.deliver_msg(fn_0_vfn_peer_id);
-    assert_eq!(primary, validator_peer_id);
-    env.assert_no_message_sent(fn_0_second_peer_id);
-    env.assert_no_message_sent(fn_0_public_peer_id);
+    // Verify that fullnode 0 now only broadcasts to the validator
+    let _ = execute_commit_and_verify_chunk_requests(
+        &mut env,
+        7,
+        &[fn_0_vfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
+        true,
+    );
 }
 
 fn check_chunk_request(message: Message, known_version: u64, target_version: Option<u64>) {
