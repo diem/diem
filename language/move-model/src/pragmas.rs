@@ -55,6 +55,14 @@ pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 /// of a boolean or a number.
 pub const FRIEND_PRAGMA: &str = "friend";
 
+/// Pragma indicating that invariants are not to be checked between entry and exit
+/// to this function
+pub const DISABLE_INVARIANTS_IN_BODY_PRAGMA: &str = "disable_invariants_in_body";
+
+/// Pragma indicating that invariants are not to be checked between entry and exit
+/// to this function
+pub const DELEGATE_INVARIANTS_TO_CALLER_PRAGMA: &str = "delegate_invariants_to_caller";
+
 /// Checks whether a pragma is valid in a specific spec block.
 pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
     use crate::builder::module_builder::SpecBlockContext::*;
@@ -82,6 +90,8 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
                 | EXPORT_ENSURES_PRAGMA
                 | FRIEND_PRAGMA
+                | DISABLE_INVARIANTS_IN_BODY_PRAGMA
+                | DELEGATE_INVARIANTS_TO_CALLER_PRAGMA
         ),
         _ => false,
     }
