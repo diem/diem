@@ -92,7 +92,7 @@ impl MintParams {
 
 pub struct Service {
     chain_id: diem_types::chain_id::ChainId,
-    private_key: diem_crypto::ed25519::Ed25519PrivateKey,
+    private_key_file: String,
     client: Client,
 }
 
@@ -102,11 +102,10 @@ impl Service {
         chain_id: diem_types::chain_id::ChainId,
         private_key_file: String,
     ) -> Self {
-        let private_key = generate_key::load_key(private_key_file);
         let client = Client::new(server_url);
         Service {
             chain_id,
-            private_key,
+            private_key_file,
             client,
         }
     }
@@ -209,6 +208,10 @@ impl Service {
         };
         Ok((treasury_compliance, designated_dealer, receiver_seq_num))
     }
+
+    fn private_key(&self) -> diem_crypto::ed25519::Ed25519PrivateKey {
+        generate_key::load_key(&self.private_key_file)
+    }
 }
 
 impl diem_types::transaction::helpers::TransactionSigner for Service {
@@ -216,10 +219,11 @@ impl diem_types::transaction::helpers::TransactionSigner for Service {
         &self,
         raw_txn: diem_types::transaction::RawTransaction,
     ) -> Result<diem_types::transaction::SignedTransaction> {
-        let signature = self.private_key.sign(&raw_txn);
+        let key = self.private_key();
+        let signature = key.sign(&raw_txn);
         Ok(diem_types::transaction::SignedTransaction::new(
             raw_txn,
-            diem_crypto::ed25519::Ed25519PublicKey::from(&self.private_key),
+            diem_crypto::ed25519::Ed25519PublicKey::from(&key),
             signature,
         ))
     }

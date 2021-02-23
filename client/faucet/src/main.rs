@@ -18,7 +18,7 @@ struct Args {
     #[structopt(short = "a", long, default_value = "127.0.0.1")]
     pub address: String,
     /// Faucet service listen port
-    #[structopt(short = "p", long, default_value = "80")]
+    #[structopt(short = "p", long, default_value = "8000")]
     pub port: u16,
     /// Diem fullnode/validator server URL
     #[structopt(short = "s", long, default_value = "https://testnet.diem.com/v1")]
