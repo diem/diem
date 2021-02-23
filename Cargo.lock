@@ -2288,7 +2288,6 @@ dependencies = [
  "chrono",
  "diem-crypto",
  "diem-crypto-derive",
- "diem-infallible",
  "diem-network-address",
  "diem-workspace-hack",
  "hex",
