@@ -885,11 +885,11 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
 <pre><code><b>pragma</b> opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>ensures</b> <b>old</b>(<a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>()) == <a href="DiemConfig.md#0x1_DiemConfig_spec_has_config">spec_has_config</a>();
-<a name="0x1_DiemConfig_config$21"></a>
+<a name="0x1_DiemConfig_config$25"></a>
 <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
-<a name="0x1_DiemConfig_now$22"></a>
+<a name="0x1_DiemConfig_now$26"></a>
 <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
-<a name="0x1_DiemConfig_epoch$23"></a>
+<a name="0x1_DiemConfig_epoch$27"></a>
 <b>let</b> epoch = config.epoch;
 <b>include</b> !<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() || (config.last_reconfiguration_time == now)
     ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_InternalReconfigureAbortsIf">InternalReconfigureAbortsIf</a> && <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
@@ -901,6 +901,7 @@ Private function to do reconfiguration.  Updates reconfiguration status resource
         update_field(<b>old</b>(config),
             epoch, <b>old</b>(config.epoch) + 1),
             last_reconfiguration_time, now);
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -950,6 +951,29 @@ This schema is to be used by callers of <code>reconfigure</code>
 
 
 
+
+<a name="0x1_DiemConfig_ReconfigureEmits"></a>
+
+
+<a name="0x1_DiemConfig_config$21"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">ReconfigureEmits</a> {
+    <b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+    <a name="0x1_DiemConfig_now$22"></a>
+    <b>let</b> now = <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>();
+    <a name="0x1_DiemConfig_msg$23"></a>
+    <b>let</b> msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
+        epoch: config.epoch,
+    };
+    <a name="0x1_DiemConfig_handle$24"></a>
+    <b>let</b> handle = config.events;
+    emits msg <b>to</b> handle <b>if</b> (!<a href="DiemConfig.md#0x1_DiemConfig_spec_reconfigure_omitted">spec_reconfigure_omitted</a>() && now != <b>old</b>(config).last_reconfiguration_time);
+}
+</code></pre>
+
+
+
 </details>
 
 <a name="0x1_DiemConfig_emit_genesis_reconfiguration_event"></a>
@@ -982,6 +1006,28 @@ reconfiguration event.
         },
     );
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<a name="0x1_DiemConfig_config$28"></a>
+
+
+<pre><code><b>let</b> config = <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<a name="0x1_DiemConfig_handle$29"></a>
+<b>let</b> handle = config.events;
+<a name="0x1_DiemConfig_msg$30"></a>
+<b>let</b> msg = <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> {
+        epoch: config.epoch,
+};
+emits msg <b>to</b> handle;
 </code></pre>
 
 

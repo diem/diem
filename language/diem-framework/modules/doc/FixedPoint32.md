@@ -474,7 +474,7 @@ This is currently identical to the concrete semantics.
 </code></pre>
 
 
-Abstract to either 0.5 or 1. This assumes validation of numerator and denominator has been
+Abstract to either 0.5 or 1. This assumes validation of numerator and denominator has
 succeeded.
 
 

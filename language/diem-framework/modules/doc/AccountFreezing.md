@@ -256,7 +256,7 @@ The <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingB
 
 <pre><code><b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotDiemRoot">CoreAddresses::AbortsIfNotDiemRoot</a>{account: dr_account};
-<a name="0x1_AccountFreezing_addr$8"></a>
+<a name="0x1_AccountFreezing_addr$12"></a>
 <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dr_account);
 <b>aborts_if</b> <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>ensures</b> <b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(addr);
@@ -297,7 +297,7 @@ The <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingB
 
 
 
-<a name="0x1_AccountFreezing_addr$9"></a>
+<a name="0x1_AccountFreezing_addr$13"></a>
 
 
 <pre><code><b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -364,6 +364,27 @@ Freeze the account at <code>addr</code>.
 <b>aborts_if</b> frozen_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>() <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(frozen_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>ensures</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(frozen_address);
+<b>include</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEmits">FreezeAccountEmits</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountFreezing_FreezeAccountEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEmits">FreezeAccountEmits</a> {
+    account: &signer;
+    frozen_address: address;
+    <a name="0x1_AccountFreezing_handle$8"></a>
+    <b>let</b> handle = <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).freeze_event_handle;
+    <a name="0x1_AccountFreezing_msg$9"></a>
+    <b>let</b> msg = <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">FreezeAccountEvent</a> {
+        initiator_address: <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account),
+        frozen_address
+    };
+    emits msg <b>to</b> handle;
+}
 </code></pre>
 
 
@@ -419,6 +440,27 @@ Unfreeze the account at <code>addr</code>.
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>;
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(unfrozen_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>ensures</b> !<a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(unfrozen_address);
+<b>include</b> <a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEmits">UnfreezeAccountEmits</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountFreezing_UnfreezeAccountEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEmits">UnfreezeAccountEmits</a> {
+    account: &signer;
+    unfrozen_address: address;
+    <a name="0x1_AccountFreezing_handle$10"></a>
+    <b>let</b> handle = <b>global</b>&lt;<a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).unfreeze_event_handle;
+    <a name="0x1_AccountFreezing_msg$11"></a>
+    <b>let</b> msg = <a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEvent">UnfreezeAccountEvent</a> {
+        initiator_address: <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account),
+        unfrozen_address
+    };
+    emits msg <b>to</b> handle;
+}
 </code></pre>
 
 

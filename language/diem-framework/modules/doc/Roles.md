@@ -1441,8 +1441,7 @@ ChildVASP have balances [[D7]][ROLE].
 <a name="0x1_Roles_spec_get_role_id"></a>
 
 
-<pre><code><b>define</b> <a href="Roles.md#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(account: signer): u64 {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<pre><code><b>define</b> <a href="Roles.md#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr: address): u64 {
     <b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id
 }
 <a name="0x1_Roles_spec_has_role_id_addr"></a>

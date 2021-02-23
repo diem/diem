@@ -751,10 +751,10 @@ pub enum ScriptCall {
     /// `account` under `account`.
     ///
     /// # Parameters
-    /// | Name         | Type         | Description                                                                               |
-    /// | ------       | ------       | -------------                                                                             |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
-    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
+    /// | Name         | Type         | Description                                                                                        |
+    /// | ------       | ------       | -------------                                                                                      |
+    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+    /// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                                               | Description                                                                                         |
@@ -863,21 +863,22 @@ pub enum ScriptCall {
     /// be sent by any account.
     ///
     /// # Technical Description
-    /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-    /// its `DiemAccount::KeyRotationCapability`.
+    /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+    /// field to `new_key`. `new_key` must be a valid authentication key that
+    /// corresponds to an ed25519 public key, and `account` must not have previously
+    /// delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name      | Type         | Description                                                 |
     /// | ------    | ------       | -------------                                               |
     /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-    /// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
+    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                               | Description                                                                              |
-    /// | ----------------           | --------------                                             | -------------                                                                            |
-    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.     |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
+    /// | Error Category             | Error Reason                                              | Description                                                                         |
+    /// | ----------------           | --------------                                            | -------------                                                                       |
+    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
     ///
     /// # Related Scripts
     /// * `Script::rotate_authentication_key_with_nonce`
@@ -891,16 +892,17 @@ pub enum ScriptCall {
     /// Compliance or Diem Root accounts).
     ///
     /// # Technical Description
-    /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-    /// its `DiemAccount::KeyRotationCapability`.
+    /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+    /// field to `new_key`. `new_key` must be a valid authentication key that
+    /// corresponds to an ed25519 public key, and `account` must not have previously
+    /// delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name            | Type         | Description                                                                |
     /// | ------          | ------       | -------------                                                              |
     /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-    /// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                           |
+    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                               | Description                                                                                |
@@ -924,25 +926,26 @@ pub enum ScriptCall {
     ///
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-    /// its `DiemAccount::KeyRotationCapability`.
+    /// `new_key` must be a valid authentication key that corresponds to an ed25519
+    /// public key, and `account` must not have previously delegated its
+    /// `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name            | Type         | Description                                                                                                  |
-    /// | ------          | ------       | -------------                                                                                                |
+    /// | Name            | Type         | Description                                                                                                 |
+    /// | ------          | ------       | -------------                                                                                               |
     /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
+    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
+    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                               | Description                                                                                                |
-    /// | ----------------           | --------------                                             | -------------                                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                             | A `SlidingNonce` resource is not published under `dr_account`.                                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
-    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                       |
+    /// | Error Category             | Error Reason                                              | Description                                                                                                |
+    /// | ----------------           | --------------                                            | -------------                                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                            | A `SlidingNonce` resource is not published under `dr_account`.                                             |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                            | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                            | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                   | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
+    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                        |
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
     ///
     /// # Related Scripts
@@ -964,20 +967,20 @@ pub enum ScriptCall {
     /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name               | Type         | Description                                                                                                                    |
-    /// | ------             | ------       | -------------                                                                                                                  |
-    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
+    /// | Name               | Type         | Description                                                                                                                   |
+    /// | ------             | ------       | -------------                                                                                                                 |
+    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
     /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
-    /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
-    /// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
+    /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
+    /// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                  | Description                                                                                                                                          |
-    /// | ----------------           | --------------                                | -------------                                                                                                                                        |
-    /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
-    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
+    /// | Error Category             | Error Reason                                 | Description                                                                                                                                         |
+    /// | ----------------           | --------------                               | -------------                                                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`         | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                  |
+    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`        | The address of `account` is not `recovery_address` or `to_recover`.                                                                                 |
+    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`  | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
     ///
     /// # Related Scripts
     /// * `Script::rotate_authentication_key`
@@ -2503,10 +2506,10 @@ pub fn encode_preburn_script(token: TypeTag, amount: u64) -> Script {
 /// `account` under `account`.
 ///
 /// # Parameters
-/// | Name         | Type         | Description                                                                               |
-/// | ------       | ------       | -------------                                                                             |
-/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
-/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
+/// | Name         | Type         | Description                                                                                        |
+/// | ------       | ------       | -------------                                                                                      |
+/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+/// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                                               | Description                                                                                         |
@@ -2642,21 +2645,22 @@ pub fn encode_remove_validator_and_reconfigure_script(
 /// be sent by any account.
 ///
 /// # Technical Description
-/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+/// field to `new_key`. `new_key` must be a valid authentication key that
+/// corresponds to an ed25519 public key, and `account` must not have previously
+/// delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name      | Type         | Description                                                 |
 /// | ------    | ------       | -------------                                               |
 /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-/// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
+/// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                               | Description                                                                              |
-/// | ----------------           | --------------                                             | -------------                                                                            |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.     |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
+/// | Error Category             | Error Reason                                              | Description                                                                         |
+/// | ----------------           | --------------                                            | -------------                                                                       |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key_with_nonce`
@@ -2676,16 +2680,17 @@ pub fn encode_rotate_authentication_key_script(new_key: Vec<u8>) -> Script {
 /// Compliance or Diem Root accounts).
 ///
 /// # Technical Description
-/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
+/// field to `new_key`. `new_key` must be a valid authentication key that
+/// corresponds to an ed25519 public key, and `account` must not have previously
+/// delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name            | Type         | Description                                                                |
 /// | ------          | ------       | -------------                                                              |
 /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                           |
+/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                               | Description                                                                                |
@@ -2721,25 +2726,26 @@ pub fn encode_rotate_authentication_key_with_nonce_script(
 ///
 /// # Technical Description
 /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
-/// its `DiemAccount::KeyRotationCapability`.
+/// `new_key` must be a valid authentication key that corresponds to an ed25519
+/// public key, and `account` must not have previously delegated its
+/// `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name            | Type         | Description                                                                                                  |
-/// | ------          | ------       | -------------                                                                                                |
+/// | Name            | Type         | Description                                                                                                 |
+/// | ------          | ------       | -------------                                                                                               |
 /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
+/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
+/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                               | Description                                                                                                |
-/// | ----------------           | --------------                                             | -------------                                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                             | A `SlidingNonce` resource is not published under `dr_account`.                                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                       |
+/// | Error Category             | Error Reason                                              | Description                                                                                                |
+/// | ----------------           | --------------                                            | -------------                                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                            | A `SlidingNonce` resource is not published under `dr_account`.                                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                            | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                            | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                   | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                        |
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
 ///
 /// # Related Scripts
@@ -2773,20 +2779,20 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script(
 /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name               | Type         | Description                                                                                                                    |
-/// | ------             | ------       | -------------                                                                                                                  |
-/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
+/// | Name               | Type         | Description                                                                                                                   |
+/// | ------             | ------       | -------------                                                                                                                 |
+/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
 /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
-/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
-/// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
+/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
+/// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                  | Description                                                                                                                                          |
-/// | ----------------           | --------------                                | -------------                                                                                                                                        |
-/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
+/// | Error Category             | Error Reason                                 | Description                                                                                                                                         |
+/// | ----------------           | --------------                               | -------------                                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`         | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                  |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`        | The address of `account` is not `recovery_address` or `to_recover`.                                                                                 |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`  | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key`

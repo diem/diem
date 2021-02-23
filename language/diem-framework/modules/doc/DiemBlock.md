@@ -271,13 +271,32 @@ The runtime always runs this before executing the transactions in a block.
     <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>;
 <b>ensures</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_microseconds">DiemTimestamp::spec_now_microseconds</a>() == timestamp;
 <b>ensures</b> <a href="DiemBlock.md#0x1_DiemBlock_get_current_block_height">get_current_block_height</a>() == <b>old</b>(<a href="DiemBlock.md#0x1_DiemBlock_get_current_block_height">get_current_block_height</a>()) + 1;
+<b>aborts_if</b> <a href="DiemBlock.md#0x1_DiemBlock_get_current_block_height">get_current_block_height</a>() + 1 &gt; MAX_U64 <b>with</b> EXECUTION_FAILURE;
+<b>include</b> <a href="DiemBlock.md#0x1_DiemBlock_BlockPrologueEmits">BlockPrologueEmits</a>;
 </code></pre>
 
 
-The below counter overflow is assumed to be excluded from verification of callers.
 
 
-<pre><code><b>aborts_if</b> [<b>assume</b>] <a href="DiemBlock.md#0x1_DiemBlock_get_current_block_height">get_current_block_height</a>() + 1 &gt; MAX_U64 <b>with</b> EXECUTION_FAILURE;
+<a name="0x1_DiemBlock_BlockPrologueEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemBlock.md#0x1_DiemBlock_BlockPrologueEmits">BlockPrologueEmits</a> {
+    round: u64;
+    timestamp: u64;
+    previous_block_votes: vector&lt;address&gt;;
+    proposer: address;
+    <a name="0x1_DiemBlock_handle$4"></a>
+    <b>let</b> handle = <b>global</b>&lt;<a href="DiemBlock.md#0x1_DiemBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).new_block_events;
+    <a name="0x1_DiemBlock_msg$5"></a>
+    <b>let</b> msg = <a href="DiemBlock.md#0x1_DiemBlock_NewBlockEvent">NewBlockEvent</a> {
+        round,
+        proposer,
+        previous_block_votes,
+        time_microseconds: timestamp,
+    };
+    emits msg <b>to</b> handle;
+}
 </code></pre>
 
 
