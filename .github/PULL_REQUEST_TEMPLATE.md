@@ -19,3 +19,10 @@ The project is undergoing daily changes. Pull Requests will be reviewed and resp
 ## Related PRs
 
 (If this PR adds or changes functionality, please take some time to update the docs at https://github.com/diem/diem/tree/master/developers.diem.com, and link to your PR here.)
+
+## If targetting a release branch, please fill the below out as well
+
+ * Justification and breaking nature (who does it affect? validators, full nodes, tooling, operators, AOS, etc.)
+ * Comprehensive test results that demonstrate the fix working and not breaking existing workflows.
+ * Why we must have it for V1 launch.
+ * What workarounds and alternative we have if we do not push the PR.
