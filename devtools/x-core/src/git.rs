@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::errors::*;
-use determinator::Paths0;
+use determinator::Utf8Paths0;
 use guppy::{graph::PackageGraph, MetadataCommand};
 use indoc::formatdoc;
 use log::{debug, info};
@@ -24,7 +24,7 @@ use std::{
 pub struct GitCli {
     root: &'static Path,
     // Caches.
-    tracked_files: OnceCell<Paths0>,
+    tracked_files: OnceCell<Utf8Paths0>,
 }
 
 impl GitCli {
@@ -41,7 +41,7 @@ impl GitCli {
     /// Returns the files tracked by Git in this working copy.
     ///
     /// The return value can be iterated on to get a list of paths.
-    pub fn tracked_files(&self) -> Result<&Paths0> {
+    pub fn tracked_files(&self) -> Result<&Utf8Paths0> {
         self.tracked_files.get_or_try_init(|| {
             // TODO: abstract out SCM and command-running functionality.
             let output = self
@@ -57,8 +57,8 @@ impl GitCli {
                 });
             }
 
-            // TODO: Get this working on Windows.
-            Ok(Paths0::new_unix(output.stdout))
+            Utf8Paths0::from_bytes(output.stdout)
+                .map_err(|(path, err)| SystemError::NonUtf8Path { path, err })
         })
     }
 
@@ -93,7 +93,7 @@ impl GitCli {
         new: impl Into<Option<Cow<'a, OsStr>>>,
         // TODO: make this more well-typed/express more of the diff model in Rust
         diff_filter: Option<&str>,
-    ) -> Result<Paths0> {
+    ) -> Result<Utf8Paths0> {
         let mut command = self.git_command();
         command.args(&["diff", "-z", "--name-only"]);
         if let Some(diff_filter) = diff_filter {
@@ -114,7 +114,8 @@ impl GitCli {
             });
         }
 
-        Ok(Paths0::new_unix(output.stdout))
+        Utf8Paths0::from_bytes(output.stdout)
+            .map_err(|(path, err)| SystemError::NonUtf8Path { path, err })
     }
 
     /// Returns a package graph for the given commit, using a scratch repo if necessary.

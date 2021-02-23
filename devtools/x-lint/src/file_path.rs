@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use std::{ffi::OsStr, fs, io, path::Path};
+use camino::Utf8Path;
+use std::{fs, io, path::Path};
 
 /// Represents a linter that runs once per file path.
 pub trait FilePathLinter: Linter {
@@ -18,12 +19,12 @@ pub trait FilePathLinter: Linter {
 #[derive(Clone, Debug)]
 pub struct FilePathContext<'l> {
     project_ctx: &'l ProjectContext<'l>,
-    file_path: &'l Path,
+    file_path: &'l Utf8Path,
 }
 
 impl<'l> FilePathContext<'l> {
     /// Constructs a new context.
-    pub fn new(project_ctx: &'l ProjectContext<'l>, file_path: &'l Path) -> Self {
+    pub fn new(project_ctx: &'l ProjectContext<'l>, file_path: &'l Utf8Path) -> Self {
         Self {
             project_ctx,
             file_path,
@@ -36,14 +37,13 @@ impl<'l> FilePathContext<'l> {
     }
 
     /// Returns the path of this file, relative to the root of the repository.
-    pub fn file_path(&self) -> &'l Path {
+    pub fn file_path(&self) -> &'l Utf8Path {
         &self.file_path
     }
 
-    /// Returns the extension of the file. Returns `None` if there's no extension or if the
-    /// extension isn't valid UTF-8.
+    /// Returns the extension of the file. Returns `None` if there's no extension.
     pub fn extension(&self) -> Option<&'l str> {
-        self.file_path.extension().map(OsStr::to_str).flatten()
+        self.file_path.extension()
     }
 
     /// Loads this file and turns it into a `ContentContext`.

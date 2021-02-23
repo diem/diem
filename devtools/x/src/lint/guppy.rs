@@ -158,15 +158,11 @@ impl PackageLinter for CrateNamesPaths {
         }
 
         let workspace_path = ctx.workspace_path();
-        if let Some(path) = workspace_path.to_str() {
-            if path.contains('_') {
-                out.write(
-                    LintLevel::Error,
-                    "workspace path contains '_' (use '-' instead)",
-                );
-            }
-        } else {
-            // Workspace path is invalid UTF-8. A different lint should catch this.
+        if workspace_path.as_str().contains('_') {
+            out.write(
+                LintLevel::Error,
+                "workspace path contains '_' (use '-' instead)",
+            );
         }
 
         for build_target in ctx.metadata().build_targets() {

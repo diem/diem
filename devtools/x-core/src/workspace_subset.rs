@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{core_config::SubsetConfig, Result, SystemError};
+use camino::Utf8PathBuf;
 use guppy::{
     graph::{
         cargo::{CargoOptions, CargoResolverVersion, CargoSet},
@@ -11,11 +12,7 @@ use guppy::{
     PackageId,
 };
 use serde::Deserialize;
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fs, path::Path};
 use toml::de;
 
 /// Contains information about all the subsets specified in this workspace.
@@ -94,7 +91,7 @@ impl<'g> WorkspaceSubsets<'g> {
     // Helper methods
     // ---
 
-    fn read_default_members(project_root: &Path) -> Result<Vec<PathBuf>> {
+    fn read_default_members(project_root: &Path) -> Result<Vec<Utf8PathBuf>> {
         #[derive(Deserialize)]
         struct RootToml {
             workspace: Workspace,
@@ -103,7 +100,7 @@ impl<'g> WorkspaceSubsets<'g> {
         #[derive(Deserialize)]
         struct Workspace {
             #[serde(rename = "default-members")]
-            default_members: Vec<PathBuf>,
+            default_members: Vec<Utf8PathBuf>,
         }
 
         let root_toml = project_root.join("Cargo.toml");

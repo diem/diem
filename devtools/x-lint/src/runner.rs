@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use std::path::Path;
+use camino::Utf8Path;
 use x_core::XCoreContext;
 
 /// Configuration for the lint engine.
@@ -238,7 +238,7 @@ impl<'cfg> LintEngine<'cfg> {
     // Helper methods
     // ---
 
-    fn file_list(&self) -> Result<impl Iterator<Item = &'cfg Path> + 'cfg> {
+    fn file_list(&self) -> Result<impl Iterator<Item = &'cfg Utf8Path> + 'cfg> {
         let tracked_files = self.config.core.git_cli().tracked_files()?;
         // TODO: make global exclusions configurable
         Ok(tracked_files

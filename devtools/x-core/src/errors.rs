@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
     result,
+    str::Utf8Error,
 };
 
 /// Type alias for the return type for `run` methods.
@@ -47,6 +48,10 @@ pub enum SystemError {
     Io {
         context: Cow<'static, str>,
         err: io::Error,
+    },
+    NonUtf8Path {
+        path: Vec<u8>,
+        err: Utf8Error,
     },
     Serde {
         context: Cow<'static, str>,
@@ -149,6 +154,9 @@ impl fmt::Display for SystemError {
                 None => write!(f, "'{}' terminated by signal", cmd),
             },
             SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
+            SystemError::NonUtf8Path { path, .. } => {
+                write!(f, "non-UTF-8 path \"{}\"", String::from_utf8_lossy(path))
+            }
             SystemError::FromHex { context, .. }
             | SystemError::Io { context, .. }
             | SystemError::Serde { context, .. }
@@ -171,6 +179,7 @@ impl error::Error for SystemError {
             SystemError::Guppy { err, .. } => Some(err),
             SystemError::HakariCargoToml { err, .. } => Some(err),
             SystemError::HakariTomlOut { err, .. } => Some(err),
+            SystemError::NonUtf8Path { err, .. } => Some(err),
             SystemError::TargetSpec { err, .. } => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),
         }

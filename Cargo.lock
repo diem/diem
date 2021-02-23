@@ -670,6 +670,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
+name = "camino"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "176c40258709f5883ce0f352f30b2065c64112843b33e3e318e1c1cc22960979"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "cargo-platform"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -726,9 +735,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.6.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb4f9cf6cb58661f5cdcda0240ab42788e009bd957ba56c1367aa01c7c6fbc05"
+checksum = "2b81b9640fc656040fbf0d3f2bafacadcf17d55f2b0dc89589c1b80b0658fd5a"
 dependencies = [
  "smallvec",
 ]
@@ -1382,11 +1391,11 @@ dependencies = [
 
 [[package]]
 name = "determinator"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f862ffb07525089b200b5bd75d2be5a35eebb529cf1118511827a3929358b21"
+checksum = "33ec6ed6a28572d35f1c9d512fe0381b6bd83bf45e273b60b9c1df883234645c"
 dependencies = [
- "cfg-if 1.0.0",
+ "camino",
  "globset",
  "guppy",
  "itertools 0.10.0",
@@ -3317,10 +3326,11 @@ dependencies = [
 
 [[package]]
 name = "guppy"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf1c6ce38a18b386305494e4b38a137b2c1a48f368cce1e65e8efbf4dbeeb6f8"
+checksum = "ec4cbddce827d660864974dc3dc62a1c810e813d17e518cc5830716b977cd110"
 dependencies = [
+ "camino",
  "cargo_metadata",
  "fixedbitset",
  "guppy-summaries",
@@ -3340,10 +3350,11 @@ dependencies = [
 
 [[package]]
 name = "guppy-summaries"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "811b7332020d2a53cfe64049a52fd46d0761082b12d8b6b8f2c5b702f8bb2a24"
+checksum = "c526b51262ef5ed4de421ee6679bf0927a20310d5cc048abe89464b710a2a299"
 dependencies = [
+ "camino",
  "cfg-if 1.0.0",
  "diffus",
  "semver 0.11.0",
@@ -3373,11 +3384,12 @@ dependencies = [
 
 [[package]]
 name = "hakari"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "717795bc5eb8ef223c45564609318cb5af8b13e285bb5b033c67232861fda383"
+checksum = "136693d8798c61025d90e5c1f588eeec33e52d0e8d42f8a24ac2d79c590757ca"
 dependencies = [
  "atomicwrites",
+ "camino",
  "cfg-if 1.0.0",
  "diffy",
  "guppy",
@@ -6996,9 +7008,9 @@ checksum = "36474e732d1affd3a6ed582781b3683df3d0563714c59c39591e8ff707cf078e"
 
 [[package]]
 name = "target-spec"
-version = "0.6.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39920b3286e8e9585b3ba77becb3e682888f63b2be5326cd16264d8ad292d78e"
+checksum = "ac395241acf0f3d224dd2b07b334994adf6f37c904d1826867332ab8c6ddedbf"
 dependencies = [
  "cfg-expr",
  "serde",
@@ -8052,6 +8064,7 @@ name = "x"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "camino",
  "chrono",
  "colored-diff",
  "determinator",
@@ -8076,6 +8089,7 @@ dependencies = [
 name = "x-core"
 version = "0.1.0"
 dependencies = [
+ "camino",
  "determinator",
  "guppy",
  "hakari",
@@ -8092,6 +8106,7 @@ dependencies = [
 name = "x-lint"
 version = "0.1.0"
 dependencies = [
+ "camino",
  "guppy",
  "hakari",
  "once_cell",

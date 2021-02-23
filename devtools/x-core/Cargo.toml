@@ -8,10 +8,11 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-determinator = "0.2.1"
-guppy = "0.7.2"
+camino = { version = "1.0.0", features = ["serde1"] }
+determinator = "0.3.0"
+guppy = "0.8.0"
 indoc = "1.0.3"
-hakari = { version = "0.1.1", features = ["summaries"] }
+hakari = { version = "0.2.0", features = ["summaries"] }
 hex = "0.4.2"
 log = "0.4.14"
 toml = "0.5.8"

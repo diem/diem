@@ -34,7 +34,7 @@ impl<'cfg> ContentLinter for EofNewline<'cfg> {
     ) -> Result<RunStatus<'l>> {
         let content = match ctx.content() {
             Some(text) => text,
-            None => return Ok(RunStatus::Skipped(SkipReason::NonUtf8)),
+            None => return Ok(RunStatus::Skipped(SkipReason::NonUtf8Content)),
         };
         if !content.is_empty() && !content.ends_with('\n') {
             out.write(LintLevel::Error, "missing newline at EOF");
@@ -72,7 +72,7 @@ impl<'cfg> ContentLinter for TrailingWhitespace<'cfg> {
     ) -> Result<RunStatus<'l>> {
         let content = match ctx.content() {
             Some(text) => text,
-            None => return Ok(RunStatus::Skipped(SkipReason::NonUtf8)),
+            None => return Ok(RunStatus::Skipped(SkipReason::NonUtf8Content)),
         };
 
         for (ln, line) in content.lines().enumerate().map(|(ln, line)| (ln + 1, line)) {

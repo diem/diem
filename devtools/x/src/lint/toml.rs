@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use camino::Utf8Path;
 use colored_diff::PrettyDifference;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use toml::{de, ser};
 use x_lint::prelude::*;
 
@@ -20,7 +20,7 @@ impl Linter for RootToml {
 impl ContentLinter for RootToml {
     fn pre_run<'l>(&self, file_ctx: &FilePathContext<'l>) -> Result<RunStatus<'l>> {
         let file_path = file_ctx.file_path();
-        if file_path == Path::new("Cargo.toml") {
+        if file_path == "Cargo.toml" {
             Ok(RunStatus::Executed)
         } else {
             Ok(RunStatus::Skipped(SkipReason::UnsupportedFile(file_path)))
@@ -112,6 +112,6 @@ struct RootTomlContents<'a> {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct Workspace<'a> {
     #[serde(borrow)]
-    members: Vec<&'a Path>,
+    members: Vec<&'a Utf8Path>,
     // Add other fields as necessary.
 }

@@ -54,8 +54,7 @@ impl ProjectLinter for GenerateWorkspaceHack {
                     hakari_package
                         .source()
                         .workspace_path()
-                        .expect("hakari package is in workspace")
-                        .display(),
+                        .expect("hakari package is in workspace"),
                     diff
                 ),
             );

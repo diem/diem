@@ -32,14 +32,7 @@ impl FilePathLinter for AllowedPaths {
         ctx: &FilePathContext<'l>,
         out: &mut LintFormatter<'l, '_>,
     ) -> Result<RunStatus<'l>> {
-        let file_path = match ctx.file_path().to_str() {
-            Some(file_path) => file_path,
-            None => {
-                out.write(LintLevel::Error, "path isn't valid Unicode");
-                return Ok(RunStatus::Executed);
-            }
-        };
-        if !self.allowed_regex.is_match(file_path) {
+        if !self.allowed_regex.is_match(ctx.file_path().as_str()) {
             out.write(
                 LintLevel::Error,
                 format!(
