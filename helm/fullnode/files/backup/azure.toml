@@ -1,0 +1,16 @@
+env_vars = []
+
+[commands]
+create_backup = 'echo "$BACKUP_NAME"'
+create_for_write = '''
+    FILE_HANDLE="$BACKUP_HANDLE/$FILE_NAME"
+    echo "$FILE_HANDLE"
+    exec 1>&-  # close stdout
+    gzip -c | azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/$FILE_HANDLE$SAS" > /dev/null
+'''
+open_for_read = 'azcopy cp --from-to BlobPipe "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/$FILE_HANDLE$SAS" < /dev/null | gzip -cd'
+save_metadata_line= 'gzip -c | azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata/$FILE_NAME$SAS"'
+list_metadata_files = '''
+    (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata$SAS" ||:) \
+    | sed -ne "s#INFO: \(.*\); Content Length:.*#metadata/\1#p"
+'''

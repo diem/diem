@@ -1,0 +1,6 @@
+Your {{ .Chart.Name }} deployment named {{ .Release.Name }} is now deployed.
+
+To access the JSON-RPC endpoint connect to the {{ include "diem-fullnode.fullname" . }}-lb service:
+
+  $ kubectl port-forward service/{{ include "diem-fullnode.fullname" . }}-lb 8080:80 &
+  $ curl -H "Content-Type: application/json" -d '{"jsonrpc":"2.0", "method":"get_metadata","params":[],"id":1}' http://localhost:8080
