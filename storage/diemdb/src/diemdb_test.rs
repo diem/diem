@@ -185,8 +185,13 @@ fn get_events_by_event_key(
 
     let mut ret = Vec::new();
     loop {
-        let events_with_proof =
-            db.get_events_by_event_key(event_key, cursor, order, LIMIT, ledger_info.version())?;
+        let events_with_proof = db.get_events_with_proof_by_event_key(
+            event_key,
+            cursor,
+            order,
+            LIMIT,
+            ledger_info.version(),
+        )?;
 
         let num_events = events_with_proof.len() as u64;
         if cursor == u64::max_value() {

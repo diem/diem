@@ -13,6 +13,7 @@ use diem_types::{
     proptest_types::{AccountInfoUniverse, ContractEventGen},
 };
 use itertools::Itertools;
+use move_core_types::{language_storage::TypeTag, move_resource::MoveResource};
 use proptest::{
     collection::{hash_set, vec},
     prelude::*,
@@ -262,4 +263,107 @@ fn test_index_get_impl(event_batches: Vec<Vec<ContractEvent>>) {
             let traversed = traverse_events_by_key(&store, &path, ledger_version_plus_one);
             assert_eq!(events, traversed);
         });
+}
+
+prop_compose! {
+    fn arb_new_block_events()(
+        address in any::<AccountAddress>(),
+        mut version in 1..10000u64,
+        mut timestamp in 0..1000000u64, // initial timestamp
+        block_bumps in vec(
+            prop_oneof![
+                Just((1, 0)), // NIL Block
+                (1..100u64, 1..100u64) // normal block
+            ], // version and timestamp bump
+            1..100,
+        )
+    ) -> Vec<(Version, ContractEvent)> {
+        let mut seq = 0;
+        block_bumps.into_iter().map(|(v, t)| {
+            version += v;
+            timestamp += t;
+            let new_block_event = NewBlockEvent::new(
+                seq, // round
+                address, // proposer
+                Vec::new(), // prev block voters
+                timestamp,
+            );
+            let event = ContractEvent::new(
+                new_block_event_key(),
+                seq,
+                TypeTag::Struct(NewBlockEvent::struct_tag()),
+                bcs::to_bytes(&new_block_event).unwrap(),
+            );
+            seq += 1;
+            (version, event)
+        }).collect()
+    }
+}
+
+fn test_get_last_version_before_timestamp_impl(new_block_events: Vec<(Version, ContractEvent)>) {
+    let tmp_dir = TempPath::new();
+    let db = DiemDB::new_for_test(&tmp_dir);
+    let store = &db.event_store;
+    // error on no blocks
+    assert!(store.get_last_version_before_timestamp(1000, 2000).is_err());
+
+    // save events to db
+    let mut cs = ChangeSet::new();
+    new_block_events.iter().for_each(|(ver, event)| {
+        store
+            .put_events(*ver as u64, &[event.clone()], &mut cs)
+            .unwrap();
+    });
+    store.db.write_schemas(cs.batch);
+
+    let ledger_version = new_block_events.last().unwrap().0;
+
+    // error on no block before timestamp
+    let (first_block_version, first_event) = new_block_events.first().unwrap();
+    let first_new_block_event: NewBlockEvent = first_event.try_into().unwrap();
+    let first_block_ts = first_new_block_event.proposed_time();
+    assert!(store
+        .get_last_version_before_timestamp(1000, *first_block_version)
+        .is_err());
+    assert!(store
+        .get_last_version_before_timestamp(first_block_ts, Version::max_value())
+        .is_err());
+
+    let mut last_block_ts = first_block_ts;
+    let mut last_block_version = *first_block_version;
+    for (version, event) in new_block_events.iter().skip(1) {
+        let new_block_event: NewBlockEvent = event.try_into().unwrap();
+        let ts = new_block_event.proposed_time();
+        if ts == last_block_ts {
+            // skip NIL blocks
+            continue;
+        }
+        assert_eq!(
+            store
+                .get_last_version_before_timestamp((last_block_ts + ts + 1) / 2, ledger_version)
+                .unwrap(),
+            version - 1,
+        );
+        assert_eq!(
+            store
+                .get_last_version_before_timestamp(ts, ledger_version)
+                .unwrap(),
+            version - 1,
+        );
+
+        last_block_version = *version;
+        last_block_ts = ts;
+    }
+
+    // error on no block after required ts
+    assert!(store
+        .get_last_version_before_timestamp(last_block_ts + 1, ledger_version)
+        .is_err());
+}
+
+proptest! {
+    #[test]
+    fn test_get_last_version_before_timestamp(new_block_events in arb_new_block_events()) {
+        test_get_last_version_before_timestamp_impl(new_block_events)
+    }
 }

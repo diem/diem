@@ -23,13 +23,19 @@ use diem_crypto::{
 };
 use diem_types::{
     account_address::AccountAddress,
+    account_config::NewBlockEvent,
+    block_metadata::new_block_event_key,
     contract_event::ContractEvent,
     event::EventKey,
     proof::{position::Position, EventAccumulatorProof, EventProof},
     transaction::Version,
 };
 use schemadb::{schema::ValueCodec, ReadOptions, SchemaIterator, DB};
-use std::{convert::TryFrom, iter::Peekable, sync::Arc};
+use std::{
+    convert::{TryFrom, TryInto},
+    iter::Peekable,
+    sync::Arc,
+};
 
 #[derive(Debug)]
 pub(crate) struct EventStore {
@@ -77,6 +83,18 @@ impl EventStore {
         })
     }
 
+    fn get_event_by_version_and_index(
+        &self,
+        version: Version,
+        index: u64,
+    ) -> Result<ContractEvent> {
+        self.db
+            .get::<EventSchema>(&(version, index))?
+            .ok_or_else(|| {
+                DiemDbError::NotFound(format!("Event {} of Txn {}", index, version)).into()
+            })
+    }
+
     /// Get the event raw data given transaction version and the index of the event queried.
     pub fn get_event_with_proof_by_version_and_index(
         &self,
@@ -84,10 +102,7 @@ impl EventStore {
         index: u64,
     ) -> Result<(ContractEvent, EventAccumulatorProof)> {
         // Get event content.
-        let event = self
-            .db
-            .get::<EventSchema>(&(version, index))?
-            .ok_or_else(|| DiemDbError::NotFound(format!("Event {} of Txn {}", index, version)))?;
+        let event = self.get_event_by_version_and_index(version, index)?;
 
         // Get the number of events in total for the transaction at `version`.
         let mut iter = self.db.iter::<EventSchema>(ReadOptions::default())?;
@@ -110,6 +125,16 @@ impl EventStore {
             .get::<EventByKeySchema>(&(*event_key, seq_num))?
             .ok_or_else(|| format_err!("Index entry should exist for seq_num {}", seq_num))?;
         Ok(ver)
+    }
+
+    fn get_event_by_key(
+        &self,
+        event_key: &EventKey,
+        seq_num: u64,
+        ledger_version: Version,
+    ) -> Result<ContractEvent> {
+        let (version, index) = self.lookup_event_by_key(event_key, seq_num, ledger_version)?;
+        self.get_event_by_version_and_index(version, index)
     }
 
     /// Get the latest sequence number on `event_key` considering all transactions with versions
@@ -182,6 +207,25 @@ impl EventStore {
         Ok(result)
     }
 
+    fn lookup_event_by_key(
+        &self,
+        event_key: &EventKey,
+        seq_num: u64,
+        ledger_version: Version,
+    ) -> Result<(Version, u64)> {
+        let indices = self.lookup_events_by_key(event_key, seq_num, 1, ledger_version)?;
+        if indices.is_empty() {
+            return Err(DiemDbError::NotFound(format!(
+                "Event {} of seq num {}.",
+                event_key, seq_num
+            ))
+            .into());
+        }
+        let (_seq, version, index) = indices[0];
+
+        Ok((version, index))
+    }
+
     /// Save contract events yielded by the transaction at `version` and return root hash of the
     /// event accumulator formed by these events.
     pub fn put_events(
@@ -237,6 +281,84 @@ impl EventStore {
                 self.put_events(version, events, cs)
             })
             .collect::<Result<Vec<_>>>()
+    }
+
+    /// Finds the first event sequence number in a specified stream on which `comp` returns false.
+    /// (assuming the whole stream is partitioned by `comp`)
+    fn search_for_event_lower_bound<C>(
+        &self,
+        event_key: &EventKey,
+        mut comp: C,
+        ledger_version: Version,
+    ) -> Result<Option<u64>>
+    where
+        C: FnMut(&ContractEvent) -> Result<bool>,
+    {
+        let mut begin = 0u64;
+        let mut end = match self.get_latest_sequence_number(ledger_version, event_key)? {
+            Some(s) => s
+                .checked_add(1)
+                .ok_or_else(|| format_err!("event sequence number overflew."))?,
+            None => return Ok(None),
+        };
+
+        // overflow not possible
+        #[allow(clippy::integer_arithmetic)]
+        {
+            let mut count = end - begin;
+            while count > 0 {
+                let step = count / 2;
+                let mid = begin + step;
+                let event = self.get_event_by_key(event_key, mid, ledger_version)?;
+                if comp(&event)? {
+                    begin = mid + 1;
+                    count -= step + 1;
+                } else {
+                    count = step;
+                }
+            }
+        }
+
+        if begin == end {
+            Ok(None)
+        } else {
+            Ok(Some(begin))
+        }
+    }
+
+    /// Gets the version of the last transaction committed before timestamp,
+    /// a commited block at or after the required timestamp must exist (otherwise it's possible
+    /// the next block committed as a timestamp smaller than the one in the request).
+    pub(crate) fn get_last_version_before_timestamp(
+        &self,
+        timestamp: u64,
+        ledger_version: Version,
+    ) -> Result<Version> {
+        let event_key = new_block_event_key();
+        let seq_at_or_after_ts = self.search_for_event_lower_bound(
+            &event_key,
+            |event| {
+                let new_block_event: NewBlockEvent = event.try_into()?;
+                Ok(new_block_event.proposed_time() < timestamp)
+            },
+            ledger_version,
+        )?.ok_or_else(|| format_err!(
+            "No new block found beyond timestmap {}, so can't determine the last version before it.",
+            timestamp,
+        ))?;
+
+        ensure!(
+            seq_at_or_after_ts > 0,
+            "First block started at or after timestamp {}.",
+            timestamp,
+        );
+
+        let (version, _idx) =
+            self.lookup_event_by_key(&event_key, seq_at_or_after_ts, ledger_version)?;
+
+        version
+            .checked_sub(1)
+            .ok_or_else(|| format_err!("A block with non-zero seq num started at version 0."))
     }
 }
 

@@ -2473,6 +2473,7 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "itertools 0.10.0",
+ "move-core-types",
  "num-derive",
  "num-traits",
  "num-variants",

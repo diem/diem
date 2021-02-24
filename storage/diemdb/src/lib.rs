@@ -429,7 +429,7 @@ impl DiemDB {
     }
 
     // ================================== Private APIs ==================================
-    fn get_events_by_event_key(
+    fn get_events_with_proof_by_event_key(
         &self,
         event_key: &EventKey,
         start_seq_num: u64,
@@ -454,7 +454,7 @@ impl DiemDB {
         let (first_seq, real_limit) = get_first_seq_num_and_limit(order, cursor, limit)?;
 
         // Query the index.
-        let mut event_keys = self.event_store.lookup_events_by_key(
+        let mut event_indices = self.event_store.lookup_events_by_key(
             &event_key,
             first_seq,
             real_limit,
@@ -468,14 +468,14 @@ impl DiemDB {
         // 90, we will get 90 to 100 from the index lookup above. Seeing that the last item
         // is 100 instead of 110 tells us 110 is out of bound.
         if order == Order::Descending {
-            if let Some((seq_num, _, _)) = event_keys.last() {
+            if let Some((seq_num, _, _)) = event_indices.last() {
                 if *seq_num < cursor {
-                    event_keys = Vec::new();
+                    event_indices = Vec::new();
                 }
             }
         }
 
-        let mut events_with_proof = event_keys
+        let mut events_with_proof = event_indices
             .into_iter()
             .map(|(seq, ver, idx)| {
                 let (event, event_proof) = self
@@ -737,7 +737,8 @@ impl DbReader for DiemDB {
                     .ledger_info()
                     .version();
             }
-            let events = self.get_events_by_event_key(event_key, start, order, limit, version)?;
+            let events =
+                self.get_events_with_proof_by_event_key(event_key, start, order, limit, version)?;
             Ok(events)
         })
     }

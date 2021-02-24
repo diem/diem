@@ -47,6 +47,7 @@ diem-jellyfish-merkle = { path = "../jellyfish-merkle", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../../common/proptest-helpers" }
 diem-temppath = { path = "../../common/temppath" }
 diem-types = { path = "../../types", features = ["fuzzing"] }
+move-core-types = {path = "../../language/move-core/types"}
 
 [features]
 default = []
