@@ -13,7 +13,7 @@ Configuration
 See [values.yaml][] for the full list of options you can configure.
 
 * `chain.name`: Select which blockchain to connect to. Current values:
-  - "testnet": Novi production testnet
+  - "testnet": Diem testnet
 * `storage.class`: This needs to be set to a StorageClass available in your
   Kubernetes cluster. Example values:
   - AWS: "gp2"
@@ -24,11 +24,12 @@ See [values.yaml][] for the full list of options you can configure.
   "LoadBalancer".
 * `service.loadBalancerSourceRanges`: If you enable the LoadBalancer service you
   can set this to a list of IP ranges to restrict access to.
+* `image.tag`: Select the image tag to deploy. For a full list of image tags, check out the [Diem dockerhub][]. Backup and restore images are specified separately in `backup.image.tag` and `restore.image.tag`
 
 Connecting to Testnet
 -------------
 
-To connect to the Novi production testnet, you must have the correct genesis blob and waypoint. The source of truth for these are hosted here:
+To connect to the Diem testnet, you must have the correct genesis blob and waypoint. The source of truth for these are hosted here:
 * https://testnet.diem.com/waypoint.txt
 * https://testnet.diem.com/genesis.blob
 
@@ -46,3 +47,4 @@ Deployment
 
 [json-rpc interface]: https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md
 [values.yaml]: values.yaml
+[Diem dockerhub]: https://hub.docker.com/r/diem/validator/tags?page=1&ordering=last_updated
