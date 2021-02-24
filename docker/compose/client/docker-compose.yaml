@@ -5,7 +5,7 @@ version: "3.8"
 services:
 
   client:
-    image: libra/client:devnet
+    image: "libra/client:${IMAGE_TAG:-devnet}"
     networks:
       shared:
         ipv4_address: 172.16.1.5

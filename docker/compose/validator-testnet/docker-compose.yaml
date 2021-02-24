@@ -17,7 +17,7 @@ services:
     validator:
         # Note this image currently does not support this, will update to the appropriate minimum
         # version shortly
-        image: libra/validator:devnet
+        image: "libra/validator:${IMAGE_TAG:-devnet}"
         networks:
             shared:
                 ipv4_address: 172.16.1.3
@@ -30,7 +30,7 @@ services:
             - "8080:8080"
 
     faucet:
-      image: libra/faucet:devnet
+      image: "libra/faucet:${IMAGE_TAG:-devnet}"
       depends_on:
         - validator
       environment:
