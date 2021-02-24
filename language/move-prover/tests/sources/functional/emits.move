@@ -196,4 +196,46 @@ module TestEmits {
         handle: EventHandle<DummyEvent>;
         emits DummyEvent{msg: 0} to handle;
     }
+
+
+    // ----------------------------
+    // pragma emits_is_partial
+    // ----------------------------
+
+    public fun partial(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun partial {
+        pragma emits_is_partial;
+        emits DummyEvent{msg: 0} to handle;
+    }
+
+    public fun partial_incorrect(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun partial_incorrect {
+        emits DummyEvent{msg: 0} to handle;
+    }
+
+
+    // ----------------------------
+    // pragma emits_is_strict
+    // ----------------------------
+
+    public fun strict(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun strict {
+    }
+
+    public fun strict_incorrect(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun strict_incorrect {
+        pragma emits_is_strict;
+    }
 }

@@ -26,6 +26,12 @@ pub const INTRINSIC_PRAGMA: &str = "intrinsic";
 /// instead interpreted by its pre and post conditions only.
 pub const OPAQUE_PRAGMA: &str = "opaque";
 
+/// Pragma indicating whether emits specification should be considered partial.
+pub const EMITS_IS_PARTIAL_PRAGMA: &str = "emits_is_partial";
+
+/// Pragma indicating whether no emits specification should mean that no events are to be emitted.
+pub const EMITS_IS_STRICT_PRAGMA: &str = "emits_is_strict";
+
 /// Pragma indicating whether aborts_if specification should be considered partial.
 pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
 
@@ -70,6 +76,8 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
         Module => matches!(
             pragma,
             VERIFY_PRAGMA
+                | EMITS_IS_STRICT_PRAGMA
+                | EMITS_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_STRICT_PRAGMA
                 | ABORTS_IF_IS_PARTIAL_PRAGMA
                 | INTRINSIC_PRAGMA
@@ -82,6 +90,8 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | VERIFY_DURATION_ESTIMATE_PRAGMA
                 | INTRINSIC_PRAGMA
                 | OPAQUE_PRAGMA
+                | EMITS_IS_STRICT_PRAGMA
+                | EMITS_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_STRICT_PRAGMA
                 | REQUIRES_IF_ABORTS_PRAGMA

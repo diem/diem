@@ -655,7 +655,8 @@ pub enum Operation {
     UnboxValue,
     EmptyEventStore,
     ExtendEventStore,
-    CheckEventStore,
+    EventStoreIncludes,
+    EventStoreIncludedIn,
 
     // Operation with no effect
     NoOp,

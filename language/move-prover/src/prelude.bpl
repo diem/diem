@@ -642,26 +642,30 @@ procedure {:inline 1} $Modifies(m: $Memory, type_args: $TypeValueArray, addr: in
 // Representation of EventStore that consists of event streams. The map `streams` takes GUIDs (with type of $Value),
 // and returns sequences of messages (with type of $ValueArray).
 type {:datatype} $EventStore;
-function {:constructor} $EventStore(streams: [$Value]$ValueMultiset): $EventStore;
+function {:constructor} $EventStore(counter: int, streams: [$Value]$ValueMultiset): $EventStore;
 
 function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
     true
 }
 
 function {:inline} $EventStore__is_empty(es: $EventStore): bool {
+    (counter#$EventStore(es) == 0) &&
     (forall guid: $Value ::
         (var stream := streams#$EventStore(es)[guid];
         $IsEmptyValueMultiset(stream)))
 }
 
+// This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
 function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
-    $EventStore((lambda guid: $Value ::
+    $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
+        (lambda guid: $Value ::
         $SubtractValueMultiset(
             streams#$EventStore(es1)[guid],
             streams#$EventStore(es2)[guid])))
 }
 
 function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
+    (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
     (forall guid: $Value ::
         $IsSubsetValueMultiset(
             streams#$EventStore(es1)[guid],
@@ -678,7 +682,7 @@ axiom $EventStore__is_empty($EmptyEventStore);
 function {:inline} $ExtendEventStore(es: $EventStore, guid: $Value, msg: $Value): $EventStore {
     (var stream := streams#$EventStore(es)[guid];
     (var stream_new := $ExtendValueMultiset(stream, msg);
-    $EventStore(streams#$EventStore(es)[guid := stream_new])))
+    $EventStore(counter#$EventStore(es)+1, streams#$EventStore(es)[guid := stream_new])))
 }
 
 function {:inline} $CondExtendEventStore(es: $EventStore, guid: $Value, msg: $Value, cond: $Value): $EventStore {

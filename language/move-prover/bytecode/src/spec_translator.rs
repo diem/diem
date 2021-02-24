@@ -128,9 +128,9 @@ impl TranslatedSpec {
         self.pre.iter().cloned()
     }
 
-    /// Returns a sequence of EventCheck expressions which verify the `emits` clauses of a
-    /// function spec. While logically we could generate a single EventCheck, for better
-    /// error reporting we construct incrementally multiple EventCheck expressions with some
+    /// Returns a sequence of EventStoreIncludes expressions which verify the `emits` clauses of a
+    /// function spec. While logically we could generate a single EventStoreIncludes, for better
+    /// error reporting we construct incrementally multiple EventStoreIncludes expressions with some
     /// redundancy for each individual `emits, so we the see the exact failure at the right
     /// emit condition.
     pub fn emits_conditions(&self, builder: &FunctionDataBuilder<'_>) -> Vec<(Loc, Exp)> {
@@ -145,10 +145,20 @@ impl TranslatedSpec {
             );
             result.push((
                 loc,
-                builder.mk_bool_call(ast::Operation::CheckEventStore, vec![es]),
+                builder.mk_bool_call(ast::Operation::EventStoreIncludes, vec![es]),
             ));
         }
         result
+    }
+
+    pub fn emits_completeness_condition(&self, builder: &FunctionDataBuilder<'_>) -> Exp {
+        let es_ty = Type::Primitive(PrimitiveType::EventStore);
+        let es = self.build_event_store(
+            builder,
+            builder.mk_call(&es_ty, ast::Operation::EmptyEventStore, vec![]),
+            &self.emits,
+        );
+        builder.mk_bool_call(ast::Operation::EventStoreIncludedIn, vec![es])
     }
 
     fn build_event_store(

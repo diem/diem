@@ -408,7 +408,7 @@ impl<'env> SpecTranslator<'env> {
             }
 
             // Operators which take boxed arguments and deliver unboxed ones
-            Eq | Neq | Pack(..) | WellFormed | CheckEventStore => {
+            Eq | Neq | Pack(..) | WellFormed | EventStoreIncludes | EventStoreIncludedIn => {
                 self.box_value(Call(id, oper, self.box_unbox_vec(args)))
             }
 
@@ -614,7 +614,8 @@ impl<'env> SpecTranslator<'env> {
             // Internal operators for event stores.
             Operation::EmptyEventStore => emit!(self.writer, "$EmptyEventStore"),
             Operation::ExtendEventStore => self.translate_extend_event_store(args),
-            Operation::CheckEventStore => self.translate_check_event_store(args),
+            Operation::EventStoreIncludes => self.translate_event_store_includes(args),
+            Operation::EventStoreIncludedIn => self.translate_event_store_included_in(args),
 
             // Regular expressions
             Operation::Function(module_id, fun_id, memory_labels) => {
@@ -691,7 +692,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_check_event_store(&self, args: &[Exp]) {
+    fn translate_event_store_includes(&self, args: &[Exp]) {
         emit!(
             self.writer,
             "(var actual := $EventStore__subtract($es, old($es)); "
@@ -699,6 +700,16 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "(var expected := ");
         self.translate_exp(&args[0]);
         emit!(self.writer, "; $EventStore__is_subset(expected, actual)))");
+    }
+
+    fn translate_event_store_included_in(&self, args: &[Exp]) {
+        emit!(
+            self.writer,
+            "(var actual := $EventStore__subtract($es, old($es)); "
+        );
+        emit!(self.writer, "(var expected := ");
+        self.translate_exp(&args[0]);
+        emit!(self.writer, "; $EventStore__is_subset(actual, expected)))");
     }
 
     fn translate_extend_event_store(&self, args: &[Exp]) {

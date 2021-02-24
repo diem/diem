@@ -9,7 +9,7 @@ use move_model::{
     ast,
     ast::{Exp, TempIndex, Value},
     model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, QualifiedId, StructId},
-    pragmas::ABORTS_IF_IS_PARTIAL_PRAGMA,
+    pragmas::{ABORTS_IF_IS_PARTIAL_PRAGMA, EMITS_IS_PARTIAL_PRAGMA, EMITS_IS_STRICT_PRAGMA},
     ty::{Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
 
@@ -34,6 +34,7 @@ const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` cla
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
 const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
+const EMITS_NOT_COVERED: &str = "emitted event not covered by any of `emits` clauses";
 
 fn modify_check_fails_message(
     env: &GlobalEnv,
@@ -634,6 +635,24 @@ impl<'a> Instrumenter<'a> {
             for (loc, cond) in self.spec.emits_conditions(&self.builder) {
                 self.builder.set_loc_and_vc_info(loc, EMITS_FAILS_MESSAGE);
                 self.builder.emit_with(move |id| Prop(id, Assert, cond))
+            }
+
+            let emits_is_partial = self
+                .builder
+                .fun_env
+                .is_pragma_true(EMITS_IS_PARTIAL_PRAGMA, || false);
+            let emits_is_strict = self
+                .builder
+                .fun_env
+                .is_pragma_true(EMITS_IS_STRICT_PRAGMA, || false);
+            if (!self.spec.emits.is_empty() && !emits_is_partial)
+                || (self.spec.emits.is_empty() && emits_is_strict)
+            {
+                // If not partial, emit an assertion for the completeness of the emits specs.
+                let cond = self.spec.emits_completeness_condition(&self.builder);
+                let loc = self.builder.fun_env.get_spec_loc();
+                self.builder.set_loc_and_vc_info(loc, EMITS_NOT_COVERED);
+                self.builder.emit_with(move |id| Prop(id, Assert, cond));
             }
         }
 
