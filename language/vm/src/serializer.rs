@@ -1254,13 +1254,13 @@ impl ModuleSerializer {
     fn serialize_friend_declarations(
         &mut self,
         binary: &mut BinaryData,
-        friend_declarations: &[ModuleHandleIndex],
+        friend_declarations: &[ModuleHandle],
     ) -> Result<()> {
         if !friend_declarations.is_empty() {
             self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.friend_decls.0 = check_index_in_binary(binary.len())?;
             for module in friend_declarations {
-                serialize_module_handle_index(binary, module)?;
+                serialize_module_handle(binary, module)?;
             }
             self.friend_decls.1 = checked_calculate_table_size(binary, self.friend_decls.0)?;
         }

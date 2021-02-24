@@ -1781,7 +1781,6 @@ impl CompiledScriptMut {
             struct_handles: self.struct_handles,
             function_handles: self.function_handles,
             field_handles: vec![],
-
             friend_decls: vec![],
 
             struct_def_instantiations: vec![],
@@ -1817,7 +1816,7 @@ pub struct CompiledModule(CompiledModuleMut);
 pub struct CompiledModuleMut {
     /// Handle to self.
     pub self_module_handle_idx: ModuleHandleIndex,
-    /// Handles to external modules and self.
+    /// Handles to external dependency modules and self.
     pub module_handles: Vec<ModuleHandle>,
     /// Handles to external and internal types.
     pub struct_handles: Vec<StructHandle>,
@@ -1825,9 +1824,9 @@ pub struct CompiledModuleMut {
     pub function_handles: Vec<FunctionHandle>,
     /// Handles to fields.
     pub field_handles: Vec<FieldHandle>,
+    /// Friend declarations, represented as a collection of handles to external friend modules.
+    pub friend_decls: Vec<ModuleHandle>,
 
-    /// Friend declarations.
-    pub friend_decls: Vec<ModuleHandleIndex>,
     /// Struct instantiations.
     pub struct_def_instantiations: Vec<StructDefInstantiation>,
     /// Function instantiations.
@@ -1919,7 +1918,7 @@ impl Arbitrary for CompiledModuleMut {
                 vec(any::<FunctionHandle>(), 0..=size),
             ),
             any::<ModuleHandleIndex>(),
-            vec(any::<ModuleHandleIndex>(), 0..=size),
+            vec(any::<ModuleHandle>(), 0..=size),
             vec(any_with::<Signature>(size), 0..=size),
             (
                 vec(any::<Identifier>(), 0..=size),

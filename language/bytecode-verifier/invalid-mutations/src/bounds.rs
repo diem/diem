@@ -59,7 +59,7 @@ impl PointerKind {
             ],
             StructDefinition => &[One(StructHandle), Star(StructHandle)],
             FunctionDefinition => &[One(FunctionHandle), One(Signature)],
-            FriendDeclaration => &[One(ModuleHandle)],
+            FriendDeclaration => &[One(AddressIdentifier), One(Identifier)],
             Signature => &[Star(StructHandle)],
             FieldHandle => &[One(StructDefinition)],
             _ => &[],
@@ -311,8 +311,11 @@ impl ApplyOutOfBoundsContext {
             (FieldHandle, StructDefinition) => {
                 self.module.field_handles[src_idx].owner = StructDefinitionIndex(new_idx)
             }
-            (FriendDeclaration, ModuleHandle) => {
-                self.module.friend_decls[src_idx] = ModuleHandleIndex(new_idx)
+            (FriendDeclaration, AddressIdentifier) => {
+                self.module.friend_decls[src_idx].address = AddressIdentifierIndex(new_idx)
+            }
+            (FriendDeclaration, Identifier) => {
+                self.module.friend_decls[src_idx].name = IdentifierIndex(new_idx)
             }
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }

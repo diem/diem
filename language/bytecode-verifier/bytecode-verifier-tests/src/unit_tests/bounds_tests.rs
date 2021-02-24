@@ -138,10 +138,22 @@ fn invalid_struct_as_type_actual_in_exists() {
 }
 
 #[test]
-fn invalid_friend() {
+fn invalid_friend_module_address() {
     let mut m = basic_test_module();
-    m.friend_decls
-        .push(ModuleHandleIndex(m.module_handles.len() as TableIndex));
+    m.friend_decls.push(ModuleHandle {
+        address: AddressIdentifierIndex::new(m.address_identifiers.len() as TableIndex),
+        name: IdentifierIndex::new(0),
+    });
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_friend_module_name() {
+    let mut m = basic_test_module();
+    m.friend_decls.push(ModuleHandle {
+        address: AddressIdentifierIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as TableIndex),
+    });
     m.freeze().unwrap_err();
 }
 

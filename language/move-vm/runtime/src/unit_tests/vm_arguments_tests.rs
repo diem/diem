@@ -173,7 +173,6 @@ fn make_module_with_function(
             type_parameters,
         }],
         field_handles: vec![],
-
         friend_decls: vec![],
 
         struct_def_instantiations: vec![],

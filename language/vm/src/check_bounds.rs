@@ -9,8 +9,8 @@ use crate::{
     file_format::{
         Bytecode, CodeOffset, CompiledModuleMut, Constant, FieldHandle, FieldInstantiation,
         FunctionDefinition, FunctionDefinitionIndex, FunctionHandle, FunctionInstantiation,
-        ModuleHandle, ModuleHandleIndex, Signature, SignatureToken, StructDefInstantiation,
-        StructDefinition, StructFieldInformation, StructHandle, TableIndex,
+        ModuleHandle, Signature, SignatureToken, StructDefInstantiation, StructDefinition,
+        StructFieldInformation, StructHandle, TableIndex,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -56,7 +56,7 @@ impl<'a> BoundsChecker<'a> {
             bounds_check.check_field_handle(field_handle)?
         }
         for friend_decl in &bounds_check.module.friend_decls {
-            bounds_check.check_friend_decl(friend_decl)?
+            bounds_check.check_module_handle(friend_decl)?
         }
         for struct_instantiation in &bounds_check.module.struct_def_instantiations {
             bounds_check.check_struct_instantiation(struct_instantiation)?
@@ -133,10 +133,6 @@ impl<'a> BoundsChecker<'a> {
             }
         }
         Ok(())
-    }
-
-    fn check_friend_decl(&mut self, friend_declaration: &ModuleHandleIndex) -> PartialVMResult<()> {
-        check_bounds_impl(&self.module.module_handles, *friend_declaration)
     }
 
     fn check_struct_instantiation(

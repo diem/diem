@@ -553,7 +553,7 @@ fn build_module_tables(
                 load_field_instantiations(binary, table, &mut module.field_instantiations)?;
             }
             TableType::FRIEND_DECLS => {
-                load_friend_decls(binary, table, &mut module.friend_decls)?;
+                load_module_handles(binary, table, &mut module.friend_decls)?;
             }
             TableType::MODULE_HANDLES
             | TableType::STRUCT_HANDLES
@@ -1233,24 +1233,6 @@ fn load_struct_definition_indices(
         indices.push(load_struct_def_index(cursor)?);
     }
     Ok(indices)
-}
-
-/// Builds the `Vec<ModuleHandleIndex>` table serving as friend declarations.
-fn load_friend_decls(
-    binary: &VersionedBinary,
-    table: &Table,
-    friend_decls: &mut Vec<ModuleHandleIndex>,
-) -> BinaryLoaderResult<()> {
-    let start = table.offset as usize;
-    let end = start
-        .checked_add(table.count as usize)
-        .expect("Unexpected overflow as the error should be detected early by `check_tables`");
-    let mut cursor = binary.new_cursor(start, end);
-    while cursor.position() < u64::from(table.count) {
-        let module = load_module_handle_index(&mut cursor)?;
-        friend_decls.push(module);
-    }
-    Ok(())
 }
 
 /// Deserializes a `CodeUnit`.
