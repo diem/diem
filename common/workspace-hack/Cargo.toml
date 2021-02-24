@@ -35,7 +35,7 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
+once_cell = { version = "1.7.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
@@ -77,7 +77,7 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
+once_cell = { version = "1.7.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
@@ -122,7 +122,7 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
+once_cell = { version = "1.7.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
@@ -164,7 +164,7 @@ log = { version = "0.4.14", default-features = false, features = ["serde", "std"
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
 num-traits = { version = "0.2.14", features = ["default", "i128", "std"] }
-once_cell = { version = "1.6.0", features = ["alloc", "default", "std"] }
+once_cell = { version = "1.7.0", features = ["alloc", "default", "std"] }
 petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph", "stable_graph"] }
 proc-macro2 = { version = "0.4.30", features = ["default", "proc-macro"] }
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
