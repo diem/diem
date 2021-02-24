@@ -118,6 +118,34 @@ impl LogEntry {
             message,
         }
     }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    pub fn thread_name(&self) -> Option<&str> {
+        self.thread_name.as_deref()
+    }
+
+    pub fn backtrace(&self) -> Option<&str> {
+        self.backtrace.as_deref()
+    }
+
+    pub fn hostname(&self) -> Option<&str> {
+        self.hostname.as_deref()
+    }
+
+    pub fn timestamp(&self) -> &str {
+        self.timestamp.as_str()
+    }
+
+    pub fn data(&self) -> &BTreeMap<&'static str, serde_json::Value> {
+        &self.data
+    }
+
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
 }
 
 /// A builder for a `DiemLogger`, configures what, where, and how to write logs.
@@ -128,6 +156,7 @@ pub struct DiemLoggerBuilder {
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
     is_async: bool,
+    custom_format: Option<fn(&LogEntry) -> Result<String, fmt::Error>>,
 }
 
 impl DiemLoggerBuilder {
@@ -140,6 +169,7 @@ impl DiemLoggerBuilder {
             address: None,
             printer: Some(Box::new(StderrWriter)),
             is_async: false,
+            custom_format: None,
         }
     }
 
@@ -177,6 +207,14 @@ impl DiemLoggerBuilder {
 
     pub fn is_async(&mut self, is_async: bool) -> &mut Self {
         self.is_async = is_async;
+        self
+    }
+
+    pub fn custom_format(
+        &mut self,
+        format: fn(&LogEntry) -> Result<String, fmt::Error>,
+    ) -> &mut Self {
+        self.custom_format = Some(format);
         self
     }
 
@@ -221,6 +259,7 @@ impl DiemLoggerBuilder {
                 sender: Some(sender),
                 printer: None,
                 filter: RwLock::new(filter),
+                formatter: self.custom_format.take().unwrap_or(default_format),
             });
             let service = LoggerService {
                 receiver,
@@ -236,6 +275,7 @@ impl DiemLoggerBuilder {
                 sender: None,
                 printer: self.printer.take(),
                 filter: RwLock::new(filter),
+                formatter: self.custom_format.take().unwrap_or(default_format),
             })
         };
 
@@ -258,11 +298,11 @@ impl DiemFilter {
     }
 }
 
-///
 pub struct DiemLogger {
     sender: Option<SyncSender<LoggerServiceEvent>>,
     printer: Option<Box<dyn Writer>>,
     filter: RwLock<DiemFilter>,
+    pub(crate) formatter: fn(&LogEntry) -> Result<String, fmt::Error>,
 }
 
 impl DiemLogger {
@@ -296,7 +336,7 @@ impl DiemLogger {
 
     fn send_entry(&self, entry: LogEntry) {
         if let Some(printer) = &self.printer {
-            let s = format(&entry).expect("Unable to format");
+            let s = (self.formatter)(&entry).expect("Unable to format");
             printer.write(s);
         }
 
@@ -362,7 +402,7 @@ impl LoggerService {
                             .local_filter
                             .enabled(&entry.metadata)
                         {
-                            let s = format(&entry).expect("Unable to format");
+                            let s = (self.facade.formatter)(&entry).expect("Unable to format");
                             printer.write(s)
                         }
                     }
@@ -479,7 +519,7 @@ impl Writer for FileWriter {
 /// UNIX_TIMESTAMP LOG_LEVEL [thread_name] FILE:LINE MESSAGE JSON_DATA
 /// Example:
 /// 2020-03-07 05:03:03 INFO [thread_name] common/diem-logger/src/lib.rs:261 Hello { "world": true }
-fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
+fn default_format(entry: &LogEntry) -> Result<String, fmt::Error> {
     use std::fmt::Write;
 
     let mut w = String::new();
