@@ -475,6 +475,7 @@ impl ClusterTestRunner {
 
     /// Discovers cluster, setup log, etc
     pub async fn setup(args: &Args) -> Result<Self> {
+        let start_time = Instant::now();
         let current_tag = args.deploy.as_deref().unwrap_or("master");
         let cluster_swarm = ClusterSwarmKube::new()
             .await
@@ -505,7 +506,9 @@ impl ClusterTestRunner {
             .ok();
         let tx_emitter = TxEmitter::new(&cluster, args.vasp);
         let github = GitHub::new();
-        let report = SuiteReport::new();
+        let mut report = SuiteReport::new();
+        let end_time = (Instant::now() - start_time).as_secs() as u64;
+        report.report_text(format!("Test runner setup time spent {} secs", end_time));
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
@@ -590,16 +593,20 @@ impl ClusterTestRunner {
         info!("Starting suite");
         let suite_started = Instant::now();
         for experiment in suite.experiments {
+            let start_time = Instant::now();
             let experiment_name = format!("{}", experiment);
             let experiment_result = self
                 .run_single_experiment(experiment, None)
                 .await
                 .map_err(move |e| format_err!("Experiment `{}` failed: `{}`", experiment_name, e));
+            let end_time = (Instant::now() - start_time).as_secs() as u64;
             if let Err(e) = experiment_result.as_ref() {
                 self.report.report_text(e.to_string());
                 self.print_report();
                 experiment_result?;
             }
+            self.report
+                .report_text_same_line(format!(", time spent {} secs", end_time))
         }
         info!(
             "Suite completed in {:?}",

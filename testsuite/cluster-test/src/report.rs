@@ -43,6 +43,10 @@ impl SuiteReport {
         self.text.push_str(&text);
     }
 
+    pub fn report_text_same_line(&mut self, text: String) {
+        self.text.push_str(&text);
+    }
+
     pub fn report_txn_stats(
         &mut self,
         experiment: String,
