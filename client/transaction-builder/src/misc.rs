@@ -6,18 +6,12 @@
 use compiled_stdlib::{legacy::transaction_scripts::LegacyStdlibScript, StdLibOptions};
 use diem_types::{
     access_path::AccessPath,
-    block_metadata::BlockMetadata,
-    transaction::{ChangeSet, Transaction},
+    transaction::ChangeSet,
     write_set::{WriteOp, WriteSetMut},
 };
 use std::convert::TryFrom;
 
-// TODO: this should go away once we are no longer using it in tests
-pub fn encode_block_prologue_script(block_metadata: BlockMetadata) -> Transaction {
-    Transaction::BlockMetadata(block_metadata)
-}
-
-/// Update WriteSet
+// Update WriteSet
 pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
     let mut write_set = WriteSetMut::new(vec![]);
     let stdlib_modules = compiled_stdlib::stdlib_modules(option);

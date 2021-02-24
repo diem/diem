@@ -20,8 +20,7 @@ use executor_test_helpers::{
 use executor_types::BlockExecutor;
 use std::convert::TryFrom;
 use transaction_builder::{
-    encode_block_prologue_script, encode_peer_to_peer_with_metadata_script,
-    encode_set_validator_config_and_reconfigure_script,
+    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
 };
 
 #[test]
@@ -110,7 +109,7 @@ fn test_reconfiguration() {
         )),
     );
     // txn2 = a dummy block prologue to bump the timer.
-    let txn2 = encode_block_prologue_script(BlockMetadata::new(
+    let txn2 = Transaction::BlockMetadata(BlockMetadata::new(
         gen_block_id(1),
         1,
         300000001,
@@ -285,7 +284,7 @@ fn test_change_publishing_option_to_custom() {
     );
 
     // Create a dummy block prologue transaction that will bump the timer.
-    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+    let txn4 = Transaction::BlockMetadata(gen_block_metadata(1, validator_account));
 
     let script_body = {
         let code = "

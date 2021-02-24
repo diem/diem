@@ -295,7 +295,7 @@ mod tests {
     use storage_interface::DbReaderWriter;
     use subscription_service::ReconfigSubscription;
     use transaction_builder::{
-        encode_block_prologue_script, encode_peer_to_peer_with_metadata_script,
+        encode_peer_to_peer_with_metadata_script,
         encode_set_validator_config_and_reconfigure_script, encode_update_diem_version_script,
     };
     use vm_genesis::Validator;
@@ -633,7 +633,7 @@ mod tests {
 
     /// Creates a dummy transaction (useful for bumping the timer).
     fn create_dummy_transaction(index: u8, validator_account: AccountAddress) -> Transaction {
-        encode_block_prologue_script(BlockMetadata::new(
+        Transaction::BlockMetadata(BlockMetadata::new(
             gen_block_id(index),
             index as u64,
             (index as u64 + 1) * 100000010,
