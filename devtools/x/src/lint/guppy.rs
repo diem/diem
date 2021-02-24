@@ -428,3 +428,43 @@ impl PackageLinter for UnpublishedPackagesOnlyUsePathDependencies {
         Ok(RunStatus::Executed)
     }
 }
+
+/// Ensure that all published packages only depend on other, published packages
+#[derive(Debug)]
+pub struct PublishedPackagesDontDependOnUnpublishedPackages;
+
+impl Linter for PublishedPackagesDontDependOnUnpublishedPackages {
+    fn name(&self) -> &'static str {
+        "published-packages-dont-depend-on-unpublished-packages"
+    }
+}
+
+impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        // Skip all packages which aren't publishable
+        if matches!(metadata.publish(), Some(&[])) {
+            return Ok(RunStatus::Executed);
+        }
+
+        for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
+            // If the direct dependency isn't publishable
+            if matches!(direct_dep.to().publish(), Some(&[])) {
+                out.write(
+                    LintLevel::Error,
+                    format!(
+                        "published package can't depend on unpublished package '{}'",
+                        direct_dep.dep_name()
+                    ),
+                );
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}

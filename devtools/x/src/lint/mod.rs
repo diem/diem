@@ -37,6 +37,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::IrrelevantBuildDeps,
         &guppy::OverlayFeatures::new(&workspace_config.overlay),
         &guppy::UnpublishedPackagesOnlyUsePathDependencies::new(),
+        &guppy::PublishedPackagesDontDependOnUnpublishedPackages,
         &workspace_classify::DefaultOrTestOnly::new(
             xctx.core().package_graph()?,
             &workspace_config.test_only,

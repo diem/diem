@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Move prover Boogie backend"
 license = "Apache-2.0"
+publish = false
 edition = "2018"
 
 [dependencies]

@@ -6,6 +6,7 @@ description = "Diem fuzzer"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
+publish = false
 edition = "2018"
 
 # common dependencies
