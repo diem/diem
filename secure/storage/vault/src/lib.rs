@@ -28,8 +28,8 @@ pub mod fuzzing;
 const MAX_NUM_KEY_VERSIONS: u32 = 4;
 
 /// Default request timeouts for vault operations.
-const DEFAULT_CONNECTION_TIMEOUT_MS: u64 = 10_000;
-const DEFAULT_RESPONSE_TIMEOUT_MS: u64 = 10_000;
+const DEFAULT_CONNECTION_TIMEOUT_MS: u64 = 100;
+const DEFAULT_RESPONSE_TIMEOUT_MS: u64 = 1_000;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {

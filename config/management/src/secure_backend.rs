@@ -17,6 +17,10 @@ pub const GITHUB: &str = "github";
 pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
+// Custom timeouts for vault backend operations when using the management tooling.
+const CONNECTION_TIMEOUT_MS: u64 = 10_000;
+const RESPONSE_TIMEOUT_MS: u64 = 10_000;
+
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
 /// only expected key is backend which defines which of the SecureBackends the parameters refer to.
 /// Some backends require parameters others do not, so that requires a conversion into the
@@ -116,8 +120,8 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     token: Token::FromDisk(PathBuf::from(token)),
                     renew_ttl_secs: None,
                     disable_cas: Some(true),
-                    connection_timeout_ms: None,
-                    response_timeout_ms: None,
+                    connection_timeout_ms: Some(CONNECTION_TIMEOUT_MS),
+                    response_timeout_ms: Some(RESPONSE_TIMEOUT_MS),
                 })
             }
             _ => panic!("Invalid backend: {}", self.backend),
