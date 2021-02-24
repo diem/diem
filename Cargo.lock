@@ -7465,7 +7465,6 @@ version = "0.1.0"
 dependencies = [
  "bcs",
  "compiled-stdlib",
- "diem-proptest-helpers",
  "diem-types",
  "diem-workspace-hack",
  "move-core-types",

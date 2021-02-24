@@ -21,8 +21,12 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 proptest = { version = "1.0.0", optional = true }
 proptest-derive = { version = "0.3.0", optional = true }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
+
+[dev-dependencies]
+proptest = "1.0.0"
+proptest-derive = "0.3.0"
+move-core-types = { path = "../../language/move-core/types", features = ["fuzzing"] }
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "diem-proptest-helpers", "move-core-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "move-core-types/fuzzing"]
