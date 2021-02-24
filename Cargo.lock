@@ -2163,6 +2163,7 @@ name = "diem-storage-inspector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "compiled-stdlib",
  "diem-config",
  "diem-crypto",
  "diem-logger",
@@ -2172,7 +2173,6 @@ dependencies = [
  "storage-interface",
  "structopt 0.3.21",
  "tempfile",
- "transaction-builder",
 ]
 
 [[package]]

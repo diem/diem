@@ -3,13 +3,12 @@
 
 #![forbid(unsafe_code)]
 
-use compiled_stdlib::{legacy::transaction_scripts::LegacyStdlibScript, StdLibOptions};
+use compiled_stdlib::StdLibOptions;
 use diem_types::{
     access_path::AccessPath,
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSetMut},
 };
-use std::convert::TryFrom;
 
 // Update WriteSet
 pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
@@ -26,13 +25,4 @@ pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
         write_set.freeze().expect("Failed to create writeset"),
         vec![],
     )
-}
-
-// TODO: delete and use StdlibScript::try_from directly if it's ok to drop the "_transaction"?
-/// Returns a user friendly mnemonic for the transaction type if the transaction is
-/// for a known, white listed, transaction.
-pub fn get_transaction_name(code: &[u8]) -> String {
-    LegacyStdlibScript::try_from(code).map_or("<unknown transaction>".to_string(), |name| {
-        format!("{}_transaction", name)
-    })
 }

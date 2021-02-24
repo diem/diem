@@ -4,12 +4,12 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
+use compiled_stdlib::shim::tmp_new_transaction_scripts::name_for_script;
 use diem_config::config::RocksdbConfig;
 use diem_logger::info;
 use diemdb::DiemDB;
 use std::path::PathBuf;
 use storage_interface::DbReader;
-use transaction_builder::get_transaction_name;
 
 use diem_types::{
     account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
@@ -78,7 +78,7 @@ fn print_txn(db: &DiemDB, version: u64) {
     println!(
         "Transaction {}: {}",
         version,
-        tx.format_for_client(get_transaction_name)
+        tx.format_for_client(|bytes| name_for_script(bytes).unwrap())
     );
 }
 
@@ -117,7 +117,7 @@ fn list_txns(db: &DiemDB) {
             v,
             tx.expect("Unable to read TX")
                 .0
-                .format_for_client(get_transaction_name)
+                .format_for_client(|bytes| name_for_script(bytes).unwrap())
         );
     }
 }

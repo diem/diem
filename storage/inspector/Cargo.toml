@@ -13,6 +13,7 @@ anyhow = "1.0.38"
 structopt = "0.3.21"
 tempfile = "3.2.0"
 
+compiled-stdlib = { path = "../../language/diem-framework/compiled" }
 diemdb = { path = "../diemdb" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
@@ -20,4 +21,3 @@ diem-types = { path = "../../types" }
 diem-logger = { path = "../../common/logger" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 storage-interface = { path = "../storage-interface" }
-transaction-builder = { path = "../../language/transaction-builder" }
