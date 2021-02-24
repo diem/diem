@@ -1,6 +1,6 @@
 module M {
-    struct Y { x: u64 }
-    resource R { x: bool, y: Self.Y }
+    struct Y has store { x: u64 }
+    struct R has key { x: bool, y: Self.Y }
 
     public publish(s: &signer) {
         move_to<R>(move(s), R { x: false, y: Y { x: 0 } });

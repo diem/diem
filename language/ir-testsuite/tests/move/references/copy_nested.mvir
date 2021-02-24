@@ -1,10 +1,10 @@
 module Test {
     import 0x1.Signer;
 
-    struct Config { b: bool }
+    struct Config has copy, drop, store { b: bool }
 
     // A current or prospective validator should publish one of these under their address
-    resource T {
+    struct T has key, store {
         config: Self.Config,
     }
 

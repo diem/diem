@@ -3,7 +3,7 @@ import 0x1.XUS;
     import 0x1.Diem;
     import 0x1.Vector;
     import 0x1.Signer;
-    resource Coins { f: vector<Diem.Diem<XUS.XUS>> }
+    struct Coins has key { f: vector<Diem.Diem<XUS.XUS>> }
 
     public new(account: &signer) {
         let coin_vec: vector<Diem.Diem<XUS.XUS>>;

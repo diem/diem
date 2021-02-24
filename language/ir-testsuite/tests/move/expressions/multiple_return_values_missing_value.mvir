@@ -1,5 +1,5 @@
 module Test {
-    resource T { b: bool }
+    struct T { b: bool }
 
     public new(): Self.T {
         return T { b: true };

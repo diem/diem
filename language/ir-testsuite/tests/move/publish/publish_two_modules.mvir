@@ -2,7 +2,7 @@ module MoneyHolder {
         import 0x1.XUS;
         import 0x1.Diem;
 
-        resource T { money: Diem.Diem<XUS.XUS> }
+        struct T { money: Diem.Diem<XUS.XUS> }
 
         public new(m: Diem.Diem<XUS.XUS>): Self.T {
             return T{ money: move(m) };
@@ -28,7 +28,7 @@ module MoneyHolder {
 //! new-transaction
 
 module Bar {
-        struct T{baz: u64}
+        struct T has drop {baz: u64}
         public new(m: u64): Self.T {
             return T{baz: move(m)};
         }

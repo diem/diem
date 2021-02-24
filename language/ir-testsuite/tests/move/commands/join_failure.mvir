@@ -1,5 +1,5 @@
 module M {
-    resource R { f:bool }
+    struct R { f:bool }
     t0() {
         let r: Self.R;
         let f: bool;
@@ -18,7 +18,7 @@ module M {
 
 //! new-transaction
 module M {
-    resource R { f:bool }
+    struct R { f:bool }
     t0() {
         let r: Self.R;
         let f: bool;
@@ -36,7 +36,7 @@ module M {
 
 //! new-transaction
 module M {
-    resource R { f:bool }
+    struct R { f:bool }
     t0() {
         let r: Self.R;
         let f: bool;
@@ -55,7 +55,7 @@ module M {
 
 //! new-transaction
 module M {
-    resource R { f:bool }
+    struct R { f:bool }
     t0() {
         let r: Self.R;
         let f: bool;
@@ -74,7 +74,7 @@ module M {
 
 //! new-transaction
 module M {
-    resource R { f:bool }
+    struct R { f:bool }
     t0() {
         let r: Self.R;
         let ref: &Self.R;

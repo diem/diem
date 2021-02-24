@@ -1,7 +1,7 @@
 module M {
     import 0x1.Signer;
 
-    resource Foo<T> { x: T }
+    struct Foo<T> has key, store { x: T }
 
     foo(account: &signer) acquires Foo {
         let sender: address;
@@ -19,7 +19,7 @@ module M {
         return;
     }
 
-    foo2<T>(account: &signer) acquires Foo {
+    foo2<T: store>(account: &signer) acquires Foo {
         let sender: address;
         let x: &mut Self.Foo<T>;
         let y: Self.Foo<T>;
@@ -36,7 +36,7 @@ module M {
     }
 
 
-    foo3<T>(account: &signer) acquires Foo {
+    foo3<T: store>(account: &signer) acquires Foo {
         let sender: address;
         let x: &mut Self.Foo<Self.Foo<T>>;
         let y: Self.Foo<Self.Foo<T>>;

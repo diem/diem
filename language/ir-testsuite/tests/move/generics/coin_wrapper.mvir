@@ -2,10 +2,10 @@ module M {
     import 0x1.XUS;
     import 0x1.Diem;
     import 0x1.Signer;
-    resource Foo<T: resource> { x: T }
-    resource CoinWrapper { f: Self.Foo<Diem.Diem<XUS.XUS>> }
-    resource InnerWrapper { f: Self.Foo<Self.Inner>}
-    resource Inner { b: vector<u8> }
+    struct Foo<T> has store { x: T }
+    struct CoinWrapper has key { f: Self.Foo<Diem.Diem<XUS.XUS>> }
+    struct InnerWrapper has key { f: Self.Foo<Self.Inner>}
+    struct Inner has store { b: vector<u8> }
 
 
     public coin_wrapper(account: &signer, c: Diem.Diem<XUS.XUS>) {

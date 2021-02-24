@@ -1,5 +1,5 @@
 module Token {
-    resource T { b: bool }
+    struct T has key { b: bool }
 
     public test() {
         let t: Self.T;

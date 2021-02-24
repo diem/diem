@@ -4,14 +4,12 @@ module M {
     // Structures
     //
 
-    // a generic resource
-    resource Some<T> { v: T }
+    // a generic struct
+    struct Some<T> has key { v: T }
 
-    // a resource
-    resource Value { val: u64 }
+    struct Value has store { val: u64 }
 
-    // a generic type either copyable or resource
-    struct Container<T> { elem: T }
+    struct Container<T> has copy, drop, store { elem: T }
 
     // Functions
     //
@@ -22,7 +20,7 @@ module M {
     }
 
     // change the elem of a `Container<T>` if T is copyable
-    public change_container<T: copyable>(c: &mut Self.Container<T>, t: T) {
+    public change_container<T: copy + drop>(c: &mut Self.Container<T>, t: T) {
         *&mut move(c).elem = move(t);
         return;
     }
@@ -52,7 +50,7 @@ module M {
         return move(v);
     }
 
-    // publish a well known `Some<Value>` resource
+    // publish a well known `Some<Value>` struct
     public publish_some_value(account: &signer) {
         let value: Self.Value;
         let some_of_value: Self.Some<Self.Value>;
@@ -79,7 +77,7 @@ module M {
     }
 
     // publish a `Some` under sender account
-    public publish_some<T>(account: &signer, v: T) {
+    public publish_some<T: store>(account: &signer, v: T) {
         let some_of_t: Self.Some<T>;
         some_of_t = Some<T>{ v: move(v) };
         move_to<Some<T>>(move(account), move(some_of_t));
@@ -87,7 +85,7 @@ module M {
     }
 
     // unpublish a `Some<T>` under sender account
-    public unpublish_some<T>(account: &signer): T acquires Some {
+    public unpublish_some<T: store>(account: &signer): T acquires Some {
         let sender: address;
         let some_of_t: Self.Some<T>;
         let t: T;
@@ -100,14 +98,14 @@ module M {
     }
 
     // whether an instance of Some<T> exists under sender account
-    public some_exists<T>(account: &signer): bool {
+    public some_exists<T: store>(account: &signer): bool {
         let sender: address;
         sender = Signer.address_of(move(account));
         return exists<Some<T>>(move(sender));
     }
 
     // check a `Some` under sender account
-    public check_some<T>(account: &signer, val: T): T * bool acquires Some {
+    public check_some<T: store>(account: &signer, val: T): T * bool acquires Some {
         let sender: address;
         let some: &Self.Some<T>;
         let inner_ref: &T;
@@ -122,7 +120,7 @@ module M {
     }
 
     // publish a `Some` under sender account
-    public change_some<T: copyable>(account: &signer, val: T) acquires Some {
+    public change_some<T: drop + store>(account: &signer, val: T) acquires Some {
         let sender: address;
         let some: &mut Self.Some<T>;
         sender = Signer.address_of(move(account));

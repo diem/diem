@@ -76,7 +76,7 @@ fn make_module() -> CompiledModuleMut {
                     signature: TypeSignature(SignatureToken::TypeParameter(0)),
                 }]),
             },
-            // key struct R { f: u64 }
+            // struct R has key { f: u64 }
             StructDefinition {
                 struct_handle: StructHandleIndex(2),
                 field_information: StructFieldInformation::Declared(vec![FieldDefinition {
@@ -84,7 +84,7 @@ fn make_module() -> CompiledModuleMut {
                     signature: TypeSignature(SignatureToken::U64),
                 }]),
             },
-            // key struct GR<T> { f: T }
+            // struct GR<T> has key { f: T }
             StructDefinition {
                 struct_handle: StructHandleIndex(3),
                 field_information: StructFieldInformation::Declared(vec![FieldDefinition {

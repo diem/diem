@@ -1,5 +1,5 @@
 module M {
-    resource R { flag: bool }
+    struct R { flag: bool }
 
     // Type checking is done before memory safety checks
     t1(): bool {
@@ -25,7 +25,7 @@ module M2 {
 
 //! new-transaction
 module M {
-    resource R { flag: bool }
+    struct R { flag: bool }
 
     t1(): u64 {
         let c: Self.R;

@@ -209,7 +209,7 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (CompiledModule, Signed
         "
         module M {
             import 0x1.Signer;
-            resource T1 { v: u64 }
+            struct T1 has key { v: u64 }
 
             public borrow_t1(account: &signer) acquires T1 {
                 let t1: &Self.T1;

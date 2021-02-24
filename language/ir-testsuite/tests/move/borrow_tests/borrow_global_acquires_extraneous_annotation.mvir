@@ -1,5 +1,5 @@
 module A {
-    resource T1{v: u64}
+    struct T1 has key {v: u64}
 
     public test() acquires T1 {
         return;

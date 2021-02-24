@@ -1,5 +1,5 @@
 module M {
-    resource Foo { f: bool }
+    struct Foo { f: bool }
 
     public id<T>(x: T): T {
         return move(x);

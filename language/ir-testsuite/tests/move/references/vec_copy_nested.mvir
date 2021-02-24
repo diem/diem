@@ -1,8 +1,8 @@
 module DeepCopy {
     import 0x1.Vector;
 
-    struct Config { i: u64 }
-    struct Nested { c: Self.Config }
+    struct Config has copy, drop, store { i: u64 }
+    struct Nested has copy, drop, store { c: Self.Config }
 
     public test_struct_shallow() {
         let c1: Self.Config;

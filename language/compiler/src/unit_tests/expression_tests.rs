@@ -161,7 +161,7 @@ fn single_resource() {
     let code = String::from(
         "
 module Test {
-    resource T { i: u64 }
+    struct T { i: u64 }
 
     public new_t(): Self.T {
         return T { i: 0 };
@@ -199,7 +199,7 @@ fn compile_borrow_field() {
     let code = String::from(
         "
         module Foobar {
-            resource FooCoin { value: u64 }
+            struct FooCoin { value: u64 }
 
             public borrow_immut_field(arg: &Self.FooCoin) {
                 let field_ref: &u64;
@@ -233,7 +233,7 @@ fn compile_borrow_field_generic() {
     let code = String::from(
         "
         module Foobar {
-            resource FooCoin<T> { value: u64 }
+            struct FooCoin<T> { value: u64 }
 
             public borrow_immut_field(arg: &Self.FooCoin<u64>) {
                 let field_ref: &u64;

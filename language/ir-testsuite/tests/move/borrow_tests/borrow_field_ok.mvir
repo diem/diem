@@ -1,8 +1,7 @@
 module A {
 
-    struct T{v: u64}
-
-    struct K{f: Self.T}
+    struct T has drop {v: u64}
+    struct K has drop {f: Self.T}
 
     public new_T(v: u64) : Self.T {
         return T{v: move(v)};

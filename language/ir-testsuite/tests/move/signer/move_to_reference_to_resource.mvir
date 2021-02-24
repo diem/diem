@@ -1,5 +1,5 @@
 module M {
-    resource R { f: bool }
+    struct R has key { f: bool }
     t0(s: &signer, r: &Self.R) {
         (copy(s));
         (move(r));
@@ -12,7 +12,7 @@ module M {
 //! new-transaction
 
 module N {
-    resource R<T> { f: T }
+    struct R<T> has key { f: T }
     t0(s: &signer, r: &mut Self.R<bool>) {
         move_to<R<bool>>(copy(s), move(r));
         return;

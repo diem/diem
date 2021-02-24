@@ -1,5 +1,5 @@
 module M {
-    struct T{f: u64}
+    struct T has drop {f: u64}
 
     public new(g: u64): Self.T {
         return T{f: move(g)};

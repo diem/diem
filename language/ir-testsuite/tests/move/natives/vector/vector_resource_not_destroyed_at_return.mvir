@@ -1,7 +1,7 @@
 module M {
     import 0x1.Vector;
 
-    resource R { b: bool}
+    struct R has store { b: bool}
 
     f() {
         let v: vector<Self.R>;

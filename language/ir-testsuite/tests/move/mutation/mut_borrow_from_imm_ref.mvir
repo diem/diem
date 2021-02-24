@@ -1,5 +1,5 @@
 module Token {
-    resource T{value: u64}
+    struct T{value: u64}
     public new(m: u64): Self.T {
         return T{value: copy(m)};
     }

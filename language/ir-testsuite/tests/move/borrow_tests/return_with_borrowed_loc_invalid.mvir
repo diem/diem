@@ -1,6 +1,6 @@
 module M {
-    struct X { y: Self.Y }
-    struct Y { u: u64 }
+    struct X has drop { y: Self.Y }
+    struct Y has drop { u: u64 }
 
     t1(): &u64 {
         let x: u64;
@@ -14,8 +14,8 @@ module M {
 
 //! new-transaction
 module M2 {
-    struct X { y: Self.Y }
-    struct Y { u: u64 }
+    struct X has drop { y: Self.Y }
+    struct Y has drop { u: u64 }
     t2(): &u64 {
         let x: u64;
         let y: &u64;
@@ -28,8 +28,8 @@ module M2 {
 
 //! new-transaction
 module M3 {
-    struct X { y: Self.Y }
-    struct Y { u: u64 }
+    struct X has drop { y: Self.Y }
+    struct Y has drop { u: u64 }
     t3(): &u64 {
         let s: Self.X;
         let x: &Self.X;
@@ -46,8 +46,8 @@ module M3 {
 
 //! new-transaction
 module M4 {
-    struct X { y: Self.Y }
-    struct Y { u: u64 }
+    struct X has drop { y: Self.Y }
+    struct Y has drop { u: u64 }
     t4(): &u64 {
         let s: Self.X;
         let x: &Self.X;

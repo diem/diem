@@ -13,7 +13,7 @@ module SortedLinkedList
 {
     import 0x1.Signer;
 
-    resource Node
+    struct Node has key
     {
         prev: address, //account address where the previous node is stored (head if no previous node exists)
         next: address, //account address where the next node is stored (head if no next node exists)

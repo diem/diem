@@ -1,7 +1,7 @@
 module M {
     import 0x1.Signer;
 
-    resource Foo {
+    struct Foo has key {
         x: u64,
     }
 

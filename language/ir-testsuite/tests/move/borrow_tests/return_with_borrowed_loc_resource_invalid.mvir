@@ -1,5 +1,5 @@
 module M {
-    resource X { u: u64 }
+    struct X { u: u64 }
 
     t() {
         let s: Self.X;

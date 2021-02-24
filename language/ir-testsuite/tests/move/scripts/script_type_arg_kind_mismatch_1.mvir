@@ -1,5 +1,5 @@
 //! type-args: 0x1::DiemAccount::DiemAccount
-main<T: copyable>() {
+main<T: copy + drop>() {
     return;
 }
 // check: CONSTRAINT_NOT_SATISFIED

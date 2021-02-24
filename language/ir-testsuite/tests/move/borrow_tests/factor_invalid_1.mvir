@@ -1,6 +1,6 @@
 module M {
-    struct X { f: Self.Y }
-    struct Y { g: u64, h: u64 }
+    struct X has drop { f: Self.Y }
+    struct Y has drop { g: u64, h: u64 }
 
     t1() {
         let x: Self.X;
@@ -28,8 +28,8 @@ module M {
 
 //! new-transaction
 module M2 {
-    struct X { f: Self.Y }
-    struct Y { g: u64, h: u64 }
+    struct X has drop { f: Self.Y }
+    struct Y has drop { g: u64, h: u64 }
     t2() {
         let x: Self.X;
         let ref_x: &mut Self.X;

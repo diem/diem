@@ -8,7 +8,7 @@ fn compile_module_with_functions() {
     let code = String::from(
         "
         module Foobar {
-            resource FooCoin { value: u64 }
+            struct FooCoin { value: u64 }
 
             public value(this: &Self.FooCoin): u64 {
                 let value_ref: &u64;
@@ -72,7 +72,7 @@ fn compile_module_with_large_frame() {
     let mut code = String::from(
         "
         module Foobar {
-            resource FooCoin { value: u64 }
+            struct FooCoin { value: u64 }
         ",
     );
 

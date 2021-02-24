@@ -3,7 +3,7 @@ module M {
         return move(x);
     }
 
-    foo<T: resource>(x: T)  {
+    foo<T: key>(x: T)  {
         let y: T;
         y = Self.id<T>(move(x));
         y = copy(y);

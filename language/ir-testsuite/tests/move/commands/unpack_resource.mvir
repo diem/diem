@@ -1,6 +1,6 @@
 module Test {
-    resource X { b: bool }
-    resource T { i: u64, x: Self.X, b: bool }
+    struct X { b: bool }
+    struct T { i: u64, x: Self.X, b: bool }
 
     public new_x(): Self.X {
         return X { b: true };

@@ -1,7 +1,7 @@
 // check: Missing struct definition for Token
 
 module Token {
-    resource T { b: bool }
+    struct T has key { b: bool }
     public new(): Self.T {
         return T{ b: true };
     }

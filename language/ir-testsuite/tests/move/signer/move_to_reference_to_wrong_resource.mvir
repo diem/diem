@@ -1,6 +1,6 @@
 module M {
-    resource R { f: bool }
-    resource X { f: bool }
+    struct R has key, store { f: bool }
+    struct X has key, store { f: bool }
     t0(s: &signer) {
         (copy(s));
         (X { f: false });
@@ -13,8 +13,8 @@ module M {
 //! new-transaction
 
 module N {
-    resource R<T> { f: T }
-    resource X<T> { f: T }
+    struct R<T> has key, store { f: T }
+    struct X<T> has key, store { f: T }
     t0(s: &signer) {
         move_to<X<bool>>(copy(s), R<bool> { f: false });
         return;

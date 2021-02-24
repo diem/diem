@@ -1,7 +1,7 @@
 module A {
 import 0x1.XUS;
     import 0x1.Diem;
-    resource A { c: Diem.Diem<XUS.XUS> }
+    struct A { c: Diem.Diem<XUS.XUS> }
     public new(c: Diem.Diem<XUS.XUS>): Self.A {
         return A { c: move(c) };
     }

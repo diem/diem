@@ -1,7 +1,7 @@
 module A {
     import 0x1.Signer;
-    resource T1{v: u64}
-    resource T2{v: u64}
+    struct T1 has key {v: u64}
+    struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
         return &mut move(x).v;
     }
@@ -32,8 +32,8 @@ module A {
 //! new-transaction
 module A2 {
     import 0x1.Signer;
-    resource T1{v: u64}
-    resource T2{v: u64}
+    struct T1 has key {v: u64}
+    struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
         return &mut move(x).v;
     }
@@ -64,8 +64,8 @@ module A2 {
 //! new-transaction
 module A3 {
     import 0x1.Signer;
-    resource T1{v: u64}
-    resource T2{v: u64}
+    struct T1 has key {v: u64}
+    struct T2 has key {v: u64}
     get_v(x: &mut Self.T1): &mut u64 {
         return &mut move(x).v;
     }

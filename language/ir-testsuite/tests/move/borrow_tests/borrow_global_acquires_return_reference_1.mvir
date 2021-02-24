@@ -1,6 +1,6 @@
 module A {
     import 0x1.Signer;
-    resource T1{v: u64}
+    struct T1 has key {v: u64}
 
     public test1(account: &signer, x: &mut Self.T1) acquires T1 {
         let y: &mut u64;

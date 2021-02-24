@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use codespan::{ByteIndex, Span};
-use std::{fmt, str::FromStr};
+use std::{collections::BTreeSet, fmt, str::FromStr};
 
 use crate::lexer::*;
 use diem_types::account_address::AccountAddress;
@@ -119,6 +119,24 @@ where
         }
     }
     Ok(v)
+}
+
+fn parse_list<C, F, R>(
+    tokens: &mut Lexer<'_>,
+    mut parse_list_continue: C,
+    parse_list_item: F,
+) -> Result<Vec<R>, ParseError<Loc, anyhow::Error>>
+where
+    C: FnMut(&mut Lexer<'_>) -> Result<bool, ParseError<Loc, anyhow::Error>>,
+    F: Fn(&mut Lexer<'_>) -> Result<R, ParseError<Loc, anyhow::Error>>,
+{
+    let mut v = vec![];
+    loop {
+        v.push(parse_list_item(tokens)?);
+        if !parse_list_continue(tokens)? {
+            break Ok(v);
+        }
+    }
 }
 
 fn parse_name(tokens: &mut Lexer<'_>) -> Result<String, ParseError<Loc, anyhow::Error>> {
@@ -1089,23 +1107,33 @@ fn parse_function_block_(
     Ok((locals, Block_::new(stmts)))
 }
 
-// Kind: Kind = {
-//     "resource" => Kind::Resource,
-//     "copyable" => Kind::Copyable,
-// }
+fn token_to_ability(token: Tok, contents: &str) -> Option<Ability> {
+    match (token, contents) {
+        (Tok::Copy, _) => Some(Ability::Copy),
+        (Tok::NameValue, Ability::DROP) => Some(Ability::Drop),
+        (Tok::NameValue, Ability::STORE) => Some(Ability::Store),
+        (Tok::NameValue, Ability::KEY) => Some(Ability::Key),
+        _ => None,
+    }
+}
 
-fn parse_kind(tokens: &mut Lexer<'_>) -> Result<Kind, ParseError<Loc, anyhow::Error>> {
-    let k = match tokens.peek() {
-        Tok::Resource => Kind::Resource,
-        Tok::Copyable => Kind::Copyable,
-        _ => {
+// Ability: Ability = {
+//     "copy" => Ability::Copy,
+//     "drop" => Ability::Drop,
+//     "store" => Ability::Store,
+//     "key" => Ability::Key,
+// }
+fn parse_ability(tokens: &mut Lexer<'_>) -> Result<Ability, ParseError<Loc, anyhow::Error>> {
+    let a = match token_to_ability(tokens.peek(), tokens.content()) {
+        Some(a) => a,
+        None => {
             return Err(ParseError::InvalidToken {
                 location: current_token_loc(tokens),
             })
         }
     };
     tokens.advance()?;
-    Ok(k)
+    Ok(a)
 }
 
 // Type: Type = {
@@ -1190,19 +1218,39 @@ fn parse_type_var(tokens: &mut Lexer<'_>) -> Result<TypeVar, ParseError<Loc, any
 }
 
 // TypeFormal: (TypeVar_, Kind) = {
-//     <type_var: Sp<TypeVar>> <k: (":" <Kind>)?> =>? {
+//     <type_var: Sp<TypeVar>> <k: (":" <Ability> ("+" <Ability>)*)?> =>? {
 // }
 
 fn parse_type_parameter(
     tokens: &mut Lexer<'_>,
-) -> Result<(TypeVar, Kind), ParseError<Loc, anyhow::Error>> {
+) -> Result<(TypeVar, BTreeSet<Ability>), ParseError<Loc, anyhow::Error>> {
     let type_var = parse_type_var(tokens)?;
     if tokens.peek() == Tok::Colon {
         tokens.advance()?; // consume the ":"
-        let k = parse_kind(tokens)?;
-        Ok((type_var, k))
+        let abilities = parse_list(
+            tokens,
+            |tokens| {
+                if tokens.peek() == Tok::Plus {
+                    tokens.advance()?;
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            },
+            parse_ability,
+        )?;
+        let mut ability_set = BTreeSet::new();
+        for ability in abilities {
+            let was_new_element = ability_set.insert(ability);
+            if !was_new_element {
+                return Err(ParseError::User {
+                    error: anyhow!("Duplicate ability '{}'", ability),
+                });
+            }
+        }
+        Ok((type_var, ability_set))
     } else {
-        Ok((type_var, Kind::All))
+        Ok((type_var, BTreeSet::new()))
     }
 }
 
@@ -1229,7 +1277,7 @@ fn parse_type_actuals(tokens: &mut Lexer<'_>) -> Result<Vec<Type>, ParseError<Lo
 
 fn parse_name_and_type_parameters(
     tokens: &mut Lexer<'_>,
-) -> Result<(String, Vec<(TypeVar, Kind)>), ParseError<Loc, anyhow::Error>> {
+) -> Result<(String, Vec<(TypeVar, BTreeSet<Ability>)>), ParseError<Loc, anyhow::Error>> {
     let mut has_types = false;
     let n = if tokens.peek() == Tok::NameBeginTyValue {
         has_types = true;
@@ -1822,17 +1870,13 @@ fn parse_script(tokens: &mut Lexer<'_>) -> Result<Script, ParseError<Loc, anyhow
     Ok(Script::new(imports, vec![], vec![], main))
 }
 
-// StructKind: bool = {
-//     "struct" => false,
-//     "resource" => true
-// }
 // StructDecl: StructDefinition_ = {
-//     <is_nominal_resource: StructKind> <name_and_type_parameters:
-//     NameAndTypeFormals> "{" <data: Comma<FieldDecl>> "}" =>? { ... }
-//     <native: NativeTag> <is_nominal_resource: StructKind>
-//     <name_and_type_parameters: NameAndTypeFormals> ";" =>? { ... }
+//     "struct" <name_and_type_parameters:
+//     NameAndTypeFormals> ("has" <Ability> ("," <Ability)*)? "{" <data: Comma<FieldDecl>> "}"
+//     =>? { ... }
+//     <native: NativeTag> <name_and_type_parameters: NameAndTypeFormals>
+//     ("has" <Ability> ("," <Ability)*)?";" =>? { ... }
 // }
-
 fn parse_struct_decl(
     tokens: &mut Lexer<'_>,
 ) -> Result<StructDefinition, ParseError<Loc, anyhow::Error>> {
@@ -1845,18 +1889,23 @@ fn parse_struct_decl(
         false
     };
 
-    let is_nominal_resource = match tokens.peek() {
-        Tok::Struct => false,
-        Tok::Resource => true,
-        _ => {
-            return Err(ParseError::InvalidToken {
-                location: current_token_loc(tokens),
-            })
-        }
-    };
-    tokens.advance()?;
-
+    consume_token(tokens, Tok::Struct)?;
     let (name, type_parameters) = parse_name_and_type_parameters(tokens)?;
+
+    let mut abilities = BTreeSet::new();
+    if tokens.peek() == Tok::NameValue && tokens.content() == "has" {
+        tokens.advance()?;
+        let abilities_vec =
+            parse_comma_list(tokens, &[Tok::LBrace, Tok::Semicolon], parse_ability, false)?;
+        for ability in abilities_vec {
+            let was_new_element = abilities.insert(ability);
+            if !was_new_element {
+                return Err(ParseError::User {
+                    error: anyhow!("Duplicate ability '{}'", ability),
+                });
+            }
+        }
+    }
 
     if is_native {
         consume_token(tokens, Tok::Semicolon)?;
@@ -1865,7 +1914,7 @@ fn parse_struct_decl(
             tokens.file_name(),
             start_loc,
             end_loc,
-            StructDefinition_::native(is_nominal_resource, name, type_parameters)?,
+            StructDefinition_::native(abilities, name, type_parameters)?,
         ));
     }
 
@@ -1887,13 +1936,7 @@ fn parse_struct_decl(
         tokens.file_name(),
         start_loc,
         end_loc,
-        StructDefinition_::move_declared(
-            is_nominal_resource,
-            name,
-            type_parameters,
-            fields,
-            invariants,
-        )?,
+        StructDefinition_::move_declared(abilities, name, type_parameters, fields, invariants)?,
     ))
 }
 
@@ -1993,11 +2036,8 @@ fn parse_import_decl(
 // }
 
 fn is_struct_decl(tokens: &mut Lexer<'_>) -> Result<bool, ParseError<Loc, anyhow::Error>> {
-    let mut t = tokens.peek();
-    if t == Tok::Native {
-        t = tokens.lookahead()?;
-    }
-    Ok(t == Tok::Struct || t == Tok::Resource)
+    let t = tokens.peek();
+    Ok(t == Tok::Struct || (t == Tok::Native && tokens.lookahead()? == Tok::Struct))
 }
 
 fn parse_module(

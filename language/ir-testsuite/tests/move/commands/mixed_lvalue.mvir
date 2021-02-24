@@ -36,6 +36,8 @@ module A {
         assert(*move(r_ref) == 1, 42);
         assert(*&(&s).f == 2, 42);
 
+        S { f: r } = move(s);
+
         return;
     }
 }

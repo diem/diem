@@ -1,4 +1,4 @@
-main<T: copyable>(x: T) {
+main<T: copy + drop>(x: T) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE
@@ -12,7 +12,7 @@ main<T>(x: &T) {
 
 
 //! new-transaction
-main<T: copyable>(v: vector<T>) {
+main<T: copy + drop>(v: vector<T>) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE
@@ -20,7 +20,7 @@ main<T: copyable>(v: vector<T>) {
 
 //! new-transaction
 module M {
-    struct Box<T> { x: T }
+    struct Box<T> has drop { x: T }
 }
 // check: "Keep(EXECUTED)"
 
@@ -28,7 +28,7 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main<T: copyable>(x: M.Box<M.Box<T>>) {
+main<T: copy + drop>(x: M.Box<M.Box<T>>) {
     return;
 }
 // check: INVALID_MAIN_FUNCTION_SIGNATURE

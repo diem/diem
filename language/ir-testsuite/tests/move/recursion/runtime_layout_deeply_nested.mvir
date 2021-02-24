@@ -1,14 +1,14 @@
 module M {
     import 0x1.Signer;
 
-    resource Box<T> { x: T }
-    resource Box3<T> { x: Self.Box<Self.Box<T>> }
-    resource Box7<T> { x: Self.Box3<Self.Box3<T>> }
-    resource Box15<T> { x: Self.Box7<Self.Box7<T>> }
-    resource Box31<T> { x: Self.Box15<Self.Box15<T>> }
-    resource Box63<T> { x: Self.Box31<Self.Box31<T>> }
-    resource Box127<T> { x: Self.Box63<Self.Box63<T>> }
-    resource Box255<T> { x: Self.Box127<Self.Box127<T>> }
+    struct Box<T> has key, store { x: T }
+    struct Box3<T> has store { x: Self.Box<Self.Box<T>> }
+    struct Box7<T> has store { x: Self.Box3<Self.Box3<T>> }
+    struct Box15<T> has store { x: Self.Box7<Self.Box7<T>> }
+    struct Box31<T> has store { x: Self.Box15<Self.Box15<T>> }
+    struct Box63<T> has store { x: Self.Box31<Self.Box31<T>> }
+    struct Box127<T> has key, store { x: Self.Box63<Self.Box63<T>> }
+    struct Box255<T> has key, store { x: Self.Box127<Self.Box127<T>> }
 
     public box3<T>(x: T): Self.Box3<T> {
         return Box3<T> { x: Box<Self.Box<T>> { x: Box<T> { x: move(x) } } };

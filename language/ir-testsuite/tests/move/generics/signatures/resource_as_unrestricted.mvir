@@ -1,6 +1,6 @@
 module M {
-    struct S<T: copyable> { b: bool }
-    resource R { b: bool }
+    struct S<T: copy + drop> { b: bool }
+    struct R { b: bool }
 
     foo() {
         let x: Self.S<Self.R>;

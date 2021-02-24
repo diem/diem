@@ -1,5 +1,5 @@
 module M {
-    struct Foo<T: copyable> { x: T }
+    struct Foo<T: copy + drop> { x: T }
 
     f(): u64 acquires Foo {
         let foo_ref: &mut Self.Foo<u64>;

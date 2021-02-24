@@ -1,6 +1,6 @@
 module M {
-    struct G { v: u64 }
-    struct S { g: Self.G }
+    struct G has drop { v: u64 }
+    struct S has drop { g: Self.G }
 
     t1(root: &mut Self.S, cond: bool) {
         let v_mut: &mut u64;

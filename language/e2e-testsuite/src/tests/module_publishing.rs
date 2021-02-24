@@ -117,13 +117,13 @@ module_republish_test!(
     duplicate_module,
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
         public f() { return; }
     }
     ",
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
         public f() { return; }
     }
     ",
@@ -139,7 +139,7 @@ module_republish_test!(
     ",
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
     }
     ",
     Executed
@@ -165,12 +165,12 @@ module_republish_test!(
     layout_incompatible_module_with_new_field,
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
     }
     ",
     "
     module M {
-        resource T { f: u64, g: bool }
+        struct T { f: u64, g: bool }
     }
     ",
     MiscellaneousError
@@ -180,12 +180,12 @@ module_republish_test!(
     layout_incompatible_module_with_changed_field,
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
     }
     ",
     "
     module M {
-        resource T { f: bool }
+        struct T { f: bool }
     }
     ",
     MiscellaneousError
@@ -195,12 +195,12 @@ module_republish_test!(
     layout_incompatible_module_with_removed_field,
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
     }
     ",
     "
     module M {
-        resource T {}
+        struct T {}
     }
     ",
     MiscellaneousError
@@ -210,7 +210,7 @@ module_republish_test!(
     layout_incompatible_module_with_removed_struct,
     "
     module M {
-        resource T { f: u64 }
+        struct T { f: u64 }
     }
     ",
     "

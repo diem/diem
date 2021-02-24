@@ -1,5 +1,5 @@
 module A {
-    struct T {value: u64, even: bool}
+    struct T has drop {value: u64, even: bool}
 
     public new(): Self.T {
         return T {value: 0, even: true};

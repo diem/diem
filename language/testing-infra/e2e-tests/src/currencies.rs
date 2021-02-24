@@ -43,7 +43,7 @@ pub fn add_currency_to_system(
             module {} {{
                 import 0x1.Diem;
                 import 0x1.FixedPoint32;
-                resource {currency_code} {{ x: bool }}
+                struct {currency_code} has store {{ x: bool }}
                 public init(dr_account: &signer, tc_account: &signer) {{
                     Diem.register_SCS_currency<Self.{currency_code}>(
                         move(dr_account),

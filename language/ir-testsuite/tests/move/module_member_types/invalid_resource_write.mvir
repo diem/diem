@@ -1,7 +1,7 @@
 module RTest {
 import 0x1.XUS;
     import 0x1.Diem;
-    resource T{fr: Diem.Diem<XUS.XUS>}
+    struct T{fr: Diem.Diem<XUS.XUS>}
 
     public new(y: Diem.Diem<XUS.XUS>): Self.T {
         return T{fr: move(y)};

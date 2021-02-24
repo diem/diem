@@ -1,6 +1,6 @@
 module M {
-    struct X { v: u64 }
-    struct S<T> { f: T }
+    struct X has drop { v: u64 }
+    struct S<T> has drop { f: T }
     t(s: Self.S<Self.X>): u64 {
         return *(&(&(&s).f).v);
     }

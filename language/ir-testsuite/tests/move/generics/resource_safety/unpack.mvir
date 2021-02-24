@@ -1,5 +1,5 @@
 module M {
-    resource Foo<T> { x: T }
+    struct Foo<T> { x: T }
 
     baz<T>(x: Self.Foo<T>) {
         let y: T;

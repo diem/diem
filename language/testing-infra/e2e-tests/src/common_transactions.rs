@@ -18,7 +18,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     import 0x1.Diem;
     import 0x1.DiemAccount;
 
-    main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
+    main<Token: store>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
       let with_cap: DiemAccount.WithdrawCapability;
       let name: vector<u8>;
       name = h\"\";

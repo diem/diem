@@ -1,10 +1,10 @@
 module Tester {
     import 0x1.Signer;
 
-    resource Initializer { x: u64, y: u64 }
+    struct Initializer has key { x: u64, y: u64 }
     struct Point { x: u64, y: u64 }
 
-    // the resource is here to just give a feeling why the computation might not be reorderable
+    // the key struct is here to just give a feeling why the computation might not be reorderable
     set_and_pick(account: &signer, p: &mut Self.Point): &mut u64 acquires Initializer {
         let sender: address;
         let init: &mut Self.Initializer;

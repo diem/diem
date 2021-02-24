@@ -1,6 +1,6 @@
 module M {
     native struct T;
-    native resource T2;
+    native struct T2;
 }
 // check: MISSING_DEPENDENCY
 
@@ -12,6 +12,6 @@ module M2 {
 
 //! new-transaction
 module M3 {
-    native resource T2;
+    native struct T2;
 }
 // check: MISSING_DEPENDENCY

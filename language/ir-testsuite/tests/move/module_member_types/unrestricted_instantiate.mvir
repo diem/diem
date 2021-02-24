@@ -1,5 +1,5 @@
 module Test {
-    struct T{fint: u64, fv: bool}
+    struct T has drop {fint: u64, fv: bool}
 
     public t1(fint: u64, fv: bool): Self.T {
         return T{fint: move(fint), fv: move(fv)};

@@ -1,6 +1,6 @@
 module A {
-    resource Coin { balance: u64 }
-    resource A { c: Self.Coin }
+    struct Coin { balance: u64 }
+    struct A { c: Self.Coin }
 
     public zero(): Self.Coin {
         return Coin { balance: 0 };

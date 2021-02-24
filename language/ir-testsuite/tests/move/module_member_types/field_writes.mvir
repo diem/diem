@@ -1,5 +1,5 @@
 module VTest {
-    struct T{fint: u64, fv: bool}
+    struct T has drop {fint: u64, fv: bool}
 
     public new(x: u64, y: bool): Self.T {
         return T{fint: move(x), fv: move(y)};
@@ -37,7 +37,7 @@ module VTest {
 //! new-transaction
 
 module RTest {
-    resource T{fint: u64, fr: bool}
+    struct T{fint: u64, fr: bool}
 
     public new(x: u64, y: bool): Self.T {
         return T{fint: move(x), fr: move(y)};

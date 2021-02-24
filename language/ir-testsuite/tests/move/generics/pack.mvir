@@ -1,5 +1,5 @@
 module M {
-    resource Foo<T> { x: T }
+    struct Foo<T> { x: T }
 
     foo() {
         let x: Self.Foo<u64>;
@@ -11,8 +11,8 @@ module M {
 //! new-transaction
 
 module N {
-    resource Foo<T1, T2: resource> { x: T1, y: T2 }
-    resource Bar { f: bool }
+    struct Foo<T1, T2: key> { x: T1, y: T2 }
+    struct Bar has key { f: bool }
 
     foo() {
         let x: Self.Foo<u64, Self.Bar>;

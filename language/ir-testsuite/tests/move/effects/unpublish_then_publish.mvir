@@ -1,7 +1,7 @@
 module M {
     import 0x1.Signer;
 
-    resource R { x: bool }
+    struct R has key { x: bool }
 
     public init(s: &signer) {
         move_to<R>(move(s), R { x: false });

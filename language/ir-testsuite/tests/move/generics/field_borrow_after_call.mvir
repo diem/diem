@@ -1,5 +1,5 @@
 module M {
-    struct X { v: u64 }
+    struct X has drop { v: u64 }
     id<T>(x: &T): &T {
         return move(x);
     }

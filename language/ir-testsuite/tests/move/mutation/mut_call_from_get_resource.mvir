@@ -1,7 +1,7 @@
 module Token {
     import 0x1.Signer;
 
-    resource T {balance: u64}
+    struct T has key {balance: u64}
 
     public new(balance: u64): Self.T  {
         return T{balance: copy(balance)};

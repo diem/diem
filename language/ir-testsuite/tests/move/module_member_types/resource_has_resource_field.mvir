@@ -1,5 +1,5 @@
 module Test {
     import 0x1.XUS;
     import 0x1.Diem;
-    resource T{fint: Diem.Diem<XUS.XUS>}
+    struct T{fint: Diem.Diem<XUS.XUS>}
 }

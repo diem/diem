@@ -1,9 +1,9 @@
 module M {
     import 0x1.Signer;
 
-    resource Box<T> { _dummy: bool }
+    struct Box<T> has key { _dummy: bool }
 
-    public type_eq<T1, T2>(account: &signer): bool acquires Box {
+    public type_eq<T1: store, T2: store>(account: &signer): bool acquires Box {
         let sender: address;
         let r: bool;
         let b: bool;
@@ -20,7 +20,7 @@ module M {
 //! type-args: u64
 import {{default}}.M;
 
-main<T>(account: &signer) {
+main<T: store>(account: &signer) {
     assert(M.type_eq<T, u64>(copy(account)), 100);
     assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
@@ -33,7 +33,7 @@ main<T>(account: &signer) {
 import {{default}}.M;
 import 0x1.DiemAccount;
 
-main<T>(account: &signer) {
+main<T: store>(account: &signer) {
     assert(M.type_eq<T, DiemAccount.DiemAccount>(copy(account)), 100);
     assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
@@ -46,7 +46,7 @@ main<T>(account: &signer) {
 import {{default}}.M;
 import 0x1.DiemAccount;
 
-main<T>(account: &signer) {
+main<T: store>(account: &signer) {
     assert(M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u64>>>>(copy(account)), 100);
     assert(!M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u8>>>>(copy(account)), 101);
     return;

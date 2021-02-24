@@ -1,5 +1,5 @@
 //! type-args: bool
-main<T: resource>() {
+main<T: key>() {
     return;
 }
 // check: CONSTRAINT_NOT_SATISFIED

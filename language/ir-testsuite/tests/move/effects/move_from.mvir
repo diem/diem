@@ -1,5 +1,5 @@
 module M {
-    resource R { x: bool }
+    struct R has key { x: bool }
 
     public publish(s: &signer) {
         move_to<R>(move(s), R { x: false });

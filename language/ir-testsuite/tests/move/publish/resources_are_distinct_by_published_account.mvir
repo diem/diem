@@ -2,7 +2,7 @@ module DiemAccount {
     import 0x1.DiemAccount;
     import 0x1.Signer;
 
-    resource T{sequence_number: u64}
+    struct T has key {sequence_number: u64}
 
     public new(m: u64): Self.T {
         return T{sequence_number: move(m)};

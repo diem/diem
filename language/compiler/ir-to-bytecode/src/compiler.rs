@@ -18,7 +18,7 @@ use std::{
     clone::Clone,
     collections::{
         hash_map::Entry::{Occupied, Vacant},
-        HashMap, VecDeque,
+        BTreeSet, HashMap, VecDeque,
     },
 };
 use vm::{
@@ -514,12 +514,13 @@ pub fn compile_module<'a>(
 
     // Explicitly declare all structs as they will be included even if not used
     for s in &module.structs {
+        let abilities = abilities(&s.value.abilities);
         let ident = QualifiedStructIdent {
             module: self_name.clone(),
             name: s.value.name.clone(),
         };
-        let kinds = type_parameter_kinds(&s.value.type_formals, true);
-        context.declare_struct_handle_index(ident, s.value.is_nominal_resource, kinds)?;
+        let type_parameters = type_parameter_kinds(&s.value.type_formals);
+        context.declare_struct_handle_index(ident, abilities, type_parameters)?;
     }
 
     for ir_constant in module.constants {
@@ -602,13 +603,14 @@ fn compile_explicit_dependency_declarations(
         let self_module_handle_idx = context.module_handle_index(&mname)?;
         for struct_dep in structs {
             let StructDependency {
-                is_nominal_resource,
+                abilities: abs,
                 name,
                 type_formals: tys,
             } = struct_dep;
             let sname = QualifiedStructIdent::new(mname.clone(), name);
-            let kinds = type_parameter_kinds(&tys, true);
-            context.declare_struct_handle_index(sname, is_nominal_resource, kinds)?;
+            let ability_set = abilities(&abs);
+            let kinds = type_parameter_kinds(&tys);
+            context.declare_struct_handle_index(sname, ability_set, kinds)?;
         }
         for function_dep in functions {
             let FunctionDependency { name, signature } = function_dep;
@@ -709,7 +711,7 @@ fn compile_imports(
 }
 
 fn type_parameter_indexes(
-    ast_tys: &[(TypeVar, ast::Kind)],
+    ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)],
 ) -> Result<HashMap<TypeVar_, TypeParameterIndex>> {
     let mut m = HashMap::new();
     for (idx, (ty_var, _)) in ast_tys.iter().enumerate() {
@@ -737,26 +739,23 @@ fn make_type_argument_subst(
     Ok(subst)
 }
 
-fn type_parameter_kinds(
-    ast_tys: &[(TypeVar, ast::Kind)],
-    struct_type_parameters: bool,
-) -> Vec<AbilitySet> {
-    ast_tys
-        .iter()
-        .map(|(_, k)| kind(k, struct_type_parameters))
-        .collect()
+fn type_parameter_kinds(ast_tys: &[(TypeVar, BTreeSet<ast::Ability>)]) -> Vec<AbilitySet> {
+    ast_tys.iter().map(|(_, abs)| abilities(abs)).collect()
 }
 
-fn kind(ast_k: &ast::Kind, struct_type_parameters: bool) -> AbilitySet {
-    let set = match ast_k {
-        ast::Kind::All => AbilitySet::EMPTY,
-        ast::Kind::Resource => AbilitySet::EMPTY | Ability::Key,
-        ast::Kind::Copyable => AbilitySet::EMPTY | Ability::Copy | Ability::Drop,
-    };
-    if !struct_type_parameters {
-        set | Ability::Store
-    } else {
-        set
+fn abilities(abilities: &BTreeSet<ast::Ability>) -> AbilitySet {
+    abilities
+        .iter()
+        .map(|a| ability(a))
+        .fold(AbilitySet::EMPTY, |acc, a| acc | a)
+}
+
+fn ability(ab: &ast::Ability) -> Ability {
+    match ab {
+        ast::Ability::Copy => Ability::Copy,
+        ast::Ability::Drop => Ability::Drop,
+        ast::Ability::Store => Ability::Store,
+        ast::Ability::Key => Ability::Key,
     }
 }
 
@@ -826,7 +825,11 @@ fn function_signature(
         .iter()
         .map(|(_, ty)| compile_type(context, &m, ty))
         .collect::<Result<_>>()?;
-    let type_parameters = f.type_formals.iter().map(|(_, k)| kind(k, false)).collect();
+    let type_parameters = f
+        .type_formals
+        .iter()
+        .map(|(_, abs)| abilities(abs))
+        .collect();
     Ok(vm::file_format::FunctionSignature {
         return_,
         parameters,

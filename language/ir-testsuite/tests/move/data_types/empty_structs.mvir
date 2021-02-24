@@ -1,7 +1,7 @@
 module Test {
   struct NonEmpty1 { f1: u64, f2: bool }
 
-  resource NonEmpty2 { f1: bool, f2: u64 }
+  struct NonEmpty2 { f1: bool, f2: u64 }
 }
 
 // check: "Keep(EXECUTED)"
@@ -17,7 +17,7 @@ module EmptyStruct {
 
 //! new-transaction
 module EmptyResource {
-  resource Empty { }
+  struct Empty { }
 }
 
 // check: VerificationError

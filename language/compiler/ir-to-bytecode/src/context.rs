@@ -16,13 +16,12 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Ability, AbilitySet, AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex,
-        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
-        FunctionInstantiationIndex, FunctionSignature, IdentifierIndex, ModuleHandle,
-        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
-        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex,
+        AbilitySet, AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
+        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
+        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
+        FunctionSignature, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
+        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
+        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
     },
     CompiledModule,
 };
@@ -597,14 +596,9 @@ impl<'a> Context<'a> {
     pub fn declare_struct_handle_index(
         &mut self,
         sname: QualifiedStructIdent,
-        is_nominal_resource: bool,
+        abilities: AbilitySet,
         type_parameters: Vec<AbilitySet>,
     ) -> Result<StructHandleIndex> {
-        let abilities = if is_nominal_resource {
-            AbilitySet::EMPTY | Ability::Key | Ability::Store
-        } else {
-            AbilitySet::EMPTY | Ability::Copy | Ability::Drop | Ability::Store
-        };
         self.declare_struct_handle_index_with_abilities(sname, abilities, type_parameters)
     }
 

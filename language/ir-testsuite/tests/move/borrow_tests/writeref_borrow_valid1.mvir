@@ -1,5 +1,5 @@
 module M {
-    struct G { v1: u64, v2: u64 }
+    struct G has drop { v1: u64, v2: u64 }
     struct S { g1: Self.G, g2: Self.G }
 
     t1(root: &mut Self.S, cond: bool) {

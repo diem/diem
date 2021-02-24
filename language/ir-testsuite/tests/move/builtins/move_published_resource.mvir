@@ -1,7 +1,7 @@
 module TestMoveFrom {
     import 0x1.Signer;
 
-    resource Counter { i: u64 }
+    struct Counter has key { i: u64 }
 
     public has(account: &signer): bool {
       let sender_address: address;

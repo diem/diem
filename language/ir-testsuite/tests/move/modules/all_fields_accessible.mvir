@@ -1,6 +1,6 @@
 module M {
-    resource A{x: u64}
-    struct B{y: u64}
+    struct A{x: u64}
+    struct B has drop {y: u64}
 
     public a(x: u64): Self.A {
         return A{x: move(x)};

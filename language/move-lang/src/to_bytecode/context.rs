@@ -12,6 +12,7 @@ use std::{
     clone::Clone,
     collections::{BTreeMap, BTreeSet, HashMap},
 };
+use IR::Ability;
 
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the dependencies actually used in the module
@@ -58,7 +59,10 @@ impl<'a> Context<'a> {
         dependency_orderings: &HashMap<ModuleIdent, usize>,
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+            (
+                BTreeSet<IR::Ability>,
+                Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>,
+            ),
         >,
         function_declarations: &HashMap<
             (ModuleIdent, FunctionName),
@@ -133,7 +137,7 @@ impl<'a> Context<'a> {
     fn struct_dependencies(
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+            (BTreeSet<Ability>, Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>),
         >,
         module_dependencies: &mut BTreeMap<
             ModuleIdent,
@@ -150,17 +154,17 @@ impl<'a> Context<'a> {
     fn struct_dependency(
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
-            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+            (BTreeSet<Ability>, Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>),
         >,
         module: &ModuleIdent,
         sname: StructName,
     ) -> IR::StructDependency {
         let key = (module.clone(), sname.clone());
-        let (is_nominal_resource, type_formals) = struct_declarations.get(&key).unwrap().clone();
+        let (abilities, type_formals) = struct_declarations.get(&key).unwrap().clone();
         let name = Self::translate_struct_name(sname);
         IR::StructDependency {
             name,
-            is_nominal_resource,
+            abilities,
             type_formals,
         }
     }

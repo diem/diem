@@ -4,7 +4,7 @@ module Test {
 import 0x1.XUS;
     import 0x1.Diem;
 
-    struct T{
+    struct T has copy, drop {
         fc: Diem.Diem<XUS.XUS>,
         fint: u64,
     }

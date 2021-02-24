@@ -764,8 +764,8 @@ pub fn test_open_publishing() {
 fn bad_module() -> (CompiledModule, Vec<u8>) {
     let bad_module_code = "
     module Test {
-        resource R1 { b: bool }
-        struct S1 { r1: Self.R1 }
+        struct R1 { b: bool }
+        struct S1 has copy, drop { r1: Self.R1 }
 
         public new_S1(): Self.S1 {
             let s: Self.S1;
@@ -1182,7 +1182,7 @@ pub fn publish_and_register_new_currency() {
         module COIN {
             import 0x1.FixedPoint32;
             import 0x1.Diem;
-            struct COIN { x: bool }
+            struct COIN has store { x: bool }
             public initialize(dr_account: &signer, tc_account: &signer) {
                 Diem.register_SCS_currency<Self.COIN>(
                     move(dr_account),

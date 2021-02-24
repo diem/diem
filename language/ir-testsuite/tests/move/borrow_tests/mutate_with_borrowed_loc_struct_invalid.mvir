@@ -1,5 +1,5 @@
 module M {
-    resource X { b: bool }
+    struct X { b: bool }
     struct S { z: u64 }
     t1() {
         let x: Self.X;
@@ -17,7 +17,7 @@ module M {
 
 //! new-transaction
 module N {
-    resource X { b: bool }
+    struct X { b: bool }
     struct S { z: u64 }
     t2() {
         let s: Self.S;

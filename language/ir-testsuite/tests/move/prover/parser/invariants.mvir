@@ -6,19 +6,19 @@ module TestInvariants {
 
   synthetic all_values: u128;
 
-  resource SingleInvariant {
+  struct SingleInvariant {
     i: u64,
     invariant i > 0
   }
 
-  resource TwoInvariants {
+  struct TwoInvariants {
     i: u64,
     j: u64,
     invariant i > 0,
     invariant j > i
   }
 
-  resource InvariantWithModifier {
+  struct InvariantWithModifier {
     i: u64,
     invariant {update} old(i) < i && all_values == old(old_values) - old(i) + i,
     invariant {unpack} all_values == old(old_values) - old(i),

@@ -1,6 +1,6 @@
 module A {
     import 0x1.Signer;
-    resource T{v: u64}
+    struct T has key {v: u64}
 
     public A0(account: &signer) acquires T {
         let sender: address;

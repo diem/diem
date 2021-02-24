@@ -1,5 +1,5 @@
 module M {
-    struct M { b: bool }
+    struct M has drop { b: bool }
     public new(): Self.M {
         return M{ b: true };
     }

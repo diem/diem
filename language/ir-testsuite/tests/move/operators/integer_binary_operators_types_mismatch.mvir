@@ -86,7 +86,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 + (R { x: true });
         return;
@@ -95,7 +95,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) + 0;
         return;
@@ -104,7 +104,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) + (R { x: true });
         return;
@@ -200,7 +200,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 - (R { x: true });
         return;
@@ -209,7 +209,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) - 0;
         return;
@@ -218,7 +218,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) - (R { x: true });
         return;
@@ -314,7 +314,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 * (R { x: true });
         return;
@@ -323,7 +323,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) * 0;
         return;
@@ -332,7 +332,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) * (R { x: true });
         return;
@@ -428,7 +428,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 / (R { x: true });
         return;
@@ -437,7 +437,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) / 0;
         return;
@@ -446,7 +446,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) / (R { x: true });
         return;
@@ -542,7 +542,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 & (R { x: true });
         return;
@@ -551,7 +551,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) & 0;
         return;
@@ -560,7 +560,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) & (R { x: true });
         return;
@@ -656,7 +656,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 | (R { x: true });
         return;
@@ -665,7 +665,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) | 0;
         return;
@@ -674,7 +674,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) | (R { x: true });
         return;
@@ -770,7 +770,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 ^ (R { x: true });
         return;
@@ -779,7 +779,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) ^ 0;
         return;
@@ -788,7 +788,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) ^ (R { x: true });
         return;
@@ -870,7 +870,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 == (R { x: true });
         return;
@@ -879,7 +879,7 @@ module M {
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) == 0;
         return;
@@ -961,7 +961,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 != (R { x: true });
         return;
@@ -970,7 +970,7 @@ module M {
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) != 0;
         return;
@@ -1322,7 +1322,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 << (R { x: true });
         return;
@@ -1331,7 +1331,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) << 0;
         return;
@@ -1340,7 +1340,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) << (R { x: true });
         return;
@@ -1408,7 +1408,7 @@ main() {
 
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     f() {
         _ = 0 >> (R { x: true });
         return;
@@ -1417,7 +1417,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     g() {
         _ = (R { x: true }) >> 0;
         return;
@@ -1426,7 +1426,7 @@ module M {
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 //! new-transaction
 module M {
-    resource R { x: bool }
+    struct R { x: bool }
     h() {
         _ = (R { x: true }) >> (R { x: true });
         return;

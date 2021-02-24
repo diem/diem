@@ -1,7 +1,7 @@
 // check: Invalid Token
 
 module Token {
-    resource T { b: bool }
+    struct T has key { b: bool }
     public new(): Self.T {
         return T{ b: true };
     }
@@ -14,9 +14,9 @@ import {{default}}.Token;
 
 main(account: &signer) {
     let sender: address;
-    let struct1: &mut Token.Token;
+    let struct1: &mut Token.T;
 
     sender = Signer.address_of(move(account));
-    struct1 = borrow_global_mut<Token.Token>(copy(sender));
+    struct1 = borrow_global_mut<Token.T>(copy(sender));
     return;
 }

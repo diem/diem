@@ -1,15 +1,15 @@
 module M {
     import 0x1.Signer;
 
-    resource R1 { f: bool }
-    resource R2<T> { f: T }
+    struct R1 has key { f: bool }
+    struct R2<T> has key { f: T }
 
     public store(sender: &signer, f: bool) {
         move_to<R1>(copy(sender), R1 { f: move(f) });
         return;
     }
 
-    public store_gen<T>(sender: &signer, t: T) {
+    public store_gen<T: store>(sender: &signer, t: T) {
         move_to<R2<T>>(copy(sender), R2<T> { f: move(t) });
         return;
     }
@@ -18,7 +18,7 @@ module M {
         return *&(borrow_global<R1>(Signer.address_of(move(s)))).f;
     }
 
-    public read_gen<T: copyable>(s: &signer): T acquires R2 {
+    public read_gen<T: copy + drop + store>(s: &signer): T acquires R2 {
         return *&(borrow_global<R2<T>>(Signer.address_of(move(s)))).f;
     }
 }

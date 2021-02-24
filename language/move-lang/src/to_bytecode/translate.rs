@@ -22,7 +22,10 @@ use bytecode_source_map::source_map::SourceMap;
 use diem_types::account_address::AccountAddress as DiemAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    iter::FromIterator,
+};
 
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
 type CollectedInfo = (
@@ -49,8 +52,13 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
             mdef.structs.key_cloned_iter().map(move |(s, sdef)| {
                 let key = (m.clone(), s);
                 let is_nominal_resource = sdef.resource_opt.is_some();
-                let kinds = type_parameters(sdef.type_parameters.clone());
-                (key, (is_nominal_resource, kinds))
+                let abilities = BTreeSet::from_iter(if is_nominal_resource {
+                    vec![IR::Ability::Key, IR::Ability::Store]
+                } else {
+                    vec![IR::Ability::Copy, IR::Ability::Drop, IR::Ability::Store]
+                });
+                let kinds = type_parameters(sdef.type_parameters.clone(), true);
+                (key, (abilities, kinds))
             })
         })
         .collect();
@@ -107,7 +115,13 @@ fn module(
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
-    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
+    struct_declarations: &HashMap<
+        (ModuleIdent, StructName),
+        (
+            BTreeSet<IR::Ability>,
+            Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>,
+        ),
+    >,
     function_declarations: &HashMap<
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
@@ -172,7 +186,13 @@ fn script(
     name: FunctionName,
     fdef: G::Function,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
-    struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
+    struct_declarations: &HashMap<
+        (ModuleIdent, StructName),
+        (
+            BTreeSet<IR::Ability>,
+            Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>,
+        ),
+    >,
     function_declarations: &HashMap<
         (ModuleIdent, FunctionName),
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
@@ -338,13 +358,18 @@ fn struct_def(
     let loc = s.loc();
     let name = context.struct_definition_name(m, s);
     let is_nominal_resource = resource_opt.is_some();
-    let type_formals = type_parameters(tys);
+    let abilities = BTreeSet::from_iter(if is_nominal_resource {
+        vec![IR::Ability::Key, IR::Ability::Store]
+    } else {
+        vec![IR::Ability::Copy, IR::Ability::Drop, IR::Ability::Store]
+    });
+    let type_formals = type_parameters(tys, true);
     let fields = struct_fields(context, loc, fields);
     sp(
         loc,
         IR::StructDefinition_ {
             name,
-            is_nominal_resource,
+            abilities,
             type_formals,
             fields,
             invariants: vec![],
@@ -464,7 +489,7 @@ fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> IR::F
         .into_iter()
         .map(|(v, st)| (var(v), single_type(context, st)))
         .collect();
-    let type_parameters = type_parameters(sig.type_parameters);
+    let type_parameters = type_parameters(sig.type_parameters, false);
     IR::FunctionSignature {
         return_type,
         formals,
@@ -609,19 +634,47 @@ fn struct_definition_name_base(
 // Types
 //**************************************************************************************************
 
-fn kind(sp!(_, k_): &Kind) -> IR::Kind {
+// fn kind(sp!(_, k_): &Kind) -> IR::Kind {
+//     use Kind_ as GK;
+//     use IR::Kind as IRK;
+//     match k_ {
+//         GK::Unknown => IRK::All,
+//         GK::Resource => IRK::Resource,
+//         GK::Affine | GK::Copyable => IRK::Copyable,
+//     }
+// }
+
+fn kind(sp!(_, k_): &Kind, struct_type_parameters: bool) -> BTreeSet<IR::Ability> {
     use Kind_ as GK;
-    use IR::Kind as IRK;
+    use IR::Ability as IRA;
+    let mut set = BTreeSet::new();
     match k_ {
-        GK::Unknown => IRK::All,
-        GK::Resource => IRK::Resource,
-        GK::Affine | GK::Copyable => IRK::Copyable,
+        GK::Unknown => (),
+        GK::Resource => {
+            set.insert(IRA::Key);
+        }
+        GK::Affine | GK::Copyable => {
+            set.insert(IRA::Drop);
+            set.insert(IRA::Copy);
+        }
+    };
+    if !struct_type_parameters {
+        set.insert(IRA::Store);
     }
+    set
 }
 
-fn type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, IR::Kind)> {
+fn type_parameters(
+    tps: Vec<TParam>,
+    struct_type_parameters: bool,
+) -> Vec<(IR::TypeVar, BTreeSet<IR::Ability>)> {
     tps.into_iter()
-        .map(|tp| (type_var(tp.user_specified_name), kind(&tp.kind)))
+        .map(|tp| {
+            (
+                type_var(tp.user_specified_name),
+                kind(&tp.kind, struct_type_parameters),
+            )
+        })
         .collect()
 }
 

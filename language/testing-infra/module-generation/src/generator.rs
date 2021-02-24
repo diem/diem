@@ -7,7 +7,10 @@ use diem_types::account_address::AccountAddress;
 use ir_to_bytecode::compiler::compile_module;
 use move_ir_types::{ast::*, location::*};
 use rand::{rngs::StdRng, Rng};
-use std::collections::{BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeSet, VecDeque},
+    iter::FromIterator,
+};
 use vm::file_format::CompiledModule;
 
 type Set<K> = BTreeSet<K>;
@@ -96,14 +99,14 @@ impl<'a> ModuleGenerator<'a> {
         random_string(&mut self.gen, len)
     }
 
-    fn base_type(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
+    fn base_type(&mut self, ty_param_context: &[(TypeVar, BTreeSet<Ability>)]) -> Type {
         // TODO: Don't generate nested resources for now. Once we allow functions to take resources
         // (and have type parameters of kind Resource or All) then we should revisit this here.
         let structs: Vec<_> = self
             .current_module
             .structs
             .iter()
-            .filter(|s| !s.value.is_nominal_resource)
+            .filter(|s| !s.value.abilities.contains(&Ability::Key))
             .cloned()
             .collect();
 
@@ -144,7 +147,7 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn typ(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
+    fn typ(&mut self, ty_param_context: &[(TypeVar, BTreeSet<Ability>)]) -> Type {
         let typ = self.base_type(ty_param_context);
         // TODO: Always change the base type to a reference if it's resource type. Then we can
         // allow functions to take resources.
@@ -157,17 +160,18 @@ impl<'a> ModuleGenerator<'a> {
         }
     }
 
-    fn type_parameters(&mut self) -> Vec<(TypeVar, Kind)> {
+    fn type_parameters(&mut self) -> Vec<(TypeVar, BTreeSet<Ability>)> {
         // Don't generate type parameters if we're generating simple types only
         if self.options.simple_types_only {
             vec![]
         } else {
             let num_ty_params = self.index(self.options.max_ty_params);
+            let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop]);
             init!(
                 num_ty_params,
                 (
                     Spanned::unsafe_no_loc(TypeVar_::new(self.identifier())),
-                    Kind::Copyable,
+                    abilities.clone(),
                 )
             )
         }
@@ -200,7 +204,10 @@ impl<'a> ModuleGenerator<'a> {
         FunctionSignature::new(formals, vec![], ty_params)
     }
 
-    fn struct_fields(&mut self, ty_params: &[(TypeVar, Kind)]) -> StructDefinitionFields {
+    fn struct_fields(
+        &mut self,
+        ty_params: &[(TypeVar, BTreeSet<Ability>)],
+    ) -> StructDefinitionFields {
         let num_fields = self
             .gen
             .gen_range(self.options.min_fields..self.options.max_fields);
@@ -243,12 +250,12 @@ impl<'a> ModuleGenerator<'a> {
             .push((fun_name, Spanned::unsafe_no_loc(fun)));
     }
 
-    fn struct_def(&mut self, is_nominal_resource: bool) {
+    fn struct_def(&mut self, abilities: BTreeSet<Ability>) {
         let name = StructName::new(self.identifier());
         let type_parameters = self.type_parameters();
         let fields = self.struct_fields(&type_parameters);
         let strct = StructDefinition_ {
-            is_nominal_resource,
+            abilities,
             name,
             type_formals: type_parameters,
             fields,
@@ -287,11 +294,15 @@ impl<'a> ModuleGenerator<'a> {
             self.function_def();
             self.options.simple_types_only = simple_types;
         }
-        (0..num_structs).for_each(|_| self.struct_def(false));
+        // TODO generate abilities
+        let abilities = BTreeSet::from_iter(vec![Ability::Copy, Ability::Drop, Ability::Store]);
+        (0..num_structs).for_each(|_| self.struct_def(abilities.clone()));
         // TODO/XXX: We can allow references to resources here
         (0..num_functions).for_each(|_| self.function_def());
         if self.options.add_resources {
-            (0..num_structs).for_each(|_| self.struct_def(true));
+            // TODO generate abilities
+            let abilities = BTreeSet::from_iter(vec![Ability::Key, Ability::Store]);
+            (0..num_structs).for_each(|_| self.struct_def(abilities.clone()));
         }
         self.current_module
     }

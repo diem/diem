@@ -1,5 +1,5 @@
 module B {
-    struct T{g: u64}
+    struct T has drop {g: u64}
 
     public new(g: u64): Self.T {
         return T{g: move(g)};
@@ -19,7 +19,7 @@ module B {
 
 module A {
     import {{default}}.B;
-    struct T{f: B.T}
+    struct T has drop {f: B.T}
 
     public new(f: B.T): Self.T {
         return T{f: move(f)};

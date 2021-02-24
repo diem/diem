@@ -1,5 +1,5 @@
 module M {
-    foo<T: resource>(x: T) {
+    foo<T: key>(x: T) {
         let y: T;
         y = copy(x);
         return;

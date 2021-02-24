@@ -1,7 +1,7 @@
 // Pack operands should be evaluated in declaration order, not alphanumeric.
 
 module M {
-    struct T {
+    struct T has drop {
         b: u64,
         a: u64
     }

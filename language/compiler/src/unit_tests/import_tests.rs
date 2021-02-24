@@ -31,7 +31,7 @@ fn compile_module_with_imports() {
         module Foobar {
             import 0x1.DiemCoin;
 
-            resource FooCoin { value: u64 }
+            struct FooCoin { value: u64 }
 
             public value(this: &Self.FooCoin): u64 {
                 let value_ref: &u64;

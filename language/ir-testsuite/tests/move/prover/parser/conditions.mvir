@@ -8,7 +8,7 @@
 //! no-run: runtime
 module TestConditions {
 
-  resource T { i: u64 }
+  struct T has key { i: u64 }
 
   public ensures_alone()
   ensures true
@@ -86,8 +86,8 @@ module TestConditions {
 //! no-run: runtime
 module TestSpecExp {
 
-  resource T { b: bool }
-  resource T1<Name> { b: Name }
+  struct T { b: bool }
+  struct T1<Name> { b: Name }
 
   public ensures_ret()
   ensures RET
@@ -164,9 +164,9 @@ module TestSpecExp {
 //! no-run: runtime
 module TestEnsuresAccessPath {
 
-  resource T { b: bool, a: address }
-  resource T1 { y: Self.T }
-  resource T2 { x: Self.T1 }
+  struct T { b: bool, a: address }
+  struct T1 { y: Self.T }
+  struct T2 { x: Self.T1 }
 
 
   public ensures_access_path(t: Self.T): Self.T
@@ -210,8 +210,8 @@ module TestEnsuresAccessPath {
 //! new-transaction
 //! no-run: runtime
 module TestBinaryOps {
-  resource T { b: bool }
-  resource Pair { x: u64, y: u64}
+  struct T { b: bool }
+  struct Pair { x: u64, y: u64}
 
   public ret_eq_seven(): u64
   ensures RET == 7
