@@ -898,6 +898,17 @@ impl DbReader for DiemDB {
         })
     }
 
+    fn get_last_version_before_timestamp(
+        &self,
+        timestamp: u64,
+        ledger_version: Version,
+    ) -> Result<Version> {
+        gauged_api("get_last_version_before_timestamp", || {
+            self.event_store
+                .get_last_version_before_timestamp(timestamp, ledger_version)
+        })
+    }
+
     fn get_latest_transaction_info_option(&self) -> Result<Option<(Version, TransactionInfo)>> {
         gauged_api("get_latest_transaction_info_option", || {
             self.ledger_store.get_latest_transaction_info_option()

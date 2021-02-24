@@ -210,6 +210,17 @@ pub trait DbReader: Send + Sync {
     /// ../diemdb/struct.DiemDB.html#method.get_block_timestamp
     fn get_block_timestamp(&self, version: u64) -> Result<u64>;
 
+    /// Gets the version of the last transaction committed before timestamp,
+    /// a commited block at or after the required timestamp must exist (otherwise it's possible
+    /// the next block committed as a timestamp smaller than the one in the request).
+    fn get_last_version_before_timestamp(
+        &self,
+        _timestamp: u64,
+        _ledger_version: Version,
+    ) -> Result<Version> {
+        unimplemented!()
+    }
+
     /// See [`DiemDB::get_latest_account_state`].
     ///
     /// [`DiemDB::get_latest_account_state`]:
