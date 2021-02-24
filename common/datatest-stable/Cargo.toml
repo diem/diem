@@ -16,7 +16,7 @@ regex = "1.4.3"
 walkdir = "2.3.1"
 structopt = "0.3.21"
 termcolor = "1.1.2"
-diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack" }
 
 [[test]]
 name = "example"

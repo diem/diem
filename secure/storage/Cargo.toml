@@ -19,18 +19,18 @@ serde_json = "1.0.62"
 thiserror = "1.0.24"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-github-client = { path = "github", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
-diem-vault-client = { path = "vault", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-github-client = { path = "github" }
+diem-infallible = { path = "../../common/infallible" }
+diem-logger = { path = "../../common/logger" }
+diem-temppath = { path = "../../common/temppath" }
+diem-time-service = { path = "../../common/time-service" }
+diem-vault-client = { path = "vault" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dev-dependencies]
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto", features = ["fuzzing"] }
+diem-crypto-derive = { path = "../../crypto/crypto-derive" }
 rand = "0.8.3"
 
 [features]

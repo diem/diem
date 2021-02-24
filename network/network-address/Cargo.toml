@@ -19,16 +19,16 @@ static_assertions = "1.1.0"
 thiserror = "1.0.24"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../../language/move-core/types" }
 
 [dev-dependencies]
 anyhow = "1.0.38"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto", features = ["fuzzing"] }
 
 [features]
 default = []

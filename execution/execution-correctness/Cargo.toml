@@ -10,33 +10,33 @@ edition = "2018"
 anyhow = "1.0.38"
 rand = { version = "0.8.3", default-features = false }
 
-consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false }
-executor = { path = "../executor", version = "0.1.0" }
-executor-types = { path = "../executor-types", version = "0.1.0" }
+consensus-types = { path = "../../consensus/consensus-types", default-features = false }
+executor = { path = "../executor" }
+executor-types = { path = "../executor-types" }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-global-constants = { path = "../../config/global-constants"}
+diem-logger = { path = "../../common/logger" }
+diem-infallible = { path = "../../common/infallible" }
+diem-secure-net = { path = "../../secure/net" }
+diem-secure-storage = { path = "../../secure/storage" }
+diem-temppath = { path = "../../common/temppath" }
+diem-types = { path = "../../types" }
+diem-vm = { path = "../../language/diem-vm" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 serde = { version = "1.0.123", default-features = false }
-storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
+storage-client = { path = "../../storage/storage-client" }
 thiserror = "1.0.24"
 # this is actually a dev-dependency (see "Conditional compilation of tests" in coding_guidelines.md)
-executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0", optional = true }
+executor-test-helpers = { path = "../executor-test-helpers", optional = true }
 
 [dev-dependencies]
-consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false, features = ["fuzzing"] }
-executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
-diem-config = { path = "../../config", version = "0.1.0" , features = ["fuzzing"] }
-diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+consensus-types = { path = "../../consensus/consensus-types", default-features = false, features = ["fuzzing"] }
+executor-test-helpers = { path = "../executor-test-helpers" }
+diem-config = { path = "../../config" , features = ["fuzzing"] }
+diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
+transaction-builder = { path = "../../language/transaction-builder" }
 
 [features]
 fuzzing = ["diem-config/fuzzing", "consensus-types/fuzzing"]

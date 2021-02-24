@@ -17,10 +17,10 @@ serde_json = "1.0.62"
 prost = "0.7.0"
 
 bcs = "0.1.2"
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+diem-types = { path = "../../types" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../../language/move-core/types" }
 
 [build-dependencies]
 prost-build = "0.7.0"

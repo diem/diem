@@ -12,20 +12,20 @@ mirai-annotations = { version = "1.10.1", default-features = false }
 proptest = { version = "1.0.0", optional = true }
 serde = { version = "1.0.123", default-features = false }
 
-executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
+executor-types = { path = "../../execution/executor-types" }
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-crypto-derive = { path = "../../crypto/crypto-derive" }
+diem-infallible = { path = "../../common/infallible" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+short-hex-str = { path = "../../common/short-hex-str" }
 
 
 [dev-dependencies]
 proptest = "1.0.0"
 
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", features = ["fuzzing"] }
 
 [features]
 default = []

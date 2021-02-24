@@ -13,6 +13,6 @@ edition = "2018"
 rand = "0.8.3"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto/"}
+diem-temppath = { path = "../../common/temppath" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }

@@ -12,22 +12,22 @@ rand = { version = "0.8.3", default-features = false }
 proptest = { version = "1.0.0", optional = true }
 rand_core = "0.6.2"
 
-crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
-consensus-types = { path = "../consensus-types", version = "0.1.0" }
+crash-handler = { path = "../../common/crash-handler" }
+consensus-types = { path = "../consensus-types" }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
-diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
-diem-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-global-constants = { path = "../../config/global-constants"}
+diem-infallible = { path = "../../common/infallible" }
+diem-logger = { path = "../../common/logger" }
+diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
+diem-secure-net = { path = "../../secure/net" }
+diem-secure-push-metrics = { path = "../../secure/push-metrics" }
+diem-secure-storage = { path = "../../secure/storage" }
+diem-temppath = { path = "../../common/temppath" }
+diem-types = { path = "../../types" }
+diem-vault-client = { path = "../../secure/storage/vault" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 serde = { version = "1.0.123", default-features = false }
 thiserror = "1.0.24"
 
@@ -36,10 +36,10 @@ criterion = "0.3.4"
 tempfile = "3.2.0"
 proptest = "1.0.0"
 
-consensus-types = { path = "../consensus-types", version = "0.1.0", features = ["fuzzing"] }
-diem-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"] }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+consensus-types = { path = "../consensus-types", features = ["fuzzing"] }
+diem-config = { path = "../../config", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../../common/proptest-helpers" }
+diem-secure-storage = { path = "../../secure/storage", features = ["testing"] }
 
 [[bench]]
 name = "safety_rules"

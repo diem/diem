@@ -18,9 +18,9 @@ prometheus = { version = "0.11.0", default-features = false }
 serde_json = "1.0.62"
 tokio = { version = "1.2.0", features = ["full"] }
 
-diem-logger = { path = "../logger", version = "0.1.0" }
-diem-metrics-core = { path = "../metrics-core", version = "0.1.0" }
-diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-logger = { path = "../logger" }
+diem-metrics-core = { path = "../metrics-core" }
+diem-workspace-hack = { path = "../workspace-hack" }
 
 [dev-dependencies]
 rusty-fork = "0.3.0"

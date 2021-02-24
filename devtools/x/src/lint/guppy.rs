@@ -5,7 +5,7 @@
 
 use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
 use anyhow::anyhow;
-use guppy::{graph::feature::FeatureFilterFn, Version};
+use guppy::{graph::feature::FeatureFilterFn, Version, VersionReq};
 use hakari::summaries::HakariBuilderSummary;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -379,4 +379,52 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
 
 fn feature_str(feature: Option<&str>) -> &str {
     feature.unwrap_or("[base]")
+}
+
+/// Ensure that all unpublished packages only use path dependencies for workspace dependencies
+#[derive(Debug)]
+pub struct UnpublishedPackagesOnlyUsePathDependencies {
+    no_version_req: VersionReq,
+}
+
+impl UnpublishedPackagesOnlyUsePathDependencies {
+    pub fn new() -> Self {
+        Self {
+            no_version_req: VersionReq::parse(">=0.0.0").expect(">=0.0.0 should be a valid req"),
+        }
+    }
+}
+
+impl Linter for UnpublishedPackagesOnlyUsePathDependencies {
+    fn name(&self) -> &'static str {
+        "unpublished-packages-only-use-path-dependencies"
+    }
+}
+
+impl PackageLinter for UnpublishedPackagesOnlyUsePathDependencies {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        // Skip all packages which aren't 'publish = false'
+        if !matches!(metadata.publish(), Some(&[])) {
+            return Ok(RunStatus::Executed);
+        }
+
+        for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
+            if direct_dep.version_req() != &self.no_version_req {
+                let msg = format!(
+                    "unpublished package specifies a version of first-party dependency '{}'; \
+                    unpublished packages should only use path dependencies for first-party packages.",
+                    direct_dep.dep_name(),
+                );
+                out.write(LintLevel::Error, msg);
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
 }

@@ -11,13 +11,13 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-diem-config = { path = "../../../config", version = "0.1.0" }
-diem-client = { path = "../../../sdk/client", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-diemdb = { path = "../../../storage/diemdb", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-storage-interface = { path = "../../../storage/storage-interface", version = "0.1.0" }
-scratchpad = { path = "../../../storage/scratchpad", version = "0.1.0" }
-diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
+diem-config = { path = "../../../config" }
+diem-client = { path = "../../../sdk/client" }
+diem-types = { path = "../../../types" }
+diemdb = { path = "../../../storage/diemdb" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+storage-interface = { path = "../../../storage/storage-interface" }
+scratchpad = { path = "../../../storage/scratchpad" }
+diem-state-view = { path = "../../../storage/state-view" }
+vm = { path = "../../vm" }
 bcs = "0.1.2"

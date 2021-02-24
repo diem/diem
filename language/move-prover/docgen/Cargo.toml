@@ -8,9 +8,9 @@ license = "Apache-2.0"
 
 [dependencies]
 # diem dependencies
-move-model = { path = "../../move-model", version = "0.1.0" }
-bytecode = { path = "../bytecode", version = "0.1.0"}
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-model = { path = "../../move-model" }
+bytecode = { path = "../bytecode"}
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 # external dependencies
 codespan = "0.8.0"
@@ -24,10 +24,10 @@ serde = { version = "1.0.123", features = ["derive"] }
 once_cell = "1.6.0"
 
 [dev-dependencies]
-move-prover = { path = "..", version = "0.1.0" }
-datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
-move-prover-test-utils = { path = "../test-utils", version = "0.1.0" }
-diem-temppath = { path = "../../../common/temppath", version = "0.1.0" }
+move-prover = { path = ".." }
+datatest-stable = { path = "../../../common/datatest-stable" }
+move-prover-test-utils = { path = "../test-utils" }
+diem-temppath = { path = "../../../common/temppath" }
 
 [[test]]
 name = "testsuite"

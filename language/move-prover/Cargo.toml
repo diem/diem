@@ -8,19 +8,19 @@ license = "Apache-2.0"
 
 [dependencies]
 # diem dependencies
-boogie-backend = { path = "boogie-backend", version = "0.1.0" }
-move-lang = { path = "../move-lang", version = "0.0.1" }
-move-model = { path = "../move-model", version = "0.1.0" }
-docgen = { path = "docgen", version = "0.1.0" }
-abigen = { path = "abigen", version = "0.1.0" }
-errmapgen = { path = "errmapgen", version = "0.1.0" }
-bytecode = { path = "bytecode", version = "0.1.0"}
-vm = { path = "../vm", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1.0" }
-move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
+boogie-backend = { path = "boogie-backend" }
+move-lang = { path = "../move-lang" }
+move-model = { path = "../move-model" }
+docgen = { path = "docgen" }
+abigen = { path = "abigen" }
+errmapgen = { path = "errmapgen" }
+bytecode = { path = "bytecode"}
+vm = { path = "../vm" }
+diem-types = { path = "../../types" }
+diem-temppath = { path = "../../common/temppath" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+bytecode-source-map = { path = "../compiler/bytecode-source-map" }
+move-ir-types = { path = "../move-ir/types" }
 
 # external dependencies
 async-trait = "0.1.42"
@@ -45,8 +45,8 @@ tokio = { version = "1.2.0", features = ["full"] }
 toml = "0.5.8"
 
 [dev-dependencies]
-datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-move-prover-test-utils = { path = "test-utils", version = "0.1.0" }
+datatest-stable = { path = "../../common/datatest-stable" }
+move-prover-test-utils = { path = "test-utils" }
 shell-words = "1.0.0"
 
 [[test]]

@@ -13,13 +13,13 @@ edition = "2018"
 petgraph = "0.5.1"
 proptest = "1.0.0"
 
-bytecode-verifier = { path = "../", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-invalid-mutations = { path = "../invalid-mutations", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
-compiled-stdlib = { path = "../../diem-framework/compiled",  version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0", features = ["fuzzing"] }
+bytecode-verifier = { path = "../" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+invalid-mutations = { path = "../invalid-mutations" }
+move-core-types = { path = "../../move-core/types" }
+compiled-stdlib = { path = "../../diem-framework/compiled" }
+vm = { path = "../../vm", features = ["fuzzing"] }
 
 [features]
 fuzzing = ["diem-types/fuzzing", "vm/fuzzing"]

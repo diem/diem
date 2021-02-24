@@ -15,8 +15,8 @@ structopt = "0.3.21"
 serde = "1.0.123"
 serde_json = "1.0.62"
 
-diemdb = { path = "../diemdb", version = "0.1.0", features = ["diemsum"] }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-storage-interface = { path = "../storage-interface", version = "0.1.0" }
+diemdb = { path = "../diemdb", features = ["diemsum"] }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+storage-interface = { path = "../storage-interface" }

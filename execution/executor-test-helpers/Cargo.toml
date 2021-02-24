@@ -14,17 +14,17 @@ anyhow = "1.0.38"
 rand = "0.8.3"
 tempfile = "3.2.0"
 
-executor = { path = "../executor", version = "0.1.0" }
-executor-types = { path = "../executor-types", version = "0.1.0" }
-diemdb = { path = "../../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
-diem-vm = { path = "../../language/diem-vm", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
-storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
-vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
+executor = { path = "../executor" }
+executor-types = { path = "../executor-types" }
+diemdb = { path = "../../storage/diemdb", features = ["fuzzing"] }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
+diem-temppath = { path = "../../common/temppath" }
+diem-types = { path = "../../types", features = ["fuzzing"] }
+diem-vm = { path = "../../language/diem-vm" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+storage-interface = { path = "../../storage/storage-interface" }
+storage-service = { path = "../../storage/storage-service" }
+transaction-builder = { path = "../../language/transaction-builder" }
+vm-genesis = { path = "../../language/tools/vm-genesis" }

@@ -25,46 +25,46 @@ reqwest = { version = "0.11.1", features = ["blocking", "json"], default_feature
 proptest = { version = "1.0.0", optional = true }
 
 bcs = "0.1.2"
-compiled-stdlib = { path = "../language/diem-framework/compiled",  version = "0.1.0" }
-diem-config = { path = "../config", version = "0.1.0" }
-diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-diemdb = { path = "../storage/diemdb", version = "0.1.0", optional = true }
-diem-json-rpc-types = { path = "./types", version = "0.1.0", package = "diem-json-rpc-types" }
-diem-logger = { path = "../common/logger", version = "0.1.0" }
-diem-mempool = { path = "../mempool", version = "0.1.0" }
-diem-metrics = { path = "../common/metrics", version = "0.1.0" }
+compiled-stdlib = { path = "../language/diem-framework/compiled" }
+diem-config = { path = "../config" }
+diem-crypto = { path = "../crypto/crypto" }
+diemdb = { path = "../storage/diemdb", optional = true }
+diem-json-rpc-types = { path = "./types", package = "diem-json-rpc-types" }
+diem-logger = { path = "../common/logger" }
+diem-mempool = { path = "../mempool" }
+diem-metrics = { path = "../common/metrics" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
-diem-trace = { path = "../common/trace", version = "0.1.0" }
-diem-types = { path = "../types", version = "0.1.0" }
-diem-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
-diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
-move-explain = { path = "../language/tools/move-explain", version = "0.1.0" }
-network = { path = "../network", version = "0.1.0" }
-storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
+diem-trace = { path = "../common/trace" }
+diem-types = { path = "../types" }
+diem-temppath = { path = "../common/temppath", optional = true }
+diem-workspace-hack = { path = "../common/workspace-hack" }
+move-core-types = { path = "../language/move-core/types" }
+move-explain = { path = "../language/tools/move-explain" }
+network = { path = "../network" }
+storage-interface = { path = "../storage/storage-interface" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 reqwest = { version = "0.11.1", features = ["blocking", "json"], default_features = false }
 rand = { version = "0.8.3" }
 
-generate-key = { path = "../config/generate-key", version = "0.1.0" }
-diemdb = { path = "../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
-diem-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }
-diem-client = { path = "../sdk/client", version = "0.1.0" }
-diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
+generate-key = { path = "../config/generate-key" }
+diemdb = { path = "../storage/diemdb", features = ["fuzzing"] }
+diem-genesis-tool = {path = "../config/management/genesis", features = ["testing"] }
+diem-client = { path = "../sdk/client" }
+diem-mempool = { path = "../mempool", features = ["fuzzing"] }
 diem-proptest-helpers = { path = "../common/proptest-helpers" }
-diem-temppath = { path = "../common/temppath", version = "0.1.0" }
-diem-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
-vm-validator = { path = "../vm-validator", version = "0.1.0" }
-compiled-stdlib = { path = "../language/diem-framework/compiled",  version = "0.1.0" }
-vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
-executor = { path = "../execution/executor", version = "0.1.0" }
-executor-types = { path = "../execution/executor-types", version = "0.1.0" }
-scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
-move-vm-types = { path = "../language/move-vm/types", version = "0.1.0" }
-transaction-builder-generated = { path = "../client/transaction-builder", version = "0.1.0" }
-diem-node = { path = "../diem-node", version = "0.1.0" }
+diem-temppath = { path = "../common/temppath" }
+diem-types = { path = "../types", features = ["fuzzing"] }
+vm-validator = { path = "../vm-validator" }
+compiled-stdlib = { path = "../language/diem-framework/compiled" }
+vm-genesis = { path = "../language/tools/vm-genesis" }
+executor = { path = "../execution/executor" }
+executor-types = { path = "../execution/executor-types" }
+scratchpad = { path = "../storage/scratchpad" }
+move-vm-types = { path = "../language/move-vm/types" }
+transaction-builder-generated = { path = "../client/transaction-builder" }
+diem-node = { path = "../diem-node" }
 
 [features]
 fuzzing = ["proptest", "diem-mempool/fuzzing", "diemdb/fuzzing", "diem-proptest-helpers", "diem-temppath", "reqwest"]

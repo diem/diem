@@ -11,10 +11,10 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
-compiled-stdlib = { path = "../../diem-framework/compiled", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-errmapgen = { path = "../../move-prover/errmapgen", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+errmapgen = { path = "../../move-prover/errmapgen" }
+move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"
 
 [features]

@@ -8,14 +8,14 @@ edition = "2018"
 
 [dependencies]
 async-trait = "0.1.42"
-bytecode = { path = "../bytecode", version = "0.1.0" }
-move-model = { path = "../../move-model", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+bytecode = { path = "../bytecode" }
+move-model = { path = "../../move-model" }
+vm = { path = "../../vm" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 num = "0.3.0"
 itertools = "0.10.0"
-diem-types = { path = "../../../types", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+diem-types = { path = "../../../types" }
+move-core-types = { path = "../../move-core/types" }
 log = "0.4.14"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.62"
@@ -31,9 +31,9 @@ codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 
 [dev-dependencies]
-datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
-move-prover-test-utils = { path = "../test-utils", version = "0.1.0" }
-diem-temppath = { path = "../../../common/temppath", version = "0.1.0" }
+datatest-stable = { path = "../../../common/datatest-stable" }
+move-prover-test-utils = { path = "../test-utils" }
+diem-temppath = { path = "../../../common/temppath" }
 
 
 # [[test]]

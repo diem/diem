@@ -14,13 +14,13 @@ anyhow = "1.0.38"
 serde = "1.0.123"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-storage-interface = { path = "../storage-interface", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-logger = { path = "../../common/logger" }
+diem-infallible = { path = "../../common/infallible" }
+diem-secure-net = { path = "../../secure/net" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+storage-interface = { path = "../storage-interface" }
 
 [features]
 default = []

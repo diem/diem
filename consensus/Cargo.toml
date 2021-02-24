@@ -29,44 +29,44 @@ termion = { version = "1.5.6", default-features = false }
 thiserror = "1.0.24"
 tokio = { version = "1.2.0", features = ["full"] }
 
-channel = { path = "../common/channel", version = "0.1.0" }
-consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
-execution-correctness = { path = "../execution/execution-correctness", version = "0.1.0" }
-executor = { path = "../execution/executor", version = "0.1.0" }
-executor-types = { path = "../execution/executor-types", version = "0.1.0" }
+channel = { path = "../common/channel" }
+consensus-types = { path = "consensus-types", default-features = false }
+execution-correctness = { path = "../execution/execution-correctness" }
+executor = { path = "../execution/executor" }
+executor-types = { path = "../execution/executor-types" }
 fallible = { path = "../common/fallible" }
 bcs = "0.1.2"
-diem-config = { path = "../config", version = "0.1.0" }
-diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-diem-logger = { path = "../common/logger", version = "0.1.0" }
-diem-mempool = { path = "../mempool", version = "0.1.0" }
-diem-metrics = { path = "../common/metrics", version = "0.1.0" }
-diem-infallible = { path = "../common/infallible", version = "0.1.0" }
-diem-secure-storage = { path = "../secure/storage", version = "0.1.0" }
-diem-temppath = { path = "../common/temppath", version = "0.1.0" }
-diem-trace = { path = "../common/trace", version = "0.1.0" }
-diem-types = { path = "../types", version = "0.1.0" }
-diem-vm = { path = "../language/diem-vm", version = "0.1.0" }
-diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
-network = { path = "../network", version = "0.1.0" }
-safety-rules = { path = "safety-rules", version = "0.1.0" }
-short-hex-str = { path = "../common/short-hex-str", version = "0.1.0" }
-state-sync = { path = "../state-sync", version = "0.1.0" }
-schemadb = { path = "../storage/schemadb", version = "0.1.0" }
-storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
-subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
+diem-config = { path = "../config" }
+diem-crypto = { path = "../crypto/crypto" }
+diem-logger = { path = "../common/logger" }
+diem-mempool = { path = "../mempool" }
+diem-metrics = { path = "../common/metrics" }
+diem-infallible = { path = "../common/infallible" }
+diem-secure-storage = { path = "../secure/storage" }
+diem-temppath = { path = "../common/temppath" }
+diem-trace = { path = "../common/trace" }
+diem-types = { path = "../types" }
+diem-vm = { path = "../language/diem-vm" }
+diem-workspace-hack = { path = "../common/workspace-hack" }
+network = { path = "../network" }
+safety-rules = { path = "safety-rules" }
+short-hex-str = { path = "../common/short-hex-str" }
+state-sync = { path = "../state-sync" }
+schemadb = { path = "../storage/schemadb" }
+storage-interface = { path = "../storage/storage-interface" }
+subscription-service = { path = "../common/subscription-service" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 tempfile = "3.2.0"
 
-consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false, features = ["fuzzing"] }
-executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
-diem-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
-diem-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
-safety-rules = { path = "safety-rules", version = "0.1.0", features = ["testing"] }
-vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
-vm-validator = { path = "../vm-validator", version = "0.1.0" }
+consensus-types = { path = "consensus-types", default-features = false, features = ["fuzzing"] }
+executor-test-helpers = { path = "../execution/executor-test-helpers" }
+diem-config = { path = "../config", features = ["fuzzing"] }
+diem-mempool = { path = "../mempool", features = ["fuzzing"] }
+safety-rules = { path = "safety-rules", features = ["testing"] }
+vm-genesis = { path = "../language/tools/vm-genesis" }
+vm-validator = { path = "../vm-validator" }
 
 [features]
 default = []

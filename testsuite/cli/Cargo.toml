@@ -24,29 +24,29 @@ structopt = "0.3.21"
 tokio = { version = "1.2.0", features = ["full"] }
 walkdir = "2.3.1"
 
-diem-config = { path = "../../config", version = "0.1.0" }
-generate-key = { path = "../../config/generate-key", version = "0.1.0" }
-crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-config = { path = "../../config" }
+generate-key = { path = "../../config/generate-key" }
+crash-handler = { path = "../../common/crash-handler" }
+diem-crypto = { path = "../../crypto/crypto" }
 bcs = "0.1.2"
-diem-wallet = { path = "diem-wallet", version = "0.1.0" }
+diem-wallet = { path = "diem-wallet" }
 diem-client = { path = "../../sdk/client" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-logger =  { path = "../../common/logger", version = "0.1.0" }
-diem-metrics = { path = "../../common/metrics", version = "0.1.0" }
-diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath/", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-resource-viewer = { path = "../../language/tools/resource-viewer", version = "0.1.0" }
-compiled-stdlib = { path = "../../language/diem-framework/compiled",  version = "0.1.0" }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
-compiler = { path = "../../language/compiler",  version = "0.1.0" }
+diem-infallible = { path = "../../common/infallible" }
+diem-logger =  { path = "../../common/logger" }
+diem-metrics = { path = "../../common/metrics" }
+diem-network-address = { path = "../../network/network-address" }
+diem-types = { path = "../../types" }
+diem-temppath = { path = "../../common/temppath/" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+resource-viewer = { path = "../../language/tools/resource-viewer" }
+compiled-stdlib = { path = "../../language/diem-framework/compiled" }
+transaction-builder = { path = "../../language/transaction-builder" }
+compiler = { path = "../../language/compiler" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", features = ["fuzzing"] }
 
 [features]
 default = []

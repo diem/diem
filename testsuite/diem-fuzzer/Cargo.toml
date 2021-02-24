@@ -24,36 +24,36 @@ rand = "0.8.3"
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
 bcs = "0.1.2"
-diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-proptest-helpers = { path = "../../common/proptest-helpers" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 # List out modules with data structures being fuzzed here.
-accumulator = { path = "../../storage/accumulator", version = "0.1.0", features = ["fuzzing"] }
-consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
-consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
-executor = { path = "../../execution/executor", version = "0.1.0", features = ["fuzzing"] }
-executor-types = { path = "../../execution/executor-types", version = "0.1.0", features = ["fuzzing"] }
-language-e2e-tests = { path = "../../language/testing-infra/e2e-tests", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"]}
-diem-jellyfish-merkle = { path = "../../storage/jellyfish-merkle", version = "0.1.0", features = ["fuzzing"] }
-diem-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
-diem-mempool = { path = "../../mempool", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
-diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
-diemdb = { path = "../../storage/diemdb", version = "0.1.0", features = ["fuzzing"] }
-move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", features = ["fuzzing"] }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0", features = ["fuzzing"] }
-network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
-safety-rules = { path = "../../consensus/safety-rules", version = "0.1.0", features = ["fuzzing", "testing"]  }
-state-sync = { path = "../../state-sync", version = "0.1.0", features = ["fuzzing", "diemdb"]  }
-storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
-vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
+accumulator = { path = "../../storage/accumulator", features = ["fuzzing"] }
+consensus = { path = "../../consensus", features = ["fuzzing"] }
+consensus-types = { path = "../../consensus/consensus-types", features = ["fuzzing"] }
+executor = { path = "../../execution/executor", features = ["fuzzing"] }
+executor-types = { path = "../../execution/executor-types", features = ["fuzzing"] }
+language-e2e-tests = { path = "../../language/testing-infra/e2e-tests" }
+diem-crypto = { path = "../../crypto/crypto", features = ["fuzzing"]}
+diem-jellyfish-merkle = { path = "../../storage/jellyfish-merkle", features = ["fuzzing"] }
+diem-json-rpc = { path = "../../json-rpc", features = ["fuzzing"] }
+diem-mempool = { path = "../../mempool" }
+diem-types = { path = "../../types", features = ["fuzzing"] }
+diem-vault-client = { path = "../../secure/storage/vault", features = ["fuzzing"] }
+diemdb = { path = "../../storage/diemdb", features = ["fuzzing"] }
+move-vm-types = { path = "../../language/move-vm/types", features = ["fuzzing"] }
+move-core-types = { path = "../../language/move-core/types", features = ["fuzzing"] }
+network = { path = "../../network", features = ["fuzzing"] }
+safety-rules = { path = "../../consensus/safety-rules", features = ["fuzzing", "testing"]  }
+state-sync = { path = "../../state-sync", features = ["fuzzing", "diemdb"]  }
+storage-interface = { path = "../../storage/storage-interface" }
+vm = { path = "../../language/vm", features = ["fuzzing"] }
 
 [dev-dependencies]
 rusty-fork = "0.3.0"
 stats_alloc = "0.1.8"
 
-datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
+datatest-stable = { path = "../../common/datatest-stable" }
 
 [[test]]
 harness = false

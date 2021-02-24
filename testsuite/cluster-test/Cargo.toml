@@ -30,37 +30,37 @@ rusoto_s3 = "0.46.0"
 chrono = "0.4.19"
 toml = { version = "0.5.8", default-features = false }
 
-debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
-diem-client = { path = "../../sdk/client", version = "0.1.0"}
-diem-retrier = { path = "../../common/retrier", version = "0.1.0" }
+debug-interface = { path = "../../common/debug-interface"}
+diem-client = { path = "../../sdk/client"}
+diem-retrier = { path = "../../common/retrier" }
 num_cpus = "1.13.0"
 
-consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
-generate-key = { path = "../../config/generate-key", version = "0.1.0" }
+consensus-types = { path = "../../consensus/consensus-types" }
+generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-diem-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
-diem-mempool = { path = "../../mempool", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
-diem-network-address-encryption = { path = "../../config/management/network-address-encryption", version = "0.1.0" }
-diem-node = { path = "../../diem-node", version = "0.1.0" }
-diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
-diem-swarm = { path = "../diem-swarm", version = "0.1.0" }
-diem-time-service = { path = "../../common/time-service", version = "0.1.0" }
-diem-trace = {path = "../../common/trace", version = "0.1.0"}
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-network = { path = "../../network", version = "0.1.0" }
-network-builder = { path = "../../network/builder", version = "0.1.0" }
-seed-peer-generator = { path = "../../config/seed-peer-generator", version = "0.1.0" }
-state-sync = { path = "../../state-sync", version = "0.1.0" }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-config = { path = "../../config" }
+diem-genesis-tool = { path = "../../config/management/genesis", features = ["testing"] }
+diem-global-constants = { path = "../../config/global-constants" }
+diem-logger = { path = "../../common/logger" }
+diem-management = { path = "../../config/management", features = ["testing"] }
+diem-mempool = { path = "../../mempool" }
+diem-infallible = { path = "../../common/infallible" }
+diem-network-address = { path = "../../network/network-address" }
+diem-network-address-encryption = { path = "../../config/management/network-address-encryption" }
+diem-node = { path = "../../diem-node" }
+diem-operational-tool = {path = "../../config/management/operational", features = ["testing"] }
+diem-secure-storage = { path = "../../secure/storage", features = ["testing"] }
+diem-swarm = { path = "../diem-swarm" }
+diem-time-service = { path = "../../common/time-service" }
+diem-trace = {path = "../../common/trace"}
+diem-types = { path = "../../types", features = ["fuzzing"] }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+network = { path = "../../network" }
+network-builder = { path = "../../network/builder" }
+seed-peer-generator = { path = "../../config/seed-peer-generator" }
+state-sync = { path = "../../state-sync" }
+transaction-builder = { path = "../../language/transaction-builder" }
 
 futures = "0.3.12"
 tokio = { version = "1.2.0", features = ["full"] }

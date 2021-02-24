@@ -11,17 +11,17 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
 mirai-annotations = "1.10.1"
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 proptest = { version = "1.0.0", optional = true }
 
 [dev-dependencies]
 rand = "0.8.3"
 proptest = "1.0.0"
 
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto", features = ["fuzzing"] }
 
 [features]
 default = []

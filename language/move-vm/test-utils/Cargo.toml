@@ -14,7 +14,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-move-vm-runtime = { path = "../runtime", version = "0.1.0" }
-move-core-types = {path = "../../move-core/types", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-vm-runtime = { path = "../runtime" }
+move-core-types = {path = "../../move-core/types" }
+vm = { path = "../../vm" }

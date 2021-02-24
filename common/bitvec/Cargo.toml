@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../workspace-hack" }
 proptest = { version = "1.0.0", default-features = true, optional = true }
 proptest-derive = { version = "0.3.0", optional = true }
 serde = { version = "1.0.123", features = ["derive"] }
@@ -18,7 +18,7 @@ serde_bytes = "0.11.5"
 
 [dev-dependencies]
 bcs = "0.1.2"
-diem-proptest-helpers = { path = "../proptest-helpers", version = "0.1.0"}
+diem-proptest-helpers = { path = "../proptest-helpers"}
 proptest = { version = "1.0.0", default-features = true }
 proptest-derive = { version = "0.3.0" }
 

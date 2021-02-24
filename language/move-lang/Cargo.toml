@@ -23,7 +23,7 @@ move-vm = { path = "../vm", package = "vm" }
 move-core-types = { path = "../move-core/types" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
 diem-types = { path = "../../types" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }

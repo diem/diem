@@ -27,11 +27,11 @@ thiserror = "1.0.24"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
 bcs = "0.1.2"
-diem-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
-diem-network-address = { path = "../network/network-address", version = "0.1.0" }
-diem-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
+diem-crypto = { path = "../crypto/crypto" }
+diem-crypto-derive = { path = "../crypto/crypto-derive" }
+diem-network-address = { path = "../network/network-address" }
+diem-workspace-hack = { path = "../common/workspace-hack" }
+move-core-types = { path = "../language/move-core/types" }
 
 [dev-dependencies]
 regex = "1.4.3"
@@ -39,9 +39,9 @@ proptest = "1.0.0"
 proptest-derive = "0.3.0"
 serde_json = "1.0.62"
 
-diem-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-diem-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
-move-core-types = { path = "../language/move-core/types", version = "0.1.0", features = ["fuzzing"]  }
+diem-crypto = { path = "../crypto/crypto", features = ["fuzzing"] }
+diem-network-address = { path = "../network/network-address", features = ["fuzzing"] }
+move-core-types = { path = "../language/move-core/types", features = ["fuzzing"]  }
 
 [features]
 default = []

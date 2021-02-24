@@ -20,10 +20,10 @@ serde = "1.0.123"
 sha2 = "0.9.3"
 thiserror = "1.0.24"
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "fiat_u64_backend"] }
-diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-diem-temppath = { path = "../../../common/temppath/", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../../crypto/crypto", features = ["fuzzing"] }
+diem-temppath = { path = "../../../common/temppath/" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 mirai-annotations = "1.10.1"
 
 [features]

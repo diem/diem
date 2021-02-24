@@ -16,17 +16,17 @@ serde-reflection = "0.3.2"
 serde_yaml = "0.8.17"
 structopt = "0.3.21"
 
-consensus = { path = "../../consensus", version = "0.1.0", features=["fuzzing"] }
-consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features=["fuzzing"] }
+consensus = { path = "../../consensus", features=["fuzzing"] }
+consensus-types = { path = "../../consensus/consensus-types", features=["fuzzing"] }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features=["fuzzing"] }
-diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0"}
-diem-types = { path = "../../types", version = "0.1.0", features=["fuzzing"] }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-network = { path = "../../network", version = "0.1.0" }
-diem-network-address = { path = "../../network/network-address", version = "0.1.0", features=["fuzzing"] }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0", features=["fuzzing"] }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto", features=["fuzzing"] }
+diem-crypto-derive = { path = "../../crypto/crypto-derive"}
+diem-types = { path = "../../types", features=["fuzzing"] }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+network = { path = "../../network" }
+diem-network-address = { path = "../../network/network-address", features=["fuzzing"] }
+move-core-types = { path = "../../language/move-core/types", features=["fuzzing"] }
 
 [[bin]]
 name = "compute"

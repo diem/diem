@@ -12,10 +12,10 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 once_cell = "1.6.0"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-metrics = { path = "../../common/metrics", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-config = { path = "../../config" }
+diem-logger = { path = "../../common/logger" }
+diem-metrics = { path = "../../common/metrics" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dependencies.rocksdb]
 version = "0.15.0"
@@ -26,4 +26,4 @@ features = ["lz4"]
 byteorder = "1.4.2"
 proptest = "1.0.0"
 tempfile = "3.2.0"
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
+diem-temppath = { path = "../../common/temppath" }

@@ -23,7 +23,7 @@ serde = { version = "1.0.123", default-features = false }
 serde_bytes = "0.11.5"
 thiserror = "1.0.24"
 
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [dev-dependencies]
 proptest = "1.0.0"

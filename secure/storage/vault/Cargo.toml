@@ -20,16 +20,16 @@ serde_json = "1.0.62"
 thiserror = "1.0.24"
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false }
 
-diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }
-diem-types = { path = "../../../types", version = "0.1.0", optional = true }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../../crypto/crypto" }
+diem-proptest-helpers = { path = "../../../common/proptest-helpers", optional = true }
+diem-types = { path = "../../../types", optional = true }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 
-diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
+diem-types = { path = "../../../types", features = ["fuzzing"] }
 
 [features]
 fuzzing = ["proptest", "diem-proptest-helpers", "diem-types"]

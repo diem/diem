@@ -22,35 +22,35 @@ rusty-fork = "0.3.0"
 statistical = "1.0.0"
 tokio = { version = "1.2.0", features = ["full"] }
 
-backup-cli = { path = "../../storage/backup/backup-cli", version = "0.1.0" }
-cli = { path = "../cli", version = "0.1.0", features = ["fuzzing"]  }
-compiled-stdlib = { path = "../../language/diem-framework/compiled", version = "0.1.0" }
-debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
-generate-key = { path = "../../config/generate-key", version = "0.1.0" }
+backup-cli = { path = "../../storage/backup/backup-cli" }
+cli = { path = "../cli", features = ["fuzzing"]  }
+compiled-stdlib = { path = "../../language/diem-framework/compiled" }
+debug-interface = { path = "../../common/debug-interface" }
+generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
-diem-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
-diem-key-manager = { path = "../../secure/key-manager", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
-diem-network-address = { path = "../../network/network-address", version = "0.1.0" }
-diem-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
+diem-global-constants = { path = "../../config/global-constants" }
+diem-infallible = { path = "../../common/infallible" }
+diem-json-rpc = { path = "../../json-rpc" }
+diem-key-manager = { path = "../../secure/key-manager" }
+diem-logger = { path = "../../common/logger" }
+diem-management = { path = "../../config/management", features = ["testing"] }
+diem-network-address = { path = "../../network/network-address" }
+diem-operational-tool = {path = "../../config/management/operational", features = ["testing"] }
 diem-client = { path = "../../sdk/client" }
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
-diem-smoke-test-attribute = { path = "../smoke-test/attribute", version = "0.1.0" }
-diem-swarm = { path = "../diem-swarm", version = "0.1.0"}
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-trace = { path = "../../common/trace", version = "0.1.0" }
-diem-events-fetcher = { path = "../../language/diem-tools/diem-events-fetcher", version = "0.1.0" }
-diem-time-service = { path = "../../common/time-service", version = "0.1.0", features = ["testing"] }
-diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-vault-client = { path = "../../secure/storage/vault", version = "0.1.0", features = ["fuzzing"] }
-diem-validator-interface = { path = "../../language/diem-tools/diem-validator-interface", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator", version = "0.1.0" }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+diem-secure-storage = { path = "../../secure/storage", features = ["testing"] }
+diem-smoke-test-attribute = { path = "../smoke-test/attribute" }
+diem-swarm = { path = "../diem-swarm"}
+diem-temppath = { path = "../../common/temppath" }
+diem-trace = { path = "../../common/trace" }
+diem-events-fetcher = { path = "../../language/diem-tools/diem-events-fetcher" }
+diem-time-service = { path = "../../common/time-service", features = ["testing"] }
+diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay" }
+diem-types = { path = "../../types" }
+diem-vault-client = { path = "../../secure/storage/vault", features = ["fuzzing"] }
+diem-validator-interface = { path = "../../language/diem-tools/diem-validator-interface" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator" }
+transaction-builder = { path = "../../language/transaction-builder" }

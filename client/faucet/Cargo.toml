@@ -19,19 +19,19 @@ structopt = "0.3.21"
 tokio = { version = "1.2.0", features = ["full"] }
 warp = "0.3.0"
 
-generate-key = { path = "../../config/generate-key", version = "0.1.0" }
+generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto/", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-client = { path = "../../sdk/client", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
-transaction-builder-generated = { path = "../transaction-builder", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto/" }
+diem-infallible = { path = "../../common/infallible" }
+diem-client = { path = "../../sdk/client" }
+diem-logger = { path = "../../common/logger" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../../language/move-core/types" }
+transaction-builder-generated = { path = "../transaction-builder" }
 
 [dev-dependencies]
 serde_json = "1.0.62"
 tempfile = "3.2.0"
 
-diem-config = { path = "../../config", version = "0.1.0" }
+diem-config = { path = "../../config" }

@@ -22,31 +22,31 @@ proptest-derive = { version = "0.3.0", optional = true }
 serde = "1.0.123"
 thiserror = "1.0.24"
 
-accumulator = { path = "../accumulator", version = "0.1.0" }
+accumulator = { path = "../accumulator" }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-metrics = { path = "../../common/metrics", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0", optional = true }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-num-variants = { path = "../../common/num-variants", version = "0.1.0" }
-schemadb = { path = "../schemadb", version = "0.1.0" }
-storage-interface = { path = "../storage-interface", version = "0.1.0" }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-jellyfish-merkle = { path = "../jellyfish-merkle" }
+diem-logger = { path = "../../common/logger" }
+diem-metrics = { path = "../../common/metrics" }
+diem-infallible = { path = "../../common/infallible" }
+diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
+diem-temppath = { path = "../../common/temppath", optional = true }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+num-variants = { path = "../../common/num-variants" }
+schemadb = { path = "../schemadb" }
+storage-interface = { path = "../storage-interface" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 rand = "0.8.3"
 
-diem-jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0", features = ["fuzzing"] }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
-diem-temppath = { path = "../../common/temppath", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-jellyfish-merkle = { path = "../jellyfish-merkle", features = ["fuzzing"] }
+diem-proptest-helpers = { path = "../../common/proptest-helpers" }
+diem-temppath = { path = "../../common/temppath" }
+diem-types = { path = "../../types", features = ["fuzzing"] }
 
 [features]
 default = []

@@ -8,14 +8,14 @@ license = "Apache-2.0"
 
 [dependencies]
 # diem dependencies
-move-lang = { path = "../move-lang", version = "0.0.1" }
-bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
-vm = { path = "../vm", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1.0" }
-move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
-move-core-types = { path = "../move-core/types", version = "0.1.0" }
+move-lang = { path = "../move-lang" }
+bytecode-verifier = { path = "../bytecode-verifier" }
+vm = { path = "../vm" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+bytecode-source-map = { path = "../compiler/bytecode-source-map" }
+move-ir-types = { path = "../move-ir/types" }
+move-core-types = { path = "../move-core/types" }
 
 # external dependencies
 codespan = "0.8.0"
@@ -29,8 +29,8 @@ anyhow = "1.0.38"
 serde = { version = "1.0.123", features = ["derive"] }
 
 [dev-dependencies]
-datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-move-prover-test-utils = { path = "../move-prover/test-utils", version = "0.1.0" }
+datatest-stable = { path = "../../common/datatest-stable" }
+move-prover-test-utils = { path = "../move-prover/test-utils" }
 
 [[test]]
 name = "testsuite"

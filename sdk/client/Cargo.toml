@@ -21,10 +21,10 @@ hex = "0.4.2"
 serde = { version = "1.0.123", features = ["derive"] }
 serde_json = "1.0.62"
 
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
 diem-json-rpc-types  = { path = "../../json-rpc/types" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 # Optional Dependencies
 reqwest = { version = "0.11.1", features = ["json"], optional = true }

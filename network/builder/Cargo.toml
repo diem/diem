@@ -17,20 +17,20 @@ rand = "0.8.3"
 serde = { version = "1.0.123", default-features = false }
 tokio = { version = "1.2.0", features = ["full"] }
 
-channel = { path = "../../common/channel", version = "0.1.0" }
+channel = { path = "../../common/channel" }
 bcs = "0.1.2"
-diem-config = { path = "../../config", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-metrics = {path = "../../common/metrics", version = "0.1.0"}
-diem-network-address = { path = "../network-address", version = "0.1.0" }
-diem-network-address-encryption = {path = "../../config/management/network-address-encryption", version = "0.1.0"}
-diem-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
-diem-time-service = { path = "../../common/time-service", version = "0.1.0", features = ["async"] }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-netcore = { path = "../netcore", version = "0.1.0" }
-network = { path = "../.", version = "0.1.0" }
-network-simple-onchain-discovery = { path = "../simple-onchain-discovery", version = "0.1.0"}
-subscription-service = { path = "../../common/subscription-service", version = "0.1.0" }
+diem-config = { path = "../../config" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-infallible = { path = "../../common/infallible" }
+diem-logger = { path = "../../common/logger" }
+diem-metrics = {path = "../../common/metrics"}
+diem-network-address = { path = "../network-address" }
+diem-network-address-encryption = {path = "../../config/management/network-address-encryption"}
+diem-secure-storage = { path = "../../secure/storage" }
+diem-time-service = { path = "../../common/time-service", features = ["async"] }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+netcore = { path = "../netcore" }
+network = { path = "../." }
+network-simple-onchain-discovery = { path = "../simple-onchain-discovery"}
+subscription-service = { path = "../../common/subscription-service" }

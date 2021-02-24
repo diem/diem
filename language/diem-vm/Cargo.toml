@@ -17,24 +17,24 @@ rayon = "1.5.0"
 mirai-annotations = "1.10.1"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-metrics = { path = "../../common/metrics", version = "0.1.0" }
-diem-state-view = { path = "../../storage/state-view", version = "0.1.0" }
-diem-trace = { path = "../../common/trace", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../move-core/types", version = "0.1.0" }
-move-vm-runtime = { path = "../move-vm/runtime", version = "0.1.0" }
-move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
-vm = { path = "../vm", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-logger = { path = "../../common/logger" }
+diem-metrics = { path = "../../common/metrics" }
+diem-state-view = { path = "../../storage/state-view" }
+diem-trace = { path = "../../common/trace" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../move-core/types" }
+move-vm-runtime = { path = "../move-vm/runtime" }
+move-vm-types = { path = "../move-vm/types" }
+vm = { path = "../vm" }
 serde_json = "1.0.62"
 serde = { version = "1.0.123", default-features = false }
 
 [dev-dependencies]
 proptest = "1.0.0"
 
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-types = { path = "../../types", features = ["fuzzing"] }
 
 [features]
 default = []

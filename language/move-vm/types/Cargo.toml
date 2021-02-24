@@ -18,10 +18,10 @@ serde = { version = "1.0.123", features = ["derive", "rc"] }
 smallvec = "1.6.1"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
+diem-crypto = { path = "../../../crypto/crypto" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = { path = "../../move-core/types" }
+vm = { path = "../../vm" }
 
 [dev-dependencies]
 proptest = "1.0.0"

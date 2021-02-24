@@ -11,6 +11,6 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.12"
-channel = { path = "../", version = "0.1.0" }
-diem-workspace-hack = { path = "../../workspace-hack", version = "0.1.0" }
+channel = { path = "../" }
+diem-workspace-hack = { path = "../../workspace-hack" }
 structopt = "0.3.21"

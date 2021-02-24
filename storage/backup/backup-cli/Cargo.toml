@@ -30,33 +30,33 @@ tokio = { version = "1.2.0", features = ["full"] }
 tokio-stream = "0.1.3"
 tokio-util = { version = "0.6.3", features = ["compat"] }
 
-executor = { path = "../../../execution/executor", version = "0.1.0" }
-executor-test-helpers = { path = "../../../execution/executor-test-helpers", version = "0.1.0", optional = true }
-executor-types = { path = "../../../execution/executor-types", version = "0.1.0" }
-diem-jellyfish-merkle = { path = "../../jellyfish-merkle", version = "0.1.0" }
+executor = { path = "../../../execution/executor" }
+executor-test-helpers = { path = "../../../execution/executor-test-helpers", optional = true }
+executor-types = { path = "../../../execution/executor-types" }
+diem-jellyfish-merkle = { path = "../../jellyfish-merkle" }
 bcs = "0.1.2"
-diem-config = { path = "../../../config", version = "0.1.0" }
-diem-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
-diem-infallible = { path = "../../../common/infallible", version = "0.1.0" }
-diem-logger = { path = "../../../common/logger", version = "0.1.0" }
-diem-secure-push-metrics = { path = "../../../secure/push-metrics", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-diem-vm = { path = "../../../language/diem-vm", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-diemdb = { path = "../../diemdb", version = "0.1.0" }
-storage-interface = { path = "../../storage-interface", version = "0.1.0" }
+diem-config = { path = "../../../config" }
+diem-crypto = { path = "../../../crypto/crypto" }
+diem-infallible = { path = "../../../common/infallible" }
+diem-logger = { path = "../../../common/logger" }
+diem-secure-push-metrics = { path = "../../../secure/push-metrics" }
+diem-types = { path = "../../../types" }
+diem-vm = { path = "../../../language/diem-vm" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diemdb = { path = "../../diemdb" }
+storage-interface = { path = "../../storage-interface" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 warp = "0.3.0"
 
-backup-service = { path = "../backup-service", version = "0.1.0" }
-executor-test-helpers = { path = "../../../execution/executor-test-helpers", version = "0.1.0" }
-diemdb = { path = "../../diemdb", version = "0.1.0", features = ["fuzzing"] }
-diem-config = { path = "../../../config", version = "0.1.0" }
+backup-service = { path = "../backup-service" }
+executor-test-helpers = { path = "../../../execution/executor-test-helpers" }
+diemdb = { path = "../../diemdb", features = ["fuzzing"] }
+diem-config = { path = "../../../config" }
 diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
-diem-temppath = { path = "../../../common/temppath", version = "0.1.0" }
-storage-interface = { path = "../../storage-interface", version = "0.1.0" }
+diem-temppath = { path = "../../../common/temppath" }
+storage-interface = { path = "../../storage-interface" }
 
 [features]
 fuzzing = ["diemdb/fuzzing"]

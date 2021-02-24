@@ -18,16 +18,16 @@ tokio = { version = "1.2.0", features = ["full"] }
 tokio-util = { version = "0.6.3", features = ["compat"] }
 url = { version = "2.2.1" }
 
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-diem-network-address = { path = "../network-address", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-network-address = { path = "../network-address" }
 diem-types = { path = "../../types" }
-memsocket = { path = "../memsocket", version = "0.1.0", optional = true }
+memsocket = { path = "../memsocket", optional = true }
 proxy = { path = "../../common/proxy" }
 
 [dev-dependencies]
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-network-address = { path = "../network-address", version = "0.1.0", features = ["fuzzing"] }
-memsocket = { path = "../memsocket", version = "0.1.0" }
+diem-logger = { path = "../../common/logger" }
+diem-network-address = { path = "../network-address", features = ["fuzzing"] }
+memsocket = { path = "../memsocket" }
 
 [features]
 default = []

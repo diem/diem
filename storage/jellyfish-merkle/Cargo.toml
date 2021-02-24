@@ -22,21 +22,21 @@ serde = { version = "1.0.123", features = ["derive"] }
 thiserror = "1.0.24"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-diem-infallible = { path = "../../common/infallible", version = "0.1.0" }
-diem-nibble = { path = "../../common/nibble", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-crypto-derive = { path = "../../crypto/crypto-derive" }
+diem-infallible = { path = "../../common/infallible" }
+diem-nibble = { path = "../../common/nibble" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dev-dependencies]
 rand = "0.8.3"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
-diem-nibble = { path = "../../common/nibble", version = "0.1.0", features = ["fuzzing"] }
-diem-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto", features = ["fuzzing"] }
+diem-nibble = { path = "../../common/nibble", features = ["fuzzing"] }
+diem-types = { path = "../../types", features = ["fuzzing"] }
 
 [features]
 default = []

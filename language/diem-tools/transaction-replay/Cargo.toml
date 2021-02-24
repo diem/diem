@@ -12,24 +12,24 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 structopt = "0.3.21"
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-diem-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
-diem-validator-interface = { path = "../diem-validator-interface", version = "0.1.0" }
-diemdb = { path = "../../../storage/diemdb", version = "0.1.0" }
-diem-vm = { path = "../../diem-vm", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0"}
-move-cli = { path = "../../tools/move-cli", version = "0.1.0" }
-move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
-move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
-move-vm-test-utils = { path = "../../move-vm/test-utils", version = "0.1.0" }
-resource-viewer = { path = "../../tools/resource-viewer", version = "0.1.0" }
-diem-framework = { path = "../../diem-framework", version = "0.1.0" }
-move-lang = { path = "../../move-lang", version = "0.0.1" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diem-types = { path = "../../../types" }
+diem-state-view = { path = "../../../storage/state-view" }
+diem-validator-interface = { path = "../diem-validator-interface" }
+diemdb = { path = "../../../storage/diemdb" }
+diem-vm = { path = "../../diem-vm" }
+vm = { path = "../../vm"}
+move-cli = { path = "../../tools/move-cli" }
+move-vm-types = { path = "../../move-vm/types" }
+move-core-types = { path = "../../move-core/types" }
+move-vm-runtime = { path = "../../move-vm/runtime" }
+move-vm-test-utils = { path = "../../move-vm/test-utils" }
+resource-viewer = { path = "../../tools/resource-viewer" }
+diem-framework = { path = "../../diem-framework" }
+move-lang = { path = "../../move-lang" }
 bcs = "0.1.2"
 difference = "2.0.0"
 
 [dev-dependencies]
-vm-genesis = { path = "../../tools/vm-genesis", version = "0.1.0" }
-compiled-stdlib = { path = "../../diem-framework/compiled", version = "0.1.0" }
+vm-genesis = { path = "../../tools/vm-genesis" }
+compiled-stdlib = { path = "../../diem-framework/compiled" }

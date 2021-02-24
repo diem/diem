@@ -10,11 +10,11 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-vm = { path = "../../vm", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
+vm = { path = "../../vm" }
+diem-types = { path = "../../../types" }
 proptest = "1.0.0"
-diem-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [features]
 default = []

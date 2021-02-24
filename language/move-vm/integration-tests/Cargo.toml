@@ -15,10 +15,10 @@ edition = "2018"
 anyhow = "1.0.38"
 tempfile = "3.2.0"
 
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-move-core-types = {path = "../../move-core/types", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
-move-lang = { path = "../../move-lang", version = "0.0.1" }
-move-vm-runtime = { path = "../runtime", version = "0.1.0" }
-move-vm-types = { path = "../types", version = "0.1.0" }
-move-vm-test-utils = { path = "../test-utils", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = {path = "../../move-core/types" }
+vm = { path = "../../vm" }
+move-lang = { path = "../../move-lang" }
+move-vm-runtime = { path = "../runtime" }
+move-vm-types = { path = "../types" }
+move-vm-test-utils = { path = "../test-utils" }
