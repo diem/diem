@@ -468,3 +468,39 @@ impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
         Ok(RunStatus::Executed)
     }
 }
+
+/// Only allow crates to be published to crates.io
+#[derive(Debug)]
+pub struct OnlyPublishToCratesIo;
+
+impl Linter for OnlyPublishToCratesIo {
+    fn name(&self) -> &'static str {
+        "only-publish-to-crates-io"
+    }
+}
+
+impl PackageLinter for OnlyPublishToCratesIo {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        match metadata.publish() {
+            Some(&[]) => {}
+            Some(&[ref r]) if r == "crates-io" => {}
+            _ => {
+                out.write(
+                    LintLevel::Error,
+                    "published package should only be publishable to crates.io. \
+                        If you intend to publish this package, ensure the 'publish' \
+                        field in the package's Cargo.toml is 'publish = [\"crates-io\"]. \
+                        Otherwise set the 'publish' field to 'publish = false'.",
+                );
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
