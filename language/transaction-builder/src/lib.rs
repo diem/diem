@@ -4,6 +4,4 @@
 #![forbid(unsafe_code)]
 
 // TODO: remove
-pub use transaction_builder_generated::misc::*;
-// TODO: remove
 pub use transaction_builder_generated::stdlib::*;

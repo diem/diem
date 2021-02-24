@@ -10,11 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
+bcs = "0.1.2"
 once_cell = "1.7.0"
 serde = { version = "1.0.123", features = ["derive"] }
 
-compiled-stdlib = { path = "../../language/diem-framework/compiled" }
-bcs = "0.1.2"
 move-core-types = { path = "../../language/move-core/types" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
