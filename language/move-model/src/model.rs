@@ -59,8 +59,10 @@ use crate::{
         ConditionKind, Exp, GlobalInvariant, ModuleName, PropertyBag, PropertyValue, Spec,
         SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value,
     },
-    pragmas::{FRIEND_PRAGMA, INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
-              DISABLE_INVARIANTS_IN_BODY_PRAGMA, DELEGATE_INVARIANTS_TO_CALLER_PRAGMA},
+    pragmas::{
+        DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, DISABLE_INVARIANTS_IN_BODY_PRAGMA, FRIEND_PRAGMA,
+        INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
+    },
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -2370,7 +2372,6 @@ impl<'env> FunctionEnv<'env> {
     pub fn are_invariants_disabled_at_call(&self) -> bool {
         self.is_pragma_true(DELEGATE_INVARIANTS_TO_CALLER_PRAGMA, || false)
     }
-
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).
     pub fn is_mutating(&self) -> bool {

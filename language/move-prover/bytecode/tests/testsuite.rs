@@ -117,6 +117,7 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(DataInvariantInstrumentationProcessor::new());
             Ok(Some(pipeline))
         }
+        // TODO: Make a version for global_invariant_instrumentation_v2?
         "global_invariant_instrumentation" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());

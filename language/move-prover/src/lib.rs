@@ -15,6 +15,7 @@ use bytecode::{
     debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
+    global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
     read_write_set_analysis::{self, ReadWriteSetProcessor},
     spec_instrumentation::SpecInstrumentationProcessor,
 };
@@ -57,6 +58,7 @@ pub fn run_move_prover<W: WriteColor>(
     let all_sources = collect_all_sources(
         &target_sources,
         &find_move_filenames(&options.move_deps, true)?,
+        options.inv_v2,
     )?;
     let other_sources = remove_sources(&target_sources, all_sources);
     let address = Some(options.account_address.as_ref());
@@ -307,7 +309,12 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         .for_each(|processor| res.add_processor(processor));
     res.add_processor(SpecInstrumentationProcessor::new());
     res.add_processor(DataInvariantInstrumentationProcessor::new());
-    res.add_processor(GlobalInvariantInstrumentationProcessor::new());
+    if options.inv_v2 {
+        // *** convert to v2 version ***
+        res.add_processor(GlobalInvariantInstrumentationProcessorV2::new());
+    } else {
+        res.add_processor(GlobalInvariantInstrumentationProcessor::new());
+    }
     res
 }
 
@@ -330,10 +337,13 @@ fn remove_sources(sources: &[String], all_files: Vec<String>) -> Vec<String> {
 fn collect_all_sources(
     target_sources: &[String],
     input_deps: &[String],
+    use_inv_v2: bool,
 ) -> anyhow::Result<Vec<String>> {
     let mut all_sources = target_sources.to_vec();
     static DEP_REGEX: Lazy<Regex> =
         Lazy::new(|| Regex::new(r"(?m)use\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
+    static NEW_FRIEND_REGEX: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"(?m)friend\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
     static FRIEND_REGEX: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r"(?m)pragma\s*friend\s*=\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap()
     });
@@ -341,7 +351,16 @@ fn collect_all_sources(
     let target_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;
     all_sources.extend(target_deps);
 
-    let friend_sources = calculate_deps(&all_sources, input_deps, &FRIEND_REGEX)?;
+    let friend_sources = calculate_deps(
+        &all_sources,
+        input_deps,
+        if use_inv_v2 {
+            &NEW_FRIEND_REGEX
+        } else {
+            &FRIEND_REGEX
+        },
+    )?;
+
     all_sources.extend(friend_sources);
 
     let friend_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;

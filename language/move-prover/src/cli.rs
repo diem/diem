@@ -63,6 +63,8 @@ pub struct Options {
     pub prover: ProverOptions,
     /// Options for the prover backend.
     pub backend: BoogieOptions,
+    /// Whether to use the v2 invariant scheme.
+    pub inv_v2: bool,
     /// Options for the documentation generator.
     pub docgen: DocgenOptions,
     /// Options for the ABI generator.
@@ -90,6 +92,7 @@ impl Default for Options {
             move_deps: vec![],
             prover: ProverOptions::default(),
             backend: BoogieOptions::default(),
+            inv_v2: false,
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
@@ -196,6 +199,11 @@ impl Options {
                 Arg::with_name("trans_v1")
                     .long("v1")
                     .help("whether to use the old v1 translation and backend")
+            )
+            .arg(
+                Arg::with_name("inv_v2")
+                    .long("inv_v2")
+                    .help("whether to use the new v2 invariant processing (with disabled invariants)")
             )
             .arg(
                 Arg::with_name("negative")
@@ -463,6 +471,9 @@ impl Options {
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
+        }
+        if matches.is_present("inv_v2") {
+            options.inv_v2 = true;
         }
         if matches.is_present("negative") {
             options.prover.negative_checks = true;
