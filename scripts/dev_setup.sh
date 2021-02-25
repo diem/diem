@@ -19,6 +19,7 @@ SCCACHE_GIT='https://github.com/rexhoffman/sccache.git@549babdd3866aa60dae01668c
 KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
+MINIKUBE_VERSION=1.17.1
 VAULT_VERSION=1.5.0
 Z3_VERSION=4.8.9
 CVC4_VERSION=aac53f51
@@ -149,6 +150,27 @@ function install_helm {
       chmod +x "${HOME}"/bin/helm
     fi
   fi
+}
+
+function install_minikube {
+  if ! command -v minikube &> /dev/null; then
+    if [[ $(uname -s) == "Darwin" ]]; then
+      install_pkg minikube brew
+    else
+      MACHINE=$(uname -m);
+      if [[ $MACHINE == "x86_64" ]]; then
+        MACHINE="amd64"
+      fi
+      TMPFILE=$(mktemp)
+      rm "$TMPFILE"
+      mkdir -p "$TMPFILE"/
+      curl -sL -o "$TMPFILE"/out "https://storage.googleapis.com/minikube/releases/v${MINIKUBE_VERSION}/minikube-$(uname -s | tr '[:upper:]' '[:lower:]')-${MACHINE}"
+      "${PRE_COMMAND[@]}" install "$TMPFILE"/out "${HOME}"/bin/minikube
+      rm -rf "$TMPFILE"
+      chmod +x "${HOME}"/bin/minikube
+    fi
+  fi
+  minikube version
 }
 
 function install_terraform {
@@ -489,6 +511,7 @@ Operation tools (since -o was provided):
   * docker
   * vault
   * terraform
+  * minikube
   * kubectl
   * helm
   * aws cli
@@ -676,6 +699,7 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_hadolint
   install_vault
   install_helm
+  install_minikube
   install_terraform
   install_kubectl
   install_awscli
