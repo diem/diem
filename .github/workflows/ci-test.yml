@@ -276,7 +276,7 @@ jobs:
       - name: build client image
         run: docker/diem-build.sh docker/client/Dockerfile libra/client:test
       - name: run validator-client test
-        run: scripts/test_docker_compose.sh
+        run: docker/compose/test_docker_compose.sh
         env:
           IMAGE_TAG: "test"
 

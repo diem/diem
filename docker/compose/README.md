@@ -25,8 +25,8 @@ To build your own complete testnet:
 
 If you would like to run the CLI client and interact with your testnet:
    1. Ensure the **validator-testnet** and the **faucet** are running
-   2. Enter the **client** directory `cd client`
-   3. Start the composition with **`run`, not `up`**: `docker-compose run client`
+   2. Enter the **client-cli** directory `cd client-cli`
+   3. Start the composition with **`run`, not `up`**: `docker-compose run client-cli`
    4. You should be in an interactive session in the CLI. Type `h` and press `enter` to see commands
    5. To create a new account, type `account create`; then you can reference it and add funds to it with `account mint 0 10 XUS` (mint 10 XUS for account #0)
 

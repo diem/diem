@@ -15,7 +15,7 @@ expect_before {
     eof { puts "\rERROR: eof!\r"; exit 1 }
 }
 
-send "cd ../docker/compose/validator-testnet\r"
+send "cd validator-testnet\r"
 send "docker-compose up --remove-orphans\r"
 # Order is non-deterministic, so we test both ways
 expect {
@@ -33,8 +33,8 @@ expect_before {
     eof { puts "\rERROR: eof!\r"; exit 1 }
 }
 
-send "cd ../docker/compose/client\r"
-send "docker-compose run client\r"
+send "cd client-cli\r"
+send "docker-compose run client-cli\r"
 expect "diem%"
 send "a c\r"
 expect "Created/retrieved local account"

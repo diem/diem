@@ -4,7 +4,7 @@
 version: "3.8"
 services:
 
-  client:
+  client-cli:
     image: "libra/client:${IMAGE_TAG:-devnet}"
     networks:
       shared:
