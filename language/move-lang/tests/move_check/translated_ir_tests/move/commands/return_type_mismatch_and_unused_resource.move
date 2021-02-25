@@ -1,5 +1,5 @@
 module M {
-    resource struct X {}
+    struct X {}
 
     fun t1(): bool {
         let x = X {};

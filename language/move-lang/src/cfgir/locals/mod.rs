@@ -10,7 +10,7 @@ use crate::{
         ast::*,
         translate::{display_var, DisplayVar},
     },
-    parser::ast::{Kind_, StructName, Var},
+    parser::ast::{Ability_, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -134,33 +134,29 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                     LocalState::Available(available)
                     | LocalState::MaybeUnavailable { available, .. } => {
                         let ty = context.local_type(&local);
-                        let kind = ty.value.kind(ty.loc);
-                        if kind.value.is_resourceful() {
-                            let verb = match (state, &kind.value) {
-                                (LocalState::Unavailable(_), _) => unreachable!(),
-                                (LocalState::Available(_), Kind_::Resource) => "still contains",
-                                _ => "might still contain",
+                        let abilities = ty.value.abilities(ty.loc);
+                        if abilities.has_ability_(Ability_::Drop).is_none() {
+                            let verb = match state {
+                                LocalState::Unavailable(_) => unreachable!(),
+                                LocalState::Available(_) => "still contains",
+                                LocalState::MaybeUnavailable { .. } => "might still contain",
                             };
                             let available = *available;
                             let stmt = match display_var(local.value()) {
-                                DisplayVar::Tmp => {
-                                    "The resource is created but not used".to_owned()
-                                }
+                                DisplayVar::Tmp => "The value is created but not used".to_owned(),
                                 DisplayVar::Orig(l) => {
                                     if context.signature.is_parameter(&local) {
-                                        format!("The parameter '{}' {} a resource value", l, verb)
+                                        format!("The parameter '{}' {} a value", l, verb,)
                                     } else {
-                                        format!(
-                                            "The local '{}' {} a resource value due to this \
-                                             assignment",
-                                            l, verb
-                                        )
+                                        format!("The local '{}' {} a value", l, verb,)
                                     }
                                 }
                             };
                             let msg = format!(
-                                "{}. The resource must be consumed before the function returns",
-                                stmt
+                                "{}. The value does not have the '{}' ability and must be \
+                                 consumed before the function returns",
+                                stmt,
+                                Ability_::Drop,
                             );
                             errors.push(vec![(*loc, "Invalid return".into()), (available, msg)])
                         }
@@ -184,17 +180,17 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
         L::Ignore => (),
         L::Var(v, _) => {
             let ty = context.local_type(v);
-            let kind = ty.value.kind(ty.loc);
-            if kind.value.is_resourceful() {
+            let abilities = ty.value.abilities(ty.loc);
+            if abilities.has_ability_(Ability_::Drop).is_none() {
                 let old_state = context.get_state(v);
                 match old_state {
                     LocalState::Unavailable(_) => (),
                     LocalState::Available(available)
                     | LocalState::MaybeUnavailable { available, .. } => {
-                        let verb = match (old_state, &kind.value) {
-                            (LocalState::Unavailable(_), _) => unreachable!(),
-                            (LocalState::Available(_), Kind_::Resource) => "contains",
-                            _ => "might contain",
+                        let verb = match old_state {
+                            LocalState::Unavailable(_) => unreachable!(),
+                            LocalState::Available(_) => "contains",
+                            LocalState::MaybeUnavailable { .. } => "might contain",
                         };
                         let available = *available;
                         let vstr = match display_var(v.value()) {
@@ -202,9 +198,11 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             DisplayVar::Orig(s) => s,
                         };
                         let msg = format!(
-                            "The local {} a resource value due to this assignment. The resource \
-                             must be used before you assign to this local again",
-                            verb
+                            "The local {} a value due to this assignment. The value does not have \
+                             the '{}' ability and must be used before you assign to this local \
+                             again",
+                            verb,
+                            Ability_::Drop,
                         );
                         context.error(vec![
                             (*loc, format!("Invalid assignment to local '{}'", vstr)),

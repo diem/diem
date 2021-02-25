@@ -3,7 +3,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:18:9 ───
     │
  18 │         T,
-    │         ^ Invalid acquires item. Expected a resource name, but got a type parameter
+    │         ^ Invalid acquires item. Expected a struct name, but got a type parameter
     │
 
 error: 
@@ -11,7 +11,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:19:9 ───
     │
  19 │         u64,
-    │         ^^^ Invalid acquires item. Expected a resource name, but got a builtin type
+    │         ^^^ Invalid acquires item. Expected a struct name, but got a builtin type
     │
 
 error: 
@@ -30,10 +30,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:21:9 ───
     │
  21 │         S,
-    │         ^ Invalid acquires item. Expected a nominal resource.
+    │         ^ Invalid acquires item. Expected a struct with the 'key' ability.
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - Declared without the ability here
     │
 
 error: 
@@ -60,7 +60,7 @@ error:
     │                          ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  31 │         destroy(account, move_from<T>(a));
-    │                                    - Expected a nominal resource. Found the type: 'T'
+    │                                    - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -68,10 +68,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:32:26 ───
     │
  32 │         destroy(account, move_from<u64>(a));
-    │                          ^^^^^^^^^^^^^^^^^ Invalid call to move_from.
+    │                          ^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'
     ·
  32 │         destroy(account, move_from<u64>(a));
-    │                                    --- Expected a nominal resource. Found the type: 'u64'
+    │                                    --- The type 'u64' does not have the ability 'key'
     │
 
 error: 
@@ -90,13 +90,13 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:34:26 ───
     │
  34 │         destroy(account, move_from<S>(a));
-    │                          ^^^^^^^^^^^^^^^ Invalid call to move_from.
+    │                          ^^^^^^^^^^^^^^^ Invalid call of 'move_from'
     ·
  34 │         destroy(account, move_from<S>(a));
-    │                                    - Expected a nominal resource. Found the type: '0x2::M::S'
+    │                                    - The type '0x2::M::S' does not have the ability 'key'
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -115,7 +115,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  37 │         borrow_global<T>(a);
-    │                       - Expected a nominal resource. Found the type: 'T'
+    │                       - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -123,10 +123,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:38:9 ───
     │
  38 │         borrow_global<u64>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
     ·
  38 │         borrow_global<u64>(a);
-    │                       --- Expected a nominal resource. Found the type: 'u64'
+    │                       --- The type 'u64' does not have the ability 'key'
     │
 
 error: 
@@ -145,13 +145,13 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
     │
  40 │         borrow_global<S>(a);
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
     ·
  40 │         borrow_global<S>(a);
-    │                       - Expected a nominal resource. Found the type: '0x2::M::S'
+    │                       - The type '0x2::M::S' does not have the ability 'key'
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -170,7 +170,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  43 │         borrow_global_mut<T>(a);
-    │                           - Expected a nominal resource. Found the type: 'T'
+    │                           - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -178,10 +178,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:44:9 ───
     │
  44 │         borrow_global_mut<u64>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
     ·
  44 │         borrow_global_mut<u64>(a);
-    │                           --- Expected a nominal resource. Found the type: 'u64'
+    │                           --- The type 'u64' does not have the ability 'key'
     │
 
 error: 
@@ -200,13 +200,13 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
     │
  46 │         borrow_global_mut<S>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
     ·
  46 │         borrow_global_mut<S>(a);
-    │                           - Expected a nominal resource. Found the type: '0x2::M::S'
+    │                           - The type '0x2::M::S' does not have the ability 'key'
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -225,7 +225,7 @@ error:
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  49 │         exists<T>(a);
-    │                - Expected a nominal resource. Found the type: 'T'
+    │                - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -233,10 +233,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:50:9 ───
     │
  50 │         exists<u64>(a);
-    │         ^^^^^^^^^^^^^^ Invalid call to exists.
+    │         ^^^^^^^^^^^^^^ Invalid call of 'exists'
     ·
  50 │         exists<u64>(a);
-    │                --- Expected a nominal resource. Found the type: 'u64'
+    │                --- The type 'u64' does not have the ability 'key'
     │
 
 error: 
@@ -255,13 +255,13 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:52:9 ───
     │
  52 │         exists<S>(a);
-    │         ^^^^^^^^^^^^ Invalid call to exists.
+    │         ^^^^^^^^^^^^ Invalid call of 'exists'
     ·
  52 │         exists<S>(a);
-    │                - Expected a nominal resource. Found the type: '0x2::M::S'
+    │                - The type '0x2::M::S' does not have the ability 'key'
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -288,7 +288,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
     ·
  55 │         move_to<T>(account, any());
-    │                 - Expected a nominal resource. Found the type: 'T'
+    │                 - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -296,10 +296,10 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:56:9 ───
     │
  56 │         move_to<u64>(account, any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
     ·
  56 │         move_to<u64>(account, any());
-    │                 --- Expected a nominal resource. Found the type: 'u64'
+    │                 --- The type 'u64' does not have the ability 'key'
     │
 
 error: 
@@ -318,12 +318,12 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:58:9 ───
     │
  58 │         move_to<S>(account, any());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
     ·
  58 │         move_to<S>(account, any());
-    │                 - Expected a nominal resource. Found the type: '0x2::M::S'
+    │                 - The type '0x2::M::S' does not have the ability 'key'
     ·
- 10 │     struct S {}
-    │            - Declared as a normal struct here
+ 10 │     struct S has store {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     │
 

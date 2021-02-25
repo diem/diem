@@ -1,11 +1,11 @@
 module Test {
 
-    struct R {
+    struct R has drop {
         x: u64,
         s: vector<vector<S>>,
     }
 
-    struct S {
+    struct S has drop {
         y: u64
     }
 

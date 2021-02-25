@@ -9,7 +9,7 @@ module SharedKeyRotation {
     use 0x1::DiemAccount;
     use 0x1::Signer;
 
-    resource struct T {
+    struct T has key {
         // cap.address can rotate the auth key for cap.address
         cap: DiemAccount::KeyRotationCapability,
         // master_key_address can also rotate the auth key for cap.address

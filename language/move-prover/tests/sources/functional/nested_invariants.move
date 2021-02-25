@@ -7,7 +7,7 @@ module TestNestedInvariants {
 
     // Tests scenarios for invariants with nested structs
 
-    struct Nested {
+    struct Nested has copy, drop {
         x: u64
     }
 
@@ -19,7 +19,7 @@ module TestNestedInvariants {
         // invariant update x <= old(x);
     }
 
-    struct Outer {
+    struct Outer has copy, drop  {
         y: u64,
         n: Nested
     }

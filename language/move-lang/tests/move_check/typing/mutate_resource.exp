@@ -3,13 +3,13 @@ error:
    ┌── tests/move_check/typing/mutate_resource.move:5:10 ───
    │
  5 │         *r = R {};
-   │          ^ Invalid mutation. Can only assign to references of a copyable type
+   │          ^ Invalid mutation. Mutation requires the 'drop' ability as the old value is destroyed
    ·
  4 │     fun t0(r: &mut R) {
-   │                    - The type: '0x8675309::M::R'
+   │                    - The type '0x8675309::M::R' does not have the ability 'drop'
    ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
+ 2 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -17,13 +17,13 @@ error:
    ┌── tests/move_check/typing/mutate_resource.move:9:10 ───
    │
  9 │         *r = x;
-   │          ^ Invalid mutation. Can only assign to references of a copyable type
+   │          ^ Invalid mutation. Mutation requires the 'drop' ability as the old value is destroyed
    ·
  8 │     fun t1<T>(r: &mut T, x: T) {
-   │                       - The type: 'T'
+   │                       - The type 'T' does not have the ability 'drop'
    ·
  8 │     fun t1<T>(r: &mut T, x: T) {
-   │            - Is found to be a non-copyable type here
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -31,12 +31,12 @@ error:
     ┌── tests/move_check/typing/mutate_resource.move:13:10 ───
     │
  13 │         *r = x;
-    │          ^ Invalid mutation. Can only assign to references of a copyable type
+    │          ^ Invalid mutation. Mutation requires the 'drop' ability as the old value is destroyed
     ·
- 12 │     fun t2<T: resource>(r: &mut T, x: T) {
-    │                                 - The type: 'T'
+ 12 │     fun t2<T: key>(r: &mut T, x: T) {
+    │                            - The type 'T' does not have the ability 'drop'
     ·
- 12 │     fun t2<T: resource>(r: &mut T, x: T) {
-    │               -------- Is found to be a non-copyable type here
+ 12 │     fun t2<T: key>(r: &mut T, x: T) {
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 

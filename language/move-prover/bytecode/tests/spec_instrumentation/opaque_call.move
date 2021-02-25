@@ -1,7 +1,7 @@
 // Contains tests for treatment of opaque calls
 module Test {
 
-	resource struct R { v: u64 }
+	struct R has key { v: u64 }
 
 	fun get_and_incr(addr: address): u64 acquires R {
 	    if (!exists<R>(addr)) abort 33;

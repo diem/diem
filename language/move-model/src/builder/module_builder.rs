@@ -294,6 +294,12 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn decl_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let struct_id = StructId::new(qsym.symbol);
+        let is_resource =
+            // TODO migrate to abilities
+            def.abilities.has_ability_(PA::Ability_::Key).is_some() || (
+                def.abilities.has_ability_(PA::Ability_::Copy).is_none() &&
+                def.abilities.has_ability_(PA::Ability_::Drop).is_none()
+            );
         let mut et = ExpTranslator::new(self);
         let type_params = et.analyze_and_add_type_params(&def.type_parameters);
         et.parent.parent.define_struct(
@@ -301,7 +307,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             qsym,
             et.parent.module_id,
             struct_id,
-            def.resource_opt.is_some(),
+            is_resource,
             type_params,
             None, // will be filled in during definition analysis
         );
@@ -445,7 +451,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         &mut self,
         loc: &Loc,
         name: &Name,
-        type_params: &[(Name, PA::Kind)],
+        type_params: &[(Name, EA::AbilitySet)],
         type_: &EA::Type,
     ) {
         let name = self.symbol_pool().make(name.value.as_str());
@@ -484,11 +490,11 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         self.spec_vars.push(var_decl);
     }
 
-    fn decl_ana_schema(
+    fn decl_ana_schema<T>(
         &mut self,
         block: &EA::SpecBlock,
         name: &Name,
-        type_params: &[(Name, PA::Kind)],
+        type_params: &[(Name, T)],
     ) {
         let qsym = self.qualified_by_module_from_name(name);
         let mut et = ExpTranslator::new(self);

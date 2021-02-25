@@ -12,7 +12,7 @@ module SharedEd25519PublicKey {
 
     /// A resource that forces the account associated with `rotation_cap` to use a ed25519
     /// authentication key derived from `key`
-    resource struct SharedEd25519PublicKey {
+    struct SharedEd25519PublicKey has key, store {
         /// 32 byte ed25519 public key
         key: vector<u8>,
         /// rotation capability for an account whose authentication key is always derived from `key`

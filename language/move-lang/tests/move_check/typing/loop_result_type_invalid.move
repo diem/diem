@@ -1,7 +1,7 @@
 address 0x2 {
 
 module X {
-    resource struct R {}
+    struct R {}
 }
 
 module M {

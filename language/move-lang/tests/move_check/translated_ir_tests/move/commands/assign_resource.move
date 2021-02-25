@@ -1,5 +1,5 @@
 module M {
-    resource struct T {}
+    struct T {}
 
     fun no() {
         let t = T{}; &t;

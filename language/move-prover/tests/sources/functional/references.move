@@ -10,7 +10,7 @@ module TestReferences {
     // References as parameters
     // ------------------------
 
-    struct T {
+    struct T has copy, drop {
         a: u64
     }
 
@@ -81,7 +81,7 @@ module TestReferences {
     // References as return values
     // ---------------------------
 
-    resource struct WithdrawalCapability {
+    struct WithdrawalCapability has key {
         account_address: address,
     }
 

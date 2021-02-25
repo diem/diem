@@ -1,5 +1,5 @@
 module M {
-    struct S {}
+    struct S has drop {}
 
     fun t0() {
         (&mut 0: &mut u64);

@@ -3,10 +3,10 @@
 
 use crate::{
     errors::Errors,
-    expansion::ast::{Fields, Value_},
+    expansion::ast::{AbilitySet, Fields, Value_},
     hlir::ast::{self as H, Block},
     naming::ast as N,
-    parser::ast::{BinOp_, ConstantName, Field, FunctionName, Kind_, ModuleIdent, StructName, Var},
+    parser::ast::{BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
 };
@@ -349,11 +349,11 @@ fn struct_def(
     _name: StructName,
     sdef: N::StructDefinition,
 ) -> H::StructDefinition {
-    let resource_opt = sdef.resource_opt;
+    let abilities = sdef.abilities;
     let type_parameters = sdef.type_parameters;
     let fields = struct_fields(context, sdef.fields);
     H::StructDefinition {
-        resource_opt,
+        abilities,
         type_parameters,
         fields,
     }
@@ -1367,7 +1367,7 @@ fn builtin(
                 bt.clone(),
             ];
             let texpected_ty_ = N::Type_::Apply(
-                Some(sp(loc, Kind_::Resource)),
+                Some(AbilitySet::empty()), // Should be unused
                 sp(loc, N::TypeName_::Multiple(texpected_tys.len())),
                 texpected_tys,
             );

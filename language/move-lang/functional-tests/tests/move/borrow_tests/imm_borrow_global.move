@@ -4,7 +4,7 @@
 //! sender: alice
 
 module A {
-    resource struct Coin { u: u64 }
+    struct Coin has store { u: u64 }
 
     public fun new(): Coin {
         Coin { u: 1 }
@@ -30,7 +30,7 @@ module Tester {
     use {{alice}}::A;
     use 0x1::Signer;
 
-    resource struct Pair { x: A::Coin, y: A::Coin }
+    struct Pair has key { x: A::Coin, y: A::Coin }
 
     public fun test_eq(addr1: address, addr2: address): bool acquires Pair {
         let p1 = borrow_global<Pair>(addr1);

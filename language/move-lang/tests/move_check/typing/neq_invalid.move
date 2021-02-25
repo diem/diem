@@ -1,10 +1,10 @@
 module M {
     struct S { u: u64 }
-    resource struct R {
+    struct R {
         f: u64
     }
-    struct G0<T: copyable> {}
-    struct G1<T: resource> {}
+    struct G0<T> has drop {}
+    struct G1<T: key> {}
     struct G2<T> {}
 
 

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{SpecId, Value},
+    expansion::ast::{ability_modifiers_ast_debug, AbilitySet, SpecId, Value},
     naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam},
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        ResourceLoc, StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
+        UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
@@ -57,7 +57,7 @@ pub struct ModuleDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct StructDefinition {
-    pub resource_opt: ResourceLoc,
+    pub abilities: AbilitySet,
     pub type_parameters: Vec<TParam>,
     pub fields: StructFields,
 }
@@ -123,7 +123,7 @@ pub type TypeName = Spanned<TypeName_>;
 #[allow(clippy::large_enum_variant)]
 pub enum BaseType_ {
     Param(TParam),
-    Apply(Kind, TypeName, Vec<BaseType>),
+    Apply(AbilitySet, TypeName, Vec<BaseType>),
     Unreachable,
     UnresolvedError,
 }
@@ -378,24 +378,31 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Copyable),
-            Signer => sp(loc, Kind_::Resource),
+            U8 | U64 | U128 | Bool | Address => AbilitySet::primitives(loc),
+            Signer => AbilitySet::signer(loc),
             Vector => {
-                assert!(
-                    ty_args.len() == 1,
-                    "ICE vector should have exactly 1 type argument."
-                );
-                ty_args[0].value.kind()
+                let declared_abilities = AbilitySet::collection(loc);
+                let ty_arg_abilities = {
+                    assert!(ty_args.len() == 1);
+                    ty_args[0].value.abilities()
+                };
+                AbilitySet::from_abilities(
+                    declared_abilities
+                        .into_iter()
+                        .filter(|ab| ty_arg_abilities.has_ability_(ab.value.requires()).is_some()),
+                )
+                .unwrap()
             }
         };
         let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
         sp(loc, BaseType_::Apply(kind, n, ty_args))
     }
 
-    pub fn kind(&self) -> Kind {
+    pub fn abilities(&self) -> AbilitySet {
         match self {
-            BaseType_::Apply(k, _, _) => k.clone(),
-            BaseType_::Param(TParam { kind, .. }) => kind.clone(),
+            BaseType_::Apply(abilities, _, _) | BaseType_::Param(TParam { abilities, .. }) => {
+                abilities.clone()
+            }
             BaseType_::Unreachable | BaseType_::UnresolvedError => panic!(
                 "ICE unreachable/unresolved error has no kind. Should only exist in dead code \
                  that should not be analyzed"
@@ -449,10 +456,10 @@ impl SingleType_ {
         Self::base(BaseType_::u128(loc))
     }
 
-    pub fn kind(&self, loc: Loc) -> Kind {
+    pub fn abilities(&self, loc: Loc) -> AbilitySet {
         match self {
-            SingleType_::Ref(_, _) => sp(loc, Kind_::Copyable),
-            SingleType_::Base(b) => b.value.kind(),
+            SingleType_::Ref(_, _) => AbilitySet::references(loc),
+            SingleType_::Base(b) => b.value.abilities(),
         }
     }
 }
@@ -602,7 +609,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         let (
             name,
             StructDefinition {
-                resource_opt,
+                abilities,
                 type_parameters,
                 fields,
             },
@@ -610,11 +617,10 @@ impl AstDebug for (StructName, &StructDefinition) {
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
-        if resource_opt.is_some() {
-            w.write("resource ");
-        }
+
         w.write(&format!("struct {}", name));
         type_parameters.ast_debug(w);
+        ability_modifiers_ast_debug(w, abilities);
         if let StructFields::Defined(fields) = fields {
             w.block(|w| {
                 w.list(fields, ";", |w, (f, bt)| {
@@ -728,8 +734,8 @@ impl AstDebug for BaseType_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             BaseType_::Param(tp) => tp.ast_debug(w),
-            BaseType_::Apply(k, m, ss) => {
-                w.annotate(
+            BaseType_::Apply(abilities, m, ss) => {
+                w.annotate_gen(
                     |w| {
                         m.ast_debug(w);
                         if !ss.is_empty() {
@@ -738,7 +744,13 @@ impl AstDebug for BaseType_ {
                             w.write(">");
                         }
                     },
-                    k,
+                    abilities,
+                    |w, abilities| {
+                        w.list(abilities, "+", |w, ab| {
+                            ab.ast_debug(w);
+                            false
+                        })
+                    },
                 );
             }
             BaseType_::Unreachable => w.write("_|_"),

@@ -6,15 +6,15 @@
 module Holder {
     use 0x1::Signer;
 
-    resource struct Hold<T> {
+    struct Hold<T> has key {
         x: T
     }
 
-    public fun hold<T>(account: &signer, x: T) {
+    public fun hold<T: store>(account: &signer, x: T) {
         move_to(account, Hold<T>{x})
     }
 
-    public fun get<T>(account: &signer): T
+    public fun get<T: store>(account: &signer): T
     acquires Hold {
         let Hold {x} = move_from<Hold<T>>(Signer::address_of(account));
         x

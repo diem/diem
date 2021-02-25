@@ -1,6 +1,6 @@
 module M {
-    resource struct R {}
-    resource struct X {}
+    struct R has key {}
+    struct X has key {}
     fun t0() acquires R, X, R {
         borrow_global_mut<R>(0x1);
         borrow_global_mut<X>(0x1);

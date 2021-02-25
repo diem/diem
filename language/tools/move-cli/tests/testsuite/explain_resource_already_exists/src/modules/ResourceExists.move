@@ -1,6 +1,6 @@
 address 0x2 {
 module ResourceExists {
-    resource struct R { }
+    struct R has key { }
 
     public fun f(account: &signer) {
         move_to<R>(account, R {});

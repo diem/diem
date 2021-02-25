@@ -45,7 +45,7 @@ use 0x1::DiemAccount;
 /// * `Script::burn`
 /// * `Script::burn_txn_fees`
 
-fun preburn<Token>(account: &signer, amount: u64) {
+fun preburn<Token: store>(account: &signer, amount: u64) {
     let withdraw_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::preburn<Token>(account, &withdraw_cap, amount);
     DiemAccount::restore_withdraw_capability(withdraw_cap);

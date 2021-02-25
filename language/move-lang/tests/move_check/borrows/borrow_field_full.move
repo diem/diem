@@ -1,6 +1,6 @@
 module M {
-    struct Outer { s1: Inner, s2: Inner }
-    struct Inner { f1: u64, f2: u64 }
+    struct Outer has copy, drop { s1: Inner, s2: Inner }
+    struct Inner has copy, drop { f1: u64, f2: u64 }
     fun id<T>(r: &T): &T {
         r
     }

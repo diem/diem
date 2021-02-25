@@ -8,7 +8,7 @@ module ChainId {
     use 0x1::DiemTimestamp;
     use 0x1::Signer;
 
-    resource struct ChainId {
+    struct ChainId has key, store {
         id: u8
     }
 

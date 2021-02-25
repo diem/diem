@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R {}
 
     fun exists(): u64 { 0 }
     fun move_to(): u64 { 0 }

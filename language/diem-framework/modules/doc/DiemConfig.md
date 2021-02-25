@@ -347,7 +347,7 @@ Returns a copy of <code>Config</code> value stored under <code>addr</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config
+<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_get">get</a>&lt;Config: <b>copy</b> + drop + store&gt;(): Config
 <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>();
     <b>assert</b>(<b>exists</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemConfig.md#0x1_DiemConfig_EDIEM_CONFIG">EDIEM_CONFIG</a>));
@@ -402,7 +402,7 @@ resource published under it.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_set">set</a>&lt;Config: <b>copy</b> + drop + store&gt;(account: &signer, payload: Config)
 <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>, <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a> {
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // Next should always be <b>true</b> <b>if</b> properly initialized.
@@ -501,7 +501,7 @@ a Diem root signer.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_set_with_capability_and_reconfigure">set_with_capability_and_reconfigure</a>&lt;Config: <b>copyable</b>&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_set_with_capability_and_reconfigure">set_with_capability_and_reconfigure</a>&lt;Config: <b>copy</b> + drop + store&gt;(
     _cap: &<a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;,
     payload: Config
 ) <b>acquires</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>, <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a> {
@@ -646,7 +646,7 @@ Does not trigger a reconfiguration.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config_and_get_capability">publish_new_config_and_get_capability</a>&lt;Config: <b>copyable</b>&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config_and_get_capability">publish_new_config_and_get_capability</a>&lt;Config: <b>copy</b> + drop + store&gt;(
     dr_account: &signer,
     payload: Config,
 ): <a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
@@ -714,7 +714,7 @@ Does not trigger a reconfiguration.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemConfig.md#0x1_DiemConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copy</b> + drop + store&gt;(
     dr_account: &signer,
     payload: Config
 ) {

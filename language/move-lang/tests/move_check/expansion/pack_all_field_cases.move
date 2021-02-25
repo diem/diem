@@ -1,6 +1,6 @@
 module M {
-    struct T {}
-    struct S { f: u64, g: u64 }
+    struct T has drop {}
+    struct S has drop { f: u64, g: u64 }
     fun foo() {
         let f = 0;
         let g = 1;

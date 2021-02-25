@@ -16,7 +16,7 @@ module FixedPoint32 {
     /// floating-point has less than 16 decimal digits of precision, so
     /// be careful about using floating-point to convert these values to
     /// decimal.
-    struct FixedPoint32 { value: u64 }
+    struct FixedPoint32 has copy, drop, store { value: u64 }
 
     ///> TODO: This is a basic constant and should be provided somewhere centrally in the framework.
     const MAX_U64: u128 = 18446744073709551615;

@@ -1,8 +1,8 @@
 module A {
 
-    struct T{v: u64}
+    struct T has drop {v: u64}
 
-    struct K{f: T}
+    struct K has drop {f: T}
 
     public fun new_T(v: u64) : T {
         T { v }

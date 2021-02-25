@@ -106,7 +106,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="burn_with_amount.md#burn_with_amount">burn_with_amount</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
+<pre><code><b>fun</b> <a href="burn_with_amount.md#burn_with_amount">burn_with_amount</a>&lt;Token: store&gt;(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/Diem.md#0x1_Diem_burn">Diem::burn</a>&lt;Token&gt;(account, preburn_address, amount)
 }

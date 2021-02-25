@@ -14,7 +14,7 @@ error:
    │         ^ Invalid assignment to local 'r'
    ·
  6 │         if (cond) { r = R{}; };
-   │                     - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+   │                     - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
    │
 
 error: 
@@ -33,7 +33,7 @@ error:
     │         ^ Invalid assignment to local 'r'
     ·
  13 │         if (cond) {} else { r = R{}; };
-    │                             - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                             - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
     │
 
 error: 
@@ -52,7 +52,7 @@ error:
     │                        ^ Invalid assignment to local 'r'
     ·
  20 │         while (cond) { r = R{} };
-    │                        - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                        - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
     │
 
 error: 
@@ -63,7 +63,7 @@ error:
     │         ^ Invalid assignment to local 'r'
     ·
  20 │         while (cond) { r = R{} };
-    │                        - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                        - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
     │
 
 error: 
@@ -82,7 +82,7 @@ error:
     │                ^ Invalid assignment to local 'r'
     ·
  27 │         loop { r = R{} }
-    │                - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │                     ^ Invalid assignment to local 'x'
     ·
  30 │     fun t5<T>(cond: bool, x: T, y: T): (T, T) {
-    │                           - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                           - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
     │
 
 error: 

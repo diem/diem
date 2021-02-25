@@ -1,7 +1,7 @@
 //! new-transaction
 
 module X {
-    struct T {}
+    struct T has drop {}
     public fun new(): T {
         T {}
     }

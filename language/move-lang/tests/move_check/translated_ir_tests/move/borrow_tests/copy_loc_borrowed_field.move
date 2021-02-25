@@ -1,5 +1,5 @@
 module Tester {
-    struct T { f: u64 }
+    struct T has copy, drop { f: u64 }
 
     fun t() {
         let x = T { f: 0 };

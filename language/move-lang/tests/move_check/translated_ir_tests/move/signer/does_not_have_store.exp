@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/move/signer/does_not_have_store.move:5:9 ───
+   │
+ 5 │         move_to(account, S<signer> {})
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
+   ·
+ 5 │         move_to(account, S<signer> {})
+   │                          ------------ The type '0x8675309::M::S<signer>' does not have the ability 'key'
+   ·
+ 5 │         move_to(account, S<signer> {})
+   │                            ------ The type '0x8675309::M::S<signer>' can have the ability 'key' but the type argument 'signer' does not have the required ability 'store'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/move/signer/does_not_have_store.move:5:17 ───
+   │
+ 5 │         move_to(account, S<signer> {})
+   │                 ^^^^^^^ Invalid local usage. Unbound local 'account'
+   │
+

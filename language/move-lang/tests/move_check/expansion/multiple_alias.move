@@ -19,7 +19,7 @@ module M {
 }
 
 module X {
-    struct S {}
+    struct S has drop {}
     public fun foo(): S { S{} }
 }
 

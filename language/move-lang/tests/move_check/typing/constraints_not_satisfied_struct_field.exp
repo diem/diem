@@ -3,15 +3,15 @@ error:
    ┌── tests/move_check/typing/constraints_not_satisfied_struct_field.move:6:12 ───
    │
  6 │         f: CupC<R>,
-   │            ^^^^^^^ Constraint not satisfied.
+   │            ^^^^^^^ 'copy' constraint not satisifed
    ·
  6 │         f: CupC<R>,
-   │                 - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+   │                 - The type '0x8675309::M::R' does not have the ability 'copy'
    ·
- 3 │     resource struct R {}
-   │     -------- The type's constraint information was determined here
+ 3 │     struct R {}
+   │            - To satisify the constraint, the 'copy' ability would need to be added here
    ·
- 2 │     struct CupC<T: copyable> {}
-   │                    -------- 'copyable' constraint declared here
+ 2 │     struct CupC<T: copy> {}
+   │                    ---- 'copy' constraint declared here
    │
 

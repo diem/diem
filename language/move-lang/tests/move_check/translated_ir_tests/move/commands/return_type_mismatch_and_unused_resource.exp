@@ -6,7 +6,7 @@ error:
    │         ^^^^^ Invalid return
    ·
  5 │         let x = X {};
-   │             - The local 'x' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │             - The local 'x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
    │
 
 error: 

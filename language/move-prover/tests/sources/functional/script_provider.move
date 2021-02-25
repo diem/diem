@@ -12,9 +12,9 @@ module ScriptProvider {
     }
 
 
-    resource struct Info<T> {}
+    struct Info<T> has key {}
 
-    public fun register<T>(account: &signer) {
+    public fun register<T: store>(account: &signer) {
         assert(Signer::address_of(account) == 0x1, 1);
         move_to(account, Info<T>{})
     }

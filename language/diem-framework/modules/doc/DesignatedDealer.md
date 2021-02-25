@@ -306,7 +306,7 @@ and default tiers for each known currency at launch.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType: store&gt;(
     dd: &signer,
     tc_account: &signer,
     add_all_currencies: bool,
@@ -368,7 +368,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType: store&gt;(dd: &signer, tc_account: &signer)
 <b>acquires</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dd);
@@ -453,7 +453,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType: store&gt;(
     tc_account: &signer,
     dd_addr: address,
     tier_upperbound: u64
@@ -530,7 +530,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_update_tier">update_tier</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_update_tier">update_tier</a>&lt;CoinType: store&gt;(
     tc_account: &signer,
     dd_addr: address,
     tier_index: u64,
@@ -610,7 +610,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType: store&gt;(
     tc_account: &signer,
     amount: u64,
     dd_addr: address,
@@ -756,7 +756,7 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr: address, amount: u64, tier_index: u64)
+<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType: store&gt;(dd_addr: address, amount: u64, tier_index: u64)
 <b>acquires</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <b>let</b> tier_info = borrow_global_mut&lt;<a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
     <a href="DesignatedDealer.md#0x1_DesignatedDealer_reset_window">reset_window</a>(tier_info);
@@ -802,7 +802,7 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType&gt;(tier_info: &<b>mut</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;) {
+<pre><code><b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType: store&gt;(tier_info: &<b>mut</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;) {
     <b>let</b> current_time = <a href="DiemTimestamp.md#0x1_DiemTimestamp_now_microseconds">DiemTimestamp::now_microseconds</a>();
     <b>if</b> (current_time &gt; <a href="DesignatedDealer.md#0x1_DesignatedDealer_ONE_DAY">ONE_DAY</a> && current_time - <a href="DesignatedDealer.md#0x1_DesignatedDealer_ONE_DAY">ONE_DAY</a> &gt; tier_info.window_start) {
         tier_info.window_start = current_time;

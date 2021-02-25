@@ -1,6 +1,6 @@
 module Test {
-    resource struct X { b: bool }
-    resource struct T { i: u64, x: X, b: bool }
+    struct X { b: bool }
+    struct T { i: u64, x: X, b: bool }
 
     public fun new_x(): X {
         X { b: true }

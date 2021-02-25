@@ -53,7 +53,7 @@ use 0x1::DiemAccount;
 /// * `Script::create_parent_vasp_account`
 /// * `Script::add_currency_to_account`
 
-fun peer_to_peer_with_metadata<Currency>(
+fun peer_to_peer_with_metadata<Currency: store>(
     payer: &signer,
     payee: address,
     amount: u64,

@@ -1,13 +1,13 @@
 //! new-transaction
 
 module M {
-    struct S {
+    struct S has drop {
         a: u64,
         b: u64,
     }
 
-    resource struct R {}
-    resource struct Cup {
+    struct R has key, store {}
+    struct Cup has key {
         a: u64,
         b: R,
     }

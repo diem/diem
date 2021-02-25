@@ -1,7 +1,7 @@
 module M {
-    struct CupC<T: copyable> {}
+    struct CupC<T: copy> {}
     struct C {}
-    resource struct R {}
+    struct R {}
 
     fun foo() {
         ignore((abort 0: CupC<R>));

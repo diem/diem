@@ -1,5 +1,5 @@
 module B {
-    struct T {g: u64}
+    struct T has drop {g: u64}
 
     public fun new(g: u64): T {
         T { g }

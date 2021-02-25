@@ -1,8 +1,8 @@
 module M {
-    struct CupC<T: copyable> {}
-    resource struct R {}
+    struct CupC<T: copy> {}
+    struct R {}
 
-    resource struct B {
+    struct B {
         f: CupC<R>,
     }
 }

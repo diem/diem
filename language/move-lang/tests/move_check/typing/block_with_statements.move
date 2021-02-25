@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R {}
     fun t0() {
         ({ let x = 0; x } : u64);
         ({ let x = 0; &x } : &u64);

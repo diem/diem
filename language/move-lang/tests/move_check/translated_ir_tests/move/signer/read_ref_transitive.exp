@@ -3,13 +3,13 @@ error:
    ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:5:9 ───
    │
  5 │         *&x
-   │         ^^^ Invalid dereference. Can only dereference references to copyable types
+   │         ^^^ Invalid dereference. Dereference requires the 'copy' ability
    ·
  4 │         let x = S<signer> { s };
-   │                 --------------- The type: '0x8675309::M::S<signer>'
+   │                 --------------- The type '0x8675309::M::S<signer>' does not have the ability 'copy'
    ·
  4 │         let x = S<signer> { s };
-   │                   ------ Is found to be a non-copyable type here
+   │                   ------ The type '0x8675309::M::S<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
    │
 
 error: 
@@ -17,12 +17,9 @@ error:
     ┌── tests/move_check/translated_ir_tests/move/signer/read_ref_transitive.move:15:9 ───
     │
  15 │         x.s
-    │         ^^^ Invalid implicit copy of field 's'.
+    │         ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
  14 │         let x = S<signer> { s };
-    │                   ------ The type: 'signer'
-    ·
- 14 │         let x = S<signer> { s };
-    │                   ------ Is declared as a non-copyable type here
+    │                   ------ The type 'signer' is not implicitly copyable. Implicit copies is limitied so simple primitive values
     │
 

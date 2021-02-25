@@ -4,4 +4,3 @@ module M {
         s1
     }
 }
-// check: STLOC_UNSAFE_TO_DESTROY_ERROR

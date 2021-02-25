@@ -3,16 +3,16 @@ error:
    ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:29 ───
    │
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                             ^^^^^^^ Constraint not satisfied.
+   │                             ^^^^^^^ 'copy' constraint not satisifed
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                                  - The type 'T' does not satisfy the constraint 'copyable'
+   │                                  - The type 'T' does not have the ability 'copy'
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                       - The type's constraint information was determined here
+   │                       - To satisify the constraint, the 'copy' ability would need to be added here
    ·
- 3 │     struct CupC<T: copyable> {}
-   │                    -------- 'copyable' constraint declared here
+ 3 │     struct CupC<T: copy> {}
+   │                    ---- 'copy' constraint declared here
    │
 
 error: 
@@ -20,50 +20,50 @@ error:
    ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:7:41 ───
    │
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                                         ^^^^^^^ Constraint not satisfied.
+   │                                         ^^^^^^^ 'key' constraint not satisifed
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                                              - The copyable type 'T' does not satisfy the constraint 'resource'
+   │                                              - The type 'T' does not have the ability 'key'
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                       - The type's constraint information was determined here
+   │                       - To satisify the constraint, the 'key' ability would need to be added here
    ·
- 2 │     struct CupR<T: resource> {}
-   │                    -------- 'resource' constraint declared here
+ 2 │     struct CupR<T: key> {}
+   │                    --- 'key' constraint declared here
    │
 
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:9:36 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:9:31 ───
    │
- 9 │     fun t_resource<T: resource>(c: CupC<T>, r: CupR<T>) {}
-   │                                    ^^^^^^^ Constraint not satisfied.
+ 9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
+   │                               ^^^^^^^ 'copy' constraint not satisifed
    ·
- 9 │     fun t_resource<T: resource>(c: CupC<T>, r: CupR<T>) {}
-   │                                         - The resource type 'T' does not satisfy the constraint 'copyable'
+ 9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
+   │                                    - The type 'T' does not have the ability 'copy'
    ·
- 9 │     fun t_resource<T: resource>(c: CupC<T>, r: CupR<T>) {}
-   │                       -------- The type's constraint information was determined here
+ 9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
+   │                    - To satisify the constraint, the 'copy' ability would need to be added here
    ·
- 3 │     struct CupC<T: copyable> {}
-   │                    -------- 'copyable' constraint declared here
+ 3 │     struct CupC<T: copy> {}
+   │                    ---- 'copy' constraint declared here
    │
 
 error: 
 
-    ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:11:48 ───
+    ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:11:44 ───
     │
- 11 │     fun t_copyable<T: copyable>(c: CupC<T>, r: CupR<T>) {}
-    │                                                ^^^^^^^ Constraint not satisfied.
+ 11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
+    │                                            ^^^^^^^ 'key' constraint not satisifed
     ·
- 11 │     fun t_copyable<T: copyable>(c: CupC<T>, r: CupR<T>) {}
-    │                                                     - The copyable type 'T' does not satisfy the constraint 'resource'
+ 11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
+    │                                                 - The type 'T' does not have the ability 'key'
     ·
- 11 │     fun t_copyable<T: copyable>(c: CupC<T>, r: CupR<T>) {}
-    │                       -------- The type's constraint information was determined here
+ 11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
+    │                    - To satisify the constraint, the 'key' ability would need to be added here
     ·
-  2 │     struct CupR<T: resource> {}
-    │                    -------- 'resource' constraint declared here
+  2 │     struct CupR<T: key> {}
+    │                    --- 'key' constraint declared here
     │
 
 error: 
@@ -71,16 +71,16 @@ error:
     ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:13:14 ───
     │
  13 │     fun r(c: CupC<R>, r: CupR<R>) {}
-    │              ^^^^^^^ Constraint not satisfied.
+    │              ^^^^^^^ 'copy' constraint not satisifed
     ·
  13 │     fun r(c: CupC<R>, r: CupR<R>) {}
-    │                   - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
+    │                   - The type '0x8675309::M::R' does not have the ability 'copy'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R has key {}
+    │            - To satisify the constraint, the 'copy' ability would need to be added here
     ·
-  3 │     struct CupC<T: copyable> {}
-    │                    -------- 'copyable' constraint declared here
+  3 │     struct CupC<T: copy> {}
+    │                    ---- 'copy' constraint declared here
     │
 
 error: 
@@ -88,15 +88,15 @@ error:
     ┌── tests/move_check/typing/constraints_not_satisfied_all_cases.move:15:26 ───
     │
  15 │     fun c(c: CupC<C>, r: CupR<C>) {}
-    │                          ^^^^^^^ Constraint not satisfied.
+    │                          ^^^^^^^ 'key' constraint not satisifed
     ·
  15 │     fun c(c: CupC<C>, r: CupR<C>) {}
-    │                               - The copyable type '0x8675309::M::C' does not satisfy the constraint 'resource'
+    │                               - The type '0x8675309::M::C' does not have the ability 'key'
     ·
-  5 │     struct C {}
-    │            - The type's constraint information was determined here
+  5 │     struct C has copy {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     ·
-  2 │     struct CupR<T: resource> {}
-    │                    -------- 'resource' constraint declared here
+  2 │     struct CupR<T: key> {}
+    │                    --- 'key' constraint declared here
     │
 

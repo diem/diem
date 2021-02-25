@@ -29,7 +29,7 @@ use 0x1::Diem;
 /// * `Script::update_dual_attestation_limit`
 /// * `Script::update_exchange_rate`
 
-fun update_minting_ability<Currency>(
+fun update_minting_ability<Currency: store>(
     tc_account: &signer,
     allow_minting: bool
 ) {

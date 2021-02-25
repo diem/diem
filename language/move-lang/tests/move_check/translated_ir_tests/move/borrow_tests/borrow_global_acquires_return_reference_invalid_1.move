@@ -1,6 +1,6 @@
 module A {
     use 0x1::Signer;
-    resource struct T1 {v: u64}
+    struct T1 has key {v: u64}
 
     public fun test1(account: &signer) acquires T1 {
         borrow_acquires_t1(account);

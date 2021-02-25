@@ -1,6 +1,6 @@
 module M {
-    struct S {}
-    resource struct R {}
+    struct S has copy, drop {}
+    struct R {}
 
     fun t() {
         let u = 0;

@@ -1,5 +1,5 @@
 module M {
-    struct S { f: u64 }
+    struct S has drop{ f: u64 }
     struct R { s1: S, s2: S }
 
     fun t0() {

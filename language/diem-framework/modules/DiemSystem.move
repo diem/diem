@@ -18,7 +18,7 @@ module DiemSystem {
     use 0x1::DiemTimestamp;
 
     /// Information about a Validator Owner.
-    struct ValidatorInfo {
+    struct ValidatorInfo has copy, drop, store {
         /// The address (account) of the Validator Owner
         addr: address,
         /// The voting power of the Validator Owner (currently always 1).
@@ -39,7 +39,7 @@ module DiemSystem {
     /// modify the DiemSystem config. This is only needed by `update_config_and_reconfigure`.
     /// Only Diem root can add or remove a validator from the validator set, so the
     /// capability is not needed for access control in those functions.
-    resource struct CapabilityHolder {
+    struct CapabilityHolder has key, store {
         /// Holds a capability returned by `DiemConfig::publish_new_config_and_get_capability`
         /// which is called in `initialize_validator_set`.
         cap: ModifyConfigCapability<DiemSystem>,
@@ -48,7 +48,7 @@ module DiemSystem {
     /// The DiemSystem struct stores the validator set and crypto scheme in
     /// DiemConfig. The DiemSystem struct is stored by DiemConfig, which publishes a
     /// DiemConfig<DiemSystem> resource.
-    struct DiemSystem {
+    struct DiemSystem has copy, drop, store {
         /// The current consensus crypto scheme.
         scheme: u8,
         /// The current validator set.

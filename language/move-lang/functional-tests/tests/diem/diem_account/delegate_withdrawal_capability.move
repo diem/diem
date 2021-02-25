@@ -9,7 +9,7 @@ module SillyColdWallet {
     use 0x1::Diem;
     use 0x1::Signer;
 
-    resource struct T {
+    struct T has key {
         cap: DiemAccount::WithdrawCapability,
         owner: address,
     }

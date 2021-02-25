@@ -1,20 +1,20 @@
 address 0x2 {
 
 module X {
-    resource struct R{}
+    struct R has key, store {}
 }
 
 module M {
     use 0x2::X;
 
-    struct S {}
-    resource struct R<T> {v: T}
+    struct S has store {}
+    struct R<T> has key {v: T}
 
-    fun destroy<T>(account: &signer, v: T) {
+    fun destroy<T: store>(account: &signer, v: T) {
         move_to(account, R { v })
     }
 
-    fun t0<T: resource>() acquires
+    fun t0<T: key>() acquires
         T,
         u64,
         X::R,
@@ -26,7 +26,7 @@ module M {
         abort 0
     }
 
-    fun t1<T: resource>(account: &signer, a: address) {
+    fun t1<T: key + store>(account: &signer, a: address) {
         destroy(account, move_from(a));
         destroy(account, move_from<T>(a));
         destroy(account, move_from<u64>(a));

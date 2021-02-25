@@ -125,8 +125,8 @@ error:
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │                  ^ Invalid assignment to local 'f'
     ·
-  2 │     resource struct R {f: u64}
-    │                           --- The type: 'u64'
+  2 │     struct R {f: u64}
+    │                  --- The type: 'u64'
     ·
  25 │         let f = 0x0;
     │                 --- Is not compatible with: 'address'

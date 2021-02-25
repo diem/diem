@@ -1,6 +1,6 @@
 module TestFriendError {
 
-    resource struct R{
+    struct R {
         x: u64,
     }
 

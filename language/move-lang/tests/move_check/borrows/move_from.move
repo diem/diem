@@ -1,5 +1,5 @@
 module M {
-    resource struct R { f: u64 }
+    struct R has key { f: u64 }
 
     fun t0(addr: address) acquires R {
         R { f: _ } = move_from<R>(addr);

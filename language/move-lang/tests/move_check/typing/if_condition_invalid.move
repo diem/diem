@@ -5,7 +5,7 @@ module M {
         if ({}) () else ()
     }
 
-    fun t1<T: copyable>(x: T) {
+    fun t1<T: drop>(x: T) {
         if (x) () else ();
         if (0) () else ();
         if (0x0) () else ()

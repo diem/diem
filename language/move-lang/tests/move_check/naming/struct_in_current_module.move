@@ -1,6 +1,6 @@
 module M {
-    struct S { f: u64 }
-    resource struct R { f: u64 }
+    struct S has drop { f: u64 }
+    struct R { f: u64 }
 
     fun foo() {
         let _ : Self::S = S { f: 0 };

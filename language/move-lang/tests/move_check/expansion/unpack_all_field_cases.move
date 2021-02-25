@@ -1,6 +1,6 @@
 module M {
     struct T {}
-    struct S { f: u64, g: u64 }
+    struct S has copy { f: u64, g: u64 }
     fun foo() {
         let f;
         let g;

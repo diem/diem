@@ -1,7 +1,7 @@
 module M {
-    resource struct R<T> {}
+    struct R<T> {}
     struct S {}
-    struct Box<T> {}
+    struct Box<T> has drop {}
 
     fun t0() {
         (0, S{}, R<u64> {});

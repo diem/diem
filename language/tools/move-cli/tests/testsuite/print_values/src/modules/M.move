@@ -3,9 +3,9 @@ module M {
     use 0x1::Debug;
     use 0x1::Vector;
 
-    struct Foo {}
-    struct Bar { x: u128, y: Foo, z: bool }
-    struct Box<T> { x: T }
+    struct Foo has drop {}
+    struct Bar has drop { x: u128, y: Foo, z: bool }
+    struct Box<T> has drop { x: T }
 
     public fun test()  {
         let x = 42;

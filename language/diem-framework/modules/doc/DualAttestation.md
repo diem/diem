@@ -917,7 +917,7 @@ Helper which returns true if dual attestion is required for a deposit.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token: store&gt;(
     payer: address, payee: address, deposit_value: u64
 ): bool <b>acquires</b> <a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a> {
     // travel rule applies for payments over a limit
@@ -1194,7 +1194,7 @@ the conditions in (2) is not met.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency: store&gt;(
     payer: address,
     payee: address,
     value: u64,

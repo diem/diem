@@ -3,5 +3,4 @@ module M {
         *s
     }
 }
-
 // check: READREF_RESOURCE_ERROR

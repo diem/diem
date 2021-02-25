@@ -3,8 +3,8 @@
 //! account: alice, 0XUS
 
 module Holder {
-    resource struct Holder<T> { x: T }
-    public fun hold<T>(account: &signer, x: T)  {
+    struct Holder<T> has key { x: T }
+    public fun hold<T: store>(account: &signer, x: T)  {
         move_to(account, Holder<T> { x })
     }
 }

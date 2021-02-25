@@ -43,7 +43,7 @@ use 0x1::SlidingNonce;
 /// * `Script::create_recovery_address`
 /// * `Script::rotate_dual_attestation_info`
 
-fun create_parent_vasp_account<CoinType>(
+fun create_parent_vasp_account<CoinType: store>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,

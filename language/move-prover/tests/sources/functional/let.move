@@ -4,7 +4,7 @@ module TestLet {
         pragma verify = true;
     }
 
-    resource struct R {
+    struct R has key {
         x: u64
     }
 
@@ -44,7 +44,7 @@ module TestLet {
         ensures result_2 == result_1 - 1;
     }
 
-    fun spec_let_with_generic<T:copyable>(x: T, y: T): bool {
+    fun spec_let_with_generic<T:copy + drop>(x: T, y: T): bool {
         x == y
     }
     spec fun spec_let_with_generic {

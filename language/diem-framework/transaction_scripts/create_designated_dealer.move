@@ -45,7 +45,7 @@ use 0x1::SlidingNonce;
 /// * `Script::peer_to_peer_with_metadata`
 /// * `Script::rotate_dual_attestation_info`
 
-fun create_designated_dealer<Currency>(
+fun create_designated_dealer<Currency: store>(
     tc_account: &signer,
     sliding_nonce: u64,
     addr: address,

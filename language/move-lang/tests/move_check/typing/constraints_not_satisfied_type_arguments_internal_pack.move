@@ -1,11 +1,11 @@
 module M {
-    struct CupC<T: copyable> {}
-    resource struct R {}
+    struct CupD<T: drop> has drop {}
+    struct R {}
 
-    struct Box<T> {}
+    struct Box<T> has drop {}
 
     fun foo() {
-        Box<CupC<R>>{};
+        Box<CupD<R>>{};
         Box<R>{};
     }
 

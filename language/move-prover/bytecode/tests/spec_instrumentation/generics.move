@@ -5,9 +5,9 @@ module Generics {
         pragma verify = true;
     }
 
-    resource struct R<T>{ x: T }
+    struct R<T> has key { x: T }
 
-    fun remove<T>(a: address): R<T> acquires R {
+    fun remove<T: store>(a: address): R<T> acquires R {
         move_from<R<T>>(a)
     }
     spec fun remove {

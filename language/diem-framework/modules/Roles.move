@@ -48,7 +48,7 @@ module Roles {
 
     /// The roleId contains the role id for the account. This is only moved
     /// to an account as a top-level resource, and is otherwise immovable.
-    resource struct RoleId {
+    struct RoleId has key, store {
         role_id: u64,
     }
 

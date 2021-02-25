@@ -1,6 +1,6 @@
 address 0x2 {
     module A {
-        struct S {
+        struct S has copy, drop {
             f1: 0x2::B::S,
             f2: 0x2::C::S,
         }
@@ -33,7 +33,7 @@ address 0x2 {
     }
 
     module B {
-        struct S {
+        struct S has copy, drop {
             f1: u64,
             f2: u128,
         }
@@ -56,7 +56,7 @@ address 0x2 {
     }
 
     module C {
-        struct S {
+        struct S has copy, drop {
             f1: address,
             f2: bool,
         }
@@ -85,7 +85,7 @@ address 0x2 {
 
 
     module D {
-        struct S {
+        struct S has copy, drop {
             f1: 0x2::B::S,
         }
 

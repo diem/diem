@@ -5,7 +5,7 @@ module TestMutRefs {
         pragma verify = true;
     }
 
-    resource struct R {
+    struct R {
         value: u64
     }
 

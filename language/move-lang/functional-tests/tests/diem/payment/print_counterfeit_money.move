@@ -5,19 +5,19 @@ module M {
     use 0x1::Diem;
     use 0x1::Signer;
 
-    resource struct R<T: resource> { x: T }
-    resource struct FakeCoin { value: u64 }
+    struct R<T> has key { x: T }
+    struct FakeCoin has store { value: u64 }
 
-    fun fetch<T: resource>(account: &signer): T acquires R {
+    fun fetch<T: store>(account: &signer): T acquires R {
         let R { x } = move_from<R<T>>(Signer::address_of(account));
         x
     }
 
-    fun store<T: resource>(account: &signer, x: T) {
+    fun store<T: store>(account: &signer, x: T) {
         move_to(account, R { x });
     }
 
-    fun transmute<T1: resource, T2: resource>(account: &signer, x: T1): T2 acquires R {
+    fun transmute<T1: store, T2: store>(account: &signer, x: T1): T2 acquires R {
         store(account, x);
         fetch(account)
     }

@@ -1,13 +1,13 @@
 address 0x42 {
 module M {
-    struct S<T: copyable> {}
-    resource struct R {}
+    struct S<T: drop> has drop {}
+    struct R {}
     fun id<T>(x: T): T { x }
 
     // Written types with unsatisified constraints
     // Checked in various positions
 
-    resource struct S1 {
+    struct S1 {
         f1: S<R>,
         f2: S<&u64>,
         f3: &(&u64),

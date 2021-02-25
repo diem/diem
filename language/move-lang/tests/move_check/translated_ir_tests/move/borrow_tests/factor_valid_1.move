@@ -1,6 +1,6 @@
 module M {
-    struct X { f: Y }
-    struct Y { g: u64, h: u64 }
+    struct X has copy, drop { f: Y }
+    struct Y has copy, drop { g: u64, h: u64 }
 
     fun t1() {
         let x = X { f: Y { g: 0, h: 0 } };

@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R has key {}
 
     fun t0() acquires R {
         let _ : bool = exists<R>();

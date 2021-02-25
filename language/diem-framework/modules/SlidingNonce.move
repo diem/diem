@@ -10,7 +10,7 @@ module SlidingNonce {
     use 0x1::Signer;
     use 0x1::Errors;
 
-    resource struct SlidingNonce {
+    struct SlidingNonce has key, store {
         /// Minimum nonce in sliding window. All transactions with smaller
         /// nonces will be automatically rejected, since the window cannot
         /// tell whether they have been executed or not.

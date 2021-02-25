@@ -1,5 +1,5 @@
 module M {
-    struct S {}
+    struct S has drop {}
 
     fun imm<T>(_x: &T) {}
     fun imm_mut<T>(_x: &T, _y: &mut T) {}

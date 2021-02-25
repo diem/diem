@@ -33,6 +33,14 @@ impl<T: TName> UniqueSet<T> {
         self.0.contains_key_(&x_)
     }
 
+    pub fn get_loc(&self, x: &T) -> Option<&T::Loc> {
+        self.0.get_loc(x)
+    }
+
+    pub fn get_loc_(&self, x_: &T::Key) -> Option<&T::Loc> {
+        self.0.get_loc_(x_)
+    }
+
     // interesection of two sets. Keeps the loc of the first set
     pub fn intersect(&self, other: &Self) -> Self {
         let mut intersection = Self::new();

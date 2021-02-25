@@ -1,0 +1,14 @@
+error: 
+
+    ┌── tests/move_check/typing/borrow_field_non_ref_non_local_root.move:9:22 ───
+    │
+  9 │         (&(if (cond) *foo() else bar()).f : &u64);
+    │                      ^^^^^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 12 │     fun foo(): &S {
+    │                 - The type '0x8675309::M::S' does not have the ability 'copy'
+    ·
+  2 │     struct S has drop { f: u64 }
+    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │
+

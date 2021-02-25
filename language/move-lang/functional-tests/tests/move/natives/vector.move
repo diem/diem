@@ -1,8 +1,8 @@
 module M {
     use 0x1::Vector;
 
-    struct Foo {}
-    resource struct Bar {}
+    struct Foo has drop {}
+    struct Bar {}
 
     fun test_natives<T>(x1: T, x2: T): (T, T) {
         let v: vector<T> = Vector::empty();

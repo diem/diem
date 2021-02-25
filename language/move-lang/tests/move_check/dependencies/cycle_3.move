@@ -3,7 +3,7 @@ address 0x2 {
 module A {
     use 0x2::B;
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -15,7 +15,7 @@ module A {
 module B {
     use 0x2::C;
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -27,7 +27,7 @@ module B {
 module C {
     use 0x2::A;
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -42,7 +42,7 @@ address 0x3 {
 
 module A {
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -53,7 +53,7 @@ module A {
 
 module C {
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -64,7 +64,7 @@ module C {
 
 module B {
 
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -78,7 +78,7 @@ module B {
 address 0x4 {
 
 module C {
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 
@@ -88,7 +88,7 @@ module C {
 }
 
 module B {
-    struct S{}
+    struct S has drop {}
 
     public fun s(): S { S{} }
 

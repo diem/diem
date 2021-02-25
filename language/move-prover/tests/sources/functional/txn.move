@@ -9,7 +9,7 @@ module TestTransaction {
         pragma verify = true;
     }
 
-    resource struct T {
+    struct T has key {
         value: u128,
     }
 

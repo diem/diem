@@ -3,8 +3,8 @@ module Events {
     use 0x1::Event;
     use 0x1::Signer;
 
-    struct AnEvent { i: u64 }
-    resource struct Handle { h: Event::EventHandle<AnEvent> }
+    struct AnEvent has copy, drop, store { i: u64 }
+    struct Handle has key{ h: Event::EventHandle<AnEvent> }
 
     public fun emit(account: &signer, i: u64) acquires Handle {
         let addr = Signer::address_of(account);

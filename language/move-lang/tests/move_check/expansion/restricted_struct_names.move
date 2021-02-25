@@ -1,6 +1,6 @@
 module M {
     struct address {}
-    resource struct signer {}
+    struct signer {}
     struct u8 {}
     struct u64 {}
     struct u128 {}

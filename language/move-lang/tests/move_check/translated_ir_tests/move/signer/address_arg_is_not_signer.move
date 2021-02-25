@@ -1,6 +1,6 @@
 address 0x2 {
 module M {
-    resource struct R { s: signer }
+    struct R has key { s: signer }
     public fun store_signer(s1: &signer, s: signer) {
         move_to(s1, R { s })
     }

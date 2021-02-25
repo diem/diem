@@ -25,7 +25,7 @@ module TestDefines {
     // Spec functions accessing global state.
     // --------------------------------------
 
-    resource struct R { x: u64 }
+    struct R has key { x: u64 }
 
     spec module {
         define exists_both(addr1: address, addr2: address): bool {

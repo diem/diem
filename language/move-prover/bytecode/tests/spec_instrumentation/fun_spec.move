@@ -29,7 +29,7 @@ module Test {
 	    ensures !is_div ==> result == a * b;
 	}
 
-	resource struct R { v: u64 }
+	struct R has key { v: u64 }
 
 	fun resource_with_old(val: u64) acquires R {
 	    if (!exists<R>(0x0)) abort 33;

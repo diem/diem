@@ -57,12 +57,12 @@ fun main(account: &signer) {
 
 //! new-transaction
 module Holder {
-    resource struct Holder<T> { x: T }
-    public fun hold<T>(account: &signer, x: T) {
+    struct Holder<T> has key { x: T }
+    public fun hold<T: store>(account: &signer, x: T) {
         move_to(account, Holder<T>{ x })
     }
 
-    public fun get<T>(addr: address): T
+    public fun get<T: store>(addr: address): T
     acquires Holder {
        let Holder<T> { x } = move_from<Holder<T>>(addr);
        x

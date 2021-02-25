@@ -47,8 +47,8 @@ error:
  9 │         if (x) () else ();
    │             ^ Invalid if condition
    ·
- 8 │     fun t1<T: copyable>(x: T) {
-   │                            - The type: 'T'
+ 8 │     fun t1<T: drop>(x: T) {
+   │                        - The type: 'T'
    ·
  9 │         if (x) () else ();
    │             - Is not compatible with: 'bool'

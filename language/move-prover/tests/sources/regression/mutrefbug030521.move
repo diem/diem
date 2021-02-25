@@ -1,6 +1,6 @@
 module Bug {
 
-    resource struct Diem<CointType> {
+    struct Diem<CointType> {
         /// The value of this coin in the base units for `CoinType`
         value: u64
     }

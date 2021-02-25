@@ -45,13 +45,13 @@ error:
    ┌── tests/move_check/typing/block_with_statements_invalid.move:7:9 ───
    │
  7 │         ({ let r = { let r = R {}; r }; r } : R);
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
    ·
  7 │         ({ let r = { let r = R {}; r }; r } : R);
-   │                                               - The type: '0x8675309::M::R'
+   │                                               - The type '0x8675309::M::R' does not have the ability 'drop'
    ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
+ 2 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 

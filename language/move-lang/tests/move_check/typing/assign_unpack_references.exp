@@ -1,0 +1,22 @@
+error: 
+
+    ┌── tests/move_check/typing/assign_unpack_references.move:20:14 ───
+    │
+ 20 │         f; s2;
+    │              ^ Invalid return
+    ·
+ 17 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
+    │                                  ------------------------------ The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/assign_unpack_references.move:30:14 ───
+    │
+ 30 │         f; s2;
+    │              ^ Invalid return
+    ·
+ 27 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
+    │                                      ------------------------------ The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+    │
+

@@ -1,5 +1,5 @@
 module M {
-    resource struct X { u: u64 }
+    struct X has key { u: u64 }
 
     fun t() {
         let s = X { u: 0 };

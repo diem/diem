@@ -1,6 +1,6 @@
 module M {
 
-  struct S {
+  struct S has copy, drop {
     x: u64,
   }
 

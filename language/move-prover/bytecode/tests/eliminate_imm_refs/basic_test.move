@@ -1,6 +1,6 @@
 module TestEliminateImmRefs {
 
-    struct R {
+    struct R has copy, drop {
         x: u64
     }
 

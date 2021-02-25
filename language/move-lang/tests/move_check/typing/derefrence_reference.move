@@ -1,6 +1,6 @@
 module M {
-    resource struct R {}
-    resource struct B { r: R }
+    struct R {}
+    struct B { r: R }
 
     fun t0(r: &R, b: &B) {
         R {} = *r;

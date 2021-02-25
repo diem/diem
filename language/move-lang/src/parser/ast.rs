@@ -133,9 +133,9 @@ pub type ResourceLoc = Option<Loc>;
 #[derive(Debug, PartialEq)]
 pub struct StructDefinition {
     pub loc: Loc,
-    pub resource_opt: ResourceLoc,
+    pub abilities: Vec<Ability>,
     pub name: StructName,
-    pub type_parameters: Vec<(Name, Kind)>,
+    pub type_parameters: Vec<(Name, Vec<Ability>)>,
     pub fields: StructFields,
 }
 
@@ -153,7 +153,7 @@ new_name!(FunctionName);
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct FunctionSignature {
-    pub type_parameters: Vec<(Name, Kind)>,
+    pub type_parameters: Vec<(Name, Vec<Ability>)>,
     pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
@@ -222,7 +222,7 @@ pub enum SpecBlockTarget_ {
     Module,
     Function(FunctionName),
     Structure(StructName),
-    Schema(Name, Vec<(Name, Kind)>),
+    Schema(Name, Vec<(Name, Vec<Ability>)>),
 }
 
 pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
@@ -245,7 +245,7 @@ pub type PragmaProperty = Spanned<PragmaProperty_>;
 pub struct SpecApplyPattern_ {
     pub visibility: Option<FunctionVisibility>,
     pub name_pattern: Vec<SpecApplyFragment>,
-    pub type_parameters: Vec<(Name, Kind)>,
+    pub type_parameters: Vec<(Name, Vec<Ability>)>,
 }
 
 pub type SpecApplyPattern = Spanned<SpecApplyPattern_>;
@@ -276,7 +276,7 @@ pub enum SpecBlockMember_ {
     Variable {
         is_global: bool,
         name: Name,
-        type_parameters: Vec<(Name, Kind)>,
+        type_parameters: Vec<(Name, Vec<Ability>)>,
         type_: Type,
     },
     Let {
@@ -347,18 +347,14 @@ pub enum ModuleAccess_ {
 }
 pub type ModuleAccess = Spanned<ModuleAccess_>;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
-pub enum Kind_ {
-    // Kind representing all types
-    Unknown,
-    // Linear resource types
-    Resource,
-    // Explicitly copyable types
-    Affine,
-    // Implicitly copyable types
-    Copyable,
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+pub enum Ability_ {
+    Copy,
+    Drop,
+    Store,
+    Key,
 }
-pub type Kind = Spanned<Kind_>;
+pub type Ability = Spanned<Ability_>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type_ {
@@ -634,6 +630,24 @@ impl Hash for ModuleIdent {
     }
 }
 
+impl TName for Ability {
+    type Key = Ability_;
+    type Loc = Loc;
+
+    fn drop_loc(self) -> (Self::Loc, Self::Key) {
+        let sp!(loc, ab_) = self;
+        (loc, ab_)
+    }
+
+    fn add_loc(loc: Self::Loc, key: Self::Key) -> Self {
+        sp(loc, key)
+    }
+
+    fn borrow(&self) -> (&Self::Loc, &Self::Key) {
+        (&self.loc, &self.value)
+    }
+}
+
 //**************************************************************************************************
 // Impl
 //**************************************************************************************************
@@ -668,14 +682,31 @@ impl Var {
     }
 }
 
-impl Kind_ {
-    pub const VALUE_CONSTRAINT: &'static str = "copyable";
-    pub const RESOURCE_CONSTRAINT: &'static str = "resource";
+impl Ability_ {
+    pub const COPY: &'static str = "copy";
+    pub const DROP: &'static str = "drop";
+    pub const STORE: &'static str = "store";
+    pub const KEY: &'static str = "key";
 
-    pub fn is_resourceful(&self) -> bool {
+    /// For a struct with ability `a`, each field needs to have the ability `a.requires()`.
+    /// Consider a generic type Foo<t1, ..., tn>, for Foo<t1, ..., tn> to have ability `a`, Foo must
+    /// have been declared with `a` and each type argument ti must have the ability `a.requires()`
+    pub fn requires(self) -> Ability_ {
         match self {
-            Kind_::Affine | Kind_::Copyable => false,
-            Kind_::Resource | Kind_::Unknown => true,
+            Ability_::Copy => Ability_::Copy,
+            Ability_::Drop => Ability_::Drop,
+            Ability_::Store => Ability_::Store,
+            Ability_::Key => Ability_::Store,
+        }
+    }
+
+    /// An inverse of `requires`, where x is in a.required_by() iff x.requires() == a
+    pub fn required_by(self) -> Vec<Ability_> {
+        match self {
+            Self::Copy => vec![Ability_::Copy],
+            Self::Drop => vec![Ability_::Drop],
+            Self::Store => vec![Ability_::Store, Ability_::Key],
+            Self::Key => vec![],
         }
     }
 }
@@ -832,6 +863,21 @@ impl fmt::Display for FunctionVisibility {
     }
 }
 
+impl fmt::Display for Ability_ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match &self {
+                Ability_::Copy => Ability_::COPY,
+                Ability_::Drop => Ability_::DROP,
+                Ability_::Store => Ability_::STORE,
+                Ability_::Key => Ability_::KEY,
+            }
+        )
+    }
+}
+
 //**************************************************************************************************
 // Debug
 //**************************************************************************************************
@@ -969,17 +1015,21 @@ impl AstDebug for StructDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let StructDefinition {
             loc: _loc,
-            resource_opt,
+            abilities,
             name,
             type_parameters,
             fields,
         } = self;
+
+        w.list(abilities, " ", |w, ab_mod| {
+            ab_mod.ast_debug(w);
+            false
+        });
+
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
-        if resource_opt.is_some() {
-            w.write("resource ");
-        }
+
         w.write(&format!("struct {}", name));
         type_parameters.ast_debug(w);
         if let StructFields::Defined(fields) = fields {
@@ -1244,7 +1294,7 @@ impl AstDebug for Constant {
     }
 }
 
-impl AstDebug for Vec<(Name, Kind)> {
+impl AstDebug for Vec<(Name, Vec<Ability>)> {
     fn ast_debug(&self, w: &mut AstWriter) {
         if !self.is_empty() {
             w.write("<");
@@ -1254,29 +1304,23 @@ impl AstDebug for Vec<(Name, Kind)> {
     }
 }
 
-impl AstDebug for (Name, Kind) {
+impl AstDebug for (Name, Vec<Ability>) {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let (n, k) = self;
+        let (n, abilities) = self;
         w.write(&n.value);
-        match &k.value {
-            Kind_::Unknown => (),
-            Kind_::Resource | Kind_::Affine => {
-                w.write(": ");
-                k.ast_debug(w)
-            }
-            Kind_::Copyable => panic!("ICE 'copyable' kind constraint"),
+        if !abilities.is_empty() {
+            w.write(": ");
+            w.list(abilities, "+", |w, ab| {
+                ab.ast_debug(w);
+                false
+            })
         }
     }
 }
 
-impl AstDebug for Kind_ {
+impl AstDebug for Ability_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        w.write(match self {
-            Kind_::Unknown => "unknown",
-            Kind_::Resource => "resource",
-            Kind_::Affine => "copyable",
-            Kind_::Copyable => "copyable",
-        })
+        w.write(&format!("{}", self))
     }
 }
 

@@ -232,7 +232,7 @@ Returns true if <code>CoinType</code> is <code><a href="XDX.md#0x1_XDX_XDX">XDX:
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="XDX.md#0x1_XDX_is_xdx">is_xdx</a>&lt;CoinType&gt;(): bool {
+<pre><code><b>public</b> <b>fun</b> <a href="XDX.md#0x1_XDX_is_xdx">is_xdx</a>&lt;CoinType: store&gt;(): bool {
     <a href="Diem.md#0x1_Diem_is_currency">Diem::is_currency</a>&lt;CoinType&gt;() &&
         <a href="Diem.md#0x1_Diem_currency_code">Diem::currency_code</a>&lt;CoinType&gt;() == <a href="Diem.md#0x1_Diem_currency_code">Diem::currency_code</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;()
 }

@@ -7,5 +7,3 @@ module M {
         if (cond) consume(s)
     }
 }
-
-// check: UNSAFE_RET_UNUSED_RESOURCES

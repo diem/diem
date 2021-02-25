@@ -1,9 +1,9 @@
 module M {
-    resource struct R1 {}
-    resource struct R2 {}
-    resource struct R3 {}
-    resource struct R4 {}
-    resource struct R5 {}
+    struct R1 has key {}
+    struct R2 has key {}
+    struct R3 has key {}
+    struct R4 has key {}
+    struct R5 has key {}
     fun foo(account: &signer) acquires R1 {
         borrow_global<R1, R2>(0x1);
         exists<R1, R2, R3>(0x1);

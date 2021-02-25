@@ -443,7 +443,7 @@ module TestVector {
     // Custom Option type using vector as container
     // --------------------------------------------
 
-    struct T<E> {
+    struct T<E> has copy, drop {
         v: vector<E>
     }
 
@@ -457,7 +457,7 @@ module TestVector {
         T<E> {v: v}
     }
 
-    fun unwrap_or<E: copyable>(x: T<E>, e: E): E {
+    fun unwrap_or<E: copy + drop>(x: T<E>, e: E): E {
         let T<E> {v : v} = x;
         if (Vector::is_empty<E>(&v))
             e

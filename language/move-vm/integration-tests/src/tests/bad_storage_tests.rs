@@ -36,7 +36,7 @@ fn test_malformed_resource() {
         module M {
             use 0x1::Signer;
 
-            resource struct Foo { x: u64, y: bool }
+            struct Foo has key { x: u64, y: bool }
 
             public fun publish(s: &signer) {
                 move_to(s, Foo { x: 123, y : false });
@@ -612,7 +612,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
         module M {
             use 0x1::Signer;
 
-            resource struct R {}
+            struct R has key {}
 
             public fun foo() {}
 

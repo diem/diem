@@ -10,7 +10,7 @@ module DiemVersion {
     use 0x1::DiemTimestamp;
     use 0x1::Roles;
 
-    struct DiemVersion {
+    struct DiemVersion has copy, drop, store {
         major: u64,
     }
 

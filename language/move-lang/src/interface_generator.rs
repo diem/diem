@@ -7,7 +7,7 @@ use move_core_types::language_storage::ModuleId;
 use move_vm::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, CompiledModule, FunctionDefinition, ModuleHandle, SignatureToken,
+        Ability, AbilitySet, CompiledModule, FunctionDefinition, ModuleHandle, SignatureToken,
         StructDefinition, StructFieldInformation, StructHandleIndex, TypeParameterIndex,
         Visibility,
     },
@@ -153,19 +153,14 @@ fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
     let mut out = String::new();
 
     let shandle = ctx.module.struct_handle_at(sdef.struct_handle);
-    let resource_mod = match ability_to_kind(shandle.abilities) {
-        Kind::Resource => "resource ",
-        Kind::Copyable => "",
-        Kind::All => panic!("Unsupported ability set for struct"),
-    };
 
     push_line!(
         out,
         format!(
-            "    {}struct {}{} {{",
-            resource_mod,
+            "    struct {}{}{} {{",
             ctx.module.identifier_at(shandle.name),
             write_type_paramters(&shandle.type_parameters),
+            write_ability_modifiers(shandle.abilities),
         )
     );
 
@@ -215,6 +210,43 @@ fn write_visibility(visibility: Visibility) -> String {
     .to_string()
 }
 
+fn write_ability_modifiers(abs: AbilitySet) -> String {
+    if abs == AbilitySet::EMPTY {
+        return "".to_string();
+    }
+    format!(
+        " has {}",
+        abs.into_iter()
+            .map(write_ability)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+}
+
+fn write_ability_constraint(abs: AbilitySet) -> String {
+    if abs == AbilitySet::EMPTY {
+        return "".to_string();
+    }
+    format!(
+        ": {}",
+        abs.into_iter()
+            .map(write_ability)
+            .collect::<Vec<_>>()
+            .join("+ ")
+    )
+}
+
+fn write_ability(ab: Ability) -> String {
+    use crate::parser::ast::Ability_ as A_;
+    match ab {
+        Ability::Copy => A_::COPY,
+        Ability::Drop => A_::DROP,
+        Ability::Store => A_::STORE,
+        Ability::Key => A_::KEY,
+    }
+    .to_string()
+}
+
 fn write_type_paramters(tps: &[AbilitySet]) -> String {
     if tps.is_empty() {
         return "".to_string();
@@ -227,20 +259,12 @@ fn write_type_paramters(tps: &[AbilitySet]) -> String {
             format!(
                 "{}{}",
                 write_type_parameter(idx as TypeParameterIndex),
-                write_kind_contraint(ability_to_kind(*abs))
+                write_ability_constraint(*abs),
             )
         })
         .collect::<Vec<_>>()
         .join(", ");
     format!("<{}>", tp_and_constraints)
-}
-
-fn write_kind_contraint(kind: Kind) -> String {
-    match kind {
-        Kind::All => "".to_string(),
-        Kind::Resource => ": resource".to_string(),
-        Kind::Copyable => ": copyable".to_string(),
-    }
 }
 
 fn write_parameters(ctx: &mut Context, params: &[SignatureToken]) -> String {
@@ -320,20 +344,4 @@ fn write_struct_handle_type(ctx: &mut Context, idx: StructHandleIndex) -> String
 
 fn write_type_parameter(idx: TypeParameterIndex) -> String {
     format!("T{}", idx)
-}
-
-// Temporary helpers until abilities+constraints are added to the source language
-enum Kind {
-    Copyable,
-    Resource,
-    All,
-}
-
-fn ability_to_kind(abs: AbilitySet) -> Kind {
-    match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
-        (true, true, false) => Kind::Copyable,
-        (false, false, true) => Kind::Resource,
-        (false, false, false) => Kind::All,
-        _ => panic!("Unsupported ability set"),
-    }
 }

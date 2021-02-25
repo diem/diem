@@ -5,7 +5,7 @@ module M {
         while ({}) ()
     }
 
-    fun t1<T: copyable>(x: T) {
+    fun t1<T: drop>(x: T) {
         while (x) ();
         while (0) ();
         while (0x0) ()

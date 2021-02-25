@@ -10,7 +10,7 @@ module M {
 
 module N {
     struct R<T> { f: T }
-    fun t0<T>(s: &signer) {
+    fun t0<T: store>(s: &signer) {
         () = move_to(s, R { f: false })
     }
 }

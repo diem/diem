@@ -1,6 +1,6 @@
 address 0x1 {
 module Funtions {
-    resource struct R { v: vector<u8> }
+    struct R has key { v: vector<u8> }
 
     public fun id(a: address): address { a }
 

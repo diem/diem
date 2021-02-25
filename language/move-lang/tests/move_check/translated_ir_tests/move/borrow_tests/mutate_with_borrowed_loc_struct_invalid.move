@@ -1,6 +1,6 @@
 module M {
-    resource struct X { b: bool }
-    struct S { z: u64 }
+    struct X has key { b: bool }
+    struct S has copy, drop { z: u64 }
     fun t1() {
         let x = X { b: true };
         let y = &x;

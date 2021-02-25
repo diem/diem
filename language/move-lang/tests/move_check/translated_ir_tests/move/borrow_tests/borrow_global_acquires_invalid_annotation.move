@@ -1,5 +1,5 @@
 module A {
-    resource struct T1 {v: u64}
+    struct T1 has key {v: u64}
 
     public fun test() acquires T1 {
         test()

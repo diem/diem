@@ -1,8 +1,7 @@
 module M {
-    resource struct S<T> {}
+    struct S<T> has key {}
 
     fun t(_account: &signer) {
-        // TODO(tmn) update when abilities hit
-        // move_to(account, S<signer> {})
+        move_to(account, S<signer> {})
     }
 }

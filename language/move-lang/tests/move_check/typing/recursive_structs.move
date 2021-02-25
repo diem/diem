@@ -6,8 +6,8 @@ module M0 {
     struct Cup<T> { f: T }
     struct Bar { f: Cup<Bar> }
 
-    resource struct X { y: vector<Y> }
-    resource struct Y { x: vector<X> }
+    struct X { y: vector<Y> }
+    struct Y { x: vector<X> }
 
 }
 

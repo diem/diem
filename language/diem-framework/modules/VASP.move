@@ -14,13 +14,13 @@ module VASP {
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
     /// off-chain protocols with this one.
-    resource struct ParentVASP {
+    struct ParentVASP has key, store {
         /// Number of child accounts this parent has created.
         num_children: u64
     }
 
     /// A resource that represents a child account of the parent VASP account at `parent_vasp_addr`
-    resource struct ChildVASP { parent_vasp_addr: address }
+    struct ChildVASP has key, store { parent_vasp_addr: address }
 
     /// The `ParentVASP` or `ChildVASP` resources are not in the required state
     const EPARENT_OR_CHILD_VASP: u64 = 0;
@@ -114,7 +114,7 @@ module VASP {
     /// Return `true` if `addr` is a parent or child VASP whose parent VASP account contains an
     /// `AccountLimits<CoinType>` resource.
     /// Aborts if `addr` is not a VASP
-    public fun has_account_limits<CoinType>(addr: address): bool acquires ChildVASP {
+    public fun has_account_limits<CoinType: store>(addr: address): bool acquires ChildVASP {
         AccountLimits::has_window_published<CoinType>(parent_address(addr))
     }
 

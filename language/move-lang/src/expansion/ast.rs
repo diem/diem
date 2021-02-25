@@ -3,11 +3,11 @@
 
 use crate::{
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, QuantKind,
-        ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
-        Var,
+        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, FunctionVisibility,
+        ModuleIdent, QuantKind, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName,
+        UnaryOp, Var,
     },
-    shared::{ast_debug::*, unique_map::UniqueMap, *},
+    shared::{ast_debug::*, unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
 use move_ir_types::location::*;
 use std::{
@@ -62,8 +62,8 @@ pub type Fields<T> = UniqueMap<Field, (usize, T)>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructDefinition {
     pub loc: Loc,
-    pub resource_opt: ResourceLoc,
-    pub type_parameters: Vec<(Name, Kind)>,
+    pub abilities: AbilitySet,
+    pub type_parameters: Vec<(Name, AbilitySet)>,
     pub fields: StructFields,
 }
 
@@ -79,7 +79,7 @@ pub enum StructFields {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct FunctionSignature {
-    pub type_parameters: Vec<(Name, Kind)>,
+    pub type_parameters: Vec<(Name, AbilitySet)>,
     pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
@@ -144,7 +144,7 @@ pub enum SpecBlockMember_ {
     Variable {
         is_global: bool,
         name: Name,
-        type_parameters: Vec<(Name, Kind)>,
+        type_parameters: Vec<(Name, AbilitySet)>,
         type_: Type,
     },
     Let {
@@ -182,6 +182,9 @@ pub enum PragmaValue {
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AbilitySet(UniqueSet<Ability>);
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ModuleAccess_ {
@@ -324,6 +327,149 @@ impl SpecId {
     }
 }
 
+impl AbilitySet {
+    /// All abilities
+    pub const ALL: [Ability_; 4] = [
+        Ability_::Copy,
+        Ability_::Drop,
+        Ability_::Store,
+        Ability_::Key,
+    ];
+    /// Abilities for bool, u8, u64, u128, and address
+    pub const PRIMITIVES: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
+    /// Abilities for &_ and &mut _
+    pub const REFERENCES: [Ability_; 2] = [Ability_::Copy, Ability_::Drop];
+    /// Abilities for signer
+    pub const SIGNER: [Ability_; 1] = [Ability_::Drop];
+    /// Abilities for vector<_>, note they are predicated on the type argument
+    pub const COLLECTION: [Ability_; 3] = [Ability_::Copy, Ability_::Drop, Ability_::Store];
+
+    pub fn empty() -> Self {
+        AbilitySet(UniqueSet::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn add(&mut self, a: Ability) -> Result<(), Loc> {
+        self.0.add(a).map_err(|(_a, loc)| loc)
+    }
+
+    pub fn has_ability(&self, a: &Ability) -> Option<Loc> {
+        self.0.get_loc(&a).cloned()
+    }
+
+    pub fn has_ability_(&self, a: Ability_) -> Option<Loc> {
+        self.0.get_loc_(&a).cloned()
+    }
+
+    // interesection of two sets. Keeps the loc of the first set
+    pub fn intersect(&self, other: &Self) -> Self {
+        Self(self.0.intersect(&other.0))
+    }
+
+    // union of two sets. Prefers the loc of the first set
+    pub fn union(&self, other: &Self) -> Self {
+        Self(self.0.union(&other.0))
+    }
+
+    pub fn is_subset(&self, other: &Self) -> bool {
+        self.0.is_subset(&other.0)
+    }
+
+    pub fn iter(&self) -> AbilitySetIter {
+        self.into_iter()
+    }
+
+    pub fn from_abilities(
+        iter: impl IntoIterator<Item = Ability>,
+    ) -> Result<Self, (Ability_, Loc, Loc)> {
+        Ok(Self(UniqueSet::from_elements(iter)?))
+    }
+
+    pub fn from_abilities_(
+        loc: Loc,
+        iter: impl IntoIterator<Item = Ability_>,
+    ) -> Result<Self, (Ability_, Loc, Loc)> {
+        Ok(Self(UniqueSet::from_elements_(loc, iter)?))
+    }
+
+    pub fn all(loc: Loc) -> Self {
+        Self::from_abilities_(loc, Self::ALL.to_vec()).unwrap()
+    }
+
+    pub fn primitives(loc: Loc) -> Self {
+        Self::from_abilities_(loc, Self::PRIMITIVES.to_vec()).unwrap()
+    }
+
+    pub fn references(loc: Loc) -> Self {
+        Self::from_abilities_(loc, Self::REFERENCES.to_vec()).unwrap()
+    }
+
+    pub fn signer(loc: Loc) -> Self {
+        Self::from_abilities_(loc, Self::SIGNER.to_vec()).unwrap()
+    }
+
+    pub fn collection(loc: Loc) -> Self {
+        Self::from_abilities_(loc, Self::COLLECTION.to_vec()).unwrap()
+    }
+}
+
+//**************************************************************************************************
+// Iter
+//**************************************************************************************************
+
+pub struct AbilitySetIter<'a>(unique_set::Iter<'a, Ability>);
+
+impl<'a> Iterator for AbilitySetIter<'a> {
+    type Item = Ability;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|(loc, a_)| sp(loc, *a_))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+impl<'a> IntoIterator for &'a AbilitySet {
+    type Item = Ability;
+    type IntoIter = AbilitySetIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        AbilitySetIter(self.0.iter())
+    }
+}
+
+pub struct AbilitySetIntoIter(unique_set::IntoIter<Ability>);
+
+impl Iterator for AbilitySetIntoIter {
+    type Item = Ability;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
+}
+
+impl<'a> IntoIterator for AbilitySet {
+    type Item = Ability;
+    type IntoIter = AbilitySetIntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        AbilitySetIntoIter(self.0.into_iter())
+    }
+}
+
 //**************************************************************************************************
 // Display
 //**************************************************************************************************
@@ -451,25 +597,35 @@ impl AstDebug for ModuleDefinition {
     }
 }
 
+pub fn ability_modifiers_ast_debug(w: &mut AstWriter, abilities: &AbilitySet) {
+    if !abilities.is_empty() {
+        w.write(" has ");
+        w.list(abilities, " ", |w, ab| {
+            ab.ast_debug(w);
+            false
+        });
+    }
+}
+
 impl AstDebug for (StructName, &StructDefinition) {
     fn ast_debug(&self, w: &mut AstWriter) {
         let (
             name,
             StructDefinition {
                 loc: _loc,
-                resource_opt,
+                abilities,
                 type_parameters,
                 fields,
             },
         ) = self;
+
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
-        if resource_opt.is_some() {
-            w.write("resource ");
-        }
+
         w.write(&format!("struct {}", name));
         type_parameters.ast_debug(w);
+        ability_modifiers_ast_debug(w, abilities);
         if let StructFields::Defined(fields) = fields {
             w.block(|w| {
                 w.list(fields, ",", |w, (_, f, idx_st)| {
@@ -694,6 +850,34 @@ impl AstDebug for Type_ {
             }
             Type_::UnresolvedError => w.write("_|_"),
         }
+    }
+}
+
+impl AstDebug for Vec<(Name, AbilitySet)> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        if !self.is_empty() {
+            w.write("<");
+            w.comma(self, |w, tp| tp.ast_debug(w));
+            w.write(">")
+        }
+    }
+}
+
+pub fn ability_constraints_ast_debug(w: &mut AstWriter, abilities: &AbilitySet) {
+    if !abilities.is_empty() {
+        w.write(": ");
+        w.list(abilities, "+", |w, ab| {
+            ab.ast_debug(w);
+            false
+        })
+    }
+}
+
+impl AstDebug for (Name, AbilitySet) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (n, abilities) = self;
+        w.write(&n.value);
+        ability_constraints_ast_debug(w, abilities)
     }
 }
 

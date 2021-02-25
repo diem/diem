@@ -1,13 +1,13 @@
 address 0x2 {
 
 module Container {
-    struct T<V> {}
+    struct T<V> has drop {}
 
     public fun new<V>(): T<V> {
         T {}
     }
 
-    public fun get<V: copyable>(self: &T<V>): V {
+    public fun get<V: drop>(self: &T<V>): V {
         abort 0
     }
 
@@ -20,8 +20,8 @@ module Container {
 module M {
     use 0x2::Container;
 
-    struct Box<T> { f1: T, f2: T }
-    resource struct R{}
+    struct Box<T> has drop { f1: T, f2: T }
+    struct R {}
 
     fun new<T>(): Box<T> {
         abort 0

@@ -1,7 +1,7 @@
 address 0x42 {
 
 module A {
-    resource struct Coin { u: u64 }
+    struct Coin has store { u: u64 }
 
     public fun new(): Coin {
         Coin { u: 1 }
@@ -23,7 +23,7 @@ module A {
 module Tester {
     use 0x42::A;
 
-    resource struct Pair { x: A::Coin, y: A::Coin }
+    struct Pair has key { x: A::Coin, y: A::Coin }
 
     fun test_eq(addr1: address, addr2: address): bool acquires Pair {
         let p1 = borrow_global<Pair>(addr1);

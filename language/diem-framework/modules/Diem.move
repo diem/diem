@@ -21,7 +21,7 @@ module Diem {
     /// of the coin (in the base units of the currency `CoinType`
     /// and specified in the `CurrencyInfo` resource for that `CoinType`
     /// published under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` account address).
-    resource struct Diem<CoinType> {
+    struct Diem<CoinType> has key, store {
         /// The value of this coin in the base units for `CoinType`
         value: u64
     }
@@ -30,18 +30,18 @@ module Diem {
     /// of coins of `CoinType` currency by the holder of this capability.
     /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`
     /// account or the `0x1::XDX` module (and `CoreAddresses::DIEM_ROOT_ADDRESS()` in testnet).
-    resource struct MintCapability<CoinType> { }
+    struct MintCapability<CoinType> has key, store { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of it.
-    resource struct BurnCapability<CoinType> { }
+    struct BurnCapability<CoinType> has key, store { }
 
     /// A `MintEvent` is emitted every time a Diem coin is minted. This
     /// contains the `amount` minted (in base units of the currency being
     /// minted) along with the `currency_code` for the coin(s) being
     /// minted, and that is defined in the `currency_code` field of the
     /// `CurrencyInfo` resource for the currency.
-    struct MintEvent {
+    struct MintEvent has copy, drop, store {
         /// Funds added to the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -55,7 +55,7 @@ module Diem {
     /// (and as defined in the `CurrencyInfo` resource for that currency).
     /// It also contains the `preburn_address` from which the coin is
     /// extracted for burning.
-    struct BurnEvent {
+    struct BurnEvent has copy, drop, store {
         /// Funds removed from the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -67,7 +67,7 @@ module Diem {
     /// A `PreburnEvent` is emitted every time an `amount` of funds with
     /// a coin type `currency_code` is enqueued in the `PreburnQueue` resource under
     /// the account at the address `preburn_address`.
-    struct PreburnEvent {
+    struct PreburnEvent has copy, drop, store {
         /// The amount of funds waiting to be removed (burned) from the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -80,7 +80,7 @@ module Diem {
     /// resource held in a `PreburnQueue` at `preburn_address` is canceled (removed from the
     /// preburn queue, but not burned). The currency of the funds is given by the
     /// `currency_code` as defined in the `CurrencyInfo` for that currency.
-    struct CancelBurnEvent {
+    struct CancelBurnEvent has copy, drop, store {
         /// The amount of funds returned
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -91,7 +91,7 @@ module Diem {
 
     /// An `ToXDXExchangeRateUpdateEvent` is emitted every time the to-XDX exchange
     /// rate for the currency given by `currency_code` is updated.
-    struct ToXDXExchangeRateUpdateEvent {
+    struct ToXDXExchangeRateUpdateEvent has copy, drop, store {
         /// The currency code of the currency whose exchange rate was updated.
         currency_code: vector<u8>,
         /// The new on-chain to-XDX exchange rate between the
@@ -108,7 +108,7 @@ module Diem {
     /// the time of registration, the `MintCapability<CoinType>` and
     /// `BurnCapability<CoinType>` capabilities are returned to the caller.
     /// Unless they are specified otherwise the fields in this resource are immutable.
-    resource struct CurrencyInfo<CoinType> {
+    struct CurrencyInfo<CoinType> has key, store {
         /// The total value for the currency represented by `CoinType`. Mutable.
         total_value: u128,
         /// Value of funds that are in the process of being burned.  Mutable.
@@ -167,7 +167,7 @@ module Diem {
     /// initiate a burn request. A burn request can be resolved by the holder
     /// of a `BurnCapability` by either (1) burning the funds, or (2) returning
     /// the funds to the account that initiated the burn request.
-    resource struct Preburn<CoinType> {
+    struct Preburn<CoinType> has key, store {
         /// A single pending burn amount. This is an element in the
         /// `PreburnQueue` resource published under each Designated Dealer account.
         to_burn: Diem<CoinType>,
@@ -184,7 +184,7 @@ module Diem {
     /// This resource can be created by either the TreasuryCompliance
     /// account, or during the upgrade process, by a designated dealer with an
     /// existing `Preburn` resource in `CoinType`
-    resource struct PreburnQueue<CoinType> {
+    struct PreburnQueue<CoinType> has key, store {
         /// The queue of preburn requests
         preburns: vector<Preburn<CoinType>>,
     }
@@ -255,7 +255,7 @@ module Diem {
 
     /// Publishes the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     /// must be a registered currency type. The caller must pass a treasury compliance account.
-    public fun publish_burn_capability<CoinType>(
+    public fun publish_burn_capability<CoinType: store>(
         tc_account: &signer,
         cap: BurnCapability<CoinType>,
     ) {
@@ -286,7 +286,7 @@ module Diem {
     /// Mints `amount` of currency. The `account` must hold a
     /// `MintCapability<CoinType>` at the top-level in order for this call
     /// to be successful.
-    public fun mint<CoinType>(account: &signer, value: u64): Diem<CoinType>
+    public fun mint<CoinType: store>(account: &signer, value: u64): Diem<CoinType>
     acquires CurrencyInfo, MintCapability {
         let addr = Signer::address_of(account);
         assert(exists<MintCapability<CoinType>>(addr), Errors::requires_capability(EMINT_CAPABILITY));
@@ -311,7 +311,7 @@ module Diem {
     /// published `BurnCapability` for the `CoinType` published under it, or if
     /// there is not a `Preburn` request in the `PreburnQueue` that does not
     /// equal `amount`.
-    public fun burn<CoinType>(
+    public fun burn<CoinType: store>(
         account: &signer,
         preburn_address: address,
         amount: u64,
@@ -353,7 +353,7 @@ module Diem {
     /// `BurnCapability<CoinType>`, or if there is no preburn request
     /// outstanding in the `PreburnQueue` resource under `preburn_address` with
     /// a value equal to `amount`.
-    public fun cancel_burn<CoinType>(
+    public fun cancel_burn<CoinType: store>(
         account: &signer,
         preburn_address: address,
         amount: u64,
@@ -398,7 +398,7 @@ module Diem {
     /// caller must have a reference to a `MintCapability<CoinType>`. Only
     /// the treasury compliance account or the `0x1::XDX` module can acquire such a
     /// reference.
-    public fun mint_with_capability<CoinType>(
+    public fun mint_with_capability<CoinType: store>(
         value: u64,
         _capability: &MintCapability<CoinType>
     ): Diem<CoinType> acquires CurrencyInfo {
@@ -463,7 +463,7 @@ module Diem {
     /// `CurrencyInfo` for the `CoinType` passed in. However, if the currency
     /// being preburned is a synthetic currency (`is_synthetic = true`) then no
     /// `PreburnEvent` will be emitted.
-    fun preburn_with_resource<CoinType>(
+    fun preburn_with_resource<CoinType: store>(
         coin: Diem<CoinType>,
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
@@ -536,7 +536,7 @@ module Diem {
     /// Create a `Preburn<CoinType>` resource.
     /// This is useful for places where a module needs to be able to burn coins
     /// outside of a Designated Dealer, e.g., for transaction fees, or for the XDX reserve.
-    public fun create_preburn<CoinType>(
+    public fun create_preburn<CoinType: store>(
         tc_account: &signer
     ): Preburn<CoinType> {
         Roles::assert_treasury_compliance(tc_account);
@@ -554,7 +554,7 @@ module Diem {
 
     /// Publish an empty `PreburnQueue` resource under the Designated Dealer
     /// dealer account `account`.
-    fun publish_preburn_queue<CoinType>(
+    fun publish_preburn_queue<CoinType: store>(
         account: &signer
     ) {
         let account_addr = Signer::address_of(account);
@@ -606,7 +606,7 @@ module Diem {
     /// used for bootstrapping the designated dealer at account-creation
     /// time, and the association TC account `tc_account` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
     /// this resource for the designated dealer `account`.
-    public fun publish_preburn_queue_to_account<CoinType>(
+    public fun publish_preburn_queue_to_account<CoinType: store>(
         account: &signer,
         tc_account: &signer
     ) acquires CurrencyInfo {
@@ -641,7 +641,7 @@ module Diem {
     /// Upgrade a designated dealer account from using a single `Preburn`
     /// resource to using a `PreburnQueue` resource so that multiple preburn
     /// requests can be outstanding in the same currency for a designated dealer.
-    fun upgrade_preburn<CoinType>(account: &signer)
+    fun upgrade_preburn<CoinType: store>(account: &signer)
     acquires Preburn {
         Roles::assert_designated_dealer(account);
         let sender = Signer::address_of(account);
@@ -684,7 +684,7 @@ module Diem {
 
     /// Add the `preburn` request to the preburn queue of `account`, and check that the
     /// number of preburn requests does not exceed `MAX_OUTSTANDING_PREBURNS`.
-    fun add_preburn_to_queue<CoinType>(account: &signer, preburn: Preburn<CoinType>)
+    fun add_preburn_to_queue<CoinType: store>(account: &signer, preburn: Preburn<CoinType>)
     acquires PreburnQueue {
         let account_addr = Signer::address_of(account);
         assert(exists<PreburnQueue<CoinType>>(account_addr), Errors::invalid_state(EPREBURN_QUEUE));
@@ -722,7 +722,7 @@ module Diem {
     /// * `account` does not have a `PreburnQueue<CoinType>` resource published under it; or
     /// * the preburn queue is already at capacity (i.e., at `MAX_OUTSTANDING_PREBURNS`); or
     /// * `coin` has a `value` field of zero.
-    public fun preburn_to<CoinType>(
+    public fun preburn_to<CoinType: store>(
         account: &signer,
         coin: Diem<CoinType>
     ) acquires CurrencyInfo, Preburn, PreburnQueue {
@@ -778,7 +778,7 @@ module Diem {
     /// Calls to this function will fail if:
     /// * `preburn_address` doesn't have a `PreburnQueue<CoinType>` resource published under it; or
     /// * a preburn request with the correct value for `amount` cannot be found in the preburn queue for `preburn_address`;
-    fun remove_preburn_from_queue<CoinType>(preburn_address: address, amount: u64): Preburn<CoinType>
+    fun remove_preburn_from_queue<CoinType: store>(preburn_address: address, amount: u64): Preburn<CoinType>
     acquires PreburnQueue {
         assert(exists<PreburnQueue<CoinType>>(preburn_address), Errors::not_published(EPREBURN_QUEUE));
         // We search from the head of the queue
@@ -843,11 +843,11 @@ module Diem {
     /// Permanently removes the coins in the oldest preburn request in the
     /// `PreburnQueue` resource under `preburn_address` that has a `to_burn`
     /// value of `amount` and updates the market cap accordingly.
-    /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
-    /// Calls to this function will fail if the there is no `PreburnQueue<CoinType>`
+    /// This function can only be called by the holder of a `BurnCapability<CoinType: store>`.
+    /// Calls to this function will fail if the there is no `PreburnQueue<CoinType: store>`
     /// resource under `preburn_address`, or, if there is no preburn request in
     /// the preburn queue with a `to_burn` amount equal to `amount`.
-    public fun burn_with_capability<CoinType>(
+    public fun burn_with_capability<CoinType: store>(
         preburn_address: address,
         capability: &BurnCapability<CoinType>,
         amount: u64,
@@ -885,9 +885,9 @@ module Diem {
 
     /// Permanently removes the coins held in the `Preburn` resource (in `to_burn` field)
     /// that was stored in a `PreburnQueue` at `preburn_address` and updates the market cap accordingly.
-    /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
+    /// This function can only be called by the holder of a `BurnCapability<CoinType: store>`.
     /// Calls to this function will fail if the preburn `to_burn` area for `CoinType` is empty.
-    fun burn_with_resource_cap<CoinType>(
+    fun burn_with_resource_cap<CoinType: store>(
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
         _capability: &BurnCapability<CoinType>
@@ -957,7 +957,7 @@ module Diem {
     /// This function can only be called by the holder of a
     /// `BurnCapability<CoinType>`, and will fail if the `PreburnQueue<CoinType>` resource
     /// at `preburn_address` does not contain a preburn request of the right amount.
-    public fun cancel_burn_with_capability<CoinType>(
+    public fun cancel_burn_with_capability<CoinType: store>(
         preburn_address: address,
         _capability: &BurnCapability<CoinType>,
         amount: u64,
@@ -1027,7 +1027,7 @@ module Diem {
 
     /// A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is
     /// used for administrative burns, like unpacking an XDX coin or charging fees.
-    public fun burn_now<CoinType>(
+    public fun burn_now<CoinType: store>(
         coin: Diem<CoinType>,
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
@@ -1058,7 +1058,7 @@ module Diem {
     /// Removes and returns the `BurnCapability<CoinType>` from `account`.
     /// Calls to this function will fail if `account` does  not have a
     /// published `BurnCapability<CoinType>` resource at the top-level.
-    public fun remove_burn_capability<CoinType>(account: &signer): BurnCapability<CoinType>
+    public fun remove_burn_capability<CoinType: store>(account: &signer): BurnCapability<CoinType>
     acquires BurnCapability {
         let addr = Signer::address_of(account);
         assert(exists<BurnCapability<CoinType>>(addr), Errors::requires_capability(EBURN_CAPABILITY));
@@ -1076,14 +1076,14 @@ module Diem {
     /// burned throughout the system (i.e. the sum of all outstanding
     /// preburn requests across all preburn resources for the `CoinType`
     /// currency).
-    public fun preburn_value<CoinType>(): u64 acquires CurrencyInfo {
+    public fun preburn_value<CoinType: store>(): u64 acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value
     }
 
     /// Create a new `Diem<CoinType>` with a value of `0`. Anyone can call
     /// this and it will be successful as long as `CoinType` is a registered currency.
-    public fun zero<CoinType>(): Diem<CoinType> {
+    public fun zero<CoinType: store>(): Diem<CoinType> {
         assert_is_currency<CoinType>();
         Diem<CoinType> { value: 0 }
     }
@@ -1091,14 +1091,14 @@ module Diem {
     /// Returns the `value` of the passed in `coin`. The value is
     /// represented in the base units for the currency represented by
     /// `CoinType`.
-    public fun value<CoinType>(coin: &Diem<CoinType>): u64 {
+    public fun value<CoinType: store>(coin: &Diem<CoinType>): u64 {
         coin.value
     }
 
     /// Removes `amount` of value from the passed in `coin`. Returns the
     /// remaining balance of the passed in `coin`, along with another coin
     /// with value equal to `amount`. Calls will fail if `amount > Diem::value(&coin)`.
-    public fun split<CoinType>(coin: Diem<CoinType>, amount: u64): (Diem<CoinType>, Diem<CoinType>) {
+    public fun split<CoinType: store>(coin: Diem<CoinType>, amount: u64): (Diem<CoinType>, Diem<CoinType>) {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
@@ -1114,7 +1114,7 @@ module Diem {
     /// `value = original_value - amount`, and the new coin will have a `value = amount`.
     /// Calls will abort if the passed-in `amount` is greater than the
     /// value of the passed-in `coin`.
-    public fun withdraw<CoinType>(coin: &mut Diem<CoinType>, amount: u64): Diem<CoinType> {
+    public fun withdraw<CoinType: store>(coin: &mut Diem<CoinType>, amount: u64): Diem<CoinType> {
         // Check that `amount` is less than the coin's value
         assert(coin.value >= amount, Errors::limit_exceeded(EAMOUNT_EXCEEDS_COIN_VALUE));
         coin.value = coin.value - amount;
@@ -1134,7 +1134,7 @@ module Diem {
 
     /// Return a `Diem<CoinType>` worth `coin.value` and reduces the `value` of the input `coin` to
     /// zero. Does not abort.
-    public fun withdraw_all<CoinType>(coin: &mut Diem<CoinType>): Diem<CoinType> {
+    public fun withdraw_all<CoinType: store>(coin: &mut Diem<CoinType>): Diem<CoinType> {
         let val = coin.value;
         withdraw(coin, val)
     }
@@ -1147,7 +1147,7 @@ module Diem {
 
     /// Takes two coins as input, returns a single coin with the total value of both coins.
     /// Destroys on of the input coins.
-    public fun join<CoinType>(coin1: Diem<CoinType>, coin2: Diem<CoinType>): Diem<CoinType>  {
+    public fun join<CoinType: store>(coin1: Diem<CoinType>, coin2: Diem<CoinType>): Diem<CoinType>  {
         deposit(&mut coin1, coin2);
         coin1
     }
@@ -1161,7 +1161,7 @@ module Diem {
     /// "Merges" the two coins.
     /// The coin passed in by reference will have a value equal to the sum of the two coins
     /// The `check` coin is consumed in the process
-    public fun deposit<CoinType>(coin: &mut Diem<CoinType>, check: Diem<CoinType>) {
+    public fun deposit<CoinType: store>(coin: &mut Diem<CoinType>, check: Diem<CoinType>) {
         let Diem { value } = check;
         assert(MAX_U64 - coin.value >= value, Errors::limit_exceeded(ECOIN));
         coin.value = coin.value + value;
@@ -1180,7 +1180,7 @@ module Diem {
     /// Destroy a zero-value coin. Calls will fail if the `value` in the passed-in `coin` is non-zero
     /// so it is impossible to "burn" any non-zero amount of `Diem` without having
     /// a `BurnCapability` for the specific `CoinType`.
-    public fun destroy_zero<CoinType>(coin: Diem<CoinType>) {
+    public fun destroy_zero<CoinType: store>(coin: Diem<CoinType>) {
         let Diem { value } = coin;
         assert(value == 0, Errors::invalid_argument(EDESTRUCTION_OF_NONZERO_COIN))
     }
@@ -1204,7 +1204,7 @@ module Diem {
     /// `CurrencyInfo<CoinType>` resource under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` and
     /// adds the currency to the set of `RegisteredCurrencies`. It returns
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
-    public fun register_currency<CoinType>(
+    public fun register_currency<CoinType: store>(
         dr_account: &signer,
         to_xdx_exchange_rate: FixedPoint32,
         is_synthetic: bool,
@@ -1273,7 +1273,7 @@ module Diem {
     /// burn capabilities are published on a treasury compliance account.
     /// This code allows different currencies to have different treasury compliance
     /// accounts.
-    public fun register_SCS_currency<CoinType>(
+    public fun register_SCS_currency<CoinType: store>(
         dr_account: &signer,
         tc_account: &signer,
         to_xdx_exchange_rate: FixedPoint32,
@@ -1324,7 +1324,7 @@ module Diem {
     }
 
     /// Returns the total amount of currency minted of type `CoinType`.
-    public fun market_cap<CoinType>(): u128
+    public fun market_cap<CoinType: store>(): u128
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
@@ -1337,7 +1337,7 @@ module Diem {
     /// Returns the value of the coin in the `FromCoinType` currency in XDX.
     /// This should only be used where a _rough_ approximation of the exchange
     /// rate is needed.
-    public fun approx_xdx_for_value<FromCoinType>(from_value: u64): u64
+    public fun approx_xdx_for_value<FromCoinType: store>(from_value: u64): u64
     acquires CurrencyInfo {
         let xdx_exchange_rate = xdx_exchange_rate<FromCoinType>();
         FixedPoint32::multiply_u64(from_value, xdx_exchange_rate)
@@ -1357,7 +1357,7 @@ module Diem {
     /// Returns the value of the coin in the `FromCoinType` currency in XDX.
     /// This should only be used where a rough approximation of the exchange
     /// rate is needed.
-    public fun approx_xdx_for_coin<FromCoinType>(coin: &Diem<FromCoinType>): u64
+    public fun approx_xdx_for_coin<FromCoinType: store>(coin: &Diem<FromCoinType>): u64
     acquires CurrencyInfo {
         let from_value = value(coin);
         approx_xdx_for_value<FromCoinType>(from_value)
@@ -1365,11 +1365,11 @@ module Diem {
 
     /// Returns `true` if the type `CoinType` is a registered currency.
     /// Returns `false` otherwise.
-    public fun is_currency<CoinType>(): bool {
+    public fun is_currency<CoinType: store>(): bool {
         exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
     }
 
-    public fun is_SCS_currency<CoinType>(): bool acquires CurrencyInfo {
+    public fun is_SCS_currency<CoinType: store>(): bool acquires CurrencyInfo {
         is_currency<CoinType>() &&
         !borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).is_synthetic
     }
@@ -1377,7 +1377,7 @@ module Diem {
 
     /// Returns `true` if `CoinType` is a synthetic currency as defined in
     /// its `CurrencyInfo`. Returns `false` otherwise.
-    public fun is_synthetic_currency<CoinType>(): bool
+    public fun is_synthetic_currency<CoinType: store>(): bool
     acquires CurrencyInfo {
         let addr = CoreAddresses::CURRENCY_INFO_ADDRESS();
         exists<CurrencyInfo<CoinType>>(addr) &&
@@ -1386,7 +1386,7 @@ module Diem {
 
     /// Returns the scaling factor for the `CoinType` currency as defined
     /// in its `CurrencyInfo`.
-    public fun scaling_factor<CoinType>(): u64
+    public fun scaling_factor<CoinType: store>(): u64
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
@@ -1397,7 +1397,7 @@ module Diem {
 
     /// Returns the representable (i.e. real-world) fractional part for the
     /// `CoinType` currency as defined in its `CurrencyInfo`.
-    public fun fractional_part<CoinType>(): u64
+    public fun fractional_part<CoinType: store>(): u64
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).fractional_part
@@ -1405,7 +1405,7 @@ module Diem {
 
     /// Returns the currency code for the registered currency as defined in
     /// its `CurrencyInfo` resource.
-    public fun currency_code<CoinType>(): vector<u8>
+    public fun currency_code<CoinType: store>(): vector<u8>
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code
@@ -1421,7 +1421,7 @@ module Diem {
 
     /// Updates the `to_xdx_exchange_rate` held in the `CurrencyInfo` for
     /// `FromCoinType` to the new passed-in `xdx_exchange_rate`.
-    public fun update_xdx_exchange_rate<FromCoinType>(
+    public fun update_xdx_exchange_rate<FromCoinType: store>(
         tc_account: &signer,
         xdx_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
@@ -1466,7 +1466,7 @@ module Diem {
     }
 
     /// Returns the (rough) exchange rate between `CoinType` and `XDX`
-    public fun xdx_exchange_rate<CoinType>(): FixedPoint32
+    public fun xdx_exchange_rate<CoinType: store>(): FixedPoint32
     acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_xdx_exchange_rate
@@ -1485,7 +1485,7 @@ module Diem {
     /// then minting is allowed, if `can_mint = false` then minting is
     /// disallowed until it is turned back on via this function. All coins
     /// start out in the default state of `can_mint = true`.
-    public fun update_minting_ability<CoinType>(
+    public fun update_minting_ability<CoinType: store>(
         tc_account: &signer,
         can_mint: bool,
         )
@@ -1516,7 +1516,7 @@ module Diem {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Asserts that `CoinType` is a registered currency.
-    public fun assert_is_currency<CoinType>() {
+    public fun assert_is_currency<CoinType: store>() {
         assert(is_currency<CoinType>(), Errors::not_published(ECURRENCY_INFO));
     }
     spec fun assert_is_currency {
@@ -1527,7 +1527,7 @@ module Diem {
         aborts_if !spec_is_currency<CoinType>() with Errors::NOT_PUBLISHED;
     }
 
-    public fun assert_is_SCS_currency<CoinType>() acquires CurrencyInfo {
+    public fun assert_is_SCS_currency<CoinType: store>() acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         assert(is_SCS_currency<CoinType>(), Errors::invalid_state(ECURRENCY_INFO));
     }

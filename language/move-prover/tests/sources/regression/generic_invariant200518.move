@@ -3,9 +3,9 @@ address 0x1 {
 module GenericBug {
     use 0x1::Signer;
 
-    resource struct PrivilegedCapability<Privilege> { }
+    struct PrivilegedCapability<Privilege> has key { }
 
-    struct T { }
+    struct T has copy, drop, store { }
 
     public fun initialize(sender: &signer) {
         assert(Signer::address_of(sender) == root_address(), 1000);
@@ -13,14 +13,14 @@ module GenericBug {
     }
 
     // Publish a specific privilege under the sending account.
-    public fun apply_for_privilege<Privilege>(sender: &signer) {
+    public fun apply_for_privilege<Privilege: store>(sender: &signer) {
         if (exists<PrivilegedCapability<Privilege>>(Signer::address_of(sender))) return;
         move_to(sender, PrivilegedCapability<Privilege>{ });
     }
 
     // Remove the `Privilege` from the address at `addr`. The sender must
     // be the diem root account.
-    public fun remove_privilege<Privilege>(sender: &signer, addr: address)
+    public fun remove_privilege<Privilege: store>(sender: &signer, addr: address)
     acquires PrivilegedCapability {
         assert(Signer::address_of(sender) == root_address(), 1001);
         //assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);

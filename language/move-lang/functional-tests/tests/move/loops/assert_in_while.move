@@ -1,5 +1,5 @@
 module Test {
-    struct Tester {
+    struct Tester has drop {
         f: u64
     }
 

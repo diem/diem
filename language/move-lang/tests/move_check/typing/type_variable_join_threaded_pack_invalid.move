@@ -7,7 +7,7 @@ module Container {
         T {}
     }
 
-    public fun get<V: copyable>(self: &T<V>): V {
+    public fun get<V: drop>(self: &T<V>): V {
         abort 0
     }
 
@@ -15,7 +15,7 @@ module Container {
         abort 0
     }
 
-    public fun get_ref<V: copyable>(self: &T<V>): &V {
+    public fun get_ref<V: drop>(self: &T<V>): &V {
         abort 0
     }
 }
@@ -25,7 +25,7 @@ module M {
     use 0x2::Container;
 
     struct Box<T> { f1: T, f2: T }
-    resource struct R{}
+    struct R {}
 
     fun id<T>(r: &T): &T {
         r

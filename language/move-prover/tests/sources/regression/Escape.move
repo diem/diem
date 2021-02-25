@@ -3,11 +3,11 @@ address 0x1 {
 module Escape {
     use 0x1::Signer;
 
-    resource struct IndoorThing { }
+    struct IndoorThing has key, store { }
 
-    resource struct OutdoorThing { }
+    struct OutdoorThing has key, store { }
 
-    resource struct Wrapper<Thing: resource> { thing: Thing }
+    struct Wrapper<Thing: key + store> has key { thing: Thing }
 
     public fun initialize(account: &signer) {
         let owner = Signer::address_of(account);
@@ -21,7 +21,7 @@ module Escape {
     }
 
     /// Calling module can install whatever object
-    public fun install<Thing: resource>(account: &signer, thing: Wrapper<Thing>) {
+    public fun install<Thing: key + store>(account: &signer, thing: Wrapper<Thing>) {
         move_to<Wrapper<Thing>>(account, thing);
     }
 

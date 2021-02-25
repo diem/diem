@@ -4,11 +4,11 @@ module TestMemory {
         pragma verify = true;
     }
 
-    resource struct R {
+    struct R has key {
         s: S
     }
 
-    struct S {
+    struct S has store {
         x: u64
     }
 

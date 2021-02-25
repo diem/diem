@@ -26,7 +26,7 @@ module COIN {
     use 0x1::FixedPoint32;
     use 0x1::Diem;
 
-    struct COIN { }
+    struct COIN has store { }
 
     public fun initialize(dr_account: &signer, tc_account: &signer) {
         // Register the COIN currency.

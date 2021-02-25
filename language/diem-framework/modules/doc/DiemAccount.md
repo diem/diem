@@ -890,7 +890,7 @@ Return <code><b>true</b></code> if <code>addr</code> has already published accou
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr: address): bool {
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token: store&gt;(addr: address): bool {
     <b>if</b> (<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr)) {
         <a href="VASP.md#0x1_VASP_has_account_limits">VASP::has_account_limits</a>&lt;Token&gt;(addr)
     }
@@ -923,7 +923,7 @@ Depending on the <code>is_withdrawal</code> flag passed in we determine whether 
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token: store&gt;(
     payer: address, payee: address, is_withdrawal: bool
 ): bool {
     <b>if</b> (is_withdrawal) {
@@ -993,7 +993,7 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_deposit">deposit</a>&lt;Token: store&gt;(
     payer: address,
     payee: address,
     to_deposit: <a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&gt;,
@@ -1193,7 +1193,7 @@ Sender should be treasury compliance account and receiver authorized DD.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_tiered_mint">tiered_mint</a>&lt;Token: store&gt;(
     tc_account: &signer,
     designated_dealer_address: address,
     mint_amount: u64,
@@ -1295,7 +1295,7 @@ The balance of designated dealer increases by <code>amount</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_cancel_burn">cancel_burn</a>&lt;Token: store&gt;(
     account: &signer,
     preburn_address: address,
     amount: u64,
@@ -1370,7 +1370,7 @@ Helper to withdraw <code>amount</code> from the given account balance and return
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token: store&gt;(
     payer: address,
     payee: address,
     balance: &<b>mut</b> <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;,
@@ -1488,7 +1488,7 @@ Withdraw <code>amount</code> <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">withdraw_from</a>&lt;Token: store&gt;(
     cap: &<a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>,
     payee: address,
     amount: u64,
@@ -1630,7 +1630,7 @@ resource under <code>dd</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_preburn">preburn</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_preburn">preburn</a>&lt;Token: store&gt;(
     dd: &signer,
     cap: &<a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>,
     amount: u64
@@ -1873,7 +1873,7 @@ attestation protocol
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_pay_from">pay_from</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_pay_from">pay_from</a>&lt;Token: store&gt;(
     cap: &<a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>,
     payee: address,
     amount: u64,
@@ -2245,7 +2245,7 @@ then add for both token types.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token: store&gt;(
     new_account: &signer,
     add_all_currencies: bool,
 ) {
@@ -2812,7 +2812,7 @@ Creates Preburn resource under account 'new_account_address'
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType: store&gt;(
     creator_account: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -2902,7 +2902,7 @@ all available currencies in the system will also be added.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token: store&gt;(
     creator_account: &signer,  // TreasuryCompliance
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -2991,7 +2991,7 @@ also be added. This account will be a child of <code>creator</code>, which must 
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token: store&gt;(
     parent: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -3126,7 +3126,7 @@ Helper to return the u64 value of the <code>balance</code> for <code>account</co
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_balance_for">balance_for</a>&lt;Token&gt;(balance: &<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;): u64 {
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_balance_for">balance_for</a>&lt;Token: store&gt;(balance: &<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;): u64 {
     <a href="Diem.md#0x1_Diem_value">Diem::value</a>&lt;Token&gt;(&balance.coin)
 }
 </code></pre>
@@ -3151,7 +3151,7 @@ Return the current balance of the account at <code>addr</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(addr: address): u64 <b>acquires</b> <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token: store&gt;(addr: address): u64 <b>acquires</b> <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a> {
     <b>assert</b>(<b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">EPAYER_DOESNT_HOLD_CURRENCY</a>));
     <a href="DiemAccount.md#0x1_DiemAccount_balance_for">balance_for</a>(borrow_global&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr))
 }
@@ -3189,7 +3189,7 @@ Add a balance of <code>Token</code> type to the sending account
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_add_currency">add_currency</a>&lt;Token: store&gt;(account: &signer) {
     // aborts <b>if</b> `Token` is not a currency type in the system
     <a href="Diem.md#0x1_Diem_assert_is_currency">Diem::assert_is_currency</a>&lt;Token&gt;();
     // Check that an account <b>with</b> this role is allowed <b>to</b> hold funds
@@ -3324,7 +3324,7 @@ Return whether the account at <code>addr</code> accepts <code>Token</code> type 
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_accepts_currency">accepts_currency</a>&lt;Token&gt;(addr: address): bool {
+<pre><code><b>public</b> <b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_accepts_currency">accepts_currency</a>&lt;Token: store&gt;(addr: address): bool {
     <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)
 }
 </code></pre>
@@ -3555,7 +3555,7 @@ The prologue for module transaction
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_module_prologue">module_prologue</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_module_prologue">module_prologue</a>&lt;Token: store&gt;(
     sender: &signer,
     txn_sequence_number: u64,
     txn_public_key: vector&lt;u8&gt;,
@@ -3667,7 +3667,7 @@ The prologue for script transaction
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_script_prologue">script_prologue</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_script_prologue">script_prologue</a>&lt;Token: store&gt;(
     sender: &signer,
     txn_sequence_number: u64,
     txn_public_key: vector&lt;u8&gt;,
@@ -3878,7 +3878,7 @@ The main properties that it verifies:
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_prologue_common">prologue_common</a>&lt;Token: store&gt;(
     sender: &signer,
     txn_sequence_number: u64,
     txn_public_key: vector&lt;u8&gt;,
@@ -4144,7 +4144,7 @@ based on the conditions checked in the prologue, should never fail.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_epilogue">epilogue</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="DiemAccount.md#0x1_DiemAccount_epilogue">epilogue</a>&lt;Token: store&gt;(
     account: &signer,
     txn_sequence_number: u64,
     txn_gas_price: u64,

@@ -25,7 +25,7 @@ fn run(
 ) -> VMResult<()> {
     let ty_params = ty_params
         .iter()
-        .map(|var| format!("{}: copyable", var))
+        .map(|var| format!("{}: copy + drop", var))
         .collect::<Vec<_>>()
         .join(", ");
     let params = params
@@ -38,8 +38,8 @@ fn run(
     let code = format!(
         r#"
         module M {{
-            struct Foo {{ x: u64 }}
-            struct Bar<T> {{ x: T }}
+            struct Foo has copy, drop {{ x: u64 }}
+            struct Bar<T> has copy, drop {{ x: T }}
 
             fun foo<{}>({}) {{ }}
         }}

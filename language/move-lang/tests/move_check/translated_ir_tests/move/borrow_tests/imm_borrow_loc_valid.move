@@ -1,8 +1,8 @@
 module Tester {
     use 0x1::Signer;
 
-    resource struct Data { v1: u64, v2: u64 }
-    resource struct Box { f: u64 }
+    struct Data has key { v1: u64, v2: u64 }
+    struct Box has key { f: u64 }
 
     // the resource struct is here to just give a feeling why the computation might not be reorderable
     fun bump_and_pick(account: &signer, b1: &mut Box, b2: &mut Box): &u64 acquires Data {

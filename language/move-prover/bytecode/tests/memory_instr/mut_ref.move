@@ -1,9 +1,9 @@
 address 0x1 {
 module TestMutRefs {
-    struct T { value: u64 }
+    struct T has copy, drop { value: u64 }
 
     // Resource to track the sum of values in T
-    resource struct TSum {
+    struct TSum has key {
         sum: u64
     }
 

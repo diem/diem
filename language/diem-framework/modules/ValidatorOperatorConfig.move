@@ -8,7 +8,7 @@ module ValidatorOperatorConfig {
     use 0x1::Roles;
     use 0x1::DiemTimestamp;
 
-    resource struct ValidatorOperatorConfig {
+    struct ValidatorOperatorConfig has key, store {
         /// The human readable name of this entity. Immutable.
         human_name: vector<u8>,
     }

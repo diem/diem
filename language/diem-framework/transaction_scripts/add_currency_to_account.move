@@ -31,7 +31,7 @@ use 0x1::DiemAccount;
 /// * `Script::create_parent_vasp_account`
 /// * `Script::peer_to_peer_with_metadata`
 
-fun add_currency_to_account<Currency>(account: &signer) {
+fun add_currency_to_account<Currency: store>(account: &signer) {
     DiemAccount::add_currency<Currency>(account);
 }
 spec fun add_currency_to_account {

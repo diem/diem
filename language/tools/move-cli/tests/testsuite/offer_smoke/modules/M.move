@@ -1,7 +1,7 @@
 // Just a dummy module with a test resource
 address 0x1 {
 module M {
-    resource struct T { b: bool }
+    struct T has key, store { b: bool }
 
     public fun create(): T {
         T { b: true }

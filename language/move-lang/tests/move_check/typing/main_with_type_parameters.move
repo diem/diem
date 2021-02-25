@@ -1,4 +1,4 @@
 script {
-fun main<T1: copyable, T2, T3: resource>() {
+fun main<T1: drop, T2, T3: key>() {
 }
 }

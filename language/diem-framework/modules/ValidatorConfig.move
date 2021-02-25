@@ -15,13 +15,13 @@ module ValidatorConfig {
     use 0x1::Roles;
     use 0x1::ValidatorOperatorConfig;
 
-    struct Config {
+    struct Config has copy, drop, store {
         consensus_pubkey: vector<u8>,
         validator_network_addresses: vector<u8>,
         fullnode_network_addresses: vector<u8>,
     }
 
-    resource struct ValidatorConfig {
+    struct ValidatorConfig has key, store {
         /// set and rotated by the operator_account
         config: Option<Config>,
         operator_account: Option<address>,

@@ -1,5 +1,5 @@
 module M {
-    resource struct T {}
+    struct T {}
     public fun new(): T {
         T{}
     }

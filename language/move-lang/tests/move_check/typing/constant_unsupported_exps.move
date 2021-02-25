@@ -7,8 +7,8 @@ module X {
 }
 
 module M {
-    resource struct R {}
-    struct B { f: u64 }
+    struct R has key {}
+    struct B has drop { f: u64 }
 
     const FLAG: bool = false;
     const C: u64 = {

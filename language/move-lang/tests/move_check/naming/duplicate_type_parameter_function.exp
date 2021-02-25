@@ -11,23 +11,23 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:27 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:23 ───
    │
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │                           ^ Duplicate type parameter declared with name 'T'
+ 3 │     fun foo2<T: drop, T: key, T>() {}
+   │                       ^ Duplicate type parameter declared with name 'T'
    ·
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
+ 3 │     fun foo2<T: drop, T: key, T>() {}
    │              - Previously defined here
    │
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:40 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:31 ───
    │
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │                                        ^ Duplicate type parameter declared with name 'T'
+ 3 │     fun foo2<T: drop, T: key, T>() {}
+   │                               ^ Duplicate type parameter declared with name 'T'
    ·
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
+ 3 │     fun foo2<T: drop, T: key, T>() {}
    │              - Previously defined here
    │
 

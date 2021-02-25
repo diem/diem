@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::{Fields, SpecId, Value, Value_},
+    expansion::ast::{
+        ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Fields, SpecId,
+        Value, Value_,
+    },
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        ResourceLoc, StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
+        UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -59,7 +62,7 @@ pub struct ModuleDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct StructDefinition {
-    pub resource_opt: ResourceLoc,
+    pub abilities: AbilitySet,
     pub type_parameters: Vec<TParam>,
     pub fields: StructFields,
 }
@@ -146,7 +149,7 @@ pub struct TParamID(pub u64);
 pub struct TParam {
     pub id: TParamID,
     pub user_specified_name: Name,
-    pub kind: Kind,
+    pub abilities: AbilitySet,
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
@@ -158,7 +161,7 @@ pub enum Type_ {
     Unit,
     Ref(bool, Box<Type>),
     Param(TParam),
-    Apply(Option<Kind>, TypeName, Vec<Type>),
+    Apply(Option<AbilitySet>, TypeName, Vec<Type>),
     Var(TVar),
     Anything,
     UnresolvedError,
@@ -322,12 +325,22 @@ impl BuiltinTypeName_ {
         }
     }
 
-    pub fn tparam_constraints(&self, loc: Loc) -> Vec<Kind> {
-        use BuiltinTypeName_::*;
+    pub fn declared_abilities(&self, loc: Loc) -> AbilitySet {
+        use BuiltinTypeName_ as B;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            Address | Signer | U8 | U64 | U128 | Bool => vec![],
-            Vector => vec![Spanned::new(loc, Kind_::Unknown)],
+            B::Address | B::U8 | B::U64 | B::U128 | B::Bool => AbilitySet::primitives(loc),
+            B::Signer => AbilitySet::signer(loc),
+            B::Vector => AbilitySet::collection(loc),
+        }
+    }
+
+    pub fn tparam_constraints(&self, _loc: Loc) -> Vec<AbilitySet> {
+        use BuiltinTypeName_ as B;
+        // Match here to make sure this function is fixed when collections are added
+        match self {
+            B::Address | B::Signer | B::U8 | B::U64 | B::U128 | B::Bool => vec![],
+            B::Vector => vec![AbilitySet::empty()],
         }
     }
 }
@@ -395,15 +408,14 @@ impl BuiltinFunction_ {
 
 impl Type_ {
     pub fn builtin_(b: BuiltinTypeName, ty_args: Vec<Type>) -> Type_ {
-        use BuiltinTypeName_::*;
-
-        let kind = match b.value {
-            U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Copyable)),
-            Signer => Some(sp(b.loc, Kind_::Resource)),
-            Vector => None,
+        use BuiltinTypeName_ as B;
+        let abilities = match &b.value {
+            B::Address | B::U8 | B::U64 | B::U128 | B::Bool => Some(AbilitySet::primitives(b.loc)),
+            B::Signer => Some(AbilitySet::signer(b.loc)),
+            B::Vector => None,
         };
         let n = sp(b.loc, TypeName_::Builtin(b));
-        Type_::Apply(kind, n, ty_args)
+        Type_::Apply(abilities, n, ty_args)
     }
 
     pub fn builtin(loc: Loc, b: BuiltinTypeName, ty_args: Vec<Type>) -> Type {
@@ -583,7 +595,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         let (
             name,
             StructDefinition {
-                resource_opt,
+                abilities,
                 type_parameters,
                 fields,
             },
@@ -591,11 +603,9 @@ impl AstDebug for (StructName, &StructDefinition) {
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
-        if resource_opt.is_some() {
-            w.write("resource ");
-        }
         w.write(&format!("struct {}", name));
         type_parameters.ast_debug(w);
+        ability_modifiers_ast_debug(w, abilities);
         if let StructFields::Defined(fields) = fields {
             w.block(|w| {
                 w.list(fields, ",", |w, (_, f, idx_st)| {
@@ -705,15 +715,10 @@ impl AstDebug for TParam {
         let TParam {
             id,
             user_specified_name,
-            kind,
+            abilities,
         } = self;
         w.write(&format!("{}#{}", user_specified_name, id.0));
-        match &kind.value {
-            Kind_::Unknown => (),
-            Kind_::Resource => w.write(": resource"),
-            Kind_::Affine => w.write(": copyable"),
-            Kind_::Copyable => panic!("ICE 'copyable' kind constraint"),
-        }
+        ability_constraints_ast_debug(w, abilities);
     }
 }
 
@@ -729,18 +734,23 @@ impl AstDebug for Type_ {
                 s.ast_debug(w)
             }
             Type_::Param(tp) => tp.ast_debug(w),
-            Type_::Apply(k_opt, sp!(_, TypeName_::Multiple(_)), ss) => {
+            Type_::Apply(abilities_opt, sp!(_, TypeName_::Multiple(_)), ss) => {
                 let w_ty = move |w: &mut AstWriter| {
                     w.write("(");
                     ss.ast_debug(w);
                     w.write(")");
                 };
-                match k_opt {
+                match abilities_opt {
                     None => w_ty(w),
-                    Some(k) => w.annotate(w_ty, k),
+                    Some(abilities) => w.annotate_gen(w_ty, abilities, |w, annot| {
+                        w.list(annot, "+", |w, a| {
+                            a.ast_debug(w);
+                            false
+                        })
+                    }),
                 }
             }
-            Type_::Apply(k_opt, m, ss) => {
+            Type_::Apply(abilities_opt, m, ss) => {
                 let w_ty = move |w: &mut AstWriter| {
                     m.ast_debug(w);
                     if !ss.is_empty() {
@@ -749,9 +759,14 @@ impl AstDebug for Type_ {
                         w.write(">");
                     }
                 };
-                match k_opt {
+                match abilities_opt {
                     None => w_ty(w),
-                    Some(k) => w.annotate(w_ty, k),
+                    Some(abilities) => w.annotate_gen(w_ty, abilities, |w, annot| {
+                        w.list(annot, "+", |w, a| {
+                            a.ast_debug(w);
+                            false
+                        })
+                    }),
                 }
             }
             Type_::Var(tv) => w.write(&format!("#{}", tv.0)),

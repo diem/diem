@@ -1,9 +1,9 @@
 module M {
     use 0x1::Event;
 
-    struct MyEvent<T1, T2> { b: bool }
+    struct MyEvent<T1, T2> has copy, drop, store { b: bool }
 
-    public fun emit_event<T1: copyable, T2: copyable>(account: &signer) {
+    public fun emit_event<T1: copy + drop + store, T2: copy + drop + store>(account: &signer) {
         let handle = Event::new_event_handle<MyEvent<T2, T1>>(account);
         Event::emit_event(&mut handle, MyEvent{ b: true });
         Event::destroy_handle(handle);

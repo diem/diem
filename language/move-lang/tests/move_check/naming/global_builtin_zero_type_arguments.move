@@ -1,5 +1,5 @@
 module M {
-    resource struct R1 {}
+    struct R1 {}
     fun foo(account: &signer) {
         borrow_global<>(0x1);
         exists<>(0x1);

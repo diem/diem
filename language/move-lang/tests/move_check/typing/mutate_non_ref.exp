@@ -33,8 +33,8 @@ error:
  11 │         *s.f = 0;
     │          ^^^ Invalid mutation. Expected a mutable reference
     ·
-  2 │     struct S { f: u64 }
-    │                   --- The type: 'u64'
+  2 │     struct S has copy, drop { f: u64 }
+    │                                  --- The type: 'u64'
     ·
  11 │         *s.f = 0;
     │          --- Is not compatible with: '&mut _'
@@ -47,8 +47,8 @@ error:
  14 │         *s_ref.f = 0;
     │          ^^^^^^^ Invalid mutation. Expected a mutable reference
     ·
-  2 │     struct S { f: u64 }
-    │                   --- The type: 'u64'
+  2 │     struct S has copy, drop { f: u64 }
+    │                                  --- The type: 'u64'
     ·
  14 │         *s_ref.f = 0;
     │          ------- Is not compatible with: '&mut _'
@@ -61,8 +61,8 @@ error:
  17 │         *x.s = S { f: 0 };
     │          ^^^ Invalid mutation. Expected a mutable reference
     ·
-  3 │     struct X { s: S }
-    │                   - The type: '0x8675309::M::S'
+  3 │     struct X has copy, drop { s: S }
+    │                                  - The type: '0x8675309::M::S'
     ·
  17 │         *x.s = S { f: 0 };
     │          --- Is not compatible with: '&mut _'
@@ -75,11 +75,8 @@ error:
  17 │         *x.s = S { f: 0 };
     │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
-  3 │     struct X { s: S }
-    │                   - The type: '0x8675309::M::S'
-    ·
-  2 │     struct S { f: u64 }
-    │            - Is declared as a non-implicitly copyable type here
+  3 │     struct X has copy, drop { s: S }
+    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies is limitied so simple primitive values
     │
 
 error: 
@@ -89,8 +86,8 @@ error:
  18 │         *x.s.f = 0;
     │          ^^^^^ Invalid mutation. Expected a mutable reference
     ·
-  2 │     struct S { f: u64 }
-    │                   --- The type: 'u64'
+  2 │     struct S has copy, drop { f: u64 }
+    │                                  --- The type: 'u64'
     ·
  18 │         *x.s.f = 0;
     │          ----- Is not compatible with: '&mut _'
@@ -103,8 +100,8 @@ error:
  21 │         *x_ref.s = S{ f: 0 };
     │          ^^^^^^^ Invalid mutation. Expected a mutable reference
     ·
-  3 │     struct X { s: S }
-    │                   - The type: '0x8675309::M::S'
+  3 │     struct X has copy, drop { s: S }
+    │                                  - The type: '0x8675309::M::S'
     ·
  21 │         *x_ref.s = S{ f: 0 };
     │          ------- Is not compatible with: '&mut _'
@@ -117,11 +114,8 @@ error:
  21 │         *x_ref.s = S{ f: 0 };
     │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
-  3 │     struct X { s: S }
-    │                   - The type: '0x8675309::M::S'
-    ·
-  2 │     struct S { f: u64 }
-    │            - Is declared as a non-implicitly copyable type here
+  3 │     struct X has copy, drop { s: S }
+    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies is limitied so simple primitive values
     │
 
 error: 
@@ -131,8 +125,8 @@ error:
  22 │         *x_ref.s.f = 0;
     │          ^^^^^^^^^ Invalid mutation. Expected a mutable reference
     ·
-  2 │     struct S { f: u64 }
-    │                   --- The type: 'u64'
+  2 │     struct S has copy, drop { f: u64 }
+    │                                  --- The type: 'u64'
     ·
  22 │         *x_ref.s.f = 0;
     │          --------- Is not compatible with: '&mut _'

@@ -11,23 +11,23 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:28 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:24 ───
    │
- 3 │     struct S2<T: copyable, T: resource, T> {}
-   │                            ^ Duplicate type parameter declared with name 'T'
+ 3 │     struct S2<T: drop, T: key, T> {}
+   │                        ^ Duplicate type parameter declared with name 'T'
    ·
- 3 │     struct S2<T: copyable, T: resource, T> {}
+ 3 │     struct S2<T: drop, T: key, T> {}
    │               - Previously defined here
    │
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:41 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:3:32 ───
    │
- 3 │     struct S2<T: copyable, T: resource, T> {}
-   │                                         ^ Duplicate type parameter declared with name 'T'
+ 3 │     struct S2<T: drop, T: key, T> {}
+   │                                ^ Duplicate type parameter declared with name 'T'
    ·
- 3 │     struct S2<T: copyable, T: resource, T> {}
+ 3 │     struct S2<T: drop, T: key, T> {}
    │               - Previously defined here
    │
 
@@ -44,23 +44,23 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:28 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:24 ───
    │
- 5 │     struct R2<T: copyable, T: resource, T> {}
-   │                            ^ Duplicate type parameter declared with name 'T'
+ 5 │     struct R2<T: drop, T: key, T> {}
+   │                        ^ Duplicate type parameter declared with name 'T'
    ·
- 5 │     struct R2<T: copyable, T: resource, T> {}
+ 5 │     struct R2<T: drop, T: key, T> {}
    │               - Previously defined here
    │
 
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:41 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_struct.move:5:32 ───
    │
- 5 │     struct R2<T: copyable, T: resource, T> {}
-   │                                         ^ Duplicate type parameter declared with name 'T'
+ 5 │     struct R2<T: drop, T: key, T> {}
+   │                                ^ Duplicate type parameter declared with name 'T'
    ·
- 5 │     struct R2<T: copyable, T: resource, T> {}
+ 5 │     struct R2<T: drop, T: key, T> {}
    │               - Previously defined here
    │
 

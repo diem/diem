@@ -1,6 +1,6 @@
 
 module M {
-    resource struct R { f: bool }
+    struct R has key { f: bool }
     fun t0(s: &signer, a: address) {
         move_to<R>(s, R { f: false }, a);
     }
@@ -10,7 +10,7 @@ module M {
 //! new-transaction
 
 module N {
-    resource struct R<T> { f: T }
+    struct R<T> has key { f: T }
     fun t0<T>(s: &signer, a: address) {
         move_to<R<bool>>(a, s, a, R<bool> { f: false });
     }

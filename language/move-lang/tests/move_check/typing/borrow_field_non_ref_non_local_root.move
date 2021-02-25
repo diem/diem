@@ -1,5 +1,5 @@
 module M {
-    struct S { f: u64 }
+    struct S has drop { f: u64 }
 
     fun t0(cond: bool, _s: S) {
         (&foo().f: &u64);

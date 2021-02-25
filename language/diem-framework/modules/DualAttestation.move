@@ -17,7 +17,7 @@ module DualAttestation {
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
     /// participate in off-chain protocols.
-    resource struct Credential {
+    struct Credential has key, store {
         /// The human readable name of this entity. Immutable.
         human_name: vector<u8>,
         /// The base_url holds the URL to be used for off-chain communication. This contains the
@@ -42,12 +42,12 @@ module DualAttestation {
     }
 
     /// Struct to store the limit on-chain
-    resource struct Limit {
+    struct Limit has key, store {
         micro_xdx_limit: u64,
     }
 
     /// The message sent whenever the compliance public key for a `DualAttestation` resource is rotated.
-    struct ComplianceKeyRotationEvent {
+    struct ComplianceKeyRotationEvent has copy, drop, store {
         /// The new `compliance_public_key` that is being used for dual attestation checking.
         new_compliance_public_key: vector<u8>,
         /// The time at which the `compliance_public_key` was rotated
@@ -55,7 +55,7 @@ module DualAttestation {
     }
 
     /// The message sent whenever the base url for a `DualAttestation` resource is rotated.
-    struct BaseUrlRotationEvent {
+    struct BaseUrlRotationEvent has copy, drop, store {
         /// The new `base_url` that is being used for dual attestation checking
         new_base_url: vector<u8>,
         /// The time at which the `base_url` was rotated
@@ -306,7 +306,7 @@ module DualAttestation {
     }
 
     /// Helper which returns true if dual attestion is required for a deposit.
-    fun dual_attestation_required<Token>(
+    fun dual_attestation_required<Token: store>(
         payer: address, payee: address, deposit_value: u64
     ): bool acquires Limit {
         // travel rule applies for payments over a limit
@@ -448,7 +448,7 @@ module DualAttestation {
     ///     published in `payee`'s `Credential` resource
     /// It aborts with an appropriate error code if dual attestation is required, but one or more of
     /// the conditions in (2) is not met.
-    public fun assert_payment_ok<Currency>(
+    public fun assert_payment_ok<Currency: store>(
         payer: address,
         payee: address,
         value: u64,

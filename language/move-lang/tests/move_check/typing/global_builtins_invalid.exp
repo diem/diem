@@ -86,10 +86,10 @@ error:
     ┌── tests/move_check/typing/global_builtins_invalid.move:15:18 ───
     │
  15 │         let () = move_to(a, 0);
-    │                  ^^^^^^^^^^^^^ Invalid call to move_to.
+    │                  ^^^^^^^^^^^^^ Invalid call of 'move_to'
     ·
  15 │         let () = move_to(a, 0);
-    │                             - Expected a nominal resource. Found the type: 'u64'
+    │                             - The type 'u64' does not have the ability 'key'
     │
 
 error: 

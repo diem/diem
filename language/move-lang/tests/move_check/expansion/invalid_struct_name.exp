@@ -40,18 +40,18 @@ error:
 
 error: 
 
-   ┌── tests/move_check/expansion/invalid_struct_name.move:9:21 ───
+   ┌── tests/move_check/expansion/invalid_struct_name.move:9:12 ───
    │
- 9 │     resource struct no2 {}
-   │                     ^^^ Invalid struct name 'no2'. Struct names must start with 'A'..'Z'
+ 9 │     struct no2 {}
+   │            ^^^ Invalid struct name 'no2'. Struct names must start with 'A'..'Z'
    │
 
 error: 
 
-    ┌── tests/move_check/expansion/invalid_struct_name.move:10:28 ───
+    ┌── tests/move_check/expansion/invalid_struct_name.move:10:19 ───
     │
- 10 │     resource struct Y { f: no }
-    │                            ^^ Unbound type 'no' in current scope
+ 10 │     struct Y { f: no }
+    │                   ^^ Unbound type 'no' in current scope
     │
 
 error: 

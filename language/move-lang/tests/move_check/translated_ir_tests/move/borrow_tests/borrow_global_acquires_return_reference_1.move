@@ -1,6 +1,6 @@
 module A {
     use 0x1::Signer;
-    resource struct T1 {v: u64}
+    struct T1 has key {v: u64}
 
     public fun test1(account: &signer, x: &mut T1) acquires T1 {
         // the acquire of t1 does not pollute y

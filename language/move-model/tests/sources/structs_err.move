@@ -1,12 +1,12 @@
 module M {
 
-  struct S {
+  struct S has drop {
     x: u64,
     y: bool,
     z: vector<u64>,
   }
 
-  struct R {
+  struct R has drop {
     s: S
   }
 
@@ -15,7 +15,7 @@ module M {
     y: bool,
   }
 
-  resource struct T {
+  struct T has key {
     x: u64
   }
 

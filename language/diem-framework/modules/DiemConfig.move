@@ -12,7 +12,7 @@ module DiemConfig {
     use 0x1::Roles;
 
     /// A generic singleton resource that holds a value of a specific type.
-    resource struct DiemConfig<Config: copyable> {
+    struct DiemConfig<Config: copy + drop + store> has key, store {
         /// Holds specific info for instance of `Config` type.
         payload: Config
     }
@@ -20,12 +20,12 @@ module DiemConfig {
     /// Event that signals DiemBFT algorithm to start a new epoch,
     /// with new configuration information. This is also called a
     /// "reconfiguration event"
-    struct NewEpochEvent {
+    struct NewEpochEvent has copy, drop, store {
         epoch: u64,
     }
 
     /// Holds information about state of reconfiguration
-    resource struct Configuration {
+    struct Configuration has key, store {
         /// Epoch number
         epoch: u64,
         /// Time of last reconfiguration. Only changes on reconfiguration events.
@@ -35,10 +35,10 @@ module DiemConfig {
     }
 
     /// Accounts with this privilege can modify DiemConfig<TypeName> under Diem root address.
-    resource struct ModifyConfigCapability<TypeName> {}
+    struct ModifyConfigCapability<TypeName> has key, store {}
 
     /// Reconfiguration disabled if this resource occurs under LibraRoot.
-    resource struct DisableReconfiguration {}
+    struct DisableReconfiguration has key, store {}
 
     /// The `Configuration` resource is in an invalid state
     const ECONFIGURATION: u64 = 0;
@@ -88,7 +88,7 @@ module DiemConfig {
 
 
     /// Returns a copy of `Config` value stored under `addr`.
-    public fun get<Config: copyable>(): Config
+    public fun get<Config: copy + drop + store>(): Config
     acquires DiemConfig {
         let addr = CoreAddresses::DIEM_ROOT_ADDRESS();
         assert(exists<DiemConfig<Config>>(addr), Errors::not_published(EDIEM_CONFIG));
@@ -106,7 +106,7 @@ module DiemConfig {
     /// Set a config item to a new value with the default capability stored under config address and trigger a
     /// reconfiguration. This function requires that the signer have a `ModifyConfigCapability<Config>`
     /// resource published under it.
-    public fun set<Config: copyable>(account: &signer, payload: Config)
+    public fun set<Config: copy + drop + store>(account: &signer, payload: Config)
     acquires DiemConfig, Configuration {
         let signer_address = Signer::address_of(account);
         // Next should always be true if properly initialized.
@@ -151,7 +151,7 @@ module DiemConfig {
     /// It is called by `DiemSystem::update_config_and_reconfigure`, which allows
     /// validator operators to change the validator set.  All other config changes require
     /// a Diem root signer.
-    public fun set_with_capability_and_reconfigure<Config: copyable>(
+    public fun set_with_capability_and_reconfigure<Config: copy + drop + store>(
         _cap: &ModifyConfigCapability<Config>,
         payload: Config
     ) acquires DiemConfig, Configuration {
@@ -206,7 +206,7 @@ module DiemConfig {
     /// The caller will use the returned ModifyConfigCapability to specify the access control
     /// policy for who can modify the config.
     /// Does not trigger a reconfiguration.
-    public fun publish_new_config_and_get_capability<Config: copyable>(
+    public fun publish_new_config_and_get_capability<Config: copy + drop + store>(
         dr_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
@@ -236,7 +236,7 @@ module DiemConfig {
     /// Publish a new config item. Only Diem root can modify such config.
     /// Publishes the capability to modify this config under the Diem root account.
     /// Does not trigger a reconfiguration.
-    public fun publish_new_config<Config: copyable>(
+    public fun publish_new_config<Config: copy + drop + store>(
         dr_account: &signer,
         payload: Config
     ) {

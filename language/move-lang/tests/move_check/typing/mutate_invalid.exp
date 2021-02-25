@@ -22,8 +22,8 @@ error:
  7 │         *&mut S{f:0}.f = &1;
    │                          -- The type: '&{integer}'
    ·
- 2 │     struct S { f: u64 }
-   │                   --- Is not compatible with: 'u64'
+ 2 │     struct S has drop { f: u64 }
+   │                            --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -50,8 +50,8 @@ error:
  9 │         bar(&mut S{f:0}).f = ();
    │                              -- The type: '()'
    ·
- 2 │     struct S { f: u64 }
-   │                   --- Is not compatible with: 'u64'
+ 2 │     struct S has drop { f: u64 }
+   │                            --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -64,8 +64,8 @@ error:
  10 │         *&mut bar(&mut S{f:0}).f = &0;
     │                                    -- The type: '&{integer}'
     ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
+  2 │     struct S has drop { f: u64 }
+    │                            --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -78,8 +78,8 @@ error:
  11 │         baz().f = false;
     │                   ----- The type: 'bool'
     ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
+  2 │     struct S has drop { f: u64 }
+    │                            --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -92,8 +92,8 @@ error:
  12 │         *&mut baz().f = false;
     │                         ----- The type: 'bool'
     ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
+  2 │     struct S has drop { f: u64 }
+    │                            --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -120,8 +120,8 @@ error:
  19 │         r.f = &0;
     │               -- The type: '&{integer}'
     ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
+  2 │     struct S has drop { f: u64 }
+    │                            --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -134,7 +134,7 @@ error:
  20 │         *&mut r.f = ();
     │                     -- The type: '()'
     ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
+  2 │     struct S has drop { f: u64 }
+    │                            --- Is not compatible with: 'u64'
     │
 

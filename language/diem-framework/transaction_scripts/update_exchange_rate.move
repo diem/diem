@@ -39,7 +39,7 @@ use 0x1::SlidingNonce;
 /// * `Script::update_dual_attestation_limit`
 /// * `Script::update_minting_ability`
 
-fun update_exchange_rate<Currency>(
+fun update_exchange_rate<Currency: store>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_numerator: u64,

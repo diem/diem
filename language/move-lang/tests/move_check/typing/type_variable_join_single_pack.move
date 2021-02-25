@@ -1,5 +1,5 @@
 module M {
-    struct Box<T> { f1: T, f2: T }
+    struct Box<T> copy, drop { f1: T, f2: T }
 
     fun t0() {
         let b = Box { f1: 0, f2: 1 };

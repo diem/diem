@@ -5,7 +5,7 @@ module M {
 }
 
 module N {
-    resource struct R { s: signer }
+    struct R has key { s: signer }
     fun t(s1: &signer, s: signer) {
         move_to<R>(s1, move s);
     }

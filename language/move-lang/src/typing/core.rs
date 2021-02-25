@@ -3,13 +3,14 @@
 
 use crate::{
     errors::*,
+    expansion::ast::AbilitySet,
     naming::ast::{
         self as N, BuiltinTypeName_, FunctionSignature, StructDefinition, TParam, TParamID, TVar,
         Type, TypeName, TypeName_, Type_,
     },
     parser::ast::{
-        ConstantName, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
-        ResourceLoc, StructName, Var,
+        Ability_, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
+        Var,
     },
     shared::{unique_map::UniqueMap, *},
 };
@@ -21,14 +22,18 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 //**************************************************************************************************
 
 pub enum Constraint {
-    IsCopyable(Loc, String, Type),
     IsImplicitlyCopyable {
         loc: Loc,
         msg: String,
         ty: Type,
         fix: String,
     },
-    KindConstraint(Loc, Type, Kind),
+    AbilityConstraint {
+        loc: Loc,
+        msg: Option<String>,
+        ty: Type,
+        constraints: AbilitySet,
+    },
     NumericConstraint(Loc, &'static str, Type),
     BitsConstraint(Loc, &'static str, Type),
     OrderedConstraint(Loc, &'static str, Type),
@@ -166,17 +171,34 @@ impl Context {
         self.constraints
             .push(Constraint::IsImplicitlyCopyable { loc, msg, ty, fix })
     }
-
-    pub fn add_copyable_constraint(&mut self, loc: Loc, msg: impl Into<String>, s: Type) {
-        self.constraints
-            .push(Constraint::IsCopyable(loc, msg.into(), s))
+    pub fn add_ability_constraint(
+        &mut self,
+        loc: Loc,
+        msg_opt: Option<impl Into<String>>,
+        ty: Type,
+        ability_: Ability_,
+    ) {
+        self.add_ability_set_constraint(
+            loc,
+            msg_opt,
+            ty,
+            AbilitySet::from_abilities(vec![sp(loc, ability_)]).unwrap(),
+        )
     }
 
-    pub fn add_kind_constraint(&mut self, loc: Loc, t: Type, k: Kind) {
-        if let sp!(_, Kind_::Unknown) = &k {
-            return;
-        }
-        self.constraints.push(Constraint::KindConstraint(loc, t, k))
+    pub fn add_ability_set_constraint(
+        &mut self,
+        loc: Loc,
+        msg_opt: Option<impl Into<String>>,
+        ty: Type,
+        constraints: AbilitySet,
+    ) {
+        self.constraints.push(Constraint::AbilityConstraint {
+            loc,
+            msg: msg_opt.map(|s| s.into()),
+            ty,
+            constraints,
+        })
     }
 
     pub fn add_base_type_constraint(&mut self, loc: Loc, msg: impl Into<String>, t: Type) {
@@ -312,8 +334,8 @@ impl Context {
             .expect("ICE should have failed in naming")
     }
 
-    pub fn resource_opt(&self, m: &ModuleIdent, n: &StructName) -> ResourceLoc {
-        self.struct_definition(m, n).resource_opt
+    pub fn struct_declared_abilities(&self, m: &ModuleIdent, n: &StructName) -> &AbilitySet {
+        &self.struct_definition(m, n).abilities
     }
 
     pub fn struct_declared_loc(&self, m: &ModuleIdent, n: &StructName) -> Loc {
@@ -514,75 +536,62 @@ fn error_format_impl_(b_: &Type_, subst: &Subst, nested: bool) -> String {
 // Type utils
 //**************************************************************************************************
 
-pub fn infer_kind(context: &Context, subst: &Subst, ty: Type) -> Option<Kind> {
-    use Kind_ as K;
+pub fn infer_abilities(context: &Context, subst: &Subst, ty: Type) -> AbilitySet {
     use Type_ as T;
     let loc = ty.loc;
     match unfold_type(subst, ty).value {
-        T::Unit | T::Ref(_, _) => Some(sp(loc, Kind_::Copyable)),
-        T::Var(_) => panic!("ICE unfold_type failed, which is impossible"),
-        T::UnresolvedError | T::Anything => None,
-        T::Param(TParam { kind, .. }) | T::Apply(Some(kind), _, _) => Some(kind),
-        // if any unknown, give unkown
-        // else if any resource, give resource
-        // else affine
-        T::Apply(None, n, tyl) => {
-            // If an anything is found, we get a none. Then use the constraint for the
-            // default kind
-            let contraints = match &n.value {
-                TypeName_::Multiple(_) | TypeName_::Builtin(_) => {
-                    tyl.iter().map(|_| None).collect::<Vec<_>>()
-                }
-                TypeName_::ModuleType(m, n) => {
-                    let sdef = context.struct_definition(m, n);
-                    sdef.type_parameters
-                        .iter()
-                        .map(|tp| Some(tp.kind.clone()))
-                        .collect::<Vec<_>>()
-                }
+        T::Unit | T::Ref(_, _) => AbilitySet::references(loc),
+        T::Var(_) => unreachable!("ICE unfold_type failed, which is impossible"),
+        T::UnresolvedError | T::Anything => AbilitySet::all(loc),
+        T::Param(TParam { abilities, .. }) | T::Apply(Some(abilities), _, _) => abilities,
+        T::Apply(None, n, ty_args) => {
+            let declared_abilities = match &n.value {
+                TypeName_::Multiple(_) => AbilitySet::collection(loc),
+                TypeName_::Builtin(b) => b.value.declared_abilities(b.loc),
+                TypeName_::ModuleType(m, n) => context.struct_declared_abilities(&m, &n).clone(),
             };
-            let max = tyl
+            let ty_args_abilities = ty_args
                 .into_iter()
-                .zip(contraints)
-                .filter_map(|(t, constraint_opt)| infer_kind(context, subst, t).or(constraint_opt))
-                .map(|k| match k {
-                    sp!(loc, K::Copyable) => sp(loc, K::Affine),
-                    k => k,
-                })
-                .max_by(most_general_kind);
-            Some(match max {
-                Some(sp!(_, K::Copyable)) => unreachable!(),
-                None | Some(sp!(_, K::Affine)) => {
-                    sp(type_name_declared_loc(context, &n), K::Affine)
-                }
-                Some(k @ sp!(_, K::Resource)) | Some(k @ sp!(_, K::Unknown)) => k,
-            })
+                .map(|ty| infer_abilities(context, subst, ty))
+                .collect::<Vec<_>>();
+            AbilitySet::from_abilities(declared_abilities.into_iter().filter(|ab| {
+                let requirement = ab.value.requires();
+                ty_args_abilities
+                    .iter()
+                    .all(|ty_arg_abilities| ty_arg_abilities.has_ability_(requirement).is_some())
+            }))
+            .unwrap()
         }
     }
 }
 
-fn most_general_kind(k1: &Kind, k2: &Kind) -> std::cmp::Ordering {
-    use std::cmp::Ordering as O;
-    use Kind_ as K;
-    match (&k1.value, &k2.value) {
-        (K::Copyable, _) | (_, K::Copyable) => panic!("ICE structs cannot be copyable"),
-
-        (K::Unknown, K::Unknown) => O::Equal,
-        (K::Unknown, _) => O::Greater,
-        (_, K::Unknown) => O::Less,
-
-        (K::Resource, K::Resource) => O::Equal,
-        (K::Resource, _) => O::Greater,
-        (_, K::Resource) => O::Less,
-
-        (K::Affine, K::Affine) => O::Equal,
-    }
-}
-
-fn type_name_declared_loc(context: &Context, sp!(loc, n_): &TypeName) -> Loc {
-    match n_ {
-        TypeName_::Multiple(_) | TypeName_::Builtin(_) => *loc,
-        TypeName_::ModuleType(m, n) => context.struct_declared_loc(m, n),
+// Returns
+// - the declared location where abilities are added (if applicable)
+// - the set of declared abilities
+// - its type arguments
+fn debug_abilities_info(context: &Context, ty: &Type) -> (Option<Loc>, AbilitySet, Vec<Type>) {
+    use Type_ as T;
+    let loc = ty.loc;
+    match &ty.value {
+        T::Unit | T::Ref(_, _) => (None, AbilitySet::references(loc), vec![]),
+        T::Var(_) => panic!("ICE call unfold_type before debug_abilities_info"),
+        T::UnresolvedError | T::Anything => (None, AbilitySet::all(loc), vec![]),
+        T::Param(TParam {
+            abilities,
+            user_specified_name,
+            ..
+        }) => (Some(user_specified_name.loc), abilities.clone(), vec![]),
+        T::Apply(_, sp!(_, TypeName_::Multiple(_)), ty_args) => {
+            (None, AbilitySet::collection(loc), ty_args.clone())
+        }
+        T::Apply(_, sp!(_, TypeName_::Builtin(b)), ty_args) => {
+            (None, b.value.declared_abilities(b.loc), ty_args.clone())
+        }
+        T::Apply(_, sp!(_, TypeName_::ModuleType(m, n)), ty_args) => (
+            Some(context.struct_declared_loc(&m, &n)),
+            context.struct_declared_abilities(&m, &n).clone(),
+            ty_args.clone(),
+        ),
     }
 }
 
@@ -608,23 +617,18 @@ pub fn make_struct_type(
 ) -> (Type, Vec<Type>) {
     let tn = sp(loc, TypeName_::ModuleType(m.clone(), n.clone()));
     let sdef = context.struct_definition(m, n);
-    let resource_opt = sdef.resource_opt;
-    let kind_opt = resource_opt.map(|rloc| sp(rloc, Kind_::Resource));
     match ty_args_opt {
         None => {
             let constraints = sdef
                 .type_parameters
                 .iter()
-                .map(|tp| (loc, tp.kind.clone()))
+                .map(|tp| (loc, tp.abilities.clone()))
                 .collect();
             let ty_args = make_tparams(context, loc, TVarCase::Base, constraints);
-            (
-                sp(loc, Type_::Apply(kind_opt, tn, ty_args.clone())),
-                ty_args,
-            )
+            (sp(loc, Type_::Apply(None, tn, ty_args.clone())), ty_args)
         }
         Some(ty_args) => {
-            let tapply_ = instantiate_apply(context, loc, kind_opt, tn, ty_args);
+            let tapply_ = instantiate_apply(context, loc, None, tn, ty_args);
             let targs = match &tapply_ {
                 Type_::Apply(_, _, targs) => targs.clone(),
                 _ => panic!("ICE instantiate_apply returned non Apply"),
@@ -640,7 +644,7 @@ pub fn make_expr_list_tvars(
     constraint_msg: impl Into<String>,
     locs: Vec<Loc>,
 ) -> Vec<Type> {
-    let constraints = locs.iter().map(|l| (*l, sp(*l, Kind_::Unknown))).collect();
+    let constraints = locs.iter().map(|l| (*l, AbilitySet::empty())).collect();
     let tys = make_tparams(
         context,
         loc,
@@ -771,7 +775,7 @@ pub fn make_function_type(
         .signature
         .type_parameters
         .iter()
-        .map(|tp| tp.kind.clone())
+        .map(|tp| tp.abilities.clone())
         .collect();
 
     let ty_args = match ty_args_opt {
@@ -873,11 +877,15 @@ pub fn solve_constraints(context: &mut Context) {
     let constraints = std::mem::replace(&mut context.constraints, vec![]);
     for constraint in constraints {
         match constraint {
-            Constraint::IsCopyable(loc, msg, s) => solve_copyable_constraint(context, loc, msg, s),
             Constraint::IsImplicitlyCopyable { loc, msg, ty, fix } => {
                 solve_implicitly_copyable_constraint(context, loc, msg, ty, fix)
             }
-            Constraint::KindConstraint(loc, b, k) => solve_kind_constraint(context, loc, b, k),
+            Constraint::AbilityConstraint {
+                loc,
+                msg,
+                ty,
+                constraints,
+            } => solve_ability_constraint(context, loc, msg, ty, constraints),
             Constraint::NumericConstraint(loc, op, t) => {
                 solve_builtin_type_constraint(context, BT::numeric(), loc, op, t)
             }
@@ -897,103 +905,110 @@ pub fn solve_constraints(context: &mut Context) {
     }
 }
 
-fn solve_kind_constraint(context: &mut Context, loc: Loc, b: Type, k: Kind) {
-    use Kind_ as K;
-    let b = unfold_type(&context.subst, b);
-    let bloc = b.loc;
-    let b_kind = match infer_kind(&context, &context.subst, b.clone()) {
-        // Anything => None
-        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
-        None => return,
-        Some(k) => k,
-    };
-    match (b_kind.value, &k.value) {
-        (_, K::Copyable) => panic!("ICE tparams cannot have copyable constraints"),
+fn solve_ability_constraint(
+    context: &mut Context,
+    loc: Loc,
+    given_msg_opt: Option<String>,
+    ty: Type,
+    constraints: AbilitySet,
+) {
+    let ty = unfold_type(&context.subst, ty);
+    let ty_loc = ty.loc;
+    let ty_abilities = infer_abilities(context, &context.subst, ty.clone());
 
-        // _ <: all
-        // copyable <: affine
-        // affine <: affine
-        // linear <: linear
-        (_, K::Unknown)
-        | (K::Copyable, K::Affine)
-        | (K::Affine, K::Affine)
-        | (K::Resource, K::Resource) => (),
-
-        // copyable </: linear
-        // affine </: linear
-        // all </: linear
-        (K::Copyable, K::Resource) | (K::Affine, K::Resource) | (K::Unknown, K::Resource) => {
-            let ty_str = error_format(&b, &context.subst);
-            let cmsg = format!(
-                "The {} type {} does not satisfy the constraint '{}'",
-                Kind_::VALUE_CONSTRAINT,
-                ty_str,
-                Kind_::RESOURCE_CONSTRAINT
-            );
-            context.error(vec![
-                (loc, "Constraint not satisfied.".into()),
-                (bloc, cmsg),
-                (
-                    b_kind.loc,
-                    "The type's constraint information was determined here".into(),
-                ),
-                (
-                    k.loc,
-                    format!("'{}' constraint declared here", Kind_::RESOURCE_CONSTRAINT),
-                ),
-            ])
+    let (declared_loc_opt, declared_abilities, ty_args) = debug_abilities_info(context, &ty);
+    for constraint in constraints {
+        if ty_abilities.has_ability(&constraint).is_some() {
+            continue;
         }
 
-        // all </: affine
-        // linear </: affine
-        (bk @ K::Unknown, K::Affine) | (bk @ K::Resource, K::Affine) => {
-            let resource_msg = match bk {
-                K::Copyable | K::Affine => panic!("ICE covered above"),
-                K::Resource => "resource ",
-                K::Unknown => "",
-            };
-            let ty_str = error_format(&b, &context.subst);
-            let cmsg = format!(
-                "The {}type {} does not satisfy the constraint '{}'",
-                resource_msg,
-                ty_str,
-                Kind_::VALUE_CONSTRAINT
-            );
-            context.error(vec![
-                (loc, "Constraint not satisfied.".into()),
-                (bloc, cmsg),
-                (
-                    b_kind.loc,
-                    "The type's constraint information was determined here".into(),
+        let ty_str = error_format(&ty, &context.subst);
+        let constraint_msg = match &given_msg_opt {
+            Some(s) => s.clone(),
+            None => format!("'{}' constraint not satisifed", constraint),
+        };
+        let ty_msg = format!(
+            "The type {} does not have the ability '{}'",
+            ty_str, constraint
+        );
+        let mut error = vec![(loc, constraint_msg), (ty_loc, ty_msg)];
+
+        match (
+            declared_loc_opt,
+            declared_abilities.has_ability(&constraint),
+        ) {
+            // primtive or vector or "tuple" does not have ability
+            (None, _) => (),
+
+            // Type was not given the ability
+            (Some(dloc), None) => error.push((
+                dloc,
+                format!(
+                    "To satisify the constraint, the '{}' ability would need to be added here",
+                    constraint
                 ),
-                (
-                    k.loc,
-                    format!("'{}' constraint declared here", Kind_::VALUE_CONSTRAINT),
-                ),
-            ])
+            )),
+            (Some(_dloc), Some(_decl_ab_loc)) => {
+                let requirement = constraint.value.requires();
+                let mut error_added = false;
+                for ty_arg in &ty_args {
+                    let ty_arg_abilities = infer_abilities(context, &context.subst, ty_arg.clone());
+                    if ty_arg_abilities.has_ability_(requirement).is_none() {
+                        let ty_arg_str = error_format(&ty_arg, &context.subst);
+                        let msg = format!(
+                            "The type {ty} can have the ability '{constraint}' but the type \
+                             argument {ty_arg} does not have the required ability '{requirement}'",
+                            ty = ty_str,
+                            ty_arg = ty_arg_str,
+                            constraint = constraint,
+                            requirement = requirement,
+                        );
+                        error.push((ty_arg.loc, msg));
+                        error_added = true;
+                        break;
+                    }
+                }
+                assert!(error_added)
+            }
         }
+
+        // is none if it is from a user constraint and not a part of the type system
+        if given_msg_opt.is_none() {
+            error.push((
+                constraint.loc,
+                format!("'{}' constraint declared here", constraint),
+            ));
+        }
+        context.error(error)
     }
 }
 
-fn solve_copyable_constraint(context: &mut Context, loc: Loc, msg: String, s: Type) {
-    let s = unfold_type(&context.subst, s);
-    let sloc = s.loc;
-    let kind = match infer_kind(&context, &context.subst, s.clone()) {
-        // Anything => None
-        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
-        None => return,
-        Some(k) => k,
-    };
-    match kind {
-        sp!(_, Kind_::Copyable) | sp!(_, Kind_::Affine) => (),
-        sp!(rloc, Kind_::Unknown) | sp!(rloc, Kind_::Resource) => {
-            let ty_str = error_format(&s, &context.subst);
-            context.error(vec![
-                (loc, msg),
-                (sloc, format!("The type: {}", ty_str)),
-                (rloc, "Is found to be a non-copyable type here".into()),
-            ])
-        }
+// This could be done with abilities, but currently all abilities are user accessable. So it seems
+// reasonable to keep this separate for now
+pub fn is_implicitly_copyable(subst: &Subst, ty: &Type) -> bool {
+    use BuiltinTypeName_ as B;
+    use Type_ as T;
+    match &ty.value {
+        T::Var(_) => panic!("ICE call unfold_type before is_implicitly_copyable"),
+
+        T::Unit
+        | T::Ref(_, _)
+        | T::UnresolvedError
+        | T::Anything
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Address))), _)
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U8))), _)
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U64))), _)
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::U128))), _)
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Bool))), _) => true,
+
+        T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Signer))), _)
+        | T::Apply(_, sp!(_, TypeName_::Builtin(sp!(_, B::Vector))), _)
+        | T::Param(TParam { .. })
+        | T::Apply(_, sp!(_, TypeName_::ModuleType(_, _)), _) => false,
+
+        T::Apply(_, sp!(_, TypeName_::Multiple(_)), ty_args) => ty_args
+            .iter()
+            .all(|ty_arg| is_implicitly_copyable(subst, &unfold_type(subst, ty_arg.clone()))),
     }
 }
 
@@ -1006,33 +1021,19 @@ fn solve_implicitly_copyable_constraint(
 ) {
     let ty = unfold_type(&context.subst, ty);
     let tloc = ty.loc;
-    let kind = match infer_kind(&context, &context.subst, ty.clone()) {
-        // Anything => None
-        // Unbound TVar or Anything satisfies any constraint. Will fail later in expansion
-        None => return,
-        Some(k) => k,
-    };
-    match kind {
-        sp!(_, Kind_::Copyable) => (),
-        sp!(kloc, Kind_::Affine) => {
-            let ty_str = error_format(&ty, &context.subst);
-            context.error(vec![
-                (loc, format!("{} {}", msg, fix)),
-                (tloc, format!("The type: {}", ty_str)),
-                (
-                    kloc,
-                    "Is declared as a non-implicitly copyable type here".into(),
+    if !is_implicitly_copyable(&context.subst, &ty) {
+        let ty_str = error_format(&ty, &context.subst);
+        context.error(vec![
+            (loc, format!("{} {}", msg, fix)),
+            (
+                tloc,
+                format!(
+                    "The type {} is not implicitly copyable. Implicit copies is limitied so \
+                     simple primitive values",
+                    ty_str
                 ),
-            ])
-        }
-        sp!(kloc, Kind_::Unknown) | sp!(kloc, Kind_::Resource) => {
-            let ty_str = error_format(&ty, &context.subst);
-            context.error(vec![
-                (loc, msg),
-                (tloc, format!("The type: {}", ty_str)),
-                (kloc, "Is declared as a non-copyable type here".into()),
-            ])
-        }
+            ),
+        ])
     }
 }
 
@@ -1063,9 +1064,12 @@ fn solve_builtin_type_constraint(
         )
     };
     match &t.value {
-        Apply(k, sp!(_, Builtin(sp!(_, b))), args) if builtin_set.contains(b) => {
-            if let Some(sp!(_, Kind_::Resource)) = k {
-                panic!("ICE assumes this type is being consumed so shouldn't be a resource");
+        Apply(abilities_opt, sp!(_, Builtin(sp!(_, b))), args) if builtin_set.contains(b) => {
+            if let Some(abilities) = abilities_opt {
+                assert!(
+                    abilities.has_ability_(Ability_::Drop).is_some(),
+                    "ICE assumes this type is being consumed so should have drop"
+                );
             }
             assert!(args.is_empty());
         }
@@ -1139,7 +1143,7 @@ pub fn best_loc(subst: &Subst, sp!(loc, t_): &Type) -> Loc {
     }
 }
 
-fn make_tparam_subst(tps: &[TParam], args: Vec<Type>) -> TParamSubst {
+pub fn make_tparam_subst(tps: &[TParam], args: Vec<Type>) -> TParamSubst {
     assert!(tps.len() == args.len());
     let mut subst = TParamSubst::new();
     for (tp, arg) in tps.iter().zip(args) {
@@ -1200,33 +1204,38 @@ pub fn instantiate(context: &mut Context, sp!(loc, t_): Type) -> Type {
             context.add_base_type_constraint(loc, "Invalid reference type", inner.clone());
             Ref(mut_, Box::new(instantiate(context, inner)))
         }
-        Apply(kopt, n, ty_args) => instantiate_apply(context, loc, kopt, n, ty_args),
+        Apply(abilities_opt, n, ty_args) => {
+            instantiate_apply(context, loc, abilities_opt, n, ty_args)
+        }
         x @ Param(_) => x,
         Var(_) => panic!("ICE instantiate type variable"),
     };
     sp(loc, it_)
 }
 
+// abilities_opt is expected to be None for non primitive types
 fn instantiate_apply(
     context: &mut Context,
     loc: Loc,
-    kind_opt: Option<Kind>,
+    abilities_opt: Option<AbilitySet>,
     n: TypeName,
     ty_args: Vec<Type>,
 ) -> Type_ {
-    let tparam_constraints: Vec<Kind> = match &n {
+    let tparam_constraints: Vec<AbilitySet> = match &n {
         sp!(nloc, N::TypeName_::Builtin(b)) => b.value.tparam_constraints(*nloc),
-        sp!(nloc, N::TypeName_::Multiple(len)) => {
-            (0..*len).map(|_| sp(*nloc, Kind_::Unknown)).collect()
+        sp!(_, N::TypeName_::Multiple(len)) => {
+            debug_assert!(abilities_opt.is_none(), "ICE instantiated expanded type");
+            (0..*len).map(|_| AbilitySet::empty()).collect()
         }
         sp!(_, N::TypeName_::ModuleType(m, s)) => {
+            debug_assert!(abilities_opt.is_none(), "ICE instantiated expanded type");
             let tps = context.struct_tparams(m, s);
-            tps.iter().map(|tp| tp.kind.clone()).collect()
+            tps.iter().map(|tp| tp.abilities.clone()).collect()
         }
     };
 
     let tys = instantiate_type_args(context, loc, Some(&n.value), ty_args, tparam_constraints);
-    Type_::Apply(kind_opt, n, tys)
+    Type_::Apply(abilities_opt, n, tys)
 }
 
 // The type arguments are bound to type variables after intantiation
@@ -1239,13 +1248,13 @@ fn instantiate_type_args(
     loc: Loc,
     n: Option<&TypeName_>,
     mut ty_args: Vec<Type>,
-    constraints: Vec<Kind>,
+    constraints: Vec<AbilitySet>,
 ) -> Vec<Type> {
     assert!(ty_args.len() == constraints.len());
     let locs_constraints = constraints
         .into_iter()
         .zip(&ty_args)
-        .map(|(k, t)| (t.loc, k))
+        .map(|(abilities, t)| (t.loc, abilities))
         .collect();
     let tvar_case = match n {
         Some(TypeName_::Multiple(_)) => {
@@ -1279,7 +1288,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
     loc: Loc,
     name_f: F,
     mut ty_args: Vec<Type>,
-    tparam_constraints: &[Kind],
+    tparam_constraints: &[AbilitySet],
 ) -> Vec<Type> {
     let args_len = ty_args.len();
     let arity = tparam_constraints.len();
@@ -1315,13 +1324,13 @@ fn make_tparams(
     context: &mut Context,
     loc: Loc,
     case: TVarCase,
-    tparam_constraints: Vec<(Loc, Kind)>,
+    tparam_constraints: Vec<(Loc, AbilitySet)>,
 ) -> Vec<Type> {
     tparam_constraints
         .into_iter()
         .map(|(vloc, constraint)| {
             let tvar = make_tvar(context, vloc);
-            context.add_kind_constraint(loc, tvar.clone(), constraint);
+            context.add_ability_set_constraint(loc, None::<String>, tvar.clone(), constraint);
             match &case {
                 TVarCase::Single(msg) => context.add_single_type_constraint(loc, msg, tvar.clone()),
                 TVarCase::Base => {

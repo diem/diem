@@ -1,6 +1,6 @@
 module TestFriend {
 
-    resource struct R{
+    struct R has key {
         x: u64,
     }
 

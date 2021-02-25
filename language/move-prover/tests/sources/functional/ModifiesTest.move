@@ -1,7 +1,7 @@
 address 0x0 {
 module A {
 
-    resource struct S {
+    struct S has key {
         x: u64
     }
     public fun read_at(addr: address): u64 acquires S {
@@ -30,7 +30,7 @@ module B {
     use 0x0::A;
     use 0x1::Signer;
 
-    resource struct T {
+    struct T has key {
         x: u64
     }
 

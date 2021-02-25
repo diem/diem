@@ -1,7 +1,7 @@
 address 0x42 {
 module M {
     struct S {}
-    resource struct R {}
+    struct R {}
 
     const C1: signer = abort 0;
     const C2: S = S{};

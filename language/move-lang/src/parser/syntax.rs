@@ -1306,37 +1306,80 @@ fn parse_optional_type_args(tokens: &mut Lexer<'_>) -> Result<Option<Vec<Type>>,
     }
 }
 
+fn token_to_ability(token: Tok, content: &str) -> Option<Ability_> {
+    match (token, content) {
+        (Tok::Copy, _) => Some(Ability_::Copy),
+        (Tok::IdentifierValue, Ability_::DROP) => Some(Ability_::Drop),
+        (Tok::IdentifierValue, Ability_::STORE) => Some(Ability_::Store),
+        (Tok::IdentifierValue, Ability_::KEY) => Some(Ability_::Key),
+        _ => None,
+    }
+}
+
+// Parse a type ability
+//      Ability =
+//          <Copy>
+//          | "drop"
+//          | "store"
+//          | "key"
+fn parse_ability(tokens: &mut Lexer) -> Result<Ability, Error> {
+    let loc = current_token_loc(tokens);
+    match token_to_ability(tokens.peek(), tokens.content()) {
+        Some(ability) => {
+            tokens.advance()?;
+            Ok(sp(loc, ability))
+        }
+        None => Err(vec![(
+            loc,
+            format!(
+                "Unexpected '{}'. Expected a type ability, one of: 'copy', 'drop', \
+                 'store', or 'key'",
+                tokens.content()
+            ),
+        )]),
+    }
+}
+
 // Parse a type parameter:
 //      TypeParameter =
 //          <Identifier> <Constraint>?
 //      Constraint =
-//          ":" "copyable"
-//          | ":" "resource"
-fn parse_type_parameter(tokens: &mut Lexer<'_>) -> Result<(Name, Kind), Error> {
+//          ":" <Ability> (+ <Ability>)*
+fn parse_type_parameter(tokens: &mut Lexer<'_>) -> Result<(Name, Vec<Ability>), Error> {
     let n = parse_identifier(tokens)?;
 
-    let kind = if match_token(tokens, Tok::Colon)? {
-        let start_loc = tokens.start_loc();
-        let k = match tokens.peek() {
-            Tok::Copyable => Kind_::Affine,
-            Tok::Resource => Kind_::Resource,
-            _ => {
-                let expected = "either 'copyable' or 'resource'";
-                return Err(unexpected_token_error(tokens, expected));
-            }
-        };
-        tokens.advance()?;
-        let end_loc = tokens.previous_end_loc();
-        spanned(tokens.file_name(), start_loc, end_loc, k)
+    let ability_constraints = if match_token(tokens, Tok::Colon)? {
+        parse_list(
+            tokens,
+            |tokens| match tokens.peek() {
+                Tok::Plus => {
+                    tokens.advance()?;
+                    Ok(true)
+                }
+                Tok::Greater | Tok::Comma => Ok(false),
+                _ => Err(unexpected_token_error(
+                    tokens,
+                    &format!(
+                        "one of: '{}', '{}', or '{}'",
+                        Tok::Plus,
+                        Tok::Greater,
+                        Tok::Comma
+                    ),
+                )),
+            },
+            parse_ability,
+        )?
     } else {
-        sp(n.loc, Kind_::Unknown)
+        vec![]
     };
-    Ok((n, kind))
+    Ok((n, ability_constraints))
 }
 
 // Parse optional type parameter list.
 //    OptionalTypeParameters = "<" Comma<TypeParameter> ">" | <empty>
-fn parse_optional_type_parameters(tokens: &mut Lexer<'_>) -> Result<Vec<(Name, Kind)>, Error> {
+fn parse_optional_type_parameters(
+    tokens: &mut Lexer<'_>,
+) -> Result<Vec<(Name, Vec<Ability>)>, Error> {
     if tokens.peek() == Tok::Less {
         parse_comma_list(
             tokens,
@@ -1482,8 +1525,9 @@ fn parse_parameter(tokens: &mut Lexer<'_>) -> Result<(Var, Type), Error> {
 
 // Parse a struct definition:
 //      StructDefinition =
-//          <DocComments> "resource"? "struct" <StructDefName> "{" Comma<FieldAnnot> "}"
-//          | <DocComments> "native" "resource"? "struct" <StructDefName> ";"
+//          <DocComments> "struct" <StructDefName> ("has" <Ability> (, <Ability>)+)?
+//          "{" Comma<FieldAnnot> "}"
+//          | <DocComments> "native" "struct" <StructDefName> ("has" <Ability> (, <Ability>)+)? ";"
 //      StructDefName =
 //          <Identifier> <OptionalTypeParameters>
 fn parse_struct_definition(tokens: &mut Lexer<'_>) -> Result<StructDefinition, Error> {
@@ -1493,14 +1537,37 @@ fn parse_struct_definition(tokens: &mut Lexer<'_>) -> Result<StructDefinition, E
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = consume_optional_token_with_loc(tokens, Tok::Native)?;
 
-    // Record the source location of the "resource" keyword (if there is one).
-    let resource_opt = consume_optional_token_with_loc(tokens, Tok::Resource)?;
-
     consume_token(tokens, Tok::Struct)?;
 
     // <StructDefName>
     let name = StructName(parse_identifier(tokens)?);
     let type_parameters = parse_optional_type_parameters(tokens)?;
+
+    let abilities = if tokens.peek() == Tok::IdentifierValue && tokens.content() == "has" {
+        tokens.advance()?;
+        parse_list(
+            tokens,
+            |tokens| match tokens.peek() {
+                Tok::Comma => {
+                    tokens.advance()?;
+                    Ok(true)
+                }
+                Tok::LBrace | Tok::Semicolon => Ok(false),
+                _ => Err(unexpected_token_error(
+                    tokens,
+                    &format!(
+                        "one of: '{}', '{}', or '{}'",
+                        Tok::Comma,
+                        Tok::LBrace,
+                        Tok::Semicolon
+                    ),
+                )),
+            },
+            parse_ability,
+        )?
+    } else {
+        vec![]
+    };
 
     let fields = match native_opt {
         Some(loc) => {
@@ -1522,7 +1589,7 @@ fn parse_struct_definition(tokens: &mut Lexer<'_>) -> Result<StructDefinition, E
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(StructDefinition {
         loc,
-        resource_opt,
+        abilities,
         name,
         type_parameters,
         fields,
@@ -1686,11 +1753,8 @@ fn parse_use_alias(tokens: &mut Lexer<'_>) -> Result<Option<Name>, Error> {
 
 // TODO rework parsing modifiers
 fn is_struct_definition(tokens: &mut Lexer<'_>) -> Result<bool, Error> {
-    let mut t = tokens.peek();
-    if t == Tok::Native {
-        t = tokens.lookahead()?;
-    }
-    Ok(t == Tok::Struct || t == Tok::Resource)
+    let t = tokens.peek();
+    Ok(t == Tok::Struct || (t == Tok::Native && tokens.lookahead()? == Tok::Struct))
 }
 
 // Parse a module:

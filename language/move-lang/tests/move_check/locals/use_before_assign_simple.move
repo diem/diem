@@ -1,5 +1,5 @@
 module M {
-    struct S {}
+    struct S has copy, drop {}
 
     fun tmove() {
         let x: u64;

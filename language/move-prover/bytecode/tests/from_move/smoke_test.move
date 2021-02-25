@@ -30,7 +30,7 @@ module SmokeTest {
     // Resources
     // -----------------
 
-    resource struct R {
+    struct R has key {
         x: u64
     }
 
@@ -60,7 +60,7 @@ module SmokeTest {
         _ = r2;
     }
 
-    resource struct G<X> {
+    struct G<X> has key {
         x: X
     }
 
@@ -69,17 +69,17 @@ module SmokeTest {
     }
 
 
-    resource struct A {
+    struct A {
         addr: address,
         val: u64,
     }
 
-    resource struct B {
+    struct B {
         val: u64,
         a: A,
     }
 
-    resource struct C {
+    struct C {
         val: u64,
         b: B,
     }

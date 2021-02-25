@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R {}
 
     fun t0(r: &mut R) {
         *r = R {};
@@ -9,7 +9,7 @@ module M {
         *r = x;
     }
 
-    fun t2<T: resource>(r: &mut T, x: T) {
+    fun t2<T: key>(r: &mut T, x: T) {
         *r = x;
     }
 

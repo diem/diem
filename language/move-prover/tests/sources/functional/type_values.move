@@ -18,7 +18,7 @@ module TestTypeValues {
         ensures result == (type<T1>() != type<T2>());
     }
 
-    resource struct R<T> { x: u64 }
+    struct R<T> has key { x: u64 }
 
     spec module {
         // Quantify over the domain of types, passing the type value to a helper function.
@@ -30,11 +30,11 @@ module TestTypeValues {
         }
     }
 
-    public fun add_R<T>(account: &signer) {
+    public fun add_R<T: store>(account: &signer) {
         move_to(account, R<T>{x: 1})
     }
 
-    public fun add_R_incorrect<T>(account: &signer) {
+    public fun add_R_incorrect<T: store>(account: &signer) {
         move_to(account, R<T>{x: 0})
     }
 }

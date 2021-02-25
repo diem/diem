@@ -1,7 +1,7 @@
 address 0x2 {
 module Summary {
-    resource struct S1 { s2: S2 }
-    resource struct S2 { f: u64 }
+    struct S1 has key { s2: S2 }
+    struct S2 has key, store { f: u64 }
 
     public fun write_callee(s2: &mut S2) {
         s2.f = 7;

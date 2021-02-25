@@ -6,6 +6,6 @@ error:
    │               ^ Invalid return
    ·
  5 │         let s = X { u: 0 };
-   │             - The local 's' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │             - The local 's' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
    │
 

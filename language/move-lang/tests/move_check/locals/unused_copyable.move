@@ -1,5 +1,5 @@
 module M {
-    struct S {}
+    struct S has drop {}
 
     // this produces unused parameter warnings for i and s, but not unused resource warnings
     fun t0(i: u64, s: S) {

@@ -1,5 +1,5 @@
 module Tester {
-    resource struct X { f: u64 }
+    struct X has key { f: u64 }
 
     fun bump_and_give(x_ref: &mut X, _other: &u64): &u64 {
         x_ref.f = x_ref.f + 1;

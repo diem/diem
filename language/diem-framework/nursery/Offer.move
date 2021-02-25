@@ -21,7 +21,7 @@ module Offer {
   use 0x1::Errors;
 
   /// A wrapper around value `offered` that can be claimed by the address stored in `for`.
-  resource struct Offer<Offered> { offered: Offered, for: address }
+  struct Offer<Offered> has key { offered: Offered, for: address }
 
   /// An offer of the specified type for the account does not exist
   const EOFFER_DNE_FOR_ACCOUNT: u64 = 0;
@@ -34,7 +34,7 @@ module Offer {
 
   /// Publish a value of type `Offered` under the sender's account. The value can be claimed by
   /// either the `for` address or the transaction sender.
-  public fun create<Offered>(account: &signer, offered: Offered, for: address) {
+  public fun create<Offered: store>(account: &signer, offered: Offered, for: address) {
     assert(!exists<Offer<Offered>>(Signer::address_of(account)), Errors::already_published(EOFFER_ALREADY_CREATED));
     move_to(account, Offer<Offered> { offered, for });
   }
@@ -51,7 +51,7 @@ module Offer {
   /// Only succeeds if the sender is the intended recipient stored in `for` or the original
   /// publisher `offer_address`.
   /// Also fails if there is no `Offer<Offered>` published.
-  public fun redeem<Offered>(account: &signer, offer_address: address): Offered acquires Offer {
+  public fun redeem<Offered: store>(account: &signer, offer_address: address): Offered acquires Offer {
     assert(exists<Offer<Offered>>(offer_address), Errors::not_published(EOFFER_DOES_NOT_EXIST));
     let Offer<Offered> { offered, for } = move_from<Offer<Offered>>(offer_address);
     let sender = Signer::address_of(account);
@@ -71,7 +71,7 @@ module Offer {
   }
 
   // Returns true if an offer of type `Offered` exists at `offer_address`.
-  public fun exists_at<Offered>(offer_address: address): bool {
+  public fun exists_at<Offered: store>(offer_address: address): bool {
     exists<Offer<Offered>>(offer_address)
   }
   spec fun exists_at {
@@ -83,7 +83,7 @@ module Offer {
 
   // Returns the address of the `Offered` type stored at `offer_address.
   // Fails if no such `Offer` exists.
-  public fun address_of<Offered>(offer_address: address): address acquires Offer {
+  public fun address_of<Offered: store>(offer_address: address): address acquires Offer {
     assert(exists<Offer<Offered>>(offer_address), Errors::not_published(EOFFER_DOES_NOT_EXIST));
     borrow_global<Offer<Offered>>(offer_address).for
   }

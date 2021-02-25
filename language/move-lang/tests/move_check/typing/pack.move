@@ -1,7 +1,7 @@
 module M {
-    struct S { f: u64 }
-    struct Nat<T> { f: T }
-    resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    struct S has drop { f: u64 }
+    struct Nat<T> has drop { f: T }
+    struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
 
     fun t0() {
         (S { f: 0 } : S);

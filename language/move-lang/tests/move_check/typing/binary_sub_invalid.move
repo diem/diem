@@ -1,6 +1,6 @@
 module M {
-    struct S { u: u64 }
-    resource struct R {
+    struct S has drop { u: u64 }
+    struct R {
         f: u64
     }
 

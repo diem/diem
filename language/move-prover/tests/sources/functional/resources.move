@@ -9,7 +9,7 @@ module TestResources {
     // Simple resource
     // ---------------
 
-    resource struct R {
+    struct R has key {
         x: u64
     }
 
@@ -111,17 +111,17 @@ module TestResources {
     // Nested resource
     // ---------------
 
-    resource struct A {
+    struct A {
         addr: address,
         val: u64,
     }
 
-    resource struct B {
+    struct B {
         val: u64,
         a: A,
     }
 
-    resource struct C {
+    struct C {
         val: u64,
         b: B,
     }

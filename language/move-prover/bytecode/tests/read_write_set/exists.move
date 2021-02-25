@@ -1,10 +1,10 @@
 address 0x2 {
 module Exists {
-    resource struct T {}
+    struct T has key, store {}
 
-    resource struct S { f: address }
+    struct S has key { f: address }
 
-    resource struct V<A> { }
+    struct V<A> has key { }
 
     public fun exists_const(): bool {
         exists<T>(0x1)
@@ -22,7 +22,7 @@ module Exists {
         exists<V<T>>(a)
     }
 
-    public fun exists_generic<X>(a: address): bool {
+    public fun exists_generic<X: store>(a: address): bool {
         exists<V<X>>(a)
     }
 
@@ -30,7 +30,7 @@ module Exists {
         exists_generic<T>(a)
     }
 
-    public fun call_with_type_param2<X, Y>(a: address): bool {
+    public fun call_with_type_param2<X, Y: store>(a: address): bool {
         exists_generic<Y>(a)
     }
 

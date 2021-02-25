@@ -7,7 +7,7 @@ module AlicePays {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
 
-    resource struct T {
+    struct T has key {
         cap: DiemAccount::WithdrawCapability,
     }
 

@@ -1,6 +1,6 @@
 address 0x2 {
 module MissingResource {
-    resource struct R { }
+    struct R has key { }
 
     public fun f() acquires R {
         borrow_global<R>(0x0);

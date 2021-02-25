@@ -1,6 +1,6 @@
 address 0x2 {
 module Footprint {
-    resource struct S { f: address }
+    struct S { f: address }
 
     // expected: empty summary
     public fun reassign_constant(a: address): address {

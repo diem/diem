@@ -1,11 +1,9 @@
 module M {
-    struct S<T> {
+    struct S<T> has drop {
         f: T,
     }
 
     fun t(s: signer) {
-        let x = S<signer> { f: s };
+        let _ = S<signer> { f: s };
     }
 }
-
-// check: UNSAFE_RET_UNUSED_RESOURCES

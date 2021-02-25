@@ -1,5 +1,5 @@
 module M {
-    resource struct R { f:bool }
+    struct R { f:bool }
     fun t0() {
         let r = R{ f: false };
         let f;

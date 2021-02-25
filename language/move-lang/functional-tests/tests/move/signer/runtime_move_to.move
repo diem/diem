@@ -1,12 +1,12 @@
 module M {
-    resource struct R1 { f: bool }
-    resource struct R2<T> { f: T }
+    struct R1 has key { f: bool }
+    struct R2<T> has key { f: T }
 
     public fun store(sender: &signer, f: bool) {
         move_to(sender, R1 { f })
     }
 
-    public fun store_gen<T>(sender: &signer, f: T) {
+    public fun store_gen<T: store>(sender: &signer, f: T) {
         move_to(sender, R2<T> { f })
     }
 
@@ -14,7 +14,7 @@ module M {
         borrow_global<R1>(0x1::Signer::address_of(sender)).f
     }
 
-    public fun read_gen<T: copyable>(sender: &signer): T acquires R2 {
+    public fun read_gen<T: copy + store>(sender: &signer): T acquires R2 {
         *&borrow_global<R2<T>>(0x1::Signer::address_of(sender)).f
     }
 }

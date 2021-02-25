@@ -122,13 +122,13 @@ error:
     ┌── tests/move_check/typing/binary_sub_invalid.move:13:9 ───
     │
  13 │         r - r;
-    │         ^^^^^ Cannot ignore resource values. The value must be used
+    │         ^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
     ·
   7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - The type: '0x8675309::M::R'
+    │                       - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
-  3 │     resource struct R {
-    │     -------- Is found to be a non-copyable type here
+  3 │     struct R {
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 

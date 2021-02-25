@@ -6,8 +6,8 @@ module M {
         no {}
     }
 
-    resource struct no2 {}
-    resource struct Y { f: no }
+    struct no2 {}
+    struct Y { f: no }
 
     fun mk2(x: no2): no2 {
         let no2 {} = x;

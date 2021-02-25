@@ -22,13 +22,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/recursive_structs.move:9:35 ───
+   ┌── tests/move_check/typing/recursive_structs.move:9:26 ───
    │
- 9 │     resource struct X { y: vector<Y> }
-   │                                   ^ Invalid field containing 'Y' in struct 'X'.
+ 9 │     struct X { y: vector<Y> }
+   │                          ^ Invalid field containing 'Y' in struct 'X'.
    ·
- 9 │     resource struct X { y: vector<Y> }
-   │                                   - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
+ 9 │     struct X { y: vector<Y> }
+   │                          - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
    │
 
 error: 

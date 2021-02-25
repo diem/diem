@@ -1,7 +1,7 @@
 address 0x2 {
 module M {
-    struct S1 { b: bool }
-    struct S2 { u: u64 }
+    struct S1 has drop { b: bool }
+    struct S2 has drop { u: u64 }
     fun check(): bool {
         false
     }

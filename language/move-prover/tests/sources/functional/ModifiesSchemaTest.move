@@ -1,7 +1,7 @@
 address 0x0 {
 module A {
 
-    resource struct S {
+    struct S has key {
         x: u64
     }
     spec schema ModifiesSchema {

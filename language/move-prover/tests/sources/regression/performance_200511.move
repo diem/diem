@@ -13,22 +13,22 @@ module Test {
         }
     }
 
-    struct EventHandle<T: copyable> {
+    struct EventHandle<T: copy + drop + store> has copy, drop, store {
         // Total number of events emitted to this event stream.
         counter: u64,
         // A globally unique ID for this event stream.
         guid: vector<u8>,
     }
 
-    struct Event1 {}
-    struct Event2 {}
+    struct Event1 has copy, drop, store {}
+    struct Event2 has copy, drop, store {}
 
-    resource struct T {
+    struct T has key {
         received_events: EventHandle<Event1>,
         sent_events: EventHandle<Event2>,
     }
 
-    struct EventHandleGenerator {
+    struct EventHandleGenerator has copy, drop, store {
         // A monotonically increasing counter
         counter: u64,
     }
@@ -47,7 +47,7 @@ module Test {
         ensures eq_append(result, BCS::serialize(old(counter.counter)), BCS::serialize(sender));
     }
 
-    fun new_event_handle_impl<T: copyable>(counter: &mut EventHandleGenerator, sender: address): EventHandle<T> {
+    fun new_event_handle_impl<T: copy + drop + store>(counter: &mut EventHandleGenerator, sender: address): EventHandle<T> {
         EventHandle<T> {counter: 0, guid: fresh_guid(counter, sender)}
     }
     spec fun new_event_handle_impl {

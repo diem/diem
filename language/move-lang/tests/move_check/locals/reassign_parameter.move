@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R {}
 
     public fun reassign_parameter(r: R) {
         let R { } = r;

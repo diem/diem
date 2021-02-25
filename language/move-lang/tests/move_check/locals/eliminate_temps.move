@@ -1,6 +1,6 @@
 module M {
-    struct S {f: u64}
-    resource struct R {}
+    struct S has drop {f: u64}
+    struct R has key {}
 
     public fun borrow_local(x: u64): u64 {
         // implicit freeze creates a temp local. If the temp is inlined, the copy won't fail

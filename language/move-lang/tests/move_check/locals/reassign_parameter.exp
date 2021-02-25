@@ -8,6 +8,6 @@ error:
    │ ╰─────────^ Invalid return
    ·
  6 │         r = R {};
-   │         - The parameter 'r' might still contain a resource value. The resource must be consumed before the function returns
+   │         - The parameter 'r' might still contain a value. The value does not have the 'drop' ability and must be consumed before the function returns
    │
 

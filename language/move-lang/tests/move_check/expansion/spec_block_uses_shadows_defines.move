@@ -1,7 +1,7 @@
 address 0x2 {
 module M {
-    resource struct R1 {}
-    resource struct R2<T> {}
+    struct R1 {}
+    struct R2<T> {}
 
     fun t1(): (R2<u64>, R1) {
         abort 0

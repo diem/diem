@@ -256,16 +256,16 @@ fun main(account: &signer) {
 
 //! new-transaction
 module Holder {
-    resource struct Holder<T> {
+    struct Holder<T> has key {
         a: T,
         b: T,
     }
 
-    public fun hold<T>(account: &signer, a: T, b: T) {
+    public fun hold<T: store>(account: &signer, a: T, b: T) {
         move_to(account, Holder<T>{ a, b})
     }
 
-    public fun get<T>(addr: address): (T, T)
+    public fun get<T: store>(addr: address): (T, T)
     acquires Holder {
         let Holder { a, b} = move_from<Holder<T>>(addr);
         (a, b)

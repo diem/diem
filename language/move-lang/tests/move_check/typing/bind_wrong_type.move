@@ -1,5 +1,5 @@
 module M {
-    resource struct R {f: u64}
+    struct R {f: u64}
     struct S { g: u64 }
 
     fun t0() {

@@ -3,11 +3,13 @@
 
 use crate::{
     errors::*,
-    expansion::{ast as E, translate::is_valid_struct_constant_or_schema_name as is_constant_name},
+    expansion::{
+        ast::{self as E, AbilitySet},
+        translate::is_valid_struct_constant_or_schema_name as is_constant_name,
+    },
     naming::ast as N,
-    parser::ast::{ConstantName, Field, FunctionName, Kind, Kind_, ModuleIdent, StructName, Var},
+    parser::ast::{Ability_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
-    typing::core::{self, Subst},
 };
 use move_ir_types::location::*;
 use std::collections::BTreeMap;
@@ -37,7 +39,7 @@ impl ResolvedType {
 struct Context {
     errors: Errors,
     current_module: Option<ModuleIdent>,
-    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>, usize)>>,
+    scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, AbilitySet, usize)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
     unscoped_constants: BTreeMap<String, Loc>,
@@ -55,10 +57,10 @@ impl Context {
                     .structs
                     .key_cloned_iter()
                     .map(|(s, sdef)| {
-                        let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
+                        let abilities = sdef.abilities.clone();
                         let arity = sdef.type_parameters.len();
                         let sname = s.value().to_string();
-                        (sname, (s.loc(), mident.clone(), kopt, arity))
+                        (sname, (s.loc(), mident.clone(), abilities, arity))
                     })
                     .collect();
                 (mident, mems)
@@ -132,7 +134,7 @@ impl Context {
         loc: Loc,
         m: &ModuleIdent,
         n: &Name,
-    ) -> Option<(Loc, StructName, Option<Kind>, usize)> {
+    ) -> Option<(Loc, StructName, AbilitySet, usize)> {
         let types = match self.scoped_types.get(m) {
             None => {
                 self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
@@ -140,7 +142,7 @@ impl Context {
             }
             Some(members) => members,
         };
-        match types.get(&n.value).cloned() {
+        match types.get(&n.value) {
             None => {
                 self.error(vec![(
                     loc,
@@ -151,8 +153,8 @@ impl Context {
                 )]);
                 None
             }
-            Some((decl_loc, _, rloc, arity)) => {
-                Some((decl_loc, StructName(n.clone()), rloc, arity))
+            Some((decl_loc, _, abilities, arity)) => {
+                Some((*decl_loc, StructName(n.clone()), abilities.clone(), *arity))
             }
         }
     }
@@ -502,15 +504,15 @@ fn acquires_type(context: &mut Context, sp!(loc, en_): E::ModuleAccess) -> Optio
             context.error(vec![(
                 loc,
                 format!(
-                    "Invalid acquires item. Expected a resource name, but got a {}",
+                    "Invalid acquires item. Expected a struct name, but got a {}",
                     case
                 ),
             )]);
             None
         }
         EN::ModuleAccess(m, n) => {
-            let (decl_loc, _, resource_opt, _) = context.resolve_module_type(loc, &m, &n)?;
-            acquires_type_struct(context, loc, decl_loc, m, StructName(n), resource_opt)
+            let (decl_loc, _, abilities, _) = context.resolve_module_type(loc, &m, &n)?;
+            acquires_type_struct(context, loc, decl_loc, m, StructName(n), &abilities)
         }
     }
 }
@@ -521,12 +523,27 @@ fn acquires_type_struct(
     decl_loc: Loc,
     declared_module: ModuleIdent,
     n: StructName,
-    resource_opt: Option<Kind>,
+    abilities: &AbilitySet,
 ) -> Option<StructName> {
     let declared_in_current = match &context.current_module {
         Some(current_module) => current_module == &declared_module,
         None => false,
     };
+
+    let mut has_errors = false;
+
+    if abilities.has_ability_(Ability_::Key).is_none() {
+        let msg = format!(
+            "Invalid acquires item. Expected a struct with the '{}' ability.",
+            Ability_::KEY
+        );
+        context.error(vec![
+            (loc, msg),
+            (decl_loc, "Declared without the ability here".to_string()),
+        ]);
+        has_errors = true;
+    }
+
     if !declared_in_current {
         let tmsg = format!(
             "The struct '{}' was not declared in the current module. Global storage access is \
@@ -534,18 +551,14 @@ fn acquires_type_struct(
             n
         );
         context.error(vec![(loc, "Invalid acquires item".into()), (n.loc(), tmsg)]);
-        return None;
+        has_errors = true;
     }
 
-    if resource_opt.is_none() {
-        context.error(vec![
-            (loc, "Invalid acquires item. Expected a nominal resource."),
-            (decl_loc, "Declared as a normal struct here"),
-        ]);
-        return None;
+    if has_errors {
+        None
+    } else {
+        Some(n)
     }
-
-    Some(n)
 }
 
 //**************************************************************************************************
@@ -554,22 +567,14 @@ fn acquires_type_struct(
 
 fn struct_def(
     context: &mut Context,
-    name: StructName,
+    _name: StructName,
     sdef: E::StructDefinition,
 ) -> N::StructDefinition {
-    let resource_opt = sdef.resource_opt;
+    let abilities = sdef.abilities;
     let type_parameters = type_parameters(context, sdef.type_parameters);
     let fields = struct_fields(context, sdef.fields);
-    match (&resource_opt, &fields) {
-        (Some(_), _) | (_, N::StructFields::Native(_)) => (),
-        (None, N::StructFields::Defined(fields)) => {
-            for (field, idx_ty) in fields.key_cloned_iter() {
-                check_no_nominal_resources(context, &name, &field, &idx_ty.1);
-            }
-        }
-    }
     N::StructDefinition {
-        resource_opt,
+        abilities,
         type_parameters,
         fields,
     }
@@ -581,39 +586,6 @@ fn struct_fields(context: &mut Context, efields: E::StructFields) -> N::StructFi
         E::StructFields::Defined(em) => {
             N::StructFields::Defined(em.map(|_f, (idx, t)| (idx, type_(context, t))))
         }
-    }
-}
-
-fn check_no_nominal_resources(context: &mut Context, s: &StructName, field: &Field, ty: &N::Type) {
-    use N::Type_ as T;
-    let sp!(tloc, ty_) = ty;
-    match ty_ {
-        T::Apply(Some(sp!(kloc, Kind_::Resource)), _, _) => {
-            let field_msg = format!(
-                "Invalid resource field '{}' for struct '{}'. Structs cannot contain resource \
-                 types, except through type parameters",
-                field, s
-            );
-            let tmsg = format!(
-                "Field '{}' is a resource due to the type: {}",
-                field,
-                core::error_format(ty, &Subst::empty()),
-            );
-            let kmsg = format!(
-                "Type {} was declared as a resource here",
-                core::error_format(ty, &Subst::empty()),
-            );
-            context.error(vec![
-                (field.loc(), field_msg),
-                (*tloc, tmsg),
-                (*kloc, kmsg),
-                (s.loc(), format!("'{}' declared as a `struct` here", s)),
-            ])
-        }
-        T::Apply(None, _, tyl) => tyl
-            .iter()
-            .for_each(|t| check_no_nominal_resources(context, s, field, t)),
-        _ => (),
     }
 }
 
@@ -640,17 +612,20 @@ fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) 
 // Types
 //**************************************************************************************************
 
-fn type_parameters(context: &mut Context, type_parameters: Vec<(Name, Kind)>) -> Vec<N::TParam> {
+fn type_parameters(
+    context: &mut Context,
+    type_parameters: Vec<(Name, AbilitySet)>,
+) -> Vec<N::TParam> {
     let mut unique_tparams = UniqueMap::new();
     type_parameters
         .into_iter()
-        .map(|(name, kind)| {
+        .map(|(name, abilities)| {
             let id = N::TParamID::next();
             let user_specified_name = name.clone();
             let tp = N::TParam {
                 id,
                 user_specified_name,
-                kind,
+                abilities,
             };
             let loc = name.loc;
             context.bind_type(
@@ -718,12 +693,12 @@ fn type_(context: &mut Context, sp!(loc, ety_): E::Type) -> N::Type {
                     assert!(context.has_errors());
                     NT::UnresolvedError
                 }
-                Some((_, _, resource_opt, arity)) => {
+                Some((_, _, _, arity)) => {
                     let tn = sp(nloc, NN::ModuleType(m, StructName(n)));
                     let tys = types(context, tys);
                     let name_f = || format!("{}", tn);
                     let tys = check_type_argument_arity(context, loc, name_f, tys, arity);
-                    NT::Apply(resource_opt, tn, tys)
+                    NT::Apply(None, tn, tys)
                 }
             }
         }

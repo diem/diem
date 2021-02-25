@@ -7,7 +7,7 @@ module Set {
     use 0x1::BCS;
     use 0x1::Vector;
 
-    struct T<Elem> { v: vector<Elem> }
+    struct T<Elem> has copy, drop, store { v: vector<Elem> }
 
     public fun empty<Elem>(): T<Elem> {
         T { v: Vector::empty() }

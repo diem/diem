@@ -8,7 +8,7 @@ module M {
 //! new-transaction
 
 module N {
-    resource struct R<T> { f: T }
+    struct R<T> has key { f: T }
     fun t0<T>(s: &signer) {
         move_to<R<u64>>(s, 0)
     }

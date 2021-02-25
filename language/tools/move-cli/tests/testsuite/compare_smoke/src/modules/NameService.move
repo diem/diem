@@ -13,7 +13,7 @@ module NameService {
     public fun EXPIRE_AFTER() : u64{5}
     const NAMESERVICE_ADDR: address = 0x2;
 
-    resource struct Expiration {
+    struct Expiration has key {
         expire_on_block_height: vector<u64>
     }
 

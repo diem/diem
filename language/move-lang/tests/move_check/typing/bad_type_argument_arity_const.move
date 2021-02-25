@@ -1,7 +1,7 @@
 address 0x42 {
 module M {
 
-    struct S<T> { f: T }
+    struct S<T> has copy, drop { f: T }
 
     const S1: S = S { f: 0 };
     const S2: S<> = S { f: 0 };

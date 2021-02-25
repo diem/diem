@@ -1,5 +1,5 @@
 module Test {
-    resource struct R {
+    struct R has key {
         x: u64,
     }
 

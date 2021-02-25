@@ -1,9 +1,9 @@
 module M {
-    struct S { u: u64 }
-    resource struct R {
+    struct S has drop { u: u64 }
+    struct R {
         f: u64
     }
-    struct G<T> {}
+    struct G<T> has drop {}
 
     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
         (0 == 1: bool);

@@ -8,10 +8,10 @@ error:
 
 error: 
 
-   ┌── tests/move_check/expansion/restricted_struct_names.move:3:21 ───
+   ┌── tests/move_check/expansion/restricted_struct_names.move:3:12 ───
    │
- 3 │     resource struct signer {}
-   │                     ^^^^^^ Invalid struct name 'signer'. Struct names must start with 'A'..'Z'
+ 3 │     struct signer {}
+   │            ^^^^^^ Invalid struct name 'signer'. Struct names must start with 'A'..'Z'
    │
 
 error: 

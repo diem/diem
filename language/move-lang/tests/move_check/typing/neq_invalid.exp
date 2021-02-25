@@ -87,13 +87,13 @@ error:
     ┌── tests/move_check/typing/neq_invalid.move:22:9 ───
     │
  22 │         r != r;
-    │         ^^^^^^ Cannot use '!=' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    │         ^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
     ·
  21 │     fun t1(r: R) {
-    │               - The type: '0x8675309::M::R'
+    │               - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
-  3 │     resource struct R {
-    │     -------- Is found to be a non-copyable type here
+  3 │     struct R {
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -125,13 +125,13 @@ error:
     ┌── tests/move_check/typing/neq_invalid.move:27:9 ───
     │
  27 │         G1{} != G1{};
-    │         ^^^^^^^^^^^^ Cannot use '!=' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    │         ^^^^^^^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
     ·
  27 │         G1{} != G1{};
-    │                 ---- The type: '0x8675309::M::G1<_>'
+    │                 ---- The type '0x8675309::M::G1<_>' does not have the ability 'drop'
     ·
-  7 │     struct G1<T: resource> {}
-    │                  -------- Is found to be a non-copyable type here
+  7 │     struct G1<T: key> {}
+    │            -- To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -155,13 +155,13 @@ error:
     ┌── tests/move_check/typing/neq_invalid.move:28:9 ───
     │
  28 │         G2{} != G2{};
-    │         ^^^^^^^^^^^^ Cannot use '!=' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    │         ^^^^^^^^^^^^ '!=' requires the 'drop' ability as the value is consumed. Try borrowing the values with '&' first.'
     ·
  28 │         G2{} != G2{};
-    │                 ---- The type: '0x8675309::M::G2<_>'
+    │                 ---- The type '0x8675309::M::G2<_>' does not have the ability 'drop'
     ·
   8 │     struct G2<T> {}
-    │               - Is found to be a non-copyable type here
+    │            -- To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 

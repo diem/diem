@@ -8,8 +8,8 @@ error:
  7 │         (S { f: false } : S);
    │                 ----- The type: 'bool'
    ·
- 2 │     struct S { f: u64 }
-   │                   --- Is not compatible with: 'u64'
+ 2 │     struct S has drop { f: u64 }
+   │                            --- Is not compatible with: 'u64'
    │
 
 error: 
@@ -22,8 +22,8 @@ error:
  15 │          } : R);
     │              - The type: '0x8675309::M::R'
     ·
-  4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
-    │                            - Is not compatible with: '0x8675309::M::S'
+  4 │     struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                   - Is not compatible with: '0x8675309::M::S'
     │
 
 error: 
@@ -36,8 +36,8 @@ error:
  18 │             f: false,
     │                ----- The type: 'bool'
     ·
-  4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
-    │                                  --- Is not compatible with: 'u64'
+  4 │     struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                         --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -50,8 +50,8 @@ error:
  19 │             n1: Nat { f: false },
     │                          ----- The type: 'bool'
     ·
-  4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
-    │                                               --- Is not compatible with: 'u64'
+  4 │     struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                                      --- Is not compatible with: 'u64'
     │
 
 error: 
@@ -64,7 +64,7 @@ error:
  15 │          } : R);
     │              - The type: '0x8675309::M::R'
     ·
-  4 │     resource struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
-    │                                                             - Is not compatible with: '0x8675309::M::S'
+  4 │     struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }
+    │                                                    - Is not compatible with: '0x8675309::M::S'
     │
 

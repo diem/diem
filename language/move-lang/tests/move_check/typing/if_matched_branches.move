@@ -1,5 +1,5 @@
 module M {
-    resource struct R {}
+    struct R {}
 
     fun t0(cond: bool) {
         if (cond) () else ();

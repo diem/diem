@@ -1,5 +1,5 @@
 module M {
-    struct Box<T> { f: T }
+    struct Box<T> has drop { f: T }
 
     fun t0() {
         Box { f: (0, 1) };

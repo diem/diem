@@ -3,12 +3,12 @@ error:
    ┌── tests/move_check/translated_ir_tests/move/signer/copy_loc_transitive.move:5:9 ───
    │
  5 │         copy x
-   │         ^^^^^^ Invalid 'copy' of owned resource value
+   │         ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
    ·
  4 │         let x = S<signer> { s };
-   │                 --------------- The type: '0x8675309::M::S<signer>'
+   │                 --------------- The type '0x8675309::M::S<signer>' does not have the ability 'copy'
    ·
  4 │         let x = S<signer> { s };
-   │                   ------ Is found to be a non-copyable type here
+   │                   ------ The type '0x8675309::M::S<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
    │
 

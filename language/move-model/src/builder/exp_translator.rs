@@ -388,9 +388,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Analyzes the sequence of type parameters as they are provided via the source AST and enters
     /// them into the environment. Returns a vector for representing them in the target AST.
-    pub fn analyze_and_add_type_params(
+    pub fn analyze_and_add_type_params<T>(
         &mut self,
-        type_params: &[(Name, PA::Kind)],
+        type_params: &[(Name, T)],
     ) -> Vec<(Symbol, Type)> {
         type_params
             .iter()

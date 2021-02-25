@@ -4,7 +4,7 @@ address 0x1 {
 // reproduces the bug that it was intended to demonstrate. This should be investigated.
 
 module TraceBug {
-    resource struct Root { }
+    struct Root has key { }
 
     spec module {
         define only_root_addr_has_root_privilege(): bool {

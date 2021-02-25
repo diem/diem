@@ -9,7 +9,7 @@ module Authenticator {
     use 0x1::Vector;
 
     /// A multi-ed25519 public key
-    struct MultiEd25519PublicKey {
+    struct MultiEd25519PublicKey has copy, drop, store {
         /// vector of ed25519 public keys
         public_keys: vector<vector<u8>>,
         /// approval threshold

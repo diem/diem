@@ -191,6 +191,48 @@ impl<K: TName, V: PartialEq> PartialEq for UniqueMap<K, V> {
 }
 impl<K: TName, V: Eq> Eq for UniqueMap<K, V> {}
 
+impl<K: TName, V: PartialOrd> PartialOrd for UniqueMap<K, V> {
+    fn partial_cmp(&self, other: &UniqueMap<K, V>) -> Option<std::cmp::Ordering> {
+        self.0
+            .iter()
+            .map(|(k_, loc_v)| {
+                let v = &loc_v.1;
+                (k_, v)
+            })
+            .partial_cmp(other.0.iter().map(|(k_, loc_v)| {
+                let v = &loc_v.1;
+                (k_, v)
+            }))
+    }
+}
+impl<K: TName, V: Ord> Ord for UniqueMap<K, V> {
+    fn cmp(&self, other: &UniqueMap<K, V>) -> std::cmp::Ordering {
+        self.0
+            .iter()
+            .map(|(k_, loc_v)| {
+                let v = &loc_v.1;
+                (k_, v)
+            })
+            .cmp(other.0.iter().map(|(k_, loc_v)| {
+                let v = &loc_v.1;
+                (k_, v)
+            }))
+    }
+}
+
+impl<K: TName, V: Hash> Hash for UniqueMap<K, V>
+where
+    K::Key: Hash,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for (k_, loc_v) in &self.0 {
+            let v = &loc_v.1;
+            k_.hash(state);
+            v.hash(state);
+        }
+    }
+}
+
 //**************************************************************************************************
 // IntoIter
 //**************************************************************************************************

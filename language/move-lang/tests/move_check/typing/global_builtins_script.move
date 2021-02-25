@@ -1,6 +1,6 @@
 address 0x42 {
 module M {
-    resource struct R {}
+    struct R has key {}
     public fun new(): R {
         R {}
     }

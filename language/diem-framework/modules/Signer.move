@@ -4,7 +4,7 @@ module Signer {
     // Conceptually, you can think of the `signer` as being a resource struct wrapper arround an
     // address
     // ```
-    // resource struct Signer { addr: address }
+    // struct Signer has key, store { addr: address }
     // ```
     // `borrow_address` borrows this inner field
     native public fun borrow_address(s: &signer): &address;

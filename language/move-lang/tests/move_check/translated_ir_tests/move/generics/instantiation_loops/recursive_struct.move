@@ -19,8 +19,8 @@ module M1 {
 module M2 {
     use 0x1::Signer;
 
-    resource struct X { y: vector<Y> }
-    resource struct Y { x: vector<X> }
+    struct X has key, store { y: vector<Y> }
+    struct Y has key, store { x: vector<X> }
 
     // blows up the vm
     public fun ex(account: &signer): bool {

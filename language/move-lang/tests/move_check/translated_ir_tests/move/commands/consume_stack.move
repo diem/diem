@@ -1,5 +1,5 @@
 module M {
-    resource struct R { data: vector<u8> }
+    struct R has key { data: vector<u8> }
 
     fun is_ok_(_addr: &address, _data: &vector<u8>): bool {
         true

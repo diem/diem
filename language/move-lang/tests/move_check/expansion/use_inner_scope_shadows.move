@@ -1,8 +1,8 @@
 address 0x2 {
 module M {
-    struct S1 { b: bool }
-    struct S2 { u: u64 }
-    struct S3 { a: address }
+    struct S1 has drop { b: bool }
+    struct S2 has drop { u: u64 }
+    struct S3 has drop { a: address }
     fun check(): bool {
         false
     }

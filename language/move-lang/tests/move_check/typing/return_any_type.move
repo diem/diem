@@ -1,5 +1,5 @@
 module M {
-    resource struct Coin {}
+    struct Coin {}
 
     fun t0() {
         0 + (return ());

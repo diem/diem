@@ -3,16 +3,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:21:9 ───
     │
  21 │         both(S{}, Coin{});
-    │         ^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
     ·
  21 │         both(S{}, Coin{});
-    │              --- The copyable type '0x8675309::M::S' does not satisfy the constraint 'resource'
+    │              --- The type '0x8675309::M::S' does not have the ability 'key'
     ·
-  2 │     struct S {}
-    │            - The type's constraint information was determined here
+  2 │     struct S has copy, drop {}
+    │            - To satisify the constraint, the 'key' ability would need to be added here
     ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                 -------- 'resource' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                 --- 'key' constraint declared here
     │
 
 error: 
@@ -20,16 +20,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:21:9 ───
     │
  21 │         both(S{}, Coin{});
-    │         ^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  21 │         both(S{}, Coin{});
-    │                   ------ The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+    │                   ------ The type '0x8675309::M::Coin' does not have the ability 'copy'
     ·
-  3 │     resource struct Coin {}
-    │     -------- The type's constraint information was determined here
+  3 │     struct Coin has key {}
+    │            ---- To satisify the constraint, the 'copy' ability would need to be added here
     ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                              -------- 'copyable' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                         ---- 'copy' constraint declared here
     │
 
 error: 
@@ -37,16 +37,13 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:22:9 ───
     │
  22 │         both(0, Coin{})
-    │         ^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^ 'key' constraint not satisifed
     ·
  22 │         both(0, Coin{})
-    │              - The copyable type 'u64' does not satisfy the constraint 'resource'
+    │              - The type 'u64' does not have the ability 'key'
     ·
- 22 │         both(0, Coin{})
-    │              - The type's constraint information was determined here
-    ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                 -------- 'resource' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                 --- 'key' constraint declared here
     │
 
 error: 
@@ -54,16 +51,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:22:9 ───
     │
  22 │         both(0, Coin{})
-    │         ^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  22 │         both(0, Coin{})
-    │                 ------ The resource type '0x8675309::M::Coin' does not satisfy the constraint 'copyable'
+    │                 ------ The type '0x8675309::M::Coin' does not have the ability 'copy'
     ·
-  3 │     resource struct Coin {}
-    │     -------- The type's constraint information was determined here
+  3 │     struct Coin has key {}
+    │            ---- To satisify the constraint, the 'copy' ability would need to be added here
     ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                              -------- 'copyable' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                         ---- 'copy' constraint declared here
     │
 
 error: 
@@ -71,16 +68,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:26:9 ───
     │
  26 │         both(Box<C> {}, Box<R> {})
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
     ·
  26 │         both(Box<C> {}, Box<R> {})
-    │              --------- The copyable type '0x8675309::M::Box<C>' does not satisfy the constraint 'resource'
+    │              --------- The type '0x8675309::M::Box<C>' does not have the ability 'key'
     ·
-  4 │     struct Box<T> {}
-    │            --- The type's constraint information was determined here
+  4 │     struct Box<T> has copy, drop {}
+    │            --- To satisify the constraint, the 'key' ability would need to be added here
     ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                 -------- 'resource' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                 --- 'key' constraint declared here
     │
 
 error: 
@@ -88,16 +85,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:26:9 ───
     │
  26 │         both(Box<C> {}, Box<R> {})
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  26 │         both(Box<C> {}, Box<R> {})
-    │                         --------- The resource type '0x8675309::M::Box<R>' does not satisfy the constraint 'copyable'
+    │                         --------- The type '0x8675309::M::Box<R>' does not have the ability 'copy'
     ·
- 25 │     fun t1<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 26 │         both(Box<C> {}, Box<R> {})
+    │                             - The type '0x8675309::M::Box<R>' can have the ability 'copy' but the type argument 'R' does not have the required ability 'copy'
     ·
-  7 │     fun both<R: resource, C: copyable>(r: R, c: C) {
-    │                              -------- 'copyable' constraint declared here
+  7 │     fun both<R: key, C: copy>(r: R, c: C) {
+    │                         ---- 'copy' constraint declared here
     │
 
 error: 
@@ -105,16 +102,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:30:9 ───
     │
  30 │         rsrc(Box3<C, C, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
     ·
  30 │         rsrc(Box3<C, C, C> {});
-    │              ---------------- The copyable type '0x8675309::M::Box3<C, C, C>' does not satisfy the constraint 'resource'
+    │              ---------------- The type '0x8675309::M::Box3<C, C, C>' does not have the ability 'key'
     ·
-  5 │     struct Box3<T1, T2, T3> {}
-    │            ---- The type's constraint information was determined here
+  5 │     struct Box3<T1, T2, T3> has copy, drop {}
+    │            ---- To satisify the constraint, the 'key' ability would need to be added here
     ·
- 15 │     fun rsrc<R: resource>(r: R) {
-    │                 -------- 'resource' constraint declared here
+ 15 │     fun rsrc<R: key>(r: R) {
+    │                 --- 'key' constraint declared here
     │
 
 error: 
@@ -122,16 +119,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:32:9 ───
     │
  32 │         cpy(Box3<R, C, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  32 │         cpy(Box3<R, C, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R, C, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<R, C, C>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 32 │         cpy(Box3<R, C, C> {});
+    │                  - The type '0x8675309::M::Box3<R, C, C>' can have the ability 'copy' but the type argument 'R' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -139,16 +136,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:33:9 ───
     │
  33 │         cpy(Box3<C, R, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  33 │         cpy(Box3<C, R, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C, R, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, R, C>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 33 │         cpy(Box3<C, R, C> {});
+    │                  - The type '0x8675309::M::Box3<C, R, C>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -156,16 +153,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:34:9 ───
     │
  34 │         cpy(Box3<C, C, R> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  34 │         cpy(Box3<C, C, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C, C, R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, C, R>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 34 │         cpy(Box3<C, C, R> {});
+    │                  - The type '0x8675309::M::Box3<C, C, R>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -173,16 +170,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:36:9 ───
     │
  36 │         cpy(Box3<C, R, R> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  36 │         cpy(Box3<C, R, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<C, R, R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, R, R>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 36 │         cpy(Box3<C, R, R> {});
+    │                  - The type '0x8675309::M::Box3<C, R, R>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -190,16 +187,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:37:9 ───
     │
  37 │         cpy(Box3<R, C, R> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  37 │         cpy(Box3<R, C, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R, C, R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<R, C, R>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 37 │         cpy(Box3<R, C, R> {});
+    │                  - The type '0x8675309::M::Box3<R, C, R>' can have the ability 'copy' but the type argument 'R' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -207,16 +204,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:38:9 ───
     │
  38 │         cpy(Box3<R, R, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  38 │         cpy(Box3<R, R, C> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R, R, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<R, R, C>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 38 │         cpy(Box3<R, R, C> {});
+    │                  - The type '0x8675309::M::Box3<R, R, C>' can have the ability 'copy' but the type argument 'R' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -224,16 +221,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:40:9 ───
     │
  40 │         cpy(Box3<R, R, R> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  40 │         cpy(Box3<R, R, R> {});
-    │             ---------------- The resource type '0x8675309::M::Box3<R, R, R>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<R, R, R>' does not have the ability 'copy'
     ·
- 29 │     fun t2<R: resource, C: copyable>() {
-    │               -------- The type's constraint information was determined here
+ 40 │         cpy(Box3<R, R, R> {});
+    │                  - The type '0x8675309::M::Box3<R, R, R>' can have the ability 'copy' but the type argument 'R' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -241,16 +238,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:44:9 ───
     │
  44 │         cpy(Box3<U, C, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  44 │         cpy(Box3<U, C, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<U, C, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, C, C>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 44 │         cpy(Box3<U, C, C> {});
+    │                  - The type '0x8675309::M::Box3<U, C, C>' can have the ability 'copy' but the type argument 'U' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -258,16 +255,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:45:9 ───
     │
  45 │         cpy(Box3<C, U, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  45 │         cpy(Box3<C, U, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<C, U, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, U, C>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 45 │         cpy(Box3<C, U, C> {});
+    │                  - The type '0x8675309::M::Box3<C, U, C>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -275,16 +272,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:46:9 ───
     │
  46 │         cpy(Box3<C, C, U> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  46 │         cpy(Box3<C, C, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<C, C, U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, C, U>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 46 │         cpy(Box3<C, C, U> {});
+    │                  - The type '0x8675309::M::Box3<C, C, U>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -292,16 +289,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:48:9 ───
     │
  48 │         cpy(Box3<C, U, U> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  48 │         cpy(Box3<C, U, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<C, U, U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<C, U, U>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 48 │         cpy(Box3<C, U, U> {});
+    │                  - The type '0x8675309::M::Box3<C, U, U>' can have the ability 'copy' but the type argument 'C' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -309,16 +306,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:49:9 ───
     │
  49 │         cpy(Box3<U, C, U> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  49 │         cpy(Box3<U, C, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<U, C, U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, C, U>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 49 │         cpy(Box3<U, C, U> {});
+    │                  - The type '0x8675309::M::Box3<U, C, U>' can have the ability 'copy' but the type argument 'U' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -326,16 +323,16 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:50:9 ───
     │
  50 │         cpy(Box3<U, U, C> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  50 │         cpy(Box3<U, U, C> {});
-    │             ---------------- The type '0x8675309::M::Box3<U, U, C>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, U, C>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 50 │         cpy(Box3<U, U, C> {});
+    │                  - The type '0x8675309::M::Box3<U, U, C>' can have the ability 'copy' but the type argument 'U' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 
 error: 
@@ -343,15 +340,15 @@ error:
     ┌── tests/move_check/typing/module_call_constraints_not_satisfied.move:52:9 ───
     │
  52 │         cpy(Box3<U, U, U> {});
-    │         ^^^^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
     ·
  52 │         cpy(Box3<U, U, U> {});
-    │             ---------------- The type '0x8675309::M::Box3<U, U, U>' does not satisfy the constraint 'copyable'
+    │             ---------------- The type '0x8675309::M::Box3<U, U, U>' does not have the ability 'copy'
     ·
- 43 │     fun t3<U, C: copyable>() {
-    │            - The type's constraint information was determined here
+ 52 │         cpy(Box3<U, U, U> {});
+    │                  - The type '0x8675309::M::Box3<U, U, U>' can have the ability 'copy' but the type argument 'U' does not have the required ability 'copy'
     ·
- 11 │     fun cpy<C: copyable>(c: C) {
-    │                -------- 'copyable' constraint declared here
+ 11 │     fun cpy<C: copy>(c: C) {
+    │                ---- 'copy' constraint declared here
     │
 

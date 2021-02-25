@@ -12,7 +12,7 @@ module RegisteredCurrencies {
     /// A DiemConfig config holding all of the currency codes for registered
     /// currencies. The inner vector<u8>'s are string representations of
     /// currency names.
-    struct RegisteredCurrencies {
+    struct RegisteredCurrencies has copy, drop, store {
         currency_codes: vector<vector<u8>>,
     }
 

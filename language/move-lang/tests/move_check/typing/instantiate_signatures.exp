@@ -3,16 +3,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:11:13 ───
     │
  11 │         f1: S<R>,
-    │             ^^^^ Constraint not satisfied.
+    │             ^^^^ 'drop' constraint not satisifed
     ·
  11 │         f1: S<R>,
-    │               - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │               - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -64,16 +64,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:18:14 ───
     │
  18 │         _f1: S<R>,
-    │              ^^^^ Constraint not satisfied.
+    │              ^^^^ 'drop' constraint not satisifed
     ·
  18 │         _f1: S<R>,
-    │                - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │                - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -114,16 +114,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:23:9 ───
     │
  23 │         S<R>,
-    │         ^^^^ Constraint not satisfied.
+    │         ^^^^ 'drop' constraint not satisifed
     ·
  23 │         S<R>,
-    │           - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │           - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -164,16 +164,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:32:17 ───
     │
  32 │         let f1: S<R> = abort 0;
-    │                 ^^^^ Constraint not satisfied.
+    │                 ^^^^ 'drop' constraint not satisifed
     ·
  32 │         let f1: S<R> = abort 0;
-    │                   - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │                   - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -214,13 +214,13 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:37:9 ───
     │
  37 │         id<S<R>>(abort 0);
-    │         ^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    │         ^^^^^^^^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
     ·
  37 │         id<S<R>>(abort 0);
-    │            ---- The type: '0x42::M::S<0x42::M::R>'
+    │            ---- The type '0x42::M::S<0x42::M::R>' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+ 37 │         id<S<R>>(abort 0);
+    │              - The type '0x42::M::S<0x42::M::R>' can have the ability 'drop' but the type argument '0x42::M::R' does not have the required ability 'drop'
     │
 
 error: 
@@ -228,16 +228,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:37:12 ───
     │
  37 │         id<S<R>>(abort 0);
-    │            ^^^^ Constraint not satisfied.
+    │            ^^^^ 'drop' constraint not satisifed
     ·
  37 │         id<S<R>>(abort 0);
-    │              - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │              - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -289,16 +289,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:42:9 ───
     │
  42 │         S<S<R>> {};
-    │         ^^^^^^^^^^ Constraint not satisfied.
+    │         ^^^^^^^^^^ 'drop' constraint not satisifed
     ·
  42 │         S<S<R>> {};
-    │           ---- The resource type '0x42::M::S<0x42::M::R>' does not satisfy the constraint 'copyable'
+    │           ---- The type '0x42::M::S<0x42::M::R>' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+ 42 │         S<S<R>> {};
+    │             - The type '0x42::M::S<0x42::M::R>' can have the ability 'drop' but the type argument '0x42::M::R' does not have the required ability 'drop'
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 
@@ -306,13 +306,13 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:42:9 ───
     │
  42 │         S<S<R>> {};
-    │         ^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    │         ^^^^^^^^^^ Cannot ignore values without the 'drop' ability. The value must be used
     ·
  42 │         S<S<R>> {};
-    │         ---------- The type: '0x42::M::S<0x42::M::S<0x42::M::R>>'
+    │         ---------- The type '0x42::M::S<0x42::M::S<0x42::M::R>>' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+ 42 │         S<S<R>> {};
+    │           ---- The type '0x42::M::S<0x42::M::S<0x42::M::R>>' can have the ability 'drop' but the type argument '0x42::M::S<0x42::M::R>' does not have the required ability 'drop'
     │
 
 error: 
@@ -320,16 +320,16 @@ error:
     ┌── tests/move_check/typing/instantiate_signatures.move:42:11 ───
     │
  42 │         S<S<R>> {};
-    │           ^^^^ Constraint not satisfied.
+    │           ^^^^ 'drop' constraint not satisifed
     ·
  42 │         S<S<R>> {};
-    │             - The resource type '0x42::M::R' does not satisfy the constraint 'copyable'
+    │             - The type '0x42::M::R' does not have the ability 'drop'
     ·
-  4 │     resource struct R {}
-    │     -------- The type's constraint information was determined here
+  4 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     ·
-  3 │     struct S<T: copyable> {}
-    │                 -------- 'copyable' constraint declared here
+  3 │     struct S<T: drop> has drop {}
+    │                 ---- 'drop' constraint declared here
     │
 
 error: 

@@ -2,14 +2,14 @@
 module M {
     use 0x1::BCS;
 
-    struct Box<T> { x: T }
-    struct Box3<T> { x: Box<Box<T>> }
-    struct Box7<T> { x: Box3<Box3<T>> }
-    struct Box15<T> { x: Box7<Box7<T>> }
-    struct Box31<T> { x: Box15<Box15<T>> }
-    struct Box63<T> { x: Box31<Box31<T>> }
-    struct Box127<T> { x: Box63<Box63<T>> }
-    struct Box255<T> { x: Box127<Box127<T>> }
+    struct Box<T> has copy, drop, store { x: T }
+    struct Box3<T> has copy, drop, store { x: Box<Box<T>> }
+    struct Box7<T> has copy, drop, store { x: Box3<Box3<T>> }
+    struct Box15<T> has copy, drop, store { x: Box7<Box7<T>> }
+    struct Box31<T> has copy, drop, store { x: Box15<Box15<T>> }
+    struct Box63<T> has copy, drop, store { x: Box31<Box31<T>> }
+    struct Box127<T> has copy, drop, store { x: Box63<Box63<T>> }
+    struct Box255<T> has copy, drop, store { x: Box127<Box127<T>> }
 
     fun box3<T>(x: T): Box3<T> {
         Box3 { x: Box { x: Box { x } } }

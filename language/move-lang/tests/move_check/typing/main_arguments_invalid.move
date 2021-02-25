@@ -1,6 +1,6 @@
 address 0x42 {
 module M {
-    resource struct R {}
+    struct R {}
     struct S {}
     struct Cup<T> {}
 
@@ -13,7 +13,7 @@ module M {
 script {
 use 0x42::M::{S, R, Cup};
 
-fun main<T: copyable>(
+fun main<T: drop>(
     a0: T,
     a1: vector<T>,
     a2: vector<vector<T>>,

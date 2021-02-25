@@ -1,5 +1,5 @@
 module M {
-    resource struct R { f: u64 }
+    struct R has key { f: u64 }
     fun acq(addr: address): R acquires R {
         move_from(addr)
     }

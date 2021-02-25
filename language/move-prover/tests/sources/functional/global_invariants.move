@@ -5,11 +5,11 @@ module TestGlobalInvariants {
         pragma verify = true;
     }
 
-    resource struct R {
+    struct R has key {
         x: u64
     }
 
-    resource struct S {
+    struct S has key {
         x: u64
     }
 

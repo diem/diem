@@ -19,7 +19,7 @@ const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGT
 fn mutated_accounts() {
     let code = r#"
         module M {
-            resource struct Foo { a: bool }
+            struct Foo has key { a: bool }
             public fun get(addr: address): bool acquires Foo {
                 borrow_global<Foo>(addr).a
             }

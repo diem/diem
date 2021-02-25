@@ -3,8 +3,8 @@
 
 //! new-transaction
 module Holder {
-    resource struct Hold<T> { x: T }
-    public fun hold<T>(account: &signer, x: T) {
+    struct Hold<T> has key { x: T }
+    public fun hold<T: store>(account: &signer, x: T) {
         move_to(account, Hold<T>{ x })
     }
 }

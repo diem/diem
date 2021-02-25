@@ -13,7 +13,7 @@ use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition,
+        Ability, AbilitySet, Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition,
         FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
         StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature, Visibility,
     },
@@ -981,10 +981,20 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
         let native = if field_info.is_none() { "native " } else { "" };
 
-        let nominal_name = match ability_to_kind(struct_handle.abilities) {
-            Kind::Resource => "resource",
-            Kind::Copyable => "struct",
-            Kind::All => panic!("Unsupported ability set for struct"),
+        let abilities = if struct_handle.abilities == AbilitySet::EMPTY {
+            String::new()
+        } else {
+            let ability_vec = struct_handle
+                .abilities
+                .into_iter()
+                .map(|a| match a {
+                    Ability::Copy => "copy",
+                    Ability::Drop => "drop",
+                    Ability::Store => "store",
+                    Ability::Key => "key",
+                })
+                .collect::<Vec<_>>();
+            format!("has {}", ability_vec.join(", "))
         };
 
         let name = self
@@ -1018,11 +1028,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         }
 
         Ok(format!(
-            "{native}{nominal_name} {name}{ty_params} {fields}",
+            "{native}struct {name}{ty_params}{abilities} {fields}",
             native = native,
-            nominal_name = nominal_name,
             name = name,
             ty_params = ty_params,
+            abilities = abilities,
             fields = &fields.join(",\n\t"),
         ))
     }

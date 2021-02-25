@@ -56,7 +56,7 @@ use 0x1::SlidingNonce;
 /// * `Script::cancel_burn`
 /// * `Script::preburn`
 
-fun burn_with_amount<Token>(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
+fun burn_with_amount<Token: store>(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
     Diem::burn<Token>(account, preburn_address, amount)
 }

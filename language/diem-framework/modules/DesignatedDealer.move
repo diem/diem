@@ -14,7 +14,7 @@ module DesignatedDealer {
     /// A `DesignatedDealer` always holds this `Dealer` resource regardless of the
     /// currencies it can hold. All `ReceivedMintEvent` events for all
     /// currencies will be emitted on `mint_event_handle`.
-    resource struct Dealer {
+    struct Dealer has key, store {
         /// Handle for mint events
         mint_event_handle: Event::EventHandle<ReceivedMintEvent>,
     }
@@ -27,7 +27,7 @@ module DesignatedDealer {
     /// The `TierInfo` resource holds the information needed to track which
     /// tier a mint to a DD needs to be in.
     // PreburnQueue published at top level in Diem.move
-    resource struct TierInfo<CoinType> {
+    struct TierInfo<CoinType> has key, store {
         /// Time window start in microseconds
         window_start: u64,
         /// The minted inflow during this time window
@@ -44,7 +44,7 @@ module DesignatedDealer {
     }
 
     /// Message for mint events
-    struct ReceivedMintEvent {
+    struct ReceivedMintEvent has copy, drop, store {
         /// The currency minted
         currency_code: vector<u8>,
         /// The address that receives the mint
@@ -86,7 +86,7 @@ module DesignatedDealer {
     /// Publishes a `Dealer` resource under `dd` with a `TierInfo`, `PreburnQueue`, and default tiers for `CoinType`.
     /// If `add_all_currencies = true` this will add a `TierInfo`, `PreburnQueue`,
     /// and default tiers for each known currency at launch.
-    public fun publish_designated_dealer_credential<CoinType>(
+    public fun publish_designated_dealer_credential<CoinType: store>(
         dd: &signer,
         tc_account: &signer,
         add_all_currencies: bool,
@@ -125,7 +125,7 @@ module DesignatedDealer {
     /// Adds the needed resources to the DD account `dd` in order to work with `CoinType`.
     /// Public so that a currency can be added to a DD later on. Will require
     /// multi-signer transactions in order to add a new currency to an existing DD.
-    public fun add_currency<CoinType>(dd: &signer, tc_account: &signer)
+    public fun add_currency<CoinType: store>(dd: &signer, tc_account: &signer)
     acquires TierInfo {
         Roles::assert_treasury_compliance(tc_account);
         let dd_addr = Signer::address_of(dd);
@@ -175,7 +175,7 @@ module DesignatedDealer {
         include DiemTimestamp::AbortsIfNotOperating;
     }
 
-    fun add_tier<CoinType>(
+    fun add_tier<CoinType: store>(
         tc_account: &signer,
         dd_addr: address,
         tier_upperbound: u64
@@ -216,7 +216,7 @@ module DesignatedDealer {
     }
 
 
-    public fun update_tier<CoinType>(
+    public fun update_tier<CoinType: store>(
         tc_account: &signer,
         dd_addr: address,
         tier_index: u64,
@@ -268,7 +268,7 @@ module DesignatedDealer {
             };
     }
 
-    public fun tiered_mint<CoinType>(
+    public fun tiered_mint<CoinType: store>(
         tc_account: &signer,
         amount: u64,
         dd_addr: address,
@@ -346,7 +346,7 @@ module DesignatedDealer {
     /// the `TierInfo<CoinType>` for the DD at `dd_addr`. Aborts if an invalid
     /// `tier_index` is supplied, or if the inflow over the time period exceeds
     /// that amount that can be minted according to the bounds for the `tier_index` tier.
-    fun validate_and_record_mint<CoinType>(dd_addr: address, amount: u64, tier_index: u64)
+    fun validate_and_record_mint<CoinType: store>(dd_addr: address, amount: u64, tier_index: u64)
     acquires TierInfo {
         let tier_info = borrow_global_mut<TierInfo<CoinType>>(dd_addr);
         reset_window(tier_info);
@@ -365,7 +365,7 @@ module DesignatedDealer {
 
     // If the time window starting at `dealer.window_start` and lasting for
     // `ONE_DAY` has elapsed, resets the window and the inflow and outflow records.
-    fun reset_window<CoinType>(tier_info: &mut TierInfo<CoinType>) {
+    fun reset_window<CoinType: store>(tier_info: &mut TierInfo<CoinType>) {
         let current_time = DiemTimestamp::now_microseconds();
         if (current_time > ONE_DAY && current_time - ONE_DAY > tier_info.window_start) {
             tier_info.window_start = current_time;

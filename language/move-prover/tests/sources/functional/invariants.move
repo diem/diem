@@ -7,7 +7,7 @@ module TestInvariants {
 
     // General invariant checking.
 
-    struct R {
+    struct R has copy, drop {
         x: u64
     }
 

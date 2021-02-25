@@ -9,7 +9,7 @@ module DiemVMConfig {
     use 0x1::Roles;
 
     /// The struct to hold config data needed to operate the DiemVM.
-    struct DiemVMConfig {
+    struct DiemVMConfig has copy, drop, store {
         /// Cost of running the VM.
         gas_schedule: GasSchedule,
     }
@@ -25,13 +25,13 @@ module DiemVMConfig {
     /// 2. The initialization of the module will publish the instruction table to the diem root account
     ///    address, and will preload the vector with the gas schedule for instructions. The VM will then
     ///    load this into memory at the startup of each block.
-    struct GasSchedule {
+    struct GasSchedule has copy, drop, store {
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
         gas_constants: GasConstants,
     }
 
-    struct GasConstants {
+    struct GasConstants has copy, drop, store {
         /// The cost per-byte written to global storage.
         global_memory_per_byte_cost: u64,
 

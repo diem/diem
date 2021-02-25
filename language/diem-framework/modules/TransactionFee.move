@@ -14,7 +14,7 @@ module TransactionFee {
 
     /// The `TransactionFee` resource holds a preburn resource for each
     /// fiat `CoinType` that can be collected as a transaction fee.
-    resource struct TransactionFee<CoinType> {
+    struct TransactionFee<CoinType> has key, store {
         balance: Diem<CoinType>,
         preburn: Preburn<CoinType>,
     }
@@ -45,7 +45,7 @@ module TransactionFee {
             with Errors::ALREADY_PUBLISHED;
     }
 
-    public fun is_coin_initialized<CoinType>(): bool {
+    public fun is_coin_initialized<CoinType: store>(): bool {
         exists<TransactionFee<CoinType>>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
 
@@ -56,7 +56,7 @@ module TransactionFee {
     /// Sets up the needed transaction fee state for a given `CoinType` currency by
     /// (1) configuring `tc_account` to accept `CoinType`
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `tc_account`
-    public fun add_txn_fee_currency<CoinType>(tc_account: &signer) {
+    public fun add_txn_fee_currency<CoinType: store>(tc_account: &signer) {
         Diem::assert_is_currency<CoinType>();
         assert(
             !is_coin_initialized<CoinType>(),
@@ -72,7 +72,7 @@ module TransactionFee {
     }
 
     /// Deposit `coin` into the transaction fees bucket
-    public fun pay_fee<CoinType>(coin: Diem<CoinType>) acquires TransactionFee {
+    public fun pay_fee<CoinType: store>(coin: Diem<CoinType>) acquires TransactionFee {
         DiemTimestamp::assert_operating();
         assert(is_coin_initialized<CoinType>(), Errors::not_published(ETRANSACTION_FEE));
         let fees = borrow_global_mut<TransactionFee<CoinType>>(
@@ -92,7 +92,7 @@ module TransactionFee {
     /// Preburns the transaction fees collected in the `CoinType` currency.
     /// If the `CoinType` is XDX, it unpacks the coin and preburns the
     /// underlying fiat.
-    public fun burn_fees<CoinType>(
+    public fun burn_fees<CoinType: store>(
         tc_account: &signer,
     ) acquires TransactionFee {
         DiemTimestamp::assert_operating();

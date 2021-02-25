@@ -24,8 +24,8 @@ module M {
 
     }
 
-    resource struct T{x: u64}
-    resource struct R{x: u64}
+    struct T has key {x: u64}
+    struct R has key {x: u64}
 
     struct SomeCoin {
         x : u64,
@@ -107,7 +107,7 @@ module M {
         emits _msg to _guid if true;
         emits _msg to _guid if x > 7;
     }
-    fun with_emits<T: copyable>(_guid: vector<u8>, _msg: T, x: u64): u64 {
+    fun with_emits<T: drop>(_guid: vector<u8>, _msg: T, x: u64): u64 {
         x
     }
 

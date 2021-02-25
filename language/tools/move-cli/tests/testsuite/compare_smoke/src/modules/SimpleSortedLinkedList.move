@@ -4,18 +4,18 @@ module SimpleSortedLinkedList {
     use 0x1::BCS;
     use 0x1::Signer;
 
-    resource struct Node<T> {
+    struct Node<T> has key {
         prev: address, //account address where the previous node is stored (head if no previous node exists)
         next: address, //account address where the next node is stored (head if no next node exists)
         head: address, //account address where current list's head is stored -- whoever stores head is the owner of the whole list
         key: T
     }
 
-    public fun node_exists<T: copyable>(node_address: address): bool {
+    public fun node_exists<T: copy + drop + store>(node_address: address): bool {
         exists<Node<T>>(node_address)
     }
 
-    public fun get_key_of_node<T: copyable>(node_address: address): T acquires Node {
+    public fun get_key_of_node<T: copy + drop + store>(node_address: address): T acquires Node {
         assert(exists<Node<T>>(node_address), 1);
 
         let node = borrow_global<Node<T>>(node_address);
@@ -23,7 +23,7 @@ module SimpleSortedLinkedList {
     }
 
     //checks whether this address is the head of a list -- fails if there is no node here
-    public fun is_head_node<T: copyable>(current_node_address: address): bool acquires Node {
+    public fun is_head_node<T: copy + drop + store>(current_node_address: address): bool acquires Node {
 		//check that a node exists
 		assert(exists<Node<T>>(current_node_address), 2);
 
@@ -36,7 +36,7 @@ module SimpleSortedLinkedList {
     }
 
     //creates a new list whose head is at txn_sender (is owned by the caller)
-    public fun create_new_list<T: copyable>(account: &signer, key: T) {
+    public fun create_new_list<T: copy + drop + store>(account: &signer, key: T) {
         let sender = Signer::address_of(account);
 
         //make sure no node/list is already stored in this account
@@ -52,7 +52,7 @@ module SimpleSortedLinkedList {
     }
 
     //adds a node that is stored in txn_sender's account and whose location in the list is right after prev_node_address
-    public fun add_node<T: copyable>(account: &signer, key: T, prev_node_address: address) acquires Node {
+    public fun add_node<T: copy + drop + store>(account: &signer, key: T, prev_node_address: address) acquires Node {
         let sender_address = Signer::address_of(account);
 
         //make sure no node is already stored in this account
@@ -100,7 +100,7 @@ module SimpleSortedLinkedList {
     }
 
     //private function used for removing a non-head node -- does not check permissions
-    fun remove_node<T: copyable>(node_address: address) acquires Node {
+    fun remove_node<T: copy + drop + store>(node_address: address) acquires Node {
         //make sure the node exists
         assert(exists<Node<T>>(node_address), 8);
 
@@ -121,7 +121,7 @@ module SimpleSortedLinkedList {
         let Node<T> { prev: _, next: _, head: _, key: _ } = move_from<Node<T>>(node_address);
     }
 
-    public fun remove_node_by_list_owner<T: copyable>(account: &signer, node_address: address) acquires Node {
+    public fun remove_node_by_list_owner<T: copy + drop + store>(account: &signer, node_address: address) acquires Node {
         //make sure the node exists
         assert(exists<Node<T>>(node_address), 9);
 
@@ -138,7 +138,7 @@ module SimpleSortedLinkedList {
     }
 
     //removes the current non-head node -- fails if the passed node is the head of a list
-    public fun remove_node_by_node_owner<T: copyable>(account: &signer) acquires Node {
+    public fun remove_node_by_node_owner<T: copy + drop + store>(account: &signer) acquires Node {
         let sender_address = Signer::address_of(account);
 
         //make sure a node exists
@@ -153,7 +153,7 @@ module SimpleSortedLinkedList {
 
     //can only called by the list owner (head) -- removes the list if it is empty
     //fails if it is non-empty or if no list is owned by the caller
-    public fun remove_list<T: copyable>(account: &signer) acquires Node {
+    public fun remove_list<T: copy + drop + store>(account: &signer) acquires Node {
         let sender_address = Signer::address_of(account);
 
         //fail if the caller does not own a list
@@ -172,7 +172,7 @@ module SimpleSortedLinkedList {
         let Node<T> { prev: _, next: _, head: _, key: _ } = move_from<Node<T>>(sender_address);
     }
 
-    public fun find<T: copyable>(key: T, head_address: address): (bool, address) acquires Node {
+    public fun find<T: copy + drop + store>(key: T, head_address: address): (bool, address) acquires Node {
         assert(Self::is_head_node<T>(head_address), 18);
 
         let key_bcs_bytes = BCS::to_bytes(&key);
@@ -196,7 +196,7 @@ module SimpleSortedLinkedList {
         return (false, *&head_node.prev)
     }
 
-    public fun empty_node<T: copyable>(account: &signer, key: T) {
+    public fun empty_node<T: copy + drop + store>(account: &signer, key: T) {
         let sender = Signer::address_of(account);
 
         //make sure no node/list is already stored in this account
@@ -211,7 +211,7 @@ module SimpleSortedLinkedList {
         move_to<Node<T>>(account, empty);
     }
 
-    public fun move_node_to<T: copyable>(account: &signer, receiver: address) acquires Node {
+    public fun move_node_to<T: copy + drop + store>(account: &signer, receiver: address) acquires Node {
         let sender_address = Signer::address_of(account);
         //make sure the node exists
         assert(exists<Node<T>>(sender_address), 20);

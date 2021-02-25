@@ -100,7 +100,7 @@ being <code>preburn_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="cancel_burn_with_amount.md#cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token&gt;(account: &signer, preburn_address: address, amount: u64) {
+<pre><code><b>fun</b> <a href="cancel_burn_with_amount.md#cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token: store&gt;(account: &signer, preburn_address: address, amount: u64) {
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_cancel_burn">DiemAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address, amount)
 }
 </code></pre>

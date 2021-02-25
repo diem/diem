@@ -815,7 +815,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType: store&gt;(
     parent_vasp: &signer,
     child_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -1264,7 +1264,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType: store&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,
@@ -1404,7 +1404,7 @@ account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency: store&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     addr: address,
@@ -1536,7 +1536,7 @@ already have a <code><a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_B
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency: store&gt;(account: &signer) {
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_add_currency">DiemAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
@@ -2733,7 +2733,7 @@ Successful execution of this script emits two events:
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency: store&gt;(
     payer: &signer,
     payee: address,
     amount: u64,
@@ -3782,7 +3782,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#preburn">preburn</a>&lt;Token: store&gt;(account: &signer, amount: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(account);
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_preburn">DiemAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
     <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_restore_withdraw_capability">DiemAccount::restore_withdraw_capability</a>(withdraw_cap);
@@ -3916,7 +3916,7 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer) {
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType: store&gt;(tc_account: &signer) {
     <a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_burn_fees">TransactionFee::burn_fees</a>&lt;CoinType&gt;(tc_account);
 }
 </code></pre>
@@ -4028,7 +4028,7 @@ resource published under the <code>designated_dealer_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#tiered_mint">tiered_mint</a>&lt;CoinType: store&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     designated_dealer_address: address,
@@ -4439,7 +4439,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency: store&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_numerator: u64,
@@ -4568,7 +4568,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="transaction_script_documentation.md#update_minting_ability">update_minting_ability</a>&lt;Currency: store&gt;(
     tc_account: &signer,
     allow_minting: bool
 ) {

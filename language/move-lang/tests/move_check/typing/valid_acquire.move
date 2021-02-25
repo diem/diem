@@ -1,7 +1,7 @@
 module M {
-    resource struct R1 {}
-    resource struct R2 {}
-    resource struct R3<T> {}
+    struct R1 has key {}
+    struct R2 has key {}
+    struct R3<T> has key {}
 
     fun foo1(a: address) acquires R1 {
         borrow_global<R1>(a);

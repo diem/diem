@@ -1,5 +1,5 @@
 module A {
-    resource struct T1{ b: bool }
+    struct T1 has key { b: bool }
 
     public fun test(addr: address) {
         borrow_global<T1>(addr);

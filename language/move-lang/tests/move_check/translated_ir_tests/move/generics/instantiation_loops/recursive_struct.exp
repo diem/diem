@@ -22,13 +22,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/move/generics/instantiation_loops/recursive_struct.move:22:35 ───
+    ┌── tests/move_check/translated_ir_tests/move/generics/instantiation_loops/recursive_struct.move:22:41 ───
     │
- 22 │     resource struct X { y: vector<Y> }
-    │                                   ^ Invalid field containing 'Y' in struct 'X'.
+ 22 │     struct X has key, store { y: vector<Y> }
+    │                                         ^ Invalid field containing 'Y' in struct 'X'.
     ·
- 22 │     resource struct X { y: vector<Y> }
-    │                                   - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
+ 22 │     struct X has key, store { y: vector<Y> }
+    │                                         - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
     │
 
 error: 

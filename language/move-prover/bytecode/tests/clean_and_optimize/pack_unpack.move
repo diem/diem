@@ -5,14 +5,14 @@ module TestPackUnpack {
         pragma verify = true;
     }
 
-    resource struct R { nested: S  }
+    struct R { nested: S  }
     spec struct R {
         global r_count: num;
         invariant pack r_count = r_count + 1;
         invariant unpack r_count = r_count - 1;
     }
 
-    resource struct S { value: u64 }
+    struct S { value: u64 }
     spec struct S {
         global s_sum: num;
         invariant value > 0;

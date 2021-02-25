@@ -1,8 +1,8 @@
 module Tester {
     use 0x1::Signer;
 
-    resource struct Initializer { x: u64, y: u64 }
-    struct Point { x: u64, y: u64 }
+    struct Initializer has key { x: u64, y: u64 }
+    struct Point has copy, drop { x: u64, y: u64 }
 
     // the resource struct is here to just give a feeling why the computation might not be reorderable
     fun set_and_pick(account: &signer, p: &mut Point): &mut u64 acquires Initializer {

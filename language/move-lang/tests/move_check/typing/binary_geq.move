@@ -1,5 +1,5 @@
 module M {
-    resource struct R {
+    struct R {
         f: u64
     }
 

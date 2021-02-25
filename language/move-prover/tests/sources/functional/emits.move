@@ -1,7 +1,7 @@
 module TestEmits {
     use 0x1::Event::{Self, EventHandle};
 
-    struct DummyEvent {
+    struct DummyEvent has copy, drop, store {
         msg: u64
     }
 

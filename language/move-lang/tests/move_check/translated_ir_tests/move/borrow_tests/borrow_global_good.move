@@ -1,7 +1,7 @@
 module A {
     use 0x1::Signer;
-    resource struct T {v: u64}
-    resource struct U {v: u64}
+    struct T has key {v: u64}
+    struct U has key {v: u64}
 
     public fun A0(account: &signer) acquires T {
         let sender = Signer::address_of(account);

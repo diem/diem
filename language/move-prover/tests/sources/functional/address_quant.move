@@ -2,7 +2,7 @@
 module AddressQuant {
     use 0x1::Signer;
 
-    resource struct R {
+    struct R has key {
         x: u64
     }
 

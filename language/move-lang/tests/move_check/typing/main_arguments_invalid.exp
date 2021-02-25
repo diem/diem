@@ -2,7 +2,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  17 │     a0: T,
@@ -13,7 +13,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  18 │     a1: vector<T>,
@@ -24,7 +24,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  19 │     a2: vector<vector<T>>,
@@ -35,7 +35,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  20 │     a3: S,
@@ -46,7 +46,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  21 │     a4: R,
@@ -57,7 +57,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  22 │     a5: Cup<u8>,
@@ -68,7 +68,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  23 │     a6: Cup<T>,
@@ -79,7 +79,7 @@ error:
 
     ┌── tests/move_check/typing/main_arguments_invalid.move:16:5 ───
     │
- 16 │ fun main<T: copyable>(
+ 16 │ fun main<T: drop>(
     │     ^^^^ Invalid parameter for script function 'main'
     ·
  24 │     a7: vector<S>,

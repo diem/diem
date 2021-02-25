@@ -24,7 +24,7 @@ module DiemTransactionPublishingOption {
     /// 2. No module publishing, custom scripts are allowed.
     /// 3. Both module publishing and custom scripts are allowed.
     /// We represent these as the following resource.
-    struct DiemTransactionPublishingOption {
+    struct DiemTransactionPublishingOption has copy, drop, store {
         /// Only script hashes in the following list can be executed by the network. If the vector is empty, no
         /// limitation would be enforced.
         script_allow_list: vector<vector<u8>>,
@@ -33,7 +33,7 @@ module DiemTransactionPublishingOption {
     }
 
     /// If published, halts transactions from all accounts except DiemRoot
-    resource struct HaltAllTransactions {}
+    struct HaltAllTransactions has key, store {}
 
     public fun initialize(
         dr_account: &signer,

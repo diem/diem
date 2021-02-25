@@ -1,5 +1,5 @@
 module M {
-    struct S { f: u64 }
+    struct S has copy, drop { f: u64 }
     fun t0() {
         *&mut 0 = 1;
         *&mut S{f:0}.f = 1;

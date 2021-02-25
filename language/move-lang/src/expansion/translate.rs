@@ -9,7 +9,7 @@ use crate::{
         byte_string, hex_string,
     },
     parser::ast::{
-        self as P, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
+        self as P, Ability, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent,
         ModuleName, StructName, Var,
     },
     shared::{unique_map::UniqueMap, *},
@@ -625,16 +625,17 @@ fn struct_def_(
     let P::StructDefinition {
         loc,
         name,
-        resource_opt,
+        abilities: abilities_vec,
         type_parameters: pty_params,
         fields: pfields,
     } = pstruct;
     let old_aliases = context.new_alias_scope(AliasMap::new());
     let type_parameters = type_parameters(context, pty_params);
+    let abilities = ability_set(context, "modifier", abilities_vec);
     let fields = struct_fields(context, &name, pfields);
     let sdef = E::StructDefinition {
         loc,
-        resource_opt,
+        abilities,
         type_parameters,
         fields,
     };
@@ -983,15 +984,36 @@ fn pragma_value(context: &mut Context, pv: P::PragmaValue) -> Option<E::PragmaVa
 // Types
 //**************************************************************************************************
 
-fn type_parameters(context: &mut Context, pty_params: Vec<(Name, Kind)>) -> Vec<(Name, Kind)> {
+fn ability_set(context: &mut Context, case: &str, abilities_vec: Vec<Ability>) -> E::AbilitySet {
+    let mut set = E::AbilitySet::empty();
+    for ability in abilities_vec {
+        let loc = ability.loc;
+        if let Err(prev_loc) = set.add(ability) {
+            context.error(vec![
+                (loc, format!("Duplicate '{}' ability {}", ability, case)),
+                (prev_loc, "Previously given".to_string()),
+            ])
+        }
+    }
+    set
+}
+
+fn type_parameters(
+    context: &mut Context,
+    pty_params: Vec<(Name, Vec<Ability>)>,
+) -> Vec<(Name, E::AbilitySet)> {
     assert!(
         context.aliases.current_scope_is_empty(),
         "ICE alias scope should be cleared before handling type parameters"
     );
-    for (name, _) in &pty_params {
-        context.aliases.remove_member_alias(name)
-    }
     pty_params
+        .into_iter()
+        .map(|(name, constraints_vec)| {
+            context.aliases.remove_member_alias(&name);
+            let constraints = ability_set(context, "constraint", constraints_vec);
+            (name, constraints)
+        })
+        .collect()
 }
 
 fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {

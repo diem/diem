@@ -1,5 +1,5 @@
 module M {
-    resource struct R { f: bool }
+    struct R has key { f: bool }
     fun t0(s: &address) {
         move_to(s, R { f: false })
     }
@@ -7,7 +7,7 @@ module M {
 // check: MOVETO_TYPE_MISMATCH_ERROR
 
 module N {
-    resource struct R<T> { f: T }
+    struct R<T> has key { f: T }
     fun t0<T>(s: address) {
         move_to(s, R { f: false })
     }
