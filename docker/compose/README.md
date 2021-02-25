@@ -6,7 +6,7 @@ custom_edit_url: https://github.com/diem/diem/edit/master/docker/compose/README.
 
 This directory contains the following compose configurations:
 * **validator-testnet**: creates a single validator test network, and a faucet that directly connects to it
-* **client**: creates a client which connects to the above validator/faucet
+* **client-cli**: creates a CLI client which connects to the above validator/faucet
 
 To use these compositions:
 1. [Download](https://docs.docker.com/install/) and install Docker and Docker Compose (comes with Docker for Mac and Windows).
