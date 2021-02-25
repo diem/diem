@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "diem-fullnode.fullname" . }}-sync-test
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: {{ include "diem-fullnode.fullname" . }}-sync-test
+      image: byrnedo/alpine-curl:0.1.8@sha256:548379d0a4a0c08b9e55d9d87a592b7d35d9ab3037f4936f5ccd09d0b625a342
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |-
+          set -ex
+          metrics=http://{{ include "diem-fullnode.fullname" . }}:9101/metrics
+          sync1=$(curl -s $metrics  | grep 'diem_state_sync_version{type="synced"}' | awk '{ print $2 }')
+          echo "Synced version: $sync1"
+          echo "Sleeping 30s to wait for state sync..."
+          sleep 30
+          sync2=$(curl -s $metrics  | grep 'diem_state_sync_version{type="synced"}' | awk '{ print $2 }')
+          echo "Synced version: $sync2"
+          if [ "$sync2" -gt "$sync1" ]; then
+            echo "Success: state sync making progress"
+            exit 0
+          else
+            echo "Failed: state sync not making progress"
+            exit 1
+          fi
+  restartPolicy: Never

@@ -22,6 +22,7 @@ jobs:
       changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+      test-helm: ${{ steps.helm-changes.outputs.changes-found }}
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
       test-website-build: ${{ steps.website-changes.outputs.changes-found }}
       test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
@@ -50,6 +51,11 @@ jobs:
         uses: ./.github/actions/matches
         with:
           pattern: 'Dockerfile$\|.*.sh$'
+      - id: helm-changes
+        name: find helm changes
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^.github\|^helm'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
@@ -335,6 +341,75 @@ jobs:
           cd /opt/git/diem/crypto/crypto
           $CARGO $CARGOFLAGS test --features='u64' --no-default-features
           $CARGO $CARGOFLAGS test --features='u32' --no-default-features
+      - uses: ./.github/actions/build-teardown
+
+  helm-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 20
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-helm == 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check machine details for minikube
+        run: |
+          kubectl version
+          helm version
+          lscpu
+      - name: Helm lint
+        working-directory: helm
+        run: helm lint fullnode
+      - name: Install minikube v1.17.1
+        run: |
+          curl -LO https://storage.googleapis.com/minikube/releases/v1.17.1/minikube-linux-amd64
+          checksum="03a6d6cccecb7a33a09afc6dae40d8d76ccfe168aa4aba1a18c1f45bbab120c2"
+          filename=minikube-linux-amd64
+          if [[ $(sha256sum $filename | awk '{print $1}') != "$checksum" ]]; then
+            echo "$filename checksum mismatch"
+            exit 1
+          fi
+          # TODO(rustielin): add minikube into scripts/dev_setup.sh
+          sudo install minikube-linux-amd64 /usr/local/bin/minikube
+          rm minikube-linux-amd64
+      - name: Start minikube
+        run: minikube start --driver=docker --cpus=3 --memory=5Gi
+      - name: Wait for node status
+        run: kubectl wait --for=condition=ready node/minikube --timeout=5m
+      - name: Interact with the cluster
+        run: kubectl get nodes
+      - name: Install fullnode helm chart
+        working-directory: helm/fullnode
+        run: |
+          helm install fullnode --set storage.class=standard --set storage.size=10Gi .
+      - name: Wait and check pods
+        run: |
+          echo "Sleep 30s while fullnode starts"
+          sleep 30
+          kubectl wait -l statefulset.kubernetes.io/pod-name=fullnode-diem-fullnode-0 --for=condition=ready pod --timeout=5m
+          echo "Sleep 1m while fullnode syncs"
+          sleep 60
+          kubectl get pods
+      - name: Run the fullnode helm chart tests
+        working-directory: helm/fullnode
+        run: helm test fullnode --logs
+      - name: Check resources
+        if: ${{ always() }}
+        run: |
+          echo "===== nodes ====="
+          kubectl get nodes
+          kubectl describe nodes
+          echo "===== pvcs ====="
+          kubectl get pvc
+          kubectl describe pvc
+          echo "===== pods ====="
+          kubectl get pods
+          kubectl describe pod fullnode-diem-fullnode-0
+          kubectl logs fullnode-diem-fullnode-0
+          kubectl logs fullnode-diem-fullnode-sync-test
+      - name: Clean up
+        if: ${{ always() }}
+        run: minikube delete
       - uses: ./.github/actions/build-teardown
 
   # Compile (but don't run) the benchmarks, to insulate against bit rot
