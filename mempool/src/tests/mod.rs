@@ -6,6 +6,8 @@ mod common;
 #[cfg(test)]
 mod core_mempool_test;
 #[cfg(test)]
+mod node;
+#[cfg(test)]
 mod shared_mempool_test;
 
 pub mod fuzzing;

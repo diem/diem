@@ -130,14 +130,27 @@ impl ConnectionMetadata {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn mock(remote_peer_id: PeerId) -> ConnectionMetadata {
+        Self::mock_with_role_and_origin(
+            remote_peer_id,
+            PeerRole::Unknown,
+            ConnectionOrigin::Inbound,
+        )
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock_with_role_and_origin(
+        remote_peer_id: PeerId,
+        role: PeerRole,
+        origin: ConnectionOrigin,
+    ) -> ConnectionMetadata {
         ConnectionMetadata {
             remote_peer_id,
+            role,
+            origin,
             connection_id: ConnectionId::default(),
             addr: NetworkAddress::mock(),
-            origin: ConnectionOrigin::Inbound,
             messaging_protocol: MessagingProtocolVersion::V1,
             application_protocols: [].iter().into(),
-            role: PeerRole::Unknown,
         }
     }
 }

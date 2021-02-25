@@ -367,7 +367,7 @@ pub type PeerSet = HashMap<PeerId, Peer>;
 /// Downstream -> Downstream, defining a controlled downstream that I always want to connect
 /// Known -> A known peer, but it has no particular role assigned to it
 /// Unknown -> Undiscovered peer, likely due to a non-mutually authenticated connection always downstream
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum PeerRole {
     Validator = 0,
     PreferredUpstream,
