@@ -28,8 +28,10 @@ jobs:
       - name: install cargo-audit
         run: cargo install --force cargo-audit
       - name: audit crates
+        # List of ignored RUSTSEC
+        # 1. RUSTSEC-2021-0020 - Not impacted, see #7723
         run: |
-          $CARGO $CARGOFLAGS audit >> $MESSAGE_PAYLOAD_FILE
+          $CARGO $CARGOFLAGS audit --ignore RUSTSEC-2021-0020 >> $MESSAGE_PAYLOAD_FILE
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_AUDIT }}
