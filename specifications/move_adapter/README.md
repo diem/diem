@@ -906,29 +906,27 @@ impl Runtime {
 }
 ```
 
-All entry points take the following 3 arguments: `sender: AccountAddress,
-data_store: &mut dyn DataStore, cost_strategy: &mut CostStrategy, log_context:
-&impl LogContext`
+All entry points take the following arguments:
 
-* **sender: AccountAddress**. This is the address that originated the call. In a
+* `sender: AccountAddress`: This is the address that originated the call. In a
 sense the address that takes responsibility of the call. The `sender` is a
 special address in the Adapter as it represents either VM authority (for
 special calls) or the [signer of the transaction](#Script-Execution).
 
-* **data\_store: DataStore**. The `DataStore` is the read/write API over the
+* `data_store: &mut dyn DataStore`: The `DataStore` is the read/write API over the
 data for the VM. Remember that an adapter takes a `StateView` which is a read
 only view of the data. The Adapter is expected to wrap that view and provide
 the VM with a read/write API. The adapter uses that cache to track side
 effects and write set, and it forwards request to the `StateView` for loading
 data that is not in the cache yet.
 
-* **cost\_strategy: CostStrategy**. `CostStrategy` is a protocol to meter the
+* `cost_strategy: &mut CostStrategy`: `CostStrategy` is a protocol to meter the
 VM. Metering allows a client to limit the amount of computation a call into
 the VM can perform. It is also the mechanism by which a transaction is
 charged. At the end of execution, `CostStrategy` will carry the transaction
 charges.
 
-* **log\_context: LogContext**. This is a trait used by the VM to trigger alerts
+* `log_context: &impl LogContext`: This is a trait used by the VM to trigger alerts
 for critical errors.
 
 #### Code Cache
