@@ -449,8 +449,6 @@ module DiemSystem {
         return Option::none()
     }
     spec fun get_validator_index_ {
-        // TODO(refactoring): re-enable once loop invariants are implemented.
-        pragma verify = false;
         pragma opaque;
         aborts_if false;
         let size = len(validators);

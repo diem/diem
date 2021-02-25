@@ -47,10 +47,6 @@ spec fun rotate_authentication_key_with_recovery_address {
     use 0x1::DiemAccount;
     use 0x1::Signer;
 
-    // TODO(refactoring): reactivate once loop invariants work again. This is calling a non-opaque function
-    //   using loops.
-    pragma verify = false;
-
     include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
     include RecoveryAddress::RotateAuthenticationKeyEnsures;

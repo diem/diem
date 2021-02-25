@@ -89,8 +89,6 @@ module Authenticator {
         Hash::sha3_256(authentication_key_preimage)
     }
     spec fun multi_ed25519_authentication_key {
-        // TODO(refactoring): reactivate once loop invariants work again.
-        pragma verify = false;
         pragma opaque;
         aborts_if false;
         ensures [abstract] result == spec_multi_ed25519_authentication_key(k);

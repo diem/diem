@@ -1,9 +1,4 @@
 module VerifyLoops {
-
-    /*
-    TODO(refactoring): this test is deactivated until we have ported loop invariants.
-
-
     spec module {
         pragma verify=true;
     }
@@ -92,6 +87,4 @@ module VerifyLoops {
         pragma verify=true;
         aborts_if false;
     }
-
-    */
 }

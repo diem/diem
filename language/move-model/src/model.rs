@@ -3,8 +3,8 @@
 
 //! Provides a model for a set of Move modules (and scripts, which
 //! are handled like modules). The model allows to access many different aspects of the Move
-//! code: all declared functions and types, their associated bytecode, there source location,
-//! there source text, and the specification fragments.
+//! code: all declared functions and types, their associated bytecode, their source location,
+//! their source text, and the specification fragments.
 //!
 //! The environment is nested into a hierarchy:
 //!

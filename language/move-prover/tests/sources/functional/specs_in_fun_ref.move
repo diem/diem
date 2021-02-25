@@ -76,7 +76,6 @@ module TestAssertWithReferences {
         x
     }
     spec fun simple5 {
-        pragma verify=true;
         ensures result == n;
     }
 
@@ -98,10 +97,12 @@ module TestAssertWithReferences {
         x
     }
     spec fun simple6 {
-        pragma verify=true;
         ensures result == n;
     }
 
+    // TODO(shaz): Boogie reports a "loop invariant not preserved" error
+    // ignoring the msg attribute.  Consequently, the message is not parsed
+    // appropriately and no Move-level error is reported.
     // This function fails.
     fun simple7(n: u64): u64 {
         let x = 0;

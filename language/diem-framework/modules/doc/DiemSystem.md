@@ -1053,8 +1053,7 @@ It has a loop, so there are spec blocks in the code to assert loop invariants.
 
 
 
-<pre><code><b>pragma</b> verify = <b>false</b>;
-<b>pragma</b> opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <a name="0x1_DiemSystem_size$21"></a>
 <b>let</b> size = len(validators);

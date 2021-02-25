@@ -263,8 +263,7 @@ Compute a multied25519 account authentication key for the policy <code>k</code>
 
 
 
-<pre><code><b>pragma</b> verify = <b>false</b>;
-<b>pragma</b> opaque;
+<pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> [abstract] result == <a href="Authenticator.md#0x1_Authenticator_spec_multi_ed25519_authentication_key">spec_multi_ed25519_authentication_key</a>(k);
 </code></pre>

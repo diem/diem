@@ -12,6 +12,7 @@ use log::{debug, info, log, warn, Level};
 use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
+    loop_analysis::LoopAnnotation,
     stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, Operation, StrongEdge},
     verification_analysis,
 };
@@ -528,6 +529,29 @@ impl<'env> ModuleTranslator<'env> {
             Label(_, label) => {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
+                // TODO: revisit whether we can express what is needed here on bytecode level
+                let annotated_func_target = self.targets.get_annotated_target(fun_target.func_env);
+                let loop_annotation = annotated_func_target
+                    .get_annotations()
+                    .get::<LoopAnnotation>()
+                    .expect("loop annotation");
+                if loop_annotation.loop_targets.contains_key(label) {
+                    let targets = &loop_annotation.loop_targets[label];
+                    for idx in 0..fun_target.get_local_count() {
+                        if let Some(ref_proxy_idx) = fun_target.get_ref_proxy_index(idx) {
+                            if targets.contains(ref_proxy_idx) {
+                                let ref_proxy_var_name = str_local(*ref_proxy_idx);
+                                let proxy_idx = fun_target.get_proxy_index(idx).unwrap();
+                                emitln!(
+                                    self.writer,
+                                    "assume l#$Mutation({}) == $Local({}) && p#$Mutation({}) == $EmptyPath;",
+                                    ref_proxy_var_name,
+                                    proxy_idx,
+                                    ref_proxy_var_name);
+                            }
+                        }
+                    }
+                }
                 self.writer.indent();
             }
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),

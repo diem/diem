@@ -8,9 +8,9 @@ use bytecode::{
     clean_and_optimize::CleanAndOptimizeProcessor, eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::FunctionTargetProcessor, livevar_analysis::LiveVarAnalysisProcessor,
-    memory_instrumentation::MemoryInstrumentationProcessor, memory_instrumentation_v2,
-    reaching_def_analysis::ReachingDefProcessor, usage_analysis::UsageProcessor,
-    verification_analysis::VerificationAnalysisProcessor,
+    loop_analysis::LoopAnalysisProcessor, memory_instrumentation::MemoryInstrumentationProcessor,
+    memory_instrumentation_v2, reaching_def_analysis::ReachingDefProcessor,
+    usage_analysis::UsageProcessor, verification_analysis::VerificationAnalysisProcessor,
 };
 
 /// Allows client to decide between one of two pipelines for ease of benchmarking
@@ -26,6 +26,7 @@ pub fn pipelines(experimental_pipeline: bool) -> Vec<Box<dyn FunctionTargetProce
             CleanAndOptimizeProcessor::new(),
             UsageProcessor::new(),
             VerificationAnalysisProcessor::new(),
+            LoopAnalysisProcessor::new(),
         ]
     }
     // Enter your pipeline here
@@ -40,6 +41,7 @@ pub fn pipelines(experimental_pipeline: bool) -> Vec<Box<dyn FunctionTargetProce
             CleanAndOptimizeProcessor::new(),
             UsageProcessor::new(),
             VerificationAnalysisProcessor::new(),
+            LoopAnalysisProcessor::new(),
         ]
     };
     vec

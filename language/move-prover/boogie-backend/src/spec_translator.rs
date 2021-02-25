@@ -685,9 +685,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::MaxU64 => emit!(self.writer, "$MAX_U64"),
             Operation::MaxU128 => emit!(self.writer, "$MAX_U128"),
             Operation::WellFormed => self.translate_well_formed(&args[0]),
-            Operation::AbortCode | Operation::AbortFlag => {
-                unimplemented!()
-            }
+            Operation::AbortCode => emit!(self.writer, "$Integer($abort_code)"),
+            Operation::AbortFlag => emit!(self.writer, "$Boolean($abort_flag)"),
             Operation::NoOp => { /* do nothing. */ }
         }
     }
@@ -1182,13 +1181,7 @@ impl<'env> SpecTranslator<'env> {
         let check = boogie_well_formed_expr(self.env, "$val", ty.skip_reference());
         if !check.is_empty() {
             emit!(self.writer, "(var $val := ");
-            if ty.is_reference() {
-                emit!(self.writer, "$Dereference(")
-            }
             self.translate_exp(exp);
-            if ty.is_reference() {
-                emit!(self.writer, ")");
-            }
             emit!(self.writer, "; {})", check);
         } else {
             emit!(self.writer, "true");
