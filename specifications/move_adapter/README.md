@@ -184,6 +184,8 @@ The adapter performs a sequence of checks to validate a transaction. Some of
 these checks are implemented directly in the adapter and others are specified
 in Move code and evaluated via the [Move VM](#Move-VM). Some of the checks
 apply to all transactions and others are specific to the type of payload.
+To ensure consistent error handling, the checks should be performed in the
+order specified here.
 
 ### General Checks
 
