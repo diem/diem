@@ -1,8 +1,9 @@
 Command `publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
-Publishing a new module 00000000000000000000000000000042::M
-Publishing a new module 00000000000000000000000000000043::N
+Publishing a new module 00000000000000000000000000000042::M (wrote 56 bytes)
+Publishing a new module 00000000000000000000000000000043::N (wrote 56 bytes)
+Wrote 112 bytes of module ID's and code
 Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 
@@ -18,8 +19,9 @@ module 43.N {
 Command `publish -v`:
 Compiling Move modules...
 Found and compiled 2 modules
-Updating an existing module 00000000000000000000000000000042::M
-Updating an existing module 00000000000000000000000000000043::N
+Updating an existing module 00000000000000000000000000000042::M (wrote 56 bytes)
+Updating an existing module 00000000000000000000000000000043::N (wrote 56 bytes)
+Wrote 112 bytes of module ID's and code
 Command `view storage/0x00000000000000000000000000000042/modules/M.mv`:
 module 42.M {
 

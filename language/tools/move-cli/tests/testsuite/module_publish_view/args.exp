@@ -1,7 +1,8 @@
 Command `publish src -v`:
 Compiling Move modules...
 Found and compiled 1 modules
-Publishing a new module 00000000000000000000000000000042::Module
+Publishing a new module 00000000000000000000000000000042::Module (wrote 120 bytes)
+Wrote 120 bytes of module ID's and code
 Command `view storage/0x00000000000000000000000000000042/modules/Module.mv`:
 module 42.Module {
 resource S {

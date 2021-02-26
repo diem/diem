@@ -21,5 +21,14 @@ run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata
 # transfer 500 XUS from 0xA to 0xB
 run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v
 
+# create a child VASP account for 0xA
+run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v
+
+# create a child VASP account for 0xB
+run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v
+
+# transfer 100 from child 0xAA to child 0xBB
+run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v
+
 # make sure state is still ok
 doctor

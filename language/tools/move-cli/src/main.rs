@@ -429,17 +429,32 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
 fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) {
     // publish effects should contain no resources
     assert!(changeset.resources().next().is_none());
+    // total bytes written across all accounts
+    let mut total_bytes_written = 0;
     for (addr, name, blob_opt) in changeset.modules() {
-        if blob_opt.is_none() {
+        if let Some(module_bytes) = blob_opt {
+            let bytes_written = addr.len() + name.len() + module_bytes.len();
+            total_bytes_written += bytes_written;
+            let module_id = ModuleId::new(addr, name.clone());
+            if state.has_module(&module_id) {
+                println!(
+                    "Updating an existing module {} (wrote {:?} bytes)",
+                    module_id, bytes_written
+                );
+            } else {
+                println!(
+                    "Publishing a new module {} (wrote {:?} bytes)",
+                    module_id, bytes_written
+                );
+            }
+        } else {
             panic!("Deleting a module is not supported")
         }
-        let module_id = ModuleId::new(addr, name.clone());
-        if state.has_module(&module_id) {
-            println!("Updating an existing module {}", module_id);
-        } else {
-            println!("Publishing a new module {}", module_id);
-        }
     }
+    println!(
+        "Wrote {:?} bytes of module ID's and code",
+        total_bytes_written
+    )
 }
 
 fn explain_execution_effects(
@@ -465,8 +480,13 @@ fn explain_execution_effects(
             changeset.accounts.len()
         );
     }
+    // total bytes written across all accounts
+    let mut total_bytes_written = 0;
     for (addr, account) in &changeset.accounts {
         print!("  ");
+        if account.resources.is_empty() {
+            continue;
+        }
         println!(
             "Changed {:?} resource(s) under address {:?}:",
             account.resources.len(),
@@ -474,23 +494,42 @@ fn explain_execution_effects(
         );
         for (struct_tag, write_opt) in &account.resources {
             print!("    ");
+            let mut bytes_to_write = struct_tag.access_vector().len();
             match write_opt {
                 Some(blob) => {
+                    bytes_to_write += blob.len();
                     if state
                         .get_resource_bytes(*addr, struct_tag.clone())?
                         .is_some()
                     {
                         // TODO: print resource diff
-                        println!("Changed type {}: {:?}", struct_tag, blob)
+                        println!(
+                            "Changed type {}: {:?} (wrote {:?} bytes)",
+                            struct_tag, blob, bytes_to_write
+                        )
                     } else {
                         // TODO: nicer printing
-                        println!("Added type {}: {:?}", struct_tag, blob)
+                        println!(
+                            "Added type {}: {:?} (wrote {:?} bytes)",
+                            struct_tag, blob, bytes_to_write
+                        )
                     }
                 }
-                None => println!("Deleted type {}", struct_tag),
-            }
+                None => println!(
+                    "Deleted type {} (wrote {:?} bytes)",
+                    struct_tag, bytes_to_write
+                ),
+            };
+            total_bytes_written += bytes_to_write;
         }
     }
+    if total_bytes_written != 0 {
+        println!(
+            "Wrote {:?} bytes of resource ID's and data",
+            total_bytes_written
+        );
+    }
+
     Ok(())
 }
 
