@@ -199,7 +199,7 @@ key against the sender account's authorization key is done separately in Move
 code.
 
 * Check that the `gas_currency_code` in the `RawTransaction` is a name composed
-of ASCII alphanumeric characters where the first character is a letter. If
+of uppercase ASCII alphanumeric characters where the first character is a letter. If
 not, validation will fail with an `INVALID_GAS_SPECIFIER` status code. Note
 that this check does not ensure that the name corresponds to a currency
 recognized by the Diem Framework.
@@ -596,9 +596,9 @@ processed as described in the following sections for different kinds of
 payloads.
 
 Whenever the Move VM is used in this transaction processing, the adapter must
-translate the `TransactionEffects` from the VM's `Session` into both a
+translate the results from the VM's `Session` into both a
 `WriteSet` and a set of events. That translation can fail with either an
-`UNKNOWN_INVARIANT_VIOLATION_ERROR` or an `EVENT_KEY_MISMATCH` status code.
+`DATA_FORMAT_ERROR` or an `EVENT_KEY_MISMATCH` status code.
 
 Regardless of the kind of transaction, the `WriteSet` changes that it produces
 are stored in the adapter's data cache, so they will be seen when processing
@@ -830,20 +830,23 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         log_context: &impl LogContext,
     ) -> VMResult<()>;
 
-    pub fn finish(self) -> VMResult<TransactionEffects>;
+    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>)>;
 }
 
-pub struct TransactionEffects {
-    // Updated resources, grouped by `AccountAddress`.
-    pub resources: Vec<(
-        AccountAddress,
-        Vec<(TypeTag, Option<(MoveTypeLayout, Value)>)>,
-    )>,
-    // Published modules.
-    pub modules: Vec<(ModuleId, Vec<u8>)>,
-    // Events reported.
-    pub events: Vec<(Vec<u8>, u64, TypeTag, MoveTypeLayout, Value)>,
+/// A collection of changes to a Move state.
+/// Note: This is different than the ChangeSet used in Diem transactions.
+pub struct ChangeSet {
+    pub accounts: BTreeMap<AccountAddress, AccountChangeSet>,
 }
+
+/// A collection of changes to modules and resources under a Move account.
+pub struct AccountChangeSet {
+    pub modules: BTreeMap<Identifier, Option<Vec<u8>>>,
+    pub resources: BTreeMap<StructTag, Option<Vec<u8>>>,
+}
+
+/// Event tuple: event key, sequence number, type tag, and event data
+pub type Event = (Vec<u8>, u64, TypeTag, Vec<u8>);
 ```
 
 The objective of a `Session` is to create and manage the data cache for a set
