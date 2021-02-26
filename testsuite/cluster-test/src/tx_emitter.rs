@@ -34,6 +34,7 @@ use rand::{
 };
 use tokio::runtime::Handle;
 
+use debug_interface::AsyncNodeDebugClient;
 use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address},
@@ -237,7 +238,7 @@ impl TxEmitter {
                 0,
             ))
             .await?;
-        let deadline = Instant::now() + TXN_MAX_WAIT;
+        let deadline = Instant::now() + Duration::from_secs(*TXN_EXPIRATION_SECONDS as u64 + 30);
         Ok(deadline)
     }
 
@@ -283,6 +284,7 @@ impl TxEmitter {
         for instance in &req.instances {
             for _ in 0..workers_per_ac {
                 let client = instance.json_rpc_client();
+                let debug_client = instance.debug_interface_client();
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
@@ -291,6 +293,7 @@ impl TxEmitter {
                 let worker = SubmissionWorker {
                     accounts,
                     client,
+                    debug_client,
                     all_addresses,
                     stop,
                     params,
@@ -575,9 +578,14 @@ impl TxEmitter {
         duration: Duration,
         emit_job_request: EmitJobRequest,
     ) -> Result<TxStats> {
+        let burst = emit_job_request.thread_params.wait_committed;
         let job = self.start_job(emit_job_request).await?;
         tokio::time::sleep(duration).await;
-        let stats = self.stop_job(job).await;
+        let worker_num = job.workers.len() as u64;
+        let mut stats = self.stop_job(job).await;
+        if !burst {
+            stats.committed = stats.committed / worker_num;
+        }
         Ok(stats)
     }
 
@@ -587,9 +595,14 @@ impl TxEmitter {
         emit_job_request: EmitJobRequest,
         interval_secs: u64,
     ) -> Result<TxStats> {
+        let burst = emit_job_request.thread_params.wait_committed;
         let job = self.start_job(emit_job_request).await?;
         self.periodic_stat(&job, duration, interval_secs).await;
-        let stats = self.stop_job(job).await;
+        let worker_num = job.workers.len() as u64;
+        let mut stats = self.stop_job(job).await;
+        if !burst {
+            stats.committed = stats.committed / worker_num;
+        }
         Ok(stats)
     }
 
@@ -618,6 +631,7 @@ struct Worker {
 struct SubmissionWorker {
     accounts: Vec<AccountData>,
     client: JsonRpcClient,
+    debug_client: AsyncNodeDebugClient,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
@@ -685,6 +699,7 @@ impl SubmissionWorker {
     #[allow(clippy::collapsible_if)]
     async fn run(mut self, gas_price: u64) -> Vec<AccountData> {
         let wait = Duration::from_millis(self.params.wait_millis);
+        let mut burst_committed = 0i64;
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests(gas_price);
             let num_requests = requests.len();
@@ -742,6 +757,20 @@ impl SubmissionWorker {
                         .latencies
                         .record_data_point(latency, num_requests as u64);
                 }
+            } else {
+                let res = self
+                    .debug_client
+                    .get_node_metric("diem_storage_committed_txns{}")
+                    .await;
+                let committed = match res {
+                    Ok(res) => res.unwrap_or_default(),
+                    _ => 0i64,
+                };
+                let delta = committed - burst_committed;
+                self.stats
+                    .committed
+                    .fetch_add(delta as u64, Ordering::Relaxed);
+                burst_committed = committed;
             }
             let now = Instant::now();
             if wait_util > now {
@@ -795,7 +824,7 @@ async fn wait_for_accounts_sequence(
     client: &JsonRpcClient,
     accounts: &mut [AccountData],
 ) -> Result<(), Vec<(AccountAddress, u64)>> {
-    let deadline = Instant::now() + TXN_MAX_WAIT;
+    let deadline = Instant::now() + Duration::from_secs(*TXN_EXPIRATION_SECONDS as u64 + 30);
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
         match query_sequence_numbers(client, &addresses).await {
@@ -867,10 +896,16 @@ async fn query_sequence_numbers(
     Ok(result)
 }
 
+pub static TXN_EXPIRATION_SECONDS: Lazy<i64> = Lazy::new(|| {
+    if let Ok(v) = env::var("TXN_EXP") {
+        v.parse()
+            .expect("Failed to parse TXN_EXP")
+    } else {
+        50_i64
+    }
+});
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_CURRENCY_CODE: &str = XUS_NAME;
-const TXN_EXPIRATION_SECONDS: i64 = 50;
-const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
 
@@ -902,7 +937,7 @@ pub fn gen_submit_transaction_request(
         MAX_GAS_AMOUNT,
         gas_price,
         GAS_CURRENCY_CODE.to_owned(),
-        TXN_EXPIRATION_SECONDS,
+        *TXN_EXPIRATION_SECONDS,
         chain_id,
     )
     .expect("Failed to create signed transaction");

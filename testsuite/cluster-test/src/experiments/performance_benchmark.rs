@@ -371,6 +371,7 @@ impl PerformanceBenchmark {
         } else {
             "".to_string()
         };
+        info!("hhhhhhhhh {:?}", stats);
         context
             .report
             .report_txn_stats(self.to_string(), stats, window, &additional);
