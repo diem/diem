@@ -66,6 +66,7 @@ spec fun add_validator_and_reconfigure {
     use 0x1::DiemAccount;
     use 0x1::Errors;
     use 0x1::Roles;
+    use 0x1::DiemConfig;
 
     include DiemAccount::TransactionChecks{sender: dr_account}; // properties checked by the prologue.
     include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: dr_account};
@@ -89,6 +90,8 @@ spec fun add_validator_and_reconfigure {
         Errors::INVALID_STATE,
         Errors::LIMIT_EXCEEDED,
         Errors::REQUIRES_ROLE;
+
+    include DiemConfig::ReconfigureEmits;
 
     /// **Access Control:**
     /// Only the Diem Root account can add Validators [[H13]][PERMISSION].

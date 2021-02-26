@@ -80,6 +80,8 @@ spec fun create_validator_operator_account {
         Errors::ALREADY_PUBLISHED,
         Errors::REQUIRES_ROLE;
 
+    include DiemAccount::MakeAccountEmits;
+
     /// **Access Control:**
     /// Only the Diem Root account can create Validator Operator accounts [[A4]][ROLE].
     include Roles::AbortsIfNotDiemRoot{account: dr_account};

@@ -151,6 +151,10 @@ pub enum Operation {
     TraceLocal(TempIndex),
     TraceReturn(usize),
     TraceAbort,
+
+    // Event
+    EmitEvent,
+    EventStoreDiverge,
 }
 
 impl Operation {
@@ -204,6 +208,8 @@ impl Operation {
             Operation::TraceLocal(..) => false,
             Operation::TraceAbort => false,
             Operation::TraceReturn(..) => false,
+            Operation::EmitEvent => false,
+            Operation::EventStoreDiverge => false,
         }
     }
 }
@@ -868,6 +874,8 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
             TraceAbort => write!(f, "trace_abort")?,
             TraceReturn(r) => write!(f, "trace_return[{}]", r)?,
+            EmitEvent => write!(f, "emit_event")?,
+            EventStoreDiverge => write!(f, "event_store_diverge")?,
         }
         Ok(())
     }

@@ -1020,6 +1020,7 @@ only Diem root has the Diem root role.
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
 
@@ -1163,6 +1164,7 @@ only Diem root has the Diem root role.
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
 
@@ -1300,6 +1302,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>;
 </code></pre>
 
 
@@ -2940,6 +2943,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -3219,6 +3223,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 

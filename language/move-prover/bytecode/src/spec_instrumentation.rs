@@ -34,7 +34,7 @@ const ABORT_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` cla
 const ABORTS_CODE_NOT_COVERED: &str =
     "abort code not covered by any of the `aborts_if` or `aborts_with` clauses";
 const EMITS_FAILS_MESSAGE: &str = "function does not emit the expected event";
-const EMITS_NOT_COVERED: &str = "emitted event not covered by any of `emits` clauses";
+const EMITS_NOT_COVERED: &str = "emitted event not covered by any of the `emits` clauses";
 
 fn modify_check_fails_message(
     env: &GlobalEnv,
@@ -522,6 +522,24 @@ impl<'a> Instrumenter<'a> {
                     vec![self.builder.mk_temporary(dest)],
                 );
                 self.builder.emit_with(move |id| Prop(id, Assume, exp));
+            }
+
+            // Emit the events in the `emits` specs of the callee.
+            for (_, msg, handle, cond) in std::mem::take(&mut callee_spec.emits) {
+                let temp_msg = self.builder.emit_let(msg).0;
+                let temp_handle = self.builder.emit_let(handle).0;
+                let mut temp_list = vec![temp_msg, temp_handle];
+                if let Some(cond) = cond {
+                    temp_list.push(self.builder.emit_let(cond).0);
+                }
+                self.builder
+                    .emit(Call(id, vec![], Operation::EmitEvent, temp_list, None));
+            }
+            // TODO: We treat the emits spec of a opaque function "strictly" for convenience,
+            //   ignoring its own EMITS_IS_STRICT_PRAGMA flag.
+            if callee_env.is_pragma_true(EMITS_IS_PARTIAL_PRAGMA, || false) {
+                self.builder
+                    .emit(Call(id, vec![], Operation::EventStoreDiverge, vec![], None));
             }
         }
     }

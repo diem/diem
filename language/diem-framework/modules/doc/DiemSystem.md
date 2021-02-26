@@ -341,7 +341,7 @@ Must be invoked by the Diem root a single time in Genesis.
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DiemConfig">DiemConfig::DiemConfig</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_AbortsIfNotGenesis">DiemTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
-<a name="0x1_DiemSystem_dr_addr$19"></a>
+<a name="0x1_DiemSystem_dr_addr$20"></a>
 <b>let</b> dr_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dr_account);
 <b>aborts_if</b> <a href="DiemConfig.md#0x1_DiemConfig_spec_is_published">DiemConfig::spec_is_published</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;() <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>aborts_if</b> <b>exists</b>&lt;<a href="DiemSystem.md#0x1_DiemSystem_CapabilityHolder">CapabilityHolder</a>&gt;(dr_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
@@ -406,6 +406,7 @@ Called by the add, remove, and update functions.
 
 
 <pre><code><b>ensures</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DiemConfig">DiemConfig::DiemConfig</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).payload == value;
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -477,6 +478,7 @@ Adds a new validator to the validator set.
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DiemConfig">DiemConfig::DiemConfig</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_AddValidatorAbortsIf">AddValidatorAbortsIf</a>;
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_AddValidatorEnsures">AddValidatorEnsures</a>;
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -583,6 +585,7 @@ Removes a validator, aborts unless called by diem root account
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_DiemConfig">DiemConfig::DiemConfig</a>&lt;<a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_RemoveValidatorAbortsIf">RemoveValidatorAbortsIf</a>;
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_RemoveValidatorEnsures">RemoveValidatorEnsures</a>;
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -689,7 +692,7 @@ and emits a reconfigurationevent.
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfGetOperator">ValidatorConfig::AbortsIfGetOperator</a>{addr: validator_addr};
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">UpdateConfigAndReconfigureAbortsIf</a>;
 <b>include</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a>;
-<a name="0x1_DiemSystem_is_validator_info_updated$20"></a>
+<a name="0x1_DiemSystem_is_validator_info_updated$21"></a>
 <b>let</b> is_validator_info_updated =
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_addr) &&
     (<b>exists</b> v_info in <a href="DiemSystem.md#0x1_DiemSystem_spec_get_validators">spec_get_validators</a>():
@@ -778,6 +781,24 @@ DIP-6 property
 
 <pre><code><b>schema</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEnsures">UpdateConfigAndReconfigureEnsures</a> {
     <b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_addr);
+}
+</code></pre>
+
+
+
+
+<a name="0x1_DiemSystem_UpdateConfigAndReconfigureEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureEmits">UpdateConfigAndReconfigureEmits</a> {
+    validator_addr: address;
+    <a name="0x1_DiemSystem_is_validator_info_updated$19"></a>
+    <b>let</b> is_validator_info_updated =
+        <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_addr) &&
+        (<b>exists</b> v_info in <a href="DiemSystem.md#0x1_DiemSystem_spec_get_validators">spec_get_validators</a>():
+            v_info.addr == validator_addr
+            && v_info.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_addr));
+    <b>include</b> is_validator_info_updated ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 }
 </code></pre>
 
@@ -1055,7 +1076,7 @@ It has a loop, so there are spec blocks in the code to assert loop invariants.
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<a name="0x1_DiemSystem_size$21"></a>
+<a name="0x1_DiemSystem_size$22"></a>
 <b>let</b> size = len(validators);
 </code></pre>
 
@@ -1137,7 +1158,7 @@ This function never aborts.
 
 <pre><code><b>pragma</b> opaque;
 <b>aborts_if</b> <b>false</b>;
-<a name="0x1_DiemSystem_new_validator_config$22"></a>
+<a name="0x1_DiemSystem_new_validator_config$23"></a>
 <b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validators[i].addr);
 </code></pre>
 

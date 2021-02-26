@@ -674,6 +674,10 @@ function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): b
     )
 }
 
+procedure {:inline 1} $EventStore__diverge(es: $EventStore) returns (es': $EventStore) {
+    assume $EventStore__is_subset(es, es');
+}
+
 function {:builtin "MapConst"} $ConstEventStoreContent(s: $ValueMultiset): [$Value]$ValueMultiset;
 
 const $EmptyEventStore: $EventStore;

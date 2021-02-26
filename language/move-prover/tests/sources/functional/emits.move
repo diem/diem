@@ -197,6 +197,15 @@ module TestEmits {
         emits DummyEvent{msg: 0} to handle;
     }
 
+    public fun emits_in_schema_condition(handle: &mut EventHandle<DummyEvent>, x: u64) {
+        if (x > 7) {
+            emits_in_schema(handle)
+        };
+    }
+    spec fun emits_in_schema_condition {
+        include x > 7 ==> EmitsInSchemaEmits;
+    }
+
 
     // ----------------------------
     // pragma emits_is_partial
@@ -237,5 +246,99 @@ module TestEmits {
     }
     spec fun strict_incorrect {
         pragma emits_is_strict;
+    }
+
+    // ------------------------
+    // calling opaque functions
+    // ------------------------
+
+    public fun callee(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 7});
+        Event::emit_event(handle, DummyEvent{msg: 77});
+    }
+    spec fun callee {
+        pragma opaque;
+        aborts_if false;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+    }
+
+    public fun opaque(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        callee(handle);
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun opaque {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        emits DummyEvent{msg: 1} to handle;
+    }
+
+    public fun opaque_incorrect(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        callee(handle);
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun opaque_incorrect {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        emits DummyEvent{msg: 1} to handle;
+        emits DummyEvent{msg: 2} to handle;
+    }
+
+    public fun opaque_completeness_incorrect(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        callee(handle);
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun opaque_completeness_incorrect {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 1} to handle;
+    }
+
+
+    // -------------------------------------------------
+    // calling opaque functions with partial emits specs
+    // -------------------------------------------------
+
+    public fun callee_partial(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 7});
+        Event::emit_event(handle, DummyEvent{msg: 77});
+    }
+    spec fun callee_partial {
+        pragma opaque;
+        aborts_if false;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        pragma emits_is_partial;
+    }
+
+    public fun opaque_partial(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        callee_partial(handle);
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun opaque_partial {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        emits DummyEvent{msg: 1} to handle;
+        pragma emits_is_partial;
+    }
+
+    public fun opaque_partial_incorrect(handle: &mut EventHandle<DummyEvent>) {
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        callee_partial(handle);
+        Event::emit_event(handle, DummyEvent{msg: 1});
+    }
+    spec fun opaque_partial_incorrect {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        emits DummyEvent{msg: 1} to handle;
+        // The completeness check of the `emits` spec of this function should fail.
     }
 }

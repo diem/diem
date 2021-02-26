@@ -1224,6 +1224,35 @@ impl<'env> ModuleTranslator<'env> {
                         self.track_return(fun_target, *i, srcs[0]);
                     }
                     TraceAbort => self.track_abort(fun_target, &str_local(srcs[0])),
+                    EmitEvent => {
+                        let msg = srcs[0];
+                        let handle = srcs[1];
+                        let translate_local = |idx: usize| {
+                            if fun_target.get_local_type(idx).is_mutable_reference() {
+                                format!("$Dereference({})", str_local(idx))
+                            } else {
+                                str_local(idx)
+                            }
+                        };
+                        emit!(
+                            self.writer,
+                            "$es := ${}ExtendEventStore($es, ",
+                            if srcs.len() > 2 { "Cond" } else { "" }
+                        );
+                        emit!(
+                            self.writer,
+                            "$SelectField({}, $Event_EventHandle_guid), {}",
+                            translate_local(handle),
+                            str_local(msg)
+                        );
+                        if srcs.len() > 2 {
+                            emit!(self.writer, ", {}", str_local(srcs[2]));
+                        }
+                        emitln!(self.writer, ");");
+                    }
+                    EventStoreDiverge => {
+                        emitln!(self.writer, "call $es := $EventStore__diverge($es);");
+                    }
                 }
                 if let Some(AbortAction(target, code)) = aa {
                     emitln!(self.writer, "if ($abort_flag) {");

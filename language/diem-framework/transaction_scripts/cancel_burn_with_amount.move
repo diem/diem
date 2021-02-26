@@ -76,6 +76,12 @@ spec fun cancel_burn_with_amount {
     ensures balance_at_addr == old(balance_at_addr) + amount;
 
     include Diem::CancelBurnWithCapEmits<Token>;
+    include DiemAccount::DepositEmits<Token>{
+        payer: preburn_address,
+        payee: preburn_address,
+        amount: amount,
+        metadata: x""
+    };
 
     aborts_with [check]
         Errors::REQUIRES_CAPABILITY,

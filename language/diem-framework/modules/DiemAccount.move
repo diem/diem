@@ -466,14 +466,18 @@ module DiemAccount {
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
     }
-
     spec fun cancel_burn {
         include CancelBurnAbortsIf<Token>;
         include Diem::CancelBurnWithCapEmits<Token>;
         include Diem::CancelBurnWithCapEnsures<Token>;
         include DepositEnsures<Token>{payee: preburn_address};
+        include DepositEmits<Token>{
+            payer: preburn_address,
+            payee: preburn_address,
+            amount: amount,
+            metadata: x""
+        };
     }
-
     spec schema CancelBurnAbortsIf<Token> {
         account: signer;
         preburn_address: address;
@@ -747,7 +751,6 @@ module DiemAccount {
             metadata_signature
         );
     }
-
     spec fun pay_from {
         pragma opaque;
         let payer = cap.account_address;
@@ -763,7 +766,6 @@ module DiemAccount {
             old(global<DiemAccount>(payer).withdraw_capability);
         include PayFromAbortsIf<Token>;
         include PayFromEnsures<Token>{payer};
-
     }
     spec schema PayFromAbortsIf<Token> {
         cap: WithdrawCapability;
@@ -1007,7 +1009,7 @@ module DiemAccount {
         ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
         ensures spec_holds_own_key_rotation_cap(new_account_addr);
         ensures spec_holds_own_withdraw_cap(new_account_addr);
-        include MakeAccountEmits;
+        include MakeAccountEmits{new_account_address: Signer::spec_address_of(new_account)};
     }
     spec schema MakeAccountAbortsIf {
         addr: address;
@@ -1025,12 +1027,11 @@ module DiemAccount {
         // abort because of a published FreezingBit, first.
     }
     spec schema MakeAccountEmits {
-        new_account: signer;
-        let new_account_addr = Signer::spec_address_of(new_account);
+        new_account_address: address;
         let handle = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()).creation_events;
         let msg = CreateAccountEvent {
-            created: new_account_addr,
-            role_id: Roles::spec_get_role_id(new_account_addr)
+            created: new_account_address,
+            role_id: Roles::spec_get_role_id(new_account_address)
         };
         emits msg to handle;
     }
@@ -1109,6 +1110,7 @@ module DiemAccount {
         include CreateDiemRootAccountModifies;
         include CreateDiemRootAccountAbortsIf;
         include CreateDiemRootAccountEnsures;
+        include MakeAccountEmits{new_account_address: CoreAddresses::DIEM_ROOT_ADDRESS()};
     }
 
     spec schema CreateDiemRootAccountModifies {
@@ -1163,7 +1165,6 @@ module DiemAccount {
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
     }
-
     spec fun create_treasury_compliance_account {
         pragma opaque;
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1172,11 +1173,10 @@ module DiemAccount {
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include MakeAccountAbortsIf{addr: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
         include CreateTreasuryComplianceAccountEnsures;
-
         let account_ops_cap = global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures account_ops_cap == update_field(old(account_ops_cap), creation_events, account_ops_cap.creation_events);
+        include MakeAccountEmits{new_account_address: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()};
     }
-
     spec schema CreateTreasuryComplianceAccountModifies {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         modifies global<DiemAccount>(tc_addr);
@@ -1186,7 +1186,6 @@ module DiemAccount {
         modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
     }
-
     spec schema CreateTreasuryComplianceAccountAbortsIf {
         dr_account: signer;
         auth_key_prefix: vector<u8>;
@@ -1195,7 +1194,6 @@ module DiemAccount {
         aborts_if exists<SlidingNonce::SlidingNonce>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
             with Errors::ALREADY_PUBLISHED;
     }
-
     spec schema CreateTreasuryComplianceAccountEnsures {
         let tc_addr = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         ensures Roles::spec_has_treasury_compliance_role_addr(tc_addr);
@@ -1232,6 +1230,7 @@ module DiemAccount {
     spec fun create_designated_dealer {
         include CreateDesignatedDealerAbortsIf<CoinType>;
         include CreateDesignatedDealerEnsures<CoinType>;
+        include MakeAccountEmits;
     }
 
     spec schema CreateDesignatedDealerAbortsIf<CoinType> {
@@ -1282,6 +1281,7 @@ module DiemAccount {
     spec fun create_parent_vasp_account {
         include CreateParentVASPAccountAbortsIf<Token>;
         include CreateParentVASPAccountEnsures<Token>;
+        include MakeAccountEmits;
     }
 
     spec schema CreateParentVASPAccountAbortsIf<Token> {
@@ -1325,7 +1325,6 @@ module DiemAccount {
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
-
     spec fun create_child_vasp_account {
         include CreateChildVASPAccountAbortsIf<Token>;
         include CreateChildVASPAccountEnsures<Token>{
@@ -1333,8 +1332,8 @@ module DiemAccount {
             child_addr: new_account_address,
         };
         include AddCurrencyForAccountEnsures<Token>{addr: new_account_address};
+        include MakeAccountEmits;
     }
-
     spec schema CreateChildVASPAccountAbortsIf<Token> {
         parent: signer;
         new_account_address: address;
@@ -1346,7 +1345,6 @@ module DiemAccount {
         include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
         include MakeAccountAbortsIf{addr: new_account_address};
     }
-
     spec schema CreateChildVASPAccountEnsures<Token> {
         parent_addr: address;
         child_addr: address;

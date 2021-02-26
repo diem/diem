@@ -139,6 +139,12 @@ The balance of <code>Token</code> at <code>preburn_address</code> should increas
 
 <pre><code><b>ensures</b> balance_at_addr == <b>old</b>(balance_at_addr) + amount;
 <b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_CancelBurnWithCapEmits">Diem::CancelBurnWithCapEmits</a>&lt;Token&gt;;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_DepositEmits">DiemAccount::DepositEmits</a>&lt;Token&gt;{
+    payer: preburn_address,
+    payee: preburn_address,
+    amount: amount,
+    metadata: x""
+};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,

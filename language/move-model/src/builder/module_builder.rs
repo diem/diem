@@ -2157,13 +2157,25 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let mut rewriter =
                 ExpRewriter::new(self.parent.env, &mut replacer).set_type_args(type_arguments);
             let mut exp = rewriter.rewrite(exp);
-            let additional_exps = rewriter.rewrite_vec(additional_exps);
+            let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
                 // There is a path condition to be added. This is only possible for proper
                 // boolean conditions.
                 if kind.get_spec_var_target().is_some() {
                     self.parent
                         .error(loc, &format!("`{}` cannot be included conditionally", kind));
+                } else if kind == &ConditionKind::Emits {
+                    let cond_exp = if additional_exps.len() < 2 {
+                        cond.clone()
+                    } else {
+                        self.make_path_expr(
+                            Operation::And,
+                            cond.node_id(),
+                            cond.clone(),
+                            additional_exps.pop().unwrap(),
+                        )
+                    };
+                    additional_exps.push(cond_exp);
                 } else {
                     // In case of AbortsIf, the path condition is combined with the predicate using
                     // &&, otherwise ==>.

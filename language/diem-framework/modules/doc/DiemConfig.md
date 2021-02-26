@@ -531,6 +531,7 @@ generic type/specific invariant issue
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetEnsures">SetEnsures</a>&lt;Config&gt;;
+<b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">ReconfigureEmits</a>;
 </code></pre>
 
 

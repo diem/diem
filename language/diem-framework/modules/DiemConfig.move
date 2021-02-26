@@ -170,6 +170,7 @@ module DiemConfig {
         include ReconfigureAbortsIf;
         modifies global<DiemConfig<Config>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include SetEnsures<Config>;
+        include ReconfigureEmits;
     }
 
     /// Private function to temporarily halt reconfiguration.
