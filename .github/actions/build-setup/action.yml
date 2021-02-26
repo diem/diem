@@ -47,6 +47,7 @@ runs:
         echo 'DOTNET_ROOT='${HOME}/.dotnet/ | tee -a $GITHUB_ENV
         echo 'BOOGIE_EXE='${HOME}/.dotnet/tools/boogie | tee -a $GITHUB_ENV
         echo "$HOME/bin" | tee -a $GITHUB_PATH
+        echo "$HOME/.dotnet" | tee -a $GITHUB_PATH
         echo "/opt/cargo/bin" | tee -a $GITHUB_PATH
         echo '/usr/lib/golang/bin' | tee -a $GITHUB_PATH
     - name: install common dependencies (should be ~ 10 seconds in a linux build, on mac it's a beast.)

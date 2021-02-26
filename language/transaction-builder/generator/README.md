@@ -151,6 +151,36 @@ target/debug/generate-transaction-builders \
     "language/diem-framework/compiled/legacy/transaction_scripts/abi"
 ```
 
+### C#
+
+To install C# source `Serde`, `Bcs`, `Diem.Types`, and `Diem.Stdlib` into a target directory `$DEST`, run:
+```bash
+target/debug/generate-transaction-builders \
+    --language csharp \
+    --module-name Diem.Stdlib \
+    --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
+    --target-source-dir "$DEST" \
+    --with-custom-diem-code language/transaction-builder/generator/examples/csharp/custom_diem_code/*.cs -- \
+    "language/diem-framework/compiled/legacy/transaction_scripts/abi"
+```
+Next, you may copy and execute the [C# demo file](examples/csharp/StdlibDemo.cs) with:
+```bash
+mkdir "$DEST"/Demo
+cp language/transaction-builder/generator/examples/csharp/StdlibDemo.cs "$DEST/Demo"
+cd "$DEST/Diem/Stdlib"
+dotnet new classlib -n Diem.Stdlib -o .
+dotnet add Diem.Stdlib.csproj reference ../Types/Diem.Types.csproj
+rm Class1.cs
+cd "../../Demo"
+dotnet new sln
+dotnet new console
+rm Program.cs
+dotnet add Demo.csproj reference ../Diem/Stdlib/Diem.Stdlib.csproj
+dotnet add Demo.csproj reference ../Diem/Types/Diem.Types.csproj
+dotnet add Demo.csproj reference ../Serde/Serde.csproj
+dotnet add Demo.csproj reference ../Bcs/Bcs.csproj
+dotnet run --project Demo.csproj
+```
 
 ## Adding Support for a New Language
 

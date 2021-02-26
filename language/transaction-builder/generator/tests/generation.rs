@@ -299,6 +299,162 @@ fn test_that_java_code_compiles_and_demo_runs() {
 }
 
 #[test]
+fn test_that_csharp_code_compiles_and_demo_runs() {
+    let registry = get_diem_registry();
+    let abis = get_stdlib_script_abis();
+    // Special case this because of what the default tempdir is on a mac
+    // It looks as if the path string might be too long for the dotnet runtime
+    // to execute correctly because you get funny errors that don't occur when
+    // the path string is shorter. So make the temp path shorter and all is good.
+    // Avoids this:
+    // "Unhandled exception. System.IO.FileNotFoundException: Could not load file
+    // or assembly \'Diem.Types, Version=1.0.0.0, Culture=neutral,
+    // PublicKeyToken=null\'. The system cannot find the file specified.\n\n
+    // File name: \'Diem.Types, Version=1.0.0.0, Culture=neutral,
+    // PublicKeyToken=null\'\n\n\n"`,
+    if std::env::consts::OS == "macos" {
+        std::env::set_var("TMPDIR", "/private/tmp/");
+    }
+    let dir = tempdir().unwrap();
+
+    let paths = std::fs::read_dir("examples/csharp/custom_diem_code")
+        .unwrap()
+        .map(|e| e.unwrap().path());
+    let config = serdegen::CodeGeneratorConfig::new("Diem.Types".to_string())
+        .with_encodings(vec![serdegen::Encoding::Bcs])
+        .with_custom_code(buildgen::read_custom_code_from_paths(
+            &["Diem", "Types"],
+            paths,
+        ));
+    let bcs_installer = serdegen::csharp::Installer::new(dir.path().to_path_buf());
+    bcs_installer.install_module(&config, &registry).unwrap();
+    bcs_installer.install_serde_runtime().unwrap();
+    bcs_installer.install_bcs_runtime().unwrap();
+
+    let abi_installer = buildgen::csharp::Installer::new(dir.path().to_path_buf());
+    abi_installer
+        .install_transaction_builders("Diem.Stdlib", &abis)
+        .unwrap();
+
+    std::fs::create_dir(dir.path().join("Demo")).unwrap();
+    std::fs::copy(
+        "examples/csharp/StdlibDemo.cs",
+        dir.path().join("Demo/StdlibDemo.cs"),
+    )
+    .unwrap();
+
+    let status = Command::new("dotnet")
+        .arg("new")
+        .arg("classlib")
+        .arg("-n")
+        .arg("Diem.Stdlib")
+        .arg("-o")
+        .arg(dir.path().join("Diem/Stdlib"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("rm")
+        .arg(dir.path().join("Diem/Stdlib/Class1.cs"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("add")
+        .arg(dir.path().join("Diem/Stdlib/Diem.Stdlib.csproj"))
+        .arg("reference")
+        .arg(dir.path().join("Diem/Types/Diem.Types.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("new")
+        .arg("sln")
+        .arg("-n")
+        .arg("Demo")
+        .arg("-o")
+        .arg(dir.path().join("Demo"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("new")
+        .arg("console")
+        .arg("-n")
+        .arg("Demo")
+        .arg("-o")
+        .arg(dir.path().join("Demo"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("rm")
+        .arg(dir.path().join("Demo/Program.cs"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("add")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .arg("reference")
+        .arg(dir.path().join("Diem/Stdlib/Diem.Stdlib.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("add")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .arg("reference")
+        .arg(dir.path().join("Diem/Types/Diem.Types.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("add")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .arg("reference")
+        .arg(dir.path().join("Serde/Serde.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("add")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .arg("reference")
+        .arg(dir.path().join("Bcs/Bcs.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let status = Command::new("dotnet")
+        .arg("build")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let output = Command::new("dotnet")
+        .arg("run")
+        .arg("--project")
+        .arg(dir.path().join("Demo/Demo.csproj"))
+        .output()
+        .unwrap();
+    assert_eq!(std::str::from_utf8(&output.stderr).unwrap(), String::new());
+    assert_eq!(
+        std::str::from_utf8(&output.stdout).unwrap(),
+        EXPECTED_OUTPUT
+    );
+    assert!(output.status.success());
+}
+
+#[test]
 #[ignore]
 fn test_that_golang_code_compiles_and_demo_runs() {
     let registry = get_diem_registry();

@@ -15,8 +15,10 @@ pub mod java;
 pub mod python3;
 /// Support for code-generation in Rust.
 pub mod rust;
-/// Support for code-generation in Rust.
+/// Support for code-generation in TypeScript.
 pub mod typescript;
+// Support for code-generation in C#
+pub mod csharp;
 
 /// Internals shared between languages.
 mod common;
