@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::liveness::proposer_election::{next, ProposerElection};
+use crate::{
+    counters::{COMMITTED_PROPOSALS_IN_WINDOW, COMMITTED_VOTES_IN_WINDOW},
+    liveness::proposer_election::{next, ProposerElection},
+};
 use consensus_types::{
     block::Block,
     common::{Author, Round},
@@ -96,13 +99,15 @@ pub trait ReputationHeuristic: Send + Sync {
 
 /// If candidate appear in the history, it's assigned active_weight otherwise inactive weight.
 pub struct ActiveInactiveHeuristic {
+    author: Author,
     active_weight: u64,
     inactive_weight: u64,
 }
 
 impl ActiveInactiveHeuristic {
-    pub fn new(active_weight: u64, inactive_weight: u64) -> Self {
+    pub fn new(author: Author, active_weight: u64, inactive_weight: u64) -> Self {
         Self {
+            author,
             active_weight,
             inactive_weight,
         }
@@ -111,11 +116,30 @@ impl ActiveInactiveHeuristic {
 
 impl ReputationHeuristic for ActiveInactiveHeuristic {
     fn get_weights(&self, candidates: &[Author], history: &[NewBlockEvent]) -> Vec<u64> {
+        let mut committed_proposals: usize = 0;
+        let mut committed_votes: usize = 0;
+
         let set = history.iter().fold(HashSet::new(), |mut set, meta| {
             set.insert(meta.proposer());
-            set.extend(meta.votes().into_iter());
+            for vote in meta.votes() {
+                set.insert(vote);
+                if vote == self.author {
+                    committed_votes = committed_votes
+                        .checked_add(1)
+                        .expect("Should not overflow the number of committed votes in a window");
+                }
+            }
+            if meta.proposer() == self.author {
+                committed_proposals = committed_proposals
+                    .checked_add(1)
+                    .expect("Should not overflow the number of committed proposals in a window");
+            }
             set
         });
+
+        COMMITTED_PROPOSALS_IN_WINDOW.set(committed_proposals as i64);
+        COMMITTED_VOTES_IN_WINDOW.set(committed_votes as i64);
+
         candidates
             .iter()
             .map(|author| {

@@ -171,6 +171,7 @@ impl EpochManager {
             ConsensusProposerType::LeaderReputation(heuristic_config) => {
                 let backend = Box::new(DiemDBBackend::new(proposers.len(), self.storage.diem_db()));
                 let heuristic = Box::new(ActiveInactiveHeuristic::new(
+                    self.author,
                     heuristic_config.active_weights,
                     heuristic_config.inactive_weights,
                 ));
