@@ -13,7 +13,7 @@ edition = "2018"
 chrono = "0.4.19"
 structopt = "0.3.21"
 tokio = { version = "1.2.0", features = ["full"] }
-serde_json = "1.0.62"
+serde_json = "1.0.63"
 serde = "1.0.123"
 anyhow = "1.0.38"
 reqwest = { version = "0.11.1", features = ["blocking", "json"], default_features = false }
