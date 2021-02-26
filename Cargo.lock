@@ -671,9 +671,9 @@ checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
 name = "camino"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "176c40258709f5883ce0f352f30b2065c64112843b33e3e318e1c1cc22960979"
+checksum = "9bb47ab72bdba43021afa16dc1ef4d80c980d366b17ed37ea8d2ebe2087075b9"
 dependencies = [
  "serde",
 ]
