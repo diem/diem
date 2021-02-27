@@ -42,12 +42,12 @@ impl ExperimentSuite {
                 .build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(0)
+            PerformanceBenchmarkParams::new_nodes_down(0, None)
                 .enable_db_backup()
                 .build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(10)
+            PerformanceBenchmarkParams::new_nodes_down(10, None)
                 .enable_db_backup()
                 .build(cluster),
         ));
@@ -86,10 +86,10 @@ impl ExperimentSuite {
     fn new_perf_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(0, None).build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(10, None).build(cluster),
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
@@ -103,7 +103,7 @@ impl ExperimentSuite {
     fn new_land_blocking_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(0, None).build(cluster),
         ));
         Self { experiments }
     }
@@ -132,10 +132,10 @@ impl ExperimentSuite {
     fn new_invalid_tx_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(0, Some(0)).build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::mix_invalid_tx(0, 10).build(cluster),
+            PerformanceBenchmarkParams::mix_invalid_tx(0, Some(10)).build(cluster),
         ));
         Self { experiments }
     }

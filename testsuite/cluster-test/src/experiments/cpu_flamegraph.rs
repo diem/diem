@@ -62,7 +62,7 @@ impl Experiment for CpuFlamegraph {
             context.cluster.validator_instances().to_vec(),
             context.global_emit_job_request,
             0,
-            0,
+            None,
         );
         let emit_future = context
             .tx_emitter

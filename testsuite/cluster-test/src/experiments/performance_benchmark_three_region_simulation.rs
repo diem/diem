@@ -60,14 +60,14 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 context.cluster.validator_instances().to_vec(),
                 context.global_emit_job_request,
                 0,
-                0,
+                None,
             )
         } else {
             EmitJobRequest::for_instances(
                 context.cluster.fullnode_instances().to_vec(),
                 context.global_emit_job_request,
                 0,
-                0,
+                None,
             )
         };
         let stats = context

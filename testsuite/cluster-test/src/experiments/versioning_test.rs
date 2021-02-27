@@ -96,7 +96,7 @@ impl Experiment for ValidatorVersioning {
                     context.cluster.validator_instances().to_vec(),
                     context.global_emit_job_request,
                     0,
-                    0,
+                    None,
                 ),
                 150,
             )

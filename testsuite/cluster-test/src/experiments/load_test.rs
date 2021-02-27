@@ -122,7 +122,7 @@ impl Experiment for LoadTest {
                         context.cluster.fullnode_instances().to_vec(),
                         context.global_emit_job_request,
                         0,
-                        0,
+                        None,
                     ))
                     .await?,
             );

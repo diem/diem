@@ -93,8 +93,8 @@ struct Args {
         default_value = "60"
     )]
     duration: u64,
-    #[structopt(long, help = "Percentage of invalid txs", default_value = "0")]
-    invalid_tx: u64,
+    #[structopt(long, help = "Percentage of invalid txs")]
+    invalid_tx: Option<u64>,
 
     #[structopt(
         long,

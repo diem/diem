@@ -34,7 +34,6 @@ use rand::{
 };
 use tokio::runtime::Handle;
 
-use debug_interface::AsyncNodeDebugClient;
 use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address},
@@ -131,7 +130,7 @@ pub struct EmitJobRequest {
     pub workers_per_ac: Option<usize>,
     pub thread_params: EmitThreadParams,
     pub gas_price: u64,
-    pub invalid_tx: u64,
+    pub invalid_tx: Option<u64>,
 }
 
 pub static REUSE_ACC: Lazy<bool> = Lazy::new(|| env::var("REUSE_ACC").is_ok());
@@ -141,7 +140,7 @@ impl EmitJobRequest {
         instances: Vec<Instance>,
         global_emit_job_request: &Option<EmitJobRequest>,
         gas_price: u64,
-        invalid_tx: u64,
+        invalid_tx: Option<u64>,
     ) -> Self {
         let mut req = match global_emit_job_request {
             Some(global_emit_job_request) => EmitJobRequest {
@@ -161,7 +160,7 @@ impl EmitJobRequest {
                 invalid_tx,
             },
         };
-        if invalid_tx != 0 {
+        if invalid_tx != None {
             req.thread_params.wait_committed = false;
         }
         req
@@ -176,7 +175,7 @@ impl EmitJobRequest {
         (num_workers, wait_time)
     }
 
-    pub fn fixed_tps(instances: Vec<Instance>, tps: u64, gas_price: u64, invalid_tx: u64) -> Self {
+    pub fn fixed_tps(instances: Vec<Instance>, tps: u64, gas_price: u64, invalid_tx: Option<u64>) -> Self {
         let (num_workers, wait_time) = EmitJobRequest::fixed_tps_params(instances.len(), tps);
         Self {
             instances,
@@ -184,7 +183,7 @@ impl EmitJobRequest {
             workers_per_ac: Some(num_workers),
             thread_params: EmitThreadParams {
                 wait_millis: wait_time,
-                wait_committed: invalid_tx == 0,
+                wait_committed: invalid_tx == None,
             },
             gas_price,
             invalid_tx,
@@ -284,22 +283,24 @@ impl TxEmitter {
         for instance in &req.instances {
             for _ in 0..workers_per_ac {
                 let client = instance.json_rpc_client();
-                let debug_client = instance.debug_interface_client();
                 let accounts = (&mut all_accounts).take(req.accounts_per_client).collect();
                 let all_addresses = all_addresses.clone();
                 let stop = stop.clone();
                 let params = req.thread_params.clone();
                 let stats = Arc::clone(&stats);
+                let invalid_tx =  match req.invalid_tx {
+                    Some(n) => n,
+                    None => 0,
+                };
                 let worker = SubmissionWorker {
                     accounts,
                     client,
-                    debug_client,
                     all_addresses,
                     stop,
                     params,
                     stats,
                     chain_id: self.chain_id,
-                    invalid_tx: req.invalid_tx,
+                    invalid_tx,
                 };
                 let join_handle = tokio_handle.spawn(worker.run(req.gas_price).boxed());
                 workers.push(Worker { join_handle });
@@ -578,14 +579,9 @@ impl TxEmitter {
         duration: Duration,
         emit_job_request: EmitJobRequest,
     ) -> Result<TxStats> {
-        let burst = emit_job_request.thread_params.wait_committed;
         let job = self.start_job(emit_job_request).await?;
         tokio::time::sleep(duration).await;
-        let worker_num = job.workers.len() as u64;
-        let mut stats = self.stop_job(job).await;
-        if !burst {
-            stats.committed = stats.committed / worker_num;
-        }
+        let stats = self.stop_job(job).await;
         Ok(stats)
     }
 
@@ -595,14 +591,9 @@ impl TxEmitter {
         emit_job_request: EmitJobRequest,
         interval_secs: u64,
     ) -> Result<TxStats> {
-        let burst = emit_job_request.thread_params.wait_committed;
         let job = self.start_job(emit_job_request).await?;
         self.periodic_stat(&job, duration, interval_secs).await;
-        let worker_num = job.workers.len() as u64;
-        let mut stats = self.stop_job(job).await;
-        if !burst {
-            stats.committed = stats.committed / worker_num;
-        }
+        let stats = self.stop_job(job).await;
         Ok(stats)
     }
 
@@ -631,7 +622,6 @@ struct Worker {
 struct SubmissionWorker {
     accounts: Vec<AccountData>,
     client: JsonRpcClient,
-    debug_client: AsyncNodeDebugClient,
     all_addresses: Arc<Vec<AccountAddress>>,
     stop: Arc<AtomicBool>,
     params: EmitThreadParams,
@@ -699,7 +689,6 @@ impl SubmissionWorker {
     #[allow(clippy::collapsible_if)]
     async fn run(mut self, gas_price: u64) -> Vec<AccountData> {
         let wait = Duration::from_millis(self.params.wait_millis);
-        let mut burst_committed = 0i64;
         while !self.stop.load(Ordering::Relaxed) {
             let requests = self.gen_requests(gas_price);
             let num_requests = requests.len();
@@ -757,20 +746,6 @@ impl SubmissionWorker {
                         .latencies
                         .record_data_point(latency, num_requests as u64);
                 }
-            } else {
-                let res = self
-                    .debug_client
-                    .get_node_metric("diem_storage_committed_txns{}")
-                    .await;
-                let committed = match res {
-                    Ok(res) => res.unwrap_or_default(),
-                    _ => 0i64,
-                };
-                let delta = committed - burst_committed;
-                self.stats
-                    .committed
-                    .fetch_add(delta as u64, Ordering::Relaxed);
-                burst_committed = committed;
             }
             let now = Instant::now();
             if wait_util > now {

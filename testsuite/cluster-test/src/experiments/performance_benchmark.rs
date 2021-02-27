@@ -63,8 +63,8 @@ pub struct PerformanceBenchmarkParams {
     pub gas_price: u64,
     #[structopt(long, help = "Set periodic stat aggregator step")]
     pub periodic_stats: Option<u64>,
-    #[structopt(long, default_value = "0", help = "Set percentage of invalid tx")]
-    pub invalid_tx: u64,
+    #[structopt(long, help = "Set percentage of invalid tx")]
+    pub invalid_tx: Option<u64>,
 }
 
 pub struct PerformanceBenchmark {
@@ -80,13 +80,13 @@ pub struct PerformanceBenchmark {
     backup: bool,
     gas_price: u64,
     periodic_stats: Option<u64>,
-    invalid_tx: u64,
+    invalid_tx: Option<u64>,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
 
 impl PerformanceBenchmarkParams {
-    pub fn new_nodes_down(percent_nodes_down: usize) -> Self {
+    pub fn new_nodes_down(percent_nodes_down: usize, invalid_tx: Option<u64>) -> Self {
         Self {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
@@ -97,7 +97,7 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price: 0,
             periodic_stats: None,
-            invalid_tx: 0,
+            invalid_tx,
         }
     }
 
@@ -112,7 +112,7 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price: 0,
             periodic_stats: None,
-            invalid_tx: 0,
+            invalid_tx: None,
         }
     }
 
@@ -127,11 +127,11 @@ impl PerformanceBenchmarkParams {
             backup: false,
             gas_price,
             periodic_stats: None,
-            invalid_tx: 0,
+            invalid_tx: None,
         }
     }
 
-    pub fn mix_invalid_tx(percent_nodes_down: usize, invalid_tx: u64) -> Self {
+    pub fn mix_invalid_tx(percent_nodes_down: usize, invalid_tx: Option<u64>) -> Self {
         Self {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
