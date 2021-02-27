@@ -557,3 +557,385 @@ fn test_transactions(start: u64, num: u64) -> Vec<TestTransaction> {
 fn test_transaction(seq_num: u64) -> TestTransaction {
     TestTransaction::new(1, seq_num, 1)
 }
+
+#[test]
+fn test_basic_flow() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    // Add transactions to send
+    harness.add_txns(&v_a, test_transactions(0, 3));
+
+    // A discovers new peer B
+    harness.connect_a_to_b(&v_b, &v_a);
+
+    // A sends messages, which are received by B
+    for seq_num in 0..3 {
+        harness.broadcast_txns_and_validate(v_a, v_b, seq_num);
+    }
+}
+
+#[test]
+fn test_metric_cache_ignore_shared_txns() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    let txns = test_transactions(0, 3);
+    harness.add_txns(v_a, test_transactions(0, 3));
+    // Check if txns's creation timestamp exist in peer_a's metrics_cache.
+    assert_eq!(
+        harness.exist_in_metrics_cache(v_a, &test_transaction(0)),
+        true
+    );
+    assert_eq!(
+        harness.exist_in_metrics_cache(v_a, &test_transaction(1)),
+        true
+    );
+    assert_eq!(
+        harness.exist_in_metrics_cache(v_a, &test_transaction(2)),
+        true
+    );
+
+    // Connect B to A incoming
+    harness.connect_a_to_b(&v_b, &v_a);
+
+    // TODO: Why not use the information that comes back from the broadcast?
+    for txn in txns.iter().take(3) {
+        // Let peer_a share txns with peer_b
+        let _ = harness.broadcast_txns_successfully(v_a, true, 1);
+        // Check if txns's creation timestamp exist in peer_b's metrics_cache.
+        assert_eq!(harness.exist_in_metrics_cache(v_b, txn), false);
+    }
+}
+
+#[test]
+fn test_interruption_in_sync() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(3, 1, None, None, false);
+    let (v_a, v_b, v_c) = (
+        validators.get(0).unwrap(),
+        validators.get(1).unwrap(),
+        validators.get(2).unwrap(),
+    );
+
+    harness.add_txns(v_a, vec![test_transaction(0)]);
+
+    // A discovers first peer
+    harness.connect_a_to_b(&v_b, &v_a);
+
+    // Make sure first txn delivered to first peer
+    harness.broadcast_txns_and_validate(v_a, v_b, 0);
+
+    // A discovers second peer
+    harness.connect_a_to_b(&v_c, &v_a);
+
+    // Make sure first txn delivered to second peer
+    harness.broadcast_txns_and_validate(v_a, v_c, 0);
+
+    // A loses connection to B
+    harness.disconnect(&v_a, &v_b);
+
+    // Only C receives the following transactions
+    for seq_num in 1..3 {
+        harness.add_txns(v_a, vec![test_transaction(seq_num)]);
+        harness.broadcast_txns_and_validate(v_a, v_c, seq_num);
+    }
+
+    // B reconnects to A
+    harness.connect_a_to_b(&v_b, &v_a);
+
+    // B should receive the remaining txns
+    for seq_num in 1..3 {
+        harness.broadcast_txns_and_validate(v_a, v_b, seq_num);
+    }
+}
+
+#[test]
+fn test_ready_transactions() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    harness.add_txns(v_a, vec![test_transaction(0), test_transaction(2)]);
+
+    // First message delivery
+    harness.connect_a_to_b(v_b, v_a);
+    harness.broadcast_txns_and_validate(v_a, v_b, 0);
+
+    // Add txn1 to mempool
+    harness.add_txns(v_a, vec![test_transaction(1)]);
+    // txn1 unlocked txn2. Now all transactions can go through in correct order
+    harness.broadcast_txns_and_validate(v_a, v_b, 1);
+    harness.broadcast_txns_and_validate(v_a, v_b, 2);
+}
+
+#[test]
+fn test_broadcast_self_transactions() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+    harness.add_txns(&v_a, vec![test_transaction(0)]);
+
+    // A and B discover each other
+    harness.connect_a_to_b(v_b, v_a);
+
+    // A sends txn to B
+    harness.broadcast_txns_successfully(v_a, true, 1);
+
+    // Add new txn to B
+    harness.add_txns(v_b, vec![TestTransaction::new(2, 0, 1)]);
+
+    // Verify that A will receive only second transaction from B
+    let (txn, _) = harness.broadcast_txns_successfully(v_b, true, 1);
+    assert_eq!(
+        txn.get(0).unwrap().sender(),
+        TestTransaction::get_address(2)
+    );
+}
+
+#[test]
+fn test_broadcast_dependencies() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    // Peer A has transactions with sequence numbers 0 and 2
+    harness.add_txns(v_a, vec![test_transaction(0), test_transaction(2)]);
+
+    // Peer B has txn1
+    harness.add_txns(v_b, vec![test_transaction(1)]);
+
+    // A and B discover each other
+    harness.connect_a_to_b(v_b, v_a);
+
+    // B receives 0
+    harness.broadcast_txns_and_validate(v_a, v_b, 0);
+    // Now B can broadcast 1
+    harness.broadcast_txns_and_validate(v_b, v_a, 1);
+    // Now A can broadcast 2
+    harness.broadcast_txns_and_validate(v_a, v_b, 2);
+}
+
+#[test]
+fn test_broadcast_updated_transaction() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    // Peer A has a transaction with sequence number 0 and gas price 1
+    harness.add_txns(v_a, vec![test_transaction(0)]);
+
+    // A and B discover each other
+    harness.connect_a_to_b(v_b, v_a);
+
+    // B receives 0
+    let (txn, _) = harness.broadcast_txns_successfully(&v_a, true, 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    assert_eq!(txn.get(0).unwrap().gas_unit_price(), 1);
+
+    // Update the gas price of the transaction with sequence 0 after B has already received 0
+    harness.add_txns(v_a, vec![TestTransaction::new(1, 0, 5)]);
+
+    // Trigger send from A to B and check B has updated gas price for sequence 0
+    let (txn, _) = harness.broadcast_txns_successfully(v_a, true, 1);
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    assert_eq!(txn.get(0).unwrap().gas_unit_price(), 5);
+}
+
+// Tests VFN properly identifying upstream peers in a network with both upstream and downstream peers
+#[test]
+fn test_vfn_multi_network() {
+    let (mut harness, peers) = TestHarness::bootstrap_network(2, true, 1, 1, None, None, false);
+    let validators = peers.get(&PeerRole::Validator).unwrap();
+    let v_a = validators.get(0).unwrap();
+
+    let vfns = peers.get(&PeerRole::ValidatorFullNode).unwrap();
+    let (vfn_a, vfn_b) = (vfns.get(0).unwrap(), vfns.get(1).unwrap());
+
+    let pfn = peers.get(&PeerRole::Unknown).unwrap().get(0).unwrap();
+
+    // Make a Chain PFN -> VFN A -> VFN B (-> upstream)
+    // VFN A discovers pfn as Inbound
+    harness.connect_a_to_b_with_networks(pfn, true, vfn_a, false);
+    // VFN B discovers VFN A as Inbound
+    harness.connect_a_to_b_with_networks(vfn_a, false, vfn_b, false);
+
+    // Also add Validator chain PFN -> VFN A -> V A
+    harness.connect_a_to_b(vfn_a, v_a);
+
+    // Add txn to VFN A
+    harness.add_txns(vfn_a, vec![test_transaction(0)]);
+
+    // VFN A should broadcast to upstream
+    harness.broadcast_txns_and_validate(vfn_a, v_a, 0);
+
+    // VFN A should additionally broadcast to failover upstream vfn in public network
+    harness.broadcast_txns_and_validate_with_networks(vfn_a, false, vfn_b, false, 0);
+
+    // Check no other mesages sent
+    harness.assert_no_message_sent(&vfn_a.primary_peer_id());
+    harness.assert_no_message_sent(&vfn_a.secondary_peer_id().unwrap());
+}
+
+/// The purpose of this test is to set up a network with 1 Validators, 1 VFNs, and 1 PFN.
+/// VFN1 is the subject of fallback testing, and should fallback to the PFN.
+#[test]
+fn test_failover() {
+    let (mut harness, peers) = TestHarness::bootstrap_network(1, true, 1, 1, None, None, false);
+    let validators = peers.get(&PeerRole::Validator).unwrap();
+    let v = validators.get(0).unwrap();
+
+    let vfns = peers.get(&PeerRole::ValidatorFullNode).unwrap();
+    let vfn = vfns.get(0).unwrap();
+    let pfn = peers.get(&PeerRole::Unknown).unwrap().get(0).unwrap();
+
+    // VFNs discover primary and fallback upstream peers
+    harness.connect_a_to_b(vfn, v);
+    harness.connect_a_to_b_with_networks(vfn, false, pfn, true);
+
+    // Send txn to VFN1
+    harness.add_txns(vfn, vec![test_transaction(0)]);
+
+    // Make sure it delivers txn to primary peer and fallbacks
+    harness.broadcast_txns_and_validate(vfn, v, 0);
+    harness.broadcast_txns_and_validate_with_networks(vfn, false, pfn, true, 0);
+
+    // Bring validator down
+    harness.disconnect(vfn, v);
+
+    // Send another txn to vfn1 now that the primary is down
+    harness.add_txns(vfn, vec![test_transaction(1)]);
+
+    // Messages still go to fallback, but don't make it to the primary
+    // Note: these two statements MUST be in this order, due to complications of the simulator
+    // TODO: This test will continue to be flaky here until some changes are made in mempool
+    // Basically, the original transaction continues to be sent out, because it's not ack'd by the
+    // primary upstream.
+    harness.broadcast_txns_and_validate_with_networks(vfn, false, pfn, true, 1);
+    harness.assert_no_message_sent(&vfn.primary_peer_id());
+}
+
+#[test]
+fn test_rebroadcast_mempool_is_full() {
+    let (mut harness, peers) = TestHarness::bootstrap_network(1, true, 0, 3, Some(5), None, false);
+    let val = peers.get(&PeerRole::Validator).unwrap().get(0).unwrap();
+    let vfn = peers
+        .get(&PeerRole::ValidatorFullNode)
+        .unwrap()
+        .get(0)
+        .unwrap();
+    let all_txns = test_transactions(0, 8);
+
+    harness.add_txns(vfn, all_txns.clone());
+
+    // VFN connects to Val
+    harness.connect_a_to_b(vfn, val);
+
+    // We should get all three txns in a batch
+    let (txns, _) = harness.broadcast_txns_successfully(vfn, true, 1);
+    let seq_nums = txns
+        .iter()
+        .map(|txn| txn.sequence_number())
+        .collect::<Vec<_>>();
+    assert_eq!(vec![0, 1, 2], seq_nums);
+
+    // We continue getting broadcasts because we haven't committed the txns
+    for _ in 0..2 {
+        let (txns, _) = harness.broadcast_txns(vfn, true, 1, false, true, false);
+        let seq_nums = txns
+            .iter()
+            .map(|txn| txn.sequence_number())
+            .collect::<Vec<_>>();
+        assert_eq!(vec![3, 4, 5], seq_nums);
+    }
+
+    // Test getting out of rebroadcasting mode: checking we can move past rebroadcasting after receiving non-retry ACK.
+    // Remove some txns, which should free space for more
+    harness.commit_txns(val, all_txns[..1].to_vec());
+
+    // Send retry batch again, this time it should be processed
+    harness.broadcast_txns_successfully(vfn, true, 1);
+
+    // Retry batch sent above should be processed successfully, and FN should move on to broadcasting later txns
+    let (txns, _) = harness.broadcast_txns(vfn, true, 1, false, true, false);
+    let seq_nums = txns
+        .iter()
+        .map(|txn| txn.sequence_number())
+        .collect::<Vec<_>>();
+    assert_eq!(vec![6, 7], seq_nums);
+}
+
+#[test]
+fn test_rebroadcast_missing_ack() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+    let pool_txns = test_transactions(0, 3);
+    harness.add_txns(v_a, pool_txns);
+
+    // A and B discover each other
+    harness.connect_a_to_b(v_b, v_a);
+
+    // Test that txn broadcasts that don't receive an ACK, A rebroadcasts the unACK'ed batch of txns
+    for _ in 0..3 {
+        let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, false, false);
+        assert_eq!(0, txns.get(0).unwrap().sequence_number());
+    }
+
+    // Getting out of rebroadcasting mode scenario 1: B sends back ACK eventually
+    let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, true, false);
+    assert_eq!(0, txns.get(0).unwrap().sequence_number());
+
+    for _ in 0..3 {
+        let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, false, false);
+        assert_eq!(1, txns.get(0).unwrap().sequence_number());
+    }
+
+    // Getting out of rebroadcasting mode scenario 2: txns in unACK'ed batch gets committed
+    harness.commit_txns(v_a, vec![test_transaction(1)]);
+
+    let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, false, false);
+    assert_eq!(2, txns.get(0).unwrap().sequence_number());
+}
+
+#[test]
+fn test_max_broadcast_limit() {
+    let (mut harness, validators) =
+        TestHarness::bootstrap_validator_network(2, 1, None, Some(3), true);
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
+
+    let pool_txns = test_transactions(0, 6);
+    harness.add_txns(v_a, pool_txns);
+
+    // A and B discover each other
+    harness.connect_a_to_b(v_b, v_a);
+
+    // Test that for mempool broadcasts txns up till max broadcast, even if they are not ACK'ed
+    let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, true, true);
+    assert_eq!(0, txns.get(0).unwrap().sequence_number());
+
+    for seq_num in 1..3 {
+        let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, false, false);
+        assert_eq!(seq_num, txns.get(0).unwrap().sequence_number());
+    }
+
+    // Check that mempool doesn't broadcast more than max_broadcasts_per_peer, even
+    // if there are more txns in mempool.
+    for _ in 0..10 {
+        harness.assert_no_message_sent(&v_a.primary_peer_id());
+    }
+
+    // Deliver ACK from B to A.
+    // This should unblock A to send more broadcasts.
+    harness.deliver_response(&v_b.primary_peer_id());
+    let (txns, _) = harness.broadcast_txns(&v_a, true, 1, false, true, true);
+    assert_eq!(3, txns.get(0).unwrap().sequence_number());
+
+    // Check that mempool doesn't broadcast more than max_broadcasts_per_peer, even
+    // if there are more txns in mempool.
+    for _ in 0..10 {
+        harness.assert_no_message_sent(&v_a.primary_peer_id());
+    }
+}
