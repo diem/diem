@@ -119,6 +119,7 @@ impl<T: fmt::Display> fmt::Display for OptFmt<T> {
 
 #[derive(Debug)]
 struct ServerInternalError(String);
+
 impl warp::reject::Reject for ServerInternalError {}
 
 #[cfg(test)]
@@ -126,7 +127,13 @@ mod tests {
     use crate::routes;
     use diem_faucet::mint;
     use diem_infallible::RwLock;
-    use diem_types::{account_address::AccountAddress, transaction::TransactionPayload::Script};
+    use diem_types::{
+        account_address::AccountAddress,
+        transaction::{
+            metadata::{CoinTradeMetadata, Metadata},
+            TransactionPayload::Script,
+        },
+    };
     use std::{collections::HashMap, convert::TryFrom, sync::Arc};
     use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;
@@ -214,12 +221,13 @@ mod tests {
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
         let amount = 13345;
+        let trade_id = "11111111-1111-1111-1111-111111111111";
         let resp = warp::test::request()
             .method("POST")
             .path(
                 format!(
-                    "/mint?auth_key={}&amount={}&currency_code=XDX&return_txns=true",
-                    auth_key, amount
+                    "/mint?auth_key={}&amount={}&trade_id={}&currency_code=XDX&return_txns=true",
+                    auth_key, amount, trade_id
                 )
                 .as_str(),
             )
@@ -230,6 +238,12 @@ mod tests {
             bcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
                 .expect("valid bcs vec");
         assert_eq!(txns.len(), 2);
+
+        // ensure if we provide a trade_id, it will end up in the metadata
+        let trade_ids = get_trade_ids_from_payload(txns[1].payload());
+        assert_eq!(trade_ids.len(), 1);
+        assert_eq!(trade_ids[0], trade_id);
+
         let reader = accounts.read();
         let addr = AccountAddress::try_from("a74fd7c46952c497e75afb0a7932586d".to_owned()).unwrap();
         let account = reader.get(&addr).expect("account should be created");
@@ -252,7 +266,7 @@ mod tests {
                     "/mint?auth_key={}&amount={}&currency_code=XDX&return_txns=true&is_designated_dealer=true",
                     auth_key, amount
                 )
-                .as_str(),
+                    .as_str(),
             )
             .reply(&filter)
             .await;
@@ -261,6 +275,7 @@ mod tests {
             bcs::from_bytes(&hex::decode(body).expect("hex encoded response body"))
                 .expect("valid bcs vec");
         assert_eq!(txns.len(), 2);
+
         let reader = accounts.read();
         let addr = AccountAddress::try_from("54aa533116e934f8a50c28bece06d3ac".to_owned()).unwrap();
         let account = reader.get(&addr).expect("account should be created");
@@ -311,6 +326,25 @@ mod tests {
             resp.body(),
             "Unhandled rejection: ServerInternalError(\"treasury compliance account not found\")"
         );
+    }
+
+    fn get_trade_ids_from_payload(
+        payload: &diem_types::transaction::TransactionPayload,
+    ) -> Vec<String> {
+        match payload {
+            Script(script) => match ScriptCall::decode(script) {
+                Some(ScriptCall::PeerToPeerWithMetadata { metadata, .. }) => {
+                    match bcs::from_bytes(&metadata).expect("should decode metadata") {
+                        Metadata::CoinTradeMetadata(CoinTradeMetadata::CoinTradeMetadataV0(
+                            coin_trade_metadata,
+                        )) => coin_trade_metadata.trade_ids,
+                        _ => panic!("unexpected type of transaction metadata"),
+                    }
+                }
+                _ => panic!("unexpected type of script"),
+            },
+            _ => panic!("unexpected payload type"),
+        }
     }
 
     fn handle_request(

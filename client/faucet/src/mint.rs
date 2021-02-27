@@ -4,9 +4,13 @@
 use anyhow::Result;
 use diem_client::{Client, MethodRequest};
 use diem_crypto::traits::SigningKey;
-use diem_types::account_config::{
-    testnet_dd_account_address, treasury_compliance_account_address, type_tag_for_currency_code,
-    XUS_NAME,
+use diem_logger::prelude::warn;
+use diem_types::{
+    account_config::{
+        testnet_dd_account_address, treasury_compliance_account_address,
+        type_tag_for_currency_code, XUS_NAME,
+    },
+    transaction::metadata,
 };
 use std::{convert::From, fmt};
 
@@ -34,6 +38,7 @@ pub struct MintParams {
     pub auth_key: diem_types::transaction::authenticator::AuthenticationKey,
     pub return_txns: Option<bool>,
     pub is_designated_dealer: Option<bool>,
+    pub trade_id: Option<String>,
 }
 
 impl MintParams {
@@ -79,10 +84,29 @@ impl MintParams {
                 self.currency_code(),
                 self.receiver(),
                 self.amount,
-                vec![],
+                self.bcs_metadata(),
                 vec![],
             ),
         )
+    }
+
+    fn bcs_metadata(&self) -> Vec<u8> {
+        match self.trade_id.clone() {
+            Some(trade_id) => {
+                let metadata = metadata::Metadata::CoinTradeMetadata(
+                    metadata::CoinTradeMetadata::CoinTradeMetadataV0(
+                        metadata::CoinTradeMetadataV0 {
+                            trade_ids: vec![trade_id],
+                        },
+                    ),
+                );
+                bcs::to_bytes(&metadata).unwrap_or_else(|e| {
+                    warn!("Unable to serialize trade_id: {}", e);
+                    vec![]
+                })
+            }
+            _ => vec![],
+        }
     }
 
     fn receiver(&self) -> diem_types::account_address::AccountAddress {

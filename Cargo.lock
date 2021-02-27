@@ -1565,6 +1565,7 @@ dependencies = [
  "generate-key",
  "hex",
  "move-core-types",
+ "rand 0.8.3",
  "reqwest",
  "serde",
  "serde_derive",
