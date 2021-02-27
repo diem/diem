@@ -1,7 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::normalized::Module;
+use crate::{file_format::Visibility, normalized::Module};
+use std::collections::BTreeSet;
 
 /// The result of a linking and layout compatibility check. Here is what the different combinations
 /// mean:
@@ -23,7 +24,7 @@ impl Compatibility {
         self.struct_and_function_linking && self.struct_layout
     }
 
-    /// Return compatibility assessment for `new_module` relative to old module `old_module`
+    /// Return compatibility assessment for `new_module` relative to old module `old_module`.
     pub fn check(old_module: &Module, new_module: &Module) -> Compatibility {
         let mut struct_and_function_linking = true;
         let mut struct_layout = true;
@@ -86,15 +87,49 @@ impl Compatibility {
             }
         }
 
-        // old module's public functions are a subset of the new module's public functions
+        // The modules are considered as compatible function-wise when all the conditions are met:
         //
-        // TODO: the current implementation treats `public(friend)` function the same way as`public`
-        // for compatibility checking. We might need to change this in the future to allow
-        // `public(friend)` functions to update if none of its friends actually calls it.
-        for item in &old_module.externally_visible_functions {
-            if !new_module.externally_visible_functions.contains(&item) {
+        // - old module's public functions are a subset of the new module's public functions
+        //   (i.e. we cannot remove or change public functions)
+        // - old module's script functions are a subset of the new module's script functions
+        //   (i.e. we cannot remove or change script functions)
+        // - for any friend function that is removed or changed in the old module
+        //   - if the function visibility is upgraded to public, it is OK
+        //   - otherwise, it is considered as incompatible.
+        //
+        // NOTE: it is possible to relax the compatibility checking for a friend function, i.e.,
+        // we can remove/change a friend function if the function is not used by any module in the
+        // friend list. But for simplicity, we decided to go to the more restrictive form now and
+        // we may revisit this in the future.
+        for (func_sig, old_vis) in &old_module.exposed_functions {
+            let new_vis_opt = new_module.exposed_functions.get(func_sig);
+            let is_compatible = match (old_vis, new_vis_opt) {
+                (Visibility::Public, Some(Visibility::Public)) => true,
+                (Visibility::Public, _) => false,
+                (Visibility::Script, Some(Visibility::Script)) => true,
+                (Visibility::Script, _) => false,
+                (Visibility::Friend, Some(Visibility::Public)) => true,
+                (Visibility::Friend, Some(Visibility::Friend)) => true,
+                (Visibility::Friend, _) => false,
+                (Visibility::Private, _) => unreachable!("A private function can never be exposed"),
+            };
+            if !is_compatible {
                 struct_and_function_linking = false;
             }
+        }
+
+        // check friend declarations compatibility
+        //
+        // - additions to the list are allowed
+        // - removals are not allowed
+        //
+        // NOTE: we may also relax this checking a bit in the future: we may allow the removal of
+        // a module removed from the friend list if the module does not call any friend function
+        // in this module.
+        let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
+        let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
+        if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
+            struct_and_function_linking = false;
         }
 
         Compatibility {

@@ -102,15 +102,11 @@ impl VMRuntime {
         // TODO: in the future, we may want to add restrictions on module republishing, possibly by
         // changing the bytecode format to include an `is_upgradable` flag in the CompiledModule.
         if data_store.exists_module(&module_id)? {
-            let old_module_bytes = data_store.load_module(&module_id)?;
-            let old_module = match CompiledModule::deserialize(&old_module_bytes) {
-                Ok(module) => module,
-                Err(err) => {
-                    warn!(*log_context, "[VM] module deserialization failed {:?}", err);
-                    return Err(err.finish(Location::Undefined));
-                }
-            };
-            let old_m = normalized::Module::new(&old_module);
+            let old_module_ref =
+                self.loader
+                    .load_module_expect_not_missing(&module_id, data_store, log_context)?;
+            let old_module = old_module_ref.module();
+            let old_m = normalized::Module::new(old_module);
             let new_m = normalized::Module::new(&compiled_module);
             let compat = Compatibility::check(&old_m, &new_m);
             if !compat.is_fully_compatible() {

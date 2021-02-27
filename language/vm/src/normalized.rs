@@ -11,8 +11,9 @@ use crate::{
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
+use std::collections::BTreeMap;
 
 /// Defines normalized representations of Move types, fields, kinds, structs, functions, and
 /// modules. These representations are useful in situations that require require comparing
@@ -24,7 +25,7 @@ use move_core_types::{
 /// A normalized version of `SignatureToken`, a type expression appearing in struct or function
 /// declarations. Unlike `SignatureToken`s, `normalized::Type`s from different modules can safely be
 /// compared.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Type {
     Bool,
     U8,
@@ -66,7 +67,7 @@ pub struct Struct {
 
 /// Normalized version of a `FunctionDefinition`. Not safe to compare without an associated
 /// `ModuleId` or `Module`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct FunctionSignature {
     pub name: Identifier,
     pub type_parameters: Vec<AbilitySet>,
@@ -80,8 +81,9 @@ pub struct FunctionSignature {
 pub struct Module {
     pub address: AccountAddress,
     pub name: Identifier,
+    pub friends: Vec<ModuleId>,
     pub structs: Vec<Struct>,
-    pub externally_visible_functions: Vec<(Visibility, FunctionSignature)>,
+    pub exposed_functions: BTreeMap<FunctionSignature, Visibility>,
 }
 
 impl Module {
@@ -89,24 +91,34 @@ impl Module {
     /// Nothing will break here if that is not the case, but there is little point in computing a
     /// normalized representation of a module that won't verify (since it can't be published).
     pub fn new(m: &CompiledModule) -> Self {
+        let friends = m.immediate_friends();
         let structs = m.struct_defs().iter().map(|d| Struct::new(m, d)).collect();
-        let externally_visible_functions = m
+        let exposed_functions = m
             .function_defs()
             .iter()
-            .filter_map(|f| match f.visibility {
-                v @ Visibility::Public | v @ Visibility::Script | v @ Visibility::Friend => Some((
-                    v,
-                    FunctionSignature::new(m, m.function_handle_at(f.function)),
-                )),
-                Visibility::Private => None,
+            .filter(|func_def| match func_def.visibility {
+                Visibility::Public | Visibility::Script | Visibility::Friend => true,
+                Visibility::Private => false,
+            })
+            .map(|func_def| {
+                (
+                    FunctionSignature::new(m, m.function_handle_at(func_def.function)),
+                    func_def.visibility,
+                )
             })
             .collect();
+
         Self {
             address: *m.address(),
             name: m.name().to_owned(),
+            friends,
             structs,
-            externally_visible_functions,
+            exposed_functions,
         }
+    }
+
+    pub fn module_id(&self) -> ModuleId {
+        ModuleId::new(self.address, self.name.clone())
     }
 }
 

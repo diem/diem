@@ -878,7 +878,7 @@ impl Loader {
     }
 
     // Expects all modules to be on chain. Gives an invariant violation if it is not found
-    fn load_module_expect_not_missing(
+    pub(crate) fn load_module_expect_not_missing(
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
@@ -1367,7 +1367,7 @@ impl Module {
         self.struct_instantiations[idx as usize].field_count
     }
 
-    fn module(&self) -> &CompiledModule {
+    pub(crate) fn module(&self) -> &CompiledModule {
         &self.module
     }
 
