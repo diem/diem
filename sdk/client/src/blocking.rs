@@ -1,8 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::time::Duration;
-
 use super::{
     request::{JsonRpcRequest, MethodRequest},
     response::{MethodResponse, Response},
@@ -23,6 +21,12 @@ use diem_types::{
     transaction::{SignedTransaction, Transaction},
 };
 use serde::{de::DeserializeOwned, Serialize};
+use std::time::Duration;
+
+// In order to avoid needing to publish the proxy crate to crates.io we simply include the small
+// library in inline by making it a module instead of a dependency.
+#[path = "../../../common/proxy/src/lib.rs"]
+mod proxy;
 
 const REQUEST_TIMEOUT: u64 = 10_000;
 
