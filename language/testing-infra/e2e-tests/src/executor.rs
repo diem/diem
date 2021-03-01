@@ -107,7 +107,10 @@ impl FakeExecutor {
     }
 
     pub fn set_golden_file(&mut self, test_name: &str) {
-        self.executed_output = Some(GoldenOutputs::new(test_name));
+        // 'test_name' includes ':' in the names, lets re-write these to be '_'s so that these
+        // files can persist on windows machines.
+        let file_name = test_name.replace(':', "_");
+        self.executed_output = Some(GoldenOutputs::new(&file_name));
     }
 
     /// Creates an executor with only the standard library Move modules published and not other
