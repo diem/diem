@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-serde_json = "1.0.63"
+serde_json = "1.0.64"
 language-e2e-tests = { path = "../testing-infra/e2e-tests" }
 bytecode-verifier = { path = "../bytecode-verifier" }
 bcs = "0.1.2"

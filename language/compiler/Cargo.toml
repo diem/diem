@@ -21,7 +21,7 @@ move-ir-types = { path = "../move-ir/types" }
 vm = { path = "../vm" }
 bcs = "0.1.2"
 structopt = "0.3.21"
-serde_json = "1.0.63"
+serde_json = "1.0.64"
 
 [features]
 default = []

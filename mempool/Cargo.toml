@@ -37,7 +37,7 @@ mirai-annotations = "1.10.1"
 network = { path = "../network" }
 rand = "0.8.3"
 netcore = { path = "../network/netcore" }
-serde_json = "1.0.63"
+serde_json = "1.0.64"
 short-hex-str = { path = "../common/short-hex-str" }
 storage-interface = { path = "../storage/storage-interface" }
 subscription-service = { path = "../common/subscription-service" }

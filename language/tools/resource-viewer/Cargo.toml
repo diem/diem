@@ -19,7 +19,7 @@ move-vm-runtime = { path = "../../move-vm/runtime" }
 move-vm-types = { path = "../../move-vm/types" }
 compiled-stdlib = { path = "../../diem-framework/compiled" }
 vm = { path = "../../vm" }
-serde_json = "1.0.63"
+serde_json = "1.0.64"
 serde = { version = "1.0.123", features = ["derive", "rc"] }
 
 anyhow = "1.0.38"

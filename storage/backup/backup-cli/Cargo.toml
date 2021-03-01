@@ -23,7 +23,7 @@ rand = "0.8.3"
 regex = "1.4.3"
 reqwest = { version = "0.11.1", features = ["stream"], default-features = false }
 serde = { version = "1.0.123", features = ["derive"] }
-serde_json = "1.0.63"
+serde_json = "1.0.64"
 structopt = "0.3.21"
 toml = "0.5.8"
 tokio = { version = "1.2.0", features = ["full"] }

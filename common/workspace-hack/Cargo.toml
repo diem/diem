@@ -42,7 +42,7 @@ rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc",
 reqwest = { version = "0.11.1", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.63", features = ["default", "indexmap", "preserve_order", "std"] }
+serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
@@ -87,7 +87,7 @@ rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc",
 reqwest = { version = "0.11.1", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.63", features = ["default", "indexmap", "preserve_order", "std"] }
+serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
@@ -131,7 +131,7 @@ rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc",
 reqwest = { version = "0.11.1", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.63", features = ["default", "indexmap", "preserve_order", "std"] }
+serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 tokio = { version = "1.2.0", features = ["bytes", "default", "fs", "full", "io-std", "io-util", "libc", "macros", "memchr", "mio", "net", "num_cpus", "once_cell", "parking_lot", "process", "rt", "rt-multi-thread", "signal", "signal-hook-registry", "sync", "test-util", "time", "tokio-macros", "winapi"] }
@@ -176,7 +176,7 @@ rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc",
 reqwest = { version = "0.11.1", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.123", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
-serde_json = { version = "1.0.63", features = ["default", "indexmap", "preserve_order", "std"] }
+serde_json = { version = "1.0.64", features = ["default", "indexmap", "preserve_order", "std"] }
 standback = { version = "0.2.15", default-features = false, features = ["std"] }
 subtle = { version = "2.4.0", default-features = false, features = ["std"] }
 syn-3575ec1268b04181 = { package = "syn", version = "0.15.44", features = ["clone-impls", "default", "derive", "extra-traits", "full", "parsing", "printing", "proc-macro", "quote", "visit"] }
