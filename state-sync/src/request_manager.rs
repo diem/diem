@@ -296,10 +296,7 @@ impl RequestManager {
         let mut failed_peer_sends = vec![];
 
         for peer in peers {
-            let sender = self
-                .network_senders
-                .get_mut(&peer.network_id())
-                .expect("missing network sender for peer");
+            let mut sender = self.get_network_sender(&peer);
             let peer_id = peer.peer_id();
             let send_result = sender.send_to(peer_id, msg.clone());
             let curr_log = log.clone().peer(&peer);
@@ -330,6 +327,27 @@ impl RequestManager {
         }
     }
 
+    fn get_network_sender(&mut self, peer: &PeerNetworkId) -> StateSyncSender {
+        self.network_senders
+            .get_mut(&peer.network_id())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Missing network sender for network: {:?}",
+                    peer.network_id()
+                )
+            })
+            .clone()
+    }
+
+    pub fn send_chunk_response(
+        &mut self,
+        peer: &PeerNetworkId,
+        message: StateSyncMessage,
+    ) -> Result<(), Error> {
+        self.get_network_sender(peer)
+            .send_to(peer.peer_id(), message)
+    }
+
     pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) -> ChunkRequestInfo {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
@@ -342,14 +360,9 @@ impl RequestManager {
             prev_request.last_request_time = now;
             prev_request.clone()
         } else {
-            self.requests.insert(
-                version,
-                ChunkRequestInfo::new(version, peers, self.multicast_level),
-            );
-            self.requests
-                .get(&version)
-                .expect("missing chunk request that was just added")
-                .clone()
+            let chunk_request_info = ChunkRequestInfo::new(version, peers, self.multicast_level);
+            self.requests.insert(version, chunk_request_info.clone());
+            chunk_request_info
         }
     }
 

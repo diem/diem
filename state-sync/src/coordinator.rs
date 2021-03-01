@@ -74,8 +74,6 @@ pub(crate) struct StateSyncCoordinator<T> {
     // An initial waypoint: for as long as the local version is less than a version determined by
     // waypoint a node is not going to be abl
     waypoint: Waypoint,
-    // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<NodeNetworkId, StateSyncSender>,
     // Actor for sending chunk requests
     // Manages to whom and how to send chunk requests
     request_manager: RequestManager,
@@ -123,7 +121,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             node_config.upstream.clone(),
             Duration::from_millis(retry_timeout_val),
             Duration::from_millis(node_config.state_sync.multicast_timeout_ms),
-            network_senders.clone(),
+            network_senders,
         );
 
         Ok(Self {
@@ -134,7 +132,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             role,
             waypoint,
             request_manager,
-            network_senders,
             subscriptions: HashMap::new(),
             sync_request: None,
             target_ledger_info: None,
@@ -870,12 +867,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             .chunk_response(chunk_response.clone())
             .peer(&peer);
         let msg = StateSyncMessage::GetChunkResponse(Box::new(chunk_response));
-
-        let network_sender = self
-            .network_senders
-            .get_mut(&peer.network_id())
-            .expect("missing network sender");
-        let send_result = network_sender.send_to(peer.peer_id(), msg);
+        let send_result = self.request_manager.send_chunk_response(&peer, msg);
         let send_result_label = if send_result.is_err() {
             counters::SEND_FAIL_LABEL
         } else {

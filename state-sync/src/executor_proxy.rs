@@ -263,12 +263,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .configs()
             .iter()
             .filter(|(id, cfg)| {
-                &self
-                    .on_chain_configs
-                    .configs()
-                    .get(id)
-                    .expect("missing on-chain config value in local copy")
-                    != cfg
+                &self.on_chain_configs.configs().get(id).unwrap_or_else(|| {
+                    panic!("Missing on-chain config value in local copy: {}", id)
+                }) != cfg
             })
             .map(|(id, _)| *id)
             .collect::<HashSet<_>>();
