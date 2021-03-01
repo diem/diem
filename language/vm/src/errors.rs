@@ -62,12 +62,11 @@ impl VMError {
                 VMStatus::Error(StatusCode::ABORTED)
             }
 
-            // TODO Errors for OUT_OF_GAS do not always have index set
             (major_status, sub_status, location)
                 if major_status.status_type() == StatusType::Execution =>
             {
                 debug_assert!(
-                    offsets.len() == 1,
+                    offsets.len() == 1 || major_status == StatusCode::OUT_OF_GAS,
                     "Unexpected offsets. major_status: {:?}\
                     sub_status: {:?}\
                     location: {:?}\
