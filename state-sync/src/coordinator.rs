@@ -13,7 +13,6 @@ use crate::{
     request_manager::RequestManager,
     shared_components::SyncState,
 };
-use anyhow::{ensure, format_err, Result};
 use diem_config::{
     config::{NodeConfig, PeerNetworkId, RoleType, StateSyncConfig},
     network_id::NodeNetworkId,
@@ -104,7 +103,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         waypoint: Waypoint,
         executor_proxy: T,
         initial_state: SyncState,
-    ) -> Result<Self> {
+    ) -> Result<Self, Error> {
         info!(LogSchema::event_log(LogEntry::Waypoint, LogEvent::Initialize).waypoint(waypoint));
 
         // Create a new request manager.
@@ -113,10 +112,12 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         let retry_timeout_val = match role {
             RoleType::FullNode => tick_interval_ms
                 .checked_add(node_config.state_sync.long_poll_timeout_ms)
-                .ok_or_else(|| format_err!("Fullnode retry timeout has overflown."))?,
-            RoleType::Validator => tick_interval_ms
-                .checked_mul(2)
-                .ok_or_else(|| format_err!("Validator retry timeout has overflown!"))?,
+                .ok_or_else(|| {
+                    Error::IntegerOverflow("Fullnode retry timeout has overflown!".into())
+                })?,
+            RoleType::Validator => tick_interval_ms.checked_mul(2).ok_or_else(|| {
+                Error::IntegerOverflow("Validator retry timeout has overflown!".into())
+            })?,
         };
         let request_manager = RequestManager::new(
             node_config.upstream.clone(),
@@ -311,7 +312,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
     /// Sync up coordinator state with the local storage
     /// and updates the pending ledger info accordingly
-    fn sync_state_with_local_storage(&mut self) -> Result<()> {
+    fn sync_state_with_local_storage(&mut self) -> Result<(), Error> {
         let new_state = self.executor_proxy.get_local_storage_state().map_err(|e| {
             counters::STORAGE_READ_FAIL_COUNT.inc();
             e
@@ -726,7 +727,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         peer: PeerNetworkId,
         request: GetChunkRequest,
         target_li: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let response_li = self.choose_response_li(request.current_epoch, Some(target_li))?;
         // In case known_version is lower than the requested ledger info an empty response might be
@@ -748,7 +749,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         request: GetChunkRequest,
         target_li: Option<LedgerInfoWithSignatures>,
         timeout_ms: u64,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
@@ -796,20 +797,21 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         peer: PeerNetworkId,
         request: GetChunkRequest,
         waypoint_version: Version,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let mut limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
-        ensure!(
-            self.local_state.committed_version() >= waypoint_version,
-            "Local version {} < requested waypoint version {}.",
-            self.local_state.committed_version(),
-            waypoint_version
-        );
-        ensure!(
-            request.known_version < waypoint_version,
-            "Waypoint request version {} is not smaller than waypoint {}",
-            request.known_version,
-            waypoint_version
-        );
+        if self.local_state.committed_version() < waypoint_version {
+            return Err(Error::UnexpectedError(format!(
+                "Local version {} < requested waypoint version {}.",
+                self.local_state.committed_version(),
+                waypoint_version
+            )));
+        }
+        if request.known_version >= waypoint_version {
+            return Err(Error::UnexpectedError(format!(
+                "Waypoint request version {} is not smaller than waypoint {}",
+                request.known_version, waypoint_version
+            )));
+        }
 
         // Retrieve the waypoint LI.
         let waypoint_li = self
@@ -821,13 +823,12 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             let end_of_epoch_li = self
                 .executor_proxy
                 .get_epoch_change_ledger_info(request.current_epoch)?;
-            ensure!(
-                end_of_epoch_li.ledger_info().version() >= request.known_version,
-                "waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
-                end_of_epoch_li.ledger_info().epoch(),
-                end_of_epoch_li.ledger_info().version(),
-                request.known_version,
-            );
+            if end_of_epoch_li.ledger_info().version() < request.known_version {
+                return Err(Error::UnexpectedError(format!(                "Waypoint request's current_epoch (epoch {}, version {}) < waypoint request's known_version {}",
+                                                                          end_of_epoch_li.ledger_info().epoch(),
+                                                                          end_of_epoch_li.ledger_info().version(),
+                                                                          request.known_version,)));
+            }
             let num_txns_until_end_of_epoch =
                 end_of_epoch_li.ledger_info().version() - request.known_version;
             limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
@@ -857,7 +858,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         known_version: u64,
         response_li: ResponseLedgerInfo,
         limit: u64,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let txns = self
             .executor_proxy
             .get_chunk(known_version, limit, response_li.version())?;
@@ -888,7 +889,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         send_result.map_err(|e| {
             error!(log.error(&e));
-            format_err!("Network error in sending chunk response to {}", peer)
+            Error::UnexpectedError(
+                format!("Network error in sending chunk response to {}", peer).into(),
+            )
         })
     }
 
@@ -900,7 +903,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         &self,
         request_epoch: u64,
         target: Option<LedgerInfoWithSignatures>,
-    ) -> Result<LedgerInfoWithSignatures> {
+    ) -> Result<LedgerInfoWithSignatures, Error> {
         let mut target_li = target.unwrap_or_else(|| self.local_state.committed_ledger_info());
         let target_epoch = target_li.ledger_info().epoch();
         if target_epoch > request_epoch {
@@ -1436,7 +1439,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         txn_list_with_proof: TransactionListWithProof,
         target: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let target_epoch = target.ledger_info().epoch();
         let target_version = target.ledger_info().version();
         let local_epoch = self.local_state.committed_epoch();
@@ -1589,7 +1592,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         &mut self,
         peer: PeerNetworkId,
         request_info: PendingRequestInfo,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let response_li = self.choose_response_li(request_info.request_epoch, None)?;
         self.deliver_chunk(
             peer,
@@ -1649,7 +1652,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         });
     }
 
-    fn send_sync_req_callback(sync_req: SyncRequest, msg: Result<()>) -> Result<()> {
+    fn send_sync_req_callback(sync_req: SyncRequest, msg: Result<()>) -> Result<(), Error> {
         sync_req.callback.send(msg).map_err(|failed_msg| {
             counters::FAILED_CHANNEL_SEND
                 .with_label_values(&[counters::CONSENSUS_SYNC_REQ_CALLBACK])
@@ -1689,7 +1692,6 @@ mod tests {
         network::StateSyncMessage,
         shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
     };
-    use anyhow::Result;
     use diem_config::{
         config::{NodeConfig, PeerNetworkId, RoleType},
         network_id::{NetworkId, NodeNetworkId},
