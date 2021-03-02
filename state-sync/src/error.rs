@@ -56,7 +56,6 @@ pub enum Error {
     UnexpectedError(String),
 }
 
-// TODO(joshlind): remove this once we move from anyhow error to thiserror in state sync!
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
         UnexpectedError(format!("{}", error))
