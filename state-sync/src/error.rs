@@ -3,6 +3,7 @@
 
 use crate::error::Error::UnexpectedError;
 use diem_types::transaction::Version;
+use futures::channel::{mpsc::SendError, oneshot::Canceled};
 use network::error::NetworkError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -45,6 +46,8 @@ pub enum Error {
     ReceivedNonSequentialChunk(String, String, String),
     #[error("Received an unexpected chunk type: {0}")]
     ReceivedWrongChunkType(String),
+    #[error("Received a oneshot::canceled event as the sender of a channel was dropped: {0}")]
+    SenderDroppedError(String),
     #[error("Synced beyond the target version. Synced version: {0}, target version: {1}")]
     SyncedBeyondTarget(Version, Version),
     #[error("State sync is uninitialized! Error: {0}")]
@@ -63,5 +66,17 @@ impl From<anyhow::Error> for Error {
 impl From<NetworkError> for Error {
     fn from(error: NetworkError) -> Self {
         Error::NetworkError(format!("{}", error))
+    }
+}
+
+impl From<SendError> for Error {
+    fn from(error: SendError) -> Self {
+        Error::UnexpectedError(format!("{}", error))
+    }
+}
+
+impl From<Canceled> for Error {
+    fn from(canceled: Canceled) -> Self {
+        Error::SenderDroppedError(format!("{}", canceled))
     }
 }

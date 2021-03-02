@@ -180,8 +180,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let starting_version = known_version
             .checked_add(1)
             .ok_or_else(|| Error::IntegerOverflow("Starting version has overflown!".into()))?;
-        self.storage
-            .get_transactions(starting_version, limit, target_version, false)
+        Ok(self
+            .storage
+            .get_transactions(starting_version, limit, target_version, false)?)
     }
 
     fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures, Error> {
@@ -204,11 +205,15 @@ impl ExecutorProxyTrait for ExecutorProxy {
         &self,
         version: u64,
     ) -> Result<LedgerInfoWithSignatures, Error> {
-        self.storage.get_epoch_ending_ledger_info(version)
+        self.storage
+            .get_epoch_ending_ledger_info(version)
+            .map_err(|error| error.into())
     }
 
     fn get_version_timestamp(&self, version: u64) -> Result<u64, Error> {
-        self.storage.get_block_timestamp(version)
+        self.storage
+            .get_block_timestamp(version)
+            .map_err(|error| error.into())
     }
 
     fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error> {
@@ -254,7 +259,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     error!(
                         LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError)
                             .subscription_name(subscription.name.clone())
-                            .error(&e),
+                            .error(&e.into()),
                         "Failed to publish reconfig notification to subscription {}",
                         subscription.name
                     );

@@ -87,7 +87,7 @@ pub(crate) struct StateSyncCoordinator<T> {
     target_ledger_info: Option<LedgerInfoWithSignatures>,
     // Option initialization listener to be called when the coordinator is caught up with
     // its waypoint.
-    initialization_listener: Option<oneshot::Sender<Result<()>>>,
+    initialization_listener: Option<oneshot::Sender<Result<(), Error>>>,
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
     subscriptions: HashMap<PeerNetworkId, PendingRequestInfo>,
@@ -333,7 +333,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
     fn wait_for_initialization(
         &mut self,
-        cb_sender: oneshot::Sender<Result<()>>,
+        cb_sender: oneshot::Sender<Result<(), Error>>,
     ) -> Result<(), Error> {
         if self.is_initialized() {
             Self::send_initialization_callback(cb_sender)?;
@@ -379,7 +379,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             return Ok(Self::send_sync_req_callback(request, Ok(()))?);
         }
         if target_version < local_li_version {
-            Self::send_sync_req_callback(request, Err(format_err!("Sync request to old version")))?;
+            Self::send_sync_req_callback(
+                request,
+                Err(Error::UnexpectedError("Sync request to old version".into())),
+            )?;
             return Err(Error::OldSyncRequestVersion(
                 target_version,
                 local_li_version,
@@ -403,7 +406,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     fn notify_consensus_of_commit_response(
         &self,
         commit_response: CommitResponse,
-        callback: Option<oneshot::Sender<Result<CommitResponse>>>,
+        callback: Option<oneshot::Sender<Result<CommitResponse, Error>>>,
     ) -> Result<(), Error> {
         if let Some(callback) = callback {
             if let Err(error) = callback.send(Ok(commit_response)) {
@@ -427,7 +430,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     async fn process_commit_notification(
         &mut self,
         committed_transactions: Vec<Transaction>,
-        commit_callback: Option<oneshot::Sender<Result<CommitResponse>>>,
+        commit_callback: Option<oneshot::Sender<Result<CommitResponse, Error>>>,
         reconfiguration_events: Vec<ContractEvent>,
         chunk_sender: Option<&PeerNetworkId>,
     ) -> Result<(), Error> {
@@ -1499,7 +1502,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 if let Some(sync_request) = self.sync_request.take() {
                     if let Err(e) = Self::send_sync_req_callback(
                         sync_request,
-                        Err(format_err!("Sync request timed out!")), // TODO(joshlind): fix these callback return messages!
+                        Err(Error::UnexpectedError("Sync request timed out!".into())),
                     ) {
                         error!(
                             LogSchema::event_log(LogEntry::SyncRequest, LogEvent::CallbackFail)
@@ -1652,19 +1655,21 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         });
     }
 
-    fn send_sync_req_callback(sync_req: SyncRequest, msg: Result<()>) -> Result<(), Error> {
+    fn send_sync_req_callback(sync_req: SyncRequest, msg: Result<(), Error>) -> Result<(), Error> {
         sync_req.callback.send(msg).map_err(|failed_msg| {
             counters::FAILED_CHANNEL_SEND
                 .with_label_values(&[counters::CONSENSUS_SYNC_REQ_CALLBACK])
                 .inc();
-            format_err!(
-                "Consensus sync request callback error - failed to send following msg: {:?}",
+            Error::UnexpectedError(format!(
+                "Consensus sync request callback error - failed to send the following message: {:?}",
                 failed_msg
-            )
+            ))
         })
     }
 
-    fn send_initialization_callback(callback: oneshot::Sender<Result<()>>) -> Result<(), Error> {
+    fn send_initialization_callback(
+        callback: oneshot::Sender<Result<(), Error>>,
+    ) -> Result<(), Error> {
         match callback.send(Ok(())) {
             Err(error) => {
                 counters::FAILED_CHANNEL_SEND
@@ -1853,7 +1858,8 @@ mod tests {
             .unwrap();
 
         // Verify that consensus is sent a commit ack when everything works
-        let (callback_sender, mut callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
+        let (callback_sender, mut callback_receiver) =
+            oneshot::channel::<Result<CommitResponse, Error>>();
         block_on(validator_coordinator.process_commit_notification(
             vec![],
             Some(callback_sender),
@@ -1867,7 +1873,8 @@ mod tests {
         }
 
         // TODO(joshlind): verify that mempool is sent the correct transactions!
-        let (callback_sender, _callback_receiver) = oneshot::channel::<Result<CommitResponse>>();
+        let (callback_sender, _callback_receiver) =
+            oneshot::channel::<Result<CommitResponse, Error>>();
         let committed_transactions = vec![create_test_transaction()];
         block_on(validator_coordinator.process_commit_notification(
             committed_transactions,
@@ -2318,7 +2325,7 @@ mod tests {
 
     fn create_sync_request_at_version(
         version: Version,
-    ) -> (SyncRequest, oneshot::Receiver<Result<()>>) {
+    ) -> (SyncRequest, oneshot::Receiver<Result<(), Error>>) {
         // Create ledger info with signatures at given version
         let ledger_info = create_ledger_info_at_version(version);
 

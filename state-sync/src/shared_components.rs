@@ -69,7 +69,9 @@ impl SyncState {
     }
 
     pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<(), Error> {
-        self.trusted_epoch_state.verify(ledger_info)
+        self.trusted_epoch_state
+            .verify(ledger_info)
+            .map_err(|error| error.into())
     }
 }
 
