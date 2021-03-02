@@ -2,7 +2,7 @@ address 0x2 {
 
 module X {
     fun f_private() {}
-    public(friend) f_friend() {}
+    public(friend) fun f_friend() {}
 }
 
 module Y {
