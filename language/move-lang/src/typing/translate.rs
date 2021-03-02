@@ -447,7 +447,7 @@ mod check_valid_constant {
                 REFERENCE_CASE
             }
             E::Pack(_, _, _, fields) => {
-                for (_, (_, (_, fe))) in fields {
+                for (_, _, (_, (_, fe))) in fields {
                     exp(context, fe)
                 }
                 "Structs are"
@@ -522,7 +522,7 @@ fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinit
         N::StructFields::Defined(m) => m,
     };
 
-    for (_field, idx_ty) in field_map.iter() {
+    for (_field_loc, _field, idx_ty) in field_map.iter() {
         let inst_ty = core::instantiate(context, idx_ty.1.clone());
         context.add_base_type_constraint(inst_ty.loc, "Invalid field type", inst_ty);
     }
@@ -1560,11 +1560,11 @@ fn add_field_types<T>(
             return fields.map(|f, (idx, x)| (idx, (context.error_type(f.loc()), x)));
         }
     };
-    for (f, _) in fields_ty.iter() {
-        if fields.get(&f).is_none() {
+    for (_, f_, _) in &fields_ty {
+        if fields.get_(&f_).is_none() {
             context.error(vec![(
                 loc,
-                format!("Missing {} for field '{}' in '{}::{}'", verb, f, m, n),
+                format!("Missing {} for field '{}' in '{}::{}'", verb, f_, m, n),
             )])
         }
     }

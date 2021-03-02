@@ -25,7 +25,7 @@ struct BorrowSafety {
 impl BorrowSafety {
     fn new<T>(local_types: &UniqueMap<Var, T>) -> Self {
         let mut local_numbers = UniqueMap::new();
-        for (idx, (v, _)) in local_types.iter().enumerate() {
+        for (idx, (v, _)) in local_types.key_cloned_iter().enumerate() {
             local_numbers.add(v, idx).unwrap();
         }
         Self { local_numbers }

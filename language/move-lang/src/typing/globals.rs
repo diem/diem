@@ -144,7 +144,7 @@ fn exp(
         }
 
         E::Pack(_, _, _, fields) => {
-            for (_, (_, (_, fe))) in fields.iter() {
+            for (_, _, (_, (_, fe))) in fields {
                 exp(context, annotated_acquires, seen, fe)
             }
         }

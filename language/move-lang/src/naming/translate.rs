@@ -49,11 +49,11 @@ impl Context {
         use ResolvedType as RT;
         let scoped_types = prog
             .modules
-            .iter()
+            .key_cloned_iter()
             .map(|(mident, mdef)| {
                 let mems = mdef
                     .structs
-                    .iter()
+                    .key_cloned_iter()
                     .map(|(s, sdef)| {
                         let kopt = sdef.resource_opt.map(|l| sp(l, Kind_::Resource));
                         let arity = sdef.type_parameters.len();
@@ -66,24 +66,24 @@ impl Context {
             .collect();
         let scoped_functions = prog
             .modules
-            .iter()
+            .key_cloned_iter()
             .map(|(mident, mdef)| {
                 let mems = mdef
                     .functions
                     .iter()
-                    .map(|(n, _)| (n.value().to_string(), n.loc()))
+                    .map(|(nloc, n, _)| (n.clone(), nloc))
                     .collect();
                 (mident, mems)
             })
             .collect();
         let scoped_constants = prog
             .modules
-            .iter()
+            .key_cloned_iter()
             .map(|(mident, mdef)| {
                 let mems = mdef
                     .constants
                     .iter()
-                    .map(|(n, _)| (n.value().to_string(), n.loc()))
+                    .map(|(nloc, n, _)| (n.clone(), nloc))
                     .collect();
                 (mident, mems)
             })
@@ -367,9 +367,8 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
         specs: _specs,
     } = escript;
     let outer_unscoped = context.save_unscoped();
-    for (n, _) in &econstants {
-        let sp!(loc, s) = n.0;
-        context.bind_constant(s, loc)
+    for (loc, s, _) in &econstants {
+        context.bind_constant(s.clone(), loc)
     }
     let inner_unscoped = context.save_unscoped();
     let constants = econstants.map(|name, c| {
@@ -520,7 +519,7 @@ fn struct_def(
     match (&resource_opt, &fields) {
         (Some(_), _) | (_, N::StructFields::Native(_)) => (),
         (None, N::StructFields::Defined(fields)) => {
-            for (field, idx_ty) in fields.iter() {
+            for (field, idx_ty) in fields.key_cloned_iter() {
                 check_no_nominal_resources(context, &name, &field, &idx_ty.1);
             }
         }

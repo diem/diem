@@ -244,7 +244,7 @@ impl fmt::Display for BuiltinFunction_ {
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Program { modules, scripts } = self;
-        for (m, mdef) in modules {
+        for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
@@ -266,7 +266,7 @@ impl AstDebug for Script {
             function_name,
             function,
         } = self;
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
@@ -289,15 +289,15 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
-        for sdef in structs {
+        for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
         }
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
-        for fdef in functions {
+        for fdef in functions.key_cloned_iter() {
             fdef.ast_debug(w);
             w.new_line();
         }
@@ -423,7 +423,7 @@ impl AstDebug for UnannotatedExp_ {
                 tys.ast_debug(w);
                 w.write(">");
                 w.write("{");
-                w.comma(fields, |w, (f, idx_bt_e)| {
+                w.comma(fields, |w, (_, f, idx_bt_e)| {
                     let (idx, (bt, e)) = idx_bt_e;
                     w.write(&format!("({}#{}:", idx, f));
                     bt.ast_debug(w);
@@ -666,7 +666,7 @@ impl AstDebug for LValue_ {
                 tys.ast_debug(w);
                 w.write(">");
                 w.write("{");
-                w.comma(fields, |w, (f, idx_bt_a)| {
+                w.comma(fields, |w, (_, f, idx_bt_a)| {
                     let (idx, (bt, a)) = idx_bt_a;
                     w.annotate(|w| w.write(&format!("{}#{}", idx, f)), bt);
                     w.write(": ");
@@ -684,7 +684,7 @@ impl AstDebug for LValue_ {
                 tys.ast_debug(w);
                 w.write(">");
                 w.write("{");
-                w.comma(fields, |w, (f, idx_bt_a)| {
+                w.comma(fields, |w, (_, f, idx_bt_a)| {
                     let (idx, (bt, a)) = idx_bt_a;
                     w.annotate(|w| w.write(&format!("{}#{}", idx, f)), bt);
                     w.write(": ");

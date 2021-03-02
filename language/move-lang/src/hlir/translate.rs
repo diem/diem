@@ -127,7 +127,7 @@ impl Context {
 
     pub fn add_struct_fields(&mut self, structs: &UniqueMap<StructName, H::StructDefinition>) {
         assert!(self.structs.is_empty());
-        for (sname, sdef) in structs.iter() {
+        for (sname, sdef) in structs.key_cloned_iter() {
             let mut fields = UniqueMap::new();
             let field_map = match &sdef.fields {
                 H::StructFields::Native(_) => continue,
@@ -591,7 +591,7 @@ fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
         }
         L::Unpack(_, _, _, fields) | L::BorrowUnpack(_, _, _, _, fields) => fields
             .iter()
-            .for_each(|(_, (_, (_, b)))| declare_bind(context, b)),
+            .for_each(|(_, _, (_, (_, b)))| declare_bind(context, b)),
     }
 }
 
@@ -1762,7 +1762,7 @@ fn check_unused_locals(
     let mut errors = Vec::new();
     // report unused locals
     for (v, _) in locals
-        .iter()
+        .key_cloned_iter()
         .filter(|(v, _)| !used.contains(v) && !v.starts_with_underscore())
     {
         let vstr = match display_var(v.value()) {

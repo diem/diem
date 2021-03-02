@@ -537,7 +537,7 @@ impl std::fmt::Display for Label {
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Program { modules, scripts } = self;
-        for (m, mdef) in modules {
+        for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
@@ -559,7 +559,7 @@ impl AstDebug for Script {
             function_name,
             function,
         } = self;
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
@@ -582,15 +582,15 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
-        for sdef in structs {
+        for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
         }
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
-        for fdef in functions {
+        for fdef in functions.key_cloned_iter() {
             fdef.ast_debug(w);
             w.new_line();
         }
@@ -668,7 +668,7 @@ impl AstDebug for (&UniqueMap<Var, SingleType>, &Block) {
         let (locals, body) = self;
         w.write("locals:");
         w.indent(4, |w| {
-            w.list(*locals, ",", |w, (v, st)| {
+            w.list(*locals, ",", |w, (_, v, st)| {
                 w.write(&format!("{}: ", v));
                 st.ast_debug(w);
                 true

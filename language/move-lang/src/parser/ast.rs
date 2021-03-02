@@ -18,12 +18,12 @@ macro_rules! new_name {
                 (self.0.loc, self.0.value)
             }
 
-            fn clone_drop_loc(&self) -> (Loc, String) {
-                (self.0.loc, self.0.value.clone())
-            }
-
             fn add_loc(loc: Loc, key: String) -> Self {
                 $n(sp(loc, key))
+            }
+
+            fn borrow(&self) -> (&Loc, &String) {
+                (&self.0.loc, &self.0.value)
             }
         }
 
@@ -584,12 +584,12 @@ impl TName for ModuleIdent {
         (self.locs, self.value)
     }
 
-    fn clone_drop_loc(&self) -> ((Loc, Loc), (Address, String)) {
-        (self.locs, self.value.clone())
-    }
-
     fn add_loc(locs: (Loc, Loc), value: (Address, String)) -> ModuleIdent {
         ModuleIdent { locs, value }
+    }
+
+    fn borrow(&self) -> (&(Loc, Loc), &(Address, String)) {
+        (&self.locs, &self.value)
     }
 }
 

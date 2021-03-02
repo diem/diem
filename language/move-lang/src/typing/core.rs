@@ -239,8 +239,11 @@ impl Context {
         declared: UniqueMap<Var, ()>,
     ) {
         // remove new locals from inner scope
-        for (new_local, _) in declared.iter().filter(|(v, _)| !old_locals.contains_key(v)) {
-            self.locals.remove(&new_local);
+        for (_, new_local, _) in declared
+            .iter()
+            .filter(|(_, v, _)| !old_locals.contains_key_(v))
+        {
+            self.locals.remove_(&new_local);
         }
 
         // return old type

@@ -39,14 +39,14 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     let mut errors = vec![];
     let orderings = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .map(|(m, mdef)| (m, mdef.dependency_order))
         .collect();
     let sdecls = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .flat_map(|(m, mdef)| {
-            mdef.structs.iter().map(move |(s, sdef)| {
+            mdef.structs.key_cloned_iter().map(move |(s, sdef)| {
                 let key = (m.clone(), s);
                 let is_nominal_resource = sdef.resource_opt.is_some();
                 let kinds = type_parameters(sdef.type_parameters.clone());
@@ -56,9 +56,9 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
         .collect();
     let fdecls = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .flat_map(|(m, mdef)| {
-            mdef.functions.iter().map(move |(f, fdef)| {
+            mdef.functions.key_cloned_iter().map(move |(f, fdef)| {
                 let key = (m.clone(), f);
                 let seen = seen_structs(&fdef.signature);
                 let sig = function_signature(&mut Context::new(None), fdef.signature.clone());

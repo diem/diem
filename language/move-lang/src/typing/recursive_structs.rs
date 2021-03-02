@@ -52,7 +52,7 @@ impl Context {
 
 pub fn modules(errors: &mut Errors, modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>) {
     modules
-        .iter()
+        .key_cloned_iter()
         .for_each(|(mname, m)| module(errors, mname, m))
 }
 
@@ -60,7 +60,7 @@ fn module(errors: &mut Errors, mname: ModuleIdent, module: &T::ModuleDefinition)
     let context = &mut Context::new(mname);
     module
         .structs
-        .iter()
+        .key_cloned_iter()
         .for_each(|(sname, sdef)| struct_def(context, sname, sdef));
     let graph = context.struct_graph();
     // - get the strongly connected components
@@ -78,7 +78,7 @@ fn struct_def(context: &mut Context, sname: StructName, sdef: &N::StructDefiniti
     match &sdef.fields {
         N::StructFields::Native(_) => (),
         N::StructFields::Defined(fields) => {
-            fields.iter().for_each(|(_, (_, ty))| type_(context, ty))
+            fields.iter().for_each(|(_, _, (_, ty))| type_(context, ty))
         }
     };
     context.current_struct = None;

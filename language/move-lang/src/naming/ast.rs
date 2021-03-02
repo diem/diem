@@ -512,7 +512,7 @@ impl fmt::Display for TypeName_ {
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Program { modules, scripts } = self;
-        for (m, mdef) in modules {
+        for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
@@ -534,7 +534,7 @@ impl AstDebug for Script {
             function_name,
             function,
         } = self;
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
@@ -557,15 +557,15 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
-        for sdef in structs {
+        for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
         }
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
-        for fdef in functions {
+        for fdef in functions.key_cloned_iter() {
             fdef.ast_debug(w);
             w.new_line();
         }
@@ -592,7 +592,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         type_parameters.ast_debug(w);
         if let StructFields::Defined(fields) = fields {
             w.block(|w| {
-                w.list(fields, ",", |w, (f, idx_st)| {
+                w.list(fields, ",", |w, (_, f, idx_st)| {
                     let (idx, st) = idx_st;
                     w.write(&format!("{}#{}: ", idx, f));
                     st.ast_debug(w);
@@ -829,7 +829,7 @@ impl AstDebug for Exp_ {
                     w.write(">");
                 }
                 w.write("{");
-                w.comma(fields, |w, (f, idx_e)| {
+                w.comma(fields, |w, (_, f, idx_e)| {
                     let (idx, e) = idx_e;
                     w.write(&format!("{}#{}: ", idx, f));
                     e.ast_debug(w);
@@ -1003,7 +1003,7 @@ impl AstDebug for LValue_ {
                     w.write(">");
                 }
                 w.write("{");
-                w.comma(fields, |w, (f, idx_b)| {
+                w.comma(fields, |w, (_, f, idx_b)| {
                     let (idx, b) = idx_b;
                     w.write(&format!("{}#{}: ", idx, f));
                     b.ast_debug(w);

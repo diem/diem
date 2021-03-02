@@ -1679,15 +1679,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let mut fields_not_convered: BTreeSet<Symbol> = BTreeSet::new();
                 fields_not_convered.extend(field_decls.keys());
                 let mut args = BTreeMap::new();
-                for (ref name, (_, exp)) in fields.iter() {
-                    let field_name = self.symbol_pool().make(&name.0.value);
+                for (name_loc, name_, (_, exp)) in fields.iter() {
+                    let field_name = self.symbol_pool().make(&name_);
                     if let Some((idx, field_ty)) = field_decls.get(&field_name) {
                         let exp = self.translate_exp(exp, &field_ty.instantiate(&instantiation));
                         fields_not_convered.remove(&field_name);
                         args.insert(idx, exp);
                     } else {
                         self.error(
-                            &self.to_loc(&name.0.loc),
+                            &self.to_loc(&name_loc),
                             &format!(
                                 "field `{}` not declared in struct `{}`",
                                 field_name.display(self.symbol_pool()),

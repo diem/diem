@@ -251,13 +251,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         compiled_module: &CompiledModule,
         source_map: &SourceMap<MoveIrLoc>,
     ) {
-        for (name, struct_def) in &module_def.structs {
+        for (name, struct_def) in module_def.structs.key_cloned_iter() {
             self.decl_ana_struct(&name, struct_def);
         }
-        for (name, fun_def) in &module_def.functions {
+        for (name, fun_def) in module_def.functions.key_cloned_iter() {
             self.decl_ana_fun(&name, fun_def);
         }
-        for (name, const_def) in &module_def.constants {
+        for (name, const_def) in module_def.constants.key_cloned_iter() {
             self.decl_ana_const(&name, const_def, compiled_module, source_map);
         }
         for spec in &module_def.specs {
@@ -531,19 +531,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
     ) {
         // Analyze all structs.
-        for (name, def) in &module_def.structs {
+        for (name, def) in module_def.structs.key_cloned_iter() {
             self.def_ana_struct(&name, def);
         }
 
         // Analyze all functions.
-        for (idx, (name, fun_def)) in module_def.functions.iter().enumerate() {
+        for (idx, (name, fun_def)) in module_def.functions.key_cloned_iter().enumerate() {
             self.def_ana_fun(&name, &fun_def.body, idx);
         }
 
         // Propagate the impurity of functions: a Move function which calls an
         // impure Move function is also considered impure.
         let mut visited = BTreeMap::new();
-        for (idx, (name, _)) in module_def.functions.iter().enumerate() {
+        for (idx, (name, _)) in module_def.functions.key_cloned_iter().enumerate() {
             let is_pure = self.propagate_function_impurity(&mut visited, SpecFunId::new(idx));
             let full_name = self.qualified_by_module_from_name(&name.0);
             if is_pure {
@@ -601,7 +601,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         // Analyze in-function spec blocks.
-        for (name, fun_def) in &module_def.functions {
+        for (name, fun_def) in module_def.functions.key_cloned_iter() {
             let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
             let qsym = self.qualified_by_module_from_name(&name.0);
             for (spec_id, spec_block) in fun_def.specs.iter() {
@@ -673,8 +673,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let fields = match &def.fields {
             EA::StructFields::Defined(fields) => {
                 let mut field_map = BTreeMap::new();
-                for (ref field_name, (idx, ty)) in fields.iter() {
-                    let field_sym = et.symbol_pool().make(&field_name.0.value);
+                for (_name_loc, field_name_, (idx, ty)) in fields {
+                    let field_sym = et.symbol_pool().make(field_name_);
                     let field_ty = et.translate_type(&ty);
                     field_map.insert(field_sym, (*idx, field_ty));
                 }
@@ -1176,8 +1176,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 if kind_opt.is_some() {
                     et.enter_scope();
-                    for (n, info) in &spec_info.used_locals {
-                        let sym = et.symbol_pool().make(n.0.value.as_str());
+                    for (_n_loc, n_, info) in &spec_info.used_locals {
+                        let sym = et.symbol_pool().make(n_);
                         let ty = et.translate_hlir_single_type(&info.type_);
                         if ty == Type::Error {
                             et.error(
@@ -2055,16 +2055,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let mut argument_map: BTreeMap<Symbol, Exp> = args_opt
             .map(|args| {
                 args.iter()
-                    .map(|(ref schema_var, (_, exp))| {
+                    .map(|(var_loc, schema_var_, (_, exp))| {
                         let pool = et.symbol_pool();
-                        let schema_sym = pool.make(&schema_var.0.value);
+                        let schema_sym = pool.make(schema_var_);
                         let schema_type = if let Some(LocalVarEntry { type_, .. }) =
                             schema_entry.all_vars.get(&schema_sym)
                         {
                             type_.instantiate(type_arguments)
                         } else {
                             et.error(
-                                &et.to_loc(&schema_var.0.loc),
+                                &et.to_loc(&var_loc),
                                 &format!("`{}` not declared in schema", schema_sym.display(pool)),
                             );
                             Type::Error

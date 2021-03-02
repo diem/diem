@@ -134,8 +134,8 @@ pub trait TName: Eq + Ord + Clone {
     type Key: Ord + Clone;
     type Loc: Copy;
     fn drop_loc(self) -> (Self::Loc, Self::Key);
-    fn clone_drop_loc(&self) -> (Self::Loc, Self::Key);
     fn add_loc(loc: Self::Loc, key: Self::Key) -> Self;
+    fn borrow(&self) -> (&Self::Loc, &Self::Key);
 }
 
 pub trait Identifier {
@@ -154,12 +154,12 @@ impl TName for Name {
         (self.loc, self.value)
     }
 
-    fn clone_drop_loc(&self) -> (Loc, String) {
-        (self.loc, self.value.clone())
-    }
-
     fn add_loc(loc: Loc, key: String) -> Self {
         sp(loc, key)
+    }
+
+    fn borrow(&self) -> (&Loc, &String) {
+        (&self.loc, &self.value)
     }
 }
 

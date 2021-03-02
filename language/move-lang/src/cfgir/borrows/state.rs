@@ -374,7 +374,7 @@ impl BorrowState {
 
     pub fn return_(&mut self, loc: Loc, rvalues: Values) -> Errors {
         let mut released = BTreeSet::new();
-        for (_local, stored_value) in self.locals.iter() {
+        for (_, _local, stored_value) in &self.locals {
             if let Value::Ref(id) = stored_value {
                 released.insert(*id);
             }
@@ -383,7 +383,7 @@ impl BorrowState {
 
         // Check locals are not borrowed
         let mut errors = Errors::new();
-        for (local, stored_value) in self.locals.iter() {
+        for (local, stored_value) in self.locals.key_cloned_iter() {
             if let Value::NonRef = stored_value {
                 let borrowed_by = self.local_borrowed_by(&local);
                 let mut local_errors =
@@ -661,10 +661,10 @@ impl BorrowState {
     pub fn canonicalize_locals(&mut self, local_numbers: &UniqueMap<Var, usize>) {
         let mut all_refs = self.borrows.all_refs();
         let mut id_map = BTreeMap::new();
-        for (local, value) in self.locals.iter() {
+        for (_, local_, value) in &self.locals {
             if let Value::Ref(id) = value {
                 assert!(all_refs.remove(id));
-                id_map.insert(*id, RefID::new(*local_numbers.get(&local).unwrap() + 1));
+                id_map.insert(*id, RefID::new(*local_numbers.get_(local_).unwrap() + 1));
             }
         }
         all_refs.remove(&Self::LOCAL_ROOT);
@@ -680,7 +680,7 @@ impl BorrowState {
     pub fn join_(mut self, mut other: Self) -> Self {
         let mut released = BTreeSet::new();
         let mut locals = UniqueMap::new();
-        for (local, self_value) in self.locals.iter() {
+        for (local, self_value) in self.locals.key_cloned_iter() {
             let joined_value = match (self_value, other.locals.get(&local).unwrap()) {
                 (Value::Ref(id1), Value::Ref(id2)) => {
                     assert!(id1 == id2);
@@ -790,8 +790,8 @@ impl BorrowState {
     pub fn display(&self) {
         println!("NEXT ID: {}", self.next_id);
         println!("LOCALS:");
-        for (var, value) in &self.locals {
-            println!("  {}: {}", var.value(), value)
+        for (_, var, value) in &self.locals {
+            println!("  {}: {}", var, value)
         }
         println!("BORROWS: ");
         self.borrows.display();

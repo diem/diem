@@ -35,7 +35,7 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn contains_key(&self, key: &K) -> bool {
-        self.contains_key_(&key.clone_drop_loc().1)
+        self.contains_key_(&key.borrow().1)
     }
 
     pub fn contains_key_(&self, key_: &K::Key) -> bool {
@@ -43,7 +43,7 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.get_(&key.clone_drop_loc().1)
+        self.get_(&key.borrow().1)
     }
 
     pub fn get_(&self, key_: &K::Key) -> Option<&V> {
@@ -51,7 +51,7 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        self.get_mut_(&key.clone_drop_loc().1)
+        self.get_mut_(&key.borrow().1)
     }
 
     pub fn get_mut_(&mut self, key_: &K::Key) -> Option<&mut V> {
@@ -59,7 +59,7 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn get_loc(&self, key: &K) -> Option<&K::Loc> {
-        self.get_loc_(&key.clone_drop_loc().1)
+        self.get_loc_(&key.borrow().1)
     }
 
     pub fn get_loc_(&self, key_: &K::Key) -> Option<&K::Loc> {
@@ -67,7 +67,7 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
-        self.remove_(&key.clone_drop_loc().1)
+        self.remove_(&key.borrow().1)
     }
 
     pub fn remove_(&mut self, key_: &K::Key) -> Option<V> {
@@ -113,15 +113,17 @@ impl<K: TName, V> UniqueMap<K, V> {
         F: FnMut(&K, &V, &V) -> V,
     {
         let mut joined = Self::new();
-        for (k, v1) in self.iter() {
+        for (loc, k_, v1) in self.iter() {
+            let k = K::add_loc(loc, k_.clone());
             let v = match other.get(&k) {
                 None => v1.clone(),
                 Some(v2) => f(&k, v1, v2),
             };
             assert!(joined.add(k, v).is_ok())
         }
-        for (k, v2) in other.iter() {
-            if !joined.contains_key(&k) {
+        for (loc, k_, v2) in other.iter() {
+            if !joined.contains_key_(&k_) {
+                let k = K::add_loc(loc, k_.clone());
                 assert!(joined.add(k, v2.clone()).is_ok())
             }
         }
@@ -130,6 +132,11 @@ impl<K: TName, V> UniqueMap<K, V> {
 
     pub fn iter(&self) -> Iter<K, V> {
         self.into_iter()
+    }
+
+    pub fn key_cloned_iter(&self) -> impl Iterator<Item = (K, &V)> {
+        self.into_iter()
+            .map(|(loc, k_, v)| (K::add_loc(loc, k_.clone()), v))
     }
 
     pub fn iter_mut(&mut self) -> IterMut<K, V> {
@@ -150,8 +157,8 @@ impl<K: TName, V> UniqueMap<K, V> {
     ) -> Result<UniqueMap<K, V>, (K::Key, K::Loc, K::Loc)> {
         let mut m = Self::new();
         for (k, v) in iter {
-            let (loc, key_) = k.clone_drop_loc();
-            if let Err(old_loc) = m.add(k, v) {
+            let (loc, key_) = k.drop_loc();
+            if let Err(old_loc) = m.add(K::add_loc(loc, key_.clone()), v) {
                 return Err((key_, loc, old_loc));
             }
         }
@@ -162,8 +169,8 @@ impl<K: TName, V> UniqueMap<K, V> {
 impl<K: TName, V: PartialEq> PartialEq for UniqueMap<K, V> {
     fn eq(&self, other: &UniqueMap<K, V>) -> bool {
         self.iter()
-            .all(|(k, v1)| other.get(&k).map(|v2| v1 == v2).unwrap_or(false))
-            && other.iter().all(|(k, _)| self.contains_key(&k))
+            .all(|(_, k_, v1)| other.get_(&k_).map(|v2| v1 == v2).unwrap_or(false))
+            && other.iter().all(|(_, k_, _)| self.contains_key_(&k_))
     }
 }
 impl<K: TName, V: Eq> Eq for UniqueMap<K, V> {}
@@ -220,13 +227,13 @@ impl<K: TName, V> IntoIterator for UniqueMap<K, V> {
 pub struct Iter<'a, K: TName, V>(
     std::iter::Map<
         std::collections::btree_map::Iter<'a, K::Key, (K::Loc, V)>,
-        fn((&'a K::Key, &'a (K::Loc, V))) -> (K, &'a V),
+        fn((&'a K::Key, &'a (K::Loc, V))) -> (K::Loc, &'a K::Key, &'a V),
     >,
     usize,
 );
 
 impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
-    type Item = (K, &'a V);
+    type Item = (K::Loc, &'a K::Key, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 > 0 {
@@ -241,15 +248,14 @@ impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a UniqueMap<K, V> {
-    type Item = (K, &'a V);
+    type Item = (K::Loc, &'a K::Key, &'a V);
     type IntoIter = Iter<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let fix = |(k_, loc_v): (&'a K::Key, &'a (K::Loc, V))| -> (K, &'a V) {
+        let fix = |(k_, loc_v): (&'a K::Key, &'a (K::Loc, V))| -> (K::Loc, &'a K::Key, &'a V) {
             let loc = loc_v.0;
             let v = &loc_v.1;
-            let k = K::add_loc(loc, k_.clone());
-            (k, v)
+            (loc, k_, v)
         };
         Iter(self.0.iter().map(fix), self.len())
     }

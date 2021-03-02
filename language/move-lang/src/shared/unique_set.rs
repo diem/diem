@@ -36,7 +36,7 @@ impl<T: TName> UniqueSet<T> {
     // interesection of two sets. Keeps the loc of the first set
     pub fn intersect(&self, other: &Self) -> Self {
         let mut intersection = Self::new();
-        for x in self {
+        for x in self.cloned_iter() {
             if !other.contains(&x) {
                 continue;
             }
@@ -48,24 +48,31 @@ impl<T: TName> UniqueSet<T> {
     // union of two sets. Prefers the loc of the first set
     pub fn union(&self, other: &Self) -> Self {
         let mut joined = Self::new();
-        for x in self {
+        for x in self.cloned_iter() {
             assert!(joined.add(x).is_ok());
         }
-        for x in other {
-            if joined.contains(&x) {
+        for (loc, x_) in other {
+            if joined.contains_(x_) {
                 continue;
             }
-            assert!(joined.add(x).is_ok())
+            assert!(joined.add(T::add_loc(loc, x_.clone())).is_ok())
         }
         joined
     }
 
     pub fn is_subset(&self, other: &Self) -> bool {
-        self.iter().all(|x| other.contains(&x))
+        self.iter().all(|(_, x_)| other.contains_(x_))
     }
 
     pub fn iter(&self) -> Iter<T> {
         self.into_iter()
+    }
+
+    pub fn cloned_iter(&self) -> impl Iterator<Item = T> {
+        self.into_iter()
+            .map(|(loc, k_)| T::add_loc(loc, k_.clone()))
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 
     pub fn from_elements(
@@ -171,12 +178,15 @@ impl<T: TName> IntoIterator for UniqueSet<T> {
 //**************************************************************************************************
 
 pub struct Iter<'a, T: TName>(
-    std::iter::Map<unique_map::Iter<'a, T, ()>, fn((T, &())) -> T>,
+    std::iter::Map<
+        unique_map::Iter<'a, T, ()>,
+        fn((T::Loc, &'a T::Key, &'a ())) -> (T::Loc, &'a T::Key),
+    >,
     usize,
 );
 
 impl<'a, T: TName> Iterator for Iter<'a, T> {
-    type Item = T;
+    type Item = (T::Loc, &'a T::Key);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 > 0 {
@@ -191,17 +201,11 @@ impl<'a, T: TName> Iterator for Iter<'a, T> {
 }
 
 impl<'a, T: TName> IntoIterator for &'a UniqueSet<T> {
-    type Item = T;
+    type Item = (T::Loc, &'a T::Key);
     type IntoIter = Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();
-        Iter(
-            self.0.iter().map(|ab_v| {
-                let (ab, ()) = ab_v;
-                ab
-            }),
-            len,
-        )
+        Iter(self.0.iter().map(|(loc, x_, ())| (loc, x_)), len)
     }
 }

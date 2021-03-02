@@ -1582,7 +1582,7 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
             unbound.insert(n.clone());
         }
         EE::Call(_, _, sp!(_, es_)) => unbound_names_exps(unbound, es_),
-        EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, (_, e))| e)),
+        EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, _, (_, e))| e)),
         EE::IfElse(econd, et, ef) => {
             unbound_names_exp(unbound, ef);
             unbound_names_exp(unbound, et);
@@ -1692,7 +1692,7 @@ fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
         }
         EL::Unpack(_, _, efields) => efields
             .iter()
-            .for_each(|(_, (_, l))| unbound_names_bind(unbound, l)),
+            .for_each(|(_, _, (_, l))| unbound_names_bind(unbound, l)),
     }
 }
 
@@ -1713,7 +1713,7 @@ fn unbound_names_assign(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
         }
         EL::Unpack(_, _, efields) => efields
             .iter()
-            .for_each(|(_, (_, l))| unbound_names_assign(unbound, l)),
+            .for_each(|(_, _, (_, l))| unbound_names_assign(unbound, l)),
     }
 }
 
