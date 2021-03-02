@@ -305,7 +305,7 @@ impl RequestManager {
             let curr_log = log.clone().peer(&peer);
             let result_label = if let Err(e) = send_result {
                 failed_peer_sends.push(peer.clone());
-                error!(curr_log.event(LogEvent::NetworkSendError).error(&e.into()));
+                error!(curr_log.event(LogEvent::NetworkSendError).error(&e));
                 counters::SEND_FAIL_LABEL
             } else {
                 debug!(curr_log.event(LogEvent::Success));
@@ -323,10 +323,10 @@ impl RequestManager {
         if failed_peer_sends.is_empty() {
             Ok(())
         } else {
-            return Err(Error::UnexpectedError(format!(
+            Err(Error::UnexpectedError(format!(
                 "Failed to send chunk request to: {:?}",
                 failed_peer_sends
-            )));
+            )))
         }
     }
 

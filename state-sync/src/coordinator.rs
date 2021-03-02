@@ -170,7 +170,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                                 .with_label_values(&[counters::SYNC_MSG_LABEL])
                                 .start_timer();
                             if let Err(e) = self.process_sync_request(*request) {
-                                error!(LogSchema::new(LogEntry::SyncRequest).error(&e.into()));
+                                error!(LogSchema::new(LogEntry::SyncRequest).error(&e));
                                 counters::SYNC_REQUEST_RESULT.with_label_values(&[counters::FAIL_LABEL]).inc();
                             }
                         }
@@ -180,7 +180,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                                 .start_timer();
                             if let Err(e) = self.process_commit_notification(notification.committed_transactions, Some(notification.callback), notification.reconfiguration_events, None).await {
                                 counters::CONSENSUS_COMMIT_FAIL_COUNT.inc();
-                                error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e.into()));
+                                error!(LogSchema::event_log(LogEntry::ConsensusCommit, LogEvent::PostCommitFail).error(&e));
                             }
                         }
                         CoordinatorMessage::GetSyncState(callback) => {
@@ -188,7 +188,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                         }
                         CoordinatorMessage::WaitForInitialization(cb_sender) => {
                             if let Err(e) = self.wait_for_initialization(cb_sender) {
-                                error!(LogSchema::new(LogEntry::Waypoint).error(&e.into()));
+                                error!(LogSchema::new(LogEntry::Waypoint).error(&e));
                             }
                         }
                     };
@@ -197,17 +197,17 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     match event {
                         Event::NewPeer(metadata) => {
                             if let Err(e) = self.process_new_peer(network_id, metadata.remote_peer_id, metadata.origin) {
-                                error!(LogSchema::new(LogEntry::NewPeer).error(&e.into()));
+                                error!(LogSchema::new(LogEntry::NewPeer).error(&e));
                             }
                         }
                         Event::LostPeer(metadata) => {
                             if let Err(e) = self.process_lost_peer(network_id, metadata.remote_peer_id, metadata.origin) {
-                                error!(LogSchema::new(LogEntry::LostPeer).error(&e.into()));
+                                error!(LogSchema::new(LogEntry::LostPeer).error(&e));
                             }
                         }
                         Event::Message(peer_id, message) => {
                             if let Err(e) = self.process_chunk_message(network_id.clone(), peer_id, message).await {
-                                error!(LogSchema::new(LogEntry::ProcessChunkMessage).error(&e.into()));
+                                error!(LogSchema::new(LogEntry::ProcessChunkMessage).error(&e));
                             }
                         }
                         unexpected_event => {
@@ -220,7 +220,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 },
                 _ = interval.select_next_some() => {
                     if let Err(e) = self.check_progress() {
-                        error!(LogSchema::event_log(LogEntry::ProgressCheck, LogEvent::Fail).error(&e.into()));
+                        error!(LogSchema::event_log(LogEntry::ProgressCheck, LogEvent::Fail).error(&e));
                     }
                 }
             }
@@ -272,7 +272,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     error!(
                         LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Fail)
                             .peer(&peer)
-                            .error(&error.clone().into())
+                            .error(&error.clone())
                             .local_li_version(self.local_state.committed_version())
                             .chunk_request(*request)
                     );
@@ -447,7 +447,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         {
             Ok(()) => CommitResponse::success(),
             Err(error) => {
-                error!(LogSchema::new(LogEntry::CommitFlow).error(&error.clone().into()));
+                error!(LogSchema::new(LogEntry::CommitFlow).error(&error));
                 CommitResponse::error(format!("{}", error))
             }
         };
@@ -456,7 +456,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         if let Err(error) =
             self.notify_consensus_of_commit_response(commit_response, commit_callback)
         {
-            error!(LogSchema::new(LogEntry::CommitFlow).error(&error.into()),);
+            error!(LogSchema::new(LogEntry::CommitFlow).error(&error),);
         }
 
         // Check long poll subscriptions, update peer requests and sync request last progress
@@ -892,9 +892,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         send_result.map_err(|e| {
             error!(log.error(&e));
-            Error::UnexpectedError(
-                format!("Network error in sending chunk response to {}", peer).into(),
-            )
+            Error::UnexpectedError(format!(
+                "Network error in sending chunk response to {}",
+                peer
+            ))
         })
     }
 
@@ -1025,7 +1026,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             let error = Error::ConsensusIsExecuting;
             error!(LogSchema::new(LogEntry::ProcessChunkResponse,)
                 .peer(peer)
-                .error(&error.clone().into()));
+                .error(&error));
             return Err(error);
         }
 
@@ -1050,7 +1051,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     LogEvent::ApplyChunkFail
                 )
                 .peer(peer)
-                .error(&error.clone().into()));
+                .error(&error));
                 counters::APPLY_CHUNK_COUNT
                     .with_label_values(&[
                         &peer.raw_network_id().to_string(),
@@ -1074,7 +1075,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             error!(
                 LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::PostCommitFail)
                     .peer(peer)
-                    .error(&error.clone().into())
+                    .error(&error)
             );
             error
         })
@@ -1322,7 +1323,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     );
                 }
                 Err(error) => {
-                    error!(LogSchema::new(LogEntry::SendChunkRequest).error(&error.into()));
+                    error!(LogSchema::new(LogEntry::SendChunkRequest).error(&error));
                 }
             }
         } else {
@@ -1555,7 +1556,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 LogSchema::event_log(log_entry, LogEvent::SendChunkRequestFail)
                     .version(known_version)
                     .local_epoch(known_epoch)
-                    .error(&error.clone().into())
+                    .error(&error)
             );
             Err(error)
         } else {
