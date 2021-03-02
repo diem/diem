@@ -13,10 +13,10 @@ use transaction_builder::encode_create_parent_vasp_account_script;
 use transaction_builder_generated::stdlib::ScriptCall;
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(16))]
+    #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn fuzz_scripts_genesis_state(
-        txns in vec(any::<ScriptCall>(), 0..100),
+        txns in vec(any::<ScriptCall>(), 0..10),
     ) {
         let executor = FakeExecutor::from_genesis_file();
         let mut accounts = vec![];

@@ -5,7 +5,9 @@
 
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_types::{
-    account_config, transaction::authenticator::AuthenticationKey, vm_status::KeptVMStatus,
+    account_config,
+    transaction::{authenticator::AuthenticationKey, TransactionStatus},
+    vm_status::KeptVMStatus,
 };
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use move_core_types::{
@@ -84,11 +86,13 @@ fn max_child_accounts_for_vasp_recovery_address() {
 
     let mut accounts = Vec::new();
 
+    // Batch the transactions to reduce the runtime of the test (cuts ~100 seconds)
+    let mut block = Vec::new();
     // Create the maximum number of allowed child accounts
     for i in 0..max_num_child_accounts + 1 {
         let child = executor.create_raw_account();
         accounts.push(child.clone());
-        executor.execute_and_apply(
+        block.push(
             account
                 .transaction()
                 .script(encode_create_child_vasp_account_script(
@@ -103,6 +107,11 @@ fn max_child_accounts_for_vasp_recovery_address() {
         );
     }
 
+    let output = executor.execute_block(block).unwrap();
+    for output in output {
+        executor.apply_write_set(output.write_set())
+    }
+
     // Now setup the recovery addresses
     let recovery_account = accounts.remove(0);
     let one_account_too_many = accounts.remove(0);
@@ -113,16 +122,25 @@ fn max_child_accounts_for_vasp_recovery_address() {
             .sequence_number(0)
             .sign(),
     );
-    for account in &accounts {
-        executor.execute_and_apply(
+
+    // Batch the transactions to reduce the runtime of the test (cuts ~ another 100 seconds)
+    let block = accounts
+        .iter()
+        .map(|account| {
             account
                 .transaction()
                 .script(encode_add_recovery_rotation_capability_script(
                     *recovery_account.address(),
                 ))
                 .sequence_number(0)
-                .sign(),
-        );
+                .sign()
+        })
+        .collect();
+
+    let outputs = executor.execute_block(block).unwrap();
+
+    for output in outputs {
+        executor.apply_write_set(output.write_set())
     }
 
     // Make sure that we can't add any more
@@ -142,12 +160,13 @@ fn max_child_accounts_for_vasp_recovery_address() {
         panic!("expected MoveAbort")
     }
 
-    // Now rotate all of the account keys
-    for account in &accounts {
-        let privkey = Ed25519PrivateKey::generate_for_testing();
-        let pubkey = privkey.public_key();
-        let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
-        executor.execute_and_apply(
+    // Batch again, cuts about ~100 seconds more as well
+    let block = accounts
+        .iter()
+        .map(|account| {
+            let privkey = Ed25519PrivateKey::generate_for_testing();
+            let pubkey = privkey.public_key();
+            let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
             account
                 .transaction()
                 .script(
@@ -158,7 +177,14 @@ fn max_child_accounts_for_vasp_recovery_address() {
                     ),
                 )
                 .sequence_number(1)
-                .sign(),
-        );
+                .sign()
+        })
+        .collect();
+
+    let outputs = executor.execute_block(block).unwrap();
+
+    // Now make sure all the rotations were executed
+    for output in outputs {
+        assert!(*output.status() == TransactionStatus::Keep(KeptVMStatus::Executed));
     }
 }
