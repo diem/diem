@@ -288,6 +288,16 @@ impl Context {
         }
     }
 
+    fn is_a_friend_of(&self, m: &ModuleIdent) -> bool {
+        match &self.current_module {
+            None => false,
+            Some(current_mident) => {
+                let minfo = self.module_info(m);
+                minfo.friends.contains_key(current_mident)
+            }
+        }
+    }
+
     fn module_info(&self, m: &ModuleIdent) -> &ModuleInfo {
         self.modules
             .get(m)
@@ -796,55 +806,43 @@ pub fn make_function_type(
         BTreeMap::new()
     };
     let defined_loc = finfo.defined_loc;
-    match &finfo.visibility {
+    match finfo.visibility {
+        FunctionVisibility::Internal if in_current_module => (),
         FunctionVisibility::Internal => {
-            if !in_current_module {
-                let internal_msg = format!(
-                    "This function is internal to its module. \
+            let internal_msg = format!(
+                "This function is internal to its module. \
                     Only '{}', '{}', and '{}' functions can be called outside of their module",
-                    FunctionVisibility::PUBLIC,
-                    FunctionVisibility::SCRIPT,
-                    FunctionVisibility::FRIEND
-                );
-                context.error(vec![
-                    (loc, format!("Invalid call to '{}::{}'", m, f)),
-                    (defined_loc, internal_msg),
-                ])
-            }
+                FunctionVisibility::PUBLIC,
+                FunctionVisibility::SCRIPT,
+                FunctionVisibility::FRIEND
+            );
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (defined_loc, internal_msg),
+            ])
         }
-        FunctionVisibility::Script(_) => {
-            if !context.is_in_script_context() {
-                let internal_msg = format!(
-                    "This function can only be called from a script context, \
+        FunctionVisibility::Script(_) if context.is_in_script_context() => (),
+        FunctionVisibility::Script(vis_loc) => {
+            let internal_msg = format!(
+                "This function can only be called from a script context, \
                                 i.e. a 'script' function or a '{}' function",
-                    FunctionVisibility::SCRIPT
-                );
-                context.error(vec![
-                    (loc, format!("Invalid call to '{}::{}'", m, f)),
-                    (defined_loc, internal_msg),
-                ])
-            }
+                FunctionVisibility::SCRIPT
+            );
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (vis_loc, internal_msg),
+            ])
         }
-        FunctionVisibility::Friend(_) => {
-            if !in_current_module {
-                let is_in_friend_list = match &context.current_module {
-                    None => false,
-                    Some(current_mident) => {
-                        let minfo = context.module_info(m);
-                        minfo.friends.contains_key(current_mident)
-                    }
-                };
-                if !is_in_friend_list {
-                    let internal_msg = format!(
-                        "This function can only be called from a friend of module '{}'",
-                        m
-                    );
-                    context.error(vec![
-                        (loc, format!("Invalid call to '{}::{}'", m, f)),
-                        (defined_loc, internal_msg),
-                    ])
-                }
-            }
+        FunctionVisibility::Friend(_) if in_current_module || context.is_a_friend_of(m) => (),
+        FunctionVisibility::Friend(vis_loc) => {
+            let internal_msg = format!(
+                "This function can only be called from a friend of module '{}'",
+                m
+            );
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (vis_loc, internal_msg),
+            ])
         }
         FunctionVisibility::Public(_) => (),
     };
