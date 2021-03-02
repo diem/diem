@@ -13,7 +13,7 @@ pub mod chunk_response;
 pub mod client;
 pub mod coordinator;
 mod counters;
-mod error;
+pub mod error;
 pub mod executor_proxy;
 mod logging;
 pub mod network;

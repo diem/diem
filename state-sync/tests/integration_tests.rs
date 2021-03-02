@@ -4,12 +4,11 @@
 use crate::test_harness::{
     default_handler, PFN_NETWORK, VALIDATOR_NETWORK, VFN_NETWORK, VFN_NETWORK_2,
 };
-use anyhow::{bail, Result};
 use diem_config::config::RoleType;
 use diem_types::{transaction::TransactionListWithProof, waypoint::Waypoint, PeerId};
 use netcore::transport::ConnectionOrigin::*;
 use network::protocols::direct_send::Message;
-use state_sync::network::StateSyncMessage;
+use state_sync::{error::Error, network::StateSyncMessage};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use test_harness::StateSyncEnvironment;
 
@@ -45,11 +44,11 @@ fn test_flaky_peer_sync() {
 
     // Create handler that causes error, but has successful retries
     let attempt = AtomicUsize::new(0);
-    let handler = Box::new(move |resp| -> Result<TransactionListWithProof> {
+    let handler = Box::new(move |resp| -> Result<TransactionListWithProof, Error> {
         let fail_request = attempt.load(Ordering::Relaxed) == 0;
         attempt.fetch_add(1, Ordering::Relaxed);
         if fail_request {
-            bail!("chunk fetch failed")
+            Err(Error::UnexpectedError("Failed to fetch chunk!".into()))
         } else {
             Ok(resp)
         }
@@ -80,8 +79,9 @@ fn test_flaky_peer_sync() {
 fn test_request_timeout() {
     let mut env = StateSyncEnvironment::new(2);
 
-    let handler =
-        Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
+    let handler = Box::new(move |_| -> Result<TransactionListWithProof, Error> {
+        Err(Error::UnexpectedError("Failed to fetch chunk!".into()))
+    });
     env.start_state_sync_peer(
         0,
         handler,

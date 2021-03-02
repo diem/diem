@@ -61,6 +61,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use state_sync::{
     bootstrapper::StateSyncBootstrapper,
     client::StateSyncClient,
+    error::Error,
     executor_proxy::ExecutorProxyTrait,
     network::{StateSyncEvents, StateSyncSender},
     shared_components::SyncState,
@@ -484,7 +485,7 @@ impl StateSyncEnvironment {
 }
 
 pub fn default_handler() -> MockRpcHandler {
-    Box::new(|resp| -> Result<TransactionListWithProof> { Ok(resp) })
+    Box::new(|resp| -> Result<TransactionListWithProof, Error> { Ok(resp) })
 }
 
 // Returns the initial peers with their signatures
@@ -814,7 +815,10 @@ impl MockStorage {
 }
 
 pub type MockRpcHandler = Box<
-    dyn Fn(TransactionListWithProof) -> Result<TransactionListWithProof> + Send + Sync + 'static,
+    dyn Fn(TransactionListWithProof) -> Result<TransactionListWithProof, Error>
+        + Send
+        + Sync
+        + 'static,
 >;
 
 pub struct MockExecutorProxy {
