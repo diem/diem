@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::error::Error::UnexpectedError;
 use diem_types::transaction::Version;
 use futures::channel::{mpsc::SendError, oneshot::Canceled};
 use network::error::NetworkError;
@@ -54,12 +53,6 @@ pub enum Error {
     UninitializedError(String),
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(error: anyhow::Error) -> Self {
-        UnexpectedError(format!("{}", error))
-    }
 }
 
 impl From<NetworkError> for Error {

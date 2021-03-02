@@ -1429,7 +1429,11 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         } else {
             None
         };
-        self.waypoint.verify(waypoint_li.ledger_info())?;
+        self.waypoint
+            .verify(waypoint_li.ledger_info())
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Waypoint verification failed: {}", error))
+            })?;
 
         self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li_to_commit)?;
         self.log_highest_seen_version(None);

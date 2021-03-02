@@ -90,13 +90,25 @@ impl ExecutorProxy {
             .iter()
             .map(|config_id| config_id.access_path())
             .collect();
-        let configs = storage.batch_fetch_resources(access_paths)?;
-        let epoch = storage
-            .get_account_state_with_proof_by_version(
-                config_address(),
-                storage.fetch_synced_version()?,
-            )?
-            .0
+        let configs = storage
+            .batch_fetch_resources(access_paths)
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Failed batch fetch of resources: {}", error))
+            })?;
+        let synced_version = storage.fetch_synced_version().map_err(|error| {
+            Error::UnexpectedError(format!("Failed to fetch storage synced version: {}", error))
+        })?;
+
+        let account_state_blob = storage
+            .get_account_state_with_proof_by_version(config_address(), synced_version)
+            .map_err(|error| {
+                Error::UnexpectedError(format!(
+                    "Failed to fetch account state with proof {}",
+                    error
+                ))
+            })?
+            .0;
+        let epoch = account_state_blob
             .map(|blob| {
                 AccountState::try_from(&blob).and_then(|state| {
                     Ok(state
@@ -107,9 +119,10 @@ impl ExecutorProxy {
                         .epoch())
                 })
             })
-            .ok_or_else(|| {
-                Error::UnexpectedError("Failed to fetch Configuration resource".into())
-            })??;
+            .ok_or_else(|| Error::UnexpectedError("Missing account state blob".into()))?
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Failed to fetch configuration resource: {}", error))
+            })?;
 
         Ok(OnChainConfigPayload::new(
             epoch,
@@ -126,9 +139,13 @@ impl ExecutorProxy {
 
 impl ExecutorProxyTrait for ExecutorProxy {
     fn get_local_storage_state(&self) -> Result<SyncState, Error> {
-        let storage_info = self
-            .storage
-            .get_startup_info()?
+        let storage_info = self.storage.get_startup_info().map_err(|error| {
+            Error::UnexpectedError(format!(
+                "Failed to get startup info from storage: {}",
+                error
+            ))
+        })?;
+        let storage_info = storage_info
             .ok_or_else(|| Error::UnexpectedError("Missing startup info from storage".into()))?;
         let current_epoch_state = storage_info.get_epoch_state().clone();
 
@@ -153,11 +170,16 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<(), Error> {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
-        let reconfig_events = self.executor.execute_and_commit_chunk(
-            txn_list_with_proof,
-            verified_target_li,
-            intermediate_end_of_epoch_li,
-        )?;
+        let reconfig_events = self
+            .executor
+            .execute_and_commit_chunk(
+                txn_list_with_proof,
+                verified_target_li,
+                intermediate_end_of_epoch_li,
+            )
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Execute and commit chunk failed: {}", error))
+            })?;
         timer.stop_and_record();
         if let Err(e) = self.publish_on_chain_config_updates(reconfig_events) {
             error!(
@@ -180,17 +202,23 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let starting_version = known_version
             .checked_add(1)
             .ok_or_else(|| Error::IntegerOverflow("Starting version has overflown!".into()))?;
-        Ok(self
-            .storage
-            .get_transactions(starting_version, limit, target_version, false)?)
+        self.storage
+            .get_transactions(starting_version, limit, target_version, false)
+            .map_err(|error| {
+                Error::UnexpectedError(format!("Failed to get transactions from storage {}", error))
+            })
     }
 
     fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures, Error> {
         let next_epoch = epoch
             .checked_add(1)
             .ok_or_else(|| Error::IntegerOverflow("Next epoch has overflown!".into()))?;
-        self.storage
-            .get_epoch_ending_ledger_infos(epoch, next_epoch)?
+        let mut epoch_ending_ledger_infos = self
+            .storage
+            .get_epoch_ending_ledger_infos(epoch, next_epoch)
+            .map_err(|error| Error::UnexpectedError(format!("{}", error)))?;
+
+        epoch_ending_ledger_infos
             .ledger_info_with_sigs
             .pop()
             .ok_or_else(|| {
@@ -207,13 +235,13 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<LedgerInfoWithSignatures, Error> {
         self.storage
             .get_epoch_ending_ledger_info(version)
-            .map_err(|error| error.into())
+            .map_err(|error| Error::UnexpectedError(format!("{}", error)))
     }
 
     fn get_version_timestamp(&self, version: u64) -> Result<u64, Error> {
         self.storage
             .get_block_timestamp(version)
-            .map_err(|error| error.into())
+            .map_err(|error| Error::UnexpectedError(format!("{}", error)))
     }
 
     fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error> {
@@ -259,7 +287,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     error!(
                         LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError)
                             .subscription_name(subscription.name.clone())
-                            .error(&e.into()),
+                            .error(&Error::UnexpectedError(format!("{}", e))),
                         "Failed to publish reconfig notification to subscription {}",
                         subscription.name
                     );
