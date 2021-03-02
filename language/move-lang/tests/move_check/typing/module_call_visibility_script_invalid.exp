@@ -6,7 +6,7 @@ error:
     │                                   ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_script'
     ·
   5 │     public(script) fun f_script() {}
-    │                        -------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -17,7 +17,7 @@ error:
     │                                                 ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_script'
     ·
   5 │     public(script) fun f_script() {}
-    │                        -------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -28,7 +28,7 @@ error:
     │                                         ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_script'
     ·
   5 │     public(script) fun f_script() {}
-    │                        -------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -39,7 +39,7 @@ error:
     │                                        ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x2::M::f_script_call_script'
     ·
  12 │     public(script) fun f_script_call_script() { X::f_script() }
-    │                        -------------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -50,7 +50,7 @@ error:
     │                                                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x2::M::f_script_call_script'
     ·
  12 │     public(script) fun f_script_call_script() { X::f_script() }
-    │                        -------------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -61,7 +61,7 @@ error:
     │                                              ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x2::M::f_script_call_script'
     ·
  12 │     public(script) fun f_script_call_script() { X::f_script() }
-    │                        -------------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
+    │     -------------- This function can only be called from a script context, i.e. a 'script' function or a 'public(script)' function
     │
 
 error: 
@@ -83,6 +83,6 @@ error:
     │                                                 ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_friend'
     ·
   6 │     public(friend) fun f_friend() {}
-    │                        -------- This function can only be called from a friend of module '0x2::X'
+    │     -------------- This function can only be called from a friend of module '0x2::X'
     │
 
