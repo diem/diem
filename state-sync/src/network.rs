@@ -3,12 +3,13 @@
 
 //! Interface between State Sync and Network layers.
 
-use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
+use crate::{
+    chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters, error::Error,
+};
 use channel::message_queues::QueueStyle;
 use diem_metrics::IntCounterVec;
 use diem_types::PeerId;
 use network::{
-    error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
@@ -57,13 +58,9 @@ impl NewNetworkSender for StateSyncSender {
 }
 
 impl StateSyncSender {
-    pub fn send_to(
-        &mut self,
-        recipient: PeerId,
-        message: StateSyncMessage,
-    ) -> Result<(), NetworkError> {
+    pub fn send_to(&mut self, recipient: PeerId, message: StateSyncMessage) -> Result<(), Error> {
         let protocol = ProtocolId::StateSyncDirectSend;
-        self.inner.send_to(recipient, protocol, message)
+        Ok(self.inner.send_to(recipient, protocol, message)?)
     }
 }
 

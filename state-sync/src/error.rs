@@ -3,6 +3,7 @@
 
 use crate::error::Error::UnexpectedError;
 use diem_types::transaction::Version;
+use network::error::NetworkError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -18,6 +19,8 @@ pub enum Error {
     IntegerOverflow(String),
     #[error("Received an invalid chunk request: {0}")]
     InvalidChunkRequest(String),
+    #[error("Encountered a network error: {0}")]
+    NetworkError(String),
     #[error("No peers are currently available: {0}")]
     NoAvailablePeers(String),
     #[error("No sync request was issued by consensus: {0}")]
@@ -54,5 +57,11 @@ pub enum Error {
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
         UnexpectedError(format!("{}", error))
+    }
+}
+
+impl From<NetworkError> for Error {
+    fn from(error: NetworkError) -> Self {
+        Error::NetworkError(format!("{}", error))
     }
 }
