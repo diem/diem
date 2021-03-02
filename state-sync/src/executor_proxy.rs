@@ -3,10 +3,10 @@
 
 use crate::{
     counters,
+    error::Error,
     logging::{LogEntry, LogEvent, LogSchema},
     shared_components::SyncState,
 };
-use anyhow::{format_err, Result};
 use diem_logger::prelude::*;
 use diem_types::{
     account_state::AccountState,
@@ -25,7 +25,7 @@ use subscription_service::ReconfigSubscription;
 /// Proxies interactions with execution and storage for state synchronization
 pub trait ExecutorProxyTrait: Send {
     /// Sync the local state with the latest in storage.
-    fn get_local_storage_state(&self) -> Result<SyncState>;
+    fn get_local_storage_state(&self) -> Result<SyncState, Error>;
 
     /// Execute and commit a batch of transactions
     fn execute_chunk(
@@ -33,7 +33,7 @@ pub trait ExecutorProxyTrait: Send {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()>;
+    ) -> Result<(), Error>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
     fn get_chunk(
@@ -41,19 +41,20 @@ pub trait ExecutorProxyTrait: Send {
         known_version: u64,
         limit: u64,
         target_version: u64,
-    ) -> Result<TransactionListWithProof>;
+    ) -> Result<TransactionListWithProof, Error>;
 
     /// Get the epoch changing ledger info for the given epoch so that we can move to next epoch.
-    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures, Error>;
 
     /// Get ledger info at an epoch boundary version.
-    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_epoch_ending_ledger_info(&self, version: u64)
+        -> Result<LedgerInfoWithSignatures, Error>;
 
     /// Returns the ledger's timestamp for the given version in microseconds
-    fn get_version_timestamp(&self, version: u64) -> Result<u64>;
+    fn get_version_timestamp(&self, version: u64) -> Result<u64, Error>;
 
     /// publishes on-chain config updates to subscribed components
-    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
+    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error>;
 }
 
 pub(crate) struct ExecutorProxy {
@@ -84,7 +85,7 @@ impl ExecutorProxy {
         }
     }
 
-    fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload> {
+    fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload, Error> {
         let access_paths = ON_CHAIN_CONFIG_REGISTRY
             .iter()
             .map(|config_id| config_id.access_path())
@@ -100,11 +101,15 @@ impl ExecutorProxy {
                 AccountState::try_from(&blob).and_then(|state| {
                     Ok(state
                         .get_configuration_resource()?
-                        .ok_or_else(|| format_err!("ConfigurationResource does not exist"))?
+                        .ok_or_else(|| {
+                            Error::UnexpectedError("Configuration resource does not exist".into())
+                        })?
                         .epoch())
                 })
             })
-            .ok_or_else(|| format_err!("Failed to fetch ConfigurationResource"))??;
+            .ok_or_else(|| {
+                Error::UnexpectedError("Failed to fetch Configuration resource".into())
+            })??;
 
         Ok(OnChainConfigPayload::new(
             epoch,
@@ -120,11 +125,11 @@ impl ExecutorProxy {
 }
 
 impl ExecutorProxyTrait for ExecutorProxy {
-    fn get_local_storage_state(&self) -> Result<SyncState> {
+    fn get_local_storage_state(&self) -> Result<SyncState, Error> {
         let storage_info = self
             .storage
             .get_startup_info()?
-            .ok_or_else(|| format_err!("[state sync] Missing storage info"))?;
+            .ok_or_else(|| Error::UnexpectedError("Missing startup info from storage".into()))?;
         let current_epoch_state = storage_info.get_epoch_state().clone();
 
         let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
@@ -145,7 +150,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
         let reconfig_events = self.executor.execute_and_commit_chunk(
@@ -171,34 +176,42 @@ impl ExecutorProxyTrait for ExecutorProxy {
         known_version: u64,
         limit: u64,
         target_version: u64,
-    ) -> Result<TransactionListWithProof> {
+    ) -> Result<TransactionListWithProof, Error> {
         let starting_version = known_version
             .checked_add(1)
-            .ok_or_else(|| format_err!("Starting version has overflown!"))?;
+            .ok_or_else(|| Error::IntegerOverflow("Starting version has overflown!".into()))?;
         self.storage
             .get_transactions(starting_version, limit, target_version, false)
     }
 
-    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_change_ledger_info(&self, epoch: u64) -> Result<LedgerInfoWithSignatures, Error> {
         let next_epoch = epoch
             .checked_add(1)
-            .ok_or_else(|| format_err!("Next epoch has overflown!"))?;
+            .ok_or_else(|| Error::IntegerOverflow("Next epoch has overflown!".into()))?;
         self.storage
             .get_epoch_ending_ledger_infos(epoch, next_epoch)?
             .ledger_info_with_sigs
             .pop()
-            .ok_or_else(|| format_err!("Empty EpochChangeProof"))
+            .ok_or_else(|| {
+                Error::UnexpectedError(format!(
+                    "Missing epoch change ledger info for epoch: {:?}",
+                    epoch
+                ))
+            })
     }
 
-    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_ending_ledger_info(
+        &self,
+        version: u64,
+    ) -> Result<LedgerInfoWithSignatures, Error> {
         self.storage.get_epoch_ending_ledger_info(version)
     }
 
-    fn get_version_timestamp(&self, version: u64) -> Result<u64> {
+    fn get_version_timestamp(&self, version: u64) -> Result<u64, Error> {
         self.storage.get_block_timestamp(version)
     }
 
-    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {
+    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error> {
         if events.is_empty() {
             return Ok(());
         }
@@ -263,7 +276,9 @@ impl ExecutorProxyTrait for ExecutorProxy {
                 .inc();
             Ok(())
         } else {
-            Err(format_err!("failed to publish at least one subscription"))
+            Err(Error::UnexpectedError(
+                "Failed to publish at least one subscription!".into(),
+            ))
         }
     }
 }
