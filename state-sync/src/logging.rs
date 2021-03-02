@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chunk_request::GetChunkRequest, chunk_response::GetChunkResponse,
+    chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, error::Error,
     request_manager::ChunkRequestInfo,
 };
 use diem_config::config::PeerNetworkId;
@@ -17,7 +17,7 @@ pub struct LogSchema<'a> {
     name: LogEntry,
     event: Option<LogEvent>,
     #[schema(debug)]
-    error: Option<&'a anyhow::Error>, // TODO(joshlind): remove anyhow once we migrate!
+    error: Option<&'a Error>,
     #[schema(display)]
     peer: Option<&'a PeerNetworkId>,
     is_upstream_peer: Option<bool>,

@@ -887,7 +887,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             .inc();
 
         send_result.map_err(|e| {
-            error!(log.error(&e.into()));
+            error!(log.error(&e));
             format_err!("Network error in sending chunk response to {}", peer)
         })
     }
