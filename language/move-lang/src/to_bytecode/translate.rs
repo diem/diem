@@ -136,15 +136,15 @@ fn module(
         })
         .collect();
 
-    let addr = DiemAddress::new(ident.0.value.address.to_u8());
-    let mname = ident.0.value.name.clone();
+    let addr = DiemAddress::new(ident.value.0.to_u8());
+    let mname = ident.value.1.clone();
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
         struct_declarations,
         function_declarations,
     );
     let ir_module = IR::ModuleDefinition {
-        name: IR::ModuleName::new(mname.0.value),
+        name: IR::ModuleName::new(mname),
         // TODO: add friends here
         friends: vec![],
         imports,

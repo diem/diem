@@ -10,7 +10,7 @@ use crate::{
     },
     parser::ast::{
         self as P, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
-        ModuleIdent_, ModuleName, StructName, Var,
+        ModuleName, StructName, Var,
     },
     shared::{unique_map::UniqueMap, *},
 };
@@ -223,12 +223,12 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     let P::ModuleDefinition { loc, name, members } = mdef;
     let _ = check_restricted_self_name(context, "module", &name.0);
 
-    let name_loc = name.loc();
-    let mident_ = ModuleIdent_ {
-        address: context.cur_address(),
-        name,
+    let name = name.0;
+    let name_loc = name.loc;
+    let current_module = ModuleIdent {
+        locs: (name_loc, name_loc),
+        value: (context.cur_address(), name.value),
     };
-    let current_module = ModuleIdent(sp(name_loc, mident_));
 
     let mut new_scope = AliasMap::new();
     module_self_aliases(&mut new_scope, &current_module);
@@ -361,11 +361,10 @@ fn module_members(
     address: Address,
     m: &P::ModuleDefinition,
 ) {
-    let mident_ = ModuleIdent_ {
-        address,
-        name: m.name.clone(),
+    let mident = ModuleIdent {
+        locs: (m.name.loc(), m.name.loc()),
+        value: (address, m.name.value().to_string()),
     };
-    let mident = ModuleIdent(sp(m.name.loc(), mident_));
     let mut cur_members = members.remove(&mident).unwrap_or_else(ModuleMembers::new);
     for mem in &m.members {
         use P::{SpecBlockMember_ as SBM, SpecBlockTarget_ as SBT, SpecBlock_ as SB};
@@ -489,7 +488,8 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
     };
     macro_rules! add_module_alias {
         ($ident:expr, $alias_opt:expr) => {{
-            let alias: Name = $alias_opt.unwrap_or_else(|| $ident.0.value.name.0.clone());
+            let alias: Name =
+                $alias_opt.unwrap_or_else(|| sp($ident.locs.1, $ident.value.1.clone()));
             if let Err(()) = check_restricted_self_name(context, "module alias", &alias) {
                 return;
             }

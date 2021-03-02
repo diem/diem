@@ -3,7 +3,7 @@
 
 use crate::shared::{ast_debug::*, Address, Identifier, Name, TName};
 use move_ir_types::location::*;
-use std::fmt;
+use std::{cmp::Ordering, fmt, hash::Hash};
 
 macro_rules! new_name {
     ($n:ident) => {
@@ -83,13 +83,14 @@ pub enum Use {
 
 new_name!(ModuleName);
 
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone)]
-pub struct ModuleIdent_ {
-    pub name: ModuleName,
-    pub address: Address,
+#[derive(Debug, Clone)]
+pub struct ModuleIdent {
+    pub locs: (
+        /* whole entity loc */ Loc,
+        /* module name loc */ Loc,
+    ),
+    pub value: (Address, String),
 }
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Clone)]
-pub struct ModuleIdent(pub Spanned<ModuleIdent_>);
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
@@ -572,7 +573,7 @@ pub enum SequenceItem_ {
 pub type SequenceItem = Spanned<SequenceItem_>;
 
 //**************************************************************************************************
-// Loc
+// Traits
 //**************************************************************************************************
 
 impl TName for ModuleIdent {
@@ -580,22 +581,42 @@ impl TName for ModuleIdent {
     type Loc = (Loc, Loc);
 
     fn drop_loc(self) -> ((Loc, Loc), (Address, String)) {
-        let inner = self.0.value;
-        let (nloc, name_) = inner.name.drop_loc();
-        ((self.0.loc, nloc), (inner.address, name_))
+        (self.locs, self.value)
     }
 
     fn clone_drop_loc(&self) -> ((Loc, Loc), (Address, String)) {
-        let (nloc, name_) = self.0.value.name.clone_drop_loc();
-        ((self.0.loc, nloc), (self.0.value.address, name_))
+        (self.locs, self.value.clone())
     }
 
-    fn add_loc(locs: (Loc, Loc), key: (Address, String)) -> ModuleIdent {
-        let (iloc, nloc) = locs;
-        let (address, name_str) = key;
-        let name = ModuleName::add_loc(nloc, name_str);
-        let ident_ = ModuleIdent_ { address, name };
-        ModuleIdent(sp(iloc, ident_))
+    fn add_loc(locs: (Loc, Loc), value: (Address, String)) -> ModuleIdent {
+        ModuleIdent { locs, value }
+    }
+}
+
+// Hash, Eq, PartialEq, Ord, PartialOrd,
+impl PartialEq for ModuleIdent {
+    fn eq(&self, other: &ModuleIdent) -> bool {
+        self.value == other.value
+    }
+}
+
+impl Eq for ModuleIdent {}
+
+impl PartialOrd for ModuleIdent {
+    fn partial_cmp(&self, other: &ModuleIdent) -> Option<Ordering> {
+        self.value.partial_cmp(&other.value)
+    }
+}
+
+impl Ord for ModuleIdent {
+    fn cmp(&self, other: &ModuleIdent) -> Ordering {
+        self.value.cmp(&other.value)
+    }
+}
+
+impl Hash for ModuleIdent {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state)
     }
 }
 
@@ -615,7 +636,7 @@ impl Definition {
 
 impl ModuleIdent {
     pub fn loc(&self) -> Loc {
-        self.0.loc
+        self.locs.0
     }
 }
 
@@ -755,7 +776,7 @@ impl FunctionVisibility {
 
 impl fmt::Display for ModuleIdent {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}::{}", self.0.value.address, &self.0.value.name)
+        write!(f, "{}::{}", self.value.0, &self.value.1)
     }
 }
 

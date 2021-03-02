@@ -256,15 +256,13 @@ fn parse_module_ident(tokens: &mut Lexer<'_>) -> Result<ModuleIdent, Error> {
     let start_loc = tokens.start_loc();
     let address = parse_address(tokens)?;
     consume_token(tokens, Tok::ColonColon)?;
-    let name = parse_module_name(tokens)?;
+    let name = parse_module_name(tokens)?.0;
     let end_loc = tokens.previous_end_loc();
-    let m = ModuleIdent_ { address, name };
-    Ok(ModuleIdent(spanned(
-        tokens.file_name(),
-        start_loc,
-        end_loc,
-        m,
-    )))
+    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+    Ok(ModuleIdent {
+        locs: (loc, name.loc),
+        value: (address, name.value),
+    })
 }
 
 // Parse a module access (a variable, struct type, or function):

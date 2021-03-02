@@ -56,7 +56,7 @@ pub enum CompiledUnit {
 impl CompiledUnit {
     pub fn name(&self) -> String {
         match self {
-            CompiledUnit::Module { ident, .. } => format!("{}", &ident.0.value.name),
+            CompiledUnit::Module { ident, .. } => ident.value.1.to_owned(),
             CompiledUnit::Script { key, .. } => key.to_owned(),
         }
     }
