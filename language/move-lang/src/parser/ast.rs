@@ -578,15 +578,18 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 impl TName for ModuleIdent {
     type Key = (Address, String);
     type Loc = (Loc, Loc);
+
     fn drop_loc(self) -> ((Loc, Loc), (Address, String)) {
         let inner = self.0.value;
         let (nloc, name_) = inner.name.drop_loc();
         ((self.0.loc, nloc), (inner.address, name_))
     }
+
     fn clone_drop_loc(&self) -> ((Loc, Loc), (Address, String)) {
         let (nloc, name_) = self.0.value.name.clone_drop_loc();
         ((self.0.loc, nloc), (self.0.value.address, name_))
     }
+
     fn add_loc(locs: (Loc, Loc), key: (Address, String)) -> ModuleIdent {
         let (iloc, nloc) = locs;
         let (address, name_str) = key;

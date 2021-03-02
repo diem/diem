@@ -10,7 +10,7 @@ use std::{collections::BTreeMap, fmt::Debug, iter::IntoIterator};
 
 /// Unique wrapper around `BTreeMap` that throws on duplicate inserts
 #[derive(Default, Clone, Debug)]
-pub struct UniqueMap<K: TName, V>(BTreeMap<K::Key, (K::Loc, V)>);
+pub struct UniqueMap<K: TName, V>(pub(crate) BTreeMap<K::Key, (K::Loc, V)>);
 
 impl<K: TName, V> UniqueMap<K, V> {
     pub fn new() -> Self {
