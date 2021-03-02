@@ -10,7 +10,7 @@ use diem_state_view::StateView;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{self, CurrencyInfoResource, RoleId},
-    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption},
+    on_chain_config::{DiemVersion, VMConfig, VMPublishingOption, DIEM_VERSION_2},
     transaction::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
         VMValidatorResult,
@@ -150,7 +150,21 @@ pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     let mut cost_strategy =
         CostStrategy::system(vm.get_gas_schedule(&log_context)?, GasUnits::new(0));
     let prologue_status = match transaction.payload() {
-        TransactionPayload::Script(_) | TransactionPayload::ScriptFunction(_) => {
+        TransactionPayload::Script(_) => {
+            vm.check_gas(&txn_data, &log_context)?;
+            vm.run_script_prologue(
+                &mut session,
+                &mut cost_strategy,
+                &txn_data,
+                &currency_code,
+                &log_context,
+            )
+        }
+        TransactionPayload::ScriptFunction(_) => {
+            // gate the behavior until the Diem version is ready
+            if vm.get_diem_version()? < DIEM_VERSION_2 {
+                return Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING));
+            }
             // NOTE: Script and ScriptFunction shares the same prologue
             vm.check_gas(&txn_data, &log_context)?;
             vm.run_script_prologue(

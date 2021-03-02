@@ -43,7 +43,6 @@ use std::{
     collections::HashSet,
     convert::{AsMut, AsRef},
 };
-use vm::errors::{Location, PartialVMError};
 
 pub struct DiemVM(DiemVMImpl);
 
@@ -183,28 +182,15 @@ impl DiemVM {
                     cost_strategy,
                     log_context,
                 ),
-                TransactionPayload::ScriptFunction(script_fn) => session
-                    .execute_script_function(
-                        script_fn.module(),
-                        script_fn.function(),
-                        script_fn.ty_args().to_vec(),
-                        convert_txn_args(script_fn.args()),
-                        vec![txn_data.sender()],
-                        cost_strategy,
-                        log_context,
-                    )
-                    .and_then(|rets| {
-                        if rets.is_empty() {
-                            Ok(())
-                        } else {
-                            // the bytecode verifier should have checked that the script function
-                            // being referred to in the transaction payload has no return values.
-                            Err(
-                                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                                    .finish(Location::Undefined),
-                            )
-                        }
-                    }),
+                TransactionPayload::ScriptFunction(script_fn) => session.execute_script_function(
+                    script_fn.module(),
+                    script_fn.function(),
+                    script_fn.ty_args().to_vec(),
+                    convert_txn_args(script_fn.args()),
+                    vec![txn_data.sender()],
+                    cost_strategy,
+                    log_context,
+                ),
                 TransactionPayload::Module(_) | TransactionPayload::WriteSet(_) => {
                     return Err(VMStatus::Error(StatusCode::UNREACHABLE));
                 }
