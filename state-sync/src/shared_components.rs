@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use crate::error::Error;
 use diem_types::{
     epoch_change::Verifier, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
 };
@@ -68,7 +68,7 @@ impl SyncState {
         self.trusted_epoch_state.epoch
     }
 
-    pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
+    pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<(), Error> {
         self.trusted_epoch_state.verify(ledger_info)
     }
 }

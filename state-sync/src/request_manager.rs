@@ -8,7 +8,6 @@ use crate::{
     logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSyncMessage, StateSyncSender},
 };
-use anyhow::{bail, format_err, Result};
 use diem_config::{
     config::{PeerNetworkId, UpstreamConfig},
     network_id::{NetworkId, NodeNetworkId},
@@ -275,14 +274,16 @@ impl RequestManager {
         chosen_peers
     }
 
-    pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
+    pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<(), Error> {
         let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_request(req.clone());
 
         // update internal state
         let peers = self.pick_peers();
         if peers.is_empty() {
             warn!(log.event(LogEvent::MissingPeers));
-            bail!("No peers to send chunk request to");
+            return Err(Error::NoAvailablePeers(
+                "No peers to send chunk request to".into(),
+            ));
         }
 
         let req_info = self.add_request(req.known_version, peers.clone());
@@ -322,7 +323,10 @@ impl RequestManager {
         if failed_peer_sends.is_empty() {
             Ok(())
         } else {
-            bail!("Failed to send chunk request to: {:?}", failed_peer_sends)
+            return Err(Error::UnexpectedError(format!(
+                "Failed to send chunk request to: {:?}",
+                failed_peer_sends
+            )));
         }
     }
 
@@ -457,7 +461,7 @@ impl RequestManager {
 
     /// Checks whether the request sent with known_version = `version` has timed out
     /// Returns true if such a request timed out (or does not exist), else false.
-    pub fn has_request_timed_out(&mut self, version: u64) -> Result<bool> {
+    pub fn has_request_timed_out(&mut self, version: u64) -> Result<bool, Error> {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
         let timeout = is_timeout(last_request_time, self.request_timeout);
@@ -480,13 +484,15 @@ impl RequestManager {
         let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
         if is_timeout(multicast_start_time, self.multicast_timeout) {
             let new_multicast_level = std::cmp::min(
-                self.multicast_level
-                    .checked_add(1)
-                    .ok_or_else(|| format_err!("New multicast level has overflown!"))?,
+                self.multicast_level.checked_add(1).ok_or_else(|| {
+                    Error::IntegerOverflow("New multicast level has overflown!".into())
+                })?,
                 self.upstream_config
                     .upstream_count()
                     .checked_sub(1)
-                    .ok_or_else(|| format_err!("Upstream count has overflown!"))?, // multicast_level (=network preference) is 0-indexed
+                    .ok_or_else(|| {
+                        Error::IntegerOverflow("Upstream count has overflown!".into())
+                    })?, // multicast_level (=network preference) is 0-indexed
             );
             self.update_multicast(new_multicast_level, Some(version));
         }
