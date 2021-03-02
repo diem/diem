@@ -10,7 +10,7 @@ use crate::{
     typing::core::{self, Subst},
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Context
@@ -37,7 +37,6 @@ impl ResolvedType {
 struct Context {
     errors: Errors,
     current_module: Option<ModuleIdent>,
-    involved_modules: BTreeSet<ModuleIdent>,
     scoped_types: BTreeMap<ModuleIdent, BTreeMap<String, (Loc, ModuleIdent, Option<Kind>, usize)>>,
     unscoped_types: BTreeMap<String, ResolvedType>,
     scoped_functions: BTreeMap<ModuleIdent, BTreeMap<String, Loc>>,
@@ -48,7 +47,6 @@ struct Context {
 impl Context {
     fn new(prog: &E::Program, errors: Errors) -> Self {
         use ResolvedType as RT;
-        let involved_modules = prog.modules.iter().map(|(mident, _)| mident).collect();
         let scoped_types = prog
             .modules
             .key_cloned_iter()
@@ -97,7 +95,6 @@ impl Context {
         Self {
             errors,
             current_module: None,
-            involved_modules,
             scoped_types,
             scoped_functions,
             scoped_constants,
@@ -120,7 +117,10 @@ impl Context {
     }
 
     fn resolve_module(&mut self, loc: Loc, m: &ModuleIdent) -> bool {
-        let resolved = self.involved_modules.contains(m);
+        // NOTE: piggybacking on `scoped_functions` to provide a set of modules in the context。
+        // TODO: a better solution would be to have a single `BTreeMap<ModuleIdent, ModuleInfo>`
+        // in the context that can be used to resolve modules, types, and functions.
+        let resolved = self.scoped_functions.contains_key(m);
         if !resolved {
             self.error(vec![(loc, format!("Unbound module '{}'", m,))]);
         }
