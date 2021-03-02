@@ -6,6 +6,13 @@ COPY rust-toolchain /diem/rust-toolchain
 COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
+# WORKAROUND for glibc 2.33 and old Docker
+# See https://github.com/actions/virtual-environments/issues/2658
+# Thanks to https://github.com/lxqt/lxqt-panel/pull/1562
+RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
+    curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
+    bsdtar -C / -xvf "$patched_glibc"
+
 # Batch mode and all operations tooling
 RUN scripts/dev_setup.sh -t -o -y -b -p && pacman -Scc --noconfirm
 ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
