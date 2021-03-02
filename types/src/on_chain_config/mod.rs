@@ -23,8 +23,11 @@ mod vm_config;
 mod vm_publishing_option;
 
 pub use self::{
-    diem_version::DiemVersion, registered_currencies::RegisteredCurrencies,
-    validator_set::ValidatorSet, vm_config::VMConfig, vm_publishing_option::VMPublishingOption,
+    diem_version::{DiemVersion, DIEM_VERSION_2},
+    registered_currencies::RegisteredCurrencies,
+    validator_set::ValidatorSet,
+    vm_config::VMConfig,
+    vm_publishing_option::VMPublishingOption,
 };
 
 /// To register an on-chain config in Rust:
