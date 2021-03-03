@@ -25,12 +25,18 @@ use structopt::StructOpt;
 pub struct RestoreCoordinatorOpt {
     #[structopt(flatten)]
     pub metadata_cache_opt: MetadataCacheOpt,
+    #[structopt(
+        long,
+        help = "Replay all transactions, don't try to use a state snapshot."
+    )]
+    pub replay_all: bool,
 }
 
 pub struct RestoreCoordinator {
     storage: Arc<dyn BackupStorage>,
     global_opt: GlobalRestoreOptions,
     metadata_cache_opt: MetadataCacheOpt,
+    replay_all: bool,
 }
 
 impl RestoreCoordinator {
@@ -43,6 +49,7 @@ impl RestoreCoordinator {
             storage,
             global_opt,
             metadata_cache_opt: opt.metadata_cache_opt,
+            replay_all: opt.replay_all,
         }
     }
 
@@ -74,7 +81,11 @@ impl RestoreCoordinator {
         let transactions = metadata_view.select_transaction_backups(self.target_version())?;
         let actual_target_version = self.get_actual_target_version(&transactions)?;
         let epoch_endings = metadata_view.select_epoch_ending_backups(actual_target_version)?;
-        let state_snapshot = metadata_view.select_state_snapshot(actual_target_version)?;
+        let state_snapshot = if self.replay_all {
+            None
+        } else {
+            metadata_view.select_state_snapshot(actual_target_version)?
+        };
         let replay_transactions_from_version = match &state_snapshot {
             Some(b) => b.version + 1,
             None => 0,
