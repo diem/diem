@@ -31,12 +31,11 @@ use diem_vm::{
     VMValidator,
 };
 use move_core_types::{
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
 
@@ -353,8 +352,7 @@ impl FakeExecutor {
         args: Vec<Vec<u8>>,
     ) {
         let write_set = {
-            let cost_table = zero_cost_schedule();
-            let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
+            let mut cost_strategy = CostStrategy::system();
             let vm = MoveVM::new();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
@@ -391,8 +389,7 @@ impl FakeExecutor {
         type_params: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
-        let cost_table = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
+        let mut cost_strategy = CostStrategy::system();
         let vm = MoveVM::new();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);

@@ -26,12 +26,7 @@ use diem_vm::DiemVM;
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use module_generation::generate_module;
-use move_core_types::{
-    gas_schedule::{GasAlgebra, GasUnits},
-    language_storage::TypeTag,
-    value::MoveValue,
-    vm_status::VMStatus,
-};
+use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
 use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::gas_schedule::CostStrategy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -111,14 +106,13 @@ fn execute_function_in_module<S: StateView>(
         let internals = diem_vm.internals();
 
         let log_context = NoContextLog::new();
-        let gas_schedule = internals.gas_schedule(&log_context)?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
             let sender = AccountAddress::random();
             let mut mod_blob = vec![];
             module
                 .serialize(&mut mod_blob)
                 .expect("Module serialization error");
-            let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
+            let mut cost_strategy = CostStrategy::system();
             txn_context
                 .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
                 .map_err(|e| e.into_vm_status())?;

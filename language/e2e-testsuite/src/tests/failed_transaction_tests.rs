@@ -9,7 +9,7 @@ use language_e2e_tests::{
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
 use move_vm_runtime::logging::NoContextLog;
-use move_vm_types::gas_schedule::zero_cost_schedule;
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 
 #[test]
 fn failed_transaction_cleanup_test() {
@@ -30,14 +30,13 @@ fn failed_transaction_cleanup_test() {
             ..Default::default()
         };
 
-        let gas_left = GasUnits::new(10_000);
         let gas_schedule = zero_cost_schedule();
+        let mut cost_strategy = CostStrategy::transaction(&gas_schedule, GasUnits::new(10_000));
 
         // TYPE_MISMATCH should be kept and charged.
         let out1 = diem_vm.failed_transaction_cleanup(
             VMStatus::Error(StatusCode::TYPE_MISMATCH),
-            &gas_schedule,
-            gas_left,
+            &mut cost_strategy,
             &txn_data,
             &data_cache,
             &account::xus_currency_code(),
@@ -55,8 +54,7 @@ fn failed_transaction_cleanup_test() {
         // Invariant violations should be discarded and not charged.
         let out2 = diem_vm.failed_transaction_cleanup(
             VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR),
-            &gas_schedule,
-            gas_left,
+            &mut cost_strategy,
             &txn_data,
             &data_cache,
             &account::xus_currency_code(),

@@ -6,13 +6,12 @@ use std::collections::HashMap;
 use crate::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 use vm::{
     errors::{PartialVMResult, VMResult},
     file_format::{
@@ -262,8 +261,7 @@ fn call_script_with_args_ty_args_signers(
     let remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     session.execute_script(
         script,
         ty_args,
@@ -291,8 +289,7 @@ fn call_script_function_with_args_ty_args_signers(
     remote_view.add_module(module);
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     session.execute_script_function(
         &id,
         function_name.as_ident_str(),
@@ -766,8 +763,7 @@ fn call_missing_item() {
     let mut remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     let error = session
         .execute_script_function(
             id,

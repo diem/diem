@@ -469,8 +469,8 @@ move run` must be applied to a module inside `storage/`",
 }
 
 fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
-    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
     let cost_strategy = if let Some(gas_budget) = gas_budget {
+        let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
         let max_gas_budget = u64::MAX
             .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
             .unwrap();
@@ -480,7 +480,7 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
         CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
     } else {
         // no budget specified. use CostStrategy::system, which disables gas metering
-        CostStrategy::system(gas_schedule, GasUnits::new(0))
+        CostStrategy::system()
     };
     Ok(cost_strategy)
 }

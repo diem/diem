@@ -15,14 +15,11 @@ use diem_validator_interface::{
 };
 use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
 use move_cli::OnDiskStateView;
-use move_core_types::{
-    effects::ChangeSet as MoveChanges,
-    gas_schedule::{GasAlgebra, GasUnits},
-};
+use move_core_types::effects::ChangeSet as MoveChanges;
 use move_lang::{compiled_unit::CompiledUnit, move_compile};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::path::{Path, PathBuf};
 use vm::{errors::VMResult, file_format::CompiledModule};
@@ -301,10 +298,9 @@ impl DiemDebugger {
         // TODO: The code here is compiled against the local move stdlib instead of the one from on
         // chain storage.
         let predicate = compile_move_script(code_path)?;
-        let gas_table = zero_cost_schedule();
         let is_version_ok = |version| {
             self.run_session_at_version(version, override_changeset.clone(), |session| {
-                let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
+                let mut cost_strategy = CostStrategy::system();
                 let log_context = NoContextLog::new();
                 session.execute_script(
                     predicate.clone(),

@@ -14,6 +14,7 @@ use move_core_types::{
     },
     vm_status::StatusCode,
 };
+use once_cell::sync::Lazy;
 use vm::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -23,6 +24,8 @@ use vm::{
     },
     file_format_common::{instruction_key, Opcodes},
 };
+
+static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 
 /// The Move VM implementation for gas charging.
 ///
@@ -53,10 +56,10 @@ impl<'a> CostStrategy<'a> {
     ///
     /// It should be used by clients in very specific cases and when executing system
     /// code that does not have to charge the user.
-    pub fn system(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+    pub fn system() -> Self {
         Self {
-            gas_left: cost_table.gas_constants.to_internal_units(gas_left),
-            cost_table,
+            gas_left: InternalGasUnits::new(0),
+            cost_table: &ZERO_COST_SCHEDULE,
             charge: false,
         }
     }
@@ -126,9 +129,6 @@ impl<'a> CostStrategy<'a> {
 
     pub fn disable_metering(&mut self) {
         self.charge = false
-    }
-    pub fn enable_metering(&mut self) {
-        self.charge = true
     }
 }
 

@@ -5,7 +5,6 @@ use crate::compiler::{as_module, as_script, compile_units};
 use move_core_types::{
     account_address::AccountAddress,
     effects::ChangeSet,
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag},
     value::{serialize_values, MoveValue},
@@ -13,7 +12,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
@@ -86,8 +85,7 @@ fn test_malformed_resource() {
     let vm = MoveVM::new();
 
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     // Execute the first script to publish a resource Foo.
     let mut script_blob = vec![];
@@ -173,8 +171,7 @@ fn test_malformed_module() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     // Publish M and call M::foo. No errors should be thrown.
     {
@@ -236,8 +233,7 @@ fn test_unverifiable_module() {
     let m = as_module(units.pop().unwrap());
 
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
 
@@ -318,8 +314,7 @@ fn test_missing_module_dependency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -394,8 +389,7 @@ fn test_malformed_module_denpency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -474,8 +468,7 @@ fn test_unverifiable_module_dependency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -566,8 +559,7 @@ const LIST_OF_ERROR_CODES: &[StatusCode] = &[
 #[test]
 fn test_storage_returns_bogus_error_when_loading_module() {
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -596,8 +588,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
 #[test]
 fn test_storage_returns_bogus_error_when_loading_resource() {
     let log_context = NoContextLog::new();
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
 
     let code = r#"
         address 0x1 {

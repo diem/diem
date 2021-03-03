@@ -7,13 +7,12 @@ use diem_state_view::StateView;
 use diem_types::{access_path::AccessPath, account_address::AccountAddress};
 use diem_vm::data_cache::StateViewCache;
 use move_core_types::{
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use vm::CompiledModule;
@@ -71,11 +70,10 @@ fn execute<M: Measurement + 'static>(
     // establish running context
     let sender = AccountAddress::new(Address::DIEM_CORE.to_u8());
     let state = EmptyStateView;
-    let gas_schedule = zero_cost_schedule();
     let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&data_cache);
-    let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(100_000_000));
+    let mut cost_strategy = CostStrategy::system();
 
     for module in modules {
         let mut mod_blob = vec![];

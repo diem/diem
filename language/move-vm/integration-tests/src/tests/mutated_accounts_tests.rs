@@ -4,14 +4,13 @@
 use crate::compiler::{as_module, compile_units};
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::ModuleId,
     value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -46,8 +45,7 @@ fn mutated_accounts() {
     let vm = MoveVM::new();
     let mut sess = vm.new_session(&storage);
 
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    let mut cost_strategy = CostStrategy::system();
     let context = NoContextLog::new();
 
     let publish = Identifier::new("publish").unwrap();

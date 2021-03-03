@@ -4,13 +4,12 @@
 use crate::compiler::compile_modules_in_file;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
+use move_vm_types::gas_schedule::CostStrategy;
 use std::{path::PathBuf, sync::Arc, thread};
 use vm::CompiledModule;
 
@@ -55,9 +54,8 @@ impl Adapter {
 
     fn publish_modules(&mut self, modules: Vec<CompiledModule>) {
         let mut session = self.vm.new_session(&self.store);
-        let cost_table = zero_cost_schedule();
         let log_context = NoContextLog::new();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system();
         for module in modules {
             let mut binary = vec![];
             module
@@ -86,8 +84,7 @@ impl Adapter {
                 let vm = self.vm.clone();
                 let data_store = self.store.clone();
                 children.push(thread::spawn(move || {
-                    let cost_table = zero_cost_schedule();
-                    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+                    let mut cost_strategy = CostStrategy::system();
                     let log_context = NoContextLog::new();
                     let mut session = vm.new_session(&data_store);
                     session
@@ -111,8 +108,7 @@ impl Adapter {
     }
 
     fn call_function(&self, module: &ModuleId, name: &IdentStr) {
-        let cost_table = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+        let mut cost_strategy = CostStrategy::system();
         let log_context = NoContextLog::new();
         let mut session = self.vm.new_session(&self.store);
         session
