@@ -16,7 +16,7 @@ can proceed but may still be discarded during the execution step.
 
 _[Execution](#Execution)_ receives a block of transactions and a starting
 state and evaluates those transactions in order. Each transaction is first
-revalidated. The system state may have changed since the validation step, so
+re-validated. The system state may have changed since the validation step, so
 that a transaction has become invalid and needs to be discarded. Otherwise,
 the execution process computes a set of side effects for each transaction.
 Those side effects are used in two ways: they are included in the final
@@ -316,7 +316,7 @@ validation fails with a `SEQUENCE_NUMBER_TOO_BIG` status code.
 the sender's account. If the transaction sequence number is too low,
 validation fails with a `SEQUENCE_NUMBER_TOO_OLD` status code. If the number
 is too high, the behavior depends on whether it is the initial validation or
-the revalidation done as part of the execution phase. Multiple transactions
+the re-validation done as part of the execution phase. Multiple transactions
 with consecutive sequence numbers from the same account can be in flight at
 the same time, but they must be executed strictly in order. For that reason, a
 transaction sequence number higher than expected for the sender's account is
@@ -619,7 +619,7 @@ input transactions are executed.
 
 ### Script and Module Transactions
 
-After revalidating a user transaction, the adapter processes the payload,
+After re-validating a user transaction, the adapter processes the payload,
 depending on its contents. In the common case, the payload is either a script
 or a module:
 
@@ -1154,7 +1154,7 @@ function with arguments and no return value.
 Modules can be thought as library or shared code, whereas Scripts can only
 come in input with the Transaction.
 
-Binaries are composed by a couple of headers and a set of tables. Some of
+Binaries are composed of headers and a set of tables. Some of
 those tables are common to both Modules and Scripts, others specific to one or
 the other. There is also data specific only to Modules or Scripts.
 
