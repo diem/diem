@@ -6,6 +6,6 @@ error:
    │     ^^^^^^^^^^^^^^ Invalid friend declaration
    ·
  7 │     friend 0x2::M;
-   │     -------------- Cannot declare modules out of the current address as a friend
+   │            ------ Cannot declare modules out of the current address as a friend
    │
 

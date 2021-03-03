@@ -411,12 +411,15 @@ fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
         // rather than a technical requirement. The compiler, VM, and bytecode verifier DO NOT
         // rely on the assumption that friend modules must reside within the same account address.
         let msg = "Cannot declare modules out of the current address as a friend";
-        context.error(vec![(loc, "Invalid friend declaration"), (loc, msg)]);
+        context.error(vec![
+            (loc, "Invalid friend declaration"),
+            (mident.loc(), msg),
+        ]);
         None
     } else if &mident == current_mident {
         context.error(vec![
             (loc, "Invalid friend declaration"),
-            (loc, "Cannot declare the module itself as a friend"),
+            (mident.loc(), "Cannot declare the module itself as a friend"),
         ]);
         None
     } else if context.resolve_module(loc, &mident) {
