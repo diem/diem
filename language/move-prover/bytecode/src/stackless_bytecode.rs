@@ -99,6 +99,13 @@ pub enum Operation {
     // User function
     Function(ModuleId, FunId, Vec<Type>),
 
+    // Markers for beginning and end of transformed
+    // opaque function calls (the function call is replaced
+    // by assumes/asserts/gotos, but it is necessary to
+    // add more assumes/asserts later in the pipeline.
+    OpaqueCallBegin(ModuleId, FunId, Vec<Type>),
+    OpaqueCallEnd(ModuleId, FunId, Vec<Type>),
+
     // Pack/Unpack
     Pack(ModuleId, StructId, Vec<Type>),
     Unpack(ModuleId, StructId, Vec<Type>),
@@ -175,6 +182,8 @@ impl Operation {
     pub fn can_abort(&self) -> bool {
         match self {
             Operation::Function(_, _, _) => true,
+            Operation::OpaqueCallBegin(_, _, _) => false,
+            Operation::OpaqueCallEnd(_, _, _) => false,
             Operation::Pack(_, _, _) => false,
             Operation::Unpack(_, _, _) => false,
             Operation::MoveTo(_, _, _) => true,
@@ -582,6 +591,7 @@ impl Bytecode {
                 }
                 (add_abort(val_targets, aa), mut_targets)
             }
+            // *** Double-check that this is in Wolfgang's code
             Call(_, dests, _, _, aa) => {
                 let mut val_targets = vec![];
                 let mut mut_targets = vec![];
@@ -796,7 +806,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
         use Operation::*;
         match self.oper {
             // User function
-            Function(mid, fid, targs) => {
+            Function(mid, fid, targs)
+            | OpaqueCallBegin(mid, fid, targs)
+            | OpaqueCallEnd(mid, fid, targs) => {
                 let func_env = self
                     .func_target
                     .global_env()
@@ -804,12 +816,21 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                     .into_function(*fid);
                 write!(
                     f,
+                    "{}",
+                    match self.oper {
+                        OpaqueCallBegin(_, _, _) => "opaque begin: ",
+                        OpaqueCallEnd(_, _, _) => "opaque end: ",
+                        _ => "",
+                    }
+                )?;
+                write!(
+                    f,
                     "{}::{}",
                     func_env
                         .module_env
                         .get_name()
                         .display(func_env.symbol_pool()),
-                    func_env.get_name().display(func_env.symbol_pool())
+                    func_env.get_name().display(func_env.symbol_pool()),
                 )?;
                 self.fmt_type_args(f, targs)?;
             }

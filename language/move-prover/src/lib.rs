@@ -213,6 +213,7 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
     } else {
         pipeline_factory::default_pipeline_with_options(&options.prover)
     };
+
     if options.prover.dump_bytecode {
         let dump_file = options
             .move_sources

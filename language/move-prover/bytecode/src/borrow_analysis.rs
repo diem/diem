@@ -617,6 +617,9 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             }
                         }
                     }
+                    OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
+                        // just skip
+                    }
                     _ => {
                         // Other operations do not create references.
                     }

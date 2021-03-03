@@ -11,8 +11,9 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     mono_analysis,
     mut_ref_instrumentation::{FunctionEnv, Loc},
+    options::ProverOptions,
     stackless_bytecode::{Bytecode, Bytecode::SaveMem, Operation},
-    verification_analysis,
+    verification_analysis, verification_analysis_v2,
 };
 use itertools::Itertools;
 use move_model::{
@@ -292,8 +293,14 @@ impl<'a> Analyzer<'a> {
         for module in self.env.get_modules() {
             for fun in module.get_functions() {
                 for (_, target) in self.targets.get_targets(&fun) {
-                    let info = verification_analysis::get_info(&target);
-                    if info.verified {
+                    let is_verified: bool;
+                    let options = ProverOptions::get(self.env);
+                    if options.invariants_v2 {
+                        is_verified = verification_analysis_v2::get_info(&target).verified;
+                    } else {
+                        is_verified = verification_analysis::get_info(&target).verified;
+                    }
+                    if is_verified {
                         self.analyze_fun(target.clone());
 
                         // We also need to analyze all modify targets because they are not

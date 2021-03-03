@@ -12,7 +12,7 @@
 //!   and is the owner of all related data.
 //! - A `ModuleEnv` which is a reference to the data of some module in the environment.
 //! - A `StructEnv` which is a reference to the data of some struct in a module.
-//! - A `FuncEnv` which is a reference to the data of some function in a module.
+//! - A `FunctionEnv` which is a reference to the data of some function in a module.
 
 use std::{
     any::{Any, TypeId},
@@ -617,6 +617,16 @@ impl GlobalEnv {
         file_id
     }
 
+    /// Get a single target module
+    pub fn get_target_module(&self) -> ModuleEnv {
+        for module_env in self.get_modules() {
+            if module_env.is_target() {
+                return module_env;
+            }
+        }
+        unreachable!("TODO: Extend V2 invariant processing to handle multiple target modules.");
+    }
+
     /// Adds documentation for a file.
     pub fn add_documentation(&mut self, file_id: FileId, docs: BTreeMap<ByteIndex, String>) {
         self.doc_comments.insert(file_id, docs);
@@ -835,6 +845,22 @@ impl GlobalEnv {
             .get(memory)
             .map(|ids| ids.iter().cloned().collect_vec())
             .unwrap_or_else(Default::default)
+    }
+
+    /// Given a set of invariants, find the subset that refer to the type in mem.
+    pub fn get_subset_invariants_for_memory(
+        &self,
+        mem: QualifiedInstId<StructId>,
+        inv_set_id: &BTreeSet<GlobalId>,
+    ) -> BTreeSet<GlobalId> {
+        if let Some(modifies_inv_id_set) = self.global_invariants_for_memory.get(&mem) {
+            modifies_inv_id_set
+                .intersection(inv_set_id)
+                .cloned()
+                .collect()
+        } else {
+            BTreeSet::<GlobalId>::new()
+        }
     }
 
     pub fn get_global_invariants_by_module(&self, module_id: ModuleId) -> BTreeSet<GlobalId> {

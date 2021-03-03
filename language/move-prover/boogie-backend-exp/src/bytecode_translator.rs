@@ -1014,6 +1014,9 @@ impl<'env> FunctionTranslator<'env> {
                         // location tracks before it returns.
                         *last_tracked_loc = None;
                     }
+                    OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
+                        // These are just markers.  There is no generated code.
+                    }
                     Pack(mid, sid, inst) => {
                         let inst = &self.inst_slice(inst);
                         let struct_env = env.get_module(*mid).into_struct(*sid);

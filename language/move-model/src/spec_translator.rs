@@ -240,6 +240,17 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         translator.result
     }
 
+    pub fn translate_invariants_by_id(
+        builder: &'b mut T,
+        inv_id_set: &BTreeSet<GlobalId>,
+    ) -> TranslatedSpec {
+        let global_env = builder.global_env();
+        let invariants = inv_id_set
+            .iter()
+            .map(|inv_id| global_env.get_global_invariant(*inv_id).unwrap());
+        SpecTranslator::translate_invariants(builder, invariants)
+    }
+
     fn translate_spec(&mut self, for_call: bool) {
         let fun_env = self.fun_env;
         let env = fun_env.module_env.env;

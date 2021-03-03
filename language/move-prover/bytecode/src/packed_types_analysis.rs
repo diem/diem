@@ -144,6 +144,9 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
                         }
                     }
                 }
+                OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
+                    // skip
+                }
                 _ => (),
             }
         }

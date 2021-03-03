@@ -20,6 +20,7 @@ use crate::{
     spec_instrumentation::SpecInstrumentationProcessor,
     usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
+    verification_analysis_v2::VerificationAnalysisProcessorV2,
 };
 
 pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetPipeline {
@@ -35,12 +36,16 @@ pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetP
         MemoryInstrumentationProcessor::new(),
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),
-        VerificationAnalysisProcessor::new(),
+        if options.invariants_v2 {
+            VerificationAnalysisProcessorV2::new()
+        } else {
+            VerificationAnalysisProcessor::new()
+        },
         LoopAnalysisProcessor::new(),
         // spec instrumentation
         SpecInstrumentationProcessor::new(),
         DataInvariantInstrumentationProcessor::new(),
-        if options.inv_v2 {
+        if options.invariants_v2 {
             GlobalInvariantInstrumentationProcessorV2::new()
         } else {
             GlobalInvariantInstrumentationProcessor::new()

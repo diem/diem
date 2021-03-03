@@ -12,10 +12,11 @@ use log::{debug, info, log, warn, Level};
 use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
+    options::ProverOptions,
     stackless_bytecode::{
         BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, StrongEdge,
     },
-    verification_analysis,
+    verification_analysis, verification_analysis_v2,
 };
 use move_model::{
     code_writer::CodeWriter,
@@ -205,19 +206,33 @@ impl<'env> ModuleTranslator<'env> {
                 .get_name()
                 .display(self.module_env.symbol_pool())
         );
+        let options = ProverOptions::get(self.module_env.env);
+
         for func_env in self.module_env.get_functions() {
             if func_env.is_native() || func_env.is_intrinsic() {
                 continue;
             }
-            let verification_info = verification_analysis::get_info(
-                &self
-                    .targets
-                    .get_target(&func_env, &FunctionVariant::Baseline),
-            );
+            let is_verified: bool;
+            let is_inlined: bool;
+            if options.invariants_v2 {
+                let verification_info = verification_analysis_v2::get_info(
+                    &self
+                        .targets
+                        .get_target(&func_env, &FunctionVariant::Baseline),
+                );
+                is_verified = verification_info.verified;
+                is_inlined = verification_info.inlined;
+            } else {
+                let verification_info = verification_analysis::get_info(
+                    &self
+                        .targets
+                        .get_target(&func_env, &FunctionVariant::Baseline),
+                );
+                is_verified = verification_info.verified;
+                is_inlined = verification_info.inlined;
+            };
             for variant in self.targets.get_target_variants(&func_env) {
-                if verification_info.verified && variant.is_verified()
-                    || verification_info.inlined && !variant.is_verified()
-                {
+                if is_verified && variant.is_verified() || is_inlined && !variant.is_verified() {
                     self.translate_function(
                         &variant,
                         &self.targets.get_target(&func_env, &variant),
@@ -860,6 +875,9 @@ impl<'env> ModuleTranslator<'env> {
                         // Clear the last track location after function call, as the call inserted
                         // location tracks before it returns.
                         *last_tracked_loc = None;
+                    }
+                    OpaqueCallBegin(_, _, _) | OpaqueCallEnd(_, _, _) => {
+                        // These are just markers.  There is no generated code.
                     }
                     Pack(mid, sid, type_actuals) => {
                         let struct_env = fun_target

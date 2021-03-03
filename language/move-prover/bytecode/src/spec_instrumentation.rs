@@ -26,7 +26,7 @@ use crate::{
     stackless_bytecode::{
         AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
     },
-    usage_analysis, verification_analysis,
+    usage_analysis, verification_analysis, verification_analysis_v2,
 };
 use move_model::{
     ast::QuantKind,
@@ -107,11 +107,23 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             return data;
         }
 
-        let options = ProverOptions::get(fun_env.module_env.env);
-        let verification_info =
-            verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
+        let is_verified: bool;
+        let is_inlined: bool;
 
-        if verification_info.verified {
+        let options = ProverOptions::get(fun_env.module_env.env);
+        if options.invariants_v2 {
+            let verification_info =
+                verification_analysis_v2::get_info(&FunctionTarget::new(fun_env, &data));
+            is_verified = verification_info.verified;
+            is_inlined = verification_info.inlined;
+        } else {
+            let verification_info =
+                verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
+            is_verified = verification_info.verified;
+            is_inlined = verification_info.inlined;
+        };
+
+        if is_verified {
             // Create a clone of the function data, moving annotations
             // out of this data and into the clone.
             let mut verification_data =
@@ -137,7 +149,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
         }
 
         // Instrument baseline variant only if it is inlined.
-        if verification_info.inlined {
+        if is_inlined {
             Instrumenter::run(&*options, targets, fun_env, data)
         } else {
             // Clear code but keep function data stub.
@@ -418,7 +430,7 @@ impl<'a> Instrumenter<'a> {
                 dests.clone(),
                 Operation::Function(mid, fid, targs.clone()),
                 srcs.clone(),
-                aa,
+                aa.clone(),
             );
             let bc_display = bc
                 .display(&self.builder.get_target(), &Default::default())
@@ -430,7 +442,6 @@ impl<'a> Instrumenter<'a> {
         } else {
             None
         };
-
         // Emit all expression debug traces.
         for (node_id, exp) in std::mem::take(&mut callee_spec.debug_traces) {
             let exp = self.instantiate_exp(exp, targs);
@@ -439,7 +450,6 @@ impl<'a> Instrumenter<'a> {
             self.builder
                 .emit_with(|id| Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None));
         }
-
         // Emit pre conditions if this is the verification variant or if the callee
         // is opaque. For inlined callees outside of verification entry points, we skip
         // emitting any pre-conditions because they are assumed already at entry into the
@@ -485,6 +495,20 @@ impl<'a> Instrumenter<'a> {
             ));
             self.can_abort = true;
         } else {
+            let options = ProverOptions::get(self.builder.global_env());
+            // Generates OpaqueCallBegin if invariant_v2 flag is set.
+            if options.invariants_v2 {
+                self.generate_opaque_call(
+                    dests.clone(),
+                    mid,
+                    fid,
+                    targs,
+                    srcs.clone(),
+                    aa.clone(),
+                    true,
+                );
+            }
+
             // Emit saves for parameters used in old(..) context. Those can be referred
             // to in aborts conditions, and must be initialized before evaluating those.
             self.emit_save_for_old(&callee_spec.saved_params);
@@ -600,11 +624,16 @@ impl<'a> Instrumenter<'a> {
                     .emit(Call(id, vec![], Operation::EventStoreDiverge, vec![], None));
             }
 
-            // If enabled, mark end of opaque function call.
-            if let Some(bc_display) = opaque_display {
-                self.builder
-                    .set_next_debug_comment(format!("<< opaque call: {}", bc_display));
-                self.builder.emit_with(Nop);
+            if !options.invariants_v2 {
+                // If enabled, mark end of opaque function call.
+                if let Some(bc_display) = opaque_display {
+                    self.builder
+                        .set_next_debug_comment(format!("<< opaque call: {}", bc_display));
+                    self.builder.emit_with(Nop);
+                }
+            } else {
+                // Generate OpaqueCallEnd instruction if invariant_v2.
+                self.generate_opaque_call(dests, mid, fid, targs, srcs, aa, false);
             }
         }
     }
@@ -827,6 +856,25 @@ impl<'a> Instrumenter<'a> {
         let new_id = env.new_node(loc, ty);
         env.set_node_instantiation(new_id, targs);
         new_id
+    }
+
+    fn generate_opaque_call(
+        &mut self,
+        dests: Vec<TempIndex>,
+        mid: ModuleId,
+        fid: FunId,
+        targs: &[Type],
+        srcs: Vec<TempIndex>,
+        aa: Option<AbortAction>,
+        is_begin: bool,
+    ) {
+        let opaque_op = if is_begin {
+            Operation::OpaqueCallBegin(mid, fid, targs.to_vec())
+        } else {
+            Operation::OpaqueCallEnd(mid, fid, targs.to_vec())
+        };
+        self.builder
+            .emit_with(|id| Bytecode::Call(id, dests, opaque_op, srcs, aa));
     }
 }
 
