@@ -83,6 +83,6 @@ error:
     │                                                 ^^^^^^^^^^^^^ Invalid call to '0x2::X::f_friend'
     ·
   6 │     public(friend) fun f_friend() {}
-    │     -------------- This function can only be called from a friend of module '0x2::X'
+    │     -------------- This function can only be called from a 'friend' of module '0x2::X'
     │
 
