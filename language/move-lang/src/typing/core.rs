@@ -837,7 +837,7 @@ pub fn make_function_type(
             if in_current_module || context.current_module_is_a_friend_of(m) => {}
         FunctionVisibility::Friend(vis_loc) => {
             let internal_msg = format!(
-                "This function can only be called from a friend of module '{}'",
+                "This function can only be called from a 'friend' of module '{}'",
                 m
             );
             context.error(vec![
