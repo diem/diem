@@ -288,7 +288,7 @@ impl Context {
         }
     }
 
-    fn is_a_friend_of(&self, m: &ModuleIdent) -> bool {
+    fn current_module_is_a_friend_of(&self, m: &ModuleIdent) -> bool {
         match &self.current_module {
             None => false,
             Some(current_mident) => {
@@ -833,7 +833,8 @@ pub fn make_function_type(
                 (vis_loc, internal_msg),
             ])
         }
-        FunctionVisibility::Friend(_) if in_current_module || context.is_a_friend_of(m) => (),
+        FunctionVisibility::Friend(_)
+            if in_current_module || context.current_module_is_a_friend_of(m) => {}
         FunctionVisibility::Friend(vis_loc) => {
             let internal_msg = format!(
                 "This function can only be called from a friend of module '{}'",
