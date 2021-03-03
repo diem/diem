@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-once_cell = "1.7.0"
+once_cell = "1.7.2"
 diem-config = { path = "../../config" }
 diem-logger = { path = "../../common/logger" }
 diem-metrics = { path = "../../common/metrics" }

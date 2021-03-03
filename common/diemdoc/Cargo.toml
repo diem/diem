@@ -16,7 +16,7 @@ serde-generate = "0.18.0"
 anyhow = "1.0.38"
 regex = "1.4.3"
 structopt = "0.3.21"
-once_cell = "1.7.0"
+once_cell = "1.7.2"
 
 diem-workspace-hack = { path = "../workspace-hack" }
 

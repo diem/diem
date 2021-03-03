@@ -16,6 +16,6 @@ hakari = { version = "0.2.0", features = ["summaries"] }
 hex = "0.4.2"
 log = "0.4.14"
 toml = "0.5.8"
-once_cell = "1.7.0"
+once_cell = "1.7.2"
 rental = "0.5.5"
 serde = { version = "1.0.123", features = ["derive"] }

@@ -14,7 +14,7 @@ anyhow = "1.0.38"
 goldenfile = "1.1.0"
 bcs = "0.1.2"
 compiler = { path = "../../compiler" }
-once_cell = "1.7.0"
+once_cell = "1.7.2"
 diem-crypto = { path = "../../../crypto/crypto", features = ["fuzzing"] }
 rand = "0.8.3"
 diem-state-view = { path = "../../../storage/state-view" }

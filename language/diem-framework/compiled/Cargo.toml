@@ -19,7 +19,7 @@ move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"
 vm = { path = "../../vm" }
 diem-framework = { path = "../../diem-framework" }
-once_cell = "1.7.0"
+once_cell = "1.7.2"
 include_dir = "0.6.0"
 sha2 = "0.9.3"
 
