@@ -55,7 +55,7 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
 ============ after pipeline `reaching_def` ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
+pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -80,12 +80,12 @@ pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs:
  10: write_ref($t6, $t9)
  11: $t11 := copy($t8)
  12: trace_local[r]($t0)
- 13: return ($t8, $t0)
+ 13: return $t8
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
+pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -105,5 +105,5 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut Te
   7: $t1 := $t8
   8: $t9 := copy($t8)
   9: trace_local[r]($t0)
- 10: return ($t8, $t0)
+ 10: return $t8
 }

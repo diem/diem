@@ -83,7 +83,7 @@ impl<'a> TransferFunctions for Optimizer<'a> {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
-        if let Call(_, dests, oper, srcs, _) = instr {
+        if let Call(_, _, oper, srcs, _) = instr {
             match oper {
                 WriteRef => {
                     state.unwritten.insert(Reference(srcs[0]));
@@ -93,15 +93,12 @@ impl<'a> TransferFunctions for Optimizer<'a> {
                         state.unwritten.insert(Reference(*dest));
                     }
                 }
-                Function(mid, fid, _) => {
-                    // Mark returns from functions which stem from &mut parameters as unwritten.
-                    let callee_env = self
-                        .target
-                        .global_env()
-                        .get_module(*mid)
-                        .into_function(*fid);
-                    for dest in dests.iter().skip(callee_env.get_return_count()) {
-                        state.unwritten.insert(Reference(*dest));
+                Function(..) => {
+                    // Mark &mut parameters to functions as unwritten.
+                    for src in srcs {
+                        if self.target.get_local_type(*src).is_mutable_reference() {
+                            state.unwritten.insert(Reference(*src));
+                        }
                     }
                 }
                 _ => {}

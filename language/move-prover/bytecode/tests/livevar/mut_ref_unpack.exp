@@ -55,7 +55,7 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
 ============ after pipeline `livevar` ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
+pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -72,13 +72,13 @@ pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs:
   3: write_ref($t4, $t6)
      # live vars: r, $t5
   4: trace_local[r]($t0)
-     # live vars: r, $t5
-  5: return ($t5, $t0)
+     # live vars: $t5
+  5: return $t5
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut TestMutRefs::R) {
+pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -90,6 +90,6 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): (u64, &mut Te
   1: $t5 := read_ref($t4)
      # live vars: r, $t5
   2: trace_local[r]($t0)
-     # live vars: r, $t5
-  3: return ($t5, $t0)
+     # live vars: $t5
+  3: return $t5
 }

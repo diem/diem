@@ -434,7 +434,7 @@ pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack:
 ============ after pipeline `clean_and_optimize` ================
 
 [variant baseline]
-pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R): &mut TestPackUnpack::R {
+pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -443,7 +443,7 @@ pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnp
   0: $t2 := borrow_field<TestPackUnpack::R>.nested($t0)
   1: unpack_ref($t2)
   2: $t3 := 0
-  3: $t2 := TestPackUnpack::private_update_value($t2, $t3)
+  3: TestPackUnpack::private_update_value($t2, $t3)
   4: $t4 := 1
   5: $t5 := borrow_field<TestPackUnpack::S>.value($t2)
   6: write_ref($t5, $t4)
@@ -452,12 +452,12 @@ pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnp
   9: write_back[Reference($t0)]($t2)
  10: trace_local[r]($t0)
  11: pack_ref($t0)
- 12: return $t0
+ 12: return ()
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): &mut TestPackUnpack::R {
+pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -467,7 +467,7 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut Te
   1: unpack_ref($t2)
   2: $t3 := 0
   3: pack_ref($t2)
-  4: $t2 := TestPackUnpack::public_update_value($t2, $t3)
+  4: TestPackUnpack::public_update_value($t2, $t3)
   5: unpack_ref($t2)
   6: $t4 := 1
   7: $t5 := borrow_field<TestPackUnpack::S>.value($t2)
@@ -477,7 +477,7 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut Te
  11: write_back[Reference($t0)]($t2)
  12: trace_local[r]($t0)
  13: pack_ref($t0)
- 14: return $t0
+ 14: return ()
 }
 
 
@@ -533,21 +533,21 @@ pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUn
 
 
 [variant baseline]
-fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): (&mut u64, &mut TestPackUnpack::R) {
+fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): &mut u64 {
      var $t1: &mut TestPackUnpack::S
      var $t2: &mut u64
   0: $t1 := borrow_field<TestPackUnpack::R>.nested($t0)
   1: unpack_ref($t1)
   2: $t2 := borrow_field<TestPackUnpack::S>.value($t1)
   3: trace_local[r]($t0)
-  4: pack_ref($t0)
-  5: pack_ref($t1)
-  6: return ($t2, $t0)
+  4: pack_ref($t1)
+  5: pack_ref($t0)
+  6: return $t2
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R): (&mut TestPackUnpack::R, &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: TestPackUnpack::S
@@ -583,15 +583,15 @@ pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r
  20: pack_ref($t12)
  21: write_back[Reference($t0)]($t12)
  22: trace_local[r1]($t0)
- 23: trace_local[r2]($t1)
- 24: pack_ref($t0)
+ 23: pack_ref($t0)
+ 24: trace_local[r2]($t1)
  25: pack_ref($t1)
- 26: return ($t0, $t1)
+ 26: return ()
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R): (&mut TestPackUnpack::R, &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: TestPackUnpack::S
@@ -623,58 +623,58 @@ pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut Test
  18: pack_ref($t10)
  19: write_back[Reference($t0)]($t10)
  20: trace_local[r1]($t0)
- 21: trace_local[r2]($t1)
- 22: pack_ref($t0)
+ 21: pack_ref($t0)
+ 22: trace_local[r2]($t1)
  23: pack_ref($t1)
- 24: return ($t0, $t1)
+ 24: return ()
 }
 
 
 [variant baseline]
-fun TestPackUnpack::private_pass_value_violating_invariant_incorrect($t0|s: &mut TestPackUnpack::S): (u64, &mut TestPackUnpack::S) {
+fun TestPackUnpack::private_pass_value_violating_invariant_incorrect($t0|s: &mut TestPackUnpack::S): u64 {
      var $t1: TestPackUnpack::S
      var $t2: u64
   0: $t1 := read_ref($t0)
   1: $t2 := TestPackUnpack::read_S_from_immutable($t1)
   2: trace_local[s]($t0)
   3: pack_ref($t0)
-  4: return ($t2, $t0)
+  4: return $t2
 }
 
 
 [variant baseline]
-fun TestPackUnpack::private_select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): (u64, &mut TestPackUnpack::R) {
+fun TestPackUnpack::private_select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1: TestPackUnpack::S
      var $t2: u64
   0: $t1 := get_field<TestPackUnpack::R>.nested($t0)
   1: $t2 := TestPackUnpack::read_S_from_immutable($t1)
   2: trace_local[r]($t0)
   3: pack_ref($t0)
-  4: return ($t2, $t0)
+  4: return $t2
 }
 
 
 [variant baseline]
-fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64): &mut TestPackUnpack::S {
+fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: &mut u64
   0: $t2 := borrow_field<TestPackUnpack::S>.value($t0)
   1: write_ref($t2, $t1)
   2: write_back[Reference($t0)]($t2)
   3: trace_local[s]($t0)
   4: pack_ref($t0)
-  5: return $t0
+  5: return ()
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64): &mut TestPackUnpack::S {
+pub fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: &mut u64
   0: $t2 := borrow_field<TestPackUnpack::S>.value($t0)
   1: write_ref($t2, $t1)
   2: write_back[Reference($t0)]($t2)
   3: trace_local[s]($t0)
   4: pack_ref($t0)
-  5: return $t0
+  5: return ()
 }
 
 
@@ -687,7 +687,7 @@ fun TestPackUnpack::read_S_from_immutable($t0|s: TestPackUnpack::S): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): (u64, &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -698,12 +698,12 @@ pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): (u64,
   3: pack_ref($t3)
   4: trace_local[r]($t0)
   5: pack_ref($t0)
-  6: return ($t4, $t0)
+  6: return $t4
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): (u64, &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -722,12 +722,12 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut T
   9: $t6 := TestPackUnpack::read_S_from_immutable($t5)
  10: trace_local[r]($t0)
  11: pack_ref($t0)
- 12: return ($t6, $t0)
+ 12: return $t6
 }
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): (u64, &mut TestPackUnpack::R) {
+pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -749,7 +749,7 @@ pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): (u64,
  10: write_back[Reference($t0)]($t3)
  11: trace_local[r]($t0)
  12: pack_ref($t0)
- 13: return ($t8, $t0)
+ 13: return $t8
 }
 
 
@@ -768,7 +768,7 @@ pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
   4: unpack_ref($t4)
-  5: ($t5, $t4) := TestPackUnpack::get_value_ref($t4)
+  5: $t5 := TestPackUnpack::get_value_ref($t4)
   6: $t6 := 2
   7: write_ref($t5, $t6)
   8: write_back[Reference($t4)]($t5)
@@ -794,7 +794,7 @@ pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackU
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
   4: unpack_ref($t4)
-  5: ($t5, $t4) := TestPackUnpack::get_value_ref($t4)
+  5: $t5 := TestPackUnpack::get_value_ref($t4)
   6: $t6 := 0
   7: write_ref($t5, $t6)
   8: write_back[Reference($t4)]($t5)
@@ -820,7 +820,7 @@ pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack:
   2: $t0 := pack TestPackUnpack::R($t3)
   3: $t4 := borrow_local($t0)
   4: unpack_ref($t4)
-  5: ($t5, $t4) := TestPackUnpack::get_value_ref($t4)
+  5: $t5 := TestPackUnpack::get_value_ref($t4)
   6: $t6 := 1
   7: write_ref($t5, $t6)
   8: write_back[Reference($t4)]($t5)

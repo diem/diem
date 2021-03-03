@@ -275,11 +275,19 @@ impl<'env> ModuleTranslator<'env> {
                 format!("{}t{}: {}", prefix, i, boogie_local_type(ty))
             }))
             .join(", ");
+        let mut_ref_count = (0..fun_target.get_parameter_count())
+            .filter(|idx| fun_target.get_local_type(*idx).is_mutable_reference())
+            .count();
         let rets = fun_target
             .get_return_types()
             .iter()
             .enumerate()
             .map(|(i, ref s)| format!("$ret{}: {}", i, boogie_local_type(s)))
+            // Add implicit return parameters for &mut
+            .chain(
+                (0..mut_ref_count)
+                    .map(|i| format!("$ret{}: $Mutation", fun_target.get_return_count() + i)),
+            )
             .join(", ");
         (args, rets)
     }
@@ -584,6 +592,14 @@ impl<'env> ModuleTranslator<'env> {
                 for (i, r) in rets.iter().enumerate() {
                     emitln!(self.writer, "$ret{} := {};", i, str_local(*r));
                 }
+                // Also assign input to output $mut parameters
+                let mut ret_idx = rets.len();
+                for i in 0..fun_target.get_parameter_count() {
+                    if fun_target.get_local_type(i).is_mutable_reference() {
+                        emitln!(self.writer, "$ret{} := {};", ret_idx, str_local(i));
+                        ret_idx = usize::saturating_add(ret_idx, 1);
+                    }
+                }
                 emitln!(self.writer, "return;");
             }
             Load(_, idx, c) => {
@@ -737,7 +753,15 @@ impl<'env> ModuleTranslator<'env> {
                         .filter(|s| !s.is_empty())
                         .join(", ");
 
-                        let dest_str = dests.iter().map(|dest_idx| str_local(*dest_idx)).join(", ");
+                        let dest_str = dests
+                            .iter()
+                            // Add implict dest returns for &mut srcs:
+                            //  f(x) --> x := f(x)  with t(x) = &mut_
+                            .chain(srcs.iter().filter(|idx| {
+                                fun_target.get_local_type(**idx).is_mutable_reference()
+                            }))
+                            .map(|idx| str_local(*idx))
+                            .join(",");
 
                         if dest_str.is_empty() {
                             emitln!(

@@ -8,7 +8,7 @@ pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: &Test::R, $t2|_simp
 ============ after pipeline `data_invariant_instrumentation` ================
 
 [variant verification]
-pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: Test::R, $t2|_simple_S: Test::S, $t3|_mut_R: &mut Test::R): &mut Test::R {
+pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: Test::R, $t2|_simple_S: Test::S, $t3|_mut_R: &mut Test::R) {
   0: assume And(WellFormed($t0), And(Gt(select Test::R.x($t0), select Test::S.y(select Test::R.s($t0))), Gt(select Test::S.y(select Test::R.s($t0)), 0)))
   1: assume And(WellFormed($t1), And(Gt(select Test::R.x($t1), select Test::S.y(select Test::R.s($t1))), Gt(select Test::S.y(select Test::R.s($t1)), 0)))
   2: assume And(WellFormed($t2), Gt(select Test::S.y($t2), 0))
@@ -18,5 +18,5 @@ pub fun Test::test_param($t0|_simple_R: Test::R, $t1|_ref_R: Test::R, $t2|_simpl
      # VC: data invariant does not hold at tests/data_invariant_instrumentation/params.move:12:9+18
   5: assert Gt(select Test::R.x($t3), select Test::S.y(select Test::R.s($t3)))
   6: label L1
-  7: return $t3
+  7: return ()
 }

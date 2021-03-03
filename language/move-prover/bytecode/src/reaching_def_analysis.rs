@@ -76,41 +76,12 @@ impl ReachingDefProcessor {
         code: Vec<Bytecode>,
         defs: &ReachingDefAnnotation,
     ) -> Vec<Bytecode> {
-        use Bytecode::*;
-        use Operation::*;
         let mut res = vec![];
         for (pc, bytecode) in code.into_iter().enumerate() {
             let no_defs = BTreeMap::new();
             let reaching_defs = defs.0.get(&(pc as CodeOffset)).unwrap_or(&no_defs);
             let mut propagate = |local| Self::get_propagated_local(local, reaching_defs);
-            match bytecode {
-                Call(attr_id, dests, Function(mid, fid, targs), srcs, aa) => {
-                    // Treat propagation for dests in function calls which stem from
-                    // &mut instrumentation as srcs. Consider `f(&mut)`; a call `f(x)` will be
-                    // transformed into `x := f(x)`. If the x on the rhs is propagated we also
-                    // want to change the x on the lhs. Otherwise we get quite some degenerated
-                    // code from copy propagation which creates unnecessary WriteBack instructions
-                    // (albeit still semantically correct).
-                    let callee_env = target.global_env().get_module(mid).into_function(fid);
-                    let mut new_dests = vec![];
-                    for (i, dest) in dests.into_iter().enumerate() {
-                        if i >= callee_env.get_return_count() {
-                            // This dest results from &mut instrumentation.
-                            new_dests.push(propagate(dest));
-                        } else {
-                            new_dests.push(dest);
-                        }
-                    }
-                    res.push(Call(
-                        attr_id,
-                        new_dests,
-                        Function(mid, fid, targs),
-                        srcs.into_iter().map(propagate).collect(),
-                        aa.map(|a| AbortAction(a.0, propagate(a.1))),
-                    ));
-                }
-                _ => res.push(bytecode.remap_src_vars(target, &mut propagate)),
-            }
+            res.push(bytecode.remap_src_vars(target, &mut propagate));
         }
         res
     }

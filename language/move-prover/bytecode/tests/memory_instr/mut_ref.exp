@@ -274,14 +274,14 @@ pub fun TestMutRefsUser::valid() {
 ============ after pipeline `memory_instr` ================
 
 [variant baseline]
-pub fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+pub fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
   0: trace_local[_x]($t0)
-  1: return $t0
+  1: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
@@ -309,7 +309,7 @@ pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T): &mut TestMut
  13: write_back[Reference($t7)]($t11)
  14: write_back[TestMutRefs::TSum]($t7)
  15: trace_local[x]($t0)
- 16: return $t0
+ 16: return ()
 }
 
 
@@ -337,7 +337,7 @@ pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
@@ -365,12 +365,12 @@ pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T): &mut TestMutRefs::T 
  13: write_back[Reference($t7)]($t11)
  14: write_back[TestMutRefs::TSum]($t7)
  15: trace_local[x]($t0)
- 16: return $t0
+ 16: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1: u64
      var $t2: u64
      var $t3: u64
@@ -382,7 +382,7 @@ pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T): &mut TestMut
   4: write_ref($t4, $t3)
   5: write_back[Reference($t0)]($t4)
   6: trace_local[x]($t0)
-  7: return $t0
+  7: return ()
 }
 
 
@@ -409,14 +409,14 @@ pub fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
 
 
 [variant baseline]
-fun TestMutRefs::private_data_invariant_invalid($t0|_x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+fun TestMutRefs::private_data_invariant_invalid($t0|_x: &mut TestMutRefs::T) {
   0: trace_local[_x]($t0)
-  1: return $t0
+  1: return ()
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T): &mut TestMutRefs::T {
+fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
@@ -444,15 +444,15 @@ fun TestMutRefs::private_decrement($t0|x: &mut TestMutRefs::T): &mut TestMutRefs
  13: write_back[Reference($t7)]($t11)
  14: write_back[TestMutRefs::TSum]($t7)
  15: trace_local[x]($t0)
- 16: return $t0
+ 16: return ()
 }
 
 
 [variant baseline]
-fun TestMutRefs::private_to_public_caller($t0|r: &mut TestMutRefs::T): &mut TestMutRefs::T {
-  0: $t0 := TestMutRefs::increment($t0)
+fun TestMutRefs::private_to_public_caller($t0|r: &mut TestMutRefs::T) {
+  0: TestMutRefs::increment($t0)
   1: trace_local[r]($t0)
-  2: return $t0
+  2: return ()
 }
 
 
@@ -465,8 +465,8 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
   0: $t2 := 1
   1: $t1 := TestMutRefs::new($t2)
   2: $t3 := borrow_local($t1)
-  3: $t3 := TestMutRefs::private_decrement($t3)
-  4: $t3 := TestMutRefs::increment($t3)
+  3: TestMutRefs::private_decrement($t3)
+  4: TestMutRefs::increment($t3)
   5: write_back[LocalRoot($t1)]($t3)
   6: return ()
 }
@@ -481,7 +481,7 @@ pub fun TestMutRefsUser::valid() {
   0: $t1 := 4
   1: $t0 := TestMutRefs::new($t1)
   2: $t2 := borrow_local($t0)
-  3: $t2 := TestMutRefs::increment($t2)
+  3: TestMutRefs::increment($t2)
   4: write_back[LocalRoot($t0)]($t2)
   5: $t3 := move($t0)
   6: TestMutRefs::delete($t3)

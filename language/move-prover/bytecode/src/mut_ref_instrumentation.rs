@@ -9,6 +9,7 @@ use crate::{
 };
 
 use crate::stackless_bytecode::AssignKind;
+use itertools::Itertools;
 use move_model::ast::TempIndex;
 pub use move_model::{
     model::{FunctionEnv, Loc},
@@ -36,18 +37,13 @@ impl FunctionTargetProcessor for MutRefInstrumenter {
 
         let mut builder = FunctionDataBuilder::new(fun_env, data);
 
-        // Add additional return parameters for mut input parameters.
-        let mut added_returns = vec![];
-        for idx in 0..builder.fun_env.get_parameter_count() {
-            let ty = builder.data.local_types[idx].clone();
-            if ty.is_mutable_reference() {
-                added_returns.push(idx);
-                builder.add_return(ty);
-            }
-        }
+        // Compute &mut parameters.
+        let param_count = builder.get_target().get_parameter_count();
+        let mut_ref_params = (0..param_count)
+            .filter(|idx| is_mut_ref(&builder, *idx))
+            .collect_vec();
 
         // Transform bytecode.
-        let param_count = builder.get_target().get_parameter_count();
         for bc in std::mem::take(&mut builder.data.code) {
             use Bytecode::*;
             use Operation::*;
@@ -61,27 +57,14 @@ impl FunctionTargetProcessor for MutRefInstrumenter {
                     // to the original parameter before returned (via borrow semantics).
                     builder.emit(Assign(attr_id, dest, src, AssignKind::Copy))
                 }
-                Call(attr_id, mut dests, op @ Function(..), srcs, aa) => {
-                    // Add all &mut parameters to the destinations.
-                    for src in &srcs {
-                        if is_mut_ref(&builder, *src) {
-                            dests.push(*src);
-                        }
-                    }
-                    builder.emit(Call(attr_id, dests, op, srcs, aa));
-                }
-                Ret(attr_id, mut rets) => {
+                Ret(attr_id, rets) => {
                     // Emit traces for &mut params at exit.
                     builder.set_loc_from_attr(attr_id);
-                    for added in &added_returns {
+                    for added in &mut_ref_params {
                         builder.emit_with(|id| {
                             Call(id, vec![], TraceLocal(*added), vec![*added], None)
                         });
                     }
-                    // Extend the returned values with the &mut params. Note that by preventing
-                    // moves of those parameters above, we can be sure they carry the final
-                    // mutated value.
-                    rets.extend(added_returns.iter());
                     builder.emit(Ret(attr_id, rets));
                 }
                 _ => builder.emit(bc),
