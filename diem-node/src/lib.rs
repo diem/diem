@@ -5,7 +5,7 @@ use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
 use debug_interface::node_debug_service::NodeDebugService;
 use diem_config::{
-    config::{NetworkConfig, NodeConfig},
+    config::{NetworkConfig, NodeConfig, PersistableConfig},
     network_id::NodeNetworkId,
     utils::get_genesis_txn,
 };
@@ -122,7 +122,10 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     let config_path = config_path.canonicalize().unwrap();
 
     // Build a single validator network
-    let template = NodeConfig::default_for_validator();
+    let mut maybe_config = PathBuf::from(&config_path);
+    maybe_config.push("validator_node_template.yaml");
+    let template = NodeConfig::load_config(maybe_config)
+        .unwrap_or_else(|_| NodeConfig::default_for_validator());
     let builder =
         diem_genesis_tool::config_builder::ValidatorBuilder::new(1, template, &config_path)
             .randomize_first_validator_ports(random_ports);

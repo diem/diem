@@ -24,6 +24,9 @@ services:
       - type: volume
         source: diem-shared
         target: /opt/diem/var
+      - type: bind
+        source: ./validator_node_template.yaml
+        target: /opt/diem/var/validator_node_template.yaml
     command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
     ports:
       - "8080:8080"

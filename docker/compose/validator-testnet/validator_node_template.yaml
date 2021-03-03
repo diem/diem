@@ -1,0 +1,32 @@
+consensus:
+  # The following slow consensus down when there are no active transactions to process
+  round_initial_timeout_ms: 20000
+  mempool_poll_count: 333
+
+# The rest of this config is copy paste of config/src/config/test_data/validator.yaml
+validator_network:
+  listen_address: "/ip4/0.0.0.0/tcp/6180"
+  identity:
+    type: "from_storage"
+    key_name: "validator_network"
+    peer_id_name: "owner_account"
+    backend:
+      type: "vault"
+      server: "https://127.0.0.1:8200"
+      ca_certificate: "/full/path/to/certificate"
+      token:
+        from_disk: "/full/path/to/token"
+
+full_node_networks:
+  - listen_address: "/ip4/0.0.0.0/tcp/7180"
+    identity:
+      type: "from_storage"
+      key_name: "fullnode_network"
+        peer_id_name: "owner_account"
+        backend:
+          type: "vault"
+          server: "https://127.0.0.1:8200"
+          token:
+                from_disk: "/full/path/to/token"
+    network_id:
+      private: "vfn"
