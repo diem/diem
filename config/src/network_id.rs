@@ -4,7 +4,7 @@ use crate::config::{PeerRole, RoleType};
 use diem_types::PeerId;
 use serde::{Deserialize, Serialize, Serializer};
 use short_hex_str::AsShortHexStr;
-use std::fmt;
+use std::{cmp::Ordering, fmt};
 
 /// A grouping of common information between all networking code for logging.
 /// This should greatly reduce the groupings between these given everywhere, and will allow
@@ -87,6 +87,39 @@ pub enum NetworkId {
     Validator,
     Public,
     Private(String),
+}
+
+impl Ord for NetworkId {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl PartialOrd for NetworkId {
+    /// Generalized ordering for determining which network is the most important
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // To simplify logic below, if it's the same it's equal
+        Some(if self == other {
+            Ordering::Equal
+        } else {
+            // Everywhere below assumes that equal has already been covered
+            match self {
+                NetworkId::Validator => Ordering::Less,
+                NetworkId::Public => Ordering::Greater,
+                NetworkId::Private(_) => match other {
+                    NetworkId::Validator => Ordering::Greater,
+                    NetworkId::Public => Ordering::Less,
+                    NetworkId::Private(_) => {
+                        if self.is_vfn_network() {
+                            Ordering::Less
+                        } else {
+                            Ordering::Greater
+                        }
+                    }
+                },
+            }
+        })
+    }
 }
 
 /// An intra-node identifier for a network of a node unique for a network
@@ -255,6 +288,13 @@ impl NetworkId {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_ensure_network_id_order() {
+        assert!(NetworkId::Validator < NetworkId::vfn_network());
+        assert!(NetworkId::vfn_network() < NetworkId::Public);
+        assert!(NetworkId::Validator < NetworkId::Public);
+    }
 
     #[test]
     fn test_serialization() {

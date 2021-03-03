@@ -170,10 +170,9 @@ async fn handle_event<V>(
     match event {
         Event::NewPeer(metadata) => {
             counters::shared_mempool_event_inc("new_peer");
-            let origin = metadata.origin;
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
-            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), metadata);
-            let is_upstream_peer = smp.peer_manager.is_upstream_peer(&peer, Some(origin));
+            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), metadata.clone());
+            let is_upstream_peer = smp.peer_manager.is_upstream_peer(&peer, Some(&metadata));
             debug!(LogSchema::new(LogEntry::NewPeer)
                 .peer(&peer)
                 .is_upstream_peer(is_upstream_peer));
@@ -187,10 +186,7 @@ async fn handle_event<V>(
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
             debug!(LogSchema::new(LogEntry::LostPeer)
                 .peer(&peer)
-                .is_upstream_peer(
-                    smp.peer_manager
-                        .is_upstream_peer(&peer, Some(metadata.origin))
-                ));
+                .is_upstream_peer(smp.peer_manager.is_upstream_peer(&peer, Some(&metadata))));
             smp.peer_manager.disable_peer(peer);
             notify_subscribers(SharedMempoolNotification::PeerStateChange, &smp.subscribers);
         }

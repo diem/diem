@@ -10,10 +10,7 @@ use crate::{
         types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
 };
-use diem_config::{
-    config::{MempoolConfig, PeerNetworkId, UpstreamConfig},
-    network_id::NetworkId,
-};
+use diem_config::config::{MempoolConfig, PeerNetworkId, PeerRole};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
@@ -23,7 +20,8 @@ use network::transport::ConnectionMetadata;
 use serde::{Deserialize, Serialize};
 use short_hex_str::AsShortHexStr;
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet, HashMap},
     ops::Add,
     time::{Duration, Instant, SystemTime},
 };
@@ -57,12 +55,9 @@ impl PeerSyncState {
 }
 
 pub(crate) struct PeerManager {
-    upstream_config: UpstreamConfig,
     mempool_config: MempoolConfig,
     peer_states: Mutex<PeerSyncStates>,
-    // The set of `mempool_config.default_failover` number of peers in the non-primary networks to
-    // broadcast to in addition to the primary network when the primary network is up.
-    default_failovers: Mutex<HashSet<PeerNetworkId>>,
+    prioritized_peers: Mutex<Vec<PeerNetworkId>>,
 }
 /// Identifier for a broadcasted batch of txns.
 /// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
@@ -104,15 +99,14 @@ impl BroadcastInfo {
 }
 
 impl PeerManager {
-    pub fn new(mempool_config: MempoolConfig, upstream_config: UpstreamConfig) -> Self {
+    pub fn new(mempool_config: MempoolConfig) -> Self {
         // Primary network is always chosen at initialization.
         counters::upstream_network(PRIMARY_NETWORK_PREFERENCE);
         info!(LogSchema::new(LogEntry::UpstreamNetwork).network_level(PRIMARY_NETWORK_PREFERENCE));
         Self {
             mempool_config,
-            upstream_config,
             peer_states: Mutex::new(PeerSyncStates::new()),
-            default_failovers: Mutex::new(HashSet::new()),
+            prioritized_peers: Mutex::new(Vec::new()),
         }
     }
 
@@ -120,7 +114,7 @@ impl PeerManager {
     pub fn add_peer(&self, peer: PeerNetworkId, metadata: ConnectionMetadata) -> bool {
         let mut peer_states = self.peer_states.lock();
         let is_new_peer = !peer_states.contains_key(&peer);
-        if self.is_upstream_peer(&peer, Some(metadata.origin)) {
+        if self.is_upstream_peer(&peer, Some(&metadata)) {
             counters::active_upstream_peers(&peer.raw_network_id()).inc();
             // If we have a new peer, let's insert new data, otherwise, let's just update the current state
             if is_new_peer {
@@ -131,7 +125,9 @@ impl PeerManager {
             }
         }
         drop(peer_states);
-        self.update_failover();
+
+        // Always need to update the prioritized peers, because of `is_alive` state changes
+        self.update_prioritized_peers();
         is_new_peer
     }
 
@@ -150,11 +146,8 @@ impl PeerManager {
             self.peer_states.lock().remove(&peer);
         }
 
-        // Always remove from failovers
-        {
-            self.default_failovers.lock().remove(&peer);
-        }
-        self.update_failover();
+        // Always update prioritized peers to be in line with peer states
+        self.update_prioritized_peers();
     }
 
     pub fn is_backoff_mode(&self, peer: &PeerNetworkId) -> bool {
@@ -185,10 +178,12 @@ impl PeerManager {
             return;
         };
 
-        // Only broadcast to peer that is both alive and picked.
-        if !state.is_alive || !self.is_picked_peer(&peer) {
+        // Only broadcast to peers that are alive.
+        if !state.is_alive {
             return;
         }
+
+        // TODO: Use `prioritized_peers` to determine which to send to.  Currently, always sends to all
 
         // If backoff mode is on for this peer, only execute broadcasts that were scheduled as a backoff broadcast.
         // This is to ensure the backoff mode is actually honored (there is a chance a broadcast was scheduled
@@ -338,50 +333,27 @@ impl PeerManager {
         }
     }
 
-    // Updates the peer chosen to failover to if all peers in the primary upstream network are down.
-    // Tries to pick more `default_peers` until there are `mempool_config.default_peers` number of them.
-    fn update_failover(&self) {
-        // Failover is enabled only if there are multiple upstream networks.
-        if self.upstream_config.networks.len() < 2 {
-            return;
-        }
+    fn update_prioritized_peers(&self) {
+        // Retrieve just what's needed for the peer ordering
+        let peers: Vec<_> = {
+            let peer_states = self.peer_states.lock();
+            peer_states
+                .iter()
+                .filter(|(_, state)| state.is_alive)
+                .map(|(peer, state)| (peer.clone(), state.metadata.role))
+                .collect()
+        };
 
-        // Declare `failover` as standalone to satisfy lifetime requirement.
-        let peer_states = self.peer_states.lock();
-        let active_peers_by_network = peer_states
+        // Order peers by network and by type
+        // Origin doesn't matter at this point, only inserted ones into peer_states are upstream
+        let mut prioritized_peers = self.prioritized_peers.lock();
+        let peers: Vec<_> = peers
             .iter()
-            .filter_map(|(peer, state)| {
-                if state.is_alive {
-                    Some((peer.raw_network_id(), peer))
-                } else {
-                    None
-                }
-            })
-            .into_group_map();
+            .sorted_by(|peer_a, peer_b| compare_prioritized_peers(peer_a, peer_b))
+            .map(|(peer, _)| peer.clone())
+            .collect();
 
-        // Update default_failovers.
-        // NOTE: this block of code, and maintaining even this concept of `default_failovers`, is a
-        // *temporary* patch to improve the reliability of txn delivery in case of the primary
-        // upstream network is lagging behind, and the txns delivered to it will not be ready for further
-        // broadcast/consensus on that end based on its stale state.
-        // So:
-        // (1) don't invest too much in refactoring this code w.r.t. the rest of this function
-        // (2) the logic of this function should later be migrated to a smarter networking layer
-        // that can handle peer selection for mempool
-        let mut default_failovers = self.default_failovers.lock();
-        if default_failovers.len() < self.mempool_config.default_failovers {
-            for failover_network in self.upstream_config.networks[1..].iter() {
-                if let Some(active_peers) = active_peers_by_network.get(failover_network) {
-                    for p in active_peers.iter().cloned() {
-                        if default_failovers.insert(p.clone())
-                            && default_failovers.len() >= self.mempool_config.default_failovers
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
+        let _ = std::mem::replace(&mut *prioritized_peers, peers);
     }
 
     pub fn process_broadcast_ack(
@@ -454,40 +426,105 @@ impl PeerManager {
     // If the origin is provided, checks whether this peer is an upstream peer based on configured preferences and
     // connection origin.
     // If the origin is not provided, checks whether this peer is an upstream peer that was seen before.
-    pub fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: Option<ConnectionOrigin>) -> bool {
-        if let Some(origin) = origin {
-            if Self::is_public_downstream(peer.raw_network_id(), origin) {
-                false
-            } else {
-                self.upstream_config
-                    .get_upstream_preference(peer.raw_network_id())
-                    .is_some()
-            }
-        } else {
-            self.peer_states.lock().contains_key(peer)
-        }
-    }
-
-    fn is_primary_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
-        self.upstream_config
-            .get_upstream_preference(peer.raw_network_id())
-            == Some(0)
-    }
-
-    fn is_public_downstream(network_id: NetworkId, origin: ConnectionOrigin) -> bool {
-        network_id == NetworkId::Public && origin == ConnectionOrigin::Inbound
-    }
-
-    // Checks whether a peer is a chosen broadcast recipient:
-    // - all primary peers
-    // - fallback peers, if k-policy is enabled
-    // This does NOT check for whether this peer is alive.
-    pub fn is_picked_peer(&self, peer: &PeerNetworkId) -> bool {
-        if self.is_primary_upstream_peer(&peer) {
+    pub fn is_upstream_peer(
+        &self,
+        peer: &PeerNetworkId,
+        metadata: Option<&ConnectionMetadata>,
+    ) -> bool {
+        // Validator network is always upstream
+        if peer.raw_network_id().is_validator_network() {
             return true;
         }
 
-        // if primary network is up, broadcast to all default_failovers in addition to it
-        self.default_failovers.lock().contains(peer)
+        // Outbound connections are upstream on non-P2P networks
+        if let Some(metadata) = metadata {
+            metadata.origin == ConnectionOrigin::Outbound
+        } else {
+            // If we already know about the peer, it's upstream
+            // TODO: If this is actually used it seems kinda pointless?
+            self.peer_states.lock().contains_key(peer)
+        }
+    }
+}
+
+/// Provides ordering for prioritized peers
+fn compare_prioritized_peers(
+    peer_a: &(PeerNetworkId, PeerRole),
+    peer_b: &(PeerNetworkId, PeerRole),
+) -> Ordering {
+    let network_a = peer_a.0.raw_network_id();
+    let network_b = peer_b.0.raw_network_id();
+
+    // Sort by NetworkId
+    match network_a.cmp(&network_b) {
+        Ordering::Equal => {
+            // Then sort by Role
+            let role_a = peer_a.1;
+            let role_b = peer_b.1;
+            match role_a.cmp(&role_b) {
+                // Then tiebreak by PeerId for stability
+                Ordering::Equal => {
+                    let peer_id_a = peer_a.0.peer_id();
+                    let peer_id_b = peer_b.0.peer_id();
+                    peer_id_a.cmp(&peer_id_b)
+                }
+                ordering => ordering,
+            }
+        }
+        ordering => ordering,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use diem_config::network_id::{NetworkId, NodeNetworkId};
+    use diem_types::PeerId;
+
+    fn peer_network_id(peer_id: PeerId, network: NetworkId) -> PeerNetworkId {
+        PeerNetworkId(NodeNetworkId::new(network, 0), peer_id)
+    }
+
+    #[test]
+    fn check_peer_prioritization() {
+        let peer_id_1 = PeerId::from_hex_literal("0x1").unwrap();
+        let peer_id_2 = PeerId::from_hex_literal("0x2").unwrap();
+        let val_1 = (
+            peer_network_id(peer_id_1, NetworkId::vfn_network()),
+            PeerRole::Validator,
+        );
+        let val_2 = (
+            peer_network_id(peer_id_2, NetworkId::vfn_network()),
+            PeerRole::Validator,
+        );
+        let vfn_1 = (
+            peer_network_id(peer_id_1, NetworkId::Public),
+            PeerRole::ValidatorFullNode,
+        );
+        let preferred_1 = (
+            peer_network_id(peer_id_1, NetworkId::Public),
+            PeerRole::PreferredUpstream,
+        );
+
+        // NetworkId ordering
+        assert_eq!(Ordering::Greater, compare_prioritized_peers(&vfn_1, &val_1));
+        assert_eq!(Ordering::Less, compare_prioritized_peers(&val_1, &vfn_1));
+
+        // PeerRole ordering
+        assert_eq!(
+            Ordering::Greater,
+            compare_prioritized_peers(&vfn_1, &preferred_1)
+        );
+        assert_eq!(
+            Ordering::Less,
+            compare_prioritized_peers(&preferred_1, &vfn_1)
+        );
+
+        // Tiebreaker on peer_id
+        assert_eq!(Ordering::Greater, compare_prioritized_peers(&val_2, &val_1));
+        assert_eq!(Ordering::Less, compare_prioritized_peers(&val_1, &val_2));
+
+        // Same the only equal case
+        assert_eq!(Ordering::Equal, compare_prioritized_peers(&val_1, &val_1));
     }
 }
