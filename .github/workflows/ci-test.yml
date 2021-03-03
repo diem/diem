@@ -274,6 +274,7 @@ jobs:
           exit $num_fails
       - name: "Send Message"
         uses: ./.github/actions/slack-file
+        if: ${{ always() }}
         with:
           payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
           webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}
