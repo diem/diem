@@ -14,61 +14,60 @@
 
 version: "3.8"
 services:
-    validator:
-        # Note this image currently does not support this, will update to the appropriate minimum
-        # version shortly
-        image: "libra/validator:${IMAGE_TAG:-devnet}"
-        networks:
-            shared:
-        volumes:
-            - type: volume
-              source: diem-shared
-              target: /opt/diem/var
-        command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
-        ports:
-            - "8080:8080"
+  validator:
+    # Note this image currently does not support this, will update to the appropriate minimum
+    # version shortly
+    image: "libra/validator:${IMAGE_TAG:-devnet}"
+    networks:
+      shared:
+    volumes:
+      - type: volume
+        source: diem-shared
+        target: /opt/diem/var
+    command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
+    ports:
+      - "8080:8080"
 
-    faucet:
-      image: "libra/faucet:${IMAGE_TAG:-devnet}"
-      depends_on:
-        - validator
-      networks:
-        shared:
-      volumes:
-        - type: volume
-          source: diem-shared
-          target: /opt/diem/var
-      command: >
-        /bin/bash -c "
-            for i in {1..10}
-            do
-                if [[ -s /opt/diem/var/mint.key ]]
-                then
-                    /opt/diem/bin/diem-faucet \
-                        --address 0.0.0.0 \
-                        --port 8000 \
-                        --chain-id TESTING \
-                        --mint-key-file-path /opt/diem/var/mint.key \
-                        --server-url http://validator:8080/v1
-                    exit $$?
-                else
-                    echo 'Validator has not populated mint.key yet. Is it running?'
-                    sleep 1
-                fi
-            done
-            exit 1
-          "
-      ports:
-        - "8000:8000"
-
+  faucet:
+    image: "libra/faucet:${IMAGE_TAG:-devnet}"
+    depends_on:
+      - validator
+    networks:
+      shared:
+    volumes:
+      - type: volume
+        source: diem-shared
+        target: /opt/diem/var
+    command: >
+      /bin/bash -c "
+        for i in {1..10}
+        do
+          if [[ -s /opt/diem/var/mint.key ]]
+          then
+            /opt/diem/bin/diem-faucet \
+              --address 0.0.0.0 \
+              --port 8000 \
+              --chain-id TESTING \
+              --mint-key-file-path /opt/diem/var/mint.key \
+              --server-url http://validator:8080/v1
+            exit $$?
+          else
+            echo 'Validator has not populated mint.key yet. Is it running?'
+            sleep 1
+          fi
+        done
+        exit 1
+      "
+    ports:
+      - "8000:8000"
 
 networks:
-    shared:
-        name: "diem-docker-compose-shared"
-        ipam:
-          config:
-            - subnet: 172.16.1.0/24
+  shared:
+    name: "diem-docker-compose-shared"
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
 
 volumes:
-  diem-shared:
-    name: diem-shared
+    diem-shared:
+        name: diem-shared
