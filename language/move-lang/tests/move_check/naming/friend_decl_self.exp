@@ -6,7 +6,7 @@ error:
    │     ^^^^^^^^^^^^ Invalid friend declaration
    ·
  3 │     friend Self;
-   │     ------------ Cannot declare the module itself as a friend
+   │            ---- Cannot declare the module itself as a friend
    │
 
 error: 
@@ -17,6 +17,6 @@ error:
    │     ^^^^^^^^^^^^^^^ Invalid friend declaration
    ·
  9 │     friend 0x43::M;
-   │     --------------- Cannot declare the module itself as a friend
+   │            ------- Cannot declare the module itself as a friend
    │
 

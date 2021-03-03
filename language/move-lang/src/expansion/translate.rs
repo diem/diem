@@ -677,19 +677,16 @@ fn struct_fields(
 fn friend(context: &mut Context, friends: &mut UniqueMap<ModuleIdent, Loc>, pfriend: P::Friend) {
     match friend_(context, pfriend) {
         Some((mident, loc)) => {
-            if let Some(old_friend_loc) = friends.get(&mident) {
+            if let Err((mident, (old_friend_loc, _))) = friends.add(mident, loc) {
                 let msg = format!(
                     "Duplicate friend declaration '{}'. Friend declarations in a module must be unique",
                     mident
                 );
                 context.error(vec![
                     (loc, msg),
-                    (*old_friend_loc, "Previously declared here".into()),
+                    (old_friend_loc, "Previously declared here".into()),
                 ]);
             }
-            if let Err(_old_loc) = friends.add(mident, loc) {
-                assert!(context.has_errors());
-            };
         }
         None => assert!(context.has_errors()),
     };
@@ -706,7 +703,10 @@ fn friend_(context: &mut Context, sp!(loc, pfriend): P::Friend) -> Option<(Modul
                 )]);
                 None
             }
-            Some(mident) => Some(mident),
+            Some(mident) => {
+                let (_, value) = mident.drop_loc();
+                Some(ModuleIdent::add_loc((mname.loc(), mname.loc()), value))
+            }
         },
         P::Friend_::QualifiedModule(mident) => Some(mident),
     };
