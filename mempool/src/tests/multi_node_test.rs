@@ -12,7 +12,7 @@ use crate::{
         },
     },
 };
-use diem_config::config::PeerRole;
+use diem_config::config::{NodeConfig, PeerRole};
 use diem_types::{transaction::SignedTransaction, PeerId};
 use netcore::transport::ConnectionOrigin;
 use network::{
@@ -21,6 +21,14 @@ use network::{
 };
 use rand::{rngs::StdRng, SeedableRng};
 use std::collections::{HashMap, HashSet};
+
+/// A struct holding a list of overriding configurations for mempool
+struct MempoolOverrideConfig {
+    broadcast_batch_size: usize,
+    mempool_size: Option<usize>,
+    max_broadcasts_per_peer: Option<usize>,
+    max_ack_timeout: bool,
+}
 
 /// A test harness representing a combined network of Nodes and the mempool interactions between them
 #[derive(Default)]
@@ -66,49 +74,21 @@ impl TestHarness {
         let mut harness = Self::default();
         let mut rng = StdRng::from_seed([0u8; 32]);
         let mut peers = HashMap::<PeerRole, Vec<NodeId>>::new();
+        let mempool_config = MempoolOverrideConfig {
+            broadcast_batch_size,
+            mempool_size,
+            max_broadcasts_per_peer,
+            max_ack_timeout,
+        };
 
         // Build up validators
         for idx in 0..validator_nodes_count {
-            let (validator, mut v_config) = validator_config(&mut rng, idx);
-            v_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
-            // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
-            v_config.mempool.shared_mempool_ack_timeout_ms =
-                if max_ack_timeout { u64::MAX } else { 0 };
-            v_config.mempool.capacity = mempool_size.unwrap_or(v_config.mempool.capacity);
-            v_config.mempool.max_broadcasts_per_peer =
-                max_broadcasts_per_peer.unwrap_or(v_config.mempool.max_broadcasts_per_peer);
-
-            let node_id = NodeId::new(NodeType::Validator, idx);
-            harness
-                .peer_to_node_id
-                .insert(validator.primary_peer_id(), node_id);
-            let validator_node = NodeInfo::Validator(validator);
-            harness
-                .nodes
-                .insert(node_id, Node::new(validator_node, v_config));
+            let node_id = harness.add_validator(&mut rng, idx, &mempool_config);
             peers.entry(PeerRole::Validator).or_default().push(node_id);
 
             // Build up VFNs if we've determined we want those too
             if vfns_attached {
-                let (vfn, mut vfn_config) = vfn_config(&mut rng, idx);
-                vfn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
-                vfn_config.mempool.shared_mempool_backoff_interval_ms = 50;
-                // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
-                vfn_config.mempool.shared_mempool_ack_timeout_ms =
-                    if max_ack_timeout { u64::MAX } else { 0 };
-                vfn_config.mempool.max_broadcasts_per_peer =
-                    max_broadcasts_per_peer.unwrap_or(vfn_config.mempool.max_broadcasts_per_peer);
-                let node_id = NodeId::new(NodeType::ValidatorFullNode, idx);
-                harness
-                    .peer_to_node_id
-                    .insert(vfn.primary_peer_id(), node_id);
-                harness
-                    .peer_to_node_id
-                    .insert(vfn.secondary_peer_id().unwrap(), node_id);
-                let vfn_node = NodeInfo::ValidatorFull(vfn);
-                harness
-                    .nodes
-                    .insert(node_id, Node::new(vfn_node, vfn_config));
+                let node_id = harness.add_vfn(&mut rng, idx, &mempool_config);
                 peers
                     .entry(PeerRole::ValidatorFullNode)
                     .or_default()
@@ -122,28 +102,92 @@ impl TestHarness {
                 .checked_add(validator_nodes_count)
                 .unwrap()
         {
-            let (full_node, mut fn_config) =
-                public_full_node_config(&mut rng, idx, PeerRole::Unknown);
-            fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
-            // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
-            fn_config.mempool.shared_mempool_ack_timeout_ms =
-                if max_ack_timeout { u64::MAX } else { 0 };
-            fn_config.mempool.capacity = mempool_size.unwrap_or(fn_config.mempool.capacity);
-            fn_config.mempool.max_broadcasts_per_peer =
-                max_broadcasts_per_peer.unwrap_or(fn_config.mempool.max_broadcasts_per_peer);
-
-            let node_id = NodeId::new(NodeType::FullNode, idx);
-            harness
-                .peer_to_node_id
-                .insert(full_node.primary_peer_id(), node_id);
-            let full_node = NodeInfo::Full(full_node);
-            harness
-                .nodes
-                .insert(node_id, Node::new(full_node, fn_config));
+            let node_id = harness.add_public_full_node(&mut rng, idx, &mempool_config);
             peers.entry(PeerRole::Unknown).or_default().push(node_id)
         }
 
         (harness, peers)
+    }
+
+    fn add_validator(
+        &mut self,
+        rng: &mut StdRng,
+        idx: u32,
+        mempool_config: &MempoolOverrideConfig,
+    ) -> NodeId {
+        let (validator, mut v_config) = validator_config(rng, idx);
+        Self::update_config(&mut v_config, mempool_config, false);
+
+        let node_id = NodeId::new(NodeType::Validator, idx);
+        let validator_node = NodeInfo::Validator(validator);
+        self.add_node(node_id, validator_node, v_config);
+        node_id
+    }
+
+    fn add_vfn(
+        &mut self,
+        rng: &mut StdRng,
+        idx: u32,
+        mempool_config: &MempoolOverrideConfig,
+    ) -> NodeId {
+        let (vfn, mut vfn_config) = vfn_config(rng, idx);
+        Self::update_config(&mut vfn_config, mempool_config, true);
+
+        let node_id = NodeId::new(NodeType::ValidatorFullNode, idx);
+        let vfn_node = NodeInfo::ValidatorFull(vfn);
+        self.add_node(node_id, vfn_node, vfn_config);
+        node_id
+    }
+
+    fn add_public_full_node(
+        &mut self,
+        rng: &mut StdRng,
+        idx: u32,
+        mempool_config: &MempoolOverrideConfig,
+    ) -> NodeId {
+        let (full_node, mut fn_config) = public_full_node_config(rng, idx, PeerRole::Unknown);
+        Self::update_config(&mut fn_config, mempool_config, false);
+
+        let node_id = NodeId::new(NodeType::FullNode, idx);
+        let full_node = NodeInfo::Full(full_node);
+        self.add_node(node_id, full_node, fn_config);
+        node_id
+    }
+
+    /// Updates configs to adjust for test specific mempool configurations
+    fn update_config(
+        config: &mut NodeConfig,
+        mempool_config: &MempoolOverrideConfig,
+        is_vfn: bool,
+    ) {
+        config.mempool.shared_mempool_batch_size = mempool_config.broadcast_batch_size;
+        // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
+        config.mempool.shared_mempool_ack_timeout_ms = if mempool_config.max_ack_timeout {
+            u64::MAX
+        } else {
+            0
+        };
+
+        // TODO: Determine the magic here for VFNs
+        if is_vfn {
+            config.mempool.shared_mempool_backoff_interval_ms = 50;
+        } else if let Some(mempool_size) = mempool_config.mempool_size {
+            config.mempool.capacity = mempool_size;
+        }
+
+        if let Some(broadcasts_per_peer) = mempool_config.max_broadcasts_per_peer {
+            config.mempool.max_broadcasts_per_peer = broadcasts_per_peer;
+        }
+    }
+
+    fn add_node(&mut self, node_id: NodeId, node_info: NodeInfo, node_config: NodeConfig) {
+        self.peer_to_node_id
+            .insert(node_info.primary_peer_id(), node_id);
+        if let Some(secondary_peer_id) = node_info.secondary_peer_id() {
+            self.peer_to_node_id.insert(secondary_peer_id, node_id);
+        }
+        self.nodes
+            .insert(node_id, Node::new(node_info, node_config));
     }
 
     fn node(&self, node_id: &NodeId) -> &Node {
@@ -164,33 +208,43 @@ impl TestHarness {
         self.node(node_id).commit_txns(txns)
     }
 
-    /// Connect two nodes, A -> B, direction is important
-    fn connect_a_to_b(&mut self, node_a: &NodeId, node_b: &NodeId) {
-        self.connect_a_to_b_with_networks(node_a, true, node_b, true);
+    /// Connect two nodes, Dialer -> Reciever, direction is important
+    fn connect(&mut self, dialer: &NodeId, receiver: &NodeId) {
+        self.connect_with_networks(dialer, true, receiver, true);
     }
 
     /// Connect two nodes on specific interfaces
-    fn connect_a_to_b_with_networks(
+    fn connect_with_networks(
         &mut self,
-        node_a_id: &NodeId,
-        is_primary_a: bool,
-        node_b_id: &NodeId,
-        is_primary_b: bool,
+        dialer_id: &NodeId,
+        dialer_is_primary: bool,
+        receiver_id: &NodeId,
+        receiver_is_primary: bool,
     ) {
-        // Tell B about A
-        let node_a = self.node(node_a_id);
-        let id_a = node_a.peer_id(is_primary_a);
-        let role_a = node_a.peer_role();
-        let node_b = self.mut_node(node_b_id);
+        // Tell receiver about dialer
+        let dialer = self.node(dialer_id);
+        let dialer_peer_id = dialer.peer_id(dialer_is_primary);
+        let dialer_role = dialer.peer_role();
+        let receiver = self.mut_node(receiver_id);
 
-        node_b.send_new_peer_event(is_primary_b, id_a, role_a, ConnectionOrigin::Inbound);
+        receiver.send_new_peer_event(
+            receiver_is_primary,
+            dialer_peer_id,
+            dialer_role,
+            ConnectionOrigin::Inbound,
+        );
 
-        // Tell A about B
-        let node_b = self.node(node_b_id);
-        let id_b = node_b.peer_id(is_primary_b);
-        let role_b = node_b.peer_role();
-        let node_a = self.mut_node(node_a_id);
-        node_a.send_new_peer_event(is_primary_a, id_b, role_b, ConnectionOrigin::Outbound);
+        // Tell dialer about receiver
+        let receiver = self.node(receiver_id);
+        let receiver_peer_id = receiver.peer_id(receiver_is_primary);
+        let receiver_role = receiver.peer_role();
+        let dialer = self.mut_node(dialer_id);
+        dialer.send_new_peer_event(
+            dialer_is_primary,
+            receiver_peer_id,
+            receiver_role,
+            ConnectionOrigin::Outbound,
+        );
     }
 
     /// Disconnect two nodes
@@ -425,7 +479,7 @@ fn test_basic_flow() {
     harness.add_txns(&v_a, test_transactions(0, 3));
 
     // A discovers new peer B
-    harness.connect_a_to_b(&v_b, &v_a);
+    harness.connect(&v_b, &v_a);
 
     // A sends messages, which are received by B
     for seq_num in 0..3 {
@@ -456,7 +510,7 @@ fn test_metric_cache_ignore_shared_txns() {
     );
 
     // Connect B to A incoming
-    harness.connect_a_to_b(&v_b, &v_a);
+    harness.connect(&v_b, &v_a);
 
     // TODO: Why not use the information that comes back from the broadcast?
     for txn in txns.iter().take(3) {
@@ -480,13 +534,13 @@ fn test_interruption_in_sync() {
     harness.add_txns(v_a, vec![test_transaction(0)]);
 
     // A discovers first peer
-    harness.connect_a_to_b(&v_b, &v_a);
+    harness.connect(&v_b, &v_a);
 
     // Make sure first txn delivered to first peer
     harness.broadcast_txns_and_validate(v_a, v_b, 0);
 
     // A discovers second peer
-    harness.connect_a_to_b(&v_c, &v_a);
+    harness.connect(&v_c, &v_a);
 
     // Make sure first txn delivered to second peer
     harness.broadcast_txns_and_validate(v_a, v_c, 0);
@@ -501,7 +555,7 @@ fn test_interruption_in_sync() {
     }
 
     // B reconnects to A
-    harness.connect_a_to_b(&v_b, &v_a);
+    harness.connect(&v_b, &v_a);
 
     // B should receive the remaining txns
     for seq_num in 1..3 {
@@ -518,7 +572,7 @@ fn test_ready_transactions() {
     harness.add_txns(v_a, vec![test_transaction(0), test_transaction(2)]);
 
     // First message delivery
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
     harness.broadcast_txns_and_validate(v_a, v_b, 0);
 
     // Add txn1 to mempool
@@ -536,7 +590,7 @@ fn test_broadcast_self_transactions() {
     harness.add_txns(&v_a, vec![test_transaction(0)]);
 
     // A and B discover each other
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
 
     // A sends txn to B
     harness.broadcast_txns_successfully(v_a, true, 1);
@@ -565,7 +619,7 @@ fn test_broadcast_dependencies() {
     harness.add_txns(v_b, vec![test_transaction(1)]);
 
     // A and B discover each other
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
 
     // B receives 0
     harness.broadcast_txns_and_validate(v_a, v_b, 0);
@@ -585,7 +639,7 @@ fn test_broadcast_updated_transaction() {
     harness.add_txns(v_a, vec![test_transaction(0)]);
 
     // A and B discover each other
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
 
     // B receives 0
     let (txn, _) = harness.broadcast_txns_successfully(&v_a, true, 1);
@@ -615,12 +669,12 @@ fn test_vfn_multi_network() {
 
     // Make a Chain PFN -> VFN A -> VFN B (-> upstream)
     // VFN A discovers pfn as Inbound
-    harness.connect_a_to_b_with_networks(pfn, true, vfn_a, false);
+    harness.connect_with_networks(pfn, true, vfn_a, false);
     // VFN B discovers VFN A as Inbound
-    harness.connect_a_to_b_with_networks(vfn_a, false, vfn_b, false);
+    harness.connect_with_networks(vfn_a, false, vfn_b, false);
 
     // Also add Validator chain PFN -> VFN A -> V A
-    harness.connect_a_to_b(vfn_a, v_a);
+    harness.connect(vfn_a, v_a);
 
     // Add txn to VFN A
     harness.add_txns(vfn_a, vec![test_transaction(0)]);
@@ -649,8 +703,8 @@ fn test_failover() {
     let pfn = peers.get(&PeerRole::Unknown).unwrap().get(0).unwrap();
 
     // VFNs discover primary and fallback upstream peers
-    harness.connect_a_to_b(vfn, v);
-    harness.connect_a_to_b_with_networks(vfn, false, pfn, true);
+    harness.connect(vfn, v);
+    harness.connect_with_networks(vfn, false, pfn, true);
 
     // Send txn to VFN1
     harness.add_txns(vfn, vec![test_transaction(0)]);
@@ -688,7 +742,7 @@ fn test_rebroadcast_mempool_is_full() {
     harness.add_txns(vfn, all_txns.clone());
 
     // VFN connects to Val
-    harness.connect_a_to_b(vfn, val);
+    harness.connect(vfn, val);
 
     // We should get all three txns in a batch
     let (txns, _) = harness.broadcast_txns_successfully(vfn, true, 1);
@@ -733,7 +787,7 @@ fn test_rebroadcast_missing_ack() {
     harness.add_txns(v_a, pool_txns);
 
     // A and B discover each other
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
 
     // Test that txn broadcasts that don't receive an ACK, A rebroadcasts the unACK'ed batch of txns
     for _ in 0..3 {
@@ -767,7 +821,7 @@ fn test_max_broadcast_limit() {
     harness.add_txns(v_a, pool_txns);
 
     // A and B discover each other
-    harness.connect_a_to_b(v_b, v_a);
+    harness.connect(v_b, v_a);
 
     // Test that for mempool broadcasts txns up till max broadcast, even if they are not ACK'ed
     let (txns, _) = harness.broadcast_txns(v_a, true, 1, true, true, true);
