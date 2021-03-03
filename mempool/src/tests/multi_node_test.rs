@@ -23,11 +23,27 @@ use rand::{rngs::StdRng, SeedableRng};
 use std::collections::{HashMap, HashSet};
 
 /// A struct holding a list of overriding configurations for mempool
+#[derive(Clone, Copy)]
 struct MempoolOverrideConfig {
-    broadcast_batch_size: usize,
+    broadcast_batch_size: Option<usize>,
     mempool_size: Option<usize>,
     max_broadcasts_per_peer: Option<usize>,
-    max_ack_timeout: bool,
+    ack_timeout_ms: Option<u64>,
+    backoff_interval_ms: Option<u64>,
+    tick_interval_ms: Option<u64>,
+}
+
+impl MempoolOverrideConfig {
+    fn new() -> MempoolOverrideConfig {
+        MempoolOverrideConfig {
+            broadcast_batch_size: Some(1),
+            mempool_size: None,
+            max_broadcasts_per_peer: None,
+            ack_timeout_ms: None,
+            backoff_interval_ms: None,
+            tick_interval_ms: None,
+        }
+    }
 }
 
 /// A test harness representing a combined network of Nodes and the mempool interactions between them
@@ -42,19 +58,15 @@ impl TestHarness {
     /// Builds a validator only network for testing the SharedMempool interactions
     fn bootstrap_validator_network(
         validator_nodes_count: u32,
-        broadcast_batch_size: usize,
-        mempool_size: Option<usize>,
-        max_broadcasts_per_peer: Option<usize>,
-        max_ack_timeout: bool,
+        validator_mempool_config: Option<MempoolOverrideConfig>,
     ) -> (TestHarness, Vec<NodeId>) {
         let (harness, mut peers) = Self::bootstrap_network(
             validator_nodes_count,
+            validator_mempool_config,
             false,
+            None,
             0,
-            broadcast_batch_size,
-            mempool_size,
-            max_broadcasts_per_peer,
-            max_ack_timeout,
+            None,
         );
         let validators = peers.remove(&PeerRole::Validator).unwrap();
         (harness, validators)
@@ -64,31 +76,24 @@ impl TestHarness {
     /// Note: None of these nodes are told about each other, and must manually be done afterwards
     fn bootstrap_network(
         validator_nodes_count: u32,
+        validator_mempool_config: Option<MempoolOverrideConfig>,
         vfns_attached: bool,
+        vfn_mempool_config: Option<MempoolOverrideConfig>,
         other_full_nodes_count: u32,
-        broadcast_batch_size: usize,
-        mempool_size: Option<usize>,
-        max_broadcasts_per_peer: Option<usize>,
-        max_ack_timeout: bool,
+        fn_mempool_config: Option<MempoolOverrideConfig>,
     ) -> (Self, HashMap<PeerRole, Vec<NodeId>>) {
         let mut harness = Self::default();
         let mut rng = StdRng::from_seed([0u8; 32]);
         let mut peers = HashMap::<PeerRole, Vec<NodeId>>::new();
-        let mempool_config = MempoolOverrideConfig {
-            broadcast_batch_size,
-            mempool_size,
-            max_broadcasts_per_peer,
-            max_ack_timeout,
-        };
 
         // Build up validators
         for idx in 0..validator_nodes_count {
-            let node_id = harness.add_validator(&mut rng, idx, &mempool_config);
+            let node_id = harness.add_validator(&mut rng, idx, validator_mempool_config);
             peers.entry(PeerRole::Validator).or_default().push(node_id);
 
             // Build up VFNs if we've determined we want those too
             if vfns_attached {
-                let node_id = harness.add_vfn(&mut rng, idx, &mempool_config);
+                let node_id = harness.add_vfn(&mut rng, idx, vfn_mempool_config);
                 peers
                     .entry(PeerRole::ValidatorFullNode)
                     .or_default()
@@ -102,7 +107,7 @@ impl TestHarness {
                 .checked_add(validator_nodes_count)
                 .unwrap()
         {
-            let node_id = harness.add_public_full_node(&mut rng, idx, &mempool_config);
+            let node_id = harness.add_public_full_node(&mut rng, idx, fn_mempool_config);
             peers.entry(PeerRole::Unknown).or_default().push(node_id)
         }
 
@@ -113,10 +118,10 @@ impl TestHarness {
         &mut self,
         rng: &mut StdRng,
         idx: u32,
-        mempool_config: &MempoolOverrideConfig,
+        mempool_config: Option<MempoolOverrideConfig>,
     ) -> NodeId {
         let (validator, mut v_config) = validator_config(rng, idx);
-        Self::update_config(&mut v_config, mempool_config, false);
+        Self::update_config(&mut v_config, mempool_config);
 
         let node_id = NodeId::new(NodeType::Validator, idx);
         let validator_node = NodeInfo::Validator(validator);
@@ -128,10 +133,10 @@ impl TestHarness {
         &mut self,
         rng: &mut StdRng,
         idx: u32,
-        mempool_config: &MempoolOverrideConfig,
+        mempool_config: Option<MempoolOverrideConfig>,
     ) -> NodeId {
         let (vfn, mut vfn_config) = vfn_config(rng, idx);
-        Self::update_config(&mut vfn_config, mempool_config, true);
+        Self::update_config(&mut vfn_config, mempool_config);
 
         let node_id = NodeId::new(NodeType::ValidatorFullNode, idx);
         let vfn_node = NodeInfo::ValidatorFull(vfn);
@@ -143,10 +148,10 @@ impl TestHarness {
         &mut self,
         rng: &mut StdRng,
         idx: u32,
-        mempool_config: &MempoolOverrideConfig,
+        mempool_config: Option<MempoolOverrideConfig>,
     ) -> NodeId {
         let (full_node, mut fn_config) = public_full_node_config(rng, idx, PeerRole::Unknown);
-        Self::update_config(&mut fn_config, mempool_config, false);
+        Self::update_config(&mut fn_config, mempool_config);
 
         let node_id = NodeId::new(NodeType::FullNode, idx);
         let full_node = NodeInfo::Full(full_node);
@@ -155,28 +160,31 @@ impl TestHarness {
     }
 
     /// Updates configs to adjust for test specific mempool configurations
-    fn update_config(
-        config: &mut NodeConfig,
-        mempool_config: &MempoolOverrideConfig,
-        is_vfn: bool,
-    ) {
-        config.mempool.shared_mempool_batch_size = mempool_config.broadcast_batch_size;
-        // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
-        config.mempool.shared_mempool_ack_timeout_ms = if mempool_config.max_ack_timeout {
-            u64::MAX
-        } else {
-            0
-        };
+    /// These adjust the reliability & timeliness of the tests based on what settings are set
+    fn update_config(config: &mut NodeConfig, mempool_config: Option<MempoolOverrideConfig>) {
+        if let Some(mempool_config) = mempool_config {
+            if let Some(batch_size) = mempool_config.broadcast_batch_size {
+                config.mempool.shared_mempool_batch_size = batch_size;
+            }
+            if let Some(mempool_size) = mempool_config.mempool_size {
+                config.mempool.capacity = mempool_size;
+            }
 
-        // TODO: Determine the magic here for VFNs
-        if is_vfn {
-            config.mempool.shared_mempool_backoff_interval_ms = 50;
-        } else if let Some(mempool_size) = mempool_config.mempool_size {
-            config.mempool.capacity = mempool_size;
-        }
+            // Set the ack timeout duration to 0 to avoid sleeping to test rebroadcast scenario (broadcast must timeout for this).
+            config.mempool.shared_mempool_ack_timeout_ms =
+                mempool_config.ack_timeout_ms.unwrap_or(0);
 
-        if let Some(broadcasts_per_peer) = mempool_config.max_broadcasts_per_peer {
-            config.mempool.max_broadcasts_per_peer = broadcasts_per_peer;
+            if let Some(max_broadcasts_per_peer) = mempool_config.max_broadcasts_per_peer {
+                config.mempool.max_broadcasts_per_peer = max_broadcasts_per_peer;
+            }
+
+            if let Some(backoff_interval_ms) = mempool_config.backoff_interval_ms {
+                config.mempool.shared_mempool_backoff_interval_ms = backoff_interval_ms;
+            }
+
+            if let Some(tick_interval_ms) = mempool_config.tick_interval_ms {
+                config.mempool.shared_mempool_tick_interval_ms = tick_interval_ms;
+            }
         }
     }
 
@@ -472,7 +480,7 @@ fn test_transaction(seq_num: u64) -> TestTransaction {
 #[test]
 fn test_basic_flow() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     // Add transactions to send
@@ -490,7 +498,7 @@ fn test_basic_flow() {
 #[test]
 fn test_metric_cache_ignore_shared_txns() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     let txns = test_transactions(0, 3);
@@ -524,7 +532,7 @@ fn test_metric_cache_ignore_shared_txns() {
 #[test]
 fn test_interruption_in_sync() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(3, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(3, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b, v_c) = (
         validators.get(0).unwrap(),
         validators.get(1).unwrap(),
@@ -566,7 +574,7 @@ fn test_interruption_in_sync() {
 #[test]
 fn test_ready_transactions() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     harness.add_txns(v_a, vec![test_transaction(0), test_transaction(2)]);
@@ -585,7 +593,7 @@ fn test_ready_transactions() {
 #[test]
 fn test_broadcast_self_transactions() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
     harness.add_txns(&v_a, vec![test_transaction(0)]);
 
@@ -608,8 +616,9 @@ fn test_broadcast_self_transactions() {
 
 #[test]
 fn test_broadcast_dependencies() {
+    let validator_config = MempoolOverrideConfig::new();
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(validator_config));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     // Peer A has transactions with sequence numbers 0 and 2
@@ -632,7 +641,7 @@ fn test_broadcast_dependencies() {
 #[test]
 fn test_broadcast_updated_transaction() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     // Peer A has a transaction with sequence number 0 and gas price 1
@@ -658,9 +667,16 @@ fn test_broadcast_updated_transaction() {
 // Tests VFN properly identifying upstream peers in a network with both upstream and downstream peers
 #[test]
 fn test_vfn_multi_network() {
-    let (mut harness, peers) = TestHarness::bootstrap_network(2, true, 1, 1, None, None, false);
+    let (mut harness, peers) = TestHarness::bootstrap_network(
+        2,
+        Some(MempoolOverrideConfig::new()),
+        true,
+        Some(MempoolOverrideConfig::new()),
+        1,
+        Some(MempoolOverrideConfig::new()),
+    );
     let validators = peers.get(&PeerRole::Validator).unwrap();
-    let v_a = validators.get(0).unwrap();
+    let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     let vfns = peers.get(&PeerRole::ValidatorFullNode).unwrap();
     let (vfn_a, vfn_b) = (vfns.get(0).unwrap(), vfns.get(1).unwrap());
@@ -673,8 +689,12 @@ fn test_vfn_multi_network() {
     // VFN B discovers VFN A as Inbound
     harness.connect_with_networks(vfn_a, false, vfn_b, false);
 
-    // Also add Validator chain PFN -> VFN A -> V A
+    // Also add Validator chain PFN -> VFN A -> V A and VFN B -> VB
     harness.connect(vfn_a, v_a);
+    harness.connect(vfn_b, v_b);
+
+    // Add V A <-> V B
+    harness.connect(v_b, v_a);
 
     // Add txn to VFN A
     harness.add_txns(vfn_a, vec![test_transaction(0)]);
@@ -694,7 +714,14 @@ fn test_vfn_multi_network() {
 /// VFN1 is the subject of fallback testing, and should fallback to the PFN.
 #[test]
 fn test_failover() {
-    let (mut harness, peers) = TestHarness::bootstrap_network(1, true, 1, 1, None, None, false);
+    let (mut harness, peers) = TestHarness::bootstrap_network(
+        1,
+        Some(MempoolOverrideConfig::new()),
+        true,
+        Some(MempoolOverrideConfig::new()),
+        1,
+        Some(MempoolOverrideConfig::new()),
+    );
     let validators = peers.get(&PeerRole::Validator).unwrap();
     let v = validators.get(0).unwrap();
 
@@ -730,7 +757,21 @@ fn test_failover() {
 
 #[test]
 fn test_rebroadcast_mempool_is_full() {
-    let (mut harness, peers) = TestHarness::bootstrap_network(1, true, 0, 3, Some(5), None, false);
+    let mut validator_mempool_config = MempoolOverrideConfig::new();
+    validator_mempool_config.broadcast_batch_size = Some(3);
+    validator_mempool_config.mempool_size = Some(5);
+    let mut vfn_mempool_config = MempoolOverrideConfig::new();
+    vfn_mempool_config.broadcast_batch_size = Some(3);
+    // Backoff retry is shorter so that test doesn't take forever
+    vfn_mempool_config.backoff_interval_ms = Some(50);
+    let (mut harness, peers) = TestHarness::bootstrap_network(
+        1,
+        Some(validator_mempool_config),
+        true,
+        Some(vfn_mempool_config),
+        0,
+        None,
+    );
     let val = peers.get(&PeerRole::Validator).unwrap().get(0).unwrap();
     let vfn = peers
         .get(&PeerRole::ValidatorFullNode)
@@ -781,7 +822,7 @@ fn test_rebroadcast_mempool_is_full() {
 #[test]
 fn test_rebroadcast_missing_ack() {
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, None, false);
+        TestHarness::bootstrap_validator_network(2, Some(MempoolOverrideConfig::new()));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
     let pool_txns = test_transactions(0, 3);
     harness.add_txns(v_a, pool_txns);
@@ -813,8 +854,13 @@ fn test_rebroadcast_missing_ack() {
 
 #[test]
 fn test_max_broadcast_limit() {
+    let mut validator_mempool_config = MempoolOverrideConfig::new();
+    validator_mempool_config.max_broadcasts_per_peer = Some(3);
+    validator_mempool_config.ack_timeout_ms = Some(u64::MAX);
+    validator_mempool_config.backoff_interval_ms = Some(50);
+
     let (mut harness, validators) =
-        TestHarness::bootstrap_validator_network(2, 1, None, Some(3), true);
+        TestHarness::bootstrap_validator_network(2, Some(validator_mempool_config));
     let (v_a, v_b) = (validators.get(0).unwrap(), validators.get(1).unwrap());
 
     let pool_txns = test_transactions(0, 6);

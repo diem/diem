@@ -423,19 +423,12 @@ impl Node {
 
     /// Waits for a specific `SharedMempoolNotification` event
     pub fn wait_for_event(&mut self, expected: SharedMempoolNotification) {
-        // TODO: This section here is the root of all flaky mempool tests, originally it would
-        // only check for 1 event, and now it checks for multiple, but the test might not end timely
-        for _ in 1..5 {
-            let event = self.runtime.block_on(self.subscriber.next()).unwrap();
-            if event == expected {
-                return;
-            }
+        let event = self.runtime.block_on(self.subscriber.next()).unwrap();
+        if event == expected {
+            return;
         }
 
-        panic!(
-            "Failed to get expected event '{:?}' after 5 events",
-            expected
-        )
+        panic!("Failed to get expected event '{:?}'", expected)
     }
 
     /// Checks that there are no `SharedMempoolNotification`s on the subscriber
