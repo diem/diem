@@ -30,6 +30,16 @@ pub const COMPLETED_DIRECTORIES: &[&str; 5] = &[
     "move/operators",
 ];
 
+pub fn minimal_stdlib_files() -> Vec<String> {
+    vec![
+        format!("{}/Errors.move", STD_LIB_DIR),
+        format!("{}/Hash.move", STD_LIB_DIR),
+        format!("{}/Option.move", STD_LIB_DIR),
+        format!("{}/Signer.move", STD_LIB_DIR),
+        format!("{}/Vector.move", STD_LIB_DIR),
+    ]
+}
+
 impl std::fmt::Display for StringError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.0)
