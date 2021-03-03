@@ -227,7 +227,7 @@ impl<'a, K: TName, V> IntoIterator for &'a RememberingUniqueMap<K, V> {
 pub struct IterMut<'a, K: TName, V>(unique_map::IterMut<'a, K, V>);
 
 impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
@@ -239,7 +239,7 @@ impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a mut RememberingUniqueMap<K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {

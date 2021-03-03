@@ -269,13 +269,13 @@ impl<'a, K: TName, V> IntoIterator for &'a UniqueMap<K, V> {
 pub struct IterMut<'a, K: TName, V>(
     std::iter::Map<
         std::collections::btree_map::IterMut<'a, K::Key, (K::Loc, V)>,
-        fn((&'a K::Key, &'a mut (K::Loc, V))) -> (K, &'a mut V),
+        fn((&'a K::Key, &'a mut (K::Loc, V))) -> (K::Loc, &'a K::Key, &'a mut V),
     >,
     usize,
 );
 
 impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 > 0 {
@@ -286,17 +286,17 @@ impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a mut UniqueMap<K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         let len = self.len();
-        let fix = |(k_, loc_v): (&'a K::Key, &'a mut (K::Loc, V))| -> (K, &'a mut V) {
-            let loc = loc_v.0;
-            let v = &mut loc_v.1;
-            let k = K::add_loc(loc, k_.clone());
-            (k, v)
-        };
+        let fix =
+            |(k_, loc_v): (&'a K::Key, &'a mut (K::Loc, V))| -> (K::Loc, &'a K::Key, &'a mut V) {
+                let loc = loc_v.0;
+                let v = &mut loc_v.1;
+                (loc, k_, v)
+            };
         IterMut(self.0.iter_mut().map(fix), len)
     }
 }

@@ -672,7 +672,7 @@ impl BorrowState {
 
         self.locals
             .iter_mut()
-            .for_each(|(_, v)| v.remap_refs(&id_map));
+            .for_each(|(_, _, v)| v.remap_refs(&id_map));
         self.borrows.remap_refs(&id_map);
         self.next_id = self.locals.len() + 1;
     }

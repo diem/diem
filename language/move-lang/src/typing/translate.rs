@@ -57,7 +57,7 @@ fn module(
     } = mdef;
     structs
         .iter_mut()
-        .for_each(|(name, s)| struct_def(context, name, s));
+        .for_each(|(_, _, s)| struct_def(context, s));
     let constants = nconstants.map(|name, c| constant(context, name, c));
     let functions = n_functions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
@@ -513,7 +513,7 @@ mod check_valid_constant {
 // Structs
 //**************************************************************************************************
 
-fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinition) {
+fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
     assert!(context.constraints.is_empty());
     context.reset_for_module_item();
 
@@ -528,7 +528,7 @@ fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinit
     }
     core::solve_constraints(context);
 
-    for (_field, idx_ty) in field_map.iter_mut() {
+    for (_field_loc, _field_, idx_ty) in field_map.iter_mut() {
         expand::type_(context, &mut idx_ty.1);
     }
 }
