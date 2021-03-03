@@ -21,7 +21,7 @@ impl<T: TName> UniqueSet<T> {
         self.0.len()
     }
 
-    pub fn add(&mut self, x: T) -> Result<(), T::Loc> {
+    pub fn add(&mut self, x: T) -> Result<(), (T, T::Loc)> {
         self.0.add(x, ())
     }
 

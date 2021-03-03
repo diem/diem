@@ -208,7 +208,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
             "Invalid parameter type",
             param_ty.clone(),
         );
-        if let Err(prev_loc) = declared.add(param.clone(), ()) {
+        if let Err((param, prev_loc)) = declared.add(param.clone(), ()) {
             context.error(vec![
                 (
                     param.loc(),
@@ -1389,7 +1389,7 @@ fn lvalue(
                     var_ty
                 }
             };
-            if let Err(prev_loc) = seen_locals.add(var.clone(), ()) {
+            if let Err((var, prev_loc)) = seen_locals.add(var.clone(), ()) {
                 let error = match case {
                     C::Bind => {
                         let msg = format!(

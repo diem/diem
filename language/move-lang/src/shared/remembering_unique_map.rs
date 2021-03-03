@@ -32,7 +32,7 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.len()
     }
 
-    pub fn add(&mut self, key: K, value: V) -> Result<(), K::Loc> {
+    pub fn add(&mut self, key: K, value: V) -> Result<(), (K, K::Loc)> {
         self.map.add(key, value)
     }
 

@@ -193,7 +193,7 @@ fn module(
     assert!(context.address == None);
     set_sender_address(context, module_def.loc, address);
     let (mident, mod_) = module_(context, module_def);
-    if let Err((old_loc, _)) = module_map.add(mident.clone(), mod_) {
+    if let Err((mident, (old_loc, _))) = module_map.add(mident, mod_) {
         let mmsg = format!("Duplicate definition for module '{}'", mident);
         context.error(vec![
             (mident.loc(), mmsg),
@@ -645,7 +645,7 @@ fn struct_fields(
     let mut field_map = UniqueMap::new();
     for (idx, (field, pt)) in pfields_vec.into_iter().enumerate() {
         let t = type_(context, pt);
-        if let Err(old_loc) = field_map.add(field.clone(), (idx, t)) {
+        if let Err((field, old_loc)) = field_map.add(field, (idx, t)) {
             context.error(vec![
                 (
                     field.loc(),
@@ -1354,7 +1354,7 @@ fn fields<T>(
 ) -> Fields<T> {
     let mut fmap = UniqueMap::new();
     for (idx, (field, x)) in xs.into_iter().enumerate() {
-        if let Err(old_loc) = fmap.add(field.clone(), (idx, x)) {
+        if let Err((field, old_loc)) = fmap.add(field, (idx, x)) {
             context.error(vec![
                 (loc, format!("Invalid {}", case)),
                 (

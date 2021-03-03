@@ -25,12 +25,13 @@ impl<K: TName, V> UniqueMap<K, V> {
         self.0.len()
     }
 
-    pub fn add(&mut self, key: K, value: V) -> Result<(), K::Loc> {
+    pub fn add(&mut self, key: K, value: V) -> Result<(), (K, K::Loc)> {
+        if let Some(old_loc) = self.get_loc(&key) {
+            return Err((key, *old_loc));
+        }
         let (loc, key_) = key.drop_loc();
         let old_value = self.0.insert(key_, (loc, value));
-        if let Some((old_loc, _)) = old_value {
-            return Err(old_loc);
-        }
+        assert!(old_value.is_none());
         Ok(())
     }
 
@@ -157,8 +158,8 @@ impl<K: TName, V> UniqueMap<K, V> {
     ) -> Result<UniqueMap<K, V>, (K::Key, K::Loc, K::Loc)> {
         let mut m = Self::new();
         for (k, v) in iter {
-            let (loc, key_) = k.drop_loc();
-            if let Err(old_loc) = m.add(K::add_loc(loc, key_.clone()), v) {
+            if let Err((k, old_loc)) = m.add(k, v) {
+                let (loc, key_) = k.drop_loc();
                 return Err((key_, loc, old_loc));
             }
         }

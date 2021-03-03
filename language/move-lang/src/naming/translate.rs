@@ -613,7 +613,7 @@ fn type_parameters(context: &mut Context, type_parameters: Vec<(Name, Kind)>) ->
                 name.value.to_string(),
                 ResolvedType::TParam(loc, tp.clone()),
             );
-            if let Err(old_loc) = unique_tparams.add(name.clone(), ()) {
+            if let Err((name, old_loc)) = unique_tparams.add(name, ()) {
                 let msg = format!("Duplicate type parameter declared with name '{}'", name);
                 context.error(vec![
                     (loc, msg),
