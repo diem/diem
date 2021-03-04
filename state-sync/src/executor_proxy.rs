@@ -216,7 +216,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         let mut epoch_ending_ledger_infos = self
             .storage
             .get_epoch_ending_ledger_infos(epoch, next_epoch)
-            .map_err(|error| Error::UnexpectedError(format!("{}", error)))?;
+            .map_err(|error| Error::UnexpectedError(error.to_string()))?;
 
         epoch_ending_ledger_infos
             .ledger_info_with_sigs
@@ -235,13 +235,13 @@ impl ExecutorProxyTrait for ExecutorProxy {
     ) -> Result<LedgerInfoWithSignatures, Error> {
         self.storage
             .get_epoch_ending_ledger_info(version)
-            .map_err(|error| Error::UnexpectedError(format!("{}", error)))
+            .map_err(|error| Error::UnexpectedError(error.to_string()))
     }
 
     fn get_version_timestamp(&self, version: u64) -> Result<u64, Error> {
         self.storage
             .get_block_timestamp(version)
-            .map_err(|error| Error::UnexpectedError(format!("{}", error)))
+            .map_err(|error| Error::UnexpectedError(error.to_string()))
     }
 
     fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<(), Error> {
@@ -287,7 +287,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                     error!(
                         LogSchema::event_log(LogEntry::Reconfig, LogEvent::PublishError)
                             .subscription_name(subscription.name.clone())
-                            .error(&Error::UnexpectedError(format!("{}", e))),
+                            .error(&Error::UnexpectedError(e.to_string())),
                         "Failed to publish reconfig notification to subscription {}",
                         subscription.name
                     );

@@ -483,17 +483,15 @@ impl RequestManager {
         // increment multicast level if this request is also multicast-timed-out
         let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
         if is_timeout(multicast_start_time, self.multicast_timeout) {
-            let new_multicast_level = std::cmp::min(
-                self.multicast_level.checked_add(1).ok_or_else(|| {
-                    Error::IntegerOverflow("New multicast level has overflown!".into())
-                })?,
-                self.upstream_config
-                    .upstream_count()
-                    .checked_sub(1)
-                    .ok_or_else(|| {
-                        Error::IntegerOverflow("Upstream count has overflown!".into())
-                    })?, // multicast_level (=network preference) is 0-indexed
-            );
+            let new_multicast_level = self.multicast_level.checked_add(1).ok_or_else(|| {
+                Error::IntegerOverflow("New multicast level has overflown!".into())
+            })?;
+            let max_multicast_level = self
+                .upstream_config
+                .upstream_count()
+                .checked_sub(1)
+                .ok_or_else(|| Error::IntegerOverflow("Upstream count has overflown!".into()))?; // multicast_level (=network preference) is 0-indexed
+            let new_multicast_level = std::cmp::min(new_multicast_level, max_multicast_level);
             self.update_multicast(new_multicast_level, Some(version));
         }
         Ok(timeout)

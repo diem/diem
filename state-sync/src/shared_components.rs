@@ -71,7 +71,7 @@ impl SyncState {
     pub fn verify_ledger_info(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<(), Error> {
         self.trusted_epoch_state
             .verify(ledger_info)
-            .map_err(|error| Error::UnexpectedError(format!("{}", error)))
+            .map_err(|error| Error::UnexpectedError(error.to_string()))
     }
 }
 

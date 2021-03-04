@@ -57,18 +57,18 @@ pub enum Error {
 
 impl From<NetworkError> for Error {
     fn from(error: NetworkError) -> Self {
-        Error::NetworkError(format!("{}", error))
+        Error::NetworkError(error.to_string())
     }
 }
 
 impl From<SendError> for Error {
     fn from(error: SendError) -> Self {
-        Error::UnexpectedError(format!("{}", error))
+        Error::UnexpectedError(error.to_string())
     }
 }
 
 impl From<Canceled> for Error {
     fn from(canceled: Canceled) -> Self {
-        Error::SenderDroppedError(format!("{}", canceled))
+        Error::SenderDroppedError(canceled.to_string())
     }
 }
