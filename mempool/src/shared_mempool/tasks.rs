@@ -53,21 +53,24 @@ pub(crate) fn execute_broadcast<V>(
     V: TransactionValidation,
 {
     let peer_manager = &smp.peer_manager.clone();
-    peer_manager.execute_broadcast(peer.clone(), backoff, smp);
-    let schedule_backoff = peer_manager.is_backoff_mode(&peer);
+    let should_schedule = peer_manager.execute_broadcast(peer.clone(), backoff, smp);
 
-    let interval_ms = if schedule_backoff {
-        smp.config.shared_mempool_backoff_interval_ms
-    } else {
-        smp.config.shared_mempool_tick_interval_ms
-    };
+    if should_schedule {
+        let schedule_backoff = peer_manager.is_backoff_mode(&peer);
 
-    scheduled_broadcasts.push(ScheduledBroadcast::new(
-        Instant::now() + Duration::from_millis(interval_ms),
-        peer,
-        schedule_backoff,
-        executor,
-    ))
+        let interval_ms = if schedule_backoff {
+            smp.config.shared_mempool_backoff_interval_ms
+        } else {
+            smp.config.shared_mempool_tick_interval_ms
+        };
+
+        scheduled_broadcasts.push(ScheduledBroadcast::new(
+            Instant::now() + Duration::from_millis(interval_ms),
+            peer,
+            schedule_backoff,
+            executor,
+        ))
+    }
 }
 
 // =============================== //

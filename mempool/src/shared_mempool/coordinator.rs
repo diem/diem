@@ -170,15 +170,10 @@ async fn handle_event<V>(
     match event {
         Event::NewPeer(metadata) => {
             counters::shared_mempool_event_inc("new_peer");
-            let origin = metadata.origin;
             let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
-            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), metadata);
-            let is_upstream_peer = smp.peer_manager.is_upstream_peer(&peer, Some(origin));
-            debug!(LogSchema::new(LogEntry::NewPeer)
-                .peer(&peer)
-                .is_upstream_peer(is_upstream_peer));
+            let should_broadcast = smp.peer_manager.add_peer(peer.clone(), metadata);
             notify_subscribers(SharedMempoolNotification::PeerStateChange, &smp.subscribers);
-            if is_new_peer && is_upstream_peer {
+            if should_broadcast {
                 tasks::execute_broadcast(peer, false, smp, scheduled_broadcasts, executor.clone());
             }
         }

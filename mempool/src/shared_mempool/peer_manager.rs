@@ -118,21 +118,29 @@ impl PeerManager {
 
     // Returns true if `peer` is discovered for the first time, else false.
     pub fn add_peer(&self, peer: PeerNetworkId, metadata: ConnectionMetadata) -> bool {
-        let mut peer_states = self.peer_states.lock();
-        let is_new_peer = !peer_states.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(metadata.origin)) {
+            debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer));
+            let mut peer_states = self.peer_states.lock();
+            let mut should_broadcast = true;
             counters::active_upstream_peers(&peer.raw_network_id()).inc();
             // If we have a new peer, let's insert new data, otherwise, let's just update the current state
-            if is_new_peer {
+            if !peer_states.contains_key(&peer) {
                 peer_states.insert(peer, PeerSyncState::new(metadata));
             } else if let Some(peer_state) = peer_states.get_mut(&peer) {
+                // If we're already broadcasting, let's ignore it
+                if peer_state.is_alive {
+                    should_broadcast = false;
+                }
+
                 peer_state.is_alive = true;
                 peer_state.metadata = metadata;
             }
+            drop(peer_states);
+            self.update_failover();
+            should_broadcast
+        } else {
+            false
         }
-        drop(peer_states);
-        self.update_failover();
-        is_new_peer
     }
 
     /// Disables a peer if it can be restarted, otherwise removes it
@@ -171,7 +179,8 @@ impl PeerManager {
         peer: PeerNetworkId,
         scheduled_backoff: bool,
         smp: &mut SharedMempool<V>,
-    ) where
+    ) -> bool
+    where
         V: TransactionValidation,
     {
         // Start timer for tracking broadcast latency.
@@ -182,19 +191,20 @@ impl PeerManager {
             state
         } else {
             // If we don't have any info about the node, we shouldn't broadcast to it
-            return;
+            return false;
         };
 
         // Only broadcast to peer that is both alive and picked.
         if !state.is_alive || !self.is_picked_peer(&peer) {
-            return;
+            return false;
         }
 
         // If backoff mode is on for this peer, only execute broadcasts that were scheduled as a backoff broadcast.
         // This is to ensure the backoff mode is actually honored (there is a chance a broadcast was scheduled
         // in non-backoff mode before backoff mode was turned on - ignore such scheduled broadcasts).
         if state.broadcast_info.backoff_mode && !scheduled_backoff {
-            return;
+            // TODO: Followup and make sure this is the right thing here
+            return true;
         }
 
         let batch_id: BatchId;
@@ -238,7 +248,7 @@ impl PeerManager {
                 // This helps rate-limit egress network bandwidth and not overload a remote peer or this
                 // node's Diem network sender.
                 if pending_broadcasts >= self.mempool_config.max_broadcasts_per_peer {
-                    return;
+                    return true;
                 }
             }
             let retry = state.broadcast_info.retry_batches.iter().rev().next();
@@ -269,7 +279,7 @@ impl PeerManager {
         }
 
         if transactions.is_empty() {
-            return;
+            return true;
         }
 
         let mut network_sender = smp
@@ -292,7 +302,7 @@ impl PeerManager {
                     .peer(&peer)
                     .error(&e.into())
             );
-            return;
+            return true;
         }
         // Update peer sync state with info from above broadcast.
         state.timeline_id = std::cmp::max(state.timeline_id, batch_id.1);
@@ -336,6 +346,8 @@ impl PeerManager {
                 ])
                 .inc();
         }
+
+        true
     }
 
     // Updates the peer chosen to failover to if all peers in the primary upstream network are down.
