@@ -44,7 +44,6 @@ use move_vm_runtime::{
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::collections::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
 use vm::CompiledModule;
 
@@ -100,13 +99,13 @@ pub fn encode_genesis_change_set(
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> ChangeSet {
-    let mut stdlib_module_map: BTreeMap<ModuleId, &Vec<u8>> = BTreeMap::new();
+    let mut stdlib_module_tuples: Vec<(ModuleId, &Vec<u8>)> = Vec::new();
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
         let module_id = CompiledModule::deserialize(module).unwrap().self_id();
         state_view.add_module(&module_id, &module);
-        stdlib_module_map.insert(module_id, module);
+        stdlib_module_tuples.push((module_id, module));
     }
     let data_cache = StateViewCache::new(&state_view);
 
@@ -151,7 +150,7 @@ pub fn encode_genesis_change_set(
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, &log_context, stdlib_module_map);
+    publish_stdlib(&mut session, &log_context, stdlib_module_tuples);
     let (changeset2, events2) = session.finish().unwrap();
 
     changeset1.squash(changeset2).unwrap();
@@ -442,7 +441,7 @@ fn create_and_initialize_owners_operators(
 fn publish_stdlib(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    stdlib: BTreeMap<ModuleId, &Vec<u8>>,
+    stdlib: Vec<(ModuleId, &Vec<u8>)>,
 ) {
     let genesis_removed = stdlib
         .iter()
