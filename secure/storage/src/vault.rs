@@ -9,7 +9,7 @@ use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
 };
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};

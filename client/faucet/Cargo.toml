@@ -23,7 +23,7 @@ warp = "0.3.0"
 generate-key = { path = "../../config/generate-key" }
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto/" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-client = { path = "../../sdk/client" }
 diem-logger = { path = "../../common/logger" }
 diem-types = { path = "../../types" }

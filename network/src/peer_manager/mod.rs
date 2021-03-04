@@ -59,7 +59,7 @@ mod tests;
 
 pub use self::error::PeerManagerError;
 use diem_config::config::{PeerRole, PeerSet};
-use diem_infallible::RwLock;
+use infallible::RwLock;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]

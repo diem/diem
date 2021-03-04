@@ -33,7 +33,7 @@ impl TimeServiceTrait for RealTimeService {
     }
 
     fn now_unix_time(&self) -> Duration {
-        diem_infallible::duration_since_epoch()
+        infallible::duration_since_epoch()
     }
 
     #[cfg(any(test, feature = "async"))]

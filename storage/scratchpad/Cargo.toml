@@ -13,7 +13,7 @@ edition = "2018"
 itertools = "0.10.0"
 
 diem-crypto = { path = "../../crypto/crypto" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::rate_limit::{Bucket, SharedBucket};
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use futures::{
     io::AsyncRead,
     ready,

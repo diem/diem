@@ -7,7 +7,7 @@ use crate::{
 };
 use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signature};
 use diem_crypto::HashValue;
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_logger::prelude::*;
 use move_core_types::{
     identifier::{IdentStr, Identifier},

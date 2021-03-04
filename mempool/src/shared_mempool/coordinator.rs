@@ -19,7 +19,7 @@ use anyhow::Result;
 use bounded_executor::BoundedExecutor;
 use channel::diem_channel;
 use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_trace::prelude::*;
 use diem_types::{

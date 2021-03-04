@@ -17,7 +17,7 @@ chrono = "0.4.19"
 erased-serde = "0.3.13"
 hostname = "0.3.1"
 diem-log-derive = { path = "derive" }
-diem-infallible = { path = "../infallible" }
+infallible = { path = "../infallible" }
 diem-workspace-hack = { path = "../workspace-hack" }
 once_cell = "1.7.2"
 serde = { version = "1.0.124", features = ["derive"] }

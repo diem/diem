@@ -13,7 +13,7 @@ use diem_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_types::{
     mempool_status::MempoolStatusCode,
     transaction::{GovernanceRole, SignedTransaction},

@@ -9,7 +9,7 @@ use diem_config::{
 use diem_crypto::{
     hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, HashValue, Uniform,
 };
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_mempool::mocks::MockSharedMempool;
 use diem_time_service::TimeService;
 use diem_types::{

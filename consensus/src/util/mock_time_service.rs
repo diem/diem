@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::util::time_service::{ScheduledTask, TimeService};
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_logger::prelude::*;
 use std::{sync::Arc, time::Duration};
 

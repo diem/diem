@@ -41,7 +41,7 @@ diem-crypto = { path = "../crypto/crypto" }
 diem-logger = { path = "../common/logger" }
 diem-mempool = { path = "../mempool" }
 diem-metrics = { path = "../common/metrics" }
-diem-infallible = { path = "../common/infallible" }
+infallible = { path = "../common/infallible" }
 diem-secure-storage = { path = "../secure/storage" }
 diem-temppath = { path = "../common/temppath" }
 diem-trace = { path = "../common/trace" }

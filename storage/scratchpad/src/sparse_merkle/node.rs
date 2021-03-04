@@ -21,8 +21,8 @@ use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_infallible::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
+use infallible::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 
 /// We wrap the node in `RwLock`. The only case when we will update the node is when we

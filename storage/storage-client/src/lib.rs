@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use diem_crypto::HashValue;
-use diem_infallible::Mutex;
 use diem_logger::warn;
 use diem_secure_net::NetworkClient;
 use diem_types::{
@@ -18,6 +17,7 @@ use diem_types::{
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
 };
+use infallible::Mutex;
 use serde::de::DeserializeOwned;
 use std::net::SocketAddr;
 use storage_interface::{

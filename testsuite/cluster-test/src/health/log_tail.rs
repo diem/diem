@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::health::ValidatorEvent;
-use diem_infallible::{duration_since_epoch, Mutex};
+use infallible::{duration_since_epoch, Mutex};
 use diem_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
 use std::{
     sync::{

@@ -11,7 +11,7 @@ use crate::{
     tx_emitter::EmitJobRequest,
 };
 use async_trait::async_trait;
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use diem_logger::info;
 use futures::future::try_join_all;
 use rand::Rng;

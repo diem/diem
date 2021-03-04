@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters;
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use std::time::Duration;
 
 pub struct BlockStage;

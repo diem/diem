@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{bail, ensure, format_err};
 use diem_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use diem_types::{
     account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
     epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,

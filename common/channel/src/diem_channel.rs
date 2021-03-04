@@ -9,7 +9,7 @@
 //! Internally, it uses the `PerKeyQueue` to store messages
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use anyhow::{ensure, Result};
-use diem_infallible::{Mutex, NonZeroUsize};
+use infallible::{Mutex, NonZeroUsize};
 use diem_metrics::IntCounterVec;
 use futures::{
     channel::oneshot,

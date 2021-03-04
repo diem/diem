@@ -613,7 +613,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         );
         counters::set_timestamp(
             counters::TimestampType::Real,
-            diem_infallible::duration_since_epoch().as_micros() as u64,
+            infallible::duration_since_epoch().as_micros() as u64,
         );
 
         debug!(LogSchema::new(LogEntry::LocalState)

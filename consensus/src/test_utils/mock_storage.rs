@@ -12,7 +12,7 @@ use consensus_types::{
     block::Block, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use diem_crypto::HashValue;
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_types::{
     epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},

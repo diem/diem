@@ -23,7 +23,7 @@ use diem_config::{
     config::{PeerRole, MAX_INBOUND_CONNECTIONS},
     network_id::NetworkContext,
 };
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
 use diem_time_service::TimeService;
 use diem_types::{network_address::NetworkAddress, PeerId};

@@ -181,8 +181,8 @@ Error handling suggestions follow the [Rust book guidance](https://doc.rust-lang
 
 *Fallible functions*
 
-* `duration_since_epoch()` - to obtain the unix time, call the function provided by `diem-infallible`.
-* `RwLock` and `Mutex` - Instead of calling `unwrap()` on the standard library implementations of these functions, use the infallible equivalent types that we provide in `diem-infallible`.
+* `duration_since_epoch()` - to obtain the unix time, call the function provided by `infallible`.
+* `RwLock` and `Mutex` - Instead of calling `unwrap()` on the standard library implementations of these functions, use the infallible equivalent types that we provide in `infallible`.
 
 *Panic*
 

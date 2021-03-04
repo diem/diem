@@ -12,7 +12,7 @@ use crate::{
 use diem_config::config::{ExecutionCorrectnessService, NodeConfig};
 use diem_crypto::ed25519::Ed25519PrivateKey;
 use diem_global_constants::EXECUTION_KEY;
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_secure_storage::{CryptoStorage, Storage};
 use diem_vm::DiemVM;
 use executor::Executor;

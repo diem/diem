@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_logger::debug;
 use diem_metrics::HistogramVec;
 use std::{cmp::min, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Instant};

@@ -9,7 +9,7 @@ use crate::{
     instance::Instance,
 };
 use debug_interface::AsyncNodeDebugClient;
-use diem_infallible::{duration_since_epoch, Mutex};
+use infallible::{duration_since_epoch, Mutex};
 use diem_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
 use serde_json::{self, value as json};
 use std::{

@@ -10,6 +10,7 @@ use diem_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Transaction},
 };
+use infallible::checked;
 
 use serde::de::DeserializeOwned;
 

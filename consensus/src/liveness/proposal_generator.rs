@@ -12,7 +12,7 @@ use consensus_types::{
     quorum_cert::QuorumCert,
 };
 
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use std::sync::Arc;
 
 #[cfg(test)]

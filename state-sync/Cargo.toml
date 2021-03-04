@@ -25,7 +25,7 @@ tokio-stream = "0.1.4"
 channel = { path = "../common/channel" }
 diem-config = { path = "../config" }
 diem-crypto = { path = "../crypto/crypto" }
-diem-infallible = { path = "../common/infallible" }
+infallible = { path = "../common/infallible" }
 diem-logger = { path = "../common/logger" }
 diem-mempool = { path = "../mempool"}
 diem-metrics = { path = "../common/metrics" }

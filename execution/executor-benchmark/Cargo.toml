@@ -21,7 +21,7 @@ diemdb = { path = "../../storage/diemdb" }
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-logger = { path = "../../common/logger" }
 diem-types = { path = "../../types" }
 diem-vm= { path = "../../language/diem-vm" }

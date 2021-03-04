@@ -14,7 +14,7 @@ use diem_config::{
     config::{NodeConfig, PeerNetworkId, PeerRole, RoleType},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use diem_infallible::{Mutex, MutexGuard, RwLock};
+use infallible::{Mutex, MutexGuard, RwLock};
 use diem_types::{account_address::AccountAddress, transaction::GovernanceRole, PeerId};
 use enum_dispatch::enum_dispatch;
 use futures::{

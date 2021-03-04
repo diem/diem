@@ -7,7 +7,7 @@
 /// # Examples
 ///
 /// ```
-///# use crate::diem_infallible::checked;
+///# use crate::infallible::checked;
 /// let a: i64 = 1;
 /// let b: i64 = 2;
 /// let c: i64 = 3;

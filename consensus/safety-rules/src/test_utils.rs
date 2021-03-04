@@ -20,7 +20,7 @@ use diem_crypto::{
     traits::SigningKey,
     Uniform,
 };
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use diem_secure_storage::{InMemoryStorage, Storage};
 use diem_types::{
     block_info::BlockInfo,

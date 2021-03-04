@@ -139,7 +139,7 @@ impl HealthCheckRunner {
             if self.debug {
                 messages.push(format!(
                     "{} {}, on_event time: {}ms, verify time: {}ms, events: {}",
-                    diem_infallible::duration_since_epoch().as_millis(),
+                    infallible::duration_since_epoch().as_millis(),
                     health_check.name(),
                     (events_processed - start).as_millis(),
                     (verified - events_processed).as_millis(),
@@ -151,7 +151,7 @@ impl HealthCheckRunner {
             node_health.insert(err.validator.clone(), false);
             messages.push(format!(
                 "{} {:?}",
-                diem_infallible::duration_since_epoch().as_millis(),
+                infallible::duration_since_epoch().as_millis(),
                 err
             ));
         }
@@ -232,7 +232,7 @@ pub struct HealthCheckError {
 
 impl HealthCheckContext {
     pub fn new() -> Self {
-        let now = diem_infallible::duration_since_epoch();
+        let now = infallible::duration_since_epoch();
         Self {
             now,
             err_acc: vec![],

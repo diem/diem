@@ -16,7 +16,7 @@
 //! use memsocket::MemorySocket;
 //! use diem_config::{config::{Peer, PeerRole, RoleType}, network_id::{NetworkContext, NetworkId}};
 //! use diem_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
-//! use diem_infallible::RwLock;
+//! use infallible::RwLock;
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use diem_types::PeerId;
 //! use std::{collections::{HashSet, HashMap}, io, sync::Arc};

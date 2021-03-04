@@ -10,7 +10,7 @@ use crate::{
     shared_components::test_utils,
 };
 use diem_config::network_id::{NetworkId, NodeNetworkId};
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof, PeerId,
 };

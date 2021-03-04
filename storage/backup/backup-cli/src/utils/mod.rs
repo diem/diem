@@ -13,10 +13,10 @@ pub mod test_utils;
 use anyhow::{anyhow, Result};
 use diem_config::config::RocksdbConfig;
 use diem_crypto::HashValue;
-use diem_infallible::duration_since_epoch;
 use diem_jellyfish_merkle::{restore::JellyfishMerkleRestore, NodeBatch, TreeWriter};
 use diem_types::{account_state_blob::AccountStateBlob, transaction::Version, waypoint::Waypoint};
 use diemdb::{backup::restore_handler::RestoreHandler, DiemDB, GetRestoreHandler};
+use infallible::duration_since_epoch;
 use std::{
     collections::HashMap,
     convert::TryFrom,

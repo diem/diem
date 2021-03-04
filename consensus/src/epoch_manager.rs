@@ -29,7 +29,7 @@ use consensus_types::{
     epoch_retrieval::EpochRetrievalRequest,
 };
 use diem_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use diem_logger::prelude::*;
 use diem_metrics::monitor;
 use diem_types::{

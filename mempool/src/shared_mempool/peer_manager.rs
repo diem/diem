@@ -11,9 +11,9 @@ use crate::{
     },
 };
 use diem_config::config::{MempoolConfig, PeerNetworkId, PeerRole};
-use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
+use infallible::Mutex;
 use itertools::Itertools;
 use netcore::transport::ConnectionOrigin;
 use network::transport::ConnectionMetadata;

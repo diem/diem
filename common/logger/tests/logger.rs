@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_logger::{info, DiemLogger, Writer};
 use std::sync::Arc;
 

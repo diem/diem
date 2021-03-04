@@ -37,7 +37,7 @@ diem-jellyfish-merkle = { path = "../../jellyfish-merkle" }
 bcs = "0.1.2"
 diem-config = { path = "../../../config" }
 diem-crypto = { path = "../../../crypto/crypto" }
-diem-infallible = { path = "../../../common/infallible" }
+infallible = { path = "../../../common/infallible" }
 diem-logger = { path = "../../../common/logger" }
 diem-secure-push-metrics = { path = "../../../secure/push-metrics" }
 diem-types = { path = "../../../types" }

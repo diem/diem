@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use diem_infallible::duration_since_epoch;
+use infallible::duration_since_epoch;
 use diem_logger::{info, warn};
 use diem_trace::{
     trace::{find_peer_with_stage, random_node, trace_node},

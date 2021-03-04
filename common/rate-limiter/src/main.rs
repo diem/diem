@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_rate_limiter::{
     async_lib::AsyncRateLimiter,
     rate_limit::{Bucket, SharedBucket},

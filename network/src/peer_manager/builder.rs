@@ -19,7 +19,7 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_crypto::x25519;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
