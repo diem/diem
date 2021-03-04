@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-hex = "0.4.2"
+hex = "0.4.3"
 serde = { version = "1.0.123", features = ["rc"], default-features = false }
 serde_yaml = "0.8.17"
 structopt = "0.3.21"

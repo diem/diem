@@ -15,7 +15,7 @@ num_cpus = "1.13.0"
 mirai-annotations = "1.10.1"
 structopt = "0.3.21"
 itertools = "0.10.0"
-hex = "0.4.2"
+hex = "0.4.3"
 getrandom = "0.2.2"
 crossbeam-channel = "0.5.0"
 

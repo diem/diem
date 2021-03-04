@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-hex = "0.4.2"
+hex = "0.4.3"
 diem-state-view = { path = "../../../storage/state-view" }
 diem-types = { path = "../../../types" }
 diem-vm = { path = "../../diem-vm" }

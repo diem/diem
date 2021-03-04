@@ -31,4 +31,4 @@ diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
 diem-config =  { path = "../../../config" }
 compiled-stdlib = { path = "../../diem-framework/compiled" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-hex = "0.4.2"
+hex = "0.4.3"

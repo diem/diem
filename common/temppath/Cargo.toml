@@ -10,6 +10,6 @@ publish = false
 edition = "2018"
 
 [dependencies]
-hex = "0.4.2"
+hex = "0.4.3"
 diem-workspace-hack = { path = "../workspace-hack" }
 rand = "0.8.3"

@@ -15,7 +15,7 @@ bytes = "1.0.1"
 curve25519-dalek = { version = "0.1.0", package = "curve25519-dalek-fiat", default-features = false, features = ["std"] }
 digest = "0.9.0"
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "serde"] }
-hex = "0.4.2"
+hex = "0.4.3"
 hkdf = "0.10.0"
 once_cell = "1.7.2"
 mirai-annotations = "1.10.1"

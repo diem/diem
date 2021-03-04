@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 codespan = { version = "0.8.0", features = ["serialization"] }
-hex = "0.4.2"
+hex = "0.4.3"
 move-ir-types = { path = "../../../move-ir/types" }
 move-core-types = { path = "../../../move-core/types" }
 diem-types = { path = "../../../../types" }

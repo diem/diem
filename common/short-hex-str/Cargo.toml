@@ -18,5 +18,5 @@ thiserror = "1.0.24"
 diem-workspace-hack = { path = "../workspace-hack" }
 
 [dev-dependencies]
-hex = "0.4.2"
+hex = "0.4.3"
 proptest = "1.0.0"

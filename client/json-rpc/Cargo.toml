@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.38"
 async-trait = "0.1.42"
 futures = "0.3.12"
-hex = "0.4.2"
+hex = "0.4.3"
 rand = "0.8.3"
 reqwest = { version = "0.11.1", features = ["blocking", "json"], default_features = false }
 serde = { version = "1.0.123", default-features = false }

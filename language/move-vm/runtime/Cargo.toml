@@ -28,7 +28,7 @@ vm = { path = "../../vm" }
 
 [dev-dependencies]
 anyhow = "1.0.38"
-hex = "0.4.2"
+hex = "0.4.3"
 proptest = "1.0.0"
 
 compiler = { path = "../../compiler" }

@@ -30,7 +30,7 @@ codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 futures = "0.3.12"
 handlebars = "3.5.3"
-hex = "0.4.2"
+hex = "0.4.3"
 itertools = "0.10.0"
 log = { version = "0.4.14", features = ["serde"] }
 num = "0.3.0"
