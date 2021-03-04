@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
+use camino::Utf8Path;
 use guppy::graph::{PackageGraph, PackageMetadata};
-use std::path::Path;
 use x_core::WorkspaceStatus;
 
 /// Represents a linter that runs once per package.
@@ -22,7 +22,7 @@ pub struct PackageContext<'l> {
     // PackageContext requires the package graph to be computed and available, though ProjectContext
     // does not.
     package_graph: &'l PackageGraph,
-    workspace_path: &'l Path,
+    workspace_path: &'l Utf8Path,
     metadata: PackageMetadata<'l>,
     is_default_member: bool,
 }
@@ -31,7 +31,7 @@ impl<'l> PackageContext<'l> {
     pub fn new(
         project_ctx: &'l ProjectContext<'l>,
         package_graph: &'l PackageGraph,
-        workspace_path: &'l Path,
+        workspace_path: &'l Utf8Path,
         metadata: PackageMetadata<'l>,
     ) -> Result<Self> {
         let default_members = project_ctx.default_members()?;
@@ -55,7 +55,7 @@ impl<'l> PackageContext<'l> {
     }
 
     /// Returns the relative path for this package in the workspace.
-    pub fn workspace_path(&self) -> &'l Path {
+    pub fn workspace_path(&self) -> &'l Utf8Path {
         self.workspace_path
     }
 

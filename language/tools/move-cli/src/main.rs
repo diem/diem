@@ -9,33 +9,30 @@ use move_cli::{
 };
 use move_core_types::{
     account_address::AccountAddress,
+    effects::{ChangeSet, Event},
     gas_schedule::{GasAlgebra, GasUnits},
-    identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     parser,
-    transaction_argument::TransactionArgument,
+    transaction_argument::{convert_txn_args, TransactionArgument},
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{
-    self, compiled_unit::CompiledUnit, Pass as MovePass, PassResult as MovePassResult,
-};
-use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::{gas_schedule, values::Value};
+use move_lang::{self, compiled_unit::CompiledUnit};
+use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
+use move_vm_types::gas_schedule::CostStrategy;
 use vm::{
-    access::ScriptAccess,
+    access::{ModuleAccess, ScriptAccess},
     compatibility::Compatibility,
-    errors::VMError,
+    errors::{PartialVMError, VMError},
     file_format::{CompiledModule, CompiledScript, SignatureToken},
-    normalized::Module,
+    normalized,
 };
 
 use anyhow::{bail, Result};
 use std::{
-    collections::BTreeSet,
+    collections::BTreeMap,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use structopt::StructOpt;
 
@@ -45,7 +42,7 @@ use structopt::StructOpt;
     about = "CLI frontend for Move compiler and VM",
     rename_all = "kebab-case"
 )]
-struct Move {
+pub struct Move {
     /// Directory storing Move resources, events, and module bytecodes produced by module publishing
     /// and script execution.
     #[structopt(long, default_value = DEFAULT_STORAGE_DIR, global = true)]
@@ -69,7 +66,7 @@ struct Move {
 }
 
 #[derive(StructOpt)]
-enum Command {
+pub enum Command {
     /// Type check and verify the specified script and modules against the modules in `storage`
     #[structopt(name = "check")]
     Check {
@@ -191,91 +188,18 @@ impl Move {
                 .into_iter()
                 .filter(|m| !state.has_module(&m.self_id()))
                 .collect();
-            state.save_modules(&new_modules)?;
+
+            let mut serialized_modules = vec![];
+            for module in new_modules {
+                let mut module_bytes = vec![];
+                module.serialize(&mut module_bytes)?;
+                serialized_modules.push((module.self_id(), module_bytes));
+            }
+            state.save_modules(&serialized_modules)?;
         }
 
         Ok(state)
     }
-}
-
-fn shadow_storage(
-    interface_dir: String,
-    pprog: move_lang::parser::ast::Program,
-) -> Result<move_lang::parser::ast::Program> {
-    fn convert_module_id(
-        address: &move_lang::shared::Address,
-        name: &move_lang::parser::ast::ModuleName,
-    ) -> ModuleId {
-        use move_lang::shared::Identifier as MoveIdentifier;
-        ModuleId::new(
-            AccountAddress::new(address.to_u8()),
-            Identifier::new(name.value().to_string()).unwrap(),
-        )
-    }
-    use move_lang::parser::ast::{Definition, Program};
-    let Program {
-        source_definitions,
-        lib_definitions,
-    } = pprog;
-    let mut interface_modules_to_remove = BTreeSet::new();
-    for def in &source_definitions {
-        match def {
-            Definition::Address(_, addr, modules) => {
-                for module in modules {
-                    interface_modules_to_remove.insert(convert_module_id(addr, &module.name));
-                }
-            }
-            Definition::Module(_) | Definition::Script(_) => (),
-        }
-    }
-
-    let interface_files_to_ignore = move_lang::find_filenames(&[interface_dir], |path| {
-        let module_str = path.file_stem().unwrap().to_str().unwrap();
-        let module = Identifier::new(module_str.to_string()).unwrap();
-
-        let mut comps = path.components().rev();
-        let _file = comps.next().unwrap();
-        let addr_str = comps.next().unwrap().as_os_str().to_str().unwrap();
-        let addr = AccountAddress::from_str(addr_str).unwrap();
-
-        let id = ModuleId::new(addr, module);
-        interface_modules_to_remove.contains(&id)
-    })?
-    .into_iter()
-    .collect::<BTreeSet<_>>();
-    let lib_definitions = lib_definitions
-        .into_iter()
-        .filter(|def| !interface_files_to_ignore.contains(def.file()))
-        .collect();
-    Ok(Program {
-        source_definitions,
-        lib_definitions,
-    })
-}
-
-fn move_compile_to_and_shadow(
-    files: &[String],
-    interface_dir: String,
-    republish: bool,
-    until: MovePass,
-) -> Result<(
-    move_lang::errors::FilesSourceText,
-    std::result::Result<MovePassResult, move_lang::errors::Errors>,
-)> {
-    let (files, pprog_and_comments_res) =
-        move_lang::move_parse(files, &[interface_dir.clone()], None, None)?;
-    let (_comments, sender_opt, mut pprog) = match pprog_and_comments_res {
-        Err(errors) => return Ok((files, Err(errors))),
-        Ok(res) => res,
-    };
-    assert!(sender_opt.is_none());
-    if republish {
-        pprog = shadow_storage(interface_dir, pprog)?;
-    }
-    Ok((
-        files,
-        move_lang::move_continue_up_to(MovePassResult::Parser(None, pprog), until),
-    ))
 }
 
 /// Compile the user modules in `src` and the script in `script_file`
@@ -283,13 +207,13 @@ fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: boo
     if verbose {
         println!("Checking Move files...");
     }
-    let (files, result) = move_compile_to_and_shadow(
+    move_lang::move_check_and_report(
         files,
-        state.interface_files_dir()?,
+        &[state.interface_files_dir()?],
+        None,
+        None,
         republish,
-        MovePass::CFGIR,
     )?;
-    move_lang::unwrap_or_report_errors!(files, result);
     Ok(())
 }
 
@@ -304,20 +228,17 @@ fn publish(
         println!("Compiling Move modules...")
     }
 
-    let (files, result) = move_compile_to_and_shadow(
+    let (_, compiled_units) = move_lang::move_compile_and_report(
         files,
-        state.interface_files_dir()?,
+        &[state.interface_files_dir()?],
+        None,
+        None,
         republish,
-        MovePass::Compilation,
     )?;
-    let compiled_units = match move_lang::unwrap_or_report_errors!(files, result) {
-        MovePassResult::Compilation(units) => units,
-        _ => unreachable!(),
-    };
 
     let num_modules = compiled_units
         .iter()
-        .filter(|u| matches!(u,  CompiledUnit::Module {..}))
+        .filter(|u| matches!(u, CompiledUnit::Module { .. }))
         .count();
     if verbose {
         println!("Found and compiled {} modules", num_modules)
@@ -339,31 +260,56 @@ fn publish(
         }
     }
 
+    // use the the publish_module API frm the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
-        for m in &modules {
-            let id = m.self_id();
-            if let Ok(old_m) = state.get_compiled_module(&id) {
-                let old_api = Module::new(&old_m);
-                let new_api = Module::new(m);
-                let compat = Compatibility::check(&old_api, &new_api);
-                if !compat.is_fully_compatible() {
-                    eprintln!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.")
-                }
-                if !compat.struct_layout {
-                    // TODO: we could choose to make this more precise by walking the global state and looking for published
-                    // structs of this type. but probably a bad idea
-                    bail!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", id)
-                }
-                if !compat.struct_and_function_linking {
-                    // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
-                    // but this is not easy to check without walking the global state and looking for everything
-                    bail!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", id)
-                }
+        let vm = MoveVM::new();
+        let mut cost_strategy = get_cost_strategy(None)?;
+        let log_context = NoContextLog::new();
+        let mut session = vm.new_session(&state);
+
+        let mut has_error = false;
+        for module in &modules {
+            let mut module_bytes = vec![];
+            module.serialize(&mut module_bytes)?;
+
+            let id = module.self_id();
+            let sender = *id.address();
+
+            let res =
+                session.publish_module(module_bytes, sender, &mut cost_strategy, &log_context);
+            if let Err(err) = res {
+                explain_publish_error(err, &state, module)?;
+                has_error = true;
+                break;
             }
         }
+
+        if !has_error {
+            let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+            assert!(events.is_empty());
+            if verbose {
+                explain_publish_changeset(&changeset, &state);
+            }
+            let modules: Vec<_> = changeset
+                .into_modules()
+                .map(|(module_id, blob_opt)| (module_id, blob_opt.expect("must be non-deletion")))
+                .collect();
+            state.save_modules(&modules)?;
+        }
+    } else {
+        // NOTE: the VM enforces the most strict way of module republishing and does not allow
+        // backward incompatible changes, as as result, if this flag is set, we skip the VM process
+        // and force the CLI to override the on-disk state directly
+        let mut serialized_modules = vec![];
+        for module in modules {
+            let mut module_bytes = vec![];
+            module.serialize(&mut module_bytes)?;
+            serialized_modules.push((module.self_id(), module_bytes));
+        }
+        state.save_modules(&serialized_modules)?;
     }
 
-    state.save_modules(&modules)
+    Ok(())
 }
 
 fn run(
@@ -389,6 +335,7 @@ fn run(
             &[state.interface_files_dir()?],
             None,
             None,
+            false,
         )?;
 
         let mut script_opt = None;
@@ -423,38 +370,16 @@ fn run(
     let mut script_bytes = vec![];
     script.serialize(&mut script_bytes)?;
 
-    let vm = MoveVM::new();
-    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
-    let mut cost_strategy = if let Some(gas_budget) = gas_budget {
-        let max_gas_budget = u64::MAX / gas_schedule.gas_constants.gas_unit_scaling_factor;
-        if gas_budget >= max_gas_budget {
-            bail!("Gas budget set too high; maximum is {}", max_gas_budget)
-        }
-        gas_schedule::CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
-    } else {
-        // no budget specified. use CostStrategy::system, which disables gas metering
-        gas_schedule::CostStrategy::system(gas_schedule, GasUnits::new(0))
-    };
-
     let signer_addresses = signers
         .iter()
         .map(|s| AccountAddress::from_hex_literal(&s))
         .collect::<Result<Vec<AccountAddress>>>()?;
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
-    let vm_args: Vec<Value> = txn_args
-        .iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect();
+    let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
+    let vm = MoveVM::new();
+    let mut cost_strategy = get_cost_strategy(gas_budget)?;
     let log_context = NoContextLog::new();
-
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -467,7 +392,7 @@ fn run(
     );
 
     if let Err(err) = res {
-        explain_error(
+        explain_execution_error(
             err,
             &state,
             &script,
@@ -476,98 +401,161 @@ fn run(
             txn_args,
         )
     } else {
-        let effects = session.finish().map_err(|e| e.into_vm_status())?;
+        let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
         if verbose {
-            explain_effects(&effects, &state)?
+            explain_execution_effects(&changeset, &events, &state)?
         }
-        maybe_commit_effects(!dry_run, Some(effects), &state)
+        maybe_commit_effects(!dry_run, changeset, events, &state)
     }
 }
 
-fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Result<()> {
-    // all module publishing happens via save_modules(), so effects shouldn't contain modules
-    assert!(effects.modules.is_empty());
-    if !effects.events.is_empty() {
-        println!("Emitted {:?} events:", effects.events.len());
+fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
+    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
+    let cost_strategy = if let Some(gas_budget) = gas_budget {
+        let max_gas_budget = u64::MAX
+            .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
+            .unwrap();
+        if gas_budget >= max_gas_budget {
+            bail!("Gas budget set too high; maximum is {}", max_gas_budget)
+        }
+        CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
+    } else {
+        // no budget specified. use CostStrategy::system, which disables gas metering
+        CostStrategy::system(gas_schedule, GasUnits::new(0))
+    };
+    Ok(cost_strategy)
+}
+
+fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) {
+    // publish effects should contain no resources
+    assert!(changeset.resources().next().is_none());
+    // total bytes written across all accounts
+    let mut total_bytes_written = 0;
+    for (addr, name, blob_opt) in changeset.modules() {
+        if let Some(module_bytes) = blob_opt {
+            let bytes_written = addr.len() + name.len() + module_bytes.len();
+            total_bytes_written += bytes_written;
+            let module_id = ModuleId::new(addr, name.clone());
+            if state.has_module(&module_id) {
+                println!(
+                    "Updating an existing module {} (wrote {:?} bytes)",
+                    module_id, bytes_written
+                );
+            } else {
+                println!(
+                    "Publishing a new module {} (wrote {:?} bytes)",
+                    module_id, bytes_written
+                );
+            }
+        } else {
+            panic!("Deleting a module is not supported")
+        }
+    }
+    println!(
+        "Wrote {:?} bytes of module ID's and code",
+        total_bytes_written
+    )
+}
+
+fn explain_execution_effects(
+    changeset: &ChangeSet,
+    events: &[Event],
+    state: &OnDiskStateView,
+) -> Result<()> {
+    // execution effects should contain no modules
+    assert!(changeset.modules().next().is_none());
+    if !events.is_empty() {
+        println!("Emitted {:?} events:", events.len());
         // TODO: better event printing
-        for (event_key, event_sequence_number, _event_type, _event_layout, event_data) in
-            &effects.events
-        {
+        for (event_key, event_sequence_number, _event_type, event_data) in events {
             println!(
                 "Emitted {:?} as the {}th event to stream {:?}",
                 event_data, event_sequence_number, event_key
             )
         }
     }
-    if !effects.resources.is_empty() {
+    if !changeset.accounts.is_empty() {
         println!(
             "Changed resource(s) under {:?} address(es):",
-            effects.resources.len()
+            changeset.accounts.len()
         );
     }
-    for (addr, writes) in &effects.resources {
+    // total bytes written across all accounts
+    let mut total_bytes_written = 0;
+    for (addr, account) in &changeset.accounts {
         print!("  ");
+        if account.resources.is_empty() {
+            continue;
+        }
         println!(
             "Changed {:?} resource(s) under address {:?}:",
-            writes.len(),
+            account.resources.len(),
             addr
         );
-        for (struct_tag, write_opt) in writes {
+        for (struct_tag, write_opt) in &account.resources {
             print!("    ");
+            let mut bytes_to_write = struct_tag.access_vector().len();
             match write_opt {
-                Some((_layout, value)) => {
+                Some(blob) => {
+                    bytes_to_write += blob.len();
                     if state
                         .get_resource_bytes(*addr, struct_tag.clone())?
                         .is_some()
                     {
                         // TODO: print resource diff
-                        println!("Changed type {}: {}", struct_tag, value)
+                        println!(
+                            "Changed type {}: {:?} (wrote {:?} bytes)",
+                            struct_tag, blob, bytes_to_write
+                        )
                     } else {
                         // TODO: nicer printing
-                        println!("Added type {}: {}", struct_tag, value)
+                        println!(
+                            "Added type {}: {:?} (wrote {:?} bytes)",
+                            struct_tag, blob, bytes_to_write
+                        )
                     }
                 }
-                None => println!("Deleted type {}", struct_tag),
-            }
+                None => println!(
+                    "Deleted type {} (wrote {:?} bytes)",
+                    struct_tag, bytes_to_write
+                ),
+            };
+            total_bytes_written += bytes_to_write;
         }
     }
+    if total_bytes_written != 0 {
+        println!(
+            "Wrote {:?} bytes of resource ID's and data",
+            total_bytes_written
+        );
+    }
+
     Ok(())
 }
 
 /// Commit the resources and events modified by a transaction to disk
 fn maybe_commit_effects(
     commit: bool,
-    effects_opt: Option<TransactionEffects>,
+    changeset: ChangeSet,
+    events: Vec<Event>,
     state: &OnDiskStateView,
 ) -> Result<()> {
     // similar to explain effects, all module publishing happens via save_modules(), so effects
     // shouldn't contain modules
     if commit {
-        if let Some(effects) = effects_opt {
-            for (addr, writes) in effects.resources {
-                for (struct_tag, write_opt) in writes {
-                    match write_opt {
-                        Some((layout, value)) => {
-                            state.save_resource(addr, struct_tag, layout, value)?
-                        }
-                        None => state.delete_resource(addr, struct_tag)?,
-                    }
+        for (addr, account) in changeset.accounts {
+            for (struct_tag, blob_opt) in account.resources {
+                match blob_opt {
+                    Some(blob) => state.save_resource(addr, struct_tag, &blob)?,
+                    None => state.delete_resource(addr, struct_tag)?,
                 }
             }
-
-            for (event_key, event_sequence_number, event_type, event_layout, event_data) in
-                effects.events
-            {
-                state.save_event(
-                    &event_key,
-                    event_sequence_number,
-                    event_type,
-                    &event_layout,
-                    event_data,
-                )?
-            }
         }
-    } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
+
+        for (event_key, event_sequence_number, event_type, event_data) in events {
+            state.save_event(&event_key, event_sequence_number, event_type, event_data)?
+        }
+    } else if !(changeset.resources().next().is_none() && events.is_empty()) {
         println!("Discarding changes; re-run without --dry-run if you would like to keep them.")
     }
 
@@ -616,8 +604,100 @@ fn explain_type_error(
     println!("Execution failed with type error when binding type arguments to type parameters")
 }
 
+fn explain_publish_error(
+    error: VMError,
+    state: &OnDiskStateView,
+    module: &CompiledModule,
+) -> Result<()> {
+    use StatusCode::*;
+
+    let module_id = module.self_id();
+    match error.into_vm_status() {
+        VMStatus::Error(DUPLICATE_MODULE_NAME) => {
+            println!(
+                "Module {} exists already. Re-run without --no-republish to publish anyway.",
+                module_id
+            );
+        }
+        VMStatus::Error(BACKWARD_INCOMPATIBLE_MODULE_UPDATE) => {
+            println!("Breaking change detected--publishing aborted. Re-run with --ignore-breaking-changes to publish anyway.");
+
+            let old_module = state.get_compiled_module(&module_id)?;
+            let old_api = normalized::Module::new(&old_module);
+            let new_api = normalized::Module::new(module);
+            let compat = Compatibility::check(&old_api, &new_api);
+            // the only way we get this error code is compatibility checking failed, so assert here
+            assert!(!compat.is_fully_compatible());
+
+            if !compat.struct_layout {
+                // TODO: we could choose to make this more precise by walking the global state and looking for published
+                // structs of this type. but probably a bad idea
+                println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", module_id)
+            } else if !compat.struct_and_function_linking {
+                // TODO: this will report false positives if we *are* simultaneously redeploying all dependent modules.
+                // but this is not easy to check without walking the global state and looking for everything
+                println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", module_id)
+            }
+        }
+        VMStatus::Error(CYCLIC_MODULE_DEPENDENCY) => {
+            println!(
+                "Publishing module {} introduces cyclic dependencies.",
+                module_id
+            );
+            // find all cycles with an iterative DFS
+            let code_cache = state.get_code_cache()?;
+
+            let mut stack = vec![];
+            let mut state = BTreeMap::new();
+            state.insert(module_id.clone(), true);
+            for dep in module.immediate_dependencies() {
+                stack.push((code_cache.get_module(&dep)?, false));
+            }
+
+            while !stack.is_empty() {
+                let (cur, is_exit) = stack.pop().unwrap();
+                let cur_id = cur.self_id();
+                if is_exit {
+                    state.insert(cur_id, false);
+                } else {
+                    state.insert(cur_id, true);
+                    stack.push((cur, true));
+                    for next in cur.immediate_dependencies() {
+                        if let Some(is_discovered_but_not_finished) = state.get(&next) {
+                            if *is_discovered_but_not_finished {
+                                let cycle_path: Vec<_> = stack
+                                    .iter()
+                                    .filter(|(_, is_exit)| *is_exit)
+                                    .map(|(m, _)| m.self_id().to_string())
+                                    .collect();
+                                println!(
+                                    "Cycle detected: {} -> {} -> {}",
+                                    module_id,
+                                    cycle_path.join(" -> "),
+                                    module_id,
+                                );
+                            }
+                        } else {
+                            stack.push((code_cache.get_module(&next)?, false));
+                        }
+                    }
+                }
+            }
+            println!("Re-run with --ignore-breaking-changes to publish anyway.")
+        }
+        VMStatus::Error(status_code) => {
+            println!("Publishing failed with unexpected error {:?}", status_code)
+        }
+        VMStatus::Executed | VMStatus::MoveAbort(..) | VMStatus::ExecutionFailure { .. } => {
+            unreachable!()
+        }
+    }
+
+    Ok(())
+}
+
 /// Explain an execution error
-fn explain_error(
+fn explain_execution_error(
     error: VMError,
     state: &OnDiskStateView,
     script: &CompiledScript,
@@ -758,15 +838,44 @@ fn doctor(state: OnDiskStateView) -> Result<()> {
         p.parent().unwrap().parent().unwrap().file_name().unwrap()
     }
 
-    let modules = state.get_all_modules()?;
     // verify and link each module
-    for module in modules.values() {
+    let code_cache = state.get_code_cache()?;
+    for module in code_cache.all_modules() {
         if bytecode_verifier::verify_module(module).is_err() {
             bail!("Failed to verify module {:?}", module.self_id())
         }
-        if bytecode_verifier::DependencyChecker::verify_module(module, modules.values()).is_err() {
+
+        let imm_deps = code_cache.get_immediate_module_dependencies(module)?;
+        if bytecode_verifier::dependencies::verify_module(module, imm_deps).is_err() {
             bail!(
                 "Failed to link module {:?} against its dependencies",
+                module.self_id()
+            )
+        }
+
+        let cyclic_check_result = bytecode_verifier::cyclic_dependencies::verify_module(
+            module,
+            |module_id| {
+                code_cache
+                    .get_module(module_id)
+                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                    .map(|m| m.immediate_dependencies())
+            },
+            |module_id| {
+                code_cache
+                    .get_module(module_id)
+                    .map_err(|_| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+                    .map(|m| m.immediate_friends())
+            },
+        );
+        if let Err(cyclic_check_error) = cyclic_check_result {
+            // the only possible error in the CLI's context is CYCLIC_MODULE_DEPENDENCY
+            assert_eq!(
+                cyclic_check_error.major_status(),
+                StatusCode::CYCLIC_MODULE_DEPENDENCY
+            );
+            bail!(
+                "Cyclic module dependencies are detected with module {} in the loop",
                 module.self_id()
             )
         }

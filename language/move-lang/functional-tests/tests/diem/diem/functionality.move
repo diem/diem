@@ -162,7 +162,7 @@ script {
 use 0x1::Diem;
 use 0x1::XDX::XDX;
 fun main(account: &signer) {
-    Diem::publish_preburn_to_account<XDX>(account, account);
+    Diem::publish_preburn_queue_to_account<XDX>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 1539,")
@@ -173,7 +173,7 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 fun main(account: &signer) {
-    Diem::publish_preburn_to_account<XUS>(account, account);
+    Diem::publish_preburn_queue_to_account<XUS>(account, account);
 }
 }
 // check: "Keep(ABORTED { code: 1539,")

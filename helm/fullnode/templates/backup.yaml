@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "backup.fullname" . }}-backup
+  labels:
+    {{- include "backup.labels" . | nindent 4 }}
+data:
+{{ (.Files.Glob "files/backup/*.toml").AsConfig | indent 2 }}
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "backup.fullname" . }}-backup
+  labels:
+    {{- include "backup.labels" . | nindent 4 }}
+    app.kubernetes.io/name: backup
+spec:
+  serviceName: {{ include "backup.fullname" . }}-backup
+  replicas: {{ int .Values.backup.enable }}
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      {{- include "backup.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/name: backup
+  template:
+    metadata:
+      labels:
+        {{- include "backup.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/name: backup
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+      - name: backup
+        image: {{ .Values.backup.image.repo }}:{{ .Values.backup.image.tag | default .Values.imageTag }}
+        imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
+        resources:
+          {{- toYaml .Values.backup.resources | nindent 10 }}
+        command: ["/usr/local/bin/db-backup"]
+        args:
+        - "coordinator"
+        - "run"
+        - "--metadata-cache-dir"
+        - "/tmp/diem-backup-metadata"
+        - "--backup-service-address"
+        - "http://{{ include "backup.backupService" . }}"
+        {{- with .Values.backup }}
+        - "--state-snapshot-interval"
+        - "{{ int .config.state_snapshot_interval }}"
+        - "--transaction-batch-size"
+        - "{{ int .config.transaction_batch_size }}"
+        - "command-adapter"
+        - "--config"
+        - "/opt/diem/etc/{{ .config.location }}.toml"
+        env:
+        - name: RUST_LOG
+          value: "debug"
+        - name: RUST_BACKTRACE
+          value: "1"
+        {{- if (include "backup.pushGateway" $) }}
+        - name: PUSH_METRICS_ENDPOINT
+          value: "{{- include "backup.pushGateway" $ }}/metrics/job/{{- .jobName | default "db_backup" }}"
+        {{- end }}
+        {{- include "backup.backupEnvironment" (dict "config" .config "era" $.Values.chain.era) | nindent 8 }}
+        volumeMounts:
+        - name: backup-config
+          mountPath: /opt/diem/etc
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 6180
+        runAsGroup: 6180
+        fsGroup: 6180
+      {{- with .nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      volumes:
+      - name: backup-config
+        configMap:
+          name: {{ include "backup.fullname" . }}-backup
+      - name: tmp
+        emptyDir: {}
+      serviceAccountName: {{ include "backup.serviceAccount" . }}
+      {{- if .Values.imagePullSecret }}
+      imagePullSecrets:
+      - name: {{.Values.imagePullSecret}}
+      {{- end }}

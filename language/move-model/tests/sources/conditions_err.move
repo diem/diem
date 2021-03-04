@@ -9,4 +9,11 @@ module M {
     // Using result which does not exist.
     ensures result_1 == 0;
   }
+
+  fun with_emits<T: copyable>(_guid: vector<u8>, _msg: T, x: u64): u64 { x }
+
+  spec fun with_emits {
+    // Type of condition for "if" is not bool.
+    emits _msg to _guid if x;
+  }
 }

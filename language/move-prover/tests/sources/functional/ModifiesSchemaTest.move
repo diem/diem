@@ -1,9 +1,9 @@
 address 0x0 {
 module A {
+
     resource struct S {
         x: u64
     }
-
     spec schema ModifiesSchema {
         addr: address;
         modifies global<S>(addr);
@@ -14,7 +14,7 @@ module A {
         s.x = 2;
     }
     spec fun mutate_at {
-        pragma opaque = true;
+        //pragma opaque = true;
         include ModifiesSchema;
     }
 

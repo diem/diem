@@ -26,9 +26,8 @@ fn main() {
 
     let args = Args::from_env();
 
-    let rt = Builder::new()
-        .threaded_scheduler()
-        .core_threads(32)
+    let rt = Builder::new_multi_thread()
+        .worker_threads(32)
         .enable_all()
         .build()
         .unwrap();

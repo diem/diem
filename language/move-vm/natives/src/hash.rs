@@ -9,6 +9,7 @@ use move_vm_types::{
     values::Value,
 };
 use sha2::{Digest, Sha256};
+use smallvec::smallvec;
 use std::collections::VecDeque;
 use vm::errors::PartialVMResult;
 
@@ -29,8 +30,10 @@ pub fn native_sha2_256(
     );
 
     let hash_vec = Sha256::digest(hash_arg.as_slice()).to_vec();
-    let return_values = vec![Value::vector_u8(hash_vec)];
-    Ok(NativeResult::ok(cost, return_values))
+    Ok(NativeResult::ok(
+        cost,
+        smallvec![Value::vector_u8(hash_vec)],
+    ))
 }
 
 pub fn native_sha3_256(
@@ -50,6 +53,8 @@ pub fn native_sha3_256(
     );
 
     let hash_vec = HashValue::sha3_256_of(hash_arg.as_slice()).to_vec();
-    let return_values = vec![Value::vector_u8(hash_vec)];
-    Ok(NativeResult::ok(cost, return_values))
+    Ok(NativeResult::ok(
+        cost,
+        smallvec![Value::vector_u8(hash_vec)],
+    ))
 }

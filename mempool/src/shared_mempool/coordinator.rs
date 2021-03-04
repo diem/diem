@@ -10,7 +10,7 @@ use crate::{
     network::{MempoolNetworkEvents, MempoolSyncMsg},
     shared_mempool::{
         tasks,
-        types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
+        types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
@@ -22,18 +22,21 @@ use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_trace::prelude::*;
-use diem_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
+use diem_types::{
+    mempool_status::MempoolStatus, on_chain_config::OnChainConfigPayload,
+    transaction::SignedTransaction, vm_status::DiscardedVMStatus,
+};
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
 use std::{
-    ops::Deref,
     sync::Arc,
     time::{Duration, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
+use tokio_stream::wrappers::IntervalStream;
 use vm_validator::vm_validator::TransactionValidation;
 
 /// Coordinator that handles inbound network events and outbound txn broadcasts.
@@ -60,9 +63,6 @@ pub(crate) async fn coordinator<V>(
         .map(|(network_id, events)| events.map(move |e| (network_id.clone(), e)))
         .collect();
     let mut events = select_all(smp_events).fuse();
-    let mempool = smp.mempool.clone();
-    let peer_manager = smp.peer_manager.clone();
-    let subscribers = &mut smp.subscribers.clone();
     let mut scheduled_broadcasts = FuturesUnordered::new();
 
     // Use a BoundedExecutor to restrict only `workers_available` concurrent
@@ -74,127 +74,22 @@ pub(crate) async fn coordinator<V>(
         let _timer = counters::MAIN_LOOP.start_timer();
         ::futures::select! {
             (msg, callback) = client_events.select_next_some() => {
-                trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
-                // this timer measures how long it took for the bounded executor to *schedule* the
-                // task
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                // this timer measures how long it took for the task to go from scheduled to started
-                let task_start_timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::CLIENT_EVENT_LABEL, counters::START_LABEL])
-                    .start_timer();
-                bounded_executor
-                .spawn(tasks::process_client_transaction_submission(
-                    smp.clone(),
-                    msg,
-                    callback,
-                    task_start_timer,
-                ))
-                .await;
+                handle_client_event(&mut smp, &bounded_executor, msg, callback).await;
             },
             msg = consensus_requests.select_next_some() => {
-                tasks::process_consensus_request(&mempool, msg).await;
+                tasks::process_consensus_request(&smp.mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
+                handle_state_sync_request(&mut smp, msg);
             }
             config_update = mempool_reconfig_events.select_next_some() => {
-                info!(LogSchema::event_log(LogEntry::ReconfigUpdate, LogEvent::Received));
-                let _timer = counters::TASK_SPAWN_LATENCY
-                    .with_label_values(&[counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL])
-                    .start_timer();
-                bounded_executor
-                    .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
-                    .await;
+                handle_mempool_reconfig_event(&mut smp, &bounded_executor, config_update).await;
             },
             (peer, backoff) = scheduled_broadcasts.select_next_some() => {
                 tasks::execute_broadcast(peer, backoff, &mut smp, &mut scheduled_broadcasts, executor.clone());
             },
             (network_id, event) = events.select_next_some() => {
-                match event {
-                    Event::NewPeer(peer_id, origin) => {
-                        counters::SHARED_MEMPOOL_EVENTS
-                            .with_label_values(&["new_peer".to_string().deref()])
-                            .inc();
-                        let peer = PeerNetworkId(network_id, peer_id);
-                        let is_new_peer = peer_manager.add_peer(peer.clone(), origin);
-                        let is_upstream_peer = peer_manager.is_upstream_peer(&peer, Some(origin));
-                        debug!(LogSchema::new(LogEntry::NewPeer).peer(&peer).is_upstream_peer(is_upstream_peer));
-                        notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                        if is_new_peer && is_upstream_peer {
-                            tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
-                        }
-                    }
-                    Event::LostPeer(peer_id, origin) => {
-                        counters::SHARED_MEMPOOL_EVENTS
-                            .with_label_values(&["lost_peer".to_string().deref()])
-                            .inc();
-                        let peer = PeerNetworkId(network_id, peer_id);
-                        debug!(LogSchema::new(LogEntry::LostPeer)
-                            .peer(&peer)
-                            .is_upstream_peer(peer_manager.is_upstream_peer(&peer, Some(origin)))
-                        );
-                        peer_manager.disable_peer(peer);
-                        notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                    }
-                    Event::Message(peer_id, msg) => {
-                        counters::SHARED_MEMPOOL_EVENTS
-                            .with_label_values(&["message".to_string().deref()])
-                            .inc();
-                        match msg {
-                            MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
-                                let smp_clone = smp.clone();
-                                let peer = PeerNetworkId(network_id, peer_id);
-                                let timeline_state = match peer_manager
-                                    .is_upstream_peer(&peer, None)
-                                {
-                                    true => TimelineState::NonQualified,
-                                    false => TimelineState::NotReady,
-                                };
-                                // this timer measures how long it took for the bounded executor to
-                                // *schedule* the task
-                                let _timer = counters::TASK_SPAWN_LATENCY
-                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::SPAWN_LABEL])
-                                    .start_timer();
-                                // this timer measures how long it took for the task to go from scheduled
-                                // to started
-                                let task_start_timer = counters::TASK_SPAWN_LATENCY
-                                    .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL, counters::START_LABEL])
-                                    .start_timer();
-                                bounded_executor
-                                    .spawn(tasks::process_transaction_broadcast(
-                                        smp_clone,
-                                        transactions,
-                                        request_id,
-                                        timeline_state,
-                                        peer,
-                                        task_start_timer
-                                    ))
-                                    .await;
-                            }
-                            MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry, backoff} => {
-                                let ack_timestamp = SystemTime::now();
-                                peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry, backoff, ack_timestamp);
-                            }
-                        }
-                    }
-                    Event::RpcRequest(peer_id, _msg, _res_tx) => {
-                        counters::UNEXPECTED_NETWORK_MSG_COUNT
-                            .with_label_values(&[&network_id.network_id().to_string(), &peer_id.to_string()])
-                            .inc();
-                        sample!(
-                            SampleRate::Duration(Duration::from_secs(60)),
-                            warn!(
-                                LogSchema::new(LogEntry::UnexpectedNetworkMsg)
-                                    .peer(&PeerNetworkId(network_id, peer_id))
-                            )
-                        );
-                    }
-                }
+                handle_event(&executor, &bounded_executor, &mut scheduled_broadcasts, &mut smp, network_id, event).await;
             },
             complete => break,
         }
@@ -205,10 +100,167 @@ pub(crate) async fn coordinator<V>(
     ));
 }
 
-/// GC all expired transactions by SystemTTL
+async fn handle_client_event<V>(
+    smp: &mut SharedMempool<V>,
+    bounded_executor: &BoundedExecutor,
+    msg: SignedTransaction,
+    callback: oneshot::Sender<anyhow::Result<(MempoolStatus, Option<DiscardedVMStatus>)>>,
+) where
+    V: TransactionValidation,
+{
+    trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
+    // This timer measures how long it took for the bounded executor to *schedule* the
+    // task.
+    let _timer =
+        counters::task_spawn_latency_timer(counters::CLIENT_EVENT_LABEL, counters::SPAWN_LABEL);
+    // This timer measures how long it took for the task to go from scheduled to started.
+    let task_start_timer =
+        counters::task_spawn_latency_timer(counters::CLIENT_EVENT_LABEL, counters::START_LABEL);
+    bounded_executor
+        .spawn(tasks::process_client_transaction_submission(
+            smp.clone(),
+            msg,
+            callback,
+            task_start_timer,
+        ))
+        .await;
+}
+
+fn handle_state_sync_request<V>(smp: &mut SharedMempool<V>, msg: CommitNotification)
+where
+    V: TransactionValidation,
+{
+    let _timer =
+        counters::task_spawn_latency_timer(counters::STATE_SYNC_EVENT_LABEL, counters::SPAWN_LABEL);
+    tokio::spawn(tasks::process_state_sync_request(smp.mempool.clone(), msg));
+}
+
+async fn handle_mempool_reconfig_event<V>(
+    smp: &mut SharedMempool<V>,
+    bounded_executor: &BoundedExecutor,
+    config_update: OnChainConfigPayload,
+) where
+    V: TransactionValidation,
+{
+    info!(LogSchema::event_log(
+        LogEntry::ReconfigUpdate,
+        LogEvent::Received
+    ));
+    let _timer =
+        counters::task_spawn_latency_timer(counters::RECONFIG_EVENT_LABEL, counters::SPAWN_LABEL);
+
+    bounded_executor
+        .spawn(tasks::process_config_update(
+            config_update,
+            smp.validator.clone(),
+        ))
+        .await;
+}
+
+async fn handle_event<V>(
+    executor: &Handle,
+    bounded_executor: &BoundedExecutor,
+    scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
+    smp: &mut SharedMempool<V>,
+    network_id: NodeNetworkId,
+    event: Event<MempoolSyncMsg>,
+) where
+    V: TransactionValidation,
+{
+    match event {
+        Event::NewPeer(metadata) => {
+            counters::shared_mempool_event_inc("new_peer");
+            let origin = metadata.origin;
+            let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
+            let is_new_peer = smp.peer_manager.add_peer(peer.clone(), metadata);
+            let is_upstream_peer = smp.peer_manager.is_upstream_peer(&peer, Some(origin));
+            debug!(LogSchema::new(LogEntry::NewPeer)
+                .peer(&peer)
+                .is_upstream_peer(is_upstream_peer));
+            notify_subscribers(SharedMempoolNotification::PeerStateChange, &smp.subscribers);
+            if is_new_peer && is_upstream_peer {
+                tasks::execute_broadcast(peer, false, smp, scheduled_broadcasts, executor.clone());
+            }
+        }
+        Event::LostPeer(metadata) => {
+            counters::shared_mempool_event_inc("lost_peer");
+            let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
+            debug!(LogSchema::new(LogEntry::LostPeer)
+                .peer(&peer)
+                .is_upstream_peer(
+                    smp.peer_manager
+                        .is_upstream_peer(&peer, Some(metadata.origin))
+                ));
+            smp.peer_manager.disable_peer(peer);
+            notify_subscribers(SharedMempoolNotification::PeerStateChange, &smp.subscribers);
+        }
+        Event::Message(peer_id, msg) => {
+            counters::shared_mempool_event_inc("message");
+            match msg {
+                MempoolSyncMsg::BroadcastTransactionsRequest {
+                    request_id,
+                    transactions,
+                } => {
+                    let smp_clone = smp.clone();
+                    let peer = PeerNetworkId(network_id, peer_id);
+                    let timeline_state = match smp.peer_manager.is_upstream_peer(&peer, None) {
+                        true => TimelineState::NonQualified,
+                        false => TimelineState::NotReady,
+                    };
+                    // This timer measures how long it took for the bounded executor to
+                    // *schedule* the task.
+                    let _timer = counters::task_spawn_latency_timer(
+                        counters::PEER_BROADCAST_EVENT_LABEL,
+                        counters::SPAWN_LABEL,
+                    );
+                    // This timer measures how long it took for the task to go from scheduled
+                    // to started.
+                    let task_start_timer = counters::task_spawn_latency_timer(
+                        counters::PEER_BROADCAST_EVENT_LABEL,
+                        counters::START_LABEL,
+                    );
+                    bounded_executor
+                        .spawn(tasks::process_transaction_broadcast(
+                            smp_clone,
+                            transactions,
+                            request_id,
+                            timeline_state,
+                            peer,
+                            task_start_timer,
+                        ))
+                        .await;
+                }
+                MempoolSyncMsg::BroadcastTransactionsResponse {
+                    request_id,
+                    retry,
+                    backoff,
+                } => {
+                    let ack_timestamp = SystemTime::now();
+                    smp.peer_manager.process_broadcast_ack(
+                        PeerNetworkId(network_id, peer_id),
+                        request_id,
+                        retry,
+                        backoff,
+                        ack_timestamp,
+                    );
+                }
+            }
+        }
+        Event::RpcRequest(peer_id, _msg, _res_tx) => {
+            counters::unexpected_msg_count_inc(&network_id.network_id(), &peer_id);
+            sample!(
+                SampleRate::Duration(Duration::from_secs(60)),
+                warn!(LogSchema::new(LogEntry::UnexpectedNetworkMsg)
+                    .peer(&PeerNetworkId(network_id, peer_id)))
+            );
+        }
+    }
+}
+
+/// Garbage collect all expired transactions by SystemTTL.
 pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval_ms: u64) {
     info!(LogSchema::event_log(LogEntry::GCRuntime, LogEvent::Start));
-    let mut interval = interval(Duration::from_millis(gc_interval_ms));
+    let mut interval = IntervalStream::new(interval(Duration::from_millis(gc_interval_ms)));
     while let Some(_interval) = interval.next().await {
         sample!(
             SampleRate::Duration(Duration::from_secs(60)),
@@ -223,11 +275,11 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
     ));
 }
 
-/// Periodically logs a snapshot of transactions in core mempool
-/// In the future we may want a interactive way to directly query mempool's internal state
-/// For now, we will rely on this periodic snapshot to observe the internal state
+/// Periodically logs a snapshot of transactions in core mempool.
+/// In the future we may want an interactive way to directly query mempool's internal state.
+/// For now, we will rely on this periodic snapshot to observe the internal state.
 pub(crate) async fn snapshot_job(mempool: Arc<Mutex<CoreMempool>>, snapshot_interval_secs: u64) {
-    let mut interval = interval(Duration::from_secs(snapshot_interval_secs));
+    let mut interval = IntervalStream::new(interval(Duration::from_secs(snapshot_interval_secs)));
     while let Some(_interval) = interval.next().await {
         let snapshot = mempool.lock().gen_snapshot();
         debug!(LogSchema::new(LogEntry::MempoolSnapshot).txns(snapshot));

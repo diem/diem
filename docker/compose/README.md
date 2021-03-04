@@ -5,8 +5,8 @@ custom_edit_url: https://github.com/diem/diem/edit/master/docker/compose/README.
 ---
 
 This directory contains the following compose configurations:
-* **validator-testnet**: creates a single validator test network
-* **mint**: creates a mint (faucet) that directly connects to validator-testnet
+* **validator-testnet**: creates a single validator test network, and a faucet that directly connects to it
+* **client-cli**: creates a CLI client which connects to the above validator/faucet
 
 To use these compositions:
 1. [Download](https://docs.docker.com/install/) and install Docker and Docker Compose (comes with Docker for Mac and Windows).
@@ -14,18 +14,23 @@ To use these compositions:
 3. Run `docker-compose up`
 
 To build your own complete testnet:
-0. Review both **validator-testnet** and **mint** docker-compose.yaml and ensure the image points to the same tagged image.
-1. Start the **validator-testnet**:
-    1. Enter the **validator-testnet** diretory `cd validator-testnet`
+1. Start the **validator-testnet** and **faucet**:
+    1. Enter the **validator-testnet** directory `cd validator-testnet`
     2. Start the composition `docker-compose up -d`
-    3. Confirm that waypoint.txt is not empty
-    4. Return to the compose directory: `cd ..`
-2. Start **mint**:
-    1. Enter the **mint** directory: `cd mint`
-    2. Copy the testnet waypoint: `cp ../validator-testnet/waypoint.txt .`
-    3. Copy the testnet mint.key: `cp ../validator-testnet/diem_root_key mint.key`
-    4. Start the composition `docker-compose up -d`
-    5. Return to the compose directory: `cd ..`
-3. Enjoy your testnet:
-    1. Faucet/mint will be available at http://127.0.0.1:8000
+    3. Return to the compose directory: `cd ..`
+ 2. Enjoy your testnet:
+    1. Faucet will be available at http://127.0.0.1:8000
     2. JSON-RPC will be available at http://127.0.0.1:8080
+
+
+If you would like to run the CLI client and interact with your testnet:
+   1. Ensure the **validator-testnet** and the **faucet** are running
+   2. Enter the **client-cli** directory `cd client-cli`
+   3. Start the composition with **`run`, not `up`**: `docker-compose run client-cli`
+   4. You should be in an interactive session in the CLI. Type `h` and press `enter` to see commands
+   5. To create a new account, type `account create`; then you can reference it and add funds to it with `account mint 0 10 XUS` (mint 10 XUS for account #0)
+
+If you would like to clear the validator/blockchain data and start from scratch, either remove the docker volume `diem-shared`,
+or run `docker-compose run validator rm -rf '/opt/diem/var/*'` from the **validator-testnet** directory.
+
+To clear just the validator logs, run  `docker-compose run validator rm -rf '/opt/diem/var/validator.log'`

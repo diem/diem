@@ -7,22 +7,23 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "1.0.37"
+anyhow = "1.0.38"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
-hex = "0.4.2"
-regex = "1.4.2"
+hex = "0.4.3"
+regex = "1.4.3"
 structopt = "0.3.21"
 difference = "2.0.0"
 petgraph = "0.5.1"
 walkdir = "2.3.1"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 
+fallible = { path = "../../common/fallible" }
 move-vm = { path = "../vm", package = "vm" }
 move-core-types = { path = "../move-core/types" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
 diem-types = { path = "../../types" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }

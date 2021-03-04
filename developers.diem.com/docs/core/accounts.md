@@ -9,8 +9,8 @@ sidebar_label: Accounts
 
 An [account](/reference/glossary.md#accounts) represents a resource on the Diem Blockchain that can send transactions. An account is a collection of Move resources stored at a particular 16-byte account address. Every account on the Diem Payment Network (DPN) is created with at least two resources:
 
-* [RoleId](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/Roles.md#resource-roleid), which grants the account a single, immutable [*role*](#account-roles) for [access control](https://github.com/diem/lip/blob/master/lips/lip-2.md).
-* [DiemAccount](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-diemaccount), which holds the account’s sequence number, authentication key, and event handles.
+* [RoleId](https://github.com/diem/diem/blob/master/language/diem-framework/modules/doc/Roles.md#resource-roleid), which grants the account a single, immutable [*role*](#account-roles) for [access control](https://github.com/diem/lip/blob/master/lips/lip-2.md).
+* [DiemAccount](https://github.com/diem/diem/blob/master/language/diem-framework/modules/doc/DiemAccount.md#resource-diemaccount), which holds the account’s sequence number, authentication key, and event handles.
 
 The Diem Payment Network (DPN) supports Regulated Virtual Asset Service Provider (Regulated VASP) accounts and Designated Dealer accounts.
 
@@ -27,7 +27,7 @@ ChildVASP is a child account of a particular ParentVASP. A Regulated VASP need n
 
 ## Creating accounts
 
-On Diem mainnet (at launch), ParentVASP accounts can only be created by the [DiemRoot account](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-diemaccount). Once a ParentVASP account is created, the Regulated VASP can then create ChildVASP accounts.
+On Diem mainnet (at launch), ParentVASP accounts can only be created by the [TreasuryCompliance account](https://github.com/diem/dip/blob/master/dips/dip-2.md#roles). Once a ParentVASP account is created, the Regulated VASP can then create ChildVASP accounts.
 
 In order to create a new account, the creator must specify the address of the new account, its authentication key prefix, and the currencies that the account will initially accept. Learn more about how accounts are created [here](transaction-types.md#account-creation-and-minting).
 
@@ -51,13 +51,13 @@ To generate an authentication key and account address:
 
 ## Currencies and balances
 
-The Diem Payment Network supports an account transacting in different currencies.  [`Diem<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/Diem.md#resource-diem) is the Diem Blockchain equivalent of [ERC20](https://eips.ethereum.org/EIPS/eip-20) from a standards perspective. At the Move level, these are different generic instantiations of the same Diem resource type (e.g., `Diem<Coin1>`, `Diem<XUS>`).
+The Diem Payment Network supports an account transacting in different currencies.  [`Diem<CoinType>`](https://github.com/diem/diem/blob/master/language/diem-framework/modules/doc/Diem.md#resource-diem) is the Diem Blockchain equivalent of [ERC20](https://eips.ethereum.org/EIPS/eip-20) from a standards perspective. At the Move level, these are different generic instantiations of the same Diem resource type (e.g., `Diem<Coin1>`, `Diem<XUS>`).
 
 >
 >**Note**: `Diem<XUS>` will be available at launch.
 >
 
-Each non-administrative account stores one or more [Balance`<CoinType>`](https://github.com/diem/diem/blob/master/language/stdlib/modules/doc/DiemAccount.md#resource-balance) resources. There is a separate Balance resource for each currency type that the account holds (e.g., Balance`<Diem<Coin1>>`, Balance`<Diem<XUS>>`, …).
+Each non-administrative account stores one or more [Balance`<CoinType>`](https://github.com/diem/diem/blob/master/language/diem-framework/modules/doc/DiemAccount.md#resource-balance) resources. There is a separate Balance resource for each currency type that the account holds (e.g., Balance`<Diem<Coin1>>`, Balance`<Diem<XUS>>`, …).
 
 In order to send and receive `Diem<CoinType>`, an account must have a balance in `Diem<CoinType>`. This can be a zero balance of `Diem<CoinType>` that is added whenever `Diem<CoinType>` currency is authorized for an account. A transaction that sends `Diem<CoinType>` to an account without a balance in `Diem<CoinType>` will abort. Thus, before sending funds of type CoinType to an address, clients should first ensure that (a) the address exists, and (b) the address has a balance in CoinType (even if that balance is zero).
 

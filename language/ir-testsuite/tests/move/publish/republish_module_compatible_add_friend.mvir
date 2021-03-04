@@ -1,0 +1,26 @@
+module A {
+}
+
+//! new-transaction
+
+module B {
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.A;
+    public(friend) foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.A;
+    friend {{default}}.B;
+    public(friend) foo() {
+        return;
+    }
+}

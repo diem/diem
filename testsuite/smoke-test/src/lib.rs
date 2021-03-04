@@ -23,6 +23,9 @@ mod key_manager;
 mod operational_tooling;
 
 #[cfg(test)]
+mod release_flow;
+
+#[cfg(test)]
 mod replay_tooling;
 
 #[cfg(test)]

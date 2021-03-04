@@ -1,9 +1,0 @@
-// no arg to main(u64) is an error
-
-main(x: u64) {
-    return;
-}
-
-// TODO(status_migration) breaks if Keep is first
-// check: TYPE_MISMATCH
-// check: Keep

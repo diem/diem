@@ -22,10 +22,10 @@ use move_vm_types::{
         self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
     },
 };
-use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
+use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
 use vm::{
     errors::*,
-    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature},
+    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
     file_format_common::Opcodes,
 };
 
@@ -78,7 +78,7 @@ impl<L: LogContext> Interpreter<L> {
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
         log_context: &L,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Value>> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new(log_context.clone());
@@ -104,7 +104,7 @@ impl<L: LogContext> Interpreter<L> {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-    ) -> VMResult<()> {
+    ) -> VMResult<Vec<Value>> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
         self.execute_main(loader, data_store, cost_strategy, function, ty_args, args)
@@ -126,8 +126,7 @@ impl<L: LogContext> Interpreter<L> {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-    ) -> VMResult<()> {
-        verify_args(function.parameters(), &args).map_err(|e| self.set_location(e))?;
+    ) -> VMResult<Vec<Value>> {
         let mut locals = Locals::new(function.local_count());
         for (i, value) in args.into_iter().enumerate() {
             locals
@@ -144,23 +143,16 @@ impl<L: LogContext> Interpreter<L> {
                     .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
             match exit_code {
                 ExitCode::Return => {
-                    current_frame
-                        .locals
-                        .check_resources_for_return()
-                        .map_err(|e| set_err_info!(current_frame, e))?;
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
                         current_frame.pc += 1; // advance past the Call instruction in the caller
                     } else {
-                        return Ok(());
+                        return Ok(mem::replace(&mut self.operand_stack.0, vec![]));
                     }
                 }
                 ExitCode::Call(fh_idx) => {
                     cost_strategy
-                        .charge_instr_with_size(
-                            Opcodes::CALL,
-                            AbstractMemorySize::new(1 as GasCarrier),
-                        )
+                        .charge_instr_with_size(Opcodes::CALL, AbstractMemorySize::new(1))
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_handle(fh_idx);
                     cost_strategy
@@ -185,14 +177,12 @@ impl<L: LogContext> Interpreter<L> {
                     current_frame = frame;
                 }
                 ExitCode::CallGeneric(idx) => {
-                    resolver
-                        .type_params_count(idx)
-                        .and_then(|arity| {
-                            cost_strategy.charge_instr_with_size(
-                                Opcodes::CALL_GENERIC,
-                                AbstractMemorySize::new((arity + 1) as GasCarrier),
-                            )
-                        })
+                    let arity = resolver.type_params_count(idx);
+                    cost_strategy
+                        .charge_instr_with_size(
+                            Opcodes::CALL_GENERIC,
+                            AbstractMemorySize::new((arity + 1) as GasCarrier),
+                        )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let ty_args = resolver
                         .instantiate_generic_function(idx, current_frame.ty_args())
@@ -288,10 +278,10 @@ impl<L: LogContext> Interpreter<L> {
         let native_function = function.get_native()?;
         let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
         cost_strategy.deduct_gas(result.cost)?;
-        let values = result
+        let return_values = result
             .result
             .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
-        for value in values {
+        for value in return_values {
             self.operand_stack.push(value)?;
         }
         Ok(())
@@ -858,10 +848,9 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK, size)?;
-                        let is_resource = resolver.struct_from_definition(*sd_idx).is_resource;
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
+                            .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::PackGeneric(si_idx) => {
                         let field_count = resolver.field_instantiation_count(*si_idx);
@@ -871,11 +860,9 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
-                        let is_resource =
-                            resolver.instantiation_is_resource(*si_idx, self.ty_args())?;
                         interpreter
                             .operand_stack
-                            .push(Value::struct_(Struct::pack(args, is_resource)))?;
+                            .push(Value::struct_(Struct::pack(args)))?;
                     }
                     Bytecode::Unpack(sd_idx) => {
                         let field_count = resolver.field_count(*sd_idx);
@@ -1157,25 +1144,4 @@ impl Frame {
             Some(id) => Location::Module(id.clone()),
         }
     }
-}
-
-// Verify the the type of the arguments in input from the outside is restricted (`is_valid_arg()`)
-// and it honors the signature of the function invoked.
-fn verify_args(signature: &Signature, args: &[Value]) -> PartialVMResult<()> {
-    if signature.len() != args.len() {
-        return Err(
-            PartialVMError::new(StatusCode::TYPE_MISMATCH).with_message(format!(
-                "argument length mismatch: expected {} got {}",
-                signature.len(),
-                args.len()
-            )),
-        );
-    }
-    for (tok, val) in signature.0.iter().zip(args) {
-        if !val.is_valid_arg(tok) {
-            return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
-                .with_message(format!("unexpected type: {:?}, arg: {:?}", tok, val)));
-        }
-    }
-    Ok(())
 }

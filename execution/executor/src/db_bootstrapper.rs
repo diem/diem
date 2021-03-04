@@ -131,8 +131,12 @@ pub fn calculate_genesis<V: VMExecutor>(
         // TODO(aldenhu): fix existing tests before using real timestamp and check on-chain epoch.
         GENESIS_TIMESTAMP_USECS
     } else {
+        let next_epoch = epoch
+            .checked_add(1)
+            .ok_or_else(|| format_err!("integer overflow occurred"))?;
+
         ensure!(
-            epoch + 1 == get_state_epoch(&state_view)?,
+            next_epoch == get_state_epoch(&state_view)?,
             "Genesis txn didn't bump epoch."
         );
         get_state_timestamp(&state_view)?

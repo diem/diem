@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/friend_decl_inner_scope_alias.move:7:12 ───
+   │
+ 7 │     friend A;
+   │            ^ Unbound module alias 'A'
+   │
+

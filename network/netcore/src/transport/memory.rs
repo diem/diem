@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::transport::Transport;
-use diem_network_address::{parse_memory, NetworkAddress, Protocol};
-use diem_types::PeerId;
+use diem_types::{
+    network_address::{parse_memory, NetworkAddress, Protocol},
+    PeerId,
+};
 use futures::{future, stream::Stream};
 use memsocket::{MemoryListener, MemorySocket};
 use std::{

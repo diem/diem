@@ -1,12 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::convert::TryFrom;
+
 use crate::Error;
-use diem_secure_json_rpc::JsonRpcClient;
+use diem_client::BlockingClient;
 use diem_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
-    on_chain_config::config_address, transaction::Transaction, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo,
+    account_state_blob::AccountStateBlob, on_chain_config::config_address,
+    transaction::Transaction, validator_config::ValidatorConfig, validator_info::ValidatorInfo,
 };
 
 /// This defines a generic trait used to interact with the Diem blockchain. In production, this
@@ -53,13 +55,13 @@ pub trait DiemInterface {
 /// simply trusting the response for correctness..
 #[derive(Clone)]
 pub struct JsonRpcDiemInterface {
-    client: JsonRpcClient,
+    client: BlockingClient,
 }
 
 impl JsonRpcDiemInterface {
     pub fn new(json_rpc_endpoint: String) -> Self {
         Self {
-            client: JsonRpcClient::new(json_rpc_endpoint),
+            client: BlockingClient::new(json_rpc_endpoint),
         }
     }
 }
@@ -121,12 +123,15 @@ impl DiemInterface for JsonRpcDiemInterface {
 
     fn submit_transaction(&self, transaction: Transaction) -> Result<(), Error> {
         if let Transaction::UserTransaction(signed_txn) = transaction {
-            self.client.submit_transaction(signed_txn).map_err(|e| {
-                Error::UnknownError(format!(
-                    "Failed to submit signed transaction. Error: {:?}",
-                    e,
-                ))
-            })
+            self.client
+                .submit(&signed_txn)
+                .map(diem_client::Response::into_inner)
+                .map_err(|e| {
+                    Error::UnknownError(format!(
+                        "Failed to submit signed transaction. Error: {:?}",
+                        e,
+                    ))
+                })
         } else {
             Err(Error::UnknownError(format!(
                 "Unable to submit a transaction type that is not a SignedTransaction: {:?}",
@@ -177,11 +182,17 @@ impl DiemInterface for JsonRpcDiemInterface {
     }
 
     fn retrieve_account_state(&self, account: AccountAddress) -> Result<AccountState, Error> {
-        self.client.get_account_state(account, None).map_err(|e| {
-            Error::UnknownError(format!(
-                "Failed to get AccountState for account: {:?}. Error: {:?}",
-                account, e
-            ))
-        })
+        let account_state = self
+            .client
+            .get_account_state_with_proof(account, None, None)?
+            .into_inner();
+
+        let blob = account_state
+            .blob
+            .ok_or_else(|| Error::UnknownError("No validator set".to_string()))?
+            .into_bytes()?;
+        let account_state_blob = AccountStateBlob::from(bcs::from_bytes::<Vec<u8>>(&blob)?);
+        let account_state = AccountState::try_from(&account_state_blob)?;
+        Ok(account_state)
     }
 }

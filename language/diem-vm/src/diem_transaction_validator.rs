@@ -22,6 +22,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     move_resource::MoveResource,
 };
+use move_vm_runtime::{data_cache::RemoteCache, session::Session};
 
 use crate::logging::AdapterLogSchema;
 use move_vm_types::gas_schedule::CostStrategy;
@@ -85,12 +86,18 @@ impl VMValidator for DiemVMValidator {
 
         let remote_cache = StateViewCache::new(state_view);
         let account_role = get_account_role(txn_sender, &remote_cache);
+        let mut session = self.0.new_session(&remote_cache);
 
-        let (status, normalized_gas_price) =
-            match validate_signature_checked_transaction(&self.0, &txn, &remote_cache, true) {
-                Ok((price, _)) => (None, price),
-                Err(err) => (Some(err.status_code()), 0),
-            };
+        let (status, normalized_gas_price) = match validate_signature_checked_transaction(
+            &self.0,
+            &mut session,
+            &txn,
+            &remote_cache,
+            true,
+        ) {
+            Ok((price, _)) => (None, price),
+            Err(err) => (Some(err.status_code()), 0),
+        };
 
         // Increment the counter for transactions verified.
         let counter_label = match status {
@@ -115,8 +122,9 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
     GovernanceRole::NonGovernanceRole
 }
 
-pub(crate) fn validate_signature_checked_transaction(
+pub(crate) fn validate_signature_checked_transaction<R: RemoteCache>(
     vm: &DiemVMImpl,
+    mut session: &mut Session<R>,
     transaction: &SignatureCheckedTransaction,
     remote_cache: &StateViewCache<'_>,
     allow_too_new: bool,
@@ -138,7 +146,6 @@ pub(crate) fn validate_signature_checked_transaction(
     };
 
     let txn_data = TransactionMetadata::new(transaction);
-    let mut session = vm.new_session(remote_cache);
     let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
     let mut cost_strategy =
         CostStrategy::system(vm.get_gas_schedule(&log_context)?, GasUnits::new(0));

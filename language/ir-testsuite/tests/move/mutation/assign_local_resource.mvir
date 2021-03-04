@@ -1,4 +1,4 @@
-// check: WRITEREF_RESOURCE_ERROR
+// check: WRITEREF_WITHOUT_DROP_ABILITY
 
 import 0x1.XUS;
 import 0x1.Diem;

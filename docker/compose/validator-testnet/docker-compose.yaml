@@ -1,49 +1,76 @@
-# This compose file defines a single validator node test network. In addition, it offers the
-# following facilities:
+# This compose file defines a single validator node test network,
+# along with a faucet that connects to it over json-rpc.
+# In addition, it offers the following facilities:
 # * JSON-RPC endpoint at http://127.0.0.1:8080.
-# * waypoint file at waypoint.txt in the same directory as this compose
-# * genesis.blob at genesis.blob in the same directory as this compose
-# * diem_root_key (mint.key) in the same directory as this compose
 # * chain_id of 4 / TESTING
-#
+# * The faucet can be accessed at 127.0.0.1:8000
+
 # Additional information:
 # * If you use this compose for different Diem Networks, you will need remove the db volume first.
-# * If you move this compose, you must recreate the empty waypoint.txt and genesis.blob otherwise
-# the container will fail to start.
 # * If you would like to use the current Diem version within this repository, execute the
-# `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
-# * Images can be found at https://hub.docker.com/r/diem/validator/tags, obtain the latest tag and
-# update below.
+#     `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
+# * Validator images can be found at https://hub.docker.com/r/libra/faucet/tags
+# * Faucet images can be found at https://hub.docker.com/r/libra/validator/tags
+
 version: "3.8"
 services:
-    validator:
-        # Note this image currently does not support this, will update to the appropriate minimum
-        # version shortly
-        image: libra/validator:master_f53da21f
-        networks:
-            shared:
-                ipv4_address: 172.16.1.3
-        volumes:
-            - type: volume
-              source: db
-              target: /opt/diem/var
-            - type: bind
-              source: ./genesis.blob
-              target: /opt/diem/var/0/genesis.blob
-            - type: bind
-              source: ./diem_root_key
-              target: /opt/diem/var/mint.key
-            - type: bind
-              source: ./waypoint.txt
-              target: /opt/diem/var/waypoint.txt
-        command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
-        ports:
-            - "8080:8080"
+  validator:
+    # Note this image currently does not support this, will update to the appropriate minimum
+    # version shortly
+    image: "libra/validator:${IMAGE_TAG:-devnet}"
+    networks:
+      shared:
+    volumes:
+      - type: volume
+        source: diem-shared
+        target: /opt/diem/var
+      - type: bind
+        source: ./validator_node_template.yaml
+        target: /opt/diem/var/validator_node_template.yaml
+    command: ["/opt/diem/bin/diem-node", "--test", "--config", "/opt/diem/var"]
+    ports:
+      - "8080:8080"
+
+  faucet:
+    image: "libra/faucet:${IMAGE_TAG:-devnet}"
+    depends_on:
+      - validator
+    networks:
+      shared:
+    volumes:
+      - type: volume
+        source: diem-shared
+        target: /opt/diem/var
+    command: >
+      /bin/bash -c "
+        for i in {1..10}
+        do
+          if [[ -s /opt/diem/var/mint.key ]]
+          then
+            /opt/diem/bin/diem-faucet \
+              --address 0.0.0.0 \
+              --port 8000 \
+              --chain-id TESTING \
+              --mint-key-file-path /opt/diem/var/mint.key \
+              --server-url http://validator:8080/v1
+            exit $$?
+          else
+            echo 'Validator has not populated mint.key yet. Is it running?'
+            sleep 1
+          fi
+        done
+        exit 1
+      "
+    ports:
+      - "8000:8000"
+
 networks:
-    shared:
-        name: "diem-docker-compose-shared"
-        ipam:
-          config:
-            - subnet: 172.16.1.0/24
+  shared:
+    name: "diem-docker-compose-shared"
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
+
 volumes:
-    db:
+    diem-shared:
+        name: diem-shared

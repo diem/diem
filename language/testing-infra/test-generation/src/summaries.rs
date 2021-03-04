@@ -6,25 +6,25 @@ use crate::{
     error::VMError,
     function_instantiation_for_state, state_control_flow, state_create_struct,
     state_create_struct_from_inst, state_function_can_acquire_resource,
-    state_local_availability_is, state_local_exists, state_local_kind_is, state_local_place,
+    state_local_availability_is, state_local_exists, state_local_has_ability, state_local_place,
     state_local_set, state_local_take, state_local_take_borrow, state_memory_safe, state_never,
     state_register_dereference, state_stack_bin_op, state_stack_function_call,
     state_stack_function_inst_call, state_stack_function_inst_popn, state_stack_function_popn,
-    state_stack_has, state_stack_has_integer, state_stack_has_polymorphic_eq,
-    state_stack_has_reference, state_stack_has_struct, state_stack_has_struct_inst,
-    state_stack_is_castable, state_stack_kind_is, state_stack_local_polymorphic_eq,
+    state_stack_has, state_stack_has_ability, state_stack_has_integer,
+    state_stack_has_polymorphic_eq, state_stack_has_reference, state_stack_has_struct,
+    state_stack_has_struct_inst, state_stack_is_castable, state_stack_local_polymorphic_eq,
     state_stack_pop, state_stack_push, state_stack_push_register, state_stack_push_register_borrow,
     state_stack_ref_polymorphic_eq, state_stack_satisfies_function_inst_signature,
     state_stack_satisfies_function_signature, state_stack_satisfies_struct_signature,
     state_stack_struct_borrow_field, state_stack_struct_borrow_field_inst,
     state_stack_struct_has_field, state_stack_struct_has_field_inst, state_stack_struct_inst_popn,
     state_stack_struct_popn, state_stack_unpack_struct, state_stack_unpack_struct_inst,
-    state_struct_inst_is_resource, state_struct_is_resource, struct_instantiation_for_state,
+    state_struct_has_key, state_struct_inst_has_key, struct_instantiation_for_state,
     transitions::*,
     unpack_instantiation_for_state, with_ty_param,
 };
 use vm::file_format::{
-    Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Kind, SignatureToken,
+    Ability, Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, SignatureToken,
     StructDefInstantiationIndex, StructDefinitionIndex,
 };
 
@@ -70,7 +70,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::Pop => Summary {
             preconditions: vec![
                 state_stack_has!(0, None),
-                state_stack_kind_is!(0, Kind::Copyable),
+                state_stack_has_ability!(0, Ability::Copy),
                 state_memory_safe!(Some(0)),
             ],
             effects: Effects::NoTyParams(vec![state_stack_pop!()]),
@@ -136,7 +136,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::CopyLoc(i) => Summary {
             preconditions: vec![
                 state_local_exists!(i),
-                state_local_kind_is!(i, Kind::Copyable),
+                state_local_has_ability!(i, Ability::Copy),
                 state_local_availability_is!(i, BorrowState::Available),
                 state_memory_safe!(None),
             ],
@@ -161,7 +161,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 state_stack_has!(0, None),
                 state_local_exists!(i),
                 // TODO: This covers storing on an copyable local only
-                state_local_kind_is!(i, Kind::Copyable),
+                state_local_has_ability!(i, Ability::Drop),
                 state_stack_local_polymorphic_eq!(0, i as usize),
                 state_memory_safe!(Some(0)),
             ],
@@ -271,7 +271,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             preconditions: vec![
                 state_stack_has!(0, None),
                 state_stack_has!(1, None),
-                state_stack_kind_is!(0, Kind::Copyable),
+                state_stack_has_ability!(0, Ability::Copy),
                 state_stack_has_polymorphic_eq!(0, 1),
                 state_memory_safe!(Some(0)),
                 state_memory_safe!(Some(1)),
@@ -335,7 +335,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             // The result of `state_struct_is_resource` is represented abstractly
             // so concrete execution may differ
             preconditions: vec![
-                state_struct_is_resource!(i),
+                state_struct_has_key!(i),
                 state_stack_has!(
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
@@ -350,7 +350,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             // The result of `state_struct_is_resource` is represented abstractly
             // so concrete execution may differ
             preconditions: vec![
-                state_struct_inst_is_resource!(i),
+                state_struct_inst_has_key!(i),
                 state_stack_has!(
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
@@ -411,7 +411,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
                 ),
-                state_struct_is_resource!(i),
+                state_struct_has_key!(i),
                 state_memory_safe!(None),
             ],
             effects: Effects::NoTyParams(vec![
@@ -426,7 +426,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
                 ),
-                state_struct_inst_is_resource!(i),
+                state_struct_inst_has_key!(i),
                 state_memory_safe!(None),
             ],
             effects: Effects::NoTyParams(vec![
@@ -441,7 +441,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
                 ),
-                state_struct_is_resource!(i),
+                state_struct_has_key!(i),
                 state_memory_safe!(None),
             ],
             effects: Effects::NoTyParams(vec![
@@ -456,7 +456,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
                 ),
-                state_struct_inst_is_resource!(i),
+                state_struct_inst_has_key!(i),
                 state_memory_safe!(None),
             ],
             effects: Effects::NoTyParams(vec![
@@ -468,7 +468,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::MoveFrom(i) => Summary {
             preconditions: vec![
                 state_function_can_acquire_resource!(),
-                state_struct_is_resource!(i),
+                state_struct_has_key!(i),
                 state_stack_has!(
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
@@ -483,7 +483,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::MoveFromGeneric(i) => Summary {
             preconditions: vec![
                 state_function_can_acquire_resource!(),
-                state_struct_inst_is_resource!(i),
+                state_struct_inst_has_key!(i),
                 state_stack_has!(
                     0,
                     Some(AbstractValue::new_primitive(SignatureToken::Address))
@@ -498,7 +498,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::MoveTo(i) => Summary {
             preconditions: vec![
                 state_stack_has_reference!(1, Mutability::Immutable),
-                state_struct_is_resource!(i),
+                state_struct_has_key!(i),
                 state_stack_has_struct!(i),
                 state_memory_safe!(None),
             ],
@@ -507,7 +507,7 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
         Bytecode::MoveToGeneric(i) => Summary {
             preconditions: vec![
                 state_stack_has_reference!(1, Mutability::Immutable),
-                state_struct_inst_is_resource!(i),
+                state_struct_inst_has_key!(i),
                 state_stack_has_struct_inst!(i),
                 state_memory_safe!(None),
             ],

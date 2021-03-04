@@ -12,11 +12,11 @@ main(s: signer) {
 main(s: &signer) {
     return;
 }
-// check: TYPE_MISMATCH
+// check: NUMBER_OF_ARGUMENTS_MISMATCH
 
 //! new-transaction
 //! args: 0x0
 main(s: &signer, s2: &signer) {
     return;
 }
-// check: TYPE_MISMATCH
+// check: NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH

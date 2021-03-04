@@ -102,6 +102,15 @@ module M {
         x
     }
 
+    spec fun with_emits {
+        emits _msg to _guid;
+        emits _msg to _guid if true;
+        emits _msg to _guid if x > 7;
+    }
+    fun with_emits<T: copyable>(_guid: vector<u8>, _msg: T, x: u64): u64 {
+        x
+    }
+
     spec module {
         global x: u64;
         local y: u64;

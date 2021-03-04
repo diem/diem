@@ -16,13 +16,15 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
-        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
-        FunctionSignature, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
+        Ability, AbilitySet, AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex,
+        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
+        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
+        FunctionInstantiationIndex, FunctionSignature, IdentifierIndex, ModuleHandle,
+        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex,
     },
+    CompiledModule,
 };
 
 macro_rules! get_or_add_item_macro {
@@ -58,7 +60,8 @@ pub fn ident_str(s: &str) -> Result<&IdentStr> {
     IdentStr::new(s)
 }
 
-struct CompiledDependency<'a> {
+#[derive(Clone, Debug)]
+pub struct CompiledDependencyView<'a> {
     structs: HashMap<(&'a IdentStr, &'a IdentStr), TableIndex>,
     functions: HashMap<&'a IdentStr, TableIndex>,
 
@@ -70,10 +73,12 @@ struct CompiledDependency<'a> {
     signature_pool: &'a [Signature],
 }
 
-impl<'a> CompiledDependency<'a> {
-    fn new<T: 'a + ModuleAccess>(dep: &'a T) -> Result<Self> {
+impl<'a> CompiledDependencyView<'a> {
+    pub fn new(dep: &'a CompiledModule) -> Result<Self> {
         let mut structs = HashMap::new();
         let mut functions = HashMap::new();
+
+        let self_handle = dep.self_handle_idx();
 
         for shandle in dep.struct_handles() {
             let mhandle = dep.module_handle_at(shandle.module);
@@ -90,7 +95,7 @@ impl<'a> CompiledDependency<'a> {
             .function_handles()
             .iter()
             .enumerate()
-            .filter(|(_idx, fhandle)| fhandle.module.0 == 0);
+            .filter(|(_idx, fhandle)| fhandle.module == self_handle);
         for (idx, fhandle) in defined_function_handles {
             let fname = dep.identifier_at(fhandle.name);
             functions.insert(fname, idx as u16);
@@ -131,11 +136,11 @@ impl<'a> CompiledDependency<'a> {
         Some((ident, name))
     }
 
-    fn struct_handle(&self, name: &QualifiedStructIdent) -> Option<&'a StructHandle> {
+    fn struct_handle(&self, module: &ModuleName, name: &StructName) -> Option<&'a StructHandle> {
         self.structs
             .get(&(
-                ident_str(name.module.as_inner()).ok()?,
-                ident_str(name.name.as_inner()).ok()?,
+                ident_str(module.as_inner()).ok()?,
+                ident_str(name.as_inner()).ok()?,
             ))
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
@@ -153,6 +158,55 @@ impl<'a> CompiledDependency<'a> {
             })
     }
 }
+
+use rental::rental;
+rental! {
+    mod rent_stored_compiled_dependency {
+        use super::CompiledDependencyView;
+        use vm::file_format::CompiledModule;
+
+        #[rental(covariant)]
+        pub(crate) struct StoredCompiledDependency {
+            module: Box<CompiledModule>,
+            view: CompiledDependencyView<'module>,
+        }
+    }
+}
+pub(crate) use rent_stored_compiled_dependency::StoredCompiledDependency;
+
+impl StoredCompiledDependency {
+    pub fn create(module: CompiledModule) -> Result<Self> {
+        Self::try_new(Box::new(module), move |module| {
+            CompiledDependencyView::new(module)
+        })
+        .map_err(|e| e.0)
+    }
+}
+
+pub(crate) enum CompiledDependency<'a> {
+    /// Simple `CompiledDependecyView` where the borrowed `CompiledModule` is held elsewehere,
+    /// Commonly, it is borrowed from outside of the compilers API
+    Borrowed(CompiledDependencyView<'a>),
+    /// `Stored` holds the `CompiledModule` as well as the `CompiledDependencyView` into the module
+    /// uses `rental` for a self referential struct
+    /// This is used to solve an issue of creating a `CompiledModule` and immediately needing to
+    /// borrow it for the `CompiledDependencyView`. The `StoredCompiledDependency` gets around this
+    /// by storing the module in it's first field, and then it's second field borrows the value in
+    /// the first field via the `rental` crate
+    Stored(StoredCompiledDependency),
+}
+
+impl<'a> CompiledDependency<'a> {
+    pub fn borrowed(module: &'a CompiledModule) -> Result<Self> {
+        Ok(Self::Borrowed(CompiledDependencyView::new(module)?))
+    }
+
+    pub fn stored(module: CompiledModule) -> Result<Self> {
+        Ok(Self::Stored(StoredCompiledDependency::create(module)?))
+    }
+}
+
+pub(crate) type CompiledDependencies<'a> = HashMap<QualifiedModuleIdent, CompiledDependency<'a>>;
 
 /// Represents all of the pools to be used in the file format, both by CompiledModule
 /// and CompiledScript.
@@ -177,7 +231,7 @@ pub struct MaterializedPools {
     pub identifiers: Vec<Identifier>,
     /// Address identifier pool
     pub address_identifiers: Vec<AccountAddress>,
-    /// Constnat pool
+    /// Constant pool
     pub constant_pool: Vec<Constant>,
 }
 
@@ -185,8 +239,8 @@ pub struct MaterializedPools {
 /// Contains all of the pools as they are built up.
 /// Specific definitions to CompiledModule or CompiledScript are not stored.
 /// However, some fields, like struct_defs and fields, are not used in CompiledScript.
-pub struct Context<'a> {
-    dependencies: HashMap<QualifiedModuleIdent, CompiledDependency<'a>>,
+pub(crate) struct Context<'a> {
+    dependencies: CompiledDependencies<'a>,
 
     // helpers
     aliases: HashMap<QualifiedModuleIdent, ModuleName>,
@@ -226,20 +280,10 @@ impl<'a> Context<'a> {
     /// Given the dependencies and the current module, creates an empty context.
     /// The current module is a dummy `Self` for CompiledScript.
     /// It initializes an "import" of `Self` as the alias for the current_module.
-    pub fn new<T: 'a + ModuleAccess>(
-        dependencies_iter: impl IntoIterator<Item = &'a T>,
+    pub fn new(
+        dependencies: CompiledDependencies<'a>,
         current_module_opt: Option<QualifiedModuleIdent>,
     ) -> Result<Self> {
-        let dependencies = dependencies_iter
-            .into_iter()
-            .map(|dep| {
-                let ident = QualifiedModuleIdent {
-                    address: *dep.address(),
-                    name: ModuleName::new(dep.name().to_string()),
-                };
-                Ok((ident, CompiledDependency::new(dep)?))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
         let context = Self {
             dependencies,
             aliases: HashMap::new(),
@@ -268,6 +312,29 @@ impl<'a> Context<'a> {
         Ok(context)
     }
 
+    pub fn take_dependencies(&mut self) -> CompiledDependencies<'a> {
+        std::mem::take(&mut self.dependencies)
+    }
+
+    pub fn restore_dependencies(&mut self, dependencies: CompiledDependencies<'a>) {
+        assert!(self.dependencies.is_empty());
+        self.dependencies = dependencies;
+    }
+
+    pub fn add_compiled_dependency(&mut self, compiled_dep: &'a CompiledModule) -> Result<()> {
+        let ident = QualifiedModuleIdent {
+            address: *compiled_dep.address(),
+            name: ModuleName::new(compiled_dep.name().to_string()),
+        };
+        match self.dependencies.get(&ident) {
+            None => self
+                .dependencies
+                .insert(ident, CompiledDependency::borrowed(compiled_dep)?),
+            Some(_previous) => bail!("Duplicate dependency module for {}", ident),
+        };
+        Ok(())
+    }
+
     fn materialize_pool<T: Clone>(
         size: usize,
         items: impl IntoIterator<Item = (T, TableIndex)>,
@@ -285,7 +352,9 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> (MaterializedPools, SourceMap<Loc>) {
+    pub fn materialize_pools(
+        self,
+    ) -> (MaterializedPools, CompiledDependencies<'a>, SourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(
@@ -307,7 +376,7 @@ impl<'a> Context<'a> {
             struct_def_instantiations: Self::materialize_map(self.struct_instantiations),
             field_instantiations: Self::materialize_map(self.field_instantiations),
         };
-        (materialized_pools, self.source_map)
+        (materialized_pools, self.dependencies, self.source_map)
     }
 
     pub fn build_index_remapping(
@@ -341,7 +410,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the identifier for the alias, fails if it is not bound.
-    fn module_ident(&self, module_name: &ModuleName) -> Result<&QualifiedModuleIdent> {
+    pub fn module_ident(&self, module_name: &ModuleName) -> Result<&QualifiedModuleIdent> {
         match self.modules.get(module_name) {
             None => bail!("Unbound module alias {}", module_name),
             Some((id, _)) => Ok(id),
@@ -349,7 +418,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the module handle index for the alias, fails if it is not bound.
-    fn module_handle_index(&self, module_name: &ModuleName) -> Result<ModuleHandleIndex> {
+    pub fn module_handle_index(&self, module_name: &ModuleName) -> Result<ModuleHandleIndex> {
         Ok(ModuleHandleIndex(
             *self
                 .module_handles
@@ -498,6 +567,13 @@ impl<'a> Context<'a> {
     // Declarations
     //**********************************************************************************************
 
+    /// Add a friend. This creates a module handle for the friended module.
+    pub fn declare_friend(&mut self, id: QualifiedModuleIdent) -> Result<ModuleHandle> {
+        let address = self.address_index(id.address)?;
+        let name = self.identifier_index(id.name.as_inner())?;
+        Ok(ModuleHandle { address, name })
+    }
+
     /// Add an import. This creates a module handle index for the imported module.
     pub fn declare_import(
         &mut self,
@@ -522,7 +598,21 @@ impl<'a> Context<'a> {
         &mut self,
         sname: QualifiedStructIdent,
         is_nominal_resource: bool,
-        type_parameters: Vec<Kind>,
+        type_parameters: Vec<AbilitySet>,
+    ) -> Result<StructHandleIndex> {
+        let abilities = if is_nominal_resource {
+            AbilitySet::EMPTY | Ability::Key | Ability::Store
+        } else {
+            AbilitySet::EMPTY | Ability::Copy | Ability::Drop | Ability::Store
+        };
+        self.declare_struct_handle_index_with_abilities(sname, abilities, type_parameters)
+    }
+
+    fn declare_struct_handle_index_with_abilities(
+        &mut self,
+        sname: QualifiedStructIdent,
+        abilities: AbilitySet,
+        type_parameters: Vec<AbilitySet>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
         let name = self.identifier_index(sname.name.as_inner())?;
@@ -531,7 +621,7 @@ impl<'a> Context<'a> {
             StructHandle {
                 module,
                 name,
-                is_nominal_resource,
+                abilities,
                 type_parameters,
             },
         );
@@ -630,21 +720,29 @@ impl<'a> Context<'a> {
     // Dependency Resolution
     //**********************************************************************************************
 
-    fn dependency(&self, m: &QualifiedModuleIdent) -> Result<&CompiledDependency> {
-        self.dependencies
+    fn dependency(&self, m: &QualifiedModuleIdent) -> Result<&CompiledDependencyView> {
+        let dep = self
+            .dependencies
             .get(m)
-            .ok_or_else(|| format_err!("Dependency not provided for {}", m))
+            .ok_or_else(|| format_err!("Dependency not provided for {}", m))?;
+        Ok(match dep {
+            CompiledDependency::Borrowed(v) => v,
+            CompiledDependency::Stored(stored) => stored.suffix(),
+        })
     }
 
-    fn dep_struct_handle(&mut self, s: &QualifiedStructIdent) -> Result<(bool, Vec<Kind>)> {
+    fn dep_struct_handle(
+        &mut self,
+        s: &QualifiedStructIdent,
+    ) -> Result<(AbilitySet, Vec<AbilitySet>)> {
         if s.module.as_inner() == ModuleName::self_name() {
             bail!("Unbound struct {}", s)
         }
         let mident = self.module_ident(&s.module)?.clone();
         let dep = self.dependency(&mident)?;
-        match dep.struct_handle(s) {
+        match dep.struct_handle(&mident.name, &s.name) {
             None => bail!("Unbound struct {}", s),
-            Some(shandle) => Ok((shandle.is_nominal_resource, shandle.type_parameters.clone())),
+            Some(shandle) => Ok((shandle.abilities, shandle.type_parameters.clone())),
         }
     }
 
@@ -655,8 +753,8 @@ impl<'a> Context<'a> {
         match self.structs.get(&s) {
             Some(sh) => Ok(StructHandleIndex(*self.struct_handles.get(sh).unwrap())),
             None => {
-                let (is_nominal_resource, type_parameters) = self.dep_struct_handle(&s)?;
-                self.declare_struct_handle_index(s, is_nominal_resource, type_parameters)
+                let (abilities, type_parameters) = self.dep_struct_handle(&s)?;
+                self.declare_struct_handle_index_with_abilities(s, abilities, type_parameters)
             }
         }
     }
@@ -753,7 +851,7 @@ impl<'a> Context<'a> {
         let mident = self.module_ident(m)?.clone();
         let dep = self.dependency(&mident)?;
         match dep.function_signature(f) {
-            None => bail!("Unbound function {}.{}", m, f),
+            None => bail!("Unbound function {}.{}", mident, f),
             Some(sig) => self.reindex_function_signature(&mident, sig),
         }
     }

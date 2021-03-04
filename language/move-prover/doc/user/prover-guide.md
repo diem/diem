@@ -1,7 +1,7 @@
 # Move Prover User Guide (DRAFT)
 
 This is the user guide for the Move prover. This document does not describe the
-[Move specification language](move-model.md), but accompanies it.
+[Move specification language](spec-lang.md), but accompanies it.
 
 This guide is currently specific for the usage of the prover within the Diem repo.
 
@@ -45,7 +45,7 @@ set an environment variable which contains a path to the default configuration f
 for example, to let the prover automatically find dependencies to the Move standard library, as shown below:
 
 ```shell script
-> echo "move_deps = [\"<path-to-diem>/language/stdlib/modules\"]" > ~/.mvprc
+> echo "move_deps = [\"<path-to-diem>/language/diem-framework/modules\"]" > ~/.mvprc
 > export MOVE_PROVER_CONFIG=~/.mvprc
 ```
 

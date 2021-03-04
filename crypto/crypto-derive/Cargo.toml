@@ -6,16 +6,17 @@ description = "Diem custom derives for `diem-crypto`"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
+publish = false
 edition = "2018"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-syn = { version = "1.0.56", features = ["derive"] }
-quote = "1.0.8"
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+syn = { version = "1.0.58", features = ["derive"] }
+quote = "1.0.9"
 proc-macro2 = "1.0.24"
 
 [dev-dependencies]
-anyhow = "1.0.37"
+anyhow = "1.0.38"

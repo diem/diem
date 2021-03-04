@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use diem_client::{Client, MethodRequest};
 use diem_crypto::traits::SigningKey;
 use diem_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address, type_tag_for_currency_code,
@@ -92,7 +93,7 @@ impl MintParams {
 pub struct Service {
     chain_id: diem_types::chain_id::ChainId,
     private_key: diem_crypto::ed25519::Ed25519PrivateKey,
-    client: diem_json_rpc_client::JsonRpcAsyncClient,
+    client: Client,
 }
 
 impl Service {
@@ -101,9 +102,8 @@ impl Service {
         chain_id: diem_types::chain_id::ChainId,
         private_key_file: String,
     ) -> Self {
-        let url = reqwest::Url::parse(server_url.as_str()).expect("invalid server url");
         let private_key = generate_key::load_key(private_key_file);
-        let client = diem_json_rpc_client::JsonRpcAsyncClient::new(url);
+        let client = Client::new(server_url);
         Service {
             chain_id,
             private_key,
@@ -125,11 +125,11 @@ impl Service {
         }
         txns.push(self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?);
 
-        let mut batch = diem_json_rpc_client::JsonRpcBatch::new();
-        for txn in &txns {
-            batch.add_submit_request(txn.clone())?;
-        }
-        self.client.execute(batch).await?;
+        let batch = txns
+            .iter()
+            .map(|txn| MethodRequest::submit(txn))
+            .collect::<Result<_, _>>()?;
+        self.client.batch(batch).await?;
 
         if let Some(return_txns) = params.return_txns {
             if return_txns {
@@ -167,7 +167,19 @@ impl Service {
             testnet_dd_account_address(),
             receiver,
         ];
-        let responses = self.client.get_accounts(&accounts).await?;
+        let responses = self
+            .client
+            .batch(
+                accounts
+                    .into_iter()
+                    .map(MethodRequest::get_account)
+                    .collect(),
+            )
+            .await?
+            .into_iter()
+            .map(|r| r.map_err(anyhow::Error::new))
+            .map(|r| r.map(|response| response.into_inner().unwrap_get_account()))
+            .collect::<Result<Vec<_>>>()?;
 
         let treasury_compliance = responses
             .get(0)

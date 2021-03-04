@@ -80,6 +80,24 @@ pub static VOTE_NIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
+/// Committed proposals from this validator when using LeaderReputation as the ProposerElection
+pub static COMMITTED_PROPOSALS_IN_WINDOW: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "diem_committed_proposals_in_window",
+        "Total number of this validator's committed proposals in the current reputation window"
+    )
+    .unwrap()
+});
+
+/// Committed votes from this validator when using LeaderReputation as the ProposerElection
+pub static COMMITTED_VOTES_IN_WINDOW: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "diem_committed_votes_in_window",
+        "Total number of this validator's committed votes in the current reputation window"
+    )
+    .unwrap()
+});
+
 //////////////////////
 // RoundState COUNTERS
 //////////////////////

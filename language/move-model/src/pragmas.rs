@@ -26,6 +26,12 @@ pub const INTRINSIC_PRAGMA: &str = "intrinsic";
 /// instead interpreted by its pre and post conditions only.
 pub const OPAQUE_PRAGMA: &str = "opaque";
 
+/// Pragma indicating whether emits specification should be considered partial.
+pub const EMITS_IS_PARTIAL_PRAGMA: &str = "emits_is_partial";
+
+/// Pragma indicating whether no emits specification should mean that no events are to be emitted.
+pub const EMITS_IS_STRICT_PRAGMA: &str = "emits_is_strict";
+
 /// Pragma indicating whether aborts_if specification should be considered partial.
 pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
 
@@ -50,6 +56,19 @@ pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 
+/// Pragma indicating that the function can only be called from certain caller.
+/// Unlike other pragmas, this pragma expects a function name like `0x1::M::f` instead
+/// of a boolean or a number.
+pub const FRIEND_PRAGMA: &str = "friend";
+
+/// Pragma indicating that invariants are not to be checked between entry and exit
+/// to this function
+pub const DISABLE_INVARIANTS_IN_BODY_PRAGMA: &str = "disable_invariants_in_body";
+
+/// Pragma indicating that invariants are not to be checked between entry and exit
+/// to this function
+pub const DELEGATE_INVARIANTS_TO_CALLER_PRAGMA: &str = "delegate_invariants_to_caller";
+
 /// Checks whether a pragma is valid in a specific spec block.
 pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
     use crate::builder::module_builder::SpecBlockContext::*;
@@ -57,6 +76,8 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
         Module => matches!(
             pragma,
             VERIFY_PRAGMA
+                | EMITS_IS_STRICT_PRAGMA
+                | EMITS_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_STRICT_PRAGMA
                 | ABORTS_IF_IS_PARTIAL_PRAGMA
                 | INTRINSIC_PRAGMA
@@ -69,6 +90,8 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | VERIFY_DURATION_ESTIMATE_PRAGMA
                 | INTRINSIC_PRAGMA
                 | OPAQUE_PRAGMA
+                | EMITS_IS_STRICT_PRAGMA
+                | EMITS_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_PARTIAL_PRAGMA
                 | ABORTS_IF_IS_STRICT_PRAGMA
                 | REQUIRES_IF_ABORTS_PRAGMA
@@ -76,6 +99,9 @@ pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) ->
                 | ADDITION_OVERFLOW_UNCHECKED_PRAGMA
                 | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
                 | EXPORT_ENSURES_PRAGMA
+                | FRIEND_PRAGMA
+                | DISABLE_INVARIANTS_IN_BODY_PRAGMA
+                | DELEGATE_INVARIANTS_TO_CALLER_PRAGMA
         ),
         _ => false,
     }

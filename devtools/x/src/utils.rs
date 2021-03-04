@@ -28,9 +28,9 @@ fn stop_sccache_server() {
     }
 }
 
-pub fn apply_sccache_if_possible<'a>(
-    cargo_config: &'a CargoConfig,
-) -> Result<Vec<(&'a str, Option<String>)>> {
+pub fn apply_sccache_if_possible(
+    cargo_config: &CargoConfig,
+) -> Result<Vec<(&str, Option<String>)>> {
     let mut envs = vec![];
 
     if var_os("SKIP_SCCACHE").is_none() && cargo_config.sccache.is_some() {

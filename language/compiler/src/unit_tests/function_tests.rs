@@ -4,7 +4,7 @@
 use crate::unit_tests::testutils::compile_module_string;
 
 #[test]
-fn compile_script_with_functions() {
+fn compile_module_with_functions() {
     let code = String::from(
         "
         module Foobar {
@@ -68,7 +68,7 @@ fn generate_function(name: &str, num_formals: usize, num_locals: usize) -> Strin
 }
 
 #[test]
-fn compile_script_with_large_frame() {
+fn compile_module_with_large_frame() {
     let mut code = String::from(
         "
         module Foobar {
@@ -81,6 +81,26 @@ fn compile_script_with_large_frame() {
 
     code.push('}');
 
+    let compiled_module_res = compile_module_string(&code);
+    assert!(compiled_module_res.is_ok());
+}
+
+#[test]
+fn compile_module_with_script_visibility_functions() {
+    let code = String::from(
+        "
+        module Foobar {
+            public(script) foo() {
+                return;
+            }
+
+            public(script) bar() {
+                Self.foo();
+                return;
+            }
+        }
+        ",
+    );
     let compiled_module_res = compile_module_string(&code);
     assert!(compiled_module_res.is_ok());
 }

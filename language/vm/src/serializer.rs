@@ -158,7 +158,7 @@ impl CompiledScriptMut {
     /// [`CompiledScript::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ScriptSerializer::new(1);
+        let mut ser = ScriptSerializer::new(VERSION_MAX);
         let mut temp = BinaryData::new();
 
         ser.common.serialize_common_tables(&mut temp, self)?;
@@ -196,7 +196,7 @@ impl CompiledModuleMut {
     /// [`CompiledModule::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ModuleSerializer::new(1);
+        let mut ser = ModuleSerializer::new(VERSION_MAX);
         let mut temp = BinaryData::new();
         ser.serialize_tables(&mut temp, self)?;
         if temp.len() > u32::max_value() as usize {
@@ -248,6 +248,7 @@ struct ModuleSerializer {
     function_defs: (u32, u32),
     field_handles: (u32, u32),
     field_instantiations: (u32, u32),
+    friend_decls: (u32, u32),
 }
 
 /// Holds data to compute the header of a transaction script binary.
@@ -392,8 +393,8 @@ fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle
 fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
     serialize_module_handle_index(binary, &struct_handle.module)?;
     serialize_identifier_index(binary, &struct_handle.name)?;
-    serialize_nominal_resource_flag(binary, struct_handle.is_nominal_resource)?;
-    serialize_kinds(binary, &struct_handle.type_parameters)
+    serialize_ability_set(binary, struct_handle.abilities)?;
+    serialize_ability_sets(binary, &struct_handle.type_parameters)
 }
 
 /// Serializes a `FunctionHandle`.
@@ -412,7 +413,7 @@ fn serialize_function_handle(
     serialize_identifier_index(binary, &function_handle.name)?;
     serialize_signature_index(binary, &function_handle.parameters)?;
     serialize_signature_index(binary, &function_handle.return_)?;
-    serialize_kinds(binary, &function_handle.type_parameters)
+    serialize_ability_sets(binary, &function_handle.type_parameters)
 }
 
 fn serialize_function_instantiation(
@@ -521,7 +522,10 @@ fn serialize_field_definition(
 ///
 /// A `FunctionDefinition` gets serialized as follows:
 /// - `FunctionDefinition.function` as a ULEB128 (index into the `FunctionHandle` table)
+/// - `FunctionDefinition.visibility` 1 byte for the visibility modifier of the function
 /// - `FunctionDefinition.flags` 1 byte for the flags of the function
+///   The flags now has only one bit used:
+///   - bit 0x2: native indicator, indicates whether the function is a native function.
 /// - `FunctionDefinition.code` a variable size stream for the `CodeUnit`
 fn serialize_function_definition(
     binary: &mut BinaryData,
@@ -529,17 +533,13 @@ fn serialize_function_definition(
 ) -> Result<()> {
     serialize_function_handle_index(binary, &function_definition.function)?;
 
-    let is_public = if function_definition.is_public() {
-        FunctionDefinition::PUBLIC
-    } else {
-        0
-    };
+    binary.push(function_definition.visibility as u8)?;
     let is_native = if function_definition.is_native() {
         FunctionDefinition::NATIVE
     } else {
         0
     };
-    binary.push(is_public | is_native)?;
+    binary.push(is_native)?;
 
     serialize_acquires(binary, &function_definition.acquires_global_resources)?;
     if let Some(code) = &function_definition.code {
@@ -654,31 +654,15 @@ pub(crate) fn serialize_signature_token(
     Ok(())
 }
 
-fn serialize_nominal_resource_flag(
-    binary: &mut BinaryData,
-    is_nominal_resource: bool,
-) -> Result<()> {
-    binary.push(if is_nominal_resource {
-        SerializedNominalResourceFlag::NOMINAL_RESOURCE
-    } else {
-        SerializedNominalResourceFlag::NORMAL_STRUCT
-    } as u8)?;
+fn serialize_ability_set(binary: &mut BinaryData, set: AbilitySet) -> Result<()> {
+    write_as_uleb128(binary, set.into_u8(), AbilitySet::ALL.into_u8())?;
     Ok(())
 }
 
-fn serialize_kind(binary: &mut BinaryData, kind: Kind) -> Result<()> {
-    binary.push(match kind {
-        Kind::All => SerializedKind::ALL,
-        Kind::Resource => SerializedKind::RESOURCE,
-        Kind::Copyable => SerializedKind::COPYABLE,
-    } as u8)?;
-    Ok(())
-}
-
-fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
-    serialize_type_parameter_count(binary, kinds.len())?;
-    for kind in kinds {
-        serialize_kind(binary, *kind)?;
+fn serialize_ability_sets(binary: &mut BinaryData, sets: &[AbilitySet]) -> Result<()> {
+    serialize_type_parameter_count(binary, sets.len())?;
+    for set in sets {
+        serialize_ability_set(binary, *set)?;
     }
     Ok(())
 }
@@ -1123,6 +1107,7 @@ impl ModuleSerializer {
             function_defs: (0, 0),
             field_handles: (0, 0),
             field_instantiations: (0, 0),
+            friend_decls: (0, 0),
         }
     }
 
@@ -1136,7 +1121,8 @@ impl ModuleSerializer {
         self.serialize_struct_def_instantiations(binary, &module.struct_def_instantiations)?;
         self.serialize_function_definitions(binary, &module.function_defs)?;
         self.serialize_field_handles(binary, &module.field_handles)?;
-        self.serialize_field_instantiations(binary, &module.field_instantiations)
+        self.serialize_field_instantiations(binary, &module.field_instantiations)?;
+        self.serialize_friend_declarations(binary, &module.friend_decls)
     }
 
     fn serialize_table_indices(&mut self, binary: &mut BinaryData) -> Result<()> {
@@ -1170,6 +1156,12 @@ impl ModuleSerializer {
             TableType::FIELD_INST,
             self.field_instantiations.0,
             self.field_instantiations.1,
+        )?;
+        serialize_table_index(
+            binary,
+            TableType::FRIEND_DECLS,
+            self.friend_decls.0,
+            self.friend_decls.1,
         )?;
         Ok(())
     }
@@ -1258,6 +1250,22 @@ impl ModuleSerializer {
         }
         Ok(())
     }
+
+    fn serialize_friend_declarations(
+        &mut self,
+        binary: &mut BinaryData,
+        friend_declarations: &[ModuleHandle],
+    ) -> Result<()> {
+        if !friend_declarations.is_empty() {
+            self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
+            self.friend_decls.0 = check_index_in_binary(binary.len())?;
+            for module in friend_declarations {
+                serialize_module_handle(binary, module)?;
+            }
+            self.friend_decls.1 = checked_calculate_table_size(binary, self.friend_decls.0)?;
+        }
+        Ok(())
+    }
 }
 
 impl ScriptSerializer {
@@ -1273,7 +1281,7 @@ impl ScriptSerializer {
         binary: &mut BinaryData,
         script: &CompiledScriptMut,
     ) -> Result<()> {
-        serialize_kinds(binary, &script.type_parameters)?;
+        serialize_ability_sets(binary, &script.type_parameters)?;
         serialize_signature_index(binary, &script.parameters)?;
         serialize_code_unit(binary, &script.code)?;
         Ok(())

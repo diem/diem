@@ -6,9 +6,12 @@ error: global memory invariant does not hold
  18 │         invariant [global] forall a: address where exists<R>(a): exists<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:34:5: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:38: create_R_invalid
     =         account = <redacted>
-    =     at tests/sources/functional/global_invariants.move:36:9: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:40: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:38: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:40: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:18
 
 error: global memory invariant does not hold
 
@@ -17,10 +20,14 @@ error: global memory invariant does not hold
  20 │         invariant update [global] forall a: address where old(exists_R(a)): exists<R>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:58:5: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:62: remove_R_invalid
     =         account = <redacted>
-    =     at tests/sources/functional/global_invariants.move:60:34: remove_R_invalid
-    =     at tests/sources/functional/global_invariants.move:61:43: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:64: remove_R_invalid
+    =         <redacted> = <redacted>
+    =     at tests/sources/functional/global_invariants.move:62: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:65: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:18
+    =     at tests/sources/functional/global_invariants.move:20
 
 error: global memory invariant does not hold
 
@@ -29,7 +36,8 @@ error: global memory invariant does not hold
  18 │         invariant [global] forall a: address where exists<R>(a): exists<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:49:5: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:53: remove_S_invalid
     =         account = <redacted>
-    =     at tests/sources/functional/global_invariants.move:51:34: remove_S_invalid
-    =     at tests/sources/functional/global_invariants.move:52:43: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:55: remove_S_invalid
+    =         <redacted> = <redacted>
+    =     at tests/sources/functional/global_invariants.move:18

@@ -10,25 +10,24 @@ publish = false
 edition = "2018"
 
 [dependencies]
-bytes = "0.5.6"
-futures = "0.3.8"
-pin-project = "1.0.2"
-serde = { version = "1.0.117", default-features = false }
-tokio = { version = "0.2.22", features = ["full"] }
-url = { version = "2.1.1" }
+bytes = "1.0.1"
+futures = "0.3.12"
+pin-project = "1.0.5"
+serde = { version = "1.0.123", default-features = false }
+tokio = { version = "1.2.0", features = ["full"] }
+tokio-util = { version = "0.6.3", features = ["compat"] }
+url = { version = "2.2.1" }
 
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-diem-network-address = { path = "../network-address", version = "0.1.0" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-types = { path = "../../types" }
-memsocket = { path = "../memsocket", version = "0.1.0", optional = true }
+memsocket = { path = "../memsocket", optional = true }
 proxy = { path = "../../common/proxy" }
 
 [dev-dependencies]
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-network-address = { path = "../network-address", version = "0.1.0", features = ["fuzzing"] }
-memsocket = { path = "../memsocket", version = "0.1.0" }
+diem-logger = { path = "../../common/logger" }
+memsocket = { path = "../memsocket" }
 
 [features]
 default = []
-fuzzing = ["memsocket/fuzzing"]
+fuzzing = ["memsocket/fuzzing", "diem-types/fuzzing"]
 testing = ["memsocket/testing"]

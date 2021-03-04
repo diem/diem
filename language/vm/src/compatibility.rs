@@ -1,9 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{normalized::Module, CompiledModule};
+use crate::{file_format::Visibility, normalized::Module};
+use std::collections::BTreeSet;
 
-/// The result of a linking and layoutcompatibility check. Here is what the different combinations
+/// The result of a linking and layout compatibility check. Here is what the different combinations
 /// mean:
 /// `{ struct: true, struct_layout: true }`: fully backward compatible
 /// `{ struct_and_function_linking: true, struct_layout: false }`: Dependent modules that reference functions or types in this module may not link. However, fixing, recompiling, and redeploying all dependent modules will work--no data migration needed.
@@ -23,7 +24,7 @@ impl Compatibility {
         self.struct_and_function_linking && self.struct_layout
     }
 
-    /// Return compatibility assessment for `new_module` relative to old module `old_module`
+    /// Return compatibility assessment for `new_module` relative to old module `old_module`.
     pub fn check(old_module: &Module, new_module: &Module) -> Compatibility {
         let mut struct_and_function_linking = true;
         let mut struct_layout = true;
@@ -41,7 +42,7 @@ impl Compatibility {
                 .find(|s| s.name == old_struct.name)
             {
                 Some(new_struct) => {
-                    if new_struct.kind != old_struct.kind
+                    if new_struct.abilities != old_struct.abilities
                         || new_struct.type_parameters != old_struct.type_parameters
                     {
                         // Declared kind and/or type parameters changed. Existing modules that depend on this struct will fail to link with the new version of the module
@@ -86,34 +87,54 @@ impl Compatibility {
             }
         }
 
-        // old module's public functions are a subset of the new module's public functions
-        for function in &old_module.public_functions {
-            if !new_module.public_functions.contains(&function) {
+        // The modules are considered as compatible function-wise when all the conditions are met:
+        //
+        // - old module's public functions are a subset of the new module's public functions
+        //   (i.e. we cannot remove or change public functions)
+        // - old module's script functions are a subset of the new module's script functions
+        //   (i.e. we cannot remove or change script functions)
+        // - for any friend function that is removed or changed in the old module
+        //   - if the function visibility is upgraded to public, it is OK
+        //   - otherwise, it is considered as incompatible.
+        //
+        // NOTE: it is possible to relax the compatibility checking for a friend function, i.e.,
+        // we can remove/change a friend function if the function is not used by any module in the
+        // friend list. But for simplicity, we decided to go to the more restrictive form now and
+        // we may revisit this in the future.
+        for (func_sig, old_vis) in &old_module.exposed_functions {
+            let new_vis_opt = new_module.exposed_functions.get(func_sig);
+            let is_compatible = match (old_vis, new_vis_opt) {
+                (Visibility::Public, Some(Visibility::Public)) => true,
+                (Visibility::Public, _) => false,
+                (Visibility::Script, Some(Visibility::Script)) => true,
+                (Visibility::Script, _) => false,
+                (Visibility::Friend, Some(Visibility::Public)) => true,
+                (Visibility::Friend, Some(Visibility::Friend)) => true,
+                (Visibility::Friend, _) => false,
+                (Visibility::Private, _) => unreachable!("A private function can never be exposed"),
+            };
+            if !is_compatible {
                 struct_and_function_linking = false;
             }
+        }
+
+        // check friend declarations compatibility
+        //
+        // - additions to the list are allowed
+        // - removals are not allowed
+        //
+        // NOTE: we may also relax this checking a bit in the future: we may allow the removal of
+        // a module removed from the friend list if the module does not call any friend function
+        // in this module.
+        let old_friend_module_ids: BTreeSet<_> = old_module.friends.iter().cloned().collect();
+        let new_friend_module_ids: BTreeSet<_> = new_module.friends.iter().cloned().collect();
+        if !old_friend_module_ids.is_subset(&new_friend_module_ids) {
+            struct_and_function_linking = false;
         }
 
         Compatibility {
             struct_and_function_linking,
             struct_layout,
         }
-    }
-
-    /// Return true if `new_module` can safely update `old_module`
-    pub fn can_update(
-        old_module: &Module,
-        new_module: &CompiledModule,
-        _new_module_dependencies: &[CompiledModule],
-    ) -> bool {
-        // (1) Verify new_module (TODO)
-        // (2) Link new_module against new_module dependencies. (TODO)
-        //     Note: this will *NOT* prevent cylic deps. We need to think about a different scheme
-        //     if we care about this (which we almost certainly do). One (probably too restrictive)
-        //     solution would be: insist that deps(new_module) are a subset of deps(old_module).
-        //     That would not only prevent cyclic deps, but also preclude the need for linking
-        //     entirely.
-        // (3) Extract the  for new_module and check compatibility with old_module
-        Self::is_fully_compatible(&Self::check(old_module, &Module::new(new_module)))
-            && panic!("TODO: implement verification, linking, cyclic deps checks")
     }
 }

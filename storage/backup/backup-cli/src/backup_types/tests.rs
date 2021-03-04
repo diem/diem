@@ -15,7 +15,7 @@ use crate::{
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
         backup_service_client::BackupServiceClient, test_utils::start_local_backup_service,
-        GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions, RocksdbOpt,
+        GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions, RocksdbOpt, TrustedWaypointOpt,
     },
 };
 use diem_config::config::RocksdbConfig;
@@ -67,7 +67,7 @@ fn test_end_to_end_impl(d: TestData) {
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
-    let (mut rt, port) = start_local_backup_service(Arc::clone(&d.db));
+    let (rt, port) = start_local_backup_service(Arc::clone(&d.db));
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port
@@ -110,6 +110,7 @@ fn test_end_to_end_impl(d: TestData) {
         dry_run: false,
         db_dir: Some(tgt_db_dir.path().to_path_buf()),
         target_version: Some(d.target_ver),
+        trusted_waypoints: TrustedWaypointOpt::default(),
         rocksdb_opt: RocksdbOpt::default(),
     }
     .try_into()

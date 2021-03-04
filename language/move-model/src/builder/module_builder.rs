@@ -1,11 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 use itertools::Itertools;
 use regex::Regex;
-use serde::export::{fmt, Formatter};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_ir_types::{ast::ConstantName, location::Spanned};
@@ -29,10 +31,10 @@ use crate::{
         SpecVarDecl, Value,
     },
     builder::{
-        exp_rewriter::ExpRewriter,
         exp_translator::ExpTranslator,
         model_builder::{ConstEntry, LocalVarEntry, ModelBuilder, SpecFunEntry},
     },
+    exp_rewriter::{ExpRewriter, RewriteTarget},
     model::{
         FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId,
         NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
@@ -50,14 +52,6 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct ModuleBuilder<'env, 'translator> {
     pub parent: &'translator mut ModelBuilder<'env>,
-    /// Counter for NodeId in this module.
-    pub node_counter: usize,
-    /// A map from node id to associated location.
-    pub loc_map: BTreeMap<NodeId, Loc>,
-    /// A map from node id to associated type.
-    pub type_map: BTreeMap<NodeId, Type>,
-    /// A map from node id to associated instantiation of type parameters.
-    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
     /// Id of the currently build module.
     pub module_id: ModuleId,
     /// Name of the currently build module.
@@ -93,7 +87,7 @@ pub enum SpecBlockContext<'a> {
 }
 
 impl<'a> fmt::Display for SpecBlockContext<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use SpecBlockContext::*;
         match self {
             Module => write!(f, "module context")?,
@@ -116,10 +110,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     ) -> Self {
         Self {
             parent,
-            node_counter: 0,
-            loc_map: BTreeMap::new(),
-            type_map: BTreeMap::new(),
-            instantiation_map: BTreeMap::new(),
             module_id,
             module_name,
             spec_funs: vec![],
@@ -171,21 +161,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         self.parent.env.symbol_pool()
     }
 
-    /// Creates a new node id.
-    pub fn new_node_id(&mut self) -> NodeId {
-        let node_id = NodeId::new(self.node_counter);
-        self.node_counter += 1;
-        node_id
-    }
-
-    /// Creates a new node id and assigns type and location to it.
-    pub fn new_node_id_with_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
-        let id = self.new_node_id();
-        self.loc_map.insert(id, loc.clone());
-        self.type_map.insert(id, ty.clone());
-        id
-    }
-
     /// Qualifies the given symbol by the current module.
     pub fn qualified_by_module(&self, sym: Symbol) -> QualifiedSymbol {
         QualifiedSymbol {
@@ -209,8 +184,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             EA::ModuleAccess_::Name(n) => (None, self.symbol_pool().make(n.value.as_str())),
             EA::ModuleAccess_::ModuleAccess(m, n) => {
                 let module_name = ModuleName::from_str(
-                    &m.0.value.address.to_string(),
-                    self.symbol_pool().make(m.0.value.name.0.value.as_str()),
+                    &m.value.0.to_string(),
+                    self.symbol_pool().make(m.value.1.as_str()),
                 );
                 (Some(module_name), self.symbol_pool().make(n.value.as_str()))
             }
@@ -276,13 +251,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         compiled_module: &CompiledModule,
         source_map: &SourceMap<MoveIrLoc>,
     ) {
-        for (name, struct_def) in &module_def.structs {
+        for (name, struct_def) in module_def.structs.key_cloned_iter() {
             self.decl_ana_struct(&name, struct_def);
         }
-        for (name, fun_def) in &module_def.functions {
+        for (name, fun_def) in module_def.functions.key_cloned_iter() {
             self.decl_ana_fun(&name, fun_def);
         }
-        for (name, const_def) in &module_def.constants {
+        for (name, const_def) in module_def.constants.key_cloned_iter() {
             self.decl_ana_const(&name, const_def, compiled_module, source_map);
         }
         for spec in &module_def.specs {
@@ -339,7 +314,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let type_params = et.analyze_and_add_type_params(&def.signature.type_parameters);
         et.enter_scope();
-        let params = et.analyze_and_add_params(&def.signature.parameters);
+        let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
         let is_public = matches!(def.visibility, PA::FunctionVisibility::Public(..));
         let loc = et.to_loc(&def.loc);
@@ -360,7 +335,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             qsym,
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Function(self.module_id, spec_fun_id),
+                oper: Operation::Function(self.module_id, spec_fun_id, None),
                 type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
                 arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
                 result_type: result_type.clone(),
@@ -428,7 +403,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             let et = &mut ExpTranslator::new(self);
             let type_params = et.analyze_and_add_type_params(&signature.type_parameters);
             et.enter_scope();
-            let params = et.analyze_and_add_params(&signature.parameters);
+            let params = et.analyze_and_add_params(&signature.parameters, false);
             let result_type = et.translate_type(&signature.return_type);
             et.finalize_types();
             (type_params, params, result_type)
@@ -440,7 +415,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             self.qualified_by_module(name),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Function(self.module_id, fun_id),
+                oper: Operation::Function(self.module_id, fun_id, None),
                 type_params: type_params.iter().map(|(_, ty)| ty.clone()).collect(),
                 arg_types: params.iter().map(|(_, ty)| ty.clone()).collect(),
                 result_type: result_type.clone(),
@@ -556,19 +531,19 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         function_infos: UniqueMap<PA::FunctionName, FunctionInfo>,
     ) {
         // Analyze all structs.
-        for (name, def) in &module_def.structs {
+        for (name, def) in module_def.structs.key_cloned_iter() {
             self.def_ana_struct(&name, def);
         }
 
         // Analyze all functions.
-        for (idx, (name, fun_def)) in module_def.functions.iter().enumerate() {
+        for (idx, (name, fun_def)) in module_def.functions.key_cloned_iter().enumerate() {
             self.def_ana_fun(&name, &fun_def.body, idx);
         }
 
         // Propagate the impurity of functions: a Move function which calls an
         // impure Move function is also considered impure.
         let mut visited = BTreeMap::new();
-        for (idx, (name, _)) in module_def.functions.iter().enumerate() {
+        for (idx, (name, _)) in module_def.functions.key_cloned_iter().enumerate() {
             let is_pure = self.propagate_function_impurity(&mut visited, SpecFunId::new(idx));
             let full_name = self.qualified_by_module_from_name(&name.0);
             if is_pure {
@@ -626,7 +601,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         // Analyze in-function spec blocks.
-        for (name, fun_def) in &module_def.functions {
+        for (name, fun_def) in module_def.functions.key_cloned_iter() {
             let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
             let qsym = self.qualified_by_module_from_name(&name.0);
             for (spec_id, spec_block) in fun_def.specs.iter() {
@@ -698,8 +673,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let fields = match &def.fields {
             EA::StructFields::Defined(fields) => {
                 let mut field_map = BTreeMap::new();
-                for (ref field_name, (idx, ty)) in fields.iter() {
-                    let field_sym = et.symbol_pool().make(&field_name.0.value);
+                for (_name_loc, field_name_, (idx, ty)) in fields {
+                    let field_sym = et.symbol_pool().make(field_name_);
                     let field_ty = et.translate_type(&ty);
                     field_map.insert(field_sym, (*idx, field_ty));
                 }
@@ -738,8 +713,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 et.define_type_param(&loc, *n, ty.clone());
             }
             et.enter_scope();
-            for (n, ty) in &params {
-                et.define_local(&loc, *n, ty.clone(), None);
+            for (idx, (n, ty)) in params.iter().enumerate() {
+                et.define_local(&loc, *n, ty.clone(), None, Some(idx));
             }
             let translated = et.translate_seq(&loc, &seq, &result_type);
             et.finalize_types();
@@ -747,10 +722,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             if !*et.errors_generated.borrow() {
                 // Rewrite all type annotations in expressions to skip references.
                 for node_id in translated.node_ids() {
-                    et.parent
-                        .type_map
-                        .entry(node_id)
-                        .and_modify(|ty| *ty = ty.skip_reference().clone());
+                    let ty = et.get_node_type(node_id);
+                    et.set_node_type(node_id, ty.skip_reference().clone());
                 }
                 et.called_spec_funs.iter().for_each(|(mid, fid)| {
                     self.parent.add_edge_to_move_fun_call_graph(
@@ -799,7 +772,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         };
         let mut is_pure = true;
         body.visit(&mut |e: &Exp| {
-            if let Exp::Call(_, Operation::Function(mid, fid), _) = e {
+            if let Exp::Call(_, Operation::Function(mid, fid, _), _) = e {
                 if mid.to_usize() < self.module_id.to_usize() {
                     // This is calling a function from another module we already have
                     // translated. In this case, the impurity has already been propagated
@@ -858,6 +831,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
 impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &EA::SpecBlock) {
         use EA::SpecBlockMember_::*;
+
+        let block_loc = self.parent.env.to_loc(&block.loc);
+        self.update_spec(context, move |spec| spec.loc = Some(block_loc));
 
         assert!(self.spec_block_lets.is_empty());
 
@@ -931,10 +907,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // will be removed by the caller to the spec function representing the let.
         // In the body of a spec function, references do not appear.
         for node_id in def.node_ids() {
-            et.parent
-                .type_map
-                .entry(node_id)
-                .and_modify(|ty| *ty = ty.skip_reference().clone());
+            let ty = et.get_node_type(node_id);
+            et.set_node_type(node_id, ty.skip_reference().clone());
         }
 
         // Prepare the type_params field for SpecFunDecl.
@@ -963,9 +937,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             for v in vars {
                 let ty = et
                     .parent
-                    .type_map
-                    .get(&v.id)
-                    .unwrap()
+                    .parent
+                    .env
+                    .get_node_type(v.id)
                     .skip_reference()
                     .clone();
                 params.push((v.name, ty));
@@ -974,7 +948,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
 
         // Prepare the result_type for SpecFunDecl.
-        let result_type = et.parent.type_map.get(&def.node_id()).unwrap().clone();
+        let result_type = et.parent.parent.env.get_node_type(def.node_id());
 
         // Generate an id and name for the function representing this let.
         let fid = SpecFunId::new(et.parent.spec_funs.len());
@@ -1129,7 +1103,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
     }
 
-    /// Sets up an expression build for the given spec block context. If kind
+    /// Sets up an expression translator for the given spec block context. If kind
     /// is given, includes all the symbols which can be consumed by the condition,
     /// otherwise only defines type parameters.
     fn exp_translator_for_context<'module_translator>(
@@ -1159,8 +1133,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 if let Some(kind) = kind_opt {
                     et.enter_scope();
-                    for (n, ty) in &entry.params {
-                        et.define_local(loc, *n, ty.clone(), None);
+                    for (idx, (n, ty)) in entry.params.iter().enumerate() {
+                        et.define_local(loc, *n, ty.clone(), None, Some(idx));
                     }
                     // Define the placeholders for the result values of a function if this is an
                     // Ensures condition.
@@ -1174,7 +1148,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 } else {
                                     Some(Operation::Result(i))
                                 };
-                                et.define_local(loc, name, ty.clone(), oper);
+                                et.define_local(loc, name, ty.clone(), oper, None);
                             }
                         } else {
                             let name = et.symbol_pool().make("result");
@@ -1183,7 +1157,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             } else {
                                 Some(Operation::Result(0))
                             };
-                            et.define_local(loc, name, entry.result_type.clone(), oper);
+                            et.define_local(loc, name, entry.result_type.clone(), oper, None);
                         }
                     }
                 }
@@ -1202,8 +1176,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 if kind_opt.is_some() {
                     et.enter_scope();
-                    for (n, info) in &spec_info.used_locals {
-                        let sym = et.symbol_pool().make(n.0.value.as_str());
+                    for (_n_loc, n_, info) in &spec_info.used_locals {
+                        let sym = et.symbol_pool().make(n_);
                         let ty = et.translate_hlir_single_type(&info.type_);
                         if ty == Type::Error {
                             et.error(
@@ -1211,7 +1185,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                 "[internal] error in translating hlir type to prover type",
                             );
                         }
-                        et.define_local(loc, sym, ty, Some(Operation::Local(sym)));
+                        et.define_local(loc, sym, ty, None, Some(info.index as usize));
                     }
                 }
                 et
@@ -1241,6 +1215,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                                     entry.struct_id,
                                     FieldId::new(*n),
                                 )),
+                                None,
                             );
                         }
                     }
@@ -1271,7 +1246,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 if kind_opt.is_some() {
                     et.enter_scope();
                     for (n, entry) in all_vars {
-                        et.define_local(loc, n, entry.type_, None);
+                        et.define_local(loc, n, entry.type_, None, None);
                     }
                 }
                 et
@@ -1360,12 +1335,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     kind: kind @ ConditionKind::Invariant,
                     properties,
                     exp,
+                    additional_exps,
                 }
                 | Condition {
                     loc,
                     kind: kind @ ConditionKind::InvariantModule,
                     properties,
                     exp,
+                    additional_exps,
                 } if matches!(context, SpecBlockContext::Function(..)) => {
                     let requires_kind = if kind == ConditionKind::InvariantModule {
                         ConditionKind::RequiresModule
@@ -1380,12 +1357,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             kind: requires_kind,
                             properties: merged_properties.clone(),
                             exp: exp.clone(),
+                            additional_exps: additional_exps.clone(),
                         },
                         Condition {
                             loc,
                             kind: ConditionKind::Ensures,
                             properties: merged_properties,
                             exp,
+                            additional_exps,
                         },
                     ]
                 }
@@ -1394,6 +1373,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     kind,
                     properties,
                     exp,
+                    additional_exps,
                 } => {
                     let mut merged_properties = context_properties.clone();
                     merged_properties.extend(properties);
@@ -1402,6 +1382,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         kind,
                         properties: merged_properties,
                         exp,
+                        additional_exps,
                     }]
                 }
             };
@@ -1434,44 +1415,59 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 .error(loc, "decreases specification not supported currently");
             return;
         }
+        if matches!(kind, ConditionKind::SucceedsIf) {
+            self.parent.error(loc, "condition kind is not supported");
+            return;
+        }
         let expected_type = self.expected_type_for_condition(&kind);
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind), false);
-        let translated = et.translate_exp(exp, &expected_type);
-        let translated_with_additional_exps = if !additional_exps.is_empty() {
-            let node_id = et.new_node_id_with_type_loc(&expected_type, loc);
-            match kind {
-                ConditionKind::AbortsIf => {
-                    let mut args = additional_exps
-                        .iter()
-                        .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
-                        .collect_vec();
-                    args.insert(0, translated);
-                    Exp::Call(node_id, Operation::CondWithAbortCode, args)
-                }
-                ConditionKind::AbortsWith => {
-                    let args = additional_exps
-                        .iter()
-                        .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
-                        .collect_vec();
-                    Exp::Call(node_id, Operation::AbortCodes, args)
-                }
-                ConditionKind::Modifies => {
-                    let args = additional_exps
-                        .iter()
-                        .map(|target| et.translate_modify_target(target))
-                        .collect_vec();
-                    Exp::Call(node_id, Operation::ModifyTargets, args)
-                }
-                _ => {
-                    et.error(
-                        loc,
-                        "additional expressions only allowed with `aborts_if`, `aborts_with`, or `modifies`",
-                    );
-                    et.new_error_exp()
-                }
+        let (translated, translated_additional) = match kind {
+            ConditionKind::AbortsIf => (
+                et.translate_exp(exp, &expected_type),
+                additional_exps
+                    .iter()
+                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .collect_vec(),
+            ),
+            ConditionKind::AbortsWith => {
+                // Parser has created a dummy exp, codes are all in additional_exps
+                let mut exps = additional_exps
+                    .iter()
+                    .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                    .collect_vec();
+                let first = exps.remove(0);
+                (first, exps)
             }
-        } else {
-            translated
+            ConditionKind::Modifies => {
+                // Parser has created a dummy exp, targets are all in additional_exps
+                let mut exps = additional_exps
+                    .iter()
+                    .map(|target| et.translate_modify_target(target))
+                    .collect_vec();
+                let first = exps.remove(0);
+                (first, exps)
+            }
+            ConditionKind::Emits => {
+                // TODO: `first` is the "message" part, and `second` is the "handle" part.
+                //       `second` should have type 0x1::Event::EventHandle<T>, and `first`
+                //       should have type T.
+                let (_, first) = et.translate_exp_free(exp);
+                let (_, second) = et.translate_exp_free(&additional_exps[0]);
+                let mut exps = vec![second];
+                if additional_exps.len() > 1 {
+                    exps.push(et.translate_exp(&additional_exps[1], &BOOL_TYPE));
+                }
+                (first, exps)
+            }
+            _ => {
+                if !additional_exps.is_empty() {
+                    et.error(
+                       loc,
+                       "additional expressions only allowed with `aborts_if`, `aborts_with`, `modifies`, or `emits`",
+                   );
+                }
+                (et.translate_exp(exp, &expected_type), vec![])
+            }
         };
         et.finalize_types();
         self.add_conditions_to_context(
@@ -1481,7 +1477,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 loc: loc.clone(),
                 kind,
                 properties,
-                exp: translated_with_additional_exps,
+                exp: translated,
+                additional_exps: translated_additional,
             }],
             PropertyBag::default(),
             "",
@@ -1527,6 +1524,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             PK::Assume => Some((Assume, exp)),
             PK::Decreases => Some((Decreases, exp)),
             PK::Modifies => Some((Modifies, exp)),
+            PK::Emits => Some((Emits, exp)),
             PK::Ensures => Some((Ensures, exp)),
             PK::Requires => Some((Requires, exp)),
             PK::AbortsIf => Some((AbortsIf, exp)),
@@ -1628,7 +1626,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             }
             et.enter_scope();
             for (n, ty) in params {
-                et.define_local(&loc, n, ty, None);
+                et.define_local(&loc, n, ty, None, None);
             }
             let translated = et.translate_seq(&loc, seq, &result_type);
             et.finalize_types();
@@ -1725,6 +1723,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         loc: loc.clone(),
                         type_: ty.clone(),
                         operation: None,
+                        temp_index: None,
                     },
                 )
             })
@@ -1903,7 +1902,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
                 let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE);
                 et.finalize_types();
-                let path_cond = self.extend_path_condition(&loc, path_cond, lhs_exp);
+                let path_cond = Some(self.extend_path_condition(&loc, path_cond, lhs_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -1946,7 +1945,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let c_exp = et.translate_exp(c, &BOOL_TYPE);
                 et.finalize_types();
                 let t_path_cond =
-                    self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone());
+                    Some(self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone()));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -1956,9 +1955,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                     properties,
                     t,
                 );
-                let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &loc);
+                let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
                 let not_c_exp = Exp::Call(node_id, Operation::Not, vec![c_exp]);
-                let e_path_cond = self.extend_path_condition(&loc, path_cond, not_c_exp);
+                let e_path_cond = Some(self.extend_path_condition(&loc, path_cond, not_c_exp));
                 self.def_ana_schema_exp_oper(
                     context_type_params,
                     vars,
@@ -2056,16 +2055,16 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let mut argument_map: BTreeMap<Symbol, Exp> = args_opt
             .map(|args| {
                 args.iter()
-                    .map(|(ref schema_var, (_, exp))| {
+                    .map(|(var_loc, schema_var_, (_, exp))| {
                         let pool = et.symbol_pool();
-                        let schema_sym = pool.make(&schema_var.0.value);
+                        let schema_sym = pool.make(schema_var_);
                         let schema_type = if let Some(LocalVarEntry { type_, .. }) =
                             schema_entry.all_vars.get(&schema_sym)
                         {
                             type_.instantiate(type_arguments)
                         } else {
                             et.error(
-                                &et.to_loc(&schema_var.0.loc),
+                                &et.to_loc(&var_loc),
                                 &format!("`{}` not declared in schema", schema_sym.display(pool)),
                             );
                             Type::Error
@@ -2104,6 +2103,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 let node_id = et.new_node_id_with_type_loc(&entry.type_, loc);
                 let exp = if let Some(oper) = &entry.operation {
                     Exp::Call(node_id, oper.clone(), vec![])
+                } else if let Some(index) = &entry.temp_index {
+                    Exp::Temporary(node_id, *index)
                 } else {
                     Exp::LocalVar(node_id, *name)
                 };
@@ -2117,6 +2118,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         loc: loc.clone(),
                         type_: ty.clone(),
                         operation: None,
+                        temp_index: None,
                     },
                 );
             } else {
@@ -2138,21 +2140,42 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             kind,
             properties,
             exp,
+            additional_exps,
         } in schema_entry
             .spec
             .conditions
             .iter()
             .chain(schema_entry.included_spec.conditions.iter())
         {
+            let mut replacer = |_, target: RewriteTarget| {
+                if let RewriteTarget::LocalVar(sym) = target {
+                    argument_map.get(&sym).cloned()
+                } else {
+                    None
+                }
+            };
             let mut rewriter =
-                ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
+                ExpRewriter::new(self.parent.env, &mut replacer).set_type_args(type_arguments);
             let mut exp = rewriter.rewrite(exp);
+            let mut additional_exps = rewriter.rewrite_vec(additional_exps);
             if let Some(cond) = &path_cond {
                 // There is a path condition to be added. This is only possible for proper
                 // boolean conditions.
                 if kind.get_spec_var_target().is_some() {
                     self.parent
                         .error(loc, &format!("`{}` cannot be included conditionally", kind));
+                } else if kind == &ConditionKind::Emits {
+                    let cond_exp = if additional_exps.len() < 2 {
+                        cond.clone()
+                    } else {
+                        self.make_path_expr(
+                            Operation::And,
+                            cond.node_id(),
+                            cond.clone(),
+                            additional_exps.pop().unwrap(),
+                        )
+                    };
+                    additional_exps.push(cond_exp);
                 } else {
                     // In case of AbortsIf, the path condition is combined with the predicate using
                     // &&, otherwise ==>.
@@ -2175,6 +2198,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 kind: kind.clone(),
                 properties: effective_properties,
                 exp,
+                additional_exps,
             });
         }
 
@@ -2184,30 +2208,15 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             .insert(schema_name, schema_entry);
     }
 
-    /// Make a path expression. This takes care of keeping virtual operators as top-level
-    /// expressions.
+    /// Make a path expression.
     fn make_path_expr(&mut self, oper: Operation, node_id: NodeId, cond: Exp, exp: Exp) -> Exp {
-        let path_cond_loc = self.loc_map.get(&node_id).expect("loc defined").clone();
-        let new_node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &path_cond_loc);
-        match exp {
-            Exp::Call(outer_node_id, Operation::CondWithAbortCode, mut args) => {
-                let exp = args.remove(0);
-                let code = args.remove(0);
-                Exp::Call(
-                    outer_node_id,
-                    Operation::CondWithAbortCode,
-                    vec![Exp::Call(new_node_id, oper, vec![cond, exp]), code],
-                )
-            }
-            Exp::Call(_, Operation::AbortCodes, _) => {
-                self.parent.error(&path_cond_loc, "[implementation restriction] `aborts_with` cannot be included in schema expression context");
-                exp
-            }
-            _ => Exp::Call(new_node_id, oper, vec![cond, exp]),
-        }
+        let env = &self.parent.env;
+        let path_cond_loc = env.get_node_loc(node_id);
+        let new_node_id = env.new_node(path_cond_loc, BOOL_TYPE.clone());
+        Exp::Call(new_node_id, oper, vec![cond, exp])
     }
 
-    /// Creates an expression build for use in schema expression. This defines the context
+    /// Creates an expression translator for use in schema expression. This defines the context
     /// type parameters and the variables.
     fn exp_translator_for_schema<'module_translator>(
         &'module_translator mut self,
@@ -2221,23 +2230,24 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
         et.enter_scope();
         for (n, entry) in vars.iter() {
-            et.define_local(&entry.loc, *n, entry.type_.clone(), entry.operation.clone());
+            et.define_local(
+                &entry.loc,
+                *n,
+                entry.type_.clone(),
+                entry.operation.clone(),
+                entry.temp_index,
+            );
         }
         et
     }
 
     /// Extends a path condition for schema expression analysis.
-    fn extend_path_condition(
-        &mut self,
-        loc: &Loc,
-        path_cond: Option<Exp>,
-        exp: Exp,
-    ) -> Option<Exp> {
+    fn extend_path_condition(&mut self, loc: &Loc, path_cond: Option<Exp>, exp: Exp) -> Exp {
         if let Some(cond) = path_cond {
-            let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, loc);
-            Some(Exp::Call(node_id, Operation::And, vec![cond, exp]))
+            let node_id = self.parent.env.new_node(loc.clone(), BOOL_TYPE.clone());
+            Exp::Call(node_id, Operation::And, vec![cond, exp])
         } else {
-            Some(exp)
+            exp
         }
     }
 
@@ -2398,6 +2408,14 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         return false;
                     }
                 }
+                PA::FunctionVisibility::Script(..) => {
+                    // TODO: model script visibility properly
+                    unimplemented!("Script visibility not supported yet")
+                }
+                PA::FunctionVisibility::Friend(..) => {
+                    // TODO: model friend visibility properly
+                    unimplemented!("Friend visibility not supported yet")
+                }
             }
         }
         let rex = Regex::new(&format!(
@@ -2494,10 +2512,10 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let mut used_memory = BTreeSet::new();
         exp.visit(&mut |e: &Exp| {
             match e {
-                Exp::SpecVar(_, mid, vid) => {
+                Exp::SpecVar(_, mid, vid, _) => {
                     used_spec_vars.insert(mid.qualified(*vid));
                 }
-                Exp::Call(_, Operation::Function(mid, fid), _) => {
+                Exp::Call(_, Operation::Function(mid, fid, _), _) => {
                     if mid.to_usize() < self.parent.env.get_module_count() {
                         // This is calling a function from another module we already have
                         // translated.
@@ -2518,12 +2536,13 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         used_memory.extend(&fun_decl.used_memory);
                     }
                 }
-                Exp::Call(node_id, Operation::Global, _)
-                | Exp::Call(node_id, Operation::Exists, _) => {
-                    if !self.parent.env.has_errors() {
+                Exp::Call(node_id, Operation::Global(_), _)
+                | Exp::Call(node_id, Operation::Exists(_), _) => {
+                    let env = &self.parent.env;
+                    if !env.has_errors() {
                         // We would crash if the type is not valid, so only do this if no errors
                         // have been reported so far.
-                        let ty = &self.instantiation_map.get(node_id).expect("type exists")[0];
+                        let ty = &env.get_node_instantiation(*node_id)[0];
                         let (mid, sid, _) = ty.require_struct();
                         used_memory.insert(mid.qualified(sid));
                     }
@@ -2771,9 +2790,6 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
             std::mem::take(&mut self.spec_vars),
             std::mem::take(&mut self.spec_funs),
             std::mem::take(&mut self.module_spec),
-            std::mem::take(&mut self.loc_map),
-            std::mem::take(&mut self.type_map),
-            std::mem::take(&mut self.instantiation_map),
             std::mem::take(&mut self.spec_block_infos),
         );
     }

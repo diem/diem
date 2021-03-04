@@ -6,13 +6,13 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{AttrId, Bytecode, Label, Operation, TempIndex},
+    stackless_bytecode::{AbortAction, AttrId, Bytecode, Label, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::{model::FunctionEnv, ty::Type};
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
@@ -37,11 +37,18 @@ impl LiveVarAnnotation {
     }
 }
 
-pub struct LiveVarAnalysisProcessor {}
+pub struct LiveVarAnalysisProcessor {
+    /// Whether the processor should attach `LiveVarAnnotation` to the function data.
+    annotate: bool,
+}
 
 impl LiveVarAnalysisProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(LiveVarAnalysisProcessor {})
+        Box::new(LiveVarAnalysisProcessor { annotate: true })
+    }
+
+    pub fn new_no_annotate() -> Box<Self> {
+        Box::new(LiveVarAnalysisProcessor { annotate: false })
     }
 }
 
@@ -50,38 +57,42 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
-        let offset_to_live_refs = if func_env.is_native() {
+        mut data: FunctionData,
+    ) -> FunctionData {
+        if func_env.is_native() {
             // Native functions have no byte code.
-            LiveVarAnnotation(BTreeMap::new())
-        } else {
-            let code = std::mem::take(&mut data.code);
-            let func_target = FunctionTarget::new(func_env, &data);
+            return data;
+        }
 
-            // Call 1st time
-            let (code, _) = Self::analyze_and_transform(&func_target, code);
+        let next_free_label = data.next_free_label_index();
+        let next_free_attr = data.next_free_attr_index();
+        let code = std::mem::take(&mut data.code);
+        let func_target = FunctionTarget::new(func_env, &data);
 
-            // Eliminate unused locals after dead code elimination.
-            let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
-            data.rename_vars(&|idx| {
-                if let Some(new_idx) = remap.get(&idx) {
-                    *new_idx
-                } else {
-                    idx
-                }
-            });
-            data.local_types = local_types;
-            data.code = code;
-            let func_target = FunctionTarget::new(func_env, &data);
+        // Call 1st time
+        let (code, _) =
+            Self::analyze_and_transform(&func_target, next_free_label, next_free_attr, code);
 
+        // Eliminate unused locals after dead code elimination.
+        let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
+        data.rename_vars(&|idx| {
+            if let Some(new_idx) = remap.get(&idx) {
+                *new_idx
+            } else {
+                idx
+            }
+        });
+        data.local_types = local_types;
+        data.code = code;
+
+        if self.annotate {
             // Call analysis 2nd time on transformed code.
-            let annotations = Self::analyze(&func_target, &data.code);
-            LiveVarAnnotation(annotations)
-        };
-        // Annotate function target with computed life variable data.
-        data.annotations
-            .set::<LiveVarAnnotation>(offset_to_live_refs);
+            let func_target = FunctionTarget::new(func_env, &data);
+            let offset_to_live_refs = LiveVarAnnotation(Self::analyze(&func_target, &data.code));
+            // Annotate function target with computed life variable data.
+            data.annotations
+                .set::<LiveVarAnnotation>(offset_to_live_refs);
+        }
         data
     }
 
@@ -93,10 +104,12 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
 impl LiveVarAnalysisProcessor {
     fn analyze_and_transform(
         func_target: &FunctionTarget,
+        next_free_label: usize,
+        next_free_attr: usize,
         code: Vec<Bytecode>,
     ) -> (Vec<Bytecode>, BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset>) {
         let annotations = Self::analyze(func_target, &code);
-        let mut analyzer = LiveVarAnalysis::new(&func_target);
+        let mut analyzer = LiveVarAnalysis::new(&func_target, next_free_label, next_free_attr);
         let new_bytecode = analyzer.transform_code(&annotations, code);
         (new_bytecode, annotations)
     }
@@ -105,8 +118,10 @@ impl LiveVarAnalysisProcessor {
         func_target: &FunctionTarget,
         code: &[Bytecode],
     ) -> BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset> {
-        let cfg = StacklessControlFlowGraph::new_backward(&code);
-        let analyzer = LiveVarAnalysis::new(&func_target);
+        // Perform backward analysis from all blocks just in case some block
+        // cannot reach an exit block
+        let cfg = StacklessControlFlowGraph::new_backward(&code, true);
+        let analyzer = LiveVarAnalysis::new(&func_target, 0, 0);
         let state_map = analyzer.analyze_function(
             LiveVarState {
                 livevars: BTreeSet::new(),
@@ -151,7 +166,7 @@ impl LiveVarAnalysisProcessor {
             }
         };
         for bytecode in code {
-            new_code.push(bytecode.remap_vars(&mut transform_local));
+            new_code.push(bytecode.remap_all_vars(func_target, &mut transform_local));
         }
         (new_code, new_vars, remap)
     }
@@ -179,19 +194,19 @@ impl LiveVarState {
         removed
     }
 
-    fn insert(&mut self, vars: Vec<TempIndex>) {
+    fn insert(&mut self, vars: &[TempIndex]) {
         for v in vars {
-            self.livevars.insert(v);
+            self.livevars.insert(*v);
         }
     }
 }
 
 impl<'a> LiveVarAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget) -> Self {
+    fn new(func_target: &'a FunctionTarget, next_label_id: usize, next_attr_id: usize) -> Self {
         Self {
             func_target,
-            next_label_id: 0,
-            next_attr_id: 0,
+            next_label_id,
+            next_attr_id,
         }
     }
 
@@ -204,8 +219,6 @@ impl<'a> LiveVarAnalysis<'a> {
         let mut transformed_code = vec![];
         let mut new_bytecodes = vec![];
         let mut skip_next = false;
-        self.next_label_id = code.len();
-        self.next_attr_id = code.len();
         for code_offset in 0..code.len() {
             if skip_next {
                 skip_next = false;
@@ -238,7 +251,7 @@ impl<'a> LiveVarAnalysis<'a> {
                 Bytecode::Assign(_, dest, _, _) if !annotation_at.after.contains(&dest) => {
                     // Drop this assign as it is not used.
                 }
-                Bytecode::Call(attr_id, dests, oper, srcs)
+                Bytecode::Call(attr_id, dests, oper, srcs, aa)
                     if code_offset + 1 < code.len() && dests.len() == 1 =>
                 {
                     // Catch the common case where we have:
@@ -254,13 +267,19 @@ impl<'a> LiveVarAnalysis<'a> {
                     if let Bytecode::Assign(_, dest, src, _) = &code[next_code_offset] {
                         let annotation_at = &annotations[&(next_code_offset as CodeOffset)];
                         if src == &dests[0] && !annotation_at.after.contains(src) {
-                            transformed_code.push(Bytecode::Call(attr_id, vec![*dest], oper, srcs));
+                            transformed_code.push(Bytecode::Call(
+                                attr_id,
+                                vec![*dest],
+                                oper,
+                                srcs,
+                                aa,
+                            ));
                             skip_next = true;
                         } else {
-                            transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs));
+                            transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs, aa));
                         }
                     } else {
-                        transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs));
+                        transformed_code.push(Bytecode::Call(attr_id, dests, oper, srcs, aa));
                     }
                 }
                 _ => {
@@ -300,6 +319,7 @@ impl<'a> LiveVarAnalysis<'a> {
                     vec![],
                     Operation::Destroy,
                     vec![idx],
+                    None,
                 ));
             }
             new_bytecodes.push(Bytecode::Jump(self.new_attr_id(), jump_label));
@@ -334,24 +354,32 @@ impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
         match instr {
             Assign(_, dst, src, _) => {
                 if state.remove(&[*dst]) {
-                    state.insert(vec![*src]);
+                    state.insert(&[*src]);
                 }
             }
             Load(_, dst, _) => {
                 state.remove(&[*dst]);
             }
-            Call(_, dsts, oper, srcs) => {
+            Call(_, dsts, oper, srcs, on_abort) => {
                 state.remove(dsts);
-                state.insert(srcs.clone());
+                state.insert(srcs);
                 if let Operation::Splice(map) = oper {
-                    state.insert(map.values().cloned().collect());
+                    state.insert(&map.values().cloned().collect_vec());
+                }
+                if let Some(AbortAction(_, dst)) = on_abort {
+                    state.remove(&[*dst]);
                 }
             }
             Ret(_, srcs) => {
-                state.insert(srcs.clone());
+                state.insert(srcs);
             }
             Abort(_, src) | Branch(_, _, _, src) => {
-                state.insert(vec![*src]);
+                state.insert(&[*src]);
+            }
+            Prop(_, _, exp) => {
+                for idx in exp.temporaries() {
+                    state.insert(&[idx]);
+                }
             }
             _ => {}
         }

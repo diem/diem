@@ -132,8 +132,7 @@ pub fn start_server(host: String, port: u16, public_metric: bool) {
                 future::ok::<_, hyper::Error>(service_fn(serve_public_metrics))
             });
 
-            let mut rt = runtime::Builder::new()
-                .basic_scheduler()
+            let rt = runtime::Builder::new_current_thread()
                 .enable_io()
                 .build()
                 .unwrap();
@@ -148,8 +147,7 @@ pub fn start_server(host: String, port: u16, public_metric: bool) {
             let make_service =
                 make_service_fn(|_| future::ok::<_, hyper::Error>(service_fn(serve_metrics)));
 
-            let mut rt = runtime::Builder::new()
-                .basic_scheduler()
+            let rt = runtime::Builder::new_current_thread()
                 .enable_io()
                 .build()
                 .unwrap();

@@ -97,7 +97,12 @@ impl AUTransactionGen for InsufficientBalanceGen {
         // TODO: Move such config to AccountUniverse
         let default_constants = GasConstants::default();
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
-        let min_cost = calculate_intrinsic_gas(raw_bytes_len, &GasConstants::default()).get();
+        let min_cost = GasConstants::default()
+            .to_external_units(calculate_intrinsic_gas(
+                raw_bytes_len,
+                &GasConstants::default(),
+            ))
+            .get();
 
         (
             txn,

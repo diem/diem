@@ -28,6 +28,6 @@ error:
    │                       ^ Duplicate declaration for local 'f' in a given 'let'
    ·
  6 │         let (f, R{f}, f) = (0, R { f: 0 }, 0);
-   │                   - Previously declared here
+   │              - Previously declared here
    │
 

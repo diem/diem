@@ -273,11 +273,11 @@ impl NetworkTask {
                         continue;
                     }
                 },
-                Event::NewPeer(peer_id, _origin) => {
-                    debug!(remote_peer = peer_id, "Peer connected");
+                Event::NewPeer(metadata) => {
+                    debug!(remote_peer = metadata.remote_peer_id, "Peer connected");
                 }
-                Event::LostPeer(peer_id, _origin) => {
-                    debug!(remote_peer = peer_id, "Peer disconnected");
+                Event::LostPeer(metadata) => {
+                    debug!(remote_peer = metadata.remote_peer_id, "Peer disconnected");
                 }
             }
         }

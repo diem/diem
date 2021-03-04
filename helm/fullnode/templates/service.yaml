@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "diem-fullnode.fullname" . }}-lb
+  labels:
+    {{- include "diem-fullnode.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- include "diem-fullnode.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/name: fullnode
+  ports:
+  - name: json-rpc
+    port: 80
+    targetPort: 8080
+  {{- with .Values.service }}
+  type: {{ .type }}
+  externalTrafficPolicy: {{ .externalTrafficPolicy }}
+  loadBalancerSourceRanges:
+    {{- toYaml .loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "diem-fullnode.fullname" . }}
+  labels:
+    {{- include "diem-fullnode.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "diem-fullnode.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/name: fullnode
+  ports:
+  - name: backup
+    port: 6186
+  - name: metrics
+    port: 9101

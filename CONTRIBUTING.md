@@ -32,7 +32,7 @@ cargo xtest
 #### Code Style, Hints, and Testing
 
 Refer to our [Coding
-Guidelines](https://developers.diem.com/docs/community/coding-guidelines) for
+Guidelines](https://github.com/diem/diem/blob/master/documentation/coding_guidelines.md) for
 detailed guidance about how to contribute to the project.
 
 #### Documentation

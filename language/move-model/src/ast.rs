@@ -19,7 +19,10 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use crate::model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
+use crate::{
+    model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter},
+    ty::TypeDisplayContext,
+};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 
@@ -62,6 +65,7 @@ pub enum ConditionKind {
     AbortsWith,
     SucceedsIf,
     Modifies,
+    Emits,
     Ensures,
     Requires,
     RequiresModule,
@@ -87,7 +91,7 @@ impl ConditionKind {
     /// Returns true of this condition allows the `old(..)` expression.
     pub fn allows_old(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Ensures | InvariantUpdate | VarUpdate(..))
+        matches!(self, Emits | Ensures | InvariantUpdate | VarUpdate(..))
     }
 
     /// Returns true if this condition is allowed on a public function declaration.
@@ -95,7 +99,14 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
+            Requires
+                | RequiresModule
+                | AbortsIf
+                | AbortsWith
+                | SucceedsIf
+                | Emits
+                | Ensures
+                | Modifies
         )
     }
 
@@ -104,7 +115,14 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
+            Requires
+                | RequiresModule
+                | AbortsIf
+                | AbortsWith
+                | SucceedsIf
+                | Emits
+                | Ensures
+                | Modifies
         )
     }
 
@@ -138,6 +156,7 @@ impl std::fmt::Display for ConditionKind {
             AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
             Modifies => write!(f, "modifies"),
+            Emits => write!(f, "emits"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),
@@ -151,12 +170,36 @@ impl std::fmt::Display for ConditionKind {
     }
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+pub enum QuantKind {
+    Forall,
+    Exists,
+}
+
+impl std::fmt::Display for QuantKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use QuantKind::*;
+        match self {
+            Forall => write!(f, "forall"),
+            Exists => write!(f, "exists"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Condition {
     pub loc: Loc,
     pub kind: ConditionKind,
     pub properties: PropertyBag,
     pub exp: Exp,
+    pub additional_exps: Vec<Exp>,
+}
+
+impl Condition {
+    /// Return all expressions in the condition, the primary one and the additional ones.
+    pub fn all_exps(&self) -> impl Iterator<Item = &Exp> {
+        std::iter::once(&self.exp).chain(self.additional_exps.iter())
+    }
 }
 
 // =================================================================================================
@@ -176,6 +219,8 @@ pub enum PropertyValue {
 /// Specification and properties associated with a language item.
 #[derive(Debug, Clone, Default)]
 pub struct Spec {
+    // The location of this specification, if available.
+    pub loc: Option<Loc>,
     // The set of conditions associated with this item.
     pub conditions: Vec<Condition>,
     // Any pragma properties associated with this item.
@@ -252,16 +297,55 @@ pub struct GlobalInvariant {
 // =================================================================================================
 /// # Expressions
 
-#[derive(Debug, Clone, PartialEq)]
+/// A type alias for temporaries. Those are locals used in bytecode.
+pub type TempIndex = usize;
+
+/// The type of expressions.
+///
+/// Expression layout follows the following design principles:
+///
+/// - We try to keep the number of expression variants minimal, for easier treatment in
+///   generic traversals. Builtin and user functions are abstracted into a general
+///   `Call(.., operation, args)` construct.
+/// - Each expression has a unique node id assigned. This id allows to build attribute tables
+///   for additional information, like expression type and source location. The id is globally
+///   unique.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Exp {
-    Error(NodeId),
+    /// Represents an invalid expression. This is used as a stub for algorithms which
+    /// generate expressions but can fail with multiple errors, like a translator from
+    /// some other source into expressions. Consumers of expressions should assume this
+    /// variant is not present and can panic when seeing it.
+    Invalid(NodeId),
+    /// Represents a value.
     Value(NodeId, Value),
+    /// Represents a reference to a local variable introduced by a specification construct,
+    /// e.g. a quantifier.
     LocalVar(NodeId, Symbol),
-    SpecVar(NodeId, ModuleId, SpecVarId),
+    /// Represents a reference to a temporary used in bytecode.
+    Temporary(NodeId, TempIndex),
+    /// Represents a reference to a global specification (ghost) variable.
+    SpecVar(NodeId, ModuleId, SpecVarId, Option<MemoryLabel>),
+    /// Represents a call to an operation. The `Operation` enum covers all builtin functions
+    /// (including operators, constants, ...) as well as user functions.
     Call(NodeId, Operation, Vec<Exp>),
+    /// Represents an invocation of a function value, as a lambda.
     Invoke(NodeId, Box<Exp>, Vec<Exp>),
+    /// Represents a lambda.
     Lambda(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    /// Represents a quantified formula over multiple variables and ranges.
+    Quant(
+        NodeId,
+        QuantKind,
+        Vec<(LocalVarDecl, Exp)>,
+        Vec<Vec<Exp>>,
+        Option<Box<Exp>>,
+        Box<Exp>,
+    ),
+    /// Represents a block which contains a set of variable bindings and an expression
+    /// for which those are defined.
     Block(NodeId, Vec<LocalVarDecl>, Box<Exp>),
+    /// Represents a conditional.
     IfElse(NodeId, Box<Exp>, Box<Exp>, Box<Exp>),
 }
 
@@ -269,13 +353,15 @@ impl Exp {
     pub fn node_id(&self) -> NodeId {
         use Exp::*;
         match self {
-            Error(node_id)
+            Invalid(node_id)
             | Value(node_id, ..)
             | LocalVar(node_id, ..)
+            | Temporary(node_id, ..)
             | SpecVar(node_id, ..)
             | Call(node_id, ..)
             | Invoke(node_id, ..)
             | Lambda(node_id, ..)
+            | Quant(node_id, ..)
             | Block(node_id, ..)
             | IfElse(node_id, ..) => *node_id,
         }
@@ -296,41 +382,195 @@ impl Exp {
         ids
     }
 
+    /// Returns the locals used in this expression.
+    pub fn locals(&self) -> BTreeSet<Symbol> {
+        let mut locals = BTreeSet::new();
+        let mut shadowed = vec![]; // Should be multiset but don't have this
+        let mut visitor = |up: bool, e: &Exp| {
+            use Exp::*;
+            let decls = match e {
+                Lambda(_, decls, _) | Block(_, decls, _) => {
+                    decls.iter().map(|d| d.name).collect_vec()
+                }
+                Quant(_, _, decls, ..) => decls.iter().map(|(d, _)| d.name).collect_vec(),
+                _ => vec![],
+            };
+            if !up {
+                shadowed.extend(decls.iter());
+            } else {
+                for sym in decls {
+                    if let Some(pos) = shadowed.iter().position(|s| *s == sym) {
+                        // Remove one instance of this symbol. The same symbol can appear
+                        // multiple times in `shadowed`.
+                        shadowed.remove(pos);
+                    }
+                }
+                if let LocalVar(_, sym) = e {
+                    if !shadowed.contains(sym) {
+                        locals.insert(*sym);
+                    }
+                }
+            }
+        };
+        self.visit_pre_post(&mut visitor);
+        locals
+    }
+
+    /// Returns the temporaries used in this expression.
+    pub fn temporaries(&self) -> BTreeSet<TempIndex> {
+        let mut temps = BTreeSet::new();
+        let mut visitor = |e: &Exp| {
+            if let Exp::Temporary(_, idx) = e {
+                temps.insert(*idx);
+            }
+        };
+        self.visit(&mut visitor);
+        temps
+    }
+
     /// Visits expression, calling visitor on each sub-expression, depth first.
     pub fn visit<F>(&self, visitor: &mut F)
     where
         F: FnMut(&Exp),
     {
+        self.visit_pre_post(&mut |up, e| {
+            if up {
+                visitor(e);
+            }
+        });
+    }
+
+    /// Visits expression, calling visitor on each sub-expression. `visitor(false, ..)` will
+    /// be called before descending into expression, and `visitor(true, ..)` after. Notice
+    /// we use one function instead of two so a lambda can be passed which encapsulates mutable
+    /// references.
+    pub fn visit_pre_post<F>(&self, visitor: &mut F)
+    where
+        F: FnMut(bool, &Exp),
+    {
         use Exp::*;
+        visitor(false, self);
         match self {
             Call(_, _, args) => {
                 for exp in args {
-                    exp.visit(visitor);
+                    exp.visit_pre_post(visitor);
                 }
             }
             Invoke(_, target, args) => {
-                target.visit(visitor);
+                target.visit_pre_post(visitor);
                 for exp in args {
-                    exp.visit(visitor);
+                    exp.visit_pre_post(visitor);
                 }
             }
-            Lambda(_, _, body) => body.visit(visitor),
+            Lambda(_, _, body) => body.visit_pre_post(visitor),
+            Quant(_, _, ranges, triggers, condition, body) => {
+                for (_, range) in ranges {
+                    range.visit_pre_post(visitor);
+                }
+                for trigger in triggers {
+                    for e in trigger {
+                        e.visit_pre_post(visitor);
+                    }
+                }
+                if let Some(exp) = condition {
+                    exp.visit_pre_post(visitor);
+                }
+                body.visit_pre_post(visitor);
+            }
             Block(_, decls, body) => {
                 for decl in decls {
                     if let Some(def) = &decl.binding {
-                        def.visit(visitor);
+                        def.visit_pre_post(visitor);
                     }
                 }
-                body.visit(visitor)
+                body.visit_pre_post(visitor)
             }
             IfElse(_, c, t, e) => {
-                c.visit(visitor);
-                t.visit(visitor);
-                e.visit(visitor);
+                c.visit_pre_post(visitor);
+                t.visit_pre_post(visitor);
+                e.visit_pre_post(visitor);
             }
             _ => {}
         }
-        visitor(self);
+        visitor(true, self);
+    }
+
+    /// Rewrites this expression based on the rewriter function. In
+    /// `let (is_rewritten, exp) = rewriter(exp)`, the function should return true if
+    /// the expression was rewritten, false and the original expression if not. In case the
+    /// expression is rewritten, the expression tree will not further be traversed and the
+    /// rewritten expression immediately returned. Otherwise, the function will recurse and
+    /// rewrite sub-expressions.
+    pub fn rewrite<F>(self, rewriter: &mut F) -> Exp
+    where
+        F: FnMut(Exp) -> (bool, Exp),
+    {
+        use Exp::*;
+        let (is_rewritten, exp) = rewriter(self);
+        if is_rewritten {
+            return exp;
+        }
+
+        let rewrite_vec = |rewriter: &mut F, exps: Vec<Exp>| -> Vec<Exp> {
+            exps.into_iter().map(|e| e.rewrite(rewriter)).collect()
+        };
+        let rewrite_box =
+            |rewriter: &mut F, exp: Box<Exp>| -> Box<Exp> { Box::new(exp.rewrite(rewriter)) };
+        let rewrite_decl = |rewriter: &mut F, d: LocalVarDecl| LocalVarDecl {
+            id: d.id,
+            name: d.name,
+            binding: d.binding.map(|e| e.rewrite(rewriter)),
+        };
+        let rewrite_decls = |rewriter: &mut F, decls: Vec<LocalVarDecl>| -> Vec<LocalVarDecl> {
+            decls
+                .into_iter()
+                .map(|d| rewrite_decl(rewriter, d))
+                .collect()
+        };
+        let rewrite_quant_decls =
+            |rewriter: &mut F, decls: Vec<(LocalVarDecl, Exp)>| -> Vec<(LocalVarDecl, Exp)> {
+                decls
+                    .into_iter()
+                    .map(|(d, r)| (rewrite_decl(rewriter, d), r.rewrite(rewriter)))
+                    .collect()
+            };
+
+        match exp {
+            Call(id, oper, args) => Call(id, oper, rewrite_vec(rewriter, args)),
+            Invoke(id, target, args) => Invoke(
+                id,
+                rewrite_box(rewriter, target),
+                rewrite_vec(rewriter, args),
+            ),
+            Lambda(id, decls, body) => Lambda(
+                id,
+                rewrite_decls(rewriter, decls),
+                rewrite_box(rewriter, body),
+            ),
+            Quant(id, kind, decls, triggers, condition, body) => Quant(
+                id,
+                kind,
+                rewrite_quant_decls(rewriter, decls),
+                triggers
+                    .into_iter()
+                    .map(|t| t.into_iter().map(|e| e.rewrite(rewriter)).collect())
+                    .collect(),
+                condition.map(|e| rewrite_box(rewriter, e)),
+                rewrite_box(rewriter, body),
+            ),
+            Block(id, decls, body) => Block(
+                id,
+                rewrite_decls(rewriter, decls),
+                rewrite_box(rewriter, body),
+            ),
+            IfElse(id, c, t, e) => IfElse(
+                id,
+                rewrite_box(rewriter, c),
+                rewrite_box(rewriter, t),
+                rewrite_box(rewriter, e),
+            ),
+            _ => exp,
+        }
     }
 
     /// Returns the set of module ids used by this expression.
@@ -351,50 +591,18 @@ impl Exp {
             _ => {}
         });
     }
-
-    /// Optionally extracts condition and abort code from the special `Operation::CondWithAbortCode`.
-    pub fn extract_cond_and_aborts_code(&self) -> (&Exp, Option<&Exp>) {
-        match self {
-            Exp::Call(_, Operation::CondWithAbortCode, args) if args.len() == 2 => {
-                (&args[0], Some(&args[1]))
-            }
-            _ => (self, None),
-        }
-    }
-
-    /// Optionally extracts list of abort codes from the special `Operation::AbortCodes`.
-    pub fn extract_abort_codes(&self) -> &[Exp] {
-        match self {
-            Exp::Call(_, Operation::AbortCodes, args) => args.as_slice(),
-            _ => &[],
-        }
-    }
-
-    /// Optionally extracts list of modify targets from the special `Operation::ModifyTargets`.
-    pub fn extract_modify_targets(&self) -> &[Exp] {
-        match self {
-            Exp::Call(_, Operation::ModifyTargets, args) => args.as_slice(),
-            _ => &[],
-        }
-    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operation {
-    Function(ModuleId, SpecFunId),
+    Function(ModuleId, SpecFunId, Option<Vec<MemoryLabel>>),
     Pack(ModuleId, StructId),
     Tuple,
     Select(ModuleId, StructId, FieldId),
     UpdateField(ModuleId, StructId, FieldId),
-    Local(Symbol),
     Result(usize),
     Index,
     Slice,
-
-    // Pseudo operators for expressions which have a special treatment in the translation.
-    CondWithAbortCode, // aborts_if E with C
-    AbortCodes,        // aborts_with C1, ..., Cn
-    ModifyTargets,     // modifies E1, ..., En
 
     // Binary operators
     Range,
@@ -423,12 +631,12 @@ pub enum Operation {
 
     // Builtin functions
     Len,
-    All,
-    Any,
     TypeValue,
     TypeDomain,
-    Global,
-    Exists,
+    ResourceDomain,
+    Global(Option<MemoryLabel>),
+    Exists(Option<MemoryLabel>),
+    CanModify,
     Old,
     Trace,
     Empty,
@@ -439,18 +647,32 @@ pub enum Operation {
     MaxU64,
     MaxU128,
 
+    // Functions which support the transformation and translation process.
+    AbortFlag,
+    AbortCode,
+    WellFormed,
+    BoxValue,
+    UnboxValue,
+    EmptyEventStore,
+    ExtendEventStore,
+    EventStoreIncludes,
+    EventStoreIncludedIn,
+
     // Operation with no effect
     NoOp,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// A label used for referring to a specific memory in Global, Exists, and SpecVar expressions.
+pub type MemoryLabel = GlobalId;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LocalVarDecl {
     pub id: NodeId,
     pub name: Symbol,
     pub binding: Option<Exp>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
     Address(BigUint),
     Number(BigInt),
@@ -481,8 +703,8 @@ impl Operation {
     {
         use Operation::*;
         match self {
-            Exists | Global => false,
-            Function(mid, fid) => check_pure(*mid, *fid),
+            Exists(_) | Global(_) => false,
+            Function(mid, fid, _) => check_pure(*mid, *fid),
             _ => true,
         }
     }
@@ -653,8 +875,6 @@ impl<'a> fmt::Display for QualifiedSymbolDisplay<'a> {
 
 impl Exp {
     /// Creates a display of an expression which can be used in formatting.
-    ///
-    /// Current implementation is incomplete.
     pub fn display<'a>(&'a self, env: &'a GlobalEnv) -> ExpDisplay<'a> {
         ExpDisplay { env, exp: self }
     }
@@ -668,28 +888,226 @@ pub struct ExpDisplay<'a> {
 
 impl<'a> fmt::Display for ExpDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        use Exp::*;
         match self.exp {
-            Exp::Value(_, Value::Number(num)) => write!(f, "{}", num)?,
-            Exp::Value(_, Value::Bool(b)) => write!(f, "{}", b)?,
-            Exp::Value(_, Value::Address(num)) => f.write_str(&num.to_str_radix(16))?,
-            Exp::Call(_, Operation::Function(mid, fid), args) => {
+            Invalid(_) => write!(f, "*invalid*"),
+            Value(_, v) => write!(f, "{}", v),
+            LocalVar(_, name) => write!(f, "{}", name.display(self.env.symbol_pool())),
+            Temporary(_, idx) => write!(f, "$t{}", idx),
+            SpecVar(_, mid, vid, label) => {
                 let module_env = self.env.get_module(*mid);
-                let fun = module_env.get_spec_fun(*fid);
+                let spec_var = module_env.get_spec_var(*vid);
                 write!(
                     f,
-                    "{}::{}({})",
+                    "{}::{}",
                     module_env.get_name().display(self.env.symbol_pool()),
-                    fun.name.display(self.env.symbol_pool()),
-                    args.iter()
-                        .map(|e| e.display(self.env).to_string())
-                        .join(", ")
-                )?
+                    spec_var.name.display(self.env.symbol_pool())
+                )?;
+                if let Some(label) = label {
+                    write!(f, "[{}]", label)?;
+                }
+                Ok(())
             }
-            _ => {
-                // TODO(wrwg): implement expression printer
-                f.write_str("<value>")?
+            Call(node_id, oper, args) => {
+                write!(
+                    f,
+                    "{}({})",
+                    oper.display(self.env, *node_id),
+                    self.fmt_exps(args)
+                )
+            }
+            Lambda(_, decls, body) => {
+                write!(f, "|{}| {}", self.fmt_decls(decls), body.display(self.env))
+            }
+            Block(_, decls, body) => {
+                write!(
+                    f,
+                    "{{let {}; {}}}",
+                    self.fmt_decls(decls),
+                    body.display(self.env)
+                )
+            }
+            Quant(_, kind, decls, triggers, opt_where, body) => {
+                let triggers_str = triggers
+                    .iter()
+                    .map(|trigger| format!("{{{}}}", self.fmt_exps(trigger)))
+                    .collect_vec()
+                    .join("");
+                let where_str = if let Some(exp) = opt_where {
+                    format!(" where {}", exp.display(self.env))
+                } else {
+                    "".to_string()
+                };
+                write!(
+                    f,
+                    "{} {}{}{}: {}",
+                    kind,
+                    self.fmt_quant_decls(decls),
+                    triggers_str,
+                    where_str,
+                    body.display(self.env)
+                )
+            }
+            Invoke(_, fun, args) => {
+                write!(f, "({})({})", fun.display(self.env), self.fmt_exps(args))
+            }
+            IfElse(_, cond, if_exp, else_exp) => {
+                write!(
+                    f,
+                    "(if {} {{{}}} else {{{}}})",
+                    cond.display(self.env),
+                    if_exp.display(self.env),
+                    else_exp.display(self.env)
+                )
             }
         }
+    }
+}
+
+impl<'a> ExpDisplay<'a> {
+    fn fmt_decls(&self, decls: &[LocalVarDecl]) -> String {
+        decls
+            .iter()
+            .map(|decl| {
+                let binding = if let Some(exp) = &decl.binding {
+                    format!(" = {}", exp.display(self.env))
+                } else {
+                    "".to_string()
+                };
+                format!("{}{}", decl.name.display(self.env.symbol_pool()), binding)
+            })
+            .join(", ")
+    }
+
+    fn fmt_quant_decls(&self, decls: &[(LocalVarDecl, Exp)]) -> String {
+        decls
+            .iter()
+            .map(|(decl, domain)| {
+                format!(
+                    "{}: {}",
+                    decl.name.display(self.env.symbol_pool()),
+                    domain.display(self.env)
+                )
+            })
+            .join(", ")
+    }
+
+    fn fmt_exps(&self, exps: &[Exp]) -> String {
+        exps.iter()
+            .map(|e| e.display(self.env).to_string())
+            .join(", ")
+    }
+}
+
+impl Operation {
+    /// Creates a display of an operation which can be used in formatting.
+    pub fn display<'a>(&'a self, env: &'a GlobalEnv, node_id: NodeId) -> OperationDisplay<'a> {
+        OperationDisplay {
+            env,
+            oper: self,
+            node_id,
+        }
+    }
+}
+
+/// Helper type for operation display.
+pub struct OperationDisplay<'a> {
+    env: &'a GlobalEnv,
+    node_id: NodeId,
+    oper: &'a Operation,
+}
+
+impl<'a> fmt::Display for OperationDisplay<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        use Operation::*;
+        match self.oper {
+            Function(mid, fid, labels_opt) => {
+                write!(f, "{}", self.fun_str(mid, fid))?;
+                if let Some(labels) = labels_opt {
+                    write!(
+                        f,
+                        "[{}]",
+                        labels.iter().map(|l| format!("{}", l)).join(", ")
+                    )?;
+                }
+                Ok(())
+            }
+            Global(label_opt) => {
+                write!(f, "global")?;
+                if let Some(label) = label_opt {
+                    write!(f, "[{}]", label)?
+                }
+                Ok(())
+            }
+            Exists(label_opt) => {
+                write!(f, "exists")?;
+                if let Some(label) = label_opt {
+                    write!(f, "[{}]", label)?
+                }
+                Ok(())
+            }
+            Pack(mid, sid) => write!(f, "pack {}", self.struct_str(mid, sid)),
+            Select(mid, sid, fid) => {
+                write!(f, "select {}", self.field_str(mid, sid, fid))
+            }
+            UpdateField(mid, sid, fid) => {
+                write!(f, "update {}", self.field_str(mid, sid, fid))
+            }
+            Result(t) => write!(f, "result{}", t),
+            _ => write!(f, "{:?}", self.oper),
+        }?;
+
+        // If operation has a type instantiation, add it.
+        let type_inst = self.env.get_node_instantiation(self.node_id);
+        if !type_inst.is_empty() {
+            let tctx = TypeDisplayContext::WithEnv {
+                env: self.env,
+                type_param_names: None,
+            };
+            write!(
+                f,
+                "<{}>",
+                type_inst.iter().map(|ty| ty.display(&tctx)).join(", ")
+            )?;
+        }
         Ok(())
+    }
+}
+
+impl<'a> OperationDisplay<'a> {
+    fn fun_str(&self, mid: &ModuleId, fid: &SpecFunId) -> String {
+        let module_env = self.env.get_module(*mid);
+        let fun = module_env.get_spec_fun(*fid);
+        format!(
+            "{}::{}",
+            module_env.get_name().display(self.env.symbol_pool()),
+            fun.name.display(self.env.symbol_pool()),
+        )
+    }
+
+    fn struct_str(&self, mid: &ModuleId, sid: &StructId) -> String {
+        let module_env = self.env.get_module(*mid);
+        let struct_env = module_env.get_struct(*sid);
+        format!(
+            "{}::{}",
+            module_env.get_name().display(self.env.symbol_pool()),
+            struct_env.get_name().display(self.env.symbol_pool()),
+        )
+    }
+
+    fn field_str(&self, mid: &ModuleId, sid: &StructId, fid: &FieldId) -> String {
+        let struct_env = self.env.get_module(*mid).into_struct(*sid);
+        let field_name = struct_env.get_field(*fid).get_name();
+        format!(
+            "{}.{}",
+            self.struct_str(mid, sid),
+            field_name.display(self.env.symbol_pool())
+        )
+    }
+}
+
+impl fmt::Display for MemoryLabel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "@{}", self.as_usize())
     }
 }

@@ -1,0 +1,18 @@
+module M {
+    consume(s: signer) {
+        Self.consume(move(s));
+        return;
+    }
+
+    t(cond: bool, s1: signer, s2: signer) {
+        if (move(cond)) {
+            Self.consume(move(s1));
+        }
+        s1 = move(s2);
+        Self.consume(move(s1));
+        return;
+    }
+}
+
+// Used to be invalid
+// Now valid because signer has drop

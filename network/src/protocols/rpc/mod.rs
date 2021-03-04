@@ -1,79 +1,80 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Implementation of the RPC protocol as per Diem wire protocol v1.
+//! Implementation of the unary RPC protocol as per [DiemNet wire protocol v1].
 //!
-//! Design:
-//! -------
+//! ## Design:
 //!
-//! RPC receives OutboundRpcRequest messages from upstream actors. The OutboundRpcRequest contains
-//! the RPC protocol, raw request bytes, RPC timeout duration, and a channel over which the
-//! response bytes can be sent back to the upstream.
-//! For inbound RPC requests, RPC sends InboundRpcRequest notifications to upstream actors. The
-//! InboundRpcRequest contains the RPC protocol, raw request bytes, and a channel over which the
-//! upstream can send a response for the RPC.
-//! Internally, the RPC actor consists of a single event loop. The event loop processes 4 kinds of
-//! messages:
-//! (1) outbound RPC requests received from upstream,
-//! (2) notifications for inbound RpcRequest/RpcResponse from the Peer actor,
-//! (3) completion notification for tasks processing inbound RPC, and
-//! (4) completion notification for tasks processing outbound RPCs.
-//! The tasks for inbound and outbound RPCs are spawned onto the same runtime as the one driving
-//! the RPC event loop.
+//! The unary RPC protocol is implemented here as two independent async completion
+//! queues: [`InboundRpcs`] and [`OutboundRpcs`].
 //!
-//! Timeouts:
-//! ---------
-//! The tasks for inbound and outbound RPCs are also "wrapped" within timeouts to ensure that they
-//! are not running forever. The outbound RPC timeout is specified by the upstream client, where as
-//! the inbound RPC timeout is a configuration parameter for the RPC actor.
+//! The `InboundRpcs` queue is responsible for handling inbound rpc requests
+//! off-the-wire, forwarding the request to the application layer, waiting for
+//! the application layer's response, and then enqueuing the rpc response to-be
+//! written over-the-wire.
 //!
-//! Limits:
-//! -------
-//! We limit the number of pending inbound RPC tasks to ensure that resource usage is bounded for
-//! inbound RPCs. For outbound RPCs, we log a warning when the limit is exceeded, but allow the RPC
-//! to proceed.
+//! Likewise, the `OutboundRpcs` queue is responsible for handling outbound rpc
+//! requests from the application layer, enqueuing the request for writing onto
+//! the wire, waiting for a corresponding rpc response, and then notifying the
+//! requestor of the arrived response message.
 //!
-//! State
-//! -------------
-//! * For outbound RPCs, the RPC actors maintains a HashMap from the RequestId to a channel over
-//! which inbound responses can be delivered to the task driving the request. Entries are removed
-//! on completion of the task, which happens either on receipt of the response, or on
-//! failure/timeout.
-//! * The RPC actor also maintains a RequestIdGenerator for generating request ids for outbound
-//! RPCs. The RequestIdGenerator increments the request id by 1 for each subsequent outbound RPC.
+//! Both `InboundRpcs` and `OutboundRpcs` are owned and driven by the [`Peer`]
+//! actor. This has a few implications. First, it means that each connection has
+//! its own pair of local rpc completion queues; the queues are _not_ shared
+//! across connections. Second, the queues don't do any IO work. They're purely
+//! driven by the owning `Peer` actor, who calls `handle_` methods on new
+//! [`NetworkMessage`] arrivals and polls for completed rpc requests. The queues
+//! also do not write to the wire directly; instead, they're given a reference to
+//! the [`Peer`] actor's write queue, which they can enqueue a new outbound
+//! [`NetworkMessage`] onto.
+//!
+//! ## Timeouts:
+//!
+//! Both inbound and outbound requests have mandatory timeouts. The tasks in the
+//! async completion queues are each wrapped in a `timeout` future, which causes
+//! the task to complete with an error if the task isn't fulfilled before the
+//! deadline.
+//!
+//! ## Limits:
+//!
+//! We limit the number of pending inbound and outbound RPC tasks to ensure that
+//! resource usage is bounded.
+//!
+//! [DiemNet wire protocol v1]: https://github.com/diem/diem/blob/master/specifications/network/messaging-v1.md
+//! [`Peer`]: crate::peer::Peer
 
 use crate::{
     counters::{
-        self, inc_by_with_context, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL,
-        REQUEST_LABEL, RESPONSE_LABEL, SENT_LABEL,
+        self, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
+        RESPONSE_LABEL, SENT_LABEL,
     },
     logging::NetworkSchema,
-    peer::{PeerHandle, PeerNotification},
+    peer::PeerNotification,
     peer_manager::PeerManagerError,
     protocols::wire::messaging::v1::{
         NetworkMessage, Priority, RequestId, RpcRequest, RpcResponse,
     },
     ProtocolId,
 };
+use anyhow::anyhow;
 use bytes::Bytes;
+use channel::diem_channel;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
+use diem_time_service::{timeout, TimeService, TimeServiceTrait};
 use diem_types::PeerId;
 use error::RpcError;
 use futures::{
     channel::oneshot,
-    future::{self, BoxFuture, FusedFuture, Future, FutureExt, TryFutureExt},
+    future::{BoxFuture, FusedFuture, Future, FutureExt},
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
-    task::Context,
 };
 use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{cmp::PartialEq, collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;
-
-#[cfg(test)]
-mod test;
 
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
@@ -130,38 +131,20 @@ pub struct OutboundRpcRequest {
     pub timeout: Duration,
 }
 
-type OutboundRpcTasks = FuturesUnordered<BoxFuture<'static, RequestId>>;
-
 // Wraps the task of request id generation. Request ids start at 0 and increment till they hit
 // RequestId::MAX. After that, they wrap around to 0.
 struct RequestIdGenerator {
     next_id: RequestId,
-    peer_id: PeerId,
 }
 
 impl RequestIdGenerator {
-    pub fn new(peer_id: PeerId) -> Self {
-        Self {
-            next_id: 0,
-            peer_id,
-        }
+    pub fn new() -> Self {
+        Self { next_id: 0 }
     }
 
     pub fn next(&mut self) -> RequestId {
         let request_id = self.next_id;
-        self.next_id = {
-            match self.next_id.overflowing_add(1) {
-                (next_id, true) => {
-                    info!(
-                        remote_peer = self.peer_id,
-                        "Request ids with peer: {} wrapped around to 0",
-                        self.peer_id.short_str(),
-                    );
-                    next_id
-                }
-                (next_id, _) => next_id,
-            }
-        };
+        self.next_id = self.next_id.wrapping_add(1);
         request_id
     }
 }
@@ -177,10 +160,12 @@ impl PartialEq for InboundRpcRequest {
 /// If the response eventually completes, `InboundRpc` records some metrics and
 /// enqueues the response message onto the outbound write queue.
 ///
-/// There is one `InboundRpcs` handler per connection.
+/// There is one `InboundRpcs` handler per [`Peer`](crate::peer::Peer).
 pub struct InboundRpcs {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// The PeerId of this connection's remote peer. Used for logging.
     remote_peer_id: PeerId,
     /// The core async queue of pending inbound rpc tasks. The tasks are driven
@@ -190,20 +175,22 @@ pub struct InboundRpcs {
     /// doesn't respond to the request before this timeout, the request will be
     /// dropped.
     inbound_rpc_timeout: Duration,
-    /// Only allow this many concurrent rpcs at one time from this remote peer.
-    /// New inbound requests exceeding this limit will be dropped.
+    /// Only allow this many concurrent inbound rpcs at one time from this remote
+    /// peer.  New inbound requests exceeding this limit will be dropped.
     max_concurrent_inbound_rpcs: u32,
 }
 
 impl InboundRpcs {
     pub fn new(
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         remote_peer_id: PeerId,
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
     ) -> Self {
         Self {
             network_context,
+            time_service,
             remote_peer_id,
             inbound_rpc_tasks: FuturesUnordered::new(),
             inbound_rpc_timeout,
@@ -212,9 +199,9 @@ impl InboundRpcs {
     }
 
     /// Handle a new inbound `RpcRequest` message off the wire.
-    pub async fn handle_inbound_request(
+    pub fn handle_inbound_request(
         &mut self,
-        peer_notifs_tx: &mut channel::Sender<PeerNotification>,
+        peer_notifs_tx: &mut diem_channel::Sender<ProtocolId, PeerNotification>,
         request: RpcRequest,
     ) -> Result<(), RpcError> {
         let network_context = &self.network_context;
@@ -247,19 +234,21 @@ impl InboundRpcs {
             counters::inbound_rpc_handler_latency(network_context, protocol_id).start_timer();
 
         // Foward request to PeerManager for handling.
-        let (res_tx, res_rx) = oneshot::channel();
+        let (response_tx, response_rx) = oneshot::channel();
         let notif = PeerNotification::RecvRpc(InboundRpcRequest {
             protocol_id,
             data: Bytes::from(request.raw_request),
-            res_tx,
+            res_tx: response_tx,
         });
-        if let Err(err) = peer_notifs_tx.send(notif).await {
+        if let Err(err) = peer_notifs_tx.push(protocol_id, notif) {
             counters::rpc_messages(network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
             return Err(err.into());
         }
 
         // Create a new task that waits for a response from the upper layer with a timeout.
-        let inbound_rpc_task = tokio::time::timeout(self.inbound_rpc_timeout, res_rx)
+        let inbound_rpc_task = self
+            .time_service
+            .timeout(self.inbound_rpc_timeout, response_rx)
             .map(move |result| {
                 // Flatten the errors
                 let maybe_response = match result {
@@ -270,7 +259,7 @@ impl InboundRpcs {
                     }),
                     Ok(Ok(Err(err))) => Err(err),
                     Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
-                    Err(_elapsed) => Err(RpcError::TimedOut),
+                    Err(timeout::Elapsed) => Err(RpcError::TimedOut),
                 };
                 // Only record latency of successful requests
                 match maybe_response {
@@ -291,9 +280,9 @@ impl InboundRpcs {
     /// Method for `Peer` actor to drive the pending inbound rpc tasks forward.
     /// The returned `Future` is a `FusedFuture` so it works correctly in a
     /// `futures::select!`.
-    pub fn next_completed_response<'a>(
-        &'a mut self,
-    ) -> impl Future<Output = Result<RpcResponse, RpcError>> + FusedFuture + 'a {
+    pub fn next_completed_response(
+        &mut self,
+    ) -> impl Future<Output = Result<RpcResponse, RpcError>> + FusedFuture + '_ {
         self.inbound_rpc_tasks.select_next_some()
     }
 
@@ -337,365 +326,282 @@ impl InboundRpcs {
     }
 }
 
-/// The rpc actor.
-pub struct Rpc {
-    /// The network instance this Rpc actor is running under.
+/// `OutboundRpcs` handles new outbound rpc requests made from the application layer.
+///
+/// There is one `OutboundRpcs` handler per [`Peer`](crate::peer::Peer).
+pub struct OutboundRpcs {
+    /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
-    /// Channel to send requests to Peer.
-    peer_handle: PeerHandle,
-    /// Channel to receive requests from other upstream actors.
-    requests_rx: channel::Receiver<OutboundRpcRequest>,
-    /// Channel to receive notifications from Peer.
-    peer_notifs_rx: channel::Receiver<PeerNotification>,
-    /// Channels to send Rpc responses to pending outbound RPC tasks.
-    pending_outbound_rpcs: HashMap<RequestId, (ProtocolId, oneshot::Sender<RpcResponse>)>,
-    /// RequestId to use for next outbound RPC.
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
+    /// The PeerId of this connection's remote peer. Used for logging.
+    remote_peer_id: PeerId,
+    /// Generates the next RequestId to use for the next outbound RPC. Note that
+    /// request ids are local to each connection.
     request_id_gen: RequestIdGenerator,
-    /// The maximum number of concurrent outbound rpc requests that we will
-    /// service before back-pressure kicks in.
+    /// A completion queue of pending outbound rpc tasks. Each task waits for
+    /// either a successful `RpcResponse` message, handed to it via the channel
+    /// in `pending_outbound_rpcs`, or waits for a timeout or cancellation
+    /// notification. After completion, the task will yield its `RequestId` and
+    /// other metadata (success/failure, success latency, response length) via
+    /// the future from `next_completed_request`.
+    outbound_rpc_tasks:
+        FuturesUnordered<BoxFuture<'static, (RequestId, Result<(f64, u64), RpcError>)>>,
+    /// Maps a `RequestId` into a handle to a task in the `outbound_rpc_tasks`
+    /// completion queue. When a new `RpcResponse` message comes in, we will use
+    /// this map to notify the corresponding task that its response has arrived.
+    pending_outbound_rpcs: HashMap<RequestId, oneshot::Sender<RpcResponse>>,
+    /// Only allow this many concurrent outbound rpcs at one time from this remote
+    /// peer. New outbound requests exceeding this limit will be dropped.
     max_concurrent_outbound_rpcs: u32,
 }
 
-impl Rpc {
-    /// Create a new instance of the [`Rpc`] protocol actor.
+impl OutboundRpcs {
     pub fn new(
         network_context: Arc<NetworkContext>,
-        peer_handle: PeerHandle,
-        requests_rx: channel::Receiver<OutboundRpcRequest>,
-        peer_notifs_rx: channel::Receiver<PeerNotification>,
+        time_service: TimeService,
+        remote_peer_id: PeerId,
         max_concurrent_outbound_rpcs: u32,
     ) -> Self {
         Self {
             network_context,
-            request_id_gen: RequestIdGenerator::new(peer_handle.peer_id()),
-            peer_handle,
-            requests_rx,
-            peer_notifs_rx,
+            time_service,
+            remote_peer_id,
+            request_id_gen: RequestIdGenerator::new(),
+            outbound_rpc_tasks: FuturesUnordered::new(),
             pending_outbound_rpcs: HashMap::new(),
             max_concurrent_outbound_rpcs,
         }
     }
 
-    /// Start the [`Rpc`] actor's event loop.
-    pub async fn start(mut self) {
-        let peer_id = self.peer_handle.peer_id();
-        let mut outbound_rpc_tasks = OutboundRpcTasks::new();
-
-        trace!(
-            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-            "{} Rpc actor for '{}' started",
-            self.network_context,
-            peer_id.short_str()
-        );
-        loop {
-            ::futures::select! {
-                notif = self.peer_notifs_rx.select_next_some() => {
-                    self.handle_inbound_message(notif);
-                },
-                maybe_req = self.requests_rx.next() => {
-                    if let Some(req) = maybe_req {
-                        self.handle_outbound_rpc(req, &mut outbound_rpc_tasks).await;
-                    } else {
-                        break;
-                    }
-                },
-                request_id = outbound_rpc_tasks.select_next_some() => {
-                    // Remove request_id from pending_outbound_rpcs if not already removed.
-                    let _ = self.pending_outbound_rpcs.remove(&request_id);
-                }
-            }
-        }
-        trace!(
-            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-            "{} Rpc actor for '{}' terminated",
-            self.network_context,
-            peer_id.short_str()
-        );
-    }
-
-    // Handle inbound message -- the message can be an inbound RPC request, or a response to a
-    // pending outbound RPC request.
-    fn handle_inbound_message(&mut self, notif: PeerNotification) {
-        match notif {
-            PeerNotification::NewMessage(message) => {
-                match message {
-                    // This is a response to a pending outbound RPC.
-                    NetworkMessage::RpcResponse(response) => {
-                        self.handle_inbound_response(response);
-                    }
-                    _ => {
-                        inc_by_with_context(
-                            &counters::INVALID_NETWORK_MESSAGES,
-                            &self.network_context,
-                            "rpc",
-                            1,
-                        );
-                        error!(
-                            NetworkSchema::new(&self.network_context)
-                                .remote_peer(&self.peer_handle.peer_id()),
-                            "{} Received non-RPC message from Peer actor: {:?}",
-                            self.network_context,
-                            message
-                        );
-                    }
-                }
-            }
-            notif => {
-                inc_by_with_context(
-                    &counters::INVALID_NETWORK_MESSAGES,
-                    &self.network_context,
-                    "rpc",
-                    1,
-                );
-                error!(
-                    NetworkSchema::new(&self.network_context)
-                        .remote_peer(&self.peer_handle.peer_id()),
-                    "{} Received unexpected event from Peer: {:?}, expected NewMessage",
-                    self.network_context,
-                    notif
-                )
-            }
-        }
-    }
-
-    // Handles inbound response by either forwarding response to task waiting for response, or by
-    // dropping it if the task has already terminated.
-    fn handle_inbound_response(&mut self, response: RpcResponse) {
-        let peer_id = self.peer_handle.peer_id();
-        let request_id = response.request_id;
-        if let Some((protocol_id, response_tx)) = self.pending_outbound_rpcs.remove(&request_id) {
-            trace!(
-                NetworkSchema::new(&self.network_context),
-                request_id = request_id,
-                "{} Waiting to notify outbound rpc task about inbound response for request_id {}",
-                self.network_context,
-                request_id
-            );
-            if let Err(e) = response_tx.send(response) {
-                warn!(
-                    NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer_id),
-                    error = ?e,
-                    protocol_id = protocol_id,
-                    "{} Failed to handle inbound RPC response from peer: {} for protocol: {}. Error: {:?}",
-                    self.network_context,
-                    peer_id.short_str(),
-                    protocol_id,
-                    e
-                );
-            } else {
-                trace!(
-                    NetworkSchema::new(&self.network_context),
-                    request_id = request_id,
-                    "{} Done notifying outbound RPC task about inbound response for request_id {}",
-                    self.network_context,
-                    request_id
-                );
-            }
-        } else {
-            // TODO: add ability to log protocol id as well
-            info!(
-                NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-                "{} Received response for expired request from {}. Discarding.",
-                self.network_context,
-                peer_id.short_str()
-            )
-        }
-    }
-
-    /// Handle an outbound rpc request.
-    ///
-    /// Cancellation is done by the client dropping the receiver side of the [`req.res_tx`]
-    /// oneshot channel. If the request is canceled, the rpc future is dropped and the request is
-    /// canceled. Currently, we don't send a cancellation message to the remote peer.
-    ///
-    /// [`req.res_tx`]: OutboundRpcRequest::res_tx
-    async fn handle_outbound_rpc(
+    /// Handle a new outbound rpc request from the application layer.
+    pub async fn handle_outbound_request(
         &mut self,
-        req: OutboundRpcRequest,
-        outbound_rpc_tasks: &mut OutboundRpcTasks,
-    ) {
-        let network_context = Arc::clone(&self.network_context);
+        request: OutboundRpcRequest,
+        write_reqs_tx: &mut channel::Sender<(
+            NetworkMessage,
+            oneshot::Sender<Result<(), PeerManagerError>>,
+        )>,
+    ) -> Result<(), RpcError> {
+        let network_context = &self.network_context;
+        let peer_id = &self.remote_peer_id;
 
         // Unpack request.
         let OutboundRpcRequest {
             protocol_id,
-            data: req_data,
+            data: request_data,
             timeout,
-            mut res_tx,
-            ..
-        } = req;
+            res_tx: mut application_response_tx,
+        } = request;
+        let req_len = request_data.len() as u64;
 
-        // If we already have too many pending RPCs, return error immediately.
-        if outbound_rpc_tasks.len() as u32 == self.max_concurrent_outbound_rpcs {
-            counters::rpc_messages(&network_context, REQUEST_LABEL, DECLINED_LABEL).inc();
-            warn!(
-                NetworkSchema::new(&self.network_context),
-                "{} Pending outbound RPCs ({}) exceeding limit ({}).",
-                self.network_context,
-                outbound_rpc_tasks.len(),
-                self.max_concurrent_outbound_rpcs,
-            );
-            let _result = res_tx.send(Err(RpcError::TooManyPending(
-                self.max_concurrent_outbound_rpcs,
-            )));
-            return;
+        // Drop the outbound request if the application layer has already canceled.
+        if application_response_tx.is_canceled() {
+            counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL).inc();
+            return Err(RpcError::UnexpectedResponseChannelCancel);
         }
 
-        let peer_handle = self.peer_handle.clone();
-        let peer_id = peer_handle.peer_id();
+        // Drop new outbound requests if our completion queue is at capacity.
+        if self.outbound_rpc_tasks.len() == self.max_concurrent_outbound_rpcs as usize {
+            counters::rpc_messages(&network_context, REQUEST_LABEL, DECLINED_LABEL).inc();
+            // Notify application that their request was dropped due to capacity.
+            let err = Err(RpcError::TooManyPending(self.max_concurrent_outbound_rpcs));
+            let _ = application_response_tx.send(err);
+            return Err(RpcError::TooManyPending(self.max_concurrent_outbound_rpcs));
+        }
 
-        // Generate and assign request id to this RPC.
         let request_id = self.request_id_gen.next();
 
-        // Create channel over which response is delivered to future driving outbound RPC.
-        let (response_tx, response_rx) = oneshot::channel();
-        // Save send end of channel which moving receive end of the channel into the future.
-        self.pending_outbound_rpcs
-            .insert(request_id, (protocol_id, response_tx));
+        trace!(
+            NetworkSchema::new(network_context).remote_peer(peer_id),
+            "{} Sending outbound rpc request with request_id {} and protocol_id {} to {}",
+            network_context,
+            request_id,
+            protocol_id,
+            peer_id.short_str(),
+        );
 
-        let f = async move {
-            // Wrap the outbound rpc protocol with the requested timeout window.
-            let mut f_rpc_res = tokio::time::timeout(
-                timeout,
-                // Future to run the actual outbound rpc protocol.
-                handle_outbound_rpc_inner(
-                    &network_context,
-                    peer_handle,
-                    request_id,
-                    protocol_id,
-                    req_data,
-                    response_rx,
-                ),
-            )
-            .map_err(Into::<RpcError>::into)
-            .map(|r| r.and_then(|x| x))
-            .boxed()
-            .fuse();
+        // Start timer to collect outbound RPC latency.
+        let timer =
+            counters::outbound_rpc_request_latency(network_context, protocol_id).start_timer();
 
-            // If the rpc client drops their oneshot receiver, this future should
-            // cancel the request.
-            let mut f_rpc_cancel =
-                future::poll_fn(|cx: &mut Context| res_tx.poll_canceled(cx)).fuse();
+        // Enqueue rpc request message onto outbound write queue.
+        let message = NetworkMessage::RpcRequest(RpcRequest {
+            protocol_id,
+            request_id,
+            priority: Priority::default(),
+            raw_request: Vec::from(request_data.as_ref()),
+        });
+        let (ack_tx, _) = oneshot::channel();
+        write_reqs_tx.send((message, ack_tx)).await?;
+
+        // Collect counters for requests sent.
+        counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
+        counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len);
+
+        // Create channel over which response is delivered to outbound_rpc_task.
+        let (response_tx, response_rx) = oneshot::channel::<RpcResponse>();
+
+        // Store send-side in the pending map so we can notify outbound_rpc_task
+        // when the rpc response has arrived.
+        self.pending_outbound_rpcs.insert(request_id, response_tx);
+
+        // A future that waits for the rpc response with a timeout. We create the
+        // timeout out here to start the timer as soon as we push onto the queue
+        // (as opposed to whenever it first gets polled on the queue).
+        let wait_for_response = self
+            .time_service
+            .timeout(timeout, response_rx)
+            .map(|result| {
+                // Flatten errors.
+                match result {
+                    Ok(Ok(response)) => Ok(Bytes::from(response.raw_response)),
+                    Ok(Err(oneshot::Canceled)) => Err(RpcError::UnexpectedResponseChannelCancel),
+                    Err(timeout::Elapsed) => Err(RpcError::TimedOut),
+                }
+            });
+
+        // A future that waits for the response and sends it to the application.
+        let notify_application = async move {
+            // This future will complete if the application layer cancels the request.
+            let mut cancellation = application_response_tx.cancellation().fuse();
+            // Pin the response future to the stack so we don't have to box it.
+            tokio::pin!(wait_for_response);
 
             futures::select! {
-                res = f_rpc_res => {
-                    // Log any errors.
-                    if let Err(ref err) = res {
-                        counters::rpc_messages(&network_context, REQUEST_LABEL, FAILED_LABEL)
-                            .inc();
-                        warn!(
-                            NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id),
-                            error = ?err,
-                            request_id = request_id,
-                            "{} Error making outbound rpc request with request_id {} to {}: {:?}",
-                            network_context,
-                            request_id,
-                            peer_id.short_str(),
-                            err
-                        );
-                    }
-                    // Propagate the results to the rpc client layer.
-                    if res_tx.send(res).is_err() {
-                        counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL)
-                            .inc();
-                        info!(
-                            NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id),
-                            "{} Rpc client canceled outbound rpc call to {}",
-                            network_context,
-                            peer_id.short_str()
-                        );
-                    }
-                },
-                // The rpc client canceled the request
-                _cancel = f_rpc_cancel => {
-                    counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL)
-                        .inc();
-                    info!(
-                        NetworkSchema::new(&network_context)
-                            .remote_peer(&peer_id),
-                        "{} Rpc client canceled outbound rpc call to {}",
-                        network_context,
-                        peer_id.short_str()
-                    );
-                },
+                maybe_response = wait_for_response => {
+                    // TODO(philiphayes): Clean up RpcError. Effectively need to
+                    // clone here to pass the result up to application layer, but
+                    // RpcError is not currently cloneable.
+                    let result_copy = match &maybe_response {
+                        Ok(response) => Ok(response.len() as u64),
+                        Err(err) => Err(RpcError::Error(anyhow!(err.to_string()))),
+                    };
+                    // Notify the application of the results.
+                    application_response_tx.send(maybe_response).map_err(|_| RpcError::UnexpectedResponseChannelCancel)?;
+                    result_copy
+                }
+                _ = cancellation => Err(RpcError::UnexpectedResponseChannelCancel),
             }
-            // Return the request_id for state management in the main event-loop.
-            request_id
         };
-        outbound_rpc_tasks.push(f.boxed());
+
+        let outbound_rpc_task = async move {
+            // Always return the request_id so we can garbage collect the
+            // pending_outbound_rpcs map.
+            match notify_application.await {
+                Ok(response_len) => {
+                    let latency = timer.stop_and_record();
+                    (request_id, Ok((latency, response_len)))
+                }
+                Err(err) => {
+                    // don't record
+                    timer.stop_and_discard();
+                    (request_id, Err(err))
+                }
+            }
+        };
+
+        self.outbound_rpc_tasks.push(outbound_rpc_task.boxed());
+        Ok(())
     }
-}
 
-async fn handle_outbound_rpc_inner(
-    network_context: &NetworkContext,
-    mut peer_handle: PeerHandle,
-    request_id: RequestId,
-    protocol_id: ProtocolId,
-    req_data: Bytes,
-    response_rx: oneshot::Receiver<RpcResponse>,
-) -> Result<Bytes, RpcError> {
-    let req_len = req_data.len();
-    let peer_id = peer_handle.peer_id();
+    /// Method for `Peer` actor to drive the pending outbound rpc tasks forward.
+    /// The returned `Future` is a `FusedFuture` so it works correctly in a
+    /// `futures::select!`.
+    pub fn next_completed_request(
+        &mut self,
+    ) -> impl Future<Output = (RequestId, Result<(f64, u64), RpcError>)> + FusedFuture + '_ {
+        self.outbound_rpc_tasks.select_next_some()
+    }
 
-    // Create NetworkMessage to be sent over the wire.
-    let request = NetworkMessage::RpcRequest(RpcRequest {
-        request_id,
-        // TODO: Use default priority for now. To be exposed via network API.
-        priority: Priority::default(),
-        protocol_id,
-        raw_request: Vec::from(req_data.as_ref()),
-    });
+    /// Handle a newly completed task from the `self.outbound_rpc_tasks` queue.
+    /// At this point, the application layer's request has already been fulfilled;
+    /// we just need to clean up this request and update some counters.
+    pub fn handle_completed_request(
+        &mut self,
+        request_id: RequestId,
+        result: Result<(f64, u64), RpcError>,
+    ) {
+        // Remove request_id from pending_outbound_rpcs if not already removed.
+        //
+        // We don't care about the value from `remove` here. If the request
+        // timed-out or was canceled, it will still be in the pending map.
+        // Otherwise, if we received a response for our request, we will have
+        // removed and triggered the oneshot from the pending map, notifying us.
+        let _ = self.pending_outbound_rpcs.remove(&request_id);
 
-    // Send outbound request to peer_handle.
-    trace!(
-        NetworkSchema::new(&network_context).remote_peer(&peer_id),
-        request_id = request_id,
-        "{} Sending outbound rpc request with request_id {} and protocol_id {} to peer {}",
-        network_context,
-        request_id,
-        protocol_id,
-        peer_id.short_str(),
-    );
-    // Start timer to collect RPC latency.
-    let timer = counters::outbound_rpc_request_latency(network_context, protocol_id).start_timer();
-    peer_handle.send_message(request, protocol_id).await?;
+        let network_context = &self.network_context;
+        let peer_id = &self.remote_peer_id;
 
-    // Collect counters for requests sent.
-    counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
-    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len as u64);
+        match result {
+            Ok((latency, request_len)) => {
+                counters::rpc_messages(network_context, RESPONSE_LABEL, RECEIVED_LABEL).inc();
+                counters::rpc_bytes(network_context, RESPONSE_LABEL, RECEIVED_LABEL)
+                    .inc_by(request_len);
 
-    // Wait for listener's response.
-    trace!(
-        NetworkSchema::new(&network_context).remote_peer(&peer_id),
-        request_id = request_id,
-        "{} Waiting to receive response for request_id {} and protocol_id {} from peer {}",
-        network_context,
-        request_id,
-        protocol_id,
-        peer_id.short_str(),
-    );
-    let response = response_rx.await?;
-    let latency = timer.stop_and_record();
-    trace!(
-        NetworkSchema::new(&network_context).remote_peer(&peer_id),
-        request_id = request_id,
-        protocol_id = protocol_id,
-        "{} Received response for request_id {} and protocol_id {} from peer {} \
-        with {:.6} seconds of latency",
-        network_context,
-        request_id,
-        protocol_id,
-        peer_id.short_str(),
-        latency,
-    );
+                trace!(
+                    NetworkSchema::new(&network_context).remote_peer(&peer_id),
+                    "{} Received response for request_id {} from peer {} \
+                     with {:.6} seconds of latency",
+                    network_context,
+                    request_id,
+                    peer_id.short_str(),
+                    latency,
+                );
+            }
+            Err(err) => {
+                if let RpcError::UnexpectedResponseChannelCancel = err {
+                    counters::rpc_messages(network_context, REQUEST_LABEL, CANCELED_LABEL).inc();
+                } else {
+                    counters::rpc_messages(network_context, REQUEST_LABEL, FAILED_LABEL).inc();
+                }
 
-    // Collect counters for received response.
-    let res_data = response.raw_response;
-    counters::rpc_messages(network_context, RESPONSE_LABEL, RECEIVED_LABEL).inc();
-    counters::rpc_bytes(network_context, RESPONSE_LABEL, RECEIVED_LABEL)
-        .inc_by(res_data.len() as u64);
-    Ok(Bytes::from(res_data))
+                warn!(
+                    NetworkSchema::new(&network_context).remote_peer(&peer_id),
+                    "{} Error making outbound rpc request with request_id {} to {}: {}",
+                    network_context,
+                    request_id,
+                    peer_id.short_str(),
+                    err
+                );
+            }
+        }
+    }
+
+    /// Handle a new inbound `RpcResponse` message. If we have a pending request
+    /// with a matching request id in the `pending_outbound_rpcs` map, this will
+    /// trigger that corresponding task to wake up and complete in
+    /// `handle_completed_request`.
+    pub fn handle_inbound_response(&mut self, response: RpcResponse) {
+        let network_context = &self.network_context;
+        let peer_id = &self.remote_peer_id;
+        let request_id = response.request_id;
+
+        let is_canceled = if let Some(response_tx) = self.pending_outbound_rpcs.remove(&request_id)
+        {
+            response_tx.send(response).is_err()
+        } else {
+            true
+        };
+
+        if is_canceled {
+            info!(
+                NetworkSchema::new(network_context).remote_peer(peer_id),
+                request_id = request_id,
+                "{} Received response for expired request_id {} from {}. Discarding.",
+                network_context,
+                request_id,
+                peer_id.short_str(),
+            );
+        } else {
+            trace!(
+                NetworkSchema::new(network_context).remote_peer(peer_id),
+                request_id = request_id,
+                "{} Notified pending outbound rpc task of inbound response for request_id {} from {}",
+                network_context,
+                request_id,
+                peer_id.short_str(),
+            );
+        }
+    }
 }

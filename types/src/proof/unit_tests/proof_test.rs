@@ -10,7 +10,7 @@ use crate::{
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, AccumulatorExtensionProof,
         EventAccumulatorInternalNode, EventAccumulatorProof, EventProof, SparseMerkleInternalNode,
-        SparseMerkleLeafNode, SparseMerkleProof, TestAccumulatorInternalNode, TestAccumulatorProof,
+        SparseMerkleLeafNode, TestAccumulatorInternalNode, TestAccumulatorProof,
         TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
     },
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
@@ -24,6 +24,8 @@ use diem_crypto::{
     },
     HashValue, PrivateKey, Uniform,
 };
+
+type SparseMerkleProof = crate::proof::SparseMerkleProof<AccountStateBlob>;
 
 #[test]
 fn test_verify_empty_accumulator() {

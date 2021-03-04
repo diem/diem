@@ -6,7 +6,7 @@ use futures::{Future, FutureExt, SinkExt};
 use std::{pin::Pin, thread, time::Duration};
 
 use crate::counters;
-use tokio::{runtime::Handle, time::delay_for};
+use tokio::{runtime::Handle, time::sleep};
 
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
@@ -108,7 +108,7 @@ impl ClockTimeService {
 impl TimeService for ClockTimeService {
     fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
         let task = async move {
-            delay_for(timeout).await;
+            sleep(timeout).await;
             t.run().await;
         };
         self.executor.spawn(task);

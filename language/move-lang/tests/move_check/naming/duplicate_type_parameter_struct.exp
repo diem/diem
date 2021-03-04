@@ -28,7 +28,7 @@ error:
    │                                         ^ Duplicate type parameter declared with name 'T'
    ·
  3 │     struct S2<T: copyable, T: resource, T> {}
-   │                            - Previously defined here
+   │               - Previously defined here
    │
 
 error: 
@@ -61,6 +61,6 @@ error:
    │                                         ^ Duplicate type parameter declared with name 'T'
    ·
  5 │     struct R2<T: copyable, T: resource, T> {}
-   │                            - Previously defined here
+   │               - Previously defined here
    │
 

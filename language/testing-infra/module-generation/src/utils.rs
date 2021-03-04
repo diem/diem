@@ -8,7 +8,7 @@ pub fn random_string(rng: &mut StdRng, len: usize) -> String {
         "".to_string()
     } else {
         let mut string = "a".to_string();
-        (1..len).for_each(|_| string.push(rng.sample(Alphanumeric)));
+        (1..len).for_each(|_| string.push(char::from(rng.sample(Alphanumeric))));
         string
     }
 }

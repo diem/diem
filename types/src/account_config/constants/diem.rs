@@ -28,11 +28,17 @@ pub fn type_tag_for_currency_code(currency_code: Identifier) -> TypeTag {
     })
 }
 
+/// In addition to the constraints for valid Move identifiers, currency codes
+/// should consist entirely of uppercase alphanumeric characters (e.g., no underscores).
+pub fn allowed_currency_code_string(possible_currency_code_string: &str) -> bool {
+    possible_currency_code_string
+        .chars()
+        .all(|chr| matches!(chr, 'A'..='Z' | '0'..='9'))
+        && Identifier::is_valid(possible_currency_code_string)
+}
+
 pub fn from_currency_code_string(currency_code_string: &str) -> Result<Identifier> {
-    // In addition to the constraints for valid Move identifiers, currency codes
-    // should consist entirely of alphanumeric characters (e.g., no underscores).
-    // TODO: After XUS is renamed , this should require uppercase as well.
-    if !currency_code_string.chars().all(char::is_alphanumeric) {
+    if !allowed_currency_code_string(currency_code_string) {
         bail!("Invalid currency code '{}'", currency_code_string)
     }
     Identifier::new(currency_code_string)

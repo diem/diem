@@ -8,7 +8,6 @@ use diem_state_view::StateView;
 use diem_types::access_path::AccessPath;
 use move_core_types::language_storage::ModuleId;
 use std::collections::HashMap;
-use vm::CompiledModule;
 
 // `StateView` has no data given we are creating the genesis
 pub(crate) struct GenesisStateView {
@@ -22,13 +21,9 @@ impl GenesisStateView {
         }
     }
 
-    pub(crate) fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
+    pub(crate) fn add_module(&mut self, module_id: &ModuleId, blob: &[u8]) {
         let access_path = AccessPath::from(module_id);
-        let mut blob = vec![];
-        module
-            .serialize(&mut blob)
-            .expect("serializing stdlib must work");
-        self.data.insert(access_path, blob);
+        self.data.insert(access_path, blob.to_vec());
     }
 }
 

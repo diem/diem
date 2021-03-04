@@ -24,6 +24,8 @@ pub struct GitHubConfig {
     pub repository_owner: String,
     /// The repository where storage will mount
     pub repository: String,
+    /// The branch containing storage, defaults to master
+    pub branch: Option<String>,
     /// The authorization token for accessing the repository
     pub token: Token,
     /// A namespace is an optional portion of the path to a key stored within GitHubConfig. For
@@ -51,6 +53,10 @@ pub struct VaultConfig {
     pub token: Token,
     /// Disable check-and-set when writing secrets to Vault
     pub disable_cas: Option<bool>,
+    /// Timeout for new vault socket connections, in milliseconds.
+    pub connection_timeout_ms: Option<u64>,
+    /// Timeout for generic vault operations (e.g., reads and writes), in milliseconds.
+    pub response_timeout_ms: Option<u64>,
 }
 
 impl VaultConfig {
@@ -146,6 +152,11 @@ impl From<&SecureBackend> for Storage {
                 let storage = Storage::from(GitHubStorage::new(
                     config.repository_owner.clone(),
                     config.repository.clone(),
+                    config
+                        .branch
+                        .as_ref()
+                        .cloned()
+                        .unwrap_or_else(|| "master".to_string()),
                     config.token.read_token().expect("Unable to read token"),
                 ));
                 if let Some(namespace) = &config.namespace {
@@ -172,11 +183,9 @@ impl From<&SecureBackend> for Storage {
                     .as_ref()
                     .map(|_| config.ca_certificate().unwrap()),
                 config.renew_ttl_secs,
-                if let Some(disable) = config.disable_cas {
-                    !disable
-                } else {
-                    true
-                },
+                config.disable_cas.map_or_else(|| true, |disable| !disable),
+                config.connection_timeout_ms,
+                config.response_timeout_ms,
             )),
         }
     }
@@ -201,6 +210,8 @@ mod tests {
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
                 disable_cas: None,
+                connection_timeout_ms: None,
+                response_timeout_ms: None,
             },
         };
 
@@ -218,6 +229,36 @@ vault:
     }
 
     #[test]
+    fn test_vault_timeout_parsing() {
+        let from_config = Config {
+            vault: VaultConfig {
+                namespace: None,
+                server: "127.0.0.1:8200".to_string(),
+                ca_certificate: None,
+                token: Token::FromConfig("test".to_string()),
+                renew_ttl_secs: None,
+                disable_cas: None,
+                connection_timeout_ms: Some(3000),
+                response_timeout_ms: Some(5000),
+            },
+        };
+
+        let text_from_config = r#"
+vault:
+    server: "127.0.0.1:8200"
+    token:
+        from_config: "test"
+    connection_timeout_ms: 3000
+    response_timeout_ms: 5000
+        "#;
+
+        let de_from_config: Config = serde_yaml::from_str(text_from_config).unwrap();
+        assert_eq!(de_from_config, from_config);
+        // Just assert that it can be serialized, no need to do string comparison
+        serde_yaml::to_string(&from_config).unwrap();
+    }
+
+    #[test]
     fn test_token_disk_parsing() {
         let from_disk = Config {
             vault: VaultConfig {
@@ -227,6 +268,8 @@ vault:
                 token: Token::FromDisk(PathBuf::from("/token")),
                 renew_ttl_secs: None,
                 disable_cas: None,
+                connection_timeout_ms: None,
+                response_timeout_ms: None,
             },
         };
 

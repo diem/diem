@@ -1,0 +1,3 @@
+# Avoid putting conflict markers in the generated Cargo.toml file since it gets in the way of compiling
+# anything.
+Cargo.toml merge=binary

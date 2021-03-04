@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use guppy::TargetSpecError;
 use hex::FromHexError;
 use serde::{de, ser};
 use std::{
@@ -9,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::ExitStatus,
     result,
+    str::Utf8Error,
 };
 
 /// Type alias for the return type for `run` methods.
@@ -35,13 +37,29 @@ pub enum SystemError {
         context: Cow<'static, str>,
         err: guppy::Error,
     },
+    HakariCargoToml {
+        context: Cow<'static, str>,
+        err: hakari::CargoTomlError,
+    },
+    HakariTomlOut {
+        context: Cow<'static, str>,
+        err: hakari::TomlOutError,
+    },
     Io {
         context: Cow<'static, str>,
         err: io::Error,
     },
+    NonUtf8Path {
+        path: Vec<u8>,
+        err: Utf8Error,
+    },
     Serde {
         context: Cow<'static, str>,
         err: Box<dyn error::Error + Send + Sync>,
+    },
+    TargetSpec {
+        context: Cow<'static, str>,
+        err: TargetSpecError,
     },
 }
 
@@ -71,6 +89,26 @@ impl SystemError {
         }
     }
 
+    pub fn hakari_cargo_toml(
+        context: impl Into<Cow<'static, str>>,
+        err: hakari::CargoTomlError,
+    ) -> Self {
+        SystemError::HakariCargoToml {
+            context: context.into(),
+            err,
+        }
+    }
+
+    pub fn hakari_toml_out(
+        context: impl Into<Cow<'static, str>>,
+        err: hakari::TomlOutError,
+    ) -> Self {
+        SystemError::HakariTomlOut {
+            context: context.into(),
+            err,
+        }
+    }
+
     pub fn de(
         context: impl Into<Cow<'static, str>>,
         err: impl de::Error + Send + Sync + 'static,
@@ -88,6 +126,13 @@ impl SystemError {
         SystemError::Serde {
             context: context.into(),
             err: Box::new(err),
+        }
+    }
+
+    pub fn target_spec(context: impl Into<Cow<'static, str>>, err: TargetSpecError) -> Self {
+        SystemError::TargetSpec {
+            context: context.into(),
+            err,
         }
     }
 }
@@ -109,10 +154,16 @@ impl fmt::Display for SystemError {
                 None => write!(f, "'{}' terminated by signal", cmd),
             },
             SystemError::GitRoot(s) => write!(f, "git root error: {}", s),
+            SystemError::NonUtf8Path { path, .. } => {
+                write!(f, "non-UTF-8 path \"{}\"", String::from_utf8_lossy(path))
+            }
             SystemError::FromHex { context, .. }
             | SystemError::Io { context, .. }
             | SystemError::Serde { context, .. }
-            | SystemError::Guppy { context, .. } => write!(f, "while {}", context),
+            | SystemError::Guppy { context, .. }
+            | SystemError::HakariCargoToml { context, .. }
+            | SystemError::HakariTomlOut { context, .. }
+            | SystemError::TargetSpec { context, .. } => write!(f, "while {}", context),
         }
     }
 }
@@ -126,6 +177,10 @@ impl error::Error for SystemError {
             SystemError::FromHex { err, .. } => Some(err),
             SystemError::Io { err, .. } => Some(err),
             SystemError::Guppy { err, .. } => Some(err),
+            SystemError::HakariCargoToml { err, .. } => Some(err),
+            SystemError::HakariTomlOut { err, .. } => Some(err),
+            SystemError::NonUtf8Path { err, .. } => Some(err),
+            SystemError::TargetSpec { err, .. } => Some(err),
             SystemError::Serde { err, .. } => Some(err.as_ref()),
         }
     }

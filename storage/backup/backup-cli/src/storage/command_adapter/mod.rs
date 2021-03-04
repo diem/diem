@@ -7,13 +7,16 @@ mod config;
 #[cfg(test)]
 mod tests;
 
-use crate::storage::{
-    command_adapter::{
-        command::Command,
-        config::{CommandAdapterConfig, EnvVar},
+use crate::{
+    storage::{
+        command_adapter::{
+            command::Command,
+            config::{CommandAdapterConfig, EnvVar},
+        },
+        BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef, ShellSafeName,
+        TextLine,
     },
-    BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef, ShellSafeName,
-    TextLine,
+    utils::error_notes::ErrorNotes,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -62,7 +65,11 @@ impl BackupStorage for CommandAdapter {
             )
             .spawn()?;
         let mut backup_handle = BackupHandle::new();
-        child.stdout().read_to_string(&mut backup_handle).await?;
+        child
+            .stdout()
+            .read_to_string(&mut backup_handle)
+            .await
+            .err_notes((file!(), line!(), name))?;
         child.join().await?;
         backup_handle.truncate(backup_handle.trim_end().len());
 
@@ -84,7 +91,11 @@ impl BackupStorage for CommandAdapter {
             )
             .spawn()?;
         let mut file_handle = FileHandle::new();
-        child.stdout().read_to_string(&mut file_handle).await?;
+        child
+            .stdout()
+            .read_to_string(&mut file_handle)
+            .await
+            .err_notes(backup_handle)?;
         file_handle.truncate(file_handle.trim_end().len());
         Ok((file_handle, Box::new(child.into_data_sink())))
     }
@@ -110,7 +121,11 @@ impl BackupStorage for CommandAdapter {
             )
             .spawn()?;
 
-        child.stdin().write_all(content.as_ref().as_bytes()).await?;
+        child
+            .stdin()
+            .write_all(content.as_ref().as_bytes())
+            .await
+            .err_notes(name)?;
         child.join().await?;
         Ok(())
     }
@@ -121,7 +136,11 @@ impl BackupStorage for CommandAdapter {
             .spawn()?;
 
         let mut buf = FileHandle::new();
-        child.into_data_source().read_to_string(&mut buf).await?;
+        child
+            .into_data_source()
+            .read_to_string(&mut buf)
+            .await
+            .err_notes((file!(), line!(), &buf))?;
         Ok(buf.lines().map(str::to_string).collect())
     }
 }

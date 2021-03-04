@@ -3,6 +3,10 @@ address 0x1 {
 
 module TestMarketCap {
 
+    /*
+    TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
+      drop it in which case the test should be removed.
+
     spec module {
         pragma verify = true;
     }
@@ -53,6 +57,8 @@ module TestMarketCap {
          aborts_if coin_ref.value + check.value / 2 > max_u64();
          ensures coin_ref.value == old(coin_ref.value) + check.value / 2;
      }
+
+     */
 }
 
 }

@@ -3,6 +3,7 @@
 
 use crate::{
     counters,
+    counters::NETWORK_RATE_LIMIT_METRICS,
     noise::{stream::NoiseStream, HandshakeAuthMode},
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
@@ -13,25 +14,24 @@ use crate::{
     ProtocolId,
 };
 use channel::{self, diem_channel, message_queues::QueueStyle};
-use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use diem_config::{
+    config::{PeerSet, RateLimitConfig, HANDSHAKE_VERSION},
+    network_id::NetworkContext,
+};
 use diem_crypto::x25519;
 use diem_infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
-use diem_network_address::NetworkAddress;
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
+use diem_time_service::TimeService;
+use diem_types::{chain_id::ChainId, network_address::NetworkAddress, PeerId};
 #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 use netcore::transport::memory::MemoryTransport;
 use netcore::transport::{
     tcp::{TcpSocket, TcpTransport},
     Transport,
 };
-use std::{
-    clone::Clone,
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    sync::Arc,
-};
+use std::{clone::Clone, collections::HashMap, fmt::Debug, net::IpAddr, sync::Arc};
 use tokio::runtime::Handle;
 
 // TODO:  This is the wrong logical location for this code to exist.  Determine the better location.
@@ -53,7 +53,7 @@ struct TransportContext {
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
     authentication_mode: AuthenticationMode,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    trusted_peers: Arc<RwLock<PeerSet>>,
 }
 
 impl TransportContext {
@@ -62,7 +62,7 @@ impl TransportContext {
         direct_send_protocols: Vec<ProtocolId>,
         rpc_protocols: Vec<ProtocolId>,
         authentication_mode: AuthenticationMode,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
     ) -> Self {
         Self {
             chain_id,
@@ -101,12 +101,12 @@ struct PeerManagerContext {
     connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
     connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
+    trusted_peers: Arc<RwLock<PeerSet>>,
     upstream_handlers:
         HashMap<ProtocolId, diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
     max_concurrent_network_reqs: usize,
-    max_concurrent_network_notifs: usize,
     channel_size: usize,
     inbound_connection_limit: usize,
 }
@@ -118,6 +118,7 @@ impl PeerManagerContext {
         connection_reqs_tx: diem_channel::Sender<PeerId, ConnectionRequest>,
         connection_reqs_rx: diem_channel::Receiver<PeerId, ConnectionRequest>,
 
+        trusted_peers: Arc<RwLock<PeerSet>>,
         upstream_handlers: HashMap<
             ProtocolId,
             diem_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
@@ -125,7 +126,6 @@ impl PeerManagerContext {
         connection_event_handlers: Vec<conn_notifs_channel::Sender>,
 
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         channel_size: usize,
         inbound_connection_limit: usize,
     ) -> Self {
@@ -135,11 +135,11 @@ impl PeerManagerContext {
             connection_reqs_tx,
             connection_reqs_rx,
 
+            trusted_peers,
             upstream_handlers,
             connection_event_handlers,
 
             max_concurrent_network_reqs,
-            max_concurrent_network_notifs,
             channel_size,
             inbound_connection_limit,
         }
@@ -175,6 +175,7 @@ enum State {
 
 pub struct PeerManagerBuilder {
     network_context: Arc<NetworkContext>,
+    time_service: TimeService,
     transport_context: Option<TransportContext>,
     peer_manager_context: Option<PeerManagerContext>,
     // TODO(philiphayes): better support multiple listening addrs
@@ -187,22 +188,26 @@ pub struct PeerManagerBuilder {
     state: State,
     max_frame_size: usize,
     enable_proxy_protocol: bool,
+    inbound_rate_limit_config: Option<RateLimitConfig>,
+    outbound_rate_limit_config: Option<RateLimitConfig>,
 }
 
 impl PeerManagerBuilder {
     pub fn create(
         chain_id: ChainId,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         // TODO(philiphayes): better support multiple listening addrs
         listen_address: NetworkAddress,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
         authentication_mode: AuthenticationMode,
         channel_size: usize,
         max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
         max_frame_size: usize,
         enable_proxy_protocol: bool,
         inbound_connection_limit: usize,
+        inbound_rate_limit_config: Option<RateLimitConfig>,
+        outbound_rate_limit_config: Option<RateLimitConfig>,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = diem_channel::new(
@@ -216,22 +221,23 @@ impl PeerManagerBuilder {
 
         Self {
             network_context,
+            time_service,
             transport_context: Some(TransportContext::new(
                 chain_id,
                 Vec::new(),
                 Vec::new(),
                 authentication_mode,
-                trusted_peers,
+                trusted_peers.clone(),
             )),
             peer_manager_context: Some(PeerManagerContext::new(
                 pm_reqs_tx,
                 pm_reqs_rx,
                 connection_reqs_tx,
                 connection_reqs_rx,
+                trusted_peers,
                 HashMap::new(),
                 Vec::new(),
                 max_concurrent_network_reqs,
-                max_concurrent_network_notifs,
                 channel_size,
                 inbound_connection_limit,
             )),
@@ -242,6 +248,8 @@ impl PeerManagerBuilder {
             state: State::CREATED,
             max_frame_size,
             enable_proxy_protocol,
+            inbound_rate_limit_config,
+            outbound_rate_limit_config,
         }
     }
 
@@ -269,7 +277,7 @@ impl PeerManagerBuilder {
     pub fn build(&mut self, executor: &Handle) -> &mut Self {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
-        use diem_network_address::Protocol::*;
+        use diem_types::network_address::Protocol::*;
 
         let transport_context = self
             .transport_context
@@ -296,6 +304,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         DIEM_TCP_TRANSPORT.clone(),
                         self.network_context.clone(),
+                        self.time_service.clone(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
@@ -312,6 +321,7 @@ impl PeerManagerBuilder {
                     DiemNetTransport::new(
                         MemoryTransport,
                         self.network_context.clone(),
+                        self.time_service.clone(),
                         key,
                         auth_mode,
                         HANDSHAKE_VERSION,
@@ -347,23 +357,35 @@ impl PeerManagerBuilder {
             .peer_manager_context
             .take()
             .expect("PeerManager can only be built once");
-
+        let inbound_rate_limiters = token_bucket_rate_limiter(
+            &self.network_context,
+            "inbound",
+            self.inbound_rate_limit_config,
+        );
+        let outbound_rate_limiters = token_bucket_rate_limiter(
+            &self.network_context,
+            "outbound",
+            self.outbound_rate_limit_config,
+        );
         let peer_mgr = PeerManager::new(
             executor.clone(),
+            self.time_service.clone(),
             transport,
             self.network_context.clone(),
             // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
             // (which could be empty, like in client use case)
             self.listen_address.clone(),
+            pm_context.trusted_peers,
             pm_context.pm_reqs_rx,
             pm_context.connection_reqs_rx,
             pm_context.upstream_handlers,
             pm_context.connection_event_handlers,
             pm_context.max_concurrent_network_reqs,
-            pm_context.max_concurrent_network_notifs,
             pm_context.channel_size,
             self.max_frame_size,
             pm_context.inbound_connection_limit,
+            inbound_rate_limiters,
+            outbound_rate_limiters,
         );
 
         // PeerManager constructor appends a public key to the listen_address.
@@ -441,4 +463,24 @@ impl PeerManagerBuilder {
             connection_notifs_rx,
         )
     }
+}
+
+fn token_bucket_rate_limiter(
+    network_context: &Arc<NetworkContext>,
+    label: &'static str,
+    input: Option<RateLimitConfig>,
+) -> TokenBucketRateLimiter<IpAddr> {
+    if let Some(config) = input {
+        if config.enabled {
+            return TokenBucketRateLimiter::new(
+                label,
+                network_context.to_string(),
+                config.initial_bucket_fill_percentage,
+                config.ip_byte_bucket_size,
+                config.ip_byte_bucket_rate,
+                Some(NETWORK_RATE_LIMIT_METRICS.clone()),
+            );
+        }
+    }
+    TokenBucketRateLimiter::open(label)
 }

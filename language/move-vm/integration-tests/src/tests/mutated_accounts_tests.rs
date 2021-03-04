@@ -7,13 +7,11 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::ModuleId,
+    value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_test_utils::{convert_txn_effects_to_move_changeset_and_events, InMemoryStorage};
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_test_utils::InMemoryStorage;
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -61,8 +59,7 @@ fn mutated_accounts() {
         &module_id,
         &publish,
         vec![],
-        vec![Value::transaction_argument_signer_reference(account1)],
-        TEST_ADDR,
+        serialize_values(&vec![MoveValue::Signer(account1)]),
         &mut cost_strategy,
         &context,
     )
@@ -77,8 +74,7 @@ fn mutated_accounts() {
         &module_id,
         &get,
         vec![],
-        vec![Value::address(account1)],
-        TEST_ADDR,
+        serialize_values(&vec![MoveValue::Address(account1)]),
         &mut cost_strategy,
         &context,
     )
@@ -90,16 +86,14 @@ fn mutated_accounts() {
         &module_id,
         &flip,
         vec![],
-        vec![Value::address(account1)],
-        TEST_ADDR,
+        serialize_values(&vec![MoveValue::Address(account1)]),
         &mut cost_strategy,
         &context,
     )
     .unwrap();
     assert_eq!(sess.num_mutated_accounts(&TEST_ADDR), 2);
 
-    let (changes, _) =
-        convert_txn_effects_to_move_changeset_and_events(sess.finish().unwrap()).unwrap();
+    let (changes, _) = sess.finish().unwrap();
     storage.apply(changes).unwrap();
 
     let mut sess = vm.new_session(&storage);
@@ -107,8 +101,7 @@ fn mutated_accounts() {
         &module_id,
         &get,
         vec![],
-        vec![Value::address(account1)],
-        TEST_ADDR,
+        serialize_values(&vec![MoveValue::Address(account1)]),
         &mut cost_strategy,
         &context,
     )

@@ -1,0 +1,24 @@
+============ after processor `stackless` ================
+
+[variant baseline]
+pub fun Trafo::opaque_caller($t0|x: u64): u64 {
+     var $t1: u64
+     var $t2: u64
+     var $t3: u64
+  0: $t1 := copy($t0)
+  1: $t2 := Trafo::opaque_decr($t1)
+  2: $t3 := Trafo::opaque_decr($t2)
+  3: return $t3
+}
+
+
+[variant baseline]
+pub fun Trafo::opaque_decr($t0|x: u64): u64 {
+     var $t1: u64
+     var $t2: u64
+     var $t3: u64
+  0: $t1 := copy($t0)
+  1: $t2 := 1
+  2: $t3 := -($t1, $t2)
+  3: return $t3
+}

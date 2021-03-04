@@ -4,9 +4,11 @@
 use crate::{Metadata, Schema};
 use std::fmt;
 
+/// An individual structured logging event from a log line.  Includes the
 #[derive(Debug)]
 pub struct Event<'a> {
     metadata: &'a Metadata,
+    /// The format message given from the log macros
     message: Option<fmt::Arguments<'a>>,
     keys_and_values: KeysAndValues<'a>,
 }
@@ -46,6 +48,7 @@ impl<'a> Event<'a> {
     }
 }
 
+/// Keys and values given from the log `a = b` macros
 #[derive(Clone)]
 struct KeysAndValues<'a>(&'a [&'a dyn Schema]);
 

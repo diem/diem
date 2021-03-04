@@ -117,7 +117,7 @@ using namespace diem_types;
     }
 
     fn output_builder_declaration(&mut self, abi: &ScriptABI) -> Result<()> {
-        write!(self.out, "\n{}", Self::quote_doc(abi.doc()))?;
+        self.output_doc(abi.doc())?;
         writeln!(
             self.out,
             "Script encode_{}_script({});",
@@ -134,7 +134,7 @@ using namespace diem_types;
 
     fn output_builder_definition(&mut self, abi: &ScriptABI) -> Result<()> {
         if self.inlined_definitions {
-            write!(self.out, "\n{}", Self::quote_doc(abi.doc()))?;
+            self.output_doc(abi.doc())?;
         }
         writeln!(
             self.out,
@@ -167,9 +167,10 @@ using namespace diem_types;
         Ok(())
     }
 
-    fn quote_doc(doc: &str) -> String {
+    fn output_doc(&mut self, doc: &str) -> Result<()> {
         let doc = crate::common::prepare_doc_string(doc);
-        textwrap::indent(&doc, "/// ").replace("\n\n", "\n///\n")
+        let text = textwrap::indent(&doc, "/// ").replace("\n\n", "\n///\n");
+        write!(self.out, "\n{}\n", text)
     }
 
     fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {

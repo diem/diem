@@ -1,0 +1,15 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Test::test($t0|_r: Test::R) {
+  0: return ()
+}
+
+============ after pipeline `data_invariant_instrumentation` ================
+
+[variant verification]
+pub fun Test::test($t0|_r: Test::R) {
+  0: assume And(WellFormed($t0), forall $elem: select Test::R.s($t0): forall $elem: $elem: Gt(select Test::S.y($elem), 0))
+  1: label L1
+  2: return ()
+}

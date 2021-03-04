@@ -29,9 +29,8 @@ use diem_global_constants::{
     OPERATOR_KEY, OWNER_KEY, SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS,
     VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
-use diem_network_address::NetworkAddress;
 use diem_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
-use diem_types::{chain_id::ChainId, waypoint::Waypoint};
+use diem_types::{chain_id::ChainId, network_address::NetworkAddress, waypoint::Waypoint};
 use std::str::FromStr;
 
 const VAULT_TOKEN: &str = "root";
@@ -370,6 +369,8 @@ impl ClusterBuilder {
                 None,
                 None,
                 true,
+                None,
+                None,
             ));
             if validator_index == 0 {
                 vault_storage.create_key(DIEM_ROOT_KEY).map_err(|e| {

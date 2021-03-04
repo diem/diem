@@ -21,6 +21,7 @@ mod diff_summary;
 mod fix;
 mod fmt;
 mod generate_summaries;
+mod generate_workspace_hack;
 mod installer;
 mod lint;
 mod playground;
@@ -81,6 +82,9 @@ enum Command {
     #[structopt(name = "diff-summary")]
     /// Diff build summaries for important subsets
     DiffSummary(diff_summary::Args),
+    #[structopt(name = "generate-workspace-hack")]
+    /// Update workspace-hack contents
+    GenerateWorkspaceHack(generate_workspace_hack::Args),
 }
 
 fn main() -> Result<()> {
@@ -122,5 +126,6 @@ fn main() -> Result<()> {
         Command::Playground(args) => playground::run(args, xctx),
         Command::GenerateSummaries(args) => generate_summaries::run(args, xctx),
         Command::DiffSummary(args) => diff_summary::run(args, xctx),
+        Command::GenerateWorkspaceHack(args) => generate_workspace_hack::run(args, xctx),
     }
 }

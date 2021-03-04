@@ -1,0 +1,34 @@
+module N {
+    foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+    public(friend) foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module N {
+    import {{default}}.M;
+    foo() {
+        M.foo();
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    public(friend) foo() {
+        return;
+    }
+}
+
+// check: BACKWARD_INCOMPATIBLE_MODULE_UPDATE

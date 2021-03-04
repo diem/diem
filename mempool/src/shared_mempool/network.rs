@@ -16,29 +16,27 @@ use network::{
 };
 use serde::{Deserialize, Serialize};
 
-/// Container for exchanging transactions with other Mempools
+/// Container for exchanging transactions with other Mempools.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum MempoolSyncMsg {
-    /// broadcast request issued by the sender
+    /// Broadcast request issued by the sender.
     BroadcastTransactionsRequest {
-        /// unique id of sync request. Can be used by sender for rebroadcast analysis
+        /// Unique id of sync request. Can be used by sender for rebroadcast analysis
         request_id: Vec<u8>,
-        /// shared transactions in this batch
         transactions: Vec<SignedTransaction>,
     },
-    /// broadcast ack issued by the receiver
+    /// Broadcast ack issued by the receiver.
     BroadcastTransactionsResponse {
-        /// unique id of received broadcast request
         request_id: Vec<u8>,
-        /// retry signal from recipient if there are txns in corresponding broadcast
-        /// that were rejected from mempool but may succeed on resend
+        /// Retry signal from recipient if there are txns in corresponding broadcast
+        /// that were rejected from mempool but may succeed on resend.
         retry: bool,
-        /// backpressure signal from recipient when it is overwhelmed (e.g. mempool is full)
+        /// A backpressure signal from the recipient when it is overwhelmed (e.g., mempool is full).
         backoff: bool,
     },
 }
 
-/// Protocol id for mempool direct-send calls
+/// Protocol id for mempool direct-send calls.
 pub const MEMPOOL_DIRECT_SEND_PROTOCOL: &[u8] = b"/diem/direct-send/0.1.0/mempool/0.1.0";
 
 /// The interface from Network to Mempool layer.
@@ -63,7 +61,7 @@ pub struct MempoolNetworkSender {
 }
 
 /// Create a new Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId and a
-/// Receiver (Events) that explicitly returns only said ProtocolId.
+/// Receiver (Events) that explicitly returns only said ProtocolId..
 pub fn network_endpoint_config(
     max_broadcasts_per_peer: usize,
 ) -> (
@@ -83,7 +81,6 @@ pub fn network_endpoint_config(
 }
 
 impl NewNetworkSender for MempoolNetworkSender {
-    /// Returns a Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId.
     fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
@@ -95,8 +92,6 @@ impl NewNetworkSender for MempoolNetworkSender {
 }
 
 impl MempoolNetworkSender {
-    /// Send a single message to the destination peer using the `MEMPOOL_DIRECT_SEND_PROTOCOL`
-    /// ProtocolId.
     pub fn send_to(
         &mut self,
         recipient: PeerId,

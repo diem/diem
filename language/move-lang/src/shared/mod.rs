@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use fallible::copy_from_slice::copy_slice_to_vec;
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
@@ -13,6 +14,7 @@ use std::{
 pub mod ast_debug;
 pub mod remembering_unique_map;
 pub mod unique_map;
+pub mod unique_set;
 
 //**************************************************************************************************
 // Address
@@ -118,7 +120,7 @@ impl TryFrom<&[u8]> for Address {
             Err(format!("The Address {:?} is of invalid length", bytes))
         } else {
             let mut addr = [0u8; ADDRESS_LENGTH];
-            addr.copy_from_slice(bytes);
+            copy_slice_to_vec(bytes, &mut addr).map_err(|e| format!("{}", e))?;
             Ok(Address(addr))
         }
     }
@@ -132,8 +134,8 @@ pub trait TName: Eq + Ord + Clone {
     type Key: Ord + Clone;
     type Loc: Copy;
     fn drop_loc(self) -> (Self::Loc, Self::Key);
-    fn clone_drop_loc(&self) -> (Self::Loc, Self::Key);
     fn add_loc(loc: Self::Loc, key: Self::Key) -> Self;
+    fn borrow(&self) -> (&Self::Loc, &Self::Key);
 }
 
 pub trait Identifier {
@@ -152,12 +154,12 @@ impl TName for Name {
         (self.loc, self.value)
     }
 
-    fn clone_drop_loc(&self) -> (Loc, String) {
-        (self.loc, self.value.clone())
-    }
-
     fn add_loc(loc: Loc, key: String) -> Self {
         sp(loc, key)
+    }
+
+    fn borrow(&self) -> (&Loc, &String) {
+        (&self.loc, &self.value)
     }
 }
 

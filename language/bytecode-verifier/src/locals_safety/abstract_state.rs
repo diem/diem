@@ -8,7 +8,7 @@ use mirai_annotations::{checked_precondition, checked_verify};
 use move_core_types::vm_status::StatusCode;
 use vm::{
     errors::PartialVMError,
-    file_format::{CodeOffset, FunctionDefinitionIndex, Kind, LocalIndex},
+    file_format::{AbilitySet, CodeOffset, FunctionDefinitionIndex, LocalIndex},
 };
 
 /// LocalState represents the current assignment state of a local
@@ -16,9 +16,9 @@ use vm::{
 pub(crate) enum LocalState {
     /// The local does not have a value
     Unavailable,
-    /// The local was assigned a resource in at least one control flow path, but was `Unavailable`
-    // in at least one other path
-    MaybeResourceful,
+    /// The local was assigned a non-drop value in at least one control flow path,
+    // but was `Unavailable` in at least one other path
+    MaybeAvailable,
     /// The local has a value
     Available,
 }
@@ -28,7 +28,7 @@ use LocalState::*;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AbstractState {
     current_function: Option<FunctionDefinitionIndex>,
-    local_kinds: Vec<Kind>,
+    all_local_abilities: Vec<AbilitySet>,
     local_states: Vec<LocalState>,
 }
 
@@ -41,27 +41,27 @@ impl AbstractState {
             .map(|i| if i < num_args { Available } else { Unavailable })
             .collect();
 
-        let local_kinds = function_view
+        let all_local_abilities = function_view
             .parameters()
             .0
             .iter()
             .chain(function_view.locals().0.iter())
-            .map(|st| resolver.kind(st, &function_view.type_parameters()))
+            .map(|st| resolver.abilities(st, &function_view.type_parameters()))
             .collect();
 
         Self {
             current_function: function_view.index(),
             local_states,
-            local_kinds,
+            all_local_abilities,
         }
     }
 
-    pub fn local_kind(&self, idx: LocalIndex) -> Kind {
-        self.local_kinds[idx as usize]
+    pub fn local_abilities(&self, idx: LocalIndex) -> AbilitySet {
+        self.all_local_abilities[idx as usize]
     }
 
-    pub fn local_kinds(&self) -> &Vec<Kind> {
-        &self.local_kinds
+    pub fn all_local_abilities(&self) -> &Vec<AbilitySet> {
+        &self.all_local_abilities
     }
 
     pub fn local_state(&self, idx: LocalIndex) -> LocalState {
@@ -90,33 +90,27 @@ impl AbstractState {
 
     fn join_(&self, other: &Self) -> Self {
         checked_precondition!(self.current_function == other.current_function);
-        checked_precondition!(self.local_kinds.len() == other.local_kinds.len());
+        checked_precondition!(self.all_local_abilities.len() == other.all_local_abilities.len());
         checked_precondition!(self.local_states.len() == other.local_states.len());
         let current_function = self.current_function;
-        let local_kinds = self.local_kinds.clone();
+        let all_local_abilities = self.all_local_abilities.clone();
         let local_states = self
             .local_states
             .iter()
             .zip(&other.local_states)
-            .enumerate()
-            .map(|(idx, (self_state, other_state))| {
+            .map(|(self_state, other_state)| {
                 use LocalState::*;
                 match (self_state, other_state) {
                     // Unavailable on both sides, nothing to add
                     (Unavailable, Unavailable) => Unavailable,
 
-                    (MaybeResourceful, Unavailable)
-                    | (Unavailable, MaybeResourceful)
-                    | (MaybeResourceful, MaybeResourceful)
-                    | (MaybeResourceful, Available)
-                    | (Available, MaybeResourceful) => MaybeResourceful,
-
-                    (Unavailable, Available) | (Available, Unavailable) => {
-                        match self.local_kinds[idx] {
-                            Kind::All | Kind::Resource => MaybeResourceful,
-                            Kind::Copyable => Unavailable,
-                        }
-                    }
+                    (MaybeAvailable, Unavailable)
+                    | (Unavailable, MaybeAvailable)
+                    | (MaybeAvailable, MaybeAvailable)
+                    | (MaybeAvailable, Available)
+                    | (Available, MaybeAvailable)
+                    | (Unavailable, Available)
+                    | (Available, Unavailable) => MaybeAvailable,
 
                     (Available, Available) => Available,
                 }
@@ -126,7 +120,7 @@ impl AbstractState {
         Self {
             current_function,
             local_states,
-            local_kinds,
+            all_local_abilities,
         }
     }
 }

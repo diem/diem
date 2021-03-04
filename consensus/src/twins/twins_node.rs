@@ -89,13 +89,12 @@ impl SMRNode {
         let payload = OnChainConfigPayload::new(1, Arc::new(configs));
         reconfig_sender.push((), payload).unwrap();
 
-        let runtime = Builder::new()
+        let runtime = Builder::new_multi_thread()
             .thread_name(format!(
                 "{}-node-{}",
                 twin_id.id,
                 std::thread::current().name().unwrap_or("")
             ))
-            .threaded_scheduler()
             .enable_all()
             .build()
             .unwrap();

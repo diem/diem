@@ -10,19 +10,17 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.37"
-hex = "0.4.2"
-serde = { version = "1.0.117", default-features = false }
-serde_json = "1.0.61"
+anyhow = "1.0.38"
+hex = "0.4.3"
+serde = { version = "1.0.123", default-features = false }
+serde_json = "1.0.64"
 prost = "0.7.0"
 
-compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 bcs = "0.1.2"
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
-move-explain = { path = "../../language/tools/move-explain", version = "0.1.0" }
+diem-types = { path = "../../types" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../../language/move-core/types" }
 
 [build-dependencies]
 prost-build = "0.7.0"

@@ -51,8 +51,8 @@ You can configure a public FullNode in two ways: using the Diem Core source code
 
           ```
           	seed_addrs:
-              4223dd0eeb0b0d78720a8990700955e1:
-             "/dns4/fn.testnet.libra.org/tcp/6182/ln-noise-ik/b6fd31624af370085cc3f872437bb4d9384b31a11b33b9591ddfaaed5a28b613/ln-handshake/0"
+                D4C4FB4956D899E55289083F45AC5D84:
+                    - "/dns4/fn.testnet.diem.com/tcp/6182/ln-noise-ik/d29d01bed8ab6c30921b327823f7e92c63f8371456fb110256e8c0e8911f4938/ln-handshake/0"
           ```
 
        * Reading through the config and making any other desired changes. You can see what configurations the `public_full_node.yaml` file should have by checking the following file as an example: `docker/compose/public_full_node/public_full_node.yaml`

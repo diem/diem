@@ -9,4 +9,4 @@ main(account: &signer) {
     return;
 }
 
-// check: POP_RESOURCE_ERROR
+// check: POP_WITHOUT_DROP_ABILITY

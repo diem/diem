@@ -327,8 +327,9 @@ impl LedgerStore {
         // write txn_info
         (first_version..first_version + txn_infos.len() as u64)
             .zip_eq(txn_infos.iter())
-            .map(|(version, txn_info)| cs.batch.put::<TransactionInfoSchema>(&version, txn_info))
-            .collect::<Result<()>>()?;
+            .try_for_each(|(version, txn_info)| {
+                cs.batch.put::<TransactionInfoSchema>(&version, txn_info)
+            })?;
 
         // write hash of txn_info into the accumulator
         let txn_hashes: Vec<HashValue> = txn_infos.iter().map(TransactionInfo::hash).collect();
@@ -339,8 +340,7 @@ impl LedgerStore {
         )?;
         writes
             .iter()
-            .map(|(pos, hash)| cs.batch.put::<TransactionAccumulatorSchema>(pos, hash))
-            .collect::<Result<()>>()?;
+            .try_for_each(|(pos, hash)| cs.batch.put::<TransactionAccumulatorSchema>(pos, hash))?;
         Ok(root_hash)
     }
 

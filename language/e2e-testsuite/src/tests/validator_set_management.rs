@@ -1,19 +1,23 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use compiled_stdlib::{self, StdLibOptions};
 use diem_types::{
-    on_chain_config::new_epoch_event_key,
-    transaction::{TransactionStatus, WriteSetPayload},
+    on_chain_config::{new_epoch_event_key, VMPublishingOption},
+    transaction::{TransactionOutput, TransactionStatus, WriteSetPayload},
     vm_status::KeptVMStatus,
 };
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor};
 use transaction_builder::*;
 
-#[test]
-fn validator_add() {
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.set_golden_file(current_function_name!());
+fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
+    assert!(matches!(
+        output.status().status(),
+        Ok(KeptVMStatus::MoveAbort(_, code)) if code == error_code
+    ));
+}
 
+fn try_add_validator(executor: &mut FakeExecutor) -> TransactionOutput {
     let diem_root_account = Account::new_diem_root();
     let validator_account = executor.create_raw_account();
     let operator_account = executor.create_raw_account();
@@ -73,7 +77,7 @@ fn validator_add() {
             .sign(),
     );
 
-    let output = executor.execute_and_apply(
+    executor.execute_transaction(
         diem_root_account
             .transaction()
             .script(encode_add_validator_and_reconfigure_script(
@@ -83,7 +87,16 @@ fn validator_add() {
             ))
             .sequence_number(3)
             .sign(),
-    );
+    )
+}
+
+#[test]
+fn validator_add() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    executor.set_golden_file(current_function_name!());
+
+    let output = try_add_validator(&mut executor);
+    executor.apply_write_set(output.write_set());
 
     assert_eq!(
         output.status(),
@@ -93,6 +106,23 @@ fn validator_add() {
         .events()
         .iter()
         .any(|e| e.key() == &new_epoch_event_key()));
+}
+
+#[test]
+fn validator_add_max_number() {
+    let mut executor = FakeExecutor::custom_genesis(
+        compiled_stdlib::stdlib_modules(StdLibOptions::Compiled)
+            .bytes_opt
+            .unwrap(),
+        Some(256),
+        VMPublishingOption::open(),
+    );
+
+    executor.set_golden_file(current_function_name!());
+
+    let output = try_add_validator(&mut executor);
+
+    assert_aborted_with(output, 1800);
 }
 
 #[test]

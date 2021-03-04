@@ -13,6 +13,7 @@ use diem_jellyfish_merkle::test_helper::{
     test_get_with_proof_with_distinct_last_nibble,
 };
 use diem_proptest_helpers::ValueGenerator;
+use diem_types::account_state_blob::AccountStateBlob;
 use diemdb::{
     schema::fuzzing::fuzz_decode, test_helper::arb_blocks_to_commit, test_save_blocks_impl,
 };
@@ -67,13 +68,16 @@ impl FuzzTargetImpl for JellyfishGetWithProof {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(arb_existent_kvs_and_nonexistent_keys(
-            1000, 100,
-        )))
+        Some(corpus_from_strategy(
+            arb_existent_kvs_and_nonexistent_keys::<AccountStateBlob>(1000, 100),
+        ))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let input = fuzz_data_to_value(data, arb_existent_kvs_and_nonexistent_keys(1000, 100));
+        let input = fuzz_data_to_value(
+            data,
+            arb_existent_kvs_and_nonexistent_keys::<AccountStateBlob>(1000, 100),
+        );
         test_get_with_proof(input);
     }
 }
@@ -87,11 +91,16 @@ impl FuzzTargetImpl for JellyfishGetWithProofWithDistinctLastNibble {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(arb_kv_pair_with_distinct_last_nibble()))
+        Some(corpus_from_strategy(
+            arb_kv_pair_with_distinct_last_nibble::<AccountStateBlob>(),
+        ))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let input = fuzz_data_to_value(data, arb_kv_pair_with_distinct_last_nibble());
+        let input = fuzz_data_to_value(
+            data,
+            arb_kv_pair_with_distinct_last_nibble::<AccountStateBlob>(),
+        );
         test_get_with_proof_with_distinct_last_nibble(input);
     }
 }
@@ -105,11 +114,13 @@ impl FuzzTargetImpl for JellyfishGetRangeProof {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(arb_tree_with_index(1000)))
+        Some(corpus_from_strategy(
+            arb_tree_with_index::<AccountStateBlob>(1000),
+        ))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let input = fuzz_data_to_value(data, arb_tree_with_index(1000));
+        let input = fuzz_data_to_value(data, arb_tree_with_index::<AccountStateBlob>(1000));
         test_get_range_proof(input);
     }
 }

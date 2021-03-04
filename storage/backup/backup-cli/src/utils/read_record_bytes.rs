@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::utils::error_notes::ErrorNotes;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
@@ -20,7 +21,7 @@ impl<R: AsyncRead + Send + Unpin> ReadRecordBytes for R {
         let n_expected = buf.capacity();
 
         loop {
-            let n_read = self.read_buf(buf).await?;
+            let n_read = self.read_buf(buf).await.err_notes("")?;
             let n_read_total = buf.len();
             if n_read_total == n_expected {
                 return Ok(());

@@ -22,6 +22,7 @@ pub fn compile_units(addr: AccountAddress, s: &str) -> Result<Vec<CompiledUnit>>
         &[],
         Some(Address::new(addr.to_u8())),
         None,
+        false,
     )?;
 
     dir.close()?;
@@ -44,6 +45,7 @@ pub fn compile_modules_in_file(addr: AccountAddress, path: &Path) -> Result<Vec<
         &[],
         Some(Address::new(addr.to_u8())),
         None,
+        false,
     )?;
 
     expect_modules(units).collect()

@@ -3,18 +3,23 @@
 
 use serde_json::json;
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::shim::tmp_new_transaction_script_builders;
 use diem_crypto::hash::CryptoHash;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::xus_tag,
+    contract_event::EventWithProof,
+    epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{ChangeSet, Transaction, TransactionPayload, WriteSetPayload},
+    proof::TransactionAccumulatorRangeProof,
+    transaction::{ChangeSet, Transaction, TransactionInfo, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
-use std::ops::Deref;
+use std::{convert::TryInto, ops::Deref};
 use transaction_builder_generated::stdlib;
+
+use diem_json_rpc_types::views::EventView;
 
 mod node;
 mod testing;
@@ -182,11 +187,11 @@ fn create_test_cases() -> Vec<Test> {
                         "authentication_key": null,
                         "balances": [
                             {
-                                "amount": 0 as u64,
+                                "amount": 0_u64,
                                 "currency": "XDX"
                             },
                             {
-                                "amount": 9223370036854775807 as u64,
+                                "amount": 9223370036854775807_u64,
                                 "currency": "XUS"
                             },
                         ],
@@ -198,14 +203,9 @@ fn create_test_cases() -> Vec<Test> {
                             "type": "designated_dealer",
                             "base_url": "",
                             "compliance_key": "",
-                            "expiration_time": 18446744073709551615 as u64,
+                            "expiration_time": 18446744073709551615_u64,
                             "human_name": "moneybags",
-                            "preburn_balances": [
-                                {
-                                    "amount": 0,
-                                    "currency": "XUS"
-                                },
-                            ],
+                            "preburn_balances": [],
                             "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
                             "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
                             "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
@@ -228,7 +228,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 997000000000 as u64, "currency": "XUS"}],
+                        "balances": [{"amount": 997000000000_u64, "currency": "XUS"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -238,7 +238,7 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": format!("0100000000000000{}", address),
                             "compliance_key": "",
                             "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                            "expiration_time": 18446744073709551615 as u64,
+                            "expiration_time": 18446744073709551615_u64,
                             "human_name": "Novi 0",
                             "num_children": 1,
                             "type": "parent_vasp"
@@ -262,7 +262,7 @@ fn create_test_cases() -> Vec<Test> {
                     json!({
                         "address": address,
                         "authentication_key": account.auth_key().to_string(),
-                        "balances": [{"amount": 3000000000 as u64, "currency": "XUS"}],
+                        "balances": [{"amount": 3000000000_u64, "currency": "XUS"}],
                         "delegated_key_rotation_capability": false,
                         "delegated_withdrawal_capability": false,
                         "is_frozen": false,
@@ -317,7 +317,7 @@ fn create_test_cases() -> Vec<Test> {
                         "events": [
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "XUS"},
+                                    "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
                                     "receiver": format!("{:#x}", &receiver.address),
                                     "sender": format!("{:#x}", &sender.address),
@@ -329,7 +329,7 @@ fn create_test_cases() -> Vec<Test> {
                             },
                             {
                                 "data": {
-                                    "amount": {"amount": 200000 as u64, "currency": "XUS"},
+                                    "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
                                     "receiver": format!("{:#x}", &receiver.address),
                                     "sender": format!("{:#x}", &sender.address),
@@ -416,11 +416,20 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
+            name: "re-submit transaction won't fail",
+            run: |env: &mut testing::Env| {
+                let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 200);
+                env.submit(&txn1);
+                env.submit(&txn1);
+                env.wait_for_txn(&txn1);
+            },
+        },
+        Test {
             name: "invalid transaction submitted: mempool validation error",
             run: |env: &mut testing::Env| {
                 env.allow_execution_failures(|env: &mut testing::Env| {
                     let txn1 = env.transfer_coins_txn((0, 0), (1, 0), 200);
-                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 200);
+                    let txn2 = env.transfer_coins_txn((0, 0), (1, 0), 300);
                     env.submit(&txn1);
                     let resp = env.submit(&txn2);
                     assert_eq!(
@@ -523,7 +532,9 @@ fn create_test_cases() -> Vec<Test> {
                     result["transaction"]
                 );
 
-                let script = stdlib::encode_burn_script(xus_tag(), 0, env.dd.address);
+                let script = tmp_new_transaction_script_builders::encode_burn_with_amount_script(
+                    xus_tag(), 0, env.dd.address, 100
+                );
                 let burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -550,10 +561,11 @@ fn create_test_cases() -> Vec<Test> {
                         ],
                         "arguments": [
                             "{U64: 0}",
-                            "{ADDRESS: 000000000000000000000000000000DD}"
+                            "{ADDRESS: 000000000000000000000000000000DD}",
+                            "{U64: 100}",
                         ],
                         "code": hex::encode(script.code()),
-                        "type": "burn"
+                        "type": "burn_with_amount"
                     }),
                     "{}",
                     result["transaction"]
@@ -567,7 +579,7 @@ fn create_test_cases() -> Vec<Test> {
                     env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100));
                 env.submit_and_wait(txn);
 
-                let script = stdlib::encode_cancel_burn_script(xus_tag(), env.dd.address);
+                let script = tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script(xus_tag(), env.dd.address, 100);
                 let cancel_burn_txn = env.create_txn(&env.tc, script.clone());
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
@@ -608,9 +620,10 @@ fn create_test_cases() -> Vec<Test> {
                         ],
                         "arguments": [
                             "{ADDRESS: 000000000000000000000000000000DD}",
+                            "{U64: 100}",
                         ],
                         "code": hex::encode(script.code()),
-                        "type": "cancel_burn"
+                        "type": "cancel_burn_with_amount"
                     }),
                     "{}",
                     result["transaction"]
@@ -906,19 +919,134 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "block metadata returns script_hash_allow_list",
+            name: "get_transactions_with_proofs",
             run: |env: &mut testing::Env| {
-                let hash = StdlibScript::AddCurrencyToAccount.compiled_bytes().hash();
-                let txn = env.create_txn(
-                    &env.root,
-                    stdlib::encode_add_to_script_allow_list_script(hash.to_vec(), 0),
-                );
-                env.submit_and_wait(txn);
-
                 let resp = env.send("get_metadata", json!([]));
-                let metadata = resp.result.unwrap();
-                assert_eq!(metadata["script_hash_allow_list"], json!([hash.to_hex()]));
-                assert_eq!(metadata["module_publishing_allowed"], true);
+
+                let limit = 10;
+                assert!(resp.diem_ledger_version > limit);
+                // We test 2 cases:
+                //      1. base_version + limit > resp.diem_ledger_version
+                //      2. base_version + limit < resp.diem_ledger_version
+                for base_version in &[resp.diem_ledger_version, 0] {
+                   // We use a batched call to ensure we get an answer using the same latest server ledger_info for both
+                    let responses = env.send_request(json!([
+                        {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
+                        {"jsonrpc": "2.0", "method": "get_transactions_with_proofs", "params": json!([*base_version, limit]), "id": 2}
+                    ]));
+
+                    let f:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");
+                    let data = &f.iter().find(|g| g["id"] == 2).unwrap()["result"];
+                    let proofs = data["proofs"].as_object().unwrap();
+
+                    // We want to verify the signatures of the LedgerInfo that will be returned by the
+                    // get_transactions_with_proofs call to be sure it's valid, but
+                    // since we don't have a local state with the set of validators unlike an actual client,
+                    // we need to get the validator set from the batched get_state_proof call.
+                    let ledger_info_view = &f.iter().find(|g| g["id"] == 1).unwrap()["result"];
+                    let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
+                    let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+                    let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
+                    assert!(!some_li.is_empty());
+                    // We use the last one (but the validator set does not change in the tests and
+                    // in practice the epoch change proofs should be verified).
+                    let validator_set = &some_li.last().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
+
+                    // The actual proofs
+                    let raw_hex_li = proofs["ledger_info_to_transaction_infos_proof"].as_str().unwrap();
+                    let li_to_tip:TransactionAccumulatorRangeProof = bcs::from_bytes(&hex::decode(&raw_hex_li).unwrap()).unwrap();
+                    // The txs for which we got the proofs
+                    let raw_hex_txs = proofs["transaction_infos"].as_str().unwrap();
+                    let txs_infos:Vec<TransactionInfo> = bcs::from_bytes(&hex::decode(&raw_hex_txs).unwrap()).unwrap();
+                    let hashes: Vec<_> = txs_infos
+                    .iter()
+                    .map(CryptoHash::hash)
+                    .collect();
+
+                    // We make sure we have between 1 and 10 txs
+                    if hashes.len() > 10 || hashes.is_empty() {
+                        panic!("Unexpected hash len returned at {} by get_transactions_with_proofs: {}", base_version, hashes.len());
+                    }
+
+                    // We must check the transactions we got correspond to the hashes in the proofs
+                    let raw_blobs = data["serialized_transactions"].as_array().unwrap();
+                    assert!(!raw_blobs.is_empty());
+                    let actual_txs:Vec<Transaction>= raw_blobs.iter().map(|tx| {
+                        bcs::from_bytes(&hex::decode(&tx.as_str().unwrap()).unwrap()).unwrap()
+                    }).collect();
+                    assert!(!actual_txs.is_empty());
+                    assert_eq!(txs_infos.len(), actual_txs.len());
+                    for (index, tx) in actual_txs.iter().enumerate() {
+                        // Notice we need to actually hash the transaction to be sure its hash is correct
+                        assert_eq!(tx.hash(), txs_infos[index].transaction_hash());
+                    }
+
+                    // We compare our results with the non-veryfing API for the test
+                    let resp_tx = env.send("get_transactions", json!([*base_version, txs_infos.len(), false]));
+                    let no_proof_txns = resp_tx.result.unwrap();
+                    assert!(!no_proof_txns.as_array().unwrap().is_empty());
+                    assert_eq!(no_proof_txns.as_array().unwrap().len(), actual_txs.len());
+                    for (index, tx) in no_proof_txns.as_array().unwrap().iter().enumerate() {
+                        assert_eq!(tx["hash"].as_str().unwrap(), actual_txs[index].hash().to_hex());
+                    }
+
+                    // We need to get the details required to verify the proof from the batched get_state_proof call
+                    let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
+                    let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
+                    let expected_hash = li.ledger_info().transaction_accumulator_hash();
+
+                    // and we verify the signature of the provided ledger info that provided the accumulator hash
+                    assert!(li.verify_signatures(&validator_set).is_ok());
+
+                    // and we eventually verify the proofs for the transactions
+                    assert!(li_to_tip.verify(expected_hash, Some(*base_version), &hashes).is_ok());
+                }
+            },
+        },
+        Test {
+            name: "get_events_with_proofs",
+            run: |env: &mut testing::Env| {
+                let responses = env.send_request(json!([
+                    {"jsonrpc": "2.0", "method": "get_state_proof", "params": json!([0]), "id": 1},
+                    {"jsonrpc": "2.0", "method": "get_events_with_proofs", "params": json!(["00000000000000000000000000000000000000000a550c18", 0, 3]), "id": 2}
+                ]));
+
+                let resps:Vec<serde_json::Value> = serde_json::from_value(responses).expect("should be valid serde_json::Value");
+
+                // we need te get the current ledger_info in order to verify the events
+                let ledger_info_view = &resps.iter().find(|g| g["id"] == 1).unwrap()["result"];
+                let li_raw = ledger_info_view["ledger_info_with_signatures"].as_str().unwrap();
+                let li:LedgerInfoWithSignatures = bcs::from_bytes(&hex::decode(&li_raw).unwrap()).unwrap();
+                // We want to verify the signatures of the LedgerInfo to be sure it's valid, but
+                // since we don't have a local state with the set of validators unlike an actual client,
+                // we need to get the validator set from the batched get_state_proof call.
+                let ep_cp = ledger_info_view["epoch_change_proof"].as_str().unwrap();
+                let epoch_proofs:EpochChangeProof = bcs::from_bytes(&hex::decode(&ep_cp).unwrap()).unwrap();
+                let some_li:Vec<_> = epoch_proofs.ledger_info_with_sigs;
+                assert!(!some_li.is_empty());
+                // We use the last one (but the validator set does not change in the tests and
+                // in practice the epoch change proofs should be verified).
+                let validator_set = &some_li.last().unwrap().ledger_info().next_epoch_state().unwrap().verifier;
+                // And we verify the signature
+                assert!(li.verify_signatures(&validator_set).is_ok());
+
+                // We now need to verify the events using this verified ledger_info:
+                let ledger_info = li.ledger_info();
+                let data = &resps.iter().find(|g| g["id"] == 2).unwrap()["result"].as_array().unwrap();
+                let mut events:Vec<EventView> = vec![];
+                for d in  data.iter() {
+                    let bcs_data = d["event_with_proof"].as_str().unwrap();
+                    let event:EventWithProof = bcs::from_bytes(&hex::decode(&bcs_data).unwrap()).unwrap();
+                    let hash = event.event.hash();
+
+                    // We verify the proof of the event
+                    assert!(event.proof.verify(ledger_info, hash, event.transaction_version, event.event_index).is_ok());
+
+                    // We can now use our verified events
+                    events.push((event.transaction_version, event.event).try_into().unwrap());
+                }
+
+                assert_eq!(events.len(),3);
             },
         },
         // no test after this one, as your scripts may not in allow list.

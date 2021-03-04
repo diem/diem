@@ -1,14 +1,14 @@
 main(s: &signer, s2: &signer) {
     return;
 }
-// check: TYPE_MISMATCH
+// check: NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH
 
 //! new-transaction
 //! args: 0
 main(s: &signer, s2: &signer,  u: u64,) {
     return;
 }
-// check: TYPE_MISMATCH
+// check: NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH
 
 //! new-transaction
 //! args: 0

@@ -1,6 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use diem_logger::json_log::JsonLogEntry;

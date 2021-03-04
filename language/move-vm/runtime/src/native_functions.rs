@@ -170,8 +170,4 @@ impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
             Err(_) => Ok(None),
         }
     }
-
-    fn is_resource(&self, ty: &Type) -> bool {
-        self.resolver.is_resource(ty)
-    }
 }

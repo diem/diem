@@ -1,19 +1,26 @@
-#while using circle we'll use circle's base image.
-FROM archlinux:20200908@sha256:7d1c7dd23c246895a34d6e8aa31eb29be573de2ce39b3e88315068e6d6cb5337 AS setup_ci_arch
+# while using circle we'll use circle's base image.
+FROM archlinux:base-devel-20210228.0.16308@sha256:a36d2608139cbbb7ec7c6267927371f2ca8eec9616ebe85a10157030f76fbd73 AS setup_ci_arch
 
 WORKDIR /diem
 COPY rust-toolchain /diem/rust-toolchain
 COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
-#Batch mode and all operations tooling
+# WORKAROUND for glibc 2.33 and old Docker
+# See https://github.com/actions/virtual-environments/issues/2658
+# Thanks to https://github.com/lxqt/lxqt-panel/pull/1562
+RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
+    curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
+    bsdtar -C / -xvf "$patched_glibc"
+
+# Batch mode and all operations tooling
 RUN scripts/dev_setup.sh -t -o -y -b -p && pacman -Scc --noconfirm
 ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
 
 FROM setup_ci_arch as tested_ci_arch
 
-#Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
-#Test that all commands we need are installed and on the PATH
+# Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
+# Test that all commands we need are installed and on the PATH
 RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v hadolint)" ] \
     && [ -x "$(command -v vault)" ] \
@@ -30,7 +37,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
 
-#should be a no-op
+# should be a no-op
 RUN scripts/dev_setup.sh -b -p
 
 FROM setup_ci_arch as build_environment_arch

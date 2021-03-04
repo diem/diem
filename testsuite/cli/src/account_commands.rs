@@ -172,8 +172,6 @@ impl Command for AccountCommandAddCurrency {
                 if is_blocking {
                     println!("Finished adding currency to account!");
                 } else {
-                    // If this value is updated, it must also be changed in
-                    // setup_scripts/docker/mint/server.py
                     println!("Currency addition request submitted");
                 }
             }

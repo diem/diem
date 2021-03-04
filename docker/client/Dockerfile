@@ -1,4 +1,4 @@
-FROM debian:buster-20201209@sha256:5b5fa7e155b1f19dffb996ea64e55520b80d5bd7a8fdb5aed1acabd217e9ed59 AS toolchain
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475 AS toolchain
 
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
@@ -22,13 +22,21 @@ COPY . /diem
 
 RUN ./docker/build-common.sh
 
-### Production Image ###
-FROM debian:buster-20201117-slim@sha256:21ce4b82ed3425e757b1ac98ff9cbeb83540034c0cbc32766a59c3eca9e0daf8 AS prod
+### Pre-Production Image ###
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475 AS pre-prod
 
 RUN apt-get update && apt-get install -y libssl1.1 ca-certificates && apt-get clean && rm -r /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/diem/bin /opt/diem/etc
 COPY --from=builder /diem/target/release/cli /opt/diem/bin/diem_client
+
+### Test pre-production Image ###
+FROM pre-prod as testing
+
+RUN /opt/diem/bin/diem_client -h
+
+### Production Image ###
+FROM pre-prod AS prod
 
 ENTRYPOINT ["/opt/diem/bin/diem_client"]
 CMD ["--url", "https://testnet.diem.com/v1", "--waypoint_url",  "https://testnet.diem.com/waypoint.txt", "--chain-id", "TESTNET"]

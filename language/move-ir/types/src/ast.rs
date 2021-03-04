@@ -83,6 +83,8 @@ pub struct QualifiedModuleIdent {
 pub struct ModuleDefinition {
     /// name of the module
     pub name: ModuleName,
+    /// the module's friends
+    pub friends: Vec<ModuleIdent>,
     /// the module's dependencies
     pub imports: Vec<ImportDefinition>,
     /// Explicit declaration of dependencies. If not provided, will be inferred based on given
@@ -318,6 +320,12 @@ pub enum FunctionVisibility {
     /// The procedure can be invoked anywhere
     /// `public`
     Public,
+    /// The procedure can only be invoked from a script context
+    /// `public(script)`
+    Script,
+    /// The procedure can be invoked internally as well as by modules in the friend list
+    /// `public(friend)`
+    Friend,
     /// The procedure can be invoked only internally
     /// `<no modifier>`
     Internal,
@@ -344,7 +352,7 @@ pub enum FunctionBody {
 /// A Move function/procedure
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function_ {
-    /// The visibility (public or internal)
+    /// The visibility
     pub visibility: FunctionVisibility,
     /// The type signature
     pub signature: FunctionSignature,
@@ -806,6 +814,7 @@ impl ModuleDefinition {
     /// Does not verify the correctness of any internal properties of its elements
     pub fn new(
         name: impl ToString,
+        friends: Vec<ModuleIdent>,
         imports: Vec<ImportDefinition>,
         explicit_dependency_declarations: Vec<ModuleDependency>,
         structs: Vec<StructDefinition>,
@@ -815,6 +824,7 @@ impl ModuleDefinition {
     ) -> Result<Self> {
         Ok(ModuleDefinition {
             name: ModuleName::new(name.to_string()),
+            friends,
             imports,
             explicit_dependency_declarations,
             structs,

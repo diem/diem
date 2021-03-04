@@ -3,7 +3,7 @@
 
 use crate::{
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, QuantKind,
         ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp,
         Var,
     },
@@ -46,6 +46,7 @@ pub struct Script {
 pub struct ModuleDefinition {
     pub loc: Loc,
     pub is_source_module: bool,
+    pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
     pub constants: UniqueMap<ConstantName, Constant>,
@@ -84,7 +85,6 @@ pub struct FunctionSignature {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-
 pub enum FunctionBody_ {
     Defined(Sequence),
     Native,
@@ -215,6 +215,11 @@ pub type LValue = Spanned<LValue_>;
 pub type LValueList_ = Vec<LValue>;
 pub type LValueList = Spanned<LValueList_>;
 
+pub type LValueWithRange_ = (LValue, Exp);
+pub type LValueWithRange = Spanned<LValueWithRange_>;
+pub type LValueWithRangeList_ = Vec<LValueWithRange>;
+pub type LValueWithRangeList = Spanned<LValueWithRangeList_>;
+
 #[derive(Debug, Clone, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum ExpDotted_ {
@@ -257,6 +262,13 @@ pub enum Exp_ {
     Loop(Box<Exp>),
     Block(Sequence),
     Lambda(LValueList, Box<Exp>), // spec only
+    Quant(
+        QuantKind,
+        LValueWithRangeList,
+        Vec<Vec<Exp>>,
+        Option<Box<Exp>>,
+        Box<Exp>,
+    ), // spec only
 
     Assign(LValueList, Box<Exp>),
     FieldMutate(Box<ExpDotted>, Box<Exp>),
@@ -272,7 +284,9 @@ pub enum Exp_ {
     BinopExp(Box<Exp>, BinOp, Box<Exp>),
 
     ExpList(Vec<Exp>),
-    Unit { trailing: bool },
+    Unit {
+        trailing: bool,
+    },
 
     Borrow(bool, Box<Exp>),
     ExpDotted(Box<ExpDotted>),
@@ -363,7 +377,7 @@ impl fmt::Display for SpecId {
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Program { modules, scripts } = self;
-        for (m, mdef) in modules {
+        for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
@@ -386,7 +400,7 @@ impl AstDebug for Script {
             function,
             specs,
         } = self;
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
@@ -403,6 +417,7 @@ impl AstDebug for ModuleDefinition {
         let ModuleDefinition {
             loc: _loc,
             is_source_module,
+            friends,
             structs,
             functions,
             constants,
@@ -413,15 +428,19 @@ impl AstDebug for ModuleDefinition {
         } else {
             "library module"
         });
-        for sdef in structs {
+        for (mident, _loc) in friends.key_cloned_iter() {
+            w.write(&format!("friend {};", mident));
+            w.new_line();
+        }
+        for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
         }
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
-        for fdef in functions {
+        for fdef in functions.key_cloned_iter() {
             fdef.ast_debug(w);
             w.new_line();
         }
@@ -453,7 +472,7 @@ impl AstDebug for (StructName, &StructDefinition) {
         type_parameters.ast_debug(w);
         if let StructFields::Defined(fields) = fields {
             w.block(|w| {
-                w.list(fields, ",", |w, (f, idx_st)| {
+                w.list(fields, ",", |w, (_, f, idx_st)| {
                     let (idx, st) = idx_st;
                     w.write(&format!("{}#{}: ", idx, f));
                     st.ast_debug(w);
@@ -774,7 +793,7 @@ impl AstDebug for Exp_ {
                     w.write(">");
                 }
                 w.write("{");
-                w.comma(fields, |w, (f, idx_e)| {
+                w.comma(fields, |w, (_, f, idx_e)| {
                     let (idx, e) = idx_e;
                     w.write(&format!("{}#{}: ", idx, f));
                     e.ast_debug(w);
@@ -804,6 +823,18 @@ impl AstDebug for Exp_ {
                 w.write("fun ");
                 bs.ast_debug(w);
                 w.write(" ");
+                e.ast_debug(w);
+            }
+            E::Quant(kind, sp!(_, rs), trs, c_opt, e) => {
+                kind.ast_debug(w);
+                w.write(" ");
+                rs.ast_debug(w);
+                trs.ast_debug(w);
+                if let Some(c) = c_opt {
+                    w.write(" where ");
+                    c.ast_debug(w);
+                }
+                w.write(" : ");
                 e.ast_debug(w);
             }
             E::ExpList(es) => {
@@ -942,13 +973,44 @@ impl AstDebug for LValue_ {
                     w.write(">");
                 }
                 w.write("{");
-                w.comma(fields, |w, (f, idx_b)| {
+                w.comma(fields, |w, (_, f, idx_b)| {
                     let (idx, b) = idx_b;
                     w.write(&format!("{}#{}: ", idx, f));
                     b.ast_debug(w);
                 });
                 w.write("}");
             }
+        }
+    }
+}
+
+impl AstDebug for Vec<LValueWithRange> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let parens = self.len() != 1;
+        if parens {
+            w.write("(");
+        }
+        w.comma(self, |w, b| b.ast_debug(w));
+        if parens {
+            w.write(")");
+        }
+    }
+}
+
+impl AstDebug for (LValue, Exp) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        self.0.ast_debug(w);
+        w.write(" in ");
+        self.1.ast_debug(w);
+    }
+}
+
+impl AstDebug for Vec<Vec<Exp>> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        for trigger in self {
+            w.write("{");
+            w.comma(trigger, |w, b| b.ast_debug(w));
+            w.write("}");
         }
     }
 }

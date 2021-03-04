@@ -1,0 +1,39 @@
+============ after processor `stackless` ================
+
+[variant baseline]
+pub fun Trafo::opaque_caller($t0|addr: address) {
+     var $t1: address
+     var $t2: address
+  0: $t1 := copy($t0)
+  1: Trafo::opaque_decr($t1)
+  2: $t2 := copy($t0)
+  3: Trafo::opaque_decr($t2)
+  4: return ()
+}
+
+
+[variant baseline]
+pub fun Trafo::opaque_decr($t0|addr: address) {
+     var $t1|r: &mut Trafo::R
+     var $t2: address
+     var $t3: &mut Trafo::R
+     var $t4: &mut Trafo::R
+     var $t5: &u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: &mut Trafo::R
+     var $t10: &mut u64
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<Trafo::R>($t2)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
+  4: $t5 := borrow_field<Trafo::R>.x($t4)
+  5: $t6 := read_ref($t5)
+  6: $t7 := 1
+  7: $t8 := -($t6, $t7)
+  8: $t9 := move($t1)
+  9: $t10 := borrow_field<Trafo::R>.x($t9)
+ 10: write_ref($t10, $t8)
+ 11: return ()
+}

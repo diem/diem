@@ -1,0 +1,2 @@
+[0] Transaction(0)
+[1] VerificationError(ERROR { status_code: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION })

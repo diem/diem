@@ -1,31 +1,40 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Peer manages a single connection to a remote peer after the initial connection
-//! establishment and handshake, including sending and receiving `NetworkMessage`s
-//! over-the-wire, maintaining a completion queue of pending RPC requests, and
-//! eventually shutting down when the PeerManager requests it or the connection
-//! is lost.
+//! [`Peer`] manages a single connection to a remote peer after the initial connection
+//! establishment and handshake.
+//!
+//! Its responsibilities include sending and receiving [`NetworkMessage`]s
+//! over-the-wire, maintaining a completion queue of pending RPC requests (through
+//! the [`InboundRpcs`] and [`OutboundRpcs`] completion queues), and eventually
+//! shutting down when the [`PeerManager`] requests it or the connection is lost.
+//!
+//! [`Peer`] owns the actual underlying connection socket and is reponsible for
+//! the socket's shutdown, graceful or otherwise.
+//!
+//! [`PeerManager`]: crate::peer_manager::PeerManager
 
 use crate::{
-    counters::{self, inc_by_with_context, RECEIVED_LABEL, SENT_LABEL},
+    counters::{self, RECEIVED_LABEL, SENT_LABEL},
     logging::NetworkSchema,
-    peer_manager::PeerManagerError,
+    peer_manager::{PeerManagerError, TransportNotification},
     protocols::{
         direct_send::Message,
-        rpc::{InboundRpcRequest, InboundRpcs},
+        rpc::{InboundRpcRequest, InboundRpcs, OutboundRpcRequest, OutboundRpcs},
         wire::messaging::v1::{
             DirectSendMsg, ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream,
             Priority, ReadError, WriteError,
         },
     },
-    transport,
-    transport::{Connection, ConnectionMetadata},
+    transport::{self, Connection, ConnectionMetadata},
     ProtocolId,
 };
 use bytes::Bytes;
+use channel::diem_channel;
 use diem_config::network_id::NetworkContext;
 use diem_logger::prelude::*;
+use diem_rate_limiter::rate_limit::SharedBucket;
+use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::PeerId;
 use futures::{
     self,
@@ -34,10 +43,13 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt, TryFutureExt,
 };
-use netcore::compat::IoCompat;
-use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, sync::Arc, time::Duration};
+use serde::Serialize;
+use short_hex_str::AsShortHexStr;
+use std::{fmt, panic, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
+use tokio_util::compat::{
+    FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt,
+};
 
 #[cfg(test)]
 mod test;
@@ -45,46 +57,44 @@ mod test;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
+/// Requests [`Peer`] receives from the [`PeerManager`](crate::peer_manager::PeerManager).
 #[derive(Debug)]
 pub enum PeerRequest {
-    // Temporary message type until we can remove NetworkProvider and use the
-    // diem_channel::Receiver<ProtocolId, NetworkRequest> directly.
+    /// Send an RPC request to peer.
+    SendRpc(OutboundRpcRequest),
+    /// Fire-and-forget style message send to peer.
     SendDirectSend(Message),
-    SendMessage(
-        NetworkMessage,
-        ProtocolId,
-        oneshot::Sender<Result<(), PeerManagerError>>,
-    ),
-    CloseConnection,
 }
 
+/// Notifications that [`Peer`] sends to the [`PeerManager`](crate::peer_manager::PeerManager).
+#[derive(Debug, PartialEq)]
+pub enum PeerNotification {
+    /// A new RPC request has been received from peer.
+    RecvRpc(InboundRpcRequest),
+    /// A new message has been received from peer.
+    RecvMessage(Message),
+}
+
+/// The reason for closing a connection.
+///
+/// For example, if the remote peer closed the connection or the connection was
+/// lost, the disconnect reason will be `ConnectionLost`. In contrast, if the
+/// [`PeerManager`](crate::peer_manager::PeerManager) requested us to close this
+/// connection, then the disconnect reason will be `Requested`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,
 }
 
-impl std::fmt::Display for DisconnectReason {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                DisconnectReason::Requested => "Requested",
-                DisconnectReason::ConnectionLost => "ConnectionLost",
-            }
-        )
+impl fmt::Display for DisconnectReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            DisconnectReason::Requested => "Requested",
+            DisconnectReason::ConnectionLost => "ConnectionLost",
+        };
+        write!(f, "{}", s)
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum PeerNotification {
-    // Temporary message type until we can remove NetworkProvider and use the
-    // diem_channel::Sender<ProtocolId, NetworkNotification> directly.
-    RecvDirectSend(Message),
-    RecvRpc(InboundRpcRequest),
-    NewMessage(NetworkMessage),
-    PeerDisconnected(ConnectionMetadata, DisconnectReason),
 }
 
 enum State {
@@ -92,28 +102,38 @@ enum State {
     ShuttingDown(DisconnectReason),
 }
 
+/// The `Peer` actor manages a single connection to another remote peer after
+/// the initial connection establishment and handshake.
 pub struct Peer<TSocket> {
     /// The network instance this Peer actor is running under.
     network_context: Arc<NetworkContext>,
     /// A handle to a tokio executor.
     executor: Handle,
+    /// A handle to a time service for easily mocking time-related operations.
+    time_service: TimeService,
     /// Connection specific information.
     connection_metadata: ConnectionMetadata,
     /// Underlying connection.
     connection: Option<TSocket>,
-    /// Channel to receive requests for opening new outbound substreams.
-    requests_rx: channel::Receiver<PeerRequest>,
-    /// Channel to send peer notifications to PeerManager.
-    peer_notifs_tx: channel::Sender<PeerNotification>,
-    /// Channel to notify about new inbound RPC responses.
-    rpc_notifs_tx: channel::Sender<PeerNotification>,
+    /// Channel to notify PeerManager that we've disconnected.
+    connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
+    /// Channel to receive requests from PeerManager to send messages and rpcs.
+    peer_reqs_rx: diem_channel::Receiver<ProtocolId, PeerRequest>,
+    /// Channel to notifty PeerManager of new inbound messages and rpcs.
+    peer_notifs_tx: diem_channel::Sender<ProtocolId, PeerNotification>,
     /// Inbound rpc request queue for handling requests from remote peer.
     inbound_rpcs: InboundRpcs,
+    /// Outbound rpc request queue for sending requests to remote peer and handling responses.
+    outbound_rpcs: OutboundRpcs,
     /// Flag to indicate if the actor is being shut down.
     state: State,
     /// The maximum size of an inbound or outbound request frame
     /// Currently, requests are only a single frame
     max_frame_size: usize,
+    /// Optional inbound rate limiter
+    inbound_rate_limiter: Option<SharedBucket>,
+    /// Optional outbound rate limiter
+    outbound_rate_limiter: Option<SharedBucket>,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -123,13 +143,17 @@ where
     pub fn new(
         network_context: Arc<NetworkContext>,
         executor: Handle,
+        time_service: TimeService,
         connection: Connection<TSocket>,
-        requests_rx: channel::Receiver<PeerRequest>,
-        peer_notifs_tx: channel::Sender<PeerNotification>,
-        rpc_notifs_tx: channel::Sender<PeerNotification>,
+        connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
+        peer_reqs_rx: diem_channel::Receiver<ProtocolId, PeerRequest>,
+        peer_notifs_tx: diem_channel::Sender<ProtocolId, PeerNotification>,
         inbound_rpc_timeout: Duration,
         max_concurrent_inbound_rpcs: u32,
+        max_concurrent_outbound_rpcs: u32,
         max_frame_size: usize,
+        inbound_rate_limiter: Option<SharedBucket>,
+        outbound_rate_limiter: Option<SharedBucket>,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -139,19 +163,29 @@ where
         Self {
             network_context: network_context.clone(),
             executor,
+            time_service: time_service.clone(),
             connection_metadata,
             connection: Some(socket),
-            requests_rx,
+            connection_notifs_tx,
+            peer_reqs_rx,
             peer_notifs_tx,
-            rpc_notifs_tx,
             inbound_rpcs: InboundRpcs::new(
-                network_context,
+                network_context.clone(),
+                time_service.clone(),
                 remote_peer_id,
                 inbound_rpc_timeout,
                 max_concurrent_inbound_rpcs,
             ),
+            outbound_rpcs: OutboundRpcs::new(
+                network_context,
+                time_service,
+                remote_peer_id,
+                max_concurrent_outbound_rpcs,
+            ),
             state: State::Connected,
             max_frame_size,
+            inbound_rate_limiter,
+            outbound_rate_limiter,
         }
     }
 
@@ -171,121 +205,91 @@ where
 
         // Split the connection into a ReadHalf and a WriteHalf.
         let (read_socket, write_socket) =
-            tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
+            tokio::io::split(self.connection.take().unwrap().compat());
 
-        let mut reader =
-            NetworkMessageStream::new(IoCompat::new(read_socket), self.max_frame_size).fuse();
-        let writer = NetworkMessageSink::new(IoCompat::new(write_socket), self.max_frame_size);
+        let mut reader = NetworkMessageStream::new(
+            read_socket.compat(),
+            self.max_frame_size,
+            self.inbound_rate_limiter.clone(),
+        )
+        .fuse();
+        let writer = NetworkMessageSink::new(
+            write_socket.compat_write(),
+            self.max_frame_size,
+            self.outbound_rate_limiter.clone(),
+        );
 
-        // Start writer "process" as a separate task. We receive two handles to communicate with
-        // the task:
-        // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.
-        // `close_tx`: Instruction to close the underlying connection.
-        let (mut write_reqs_tx, close_tx) = Self::start_writer_task(
+        // Start writer "process" as a separate task. We receive two handles to
+        // communicate with the task:
+        //   1. `write_reqs_tx`: Queue of pending NetworkMessages to write.
+        //   2. `close_tx`: Handle to close the task and underlying connection.
+        let (mut write_reqs_tx, writer_close_tx) = Self::start_writer_task(
             &self.executor,
+            self.time_service.clone(),
             self.connection_metadata.clone(),
             self.network_context.clone(),
             writer,
         );
+
         // Start main Peer event loop.
-        loop {
-            match self.state {
-                State::Connected => {
-                    futures::select! {
-                        maybe_request = self.requests_rx.next() => {
-                            if let Some(request) = maybe_request {
-                                self.handle_outbound_request(request, &mut write_reqs_tx).await;
-                            } else {
-                                // This branch will only be taken if all PeerRequest senders for this Peer
-                                // get dropped.
-                                break;
-                            }
-                        },
-                        maybe_message = reader.next() => {
-                            match maybe_message {
-                                Some(message) =>  {
-                                    if let Err(err) = self.handle_inbound_message(message, &mut write_reqs_tx).await {
-                                        warn!(
-                                            NetworkSchema::new(&self.network_context)
-                                                .connection_metadata(&self.connection_metadata),
-                                            error = %err,
-                                            "{} Error in handling inbound message from peer: {}, error: {}",
-                                            self.network_context,
-                                            remote_peer_id.short_str(),
-                                            err
-                                        );
-                                    }
-                                },
-                                None => {
-                                    info!(
-                                        NetworkSchema::new(&self.network_context)
-                                            .connection_metadata(&self.connection_metadata),
-                                        "{} Received connection closed event for peer: {}",
-                                        self.network_context,
-                                        remote_peer_id.short_str()
-                                    );
-                                    self.close_connection(DisconnectReason::ConnectionLost);
-                                }
-                            }
-                        },
-                        // Drive the queue of pending inbound rpcs. When one is
-                        // fulfilled by an upstream protocol, send the response
-                        // to the remote peer.
-                        maybe_response = self.inbound_rpcs.next_completed_response() => {
-                            if let Err(err) = self.inbound_rpcs.send_outbound_response(&mut write_reqs_tx, maybe_response).await {
+        let reason = loop {
+            if let State::ShuttingDown(reason) = self.state {
+                break reason;
+            }
+
+            futures::select! {
+                // Handle a new outbound request from the PeerManager.
+                maybe_request = self.peer_reqs_rx.next() => {
+                    match maybe_request {
+                        Some(request) => self.handle_outbound_request(request, &mut write_reqs_tx).await,
+                        // The PeerManager is requesting this connection to close
+                        // by dropping the corresponding peer_reqs_tx handle.
+                        None => self.shutdown(DisconnectReason::Requested),
+                    }
+                },
+                // Handle a new inbound NetworkMessage that we've just read off
+                // the wire from the remote peer.
+                maybe_message = reader.next() => {
+                    match maybe_message {
+                        Some(message) =>  {
+                            if let Err(err) = self.handle_inbound_message(message, &mut write_reqs_tx).await {
                                 warn!(
-                                    NetworkSchema::new(&self.network_context).connection_metadata(&self.connection_metadata),
+                                    NetworkSchema::new(&self.network_context)
+                                        .connection_metadata(&self.connection_metadata),
                                     error = %err,
-                                    "{} Error in handling inbound rpc request, error: {}", self.network_context, err,
+                                    "{} Error in handling inbound message from peer: {}, error: {}",
+                                    self.network_context,
+                                    remote_peer_id.short_str(),
+                                    err
                                 );
                             }
                         },
+                        // The socket was gracefully closed by the remote peer.
+                        None => self.shutdown(DisconnectReason::ConnectionLost),
                     }
-                }
-                State::ShuttingDown(reason) => {
-                    // Send a close instruction to the writer task. On receipt of this instruction, the writer
-                    // task drops all pending outbound messages and closes the connection.
-                    if let Err(e) = close_tx.send(()) {
-                        info!(
-                            NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata),
-                            error = ?e,
-                            "{} Failed to send close instruction to writer task. It must already be terminating/terminated. Error: {:?}",
-                            self.network_context,
-                            e
-                        );
-                    }
-                    // Send a PeerDisconnected event to upstream.
-                    if let Err(e) = self
-                        .peer_notifs_tx
-                        .send(PeerNotification::PeerDisconnected(
-                            self.connection_metadata.clone(),
-                            reason,
-                        ))
-                        .await
-                    {
+                },
+                // Drive the queue of pending inbound rpcs. When one is fulfilled
+                // by an upstream protocol, send the response to the remote peer.
+                maybe_response = self.inbound_rpcs.next_completed_response() => {
+                    if let Err(err) = self.inbound_rpcs.send_outbound_response(&mut write_reqs_tx, maybe_response).await {
                         warn!(
-                            NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata),
-                            error = ?e,
-                            "{} Failed to notify upstream about disconnection of peer: {}; error: {:?}",
-                            self.network_context,
-                            remote_peer_id.short_str(),
-                            e
+                            NetworkSchema::new(&self.network_context).connection_metadata(&self.connection_metadata),
+                            error = %err,
+                            "{} Error in handling inbound rpc request, error: {}", self.network_context, err,
                         );
                     }
-                    break;
+                },
+                // Poll the queue of pending outbound rpc tasks for the next
+                // successfully or unsuccessfully completed request.
+                (request_id, maybe_completed_request) = self.outbound_rpcs.next_completed_request() => {
+                    self.outbound_rpcs.handle_completed_request(request_id, maybe_completed_request);
                 }
             }
-        }
+        };
 
-        trace!(
-            NetworkSchema::new(&self.network_context)
-                .connection_metadata(&self.connection_metadata),
-            "{} Peer actor for '{}' terminated",
-            self.network_context,
-            remote_peer_id.short_str()
-        );
+        // Finish shutting down the connection. Close the writer task and notify
+        // PeerManager that this connection has shutdown.
+        self.do_shutdown(writer_close_tx, reason).await;
     }
 
     // Start a new task on the given executor which is responsible for writing outbound messages on
@@ -297,6 +301,7 @@ where
     // them and immediately closes the connection.
     fn start_writer_task(
         executor: &Handle,
+        time_service: TimeService,
         connection_metadata: ConnectionMetadata,
         network_context: Arc<NetworkContext>,
         mut writer: NetworkMessageSink<impl AsyncWrite + Unpin + Send + 'static>,
@@ -354,7 +359,10 @@ where
                 writer.close().await?;
                 Ok(()) as Result<(), WriteError>
             };
-            match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, flush_and_close).await {
+            match time_service
+                .timeout(transport::TRANSPORT_TIMEOUT, flush_and_close)
+                .await
+            {
                 Err(_) => {
                     info!(
                         NetworkSchema::new(&network_context)
@@ -424,16 +432,14 @@ where
                 }
                 ReadError::IoError(_) => {
                     // IoErrors are mostly unrecoverable so just close the connection.
-                    self.close_connection(DisconnectReason::ConnectionLost);
+                    self.shutdown(DisconnectReason::ConnectionLost);
                     return Err(err.into());
                 }
             },
         };
 
         match message {
-            NetworkMessage::DirectSendMsg(message) => {
-                self.handle_inbound_direct_send(message).await
-            }
+            NetworkMessage::DirectSendMsg(message) => self.handle_inbound_direct_send(message),
             NetworkMessage::Error(error_msg) => {
                 warn!(
                     NetworkSchema::new(&self.network_context)
@@ -449,7 +455,6 @@ where
                 if let Err(err) = self
                     .inbound_rpcs
                     .handle_inbound_request(&mut self.peer_notifs_tx, request)
-                    .await
                 {
                     warn!(
                         NetworkSchema::new(&self.network_context)
@@ -461,19 +466,8 @@ where
                     );
                 }
             }
-            NetworkMessage::RpcResponse(_) => {
-                let notif = PeerNotification::NewMessage(message);
-                self.rpc_notifs_tx.send(notif).await.map_err(|err| {
-                    warn!(
-                        NetworkSchema::new(&self.network_context)
-                            .connection_metadata(&self.connection_metadata),
-                        error = ?err,
-                        "{} Failed to send notification to RPC actor. Error: {:?}",
-                        self.network_context,
-                        err
-                    );
-                    err
-                })?;
+            NetworkMessage::RpcResponse(response) => {
+                self.outbound_rpcs.handle_inbound_response(response)
             }
         };
         Ok(())
@@ -482,7 +476,7 @@ where
     /// Handle an inbound DirectSendMsg from the remote peer. There's not much to
     /// do here other than bump some counters and forward the message up to the
     /// PeerManager.
-    async fn handle_inbound_direct_send(&mut self, message: DirectSendMsg) {
+    fn handle_inbound_direct_send(&mut self, message: DirectSendMsg) {
         let peer_id = self.remote_peer_id();
         let protocol_id = message.protocol_id;
         let data = message.raw_msg;
@@ -500,12 +494,12 @@ where
         counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
             .inc_by(data.len() as u64);
 
-        let notif = PeerNotification::RecvDirectSend(Message {
+        let notif = PeerNotification::RecvMessage(Message {
             protocol_id,
             mdata: Bytes::from(data),
         });
 
-        if let Err(err) = self.peer_notifs_tx.send(notif).await {
+        if let Err(err) = self.peer_notifs_tx.push(protocol_id, notif) {
             warn!(
                 NetworkSchema::new(&self.network_context),
                 error = ?err,
@@ -516,8 +510,8 @@ where
         }
     }
 
-    async fn handle_outbound_request<'a>(
-        &'a mut self,
+    async fn handle_outbound_request(
+        &mut self,
         request: PeerRequest,
         write_reqs_tx: &mut channel::Sender<(
             NetworkMessage,
@@ -561,106 +555,76 @@ where
                     }
                 }
             }
-            PeerRequest::SendMessage(message, protocol, channel) => {
-                if let Err(e) = write_reqs_tx.send((message, channel)).await {
-                    inc_by_with_context(
-                        &counters::PEER_SEND_FAILURES,
-                        &self.network_context,
-                        protocol.as_str(),
-                        1,
-                    );
-                    error!(
+            PeerRequest::SendRpc(request) => {
+                let protocol_id = request.protocol_id;
+                if let Err(e) = self
+                    .outbound_rpcs
+                    .handle_outbound_request(request, write_reqs_tx)
+                    .await
+                {
+                    warn!(
                         NetworkSchema::new(&self.network_context)
                             .connection_metadata(&self.connection_metadata),
-                        error = ?e,
-                        "Failed to send message for protocol {} to peer: {}. Error: {:?}",
-                        protocol,
+                        error = %e,
+                        "Failed to send outbound rpc request for protocol {} to peer: {}. Error: {}",
+                        protocol_id,
                         self.remote_peer_id().short_str(),
-                        e
+                        e,
                     );
                 }
             }
-            PeerRequest::CloseConnection => self.close_connection(DisconnectReason::Requested),
         }
     }
 
-    fn close_connection(&mut self, reason: DisconnectReason) {
+    fn shutdown(&mut self, reason: DisconnectReason) {
         // Set the state of the actor to `State::ShuttingDown` to true ensures that the peer actor
         // will terminate and close the connection.
         self.state = State::ShuttingDown(reason);
     }
-}
 
-#[derive(Clone)]
-pub struct PeerHandle {
-    connection_metadata: ConnectionMetadata,
-    network_context: Arc<NetworkContext>,
-    sender: channel::Sender<PeerRequest>,
-}
+    async fn do_shutdown(mut self, writer_close_tx: oneshot::Sender<()>, reason: DisconnectReason) {
+        let remote_peer_id = self.remote_peer_id();
 
-impl PeerHandle {
-    pub fn new(
-        network_context: Arc<NetworkContext>,
-        connection_metadata: ConnectionMetadata,
-        sender: channel::Sender<PeerRequest>,
-    ) -> Self {
-        Self {
-            network_context,
-            connection_metadata,
-            sender,
-        }
-    }
-
-    pub fn peer_id(&self) -> PeerId {
-        self.connection_metadata.remote_peer_id
-    }
-
-    pub async fn send_message(
-        &mut self,
-        message: NetworkMessage,
-        protocol: ProtocolId,
-    ) -> Result<(), PeerManagerError> {
-        // If we fail to send the request to the Peer, then it must have already been shutdown.
-        let (oneshot_tx, oneshot_rx) = oneshot::channel();
+        // Send a PeerDisconnected event to PeerManager.
         if let Err(e) = self
-            .sender
-            .send(PeerRequest::SendMessage(message, protocol, oneshot_tx))
+            .connection_notifs_tx
+            .send(TransportNotification::Disconnected(
+                self.connection_metadata.clone(),
+                reason,
+            ))
             .await
         {
             warn!(
                 NetworkSchema::new(&self.network_context)
                     .connection_metadata(&self.connection_metadata),
                 error = ?e,
-                "Sending message to Peer {} \
-                 failed because it has already been shutdown.",
-                self.peer_id().short_str()
+                "{} Failed to notify upstream about disconnection of peer: {}; error: {:?}",
+                self.network_context,
+                remote_peer_id.short_str(),
+                e
             );
         }
-        oneshot_rx
-            .await
-            // The send_message request can get dropped/canceled if the peer
-            // connection is in the process of shutting down.
-            .map_err(|_| PeerManagerError::NotConnected(self.peer_id()))?
-    }
 
-    pub async fn send_direct_send(&mut self, message: Message) -> Result<(), PeerManagerError> {
-        self.sender
-            .send(PeerRequest::SendDirectSend(message))
-            .await?;
-        Ok(())
-    }
-
-    pub async fn disconnect(&mut self) {
-        // If we fail to send the request to the Peer, then it must have already been shutdown.
-        if let Err(e) = self.sender.send(PeerRequest::CloseConnection).await {
+        // Send a close instruction to the writer task. On receipt of this
+        // instruction, the writer task drops all pending outbound messages and
+        // closes the connection.
+        if let Err(e) = writer_close_tx.send(()) {
             info!(
                 NetworkSchema::new(&self.network_context)
                     .connection_metadata(&self.connection_metadata),
                 error = ?e,
-                "Sending CloseConnection request to Peer {} \
-                 failed because it has already been shutdown.",
-                self.peer_id().short_str()
+                "{} Failed to send close instruction to writer task. It must already be terminating/terminated. Error: {:?}",
+                self.network_context,
+                e
             );
         }
+
+        trace!(
+            NetworkSchema::new(&self.network_context)
+                .connection_metadata(&self.connection_metadata),
+            "{} Peer actor for '{}' terminated",
+            self.network_context,
+            remote_peer_id.short_str()
+        );
     }
 }

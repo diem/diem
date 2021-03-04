@@ -26,6 +26,7 @@ use crate::{
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
 };
 use anyhow::{ensure, format_err, Result};
+use diem_logger::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
@@ -262,11 +263,7 @@ impl DB {
                 rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
             }),
         )?;
-        Ok(DB {
-            name,
-            inner,
-            column_families,
-        })
+        Ok(Self::log_construct(name, column_families, inner))
     }
 
     fn open_cf_readonly(
@@ -283,11 +280,7 @@ impl DB {
             error_if_log_file_exists,
         )?;
 
-        Ok(DB {
-            name,
-            inner,
-            column_families,
-        })
+        Ok(Self::log_construct(name, column_families, inner))
     }
 
     fn open_cf_as_secondary<P: AsRef<Path>>(
@@ -304,11 +297,20 @@ impl DB {
             &column_families,
         )?;
 
-        Ok(DB {
+        Ok(Self::log_construct(name, column_families, inner))
+    }
+
+    fn log_construct(
+        name: &'static str,
+        column_families: Vec<&'static str>,
+        inner: rocksdb::DB,
+    ) -> DB {
+        info!(rocksdb_name = name, "Opened RocksDB.");
+        DB {
             name,
             inner,
             column_families,
-        })
+        }
     }
 
     /// Reads single record by key.
@@ -430,27 +432,6 @@ impl DB {
         })
     }
 
-    /// Returns the approximate size of each non-empty column family in bytes.
-    pub fn get_approximate_sizes_cf(&self) -> Result<BTreeMap<ColumnFamilyName, u64>> {
-        let mut cf_sizes = BTreeMap::new();
-
-        for cf_name in &self.column_families {
-            let cf_handle = self.get_cf_handle(&cf_name)?;
-            let size = self
-                .inner
-                .property_int_value_cf(cf_handle, "rocksdb.estimate-live-data-size")?
-                .ok_or_else(|| {
-                    format_err!(
-                        "Unable to get approximate size of {} column family.",
-                        cf_name,
-                    )
-                })?;
-            cf_sizes.insert(*cf_name, size);
-        }
-
-        Ok(cf_sizes)
-    }
-
     /// Flushes all memtable data. This is only used for testing `get_approximate_sizes_cf` in unit
     /// tests.
     pub fn flush_all(&self) -> Result<()> {
@@ -459,6 +440,18 @@ impl DB {
             self.inner.flush_cf(cf_handle)?;
         }
         Ok(())
+    }
+
+    pub fn get_property(&self, cf_name: &str, property_name: &str) -> Result<u64> {
+        self.inner
+            .property_int_value_cf(self.get_cf_handle(&cf_name)?, property_name)?
+            .ok_or_else(|| {
+                format_err!(
+                    "Unable to get property \"{}\" of  column family \"{}\".",
+                    property_name,
+                    cf_name,
+                )
+            })
     }
 }
 

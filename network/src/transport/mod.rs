@@ -10,25 +10,29 @@ use crate::{
     },
 };
 use diem_config::{
-    config::HANDSHAKE_VERSION,
+    config::{PeerRole, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::x25519;
 use diem_logger::prelude::*;
-use diem_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_time_service::{timeout, TimeService, TimeServiceTrait};
+use diem_types::{
+    chain_id::ChainId,
+    network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress},
+    PeerId,
+};
 use futures::{
     future::{Future, FutureExt},
     io::{AsyncRead, AsyncWrite},
     stream::{Stream, StreamExt, TryStreamExt},
 };
 use netcore::transport::{proxy_protocol, tcp, ConnectionOrigin, Transport};
-use serde::{export::Formatter, Serialize};
+use serde::Serialize;
+use short_hex_str::AsShortHexStr;
 use std::{
     collections::BTreeMap,
     convert::TryFrom,
-    fmt::Debug,
-    io,
+    fmt, io,
     pin::Pin,
     sync::{
         atomic::{AtomicU32, Ordering},
@@ -36,7 +40,6 @@ use std::{
     },
     time::Duration,
 };
-use tokio::time::timeout;
 
 #[cfg(test)]
 mod test;
@@ -54,18 +57,15 @@ static CONNECTION_ID_GENERATOR: ConnectionIdGenerator = ConnectionIdGenerator::n
 /// tcp::Transport with Diem-specific configuration applied.
 pub const DIEM_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.
-    recv_buffer_size: None,
-    send_buffer_size: None,
     ttl: None,
-    keepalive: None,
     // Use TCP_NODELAY for diem tcp connections.
     nodelay: Some(true),
 };
 
 /// A trait alias for "socket-like" things.
-pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+pub trait TSocket: AsyncRead + AsyncWrite + Send + fmt::Debug + Unpin + 'static {}
 
-impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + fmt::Debug + Unpin + 'static {}
 
 /// Unique local identifier for a connection.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize)]
@@ -95,15 +95,6 @@ impl ConnectionIdGenerator {
     }
 }
 
-/// Used to indicate the trust level of a Connection
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub enum TrustLevel {
-    /// Either we dialed the peer or it was in our trusted peers set
-    Trusted,
-    /// A peer that isn't in our trusted peers set
-    Untrusted,
-}
-
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, PartialEq, Serialize)]
 pub struct ConnectionMetadata {
@@ -113,7 +104,7 @@ pub struct ConnectionMetadata {
     pub origin: ConnectionOrigin,
     pub messaging_protocol: MessagingProtocolVersion,
     pub application_protocols: SupportedProtocols,
-    pub trust_level: TrustLevel,
+    pub role: PeerRole,
 }
 
 impl ConnectionMetadata {
@@ -124,7 +115,7 @@ impl ConnectionMetadata {
         origin: ConnectionOrigin,
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
-        trust_level: TrustLevel,
+        role: PeerRole,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
             remote_peer_id,
@@ -133,40 +124,54 @@ impl ConnectionMetadata {
             origin,
             messaging_protocol,
             application_protocols,
-            trust_level,
+            role,
         }
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn mock(remote_peer_id: PeerId) -> ConnectionMetadata {
+        Self::mock_with_role_and_origin(
+            remote_peer_id,
+            PeerRole::Unknown,
+            ConnectionOrigin::Inbound,
+        )
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock_with_role_and_origin(
+        remote_peer_id: PeerId,
+        role: PeerRole,
+        origin: ConnectionOrigin,
+    ) -> ConnectionMetadata {
         ConnectionMetadata {
             remote_peer_id,
+            role,
+            origin,
             connection_id: ConnectionId::default(),
             addr: NetworkAddress::mock(),
-            origin: ConnectionOrigin::Inbound,
             messaging_protocol: MessagingProtocolVersion::V1,
             application_protocols: [].iter().into(),
-            trust_level: TrustLevel::Untrusted,
         }
     }
 }
 
-impl std::fmt::Debug for ConnectionMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for ConnectionMetadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl std::fmt::Display for ConnectionMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for ConnectionMetadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "[{},{},{},{},{:?}]",
+            "[{},{},{},{},{:?},{:?}]",
             self.remote_peer_id,
             self.addr,
             self.origin,
             self.messaging_protocol,
-            self.application_protocols
+            self.application_protocols,
+            self.role
         )
     }
 }
@@ -180,14 +185,14 @@ pub struct Connection<TSocket> {
 }
 
 /// Convenience function for adding a timeout to a Future that returns an `io::Result`.
-async fn timeout_io<F, T>(duration: Duration, fut: F) -> io::Result<T>
+async fn timeout_io<F, T>(time_service: TimeService, duration: Duration, fut: F) -> io::Result<T>
 where
     F: Future<Output = io::Result<T>>,
 {
-    let res = timeout(duration, fut).await;
+    let res = time_service.timeout(duration, fut).await;
     match res {
         Ok(out) => out,
-        Err(err) => Err(io::Error::new(io::ErrorKind::TimedOut, err)),
+        Err(timeout::Elapsed) => Err(io::Error::new(io::ErrorKind::TimedOut, timeout::Elapsed)),
     }
 }
 
@@ -245,7 +250,7 @@ async fn upgrade_inbound<T: TSocket>(
     };
 
     // try authenticating via noise handshake
-    let (mut socket, remote_peer_id, trust_level) =
+    let (mut socket, remote_peer_id, peer_role) =
         ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
             if err.should_security_log() {
                 sample!(
@@ -301,7 +306,7 @@ async fn upgrade_inbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
-            trust_level,
+            peer_role,
         ),
     })
 }
@@ -371,7 +376,7 @@ async fn upgrade_outbound<T: TSocket>(
             origin,
             messaging_protocol,
             application_protocols,
-            TrustLevel::Trusted,
+            PeerRole::Unknown,
         ),
     })
 }
@@ -391,6 +396,7 @@ async fn upgrade_outbound<T: TSocket>(
 pub struct DiemNetTransport<TTransport> {
     base_transport: TTransport,
     ctxt: Arc<UpgradeContext>,
+    time_service: TimeService,
     identity_pubkey: x25519::PublicKey,
     enable_proxy_protocol: bool,
 }
@@ -406,6 +412,7 @@ where
     pub fn new(
         base_transport: TTransport,
         network_context: Arc<NetworkContext>,
+        time_service: TimeService,
         identity_key: x25519::PrivateKey,
         auth_mode: HandshakeAuthMode,
         handshake_version: u8,
@@ -429,8 +436,9 @@ where
         };
 
         Self {
-            ctxt: Arc::new(upgrade_context),
             base_transport,
+            ctxt: Arc::new(upgrade_context),
+            time_service,
             identity_pubkey,
             enable_proxy_protocol,
         }
@@ -439,7 +447,7 @@ where
     fn parse_dial_addr(
         addr: &NetworkAddress,
     ) -> io::Result<(NetworkAddress, x25519::PublicKey, u8)> {
-        use diem_network_address::Protocol::*;
+        use diem_types::network_address::Protocol::*;
 
         let protos = addr.as_slice();
 
@@ -529,7 +537,7 @@ where
 
         // outbound dial upgrade task
         let upgrade_fut = upgrade_outbound(self.ctxt.clone(), fut_socket, addr, peer_id, pubkey);
-        let upgrade_fut = timeout_io(TRANSPORT_TIMEOUT, upgrade_fut);
+        let upgrade_fut = timeout_io(self.time_service.clone(), TRANSPORT_TIMEOUT, upgrade_fut);
         Ok(upgrade_fut)
     }
 
@@ -575,6 +583,7 @@ where
 
         // need to move a ctxt into stream task
         let ctxt = self.ctxt.clone();
+        let time_service = self.time_service.clone();
         let enable_proxy_protocol = self.enable_proxy_protocol;
         // stream of inbound upgrade tasks
         let inbounds = listener.map_ok(move |(fut_socket, addr)| {
@@ -585,7 +594,7 @@ where
                 addr.clone(),
                 enable_proxy_protocol,
             );
-            let fut_upgrade = timeout_io(TRANSPORT_TIMEOUT, fut_upgrade);
+            let fut_upgrade = timeout_io(time_service.clone(), TRANSPORT_TIMEOUT, fut_upgrade);
             (fut_upgrade, addr)
         });
 

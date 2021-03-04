@@ -11,17 +11,16 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.13.0"
-serde = { version = "1.0.117", features = ["rc"], default-features = false }
-thiserror = "1.0.23"
+serde = { version = "1.0.123", features = ["rc"], default-features = false }
+thiserror = "1.0.24"
 
 bcs = "0.1.2"
-diem-global-constants = { path = "../../../config/global-constants", version = "0.1.0"}
-diem-infallible = { path = "../../../common/infallible", version = "0.1.0" }
-diem-logger = { path = "../../../common/logger", version = "0.1.0" }
-diem-network-address = { path = "../../../network/network-address", version = "0.1.0" }
-diem-secure-storage = { path = "../../../secure/storage", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../../language/move-core/types", version = "0.1.0" }
+diem-global-constants = { path = "../../global-constants"}
+diem-infallible = { path = "../../../common/infallible" }
+diem-logger = { path = "../../../common/logger" }
+diem-secure-storage = { path = "../../../secure/storage" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [dev-dependencies]
-rand = "0.7.3"
+rand = "0.8.3"

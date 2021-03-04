@@ -4,8 +4,7 @@
 //! Errors that originate from the PeerManager module
 
 use crate::protocols::wire::messaging::v1 as wire;
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::channel::{mpsc, oneshot};
 use thiserror::Error;
 

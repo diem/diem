@@ -10,17 +10,17 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.37"
-serde = { version = "1.0.117", default-features = false }
-thiserror = "1.0.23"
+anyhow = "1.0.38"
+serde = { version = "1.0.123", default-features = false }
+thiserror = "1.0.24"
 
 bcs = "0.1.2"
-diem-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-diem-secure-net = { path = "../../secure/net", version = "0.1.0" }
-diem-types = { path = "../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
-storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-secure-net = { path = "../../secure/net" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+scratchpad = { path = "../../storage/scratchpad" }
+storage-interface = { path = "../../storage/storage-interface" }
 
 [features]
 default = []

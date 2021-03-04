@@ -10,9 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-backtrace = "0.3.55"
+backtrace = "0.3.56"
 toml = "0.5.8"
 
-diem-logger = { path = "../logger", version = "0.1.0" }
-diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-serde = { version = "1.0.117", features = ["derive"] }
+diem-logger = { path = "../logger" }
+diem-workspace-hack = { path = "../workspace-hack" }
+serde = { version = "1.0.123", features = ["derive"] }

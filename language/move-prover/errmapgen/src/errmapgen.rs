@@ -159,7 +159,7 @@ impl<'env> ErrmapGen<'env> {
 
     pub fn gen(&mut self) {
         for module in self.env.get_modules() {
-            if !module.is_script_module() && !module.is_dependency() {
+            if !module.is_script_module() && module.is_target() {
                 self.build_error_map(&module).unwrap()
             }
         }

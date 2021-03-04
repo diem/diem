@@ -10,9 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3.8"
-diem-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
-tokio = { version = "0.2.22", features = ["sync"] }
+futures = "0.3.12"
+diem-workspace-hack = { path = "../workspace-hack" }
+tokio = { version = "1.2.0", features = ["sync"] }
 
 [dev-dependencies]
-tokio = { version = "0.2.22", features = ["full"] }
+tokio = { version = "1.2.0", features = ["full"] }

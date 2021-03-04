@@ -2,37 +2,78 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     print_targets_for_test,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
 };
+use itertools::Itertools;
 use log::debug;
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
-use std::{collections::BTreeMap, fs};
+use std::{collections::BTreeMap, fmt::Formatter, fs};
 
 /// A data structure which holds data for multiple function targets, and allows to
 /// manipulate them as part of a transformation pipeline.
 #[derive(Debug, Default)]
 pub struct FunctionTargetsHolder {
-    targets: BTreeMap<QualifiedId<FunId>, FunctionTargetData>,
+    targets: BTreeMap<QualifiedId<FunId>, BTreeMap<FunctionVariant, FunctionData>>,
 }
 
-/// A trait for processing a function target. Takes as parameter a target holder which can be
-/// mutated, the env of the function being processed, and the target data. During the time
-/// the processor is called, the target data is removed from the holder, and added back once
-/// transformation has finished. This allows the processor to take ownership
-/// on the target data. Notice that you can use `FunctionTarget{func_env, &data}` to temporarily
-/// construct a function target for access to the underlying data.
+/// Describes a function target variant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FunctionVariant {
+    /// The baseline variant which was created from the original Move bytecode and is then
+    /// subject of multiple transformations.
+    Baseline,
+    /// The variant which is instrumented for verification. Only functions which are target
+    /// of verification have one of those.
+    Verification,
+}
+
+impl std::fmt::Display for FunctionVariant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use FunctionVariant::*;
+        match self {
+            Baseline => write!(f, "baseline"),
+            Verification => write!(f, "verification"),
+        }
+    }
+}
+
+/// A trait describing a function target processor.
 pub trait FunctionTargetProcessor {
+    /// Processes a function variant. Takes as parameter a target holder which can be mutated, the
+    /// env of the function being processed, and the target data. During the time the processor is
+    /// called, the target data is removed from the holder, and added back once transformation
+    /// has finished. This allows the processor to take ownership on the target data.
     fn process(
+        &self,
+        _targets: &mut FunctionTargetsHolder,
+        _fun_env: &FunctionEnv<'_>,
+        _data: FunctionData,
+    ) -> FunctionData {
+        unimplemented!()
+    }
+
+    /// Same as `process` but can return None to indicate that the function variant is
+    /// removed. By default, this maps to `Some(self.process(..))`. One needs to implement
+    /// either this function or `process`.
+    fn process_and_maybe_remove(
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionTargetData,
-    ) -> FunctionTargetData;
+        data: FunctionData,
+    ) -> Option<FunctionData> {
+        Some(self.process(targets, func_env, data))
+    }
 
     /// Returns a name for this processor. This should be suitable as a file suffix.
     fn name(&self) -> String;
+
+    /// A function which is called once before any `process` call is issued.
+    fn initialize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {}
+
+    /// A function which is called once after the last `process` call.
+    fn finalize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {}
 }
 
 /// A processing pipeline for function targets.
@@ -42,32 +83,141 @@ pub struct FunctionTargetPipeline {
 }
 
 impl FunctionTargetsHolder {
+    /// Get an iterator for all functions this holder.
+    pub fn get_funs(&self) -> impl Iterator<Item = QualifiedId<FunId>> + '_ {
+        self.targets.keys().cloned()
+    }
+
+    /// Gets an iterator for all functions and variants in this holder.
+    pub fn get_funs_and_variants(
+        &self,
+    ) -> impl Iterator<Item = (QualifiedId<FunId>, FunctionVariant)> + '_ {
+        self.targets
+            .iter()
+            .map(|(id, vs)| vs.keys().map(move |v| (*id, *v)))
+            .flatten()
+    }
+
     /// Adds a new function target. The target will be initialized from the Move byte code.
     pub fn add_target(&mut self, func_env: &FunctionEnv<'_>) {
         let generator = StacklessBytecodeGenerator::new(func_env);
         let data = generator.generate_function();
-        self.targets.insert(func_env.get_qualified_id(), data);
+        self.targets
+            .entry(func_env.get_qualified_id())
+            .or_default()
+            .insert(FunctionVariant::Baseline, data);
     }
 
-    /// Gets a function target for read-only consumption.
-    pub fn get_target<'env>(&'env self, func_env: &'env FunctionEnv<'env>) -> FunctionTarget<'env> {
+    /// Gets a function target for read-only consumption, for the given variant.
+    pub fn get_target<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+        variant: FunctionVariant,
+    ) -> FunctionTarget<'env> {
         let data = self
-            .get_target_data(&func_env.get_qualified_id())
-            .expect("function target exists");
+            .get_data(&func_env.get_qualified_id(), variant)
+            .unwrap_or_else(|| {
+                panic!(
+                    "expected function target: {} ({:?})",
+                    func_env.get_full_name_str(),
+                    variant
+                )
+            });
         FunctionTarget::new(func_env, &data)
     }
 
-    /// Gets function target data for a qualfied function identifier
-    pub fn get_target_data(&self, id: &QualifiedId<FunId>) -> Option<&FunctionTargetData> {
-        self.targets.get(id)
+    /// Gets the function target from the variant which owns the annotations.
+    /// TODO(refactoring): the need for this function should be removed once refactoring
+    ///    finishes and old boilerplate can be removed.
+    pub fn get_annotated_target<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+    ) -> FunctionTarget<'env> {
+        if self
+            .get_target_variants(func_env)
+            .contains(&FunctionVariant::Verification)
+        {
+            self.get_target(func_env, FunctionVariant::Verification)
+        } else {
+            self.get_target(func_env, FunctionVariant::Baseline)
+        }
+    }
+
+    /// Gets all available variants for function.
+    pub fn get_target_variants(&self, func_env: &FunctionEnv<'_>) -> Vec<FunctionVariant> {
+        self.targets
+            .get(&func_env.get_qualified_id())
+            .expect("function targets exist")
+            .keys()
+            .cloned()
+            .collect_vec()
+    }
+
+    /// Gets targets for all available variants.
+    pub fn get_targets<'env>(
+        &'env self,
+        func_env: &'env FunctionEnv<'env>,
+    ) -> Vec<(FunctionVariant, FunctionTarget<'env>)> {
+        self.targets
+            .get(&func_env.get_qualified_id())
+            .expect("function targets exist")
+            .iter()
+            .map(|(v, d)| (*v, FunctionTarget::new(func_env, d)))
+            .collect_vec()
+    }
+
+    /// Gets function data for a variant.
+    pub fn get_data(
+        &self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> Option<&FunctionData> {
+        self.targets.get(id).and_then(|vs| vs.get(&variant))
+    }
+
+    /// Gets mutable function data for a variant.
+    pub fn get_data_mut(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> Option<&mut FunctionData> {
+        self.targets.get_mut(id).and_then(|vs| vs.get_mut(&variant))
+    }
+
+    /// Removes function data for a variant.
+    pub fn remove_target_data(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+    ) -> FunctionData {
+        self.targets
+            .get_mut(id)
+            .expect("function target exists")
+            .remove(&variant)
+            .expect("variant exists")
+    }
+
+    /// Sets function data for a function's variant.
+    pub fn insert_target_data(
+        &mut self,
+        id: &QualifiedId<FunId>,
+        variant: FunctionVariant,
+        data: FunctionData,
+    ) {
+        self.targets.entry(*id).or_default().insert(variant, data);
     }
 
     /// Processes the function target data for given function.
     fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
-        let key = func_env.get_qualified_id();
-        let data = self.targets.remove(&key).expect("function target exists");
-        let processed_data = processor.process(self, func_env, data);
-        self.targets.insert(key, processed_data);
+        let id = func_env.get_qualified_id();
+        for variant in self.get_target_variants(func_env) {
+            // Remove data so we can own it.
+            let data = self.remove_target_data(&id, variant);
+            if let Some(processed_data) = processor.process_and_maybe_remove(self, func_env, data) {
+                // Put back processed data.
+                self.insert_target_data(&id, variant, processed_data);
+            }
+        }
     }
 }
 
@@ -90,8 +240,12 @@ impl FunctionTargetPipeline {
         dump_to_file: Option<String>,
     ) {
         let mut worklist = vec![];
-        for (key, data) in &targets.targets {
-            worklist.push((*key, data.get_callees()))
+        for fun in targets.get_funs() {
+            let fun_env = env.get_function(fun);
+            worklist.push((
+                fun,
+                fun_env.get_called_functions().into_iter().collect_vec(),
+            ));
         }
         let mut to_remove = vec![];
         let mut topological_order = vec![];
@@ -127,7 +281,11 @@ impl FunctionTargetPipeline {
                 // analysis processors to deal gracefully with the absence of summaries. But for
                 // now, we intentionally fail because recursion is not expected in Diem Framework
                 // code
-                unimplemented!("Recursion or mutual recursion detected in {:?}. Make sure that all analyses in  self.processors are prepared to handle recursion", func_env.get_identifier());
+                unimplemented!(
+                    "Recursion or mutual recursion detected in {:?}. \
+                     Make sure that all analyses in  self.processors are prepared to handle recursion",
+                    func_env.get_identifier()
+                );
             }
             topological_order.push(func_env);
         }
@@ -138,16 +296,19 @@ impl FunctionTargetPipeline {
             if let Some(base_name) = &dump_to_file {
                 let dump =
                     print_targets_for_test(env, &format!("after processor `{}`", name), targets);
+                let trimmed = format!("{}\n", dump.trim());
                 let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, name);
                 debug!("dumping bytecode to `{}`", file_name);
-                fs::write(&file_name, &dump).expect("dumping bytecode");
+                fs::write(&file_name, &trimmed).expect("dumping bytecode");
             }
         };
         dump_to_file(0, "stackless", targets);
         for (step_count, processor) in self.processors.iter().enumerate() {
+            processor.initialize(env, targets);
             for func_env in &topological_order {
                 targets.process(func_env, processor.as_ref());
             }
+            processor.finalize(env, targets);
             dump_to_file(step_count + 1, &processor.name(), targets);
         }
     }

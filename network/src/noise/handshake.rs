@@ -5,28 +5,24 @@
 //! This module also implements additional anti-DoS mitigation,
 //! by including a timestamp in each handshake initialization message.
 //! Refer to the module's documentation for more information.
-//! A successful handshake returns a `NoiseStream` which is defined in the
+//! A successful handshake returns a [`NoiseStream`] which is defined in the
 //! [stream] module.
 //!
-//! [stream]: network::noise::stream
+//! [stream]: crate::noise::stream
 
-use crate::{
-    noise::{error::NoiseHandshakeError, stream::NoiseStream},
-    transport::TrustLevel,
+use crate::noise::{error::NoiseHandshakeError, stream::NoiseStream};
+use diem_config::{
+    config::{Peer, PeerRole, PeerSet},
+    network_id::NetworkContext,
 };
-use diem_config::network_id::NetworkContext;
 use diem_crypto::{noise, x25519};
 use diem_infallible::{duration_since_epoch, RwLock};
 use diem_logger::trace;
 use diem_types::PeerId;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use netcore::transport::ConnectionOrigin;
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryFrom as _,
-    fmt::Debug,
-    sync::Arc,
-};
+use short_hex_str::{AsShortHexStr, ShortHexStr};
+use std::{collections::HashMap, convert::TryFrom as _, fmt::Debug, sync::Arc};
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.
 /// This is in order to prevent replay attacks, where the attacker does not know the client's static key,
@@ -91,25 +87,23 @@ pub enum HandshakeAuthMode {
         // mutual-auth scenarios because we have a bounded set of trusted peers
         // that rarely changes.
         anti_replay_timestamps: RwLock<AntiReplayTimestamps>,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+        trusted_peers: Arc<RwLock<PeerSet>>,
     },
     /// In `MaybeMutual` mode, the dialer authenticates the server and the server will allow all
     /// inbound connections from any peer but will mark connections as `Trusted` if the incoming
     /// connection is apart of its trusted peers set.
-    MaybeMutual(Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>),
+    MaybeMutual(Arc<RwLock<PeerSet>>),
 }
 
 impl HandshakeAuthMode {
-    pub fn mutual(trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>) -> Self {
+    pub fn mutual(trusted_peers: Arc<RwLock<PeerSet>>) -> Self {
         HandshakeAuthMode::Mutual {
             anti_replay_timestamps: RwLock::new(AntiReplayTimestamps::default()),
             trusted_peers,
         }
     }
 
-    pub fn maybe_mutual(
-        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-    ) -> Self {
+    pub fn maybe_mutual(trusted_peers: Arc<RwLock<PeerSet>>) -> Self {
         HandshakeAuthMode::MaybeMutual(trusted_peers)
     }
 
@@ -304,7 +298,7 @@ impl NoiseUpgrader {
     pub async fn upgrade_inbound<TSocket>(
         &self,
         mut socket: TSocket,
-    ) -> Result<(NoiseStream<TSocket>, PeerId, TrustLevel), NoiseHandshakeError>
+    ) -> Result<(NoiseStream<TSocket>, PeerId, PeerRole), NoiseHandshakeError>
     where
         TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
@@ -353,53 +347,42 @@ impl NoiseUpgrader {
             .map_err(|err| NoiseHandshakeError::ServerParseClient(remote_peer_short, err))?;
 
         // if mutual auth mode, verify the remote pubkey is in our set of trusted peers
-        let trust_level = match &self.auth_mode {
+        let peer_role = match &self.auth_mode {
             HandshakeAuthMode::Mutual { trusted_peers, .. } => {
                 match trusted_peers.read().get(&remote_peer_id) {
-                    Some(remote_pubkey_set) => {
-                        if !remote_pubkey_set.contains(&remote_public_key) {
-                            return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
-                                remote_peer_short,
-                                hex::encode(remote_public_key.as_slice()),
-                            ));
-                        }
+                    Some(peer) => {
+                        Self::authenticate_inbound(remote_peer_short, peer, &remote_public_key)
                     }
-                    None => {
-                        return Err(NoiseHandshakeError::UnauthenticatedClient(
-                            remote_peer_short,
-                            remote_peer_id,
-                        ))
-                    }
-                };
-                TrustLevel::Trusted
+                    None => Err(NoiseHandshakeError::UnauthenticatedClient(
+                        remote_peer_short,
+                        remote_peer_id,
+                    )),
+                }
             }
             HandshakeAuthMode::MaybeMutual(trusted_peers) => {
                 match trusted_peers.read().get(&remote_peer_id) {
-                    Some(remote_pubkey_set) => {
-                        if !remote_pubkey_set.contains(&remote_public_key) {
-                            return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
-                                remote_peer_short,
-                                hex::encode(remote_public_key.as_slice()),
-                            ));
-                        }
-                        TrustLevel::Trusted
+                    Some(peer) => {
+                        Self::authenticate_inbound(remote_peer_short, peer, &remote_public_key)
                     }
                     None => {
                         // if not, verify that their peerid is constructed correctly from their public key
                         let derived_remote_peer_id =
-                            PeerId::from_identity_public_key(remote_public_key);
+                            diem_types::account_address::from_identity_public_key(
+                                remote_public_key,
+                            );
                         if derived_remote_peer_id != remote_peer_id {
-                            return Err(NoiseHandshakeError::ClientPeerIdMismatch(
+                            Err(NoiseHandshakeError::ClientPeerIdMismatch(
                                 remote_peer_short,
                                 remote_peer_id,
                                 derived_remote_peer_id,
-                            ));
+                            ))
+                        } else {
+                            Ok(PeerRole::Unknown)
                         }
-                        TrustLevel::Untrusted
                     }
                 }
             }
-        };
+        }?;
 
         // if on a mutually authenticated network,
         // the payload should contain a u64 client timestamp
@@ -455,11 +438,21 @@ impl NoiseUpgrader {
             self.network_context,
             remote_peer_short,
         );
-        Ok((
-            NoiseStream::new(socket, session),
-            remote_peer_id,
-            trust_level,
-        ))
+        Ok((NoiseStream::new(socket, session), remote_peer_id, peer_role))
+    }
+
+    fn authenticate_inbound(
+        remote_peer_short: ShortHexStr,
+        peer: &Peer,
+        remote_public_key: &x25519::PublicKey,
+    ) -> Result<PeerRole, NoiseHandshakeError> {
+        if !peer.keys.contains(&remote_public_key) {
+            return Err(NoiseHandshakeError::UnauthenticatedClientPubkey(
+                remote_peer_short,
+                hex::encode(remote_public_key.as_slice()),
+            ));
+        }
+        Ok(peer.role)
     }
 }
 
@@ -472,6 +465,7 @@ impl NoiseUpgrader {
 mod test {
     use super::*;
     use crate::testutils::fake_socket::ReadWriteTestSocket;
+    use diem_config::config::{Peer, PeerRole};
     use diem_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use futures::{executor::block_on, future::join};
     use memsocket::MemorySocket;
@@ -501,8 +495,14 @@ mod test {
             let server_pubkey_set = [server_public_key].iter().copied().collect();
             let trusted_peers = Arc::new(RwLock::new(
                 vec![
-                    (client_peer_id, client_pubkey_set),
-                    (server_peer_id, server_pubkey_set),
+                    (
+                        client_peer_id,
+                        Peer::new(Vec::new(), client_pubkey_set, PeerRole::Validator),
+                    ),
+                    (
+                        server_peer_id,
+                        Peer::new(Vec::new(), server_pubkey_set, PeerRole::Validator),
+                    ),
                 ]
                 .into_iter()
                 .collect(),
@@ -511,8 +511,10 @@ mod test {
             let server_auth = HandshakeAuthMode::mutual(trusted_peers);
             (client_auth, server_auth, client_peer_id, server_peer_id)
         } else {
-            let client_peer_id = PeerId::from_identity_public_key(client_public_key);
-            let server_peer_id = PeerId::from_identity_public_key(server_public_key);
+            let client_peer_id =
+                diem_types::account_address::from_identity_public_key(client_public_key);
+            let server_peer_id =
+                diem_types::account_address::from_identity_public_key(server_public_key);
             (
                 HandshakeAuthMode::server_only(),
                 HandshakeAuthMode::server_only(),
@@ -542,7 +544,7 @@ mod test {
         server_public_key: x25519::PublicKey,
     ) -> (
         Result<NoiseStream<MemorySocket>, NoiseHandshakeError>,
-        Result<(NoiseStream<MemorySocket>, PeerId, TrustLevel), NoiseHandshakeError>,
+        Result<(NoiseStream<MemorySocket>, PeerId, PeerRole), NoiseHandshakeError>,
     ) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
@@ -693,8 +695,8 @@ mod test {
         client.network_context = NetworkContext::mock_with_peer_id(PeerId::random());
         let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
 
-        trace!("client_res: {}", client_res.unwrap_err());
-        trace!("server_res: {}", server_res.unwrap_err());
+        client_res.unwrap_err();
+        server_res.unwrap_err();
     }
 
     #[test]

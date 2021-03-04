@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cached_access_path_table::resource_vec_to_type_tag,
     fat_type::{FatStructType, FatType},
     resolver::Resolver,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
@@ -14,7 +13,7 @@ use diem_types::{
 };
 use move_core_types::{
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
     value::{MoveStruct, MoveValue},
 };
 use move_vm_runtime::data_cache::RemoteCache;
@@ -23,9 +22,11 @@ use std::{
     convert::TryInto,
     fmt::{Display, Formatter},
 };
-use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
+use vm::{
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
+    file_format::{Ability, AbilitySet},
+};
 
-mod cached_access_path_table;
 mod fat_type;
 mod module_cache;
 mod resolver;
@@ -35,9 +36,9 @@ pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
 #[derive(Debug)]
 pub struct AnnotatedMoveStruct {
-    is_resource: bool,
-    type_: StructTag,
-    value: Vec<(Identifier, AnnotatedMoveValue)>,
+    pub abilities: AbilitySet,
+    pub type_: StructTag,
+    pub value: Vec<(Identifier, AnnotatedMoveValue)>,
 }
 
 /// AnnotatedMoveValue is a fully expanded version of on chain Move data. This should only be used
@@ -51,7 +52,7 @@ pub enum AnnotatedMoveValue {
     U128(u128),
     Bool(bool),
     Address(AccountAddress),
-    Vector(Vec<AnnotatedMoveValue>),
+    Vector(TypeTag, Vec<AnnotatedMoveValue>),
     Bytes(Vec<u8>),
     Struct(AnnotatedMoveStruct),
 }
@@ -81,10 +82,10 @@ impl<'a> MoveValueAnnotator<'a> {
         access_path: AccessPath,
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
-        self.view_resource(
-            &resource_vec_to_type_tag(access_path.path.as_slice())?,
-            blob,
-        )
+        match access_path.get_struct_tag() {
+            Some(tag) => self.view_resource(&tag, blob),
+            None => bail!("Bad resource access path"),
+        }
     }
 
     pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {
@@ -109,13 +110,14 @@ impl<'a> MoveValueAnnotator<'a> {
     pub fn view_account_state(&self, state: &AccountState) -> Result<AnnotatedAccountStateBlob> {
         let mut output = BTreeMap::new();
         for (k, v) in state.iter() {
-            let ty = if let Ok(ty) = resource_vec_to_type_tag(k.as_slice()) {
-                ty
-            } else {
-                println!("Uncached AccessPath: {:?}", k);
-                continue;
+            let tag = match AccessPath::new(AccountAddress::random(), k.to_vec()).get_struct_tag() {
+                Some(t) => t,
+                None => {
+                    println!("Uncached AccessPath: {:?}", k);
+                    continue;
+                }
             };
-            let ty = self.cache.resolve_struct(&ty)?;
+            let ty = self.cache.resolve_struct(&tag)?;
             let struct_def = (&ty)
                 .try_into()
                 .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
@@ -145,7 +147,7 @@ impl<'a> MoveValueAnnotator<'a> {
             annotated_fields.push(self.annotate_value(v, ty)?);
         }
         Ok(AnnotatedMoveStruct {
-            is_resource: ty.is_resource,
+            abilities: ty.abilities.0,
             type_: struct_tag,
             value: field_names
                 .into_iter()
@@ -171,6 +173,7 @@ impl<'a> MoveValueAnnotator<'a> {
                         .collect::<Result<_>>()?,
                 ),
                 _ => AnnotatedMoveValue::Vector(
+                    ty.type_tag().unwrap(),
                     a.iter()
                         .map(|v| self.annotate_value(v, ty.as_ref()))
                         .collect::<Result<_>>()?,
@@ -208,7 +211,7 @@ fn pretty_print_value(
         AnnotatedMoveValue::U64(v) => write!(f, "{}", v),
         AnnotatedMoveValue::U128(v) => write!(f, "{}u128", v),
         AnnotatedMoveValue::Address(a) => write!(f, "{}", a.short_str_lossless()),
-        AnnotatedMoveValue::Vector(v) => {
+        AnnotatedMoveValue::Vector(_, v) => {
             writeln!(f, "[")?;
             for value in v.iter() {
                 write_indent(f, indent + 4)?;
@@ -228,12 +231,8 @@ fn pretty_print_struct(
     value: &AnnotatedMoveStruct,
     indent: u64,
 ) -> std::fmt::Result {
-    writeln!(
-        f,
-        "{}{} {{",
-        if value.is_resource { "resource " } else { "" },
-        value.type_
-    )?;
+    pretty_print_ability_modifiers(f, value.abilities)?;
+    writeln!(f, "{} {{", value.type_)?;
     for (field_name, v) in value.value.iter() {
         write_indent(f, indent + 4)?;
         write!(f, "{}: ", field_name)?;
@@ -242,6 +241,18 @@ fn pretty_print_struct(
     }
     write_indent(f, indent)?;
     write!(f, "}}")
+}
+
+fn pretty_print_ability_modifiers(f: &mut Formatter, abilities: AbilitySet) -> std::fmt::Result {
+    for ability in abilities {
+        match ability {
+            Ability::Copy => write!(f, "copy ")?,
+            Ability::Drop => write!(f, "drop ")?,
+            Ability::Store => write!(f, "store ")?,
+            Ability::Key => write!(f, "key ")?,
+        }
+    }
+    Ok(())
 }
 
 impl Display for AnnotatedMoveValue {

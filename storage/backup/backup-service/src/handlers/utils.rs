@@ -69,7 +69,7 @@ pub(super) fn reply_with_async_channel_writer<G, F>(
     backup_handler: &BackupHandler,
     endpoint: &'static str,
     get_channel_writer: G,
-) -> Result<Box<dyn Reply>>
+) -> Box<dyn Reply>
 where
     G: FnOnce(BackupHandler, BytesSender) -> F,
     F: Future<Output = ()> + Send + 'static,
@@ -79,7 +79,7 @@ where
     let bh = backup_handler.clone();
     tokio::spawn(get_channel_writer(bh, sender));
 
-    Ok(Box::new(Response::new(body)))
+    Box::new(Response::new(body))
 }
 
 pub(super) async fn send_size_prefixed_bcs_bytes<I, R>(iter_res: Result<I>, mut sender: BytesSender)

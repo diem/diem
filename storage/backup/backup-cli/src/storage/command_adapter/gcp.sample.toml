@@ -1,27 +1,40 @@
 [[env_vars]]
-key = "BASE_PATH"
+key = "BUCKET"
 value = "diem-backup/backup1"
+
+[[env_vars]]
+key = "SUB_DIR"
+value = "e1"
 
 [commands]
 create_backup = '''
-    echo "$BACKUP_NAME"  # backup handle is the same with input backup name, output to stdout
+    # backup handle is the same with input backup name, output to stdout
+    echo "$BACKUP_NAME"
 '''
 
 create_for_write = '''
-    FILE_HANDLE="gs://$BASE_PATH/$BACKUP_HANDLE/$FILE_NAME"  # file handle is the file name under the folder with the name of the backup handle
-    echo "$FILE_HANDLE" # output file handle to stdout
-    exec 1>&-  # close stdout
-    gsutil -q cp - "$FILE_HANDLE" > /dev/null  # route stdin to file handle
+    # file handle is the file name under the folder with the name of the backup handle
+    FILE_HANDLE="$BACKUP_HANDLE/$FILE_NAME"
+    # output file handle to stdout
+    echo "$FILE_HANDLE"
+    # close stdout
+    exec 1>&-
+    # route stdin to file handle
+    gzip -c | gsutil -q cp - "gs://$BUCKET/$SUB_DIR/$FILE_HANDLE" > /dev/null
 '''
 
 open_for_read = '''
-    gsutil -q cp "$FILE_HANDLE" -  # route file handle content to stdout
+    # route file handle content to stdout
+    gsutil -q cp "gs://$BUCKET/$SUB_DIR/$FILE_HANDLE" - | gzip -cd
 '''
 
-save_metadata_line= '''
-    gsutil -q cp - "gs://$BASE_PATH/metadata/$FILE_NAME"  # save the line to a new file under the metadata folder
+save_metadata_line = '''
+    # save the line to a new file under the metadata folder
+    gzip -c | gsutil -q cp - "gs://$BUCKET/$SUB_DIR/metadata/$FILE_NAME"
 '''
 
 list_metadata_files = '''
-    gsutil -q ls gs://$BASE_PATH/metadata/ ||:
+    # list files under the metadata folder
+    (gsutil -q ls gs://$BUCKET/$SUB_DIR/metadata/ ||:) \
+    | sed -ne "s#gs://.*/metadata/#metadata/#p"
 '''

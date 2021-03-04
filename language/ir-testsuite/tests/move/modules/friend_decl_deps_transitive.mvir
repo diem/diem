@@ -1,0 +1,28 @@
+module A {
+    public foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module B {
+    import {{default}}.A;
+    public foo() {
+        A.foo();
+        return;
+    }
+}
+
+//! new-transaction
+
+module C {
+    friend {{default}}.A;
+    import {{default}}.B;
+    public foo() {
+        B.foo();
+        return;
+    }
+}
+
+// check: INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES

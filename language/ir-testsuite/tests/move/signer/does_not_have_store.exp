@@ -1,0 +1,2 @@
+[0] Transaction(0)
+[1] VerificationError(ERROR { status_code: MOVETO_WITHOUT_KEY_ABILITY })

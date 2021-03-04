@@ -29,6 +29,16 @@ ChangeSet:
     - events:
         SEQ:
           TYPENAME: ContractEvent
+CoinTradeMetadata:
+  ENUM:
+    0:
+      CoinTradeMetadataV0:
+        NEWTYPE:
+          TYPENAME: CoinTradeMetadataV0
+CoinTradeMetadataV0:
+  STRUCT:
+    - trade_ids:
+        SEQ: STR
 ContractEvent:
   ENUM:
     0:
@@ -83,6 +93,14 @@ Metadata:
       UnstructuredBytesMetadata:
         NEWTYPE:
           TYPENAME: UnstructuredBytesMetadata
+    4:
+      RefundMetadata:
+        NEWTYPE:
+          TYPENAME: RefundMetadata
+    5:
+      CoinTradeMetadata:
+        NEWTYPE:
+          TYPENAME: CoinTradeMetadata
 Module:
   STRUCT:
     - code: BYTES
@@ -103,6 +121,27 @@ RawTransaction:
     - expiration_timestamp_secs: U64
     - chain_id:
         TYPENAME: ChainId
+RefundMetadata:
+  ENUM:
+    0:
+      RefundMetadataV0:
+        NEWTYPE:
+          TYPENAME: RefundMetadataV0
+RefundMetadataV0:
+  STRUCT:
+    - transaction_version: U64
+    - reason:
+        TYPENAME: RefundReason
+RefundReason:
+  ENUM:
+    0:
+      OtherReason: UNIT
+    1:
+      InvalidSubaddress: UNIT
+    2:
+      UserInitiatedPartialRefund: UNIT
+    3:
+      UserInitiatedFullRefund: UNIT
 Script:
   STRUCT:
     - code: BYTES

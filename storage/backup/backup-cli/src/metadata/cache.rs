@@ -5,11 +5,12 @@ use crate::{
     metadata::{view::MetadataView, Metadata},
     metrics::metadata::{NUM_META_DOWNLOAD, NUM_META_FILES, NUM_META_MISS},
     storage::{BackupStorage, FileHandle},
-    utils::stream::StreamX,
+    utils::{error_notes::ErrorNotes, stream::StreamX},
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use diem_logger::prelude::*;
+use futures::stream::poll_fn;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -20,8 +21,8 @@ use structopt::StructOpt;
 use tokio::{
     fs::{create_dir_all, read_dir, remove_file, OpenOptions},
     io::{AsyncRead, AsyncReadExt},
-    stream::StreamExt,
 };
+use tokio_stream::StreamExt;
 
 #[derive(StructOpt)]
 pub struct MetadataCacheOpt {
@@ -57,13 +58,19 @@ pub async fn sync_and_load(
 ) -> Result<MetadataView> {
     let timer = Instant::now();
     let cache_dir = opt.cache_dir();
-    create_dir_all(&cache_dir).await?; // create if not present already
+    create_dir_all(&cache_dir).await.err_notes(&cache_dir)?; // create if not present already
 
     // List cached metadata files.
-    let local_entries = read_dir(&cache_dir)
-        .await?
-        .collect::<tokio::io::Result<Vec<_>>>()
-        .await?;
+    let mut dir = read_dir(&cache_dir).await.err_notes(&cache_dir)?;
+    let local_entries = poll_fn(|ctx| {
+        ::std::task::Poll::Ready(match futures::ready!(dir.poll_next_entry(ctx)) {
+            Ok(Some(entry)) => Some(Ok(entry)),
+            Ok(None) => None,
+            Err(err) => Some(Err(err)),
+        })
+    })
+    .collect::<tokio::io::Result<Vec<_>>>()
+    .await?;
     let local_hashes = local_entries
         .iter()
         .map(|e| {
@@ -89,7 +96,8 @@ pub async fn sync_and_load(
     let up_to_date_local_hashes = local_hashes.intersection(&remote_hashes);
 
     for h in stale_local_hashes {
-        remove_file(&cache_dir.join(&*h)).await?;
+        let file = cache_dir.join(&*h);
+        remove_file(&file).await.err_notes(&file)?;
     }
 
     NUM_META_MISS.set(new_remote_hashes.len() as i64);
@@ -101,13 +109,18 @@ pub async fn sync_and_load(
 
         async move {
             let file_handle = fh_by_h_ref.get(*h).expect("In map.");
+            let local_file = cache_dir_ref.join(*h);
             tokio::io::copy(
-                &mut storage_ref.open_for_read(file_handle).await?,
+                &mut storage_ref
+                    .open_for_read(file_handle)
+                    .await
+                    .err_notes(file_handle)?,
                 &mut OpenOptions::new()
                     .write(true)
                     .create_new(true)
-                    .open(&cache_dir_ref.join(*h))
-                    .await?,
+                    .open(&local_file)
+                    .await
+                    .err_notes(&local_file)?,
             )
             .await?;
             NUM_META_DOWNLOAD.inc();
@@ -130,9 +143,11 @@ pub async fn sync_and_load(
             OpenOptions::new()
                 .read(true)
                 .open(&cached_file)
-                .await?
+                .await
+                .err_notes(&cached_file)?
                 .load_metadata_lines()
-                .await?
+                .await
+                .err_notes(&cached_file)?
                 .into_iter(),
         )
     }
@@ -166,7 +181,9 @@ trait LoadMetadataLines {
 impl<R: AsyncRead + Send + Unpin> LoadMetadataLines for R {
     async fn load_metadata_lines(&mut self) -> Result<Vec<Metadata>> {
         let mut buf = String::new();
-        self.read_to_string(&mut buf).await?;
+        self.read_to_string(&mut buf)
+            .await
+            .err_notes((file!(), line!(), &buf))?;
         Ok(buf
             .lines()
             .map(serde_json::from_str::<Metadata>)

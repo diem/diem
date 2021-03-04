@@ -1,0 +1,91 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "backup.fullname" . }}-backup-verify
+  labels:
+    {{- include "backup.labels" . | nindent 4 }}
+    app.kubernetes.io/name: backup-verify
+spec:
+  concurrencyPolicy: Replace
+  suspend: {{ not .Values.backup.enable }}
+  schedule: {{ .Values.backup_verify.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "backup.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/name: backup-verify
+          annotations:
+            seccomp.security.alpha.kubernetes.io/pod: runtime/default
+        spec:
+          restartPolicy: Never
+          terminationGracePeriodSeconds: 0
+          containers:
+          - name: backup-verify
+            # use the same image with the backup sts
+            image: {{ .Values.backup.image.repo }}:{{ .Values.backup.image.tag | default .Values.imageTag }}
+            imagePullPolicy: {{ .Values.backup.image.pullPolicy }}
+            command:
+            - /usr/local/bin/db-backup-verify
+            {{- range $.Values.restore.config.trusted_waypoints }}
+            - --trust-waypoint
+            - {{ . }}
+            {{- end }}
+            - --metadata-cache-dir
+            - /tmp/diem-backup-verify-metadata
+            - command-adapter
+            - --config
+            # use the same config with the backup sts
+            - /opt/diem/etc/{{ .Values.backup.config.location }}.toml
+            env:
+            - name: RUST_LOG
+              value: "debug"
+            - name: RUST_BACKTRACE
+              value: "1"
+            - name: PUSH_METRICS_ENDPOINT
+              value: "{{- include "backup.pushGateway" $ }}/metrics/job/{{- .Values.backup_verify.jobName | default "db_backup_verify" }}"
+            {{- include "backup.backupEnvironment" (dict "config" $.Values.backup.config "era" $.Values.chain.era) | nindent 12 }}
+            {{- with .Values.backup_verify }}
+            resources:
+            {{- toYaml .resources | nindent 14 }}
+            volumeMounts:
+            - name: backup-config
+              mountPath: /opt/diem/etc
+            - name: tmp
+              mountPath: /tmp
+            securityContext:
+              readOnlyRootFilesystem: true
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 6180
+            runAsGroup: 6180
+            fsGroup: 6180
+          {{- with .nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- end }}
+          volumes:
+          - name: backup-config
+            configMap:
+              name: {{ include "backup.fullname" . }}-backup
+          - name: tmp
+            emptyDir: {}
+          serviceAccountName: {{ include "backup.serviceAccount" . }}
+          {{- if .Values.imagePullSecret }}
+          imagePullSecrets:
+          - name: {{.Values.imagePullSecret}}
+          {{- end }}

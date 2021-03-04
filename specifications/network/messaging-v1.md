@@ -26,7 +26,7 @@ enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,
     MempoolDirectSend = 2,
-    StateSynchronizerDirectSend = 3,
+    StateSyncDirectSend = 3,
     DiscoveryDirectSend = 4,
     HealthCheckerRpc = 5,
     IdentityDirectSend = 6,

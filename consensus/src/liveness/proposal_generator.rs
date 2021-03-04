@@ -101,13 +101,16 @@ impl ProposalGenerator {
         } else {
             // One needs to hold the blocks with the references to the payloads while get_block is
             // being executed: pending blocks vector keeps all the pending ancestors of the extended branch.
-            let pending_blocks = self
+            let mut pending_blocks = self
                 .block_store
                 .path_from_root(hqc.certified_block().id())
                 .ok_or_else(|| format_err!("HQC {} already pruned", hqc.certified_block().id()))?;
+            // Avoid txn manager long poll it the root block has txns, so that the leader can
+            // deliver the commit proof to others without delay.
+            pending_blocks.push(self.block_store.root());
 
             // Exclude all the pending transactions: these are all the ancestors of
-            // parent (including) up to the root (excluding).
+            // parent (including) up to the root (including).
             let exclude_payload: Vec<&Vec<_>> = pending_blocks
                 .iter()
                 .flat_map(|block| block.payload())

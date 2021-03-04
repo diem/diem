@@ -8,17 +8,17 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, TempIndex},
+    stackless_bytecode::{AbortAction, BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
-use move_model::model::FunctionEnv;
+use move_model::{ast::TempIndex, model::FunctionEnv};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-/// The reaching definitions we are capturing. Currently we only
+/// The reaching definitions we are capturing. Currently we only capture
 /// aliases (assignment).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Def {
@@ -71,33 +71,33 @@ impl ReachingDefProcessor {
     }
 
     /// Perform copy propagation based on reaching definitions analysis results.
-    pub fn copy_propagation(code: Vec<Bytecode>, defs: &ReachingDefAnnotation) -> Vec<Bytecode> {
-        use Bytecode::*;
+    pub fn copy_propagation(
+        target: &FunctionTarget<'_>,
+        code: Vec<Bytecode>,
+        defs: &ReachingDefAnnotation,
+    ) -> Vec<Bytecode> {
         let mut res = vec![];
         for (pc, bytecode) in code.into_iter().enumerate() {
             let no_defs = BTreeMap::new();
             let reaching_defs = defs.0.get(&(pc as CodeOffset)).unwrap_or(&no_defs);
             let mut propagate = |local| Self::get_propagated_local(local, reaching_defs);
-            match bytecode {
-                Assign(attr, dest, src, kind) => {
-                    // For assign, override the generic treatment, as we do not want to
-                    // propagate to the destination.
-                    res.push(Assign(attr, dest, propagate(src), kind));
-                }
-                _ => res.push(bytecode.remap_vars(&mut propagate)),
-            }
+            res.push(bytecode.remap_src_vars(target, &mut propagate));
         }
         res
     }
 
-    /// Determines whether code is suitable for copy propagation. Currently we cannot
-    /// do this for code with embedded spec blocks, because those refer to locals
-    /// which might be substituted via copy propagation.
-    /// TODO(wrwg): verify that spec blocks are the actual cause, it could be also a bug elsewhere.
-    ///     Currently functional/verify_vector fails without this and it uses spec blocks all
-    ///     over the place.
-    fn suitable_for_copy_propagation(&self, code: &[Bytecode]) -> bool {
-        !code.iter().any(|bc| matches!(bc, Bytecode::SpecBlock(..)))
+    /// Compute the set of locals which are borrowed from or which are otherwise used to refer to.
+    /// We can't alias such locals to other locals because of reference semantics.
+    fn borrowed_locals(&self, code: &[Bytecode]) -> BTreeSet<TempIndex> {
+        use Bytecode::*;
+        code.iter()
+            .filter_map(|bc| match bc {
+                Call(_, _, Operation::BorrowLoc, srcs, _) => Some(srcs[0]),
+                Call(_, _, Operation::WriteBack(BorrowNode::LocalRoot(src), _), ..) => Some(*src),
+                Call(_, _, Operation::WriteBack(BorrowNode::Reference(src), _), ..) => Some(*src),
+                _ => None,
+            })
+            .collect()
     }
 }
 
@@ -106,15 +106,16 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
-        if func_env.is_native() || !self.suitable_for_copy_propagation(&data.code) {
+        mut data: FunctionData,
+    ) -> FunctionData {
+        if func_env.is_native() {
             // Nothing to do
             data
         } else {
             let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let analyzer = ReachingDefAnalysis {
-                target: FunctionTarget::new(func_env, &data),
+                _target: FunctionTarget::new(func_env, &data),
+                borrowed_locals: self.borrowed_locals(&data.code),
             };
             let block_state_map = analyzer.analyze_function(
                 ReachingDefState {
@@ -130,11 +131,14 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 
             // Run copy propagation transformation.
             let annotations = ReachingDefAnnotation(defs);
-            data.code = Self::copy_propagation(data.code, &annotations);
+            let code = std::mem::take(&mut data.code);
+            let target = FunctionTarget::new(func_env, &data);
+            let new_code = Self::copy_propagation(&target, code, &annotations);
+            data.code = new_code;
 
             // Currently we do not need reaching defs after this phase. If so in the future, we
             // need to uncomment this statement.
-            // data.annotations.set(annotations);
+            //data.annotations.set(annotations);
             data
         }
     }
@@ -145,7 +149,8 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
 }
 
 struct ReachingDefAnalysis<'a> {
-    target: FunctionTarget<'a>,
+    _target: FunctionTarget<'a>,
+    borrowed_locals: BTreeSet<TempIndex>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, PartialOrd)]
@@ -160,24 +165,31 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     const BACKWARD: bool = false;
 
     fn execute(&self, state: &mut ReachingDefState, instr: &Bytecode, _offset: CodeOffset) {
+        use BorrowNode::*;
         use Bytecode::*;
+        use Operation::*;
         match instr {
-            Assign(_, dst, src, _) => {
-                // Only define aliases for temporaries. We want to keep names for user
-                // declared variables for better debugging. Also don't skip assigns
-                // from proxied parameters. The later is currently needed because the
-                // Boogie backend does not allow to write to such values, which happens via
-                // WriteBack instructions.
-                // TODO(remove): this restriction should be handled in the backend instead of here.
-                if self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none() {
-                    state.def_alias(*dst, *src);
+            Assign(_, dest, src, _) => {
+                state.kill(*dest);
+                if !self.borrowed_locals.contains(dest) && !self.borrowed_locals.contains(src) {
+                    state.def_alias(*dest, *src);
                 }
             }
-            _ => {
-                for dst in instr.modifies() {
-                    state.kill(dst);
+            Load(_, dest, ..) => {
+                state.kill(*dest);
+            }
+            Call(_, dests, oper, _, on_abort) => {
+                if let WriteBack(LocalRoot(dest), _) = oper {
+                    state.kill(*dest);
+                }
+                for dest in dests {
+                    state.kill(*dest);
+                }
+                if let Some(AbortAction(_, dest)) = on_abort {
+                    state.kill(*dest);
                 }
             }
+            _ => {}
         }
     }
 }
@@ -187,17 +199,19 @@ impl<'a> DataflowAnalysis for ReachingDefAnalysis<'a> {}
 impl AbstractDomain for ReachingDefState {
     fn join(&mut self, other: &Self) -> JoinResult {
         let mut result = JoinResult::Unchanged;
-        for (idx, other_defs) in &other.map {
-            if !self.map.contains_key(idx) {
-                self.map.insert(*idx, other_defs.clone());
-                result = JoinResult::Changed;
-            } else {
-                let defs = self.map.get_mut(idx).unwrap();
+        for idx in self.map.keys().cloned().collect_vec() {
+            if let Some(other_defs) = other.map.get(&idx) {
+                // Union of definitions
+                let defs = self.map.get_mut(&idx).unwrap();
                 for d in other_defs {
                     if defs.insert(d.clone()) {
                         result = JoinResult::Changed;
                     }
                 }
+            } else {
+                // Kill this definition as it is not contained in both incoming states.
+                self.map.remove(&idx);
+                result = JoinResult::Changed;
             }
         }
         result

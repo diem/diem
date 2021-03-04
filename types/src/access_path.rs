@@ -41,7 +41,7 @@ use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_T
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -84,6 +84,20 @@ impl AccessPath {
         let address = *key.address();
         let path = AccessPath::code_access_path_vec(key);
         AccessPath { address, path }
+    }
+
+    /// Extract the structured resource or module `Path` from `self`
+    pub fn get_path(&self) -> Path {
+        bcs::from_bytes::<Path>(&self.path).expect("Unexpected serialization error")
+    }
+
+    /// Extract a StructTag from `self`. Returns Some if this is a resource access
+    /// path and None otherwise
+    pub fn get_struct_tag(&self) -> Option<StructTag> {
+        match self.get_path() {
+            Path::Resource(s) => Some(s),
+            Path::Code(_) => None,
+        }
     }
 }
 
@@ -129,5 +143,21 @@ impl From<&ModuleId> for AccessPath {
             address: *id.address(),
             path: id.access_vector(),
         }
+    }
+}
+
+impl TryFrom<&[u8]> for Path {
+    type Error = bcs::Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        bcs::from_bytes::<Path>(bytes)
+    }
+}
+
+impl TryFrom<&Vec<u8>> for Path {
+    type Error = bcs::Error;
+
+    fn try_from(bytes: &Vec<u8>) -> Result<Self, Self::Error> {
+        bcs::from_bytes::<Path>(bytes)
     }
 }

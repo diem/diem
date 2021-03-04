@@ -51,9 +51,18 @@ pub struct ConstantInfo {
 }
 
 pub struct ModuleInfo {
+    pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, FunctionInfo>,
     pub constants: UniqueMap<ConstantName, ConstantInfo>,
+}
+
+pub struct LoopInfo(LoopInfo_);
+
+enum LoopInfo_ {
+    NotInLoop,
+    BreakTypeUnknown,
+    BreakType(Box<Type>),
 }
 
 pub struct Context {
@@ -68,8 +77,7 @@ pub struct Context {
     pub subst: Subst,
     pub constraints: Constraints,
 
-    pub in_loop: bool,
-    pub break_type: Option<Type>,
+    loop_info: LoopInfo,
 
     errors: Errors,
 }
@@ -89,6 +97,7 @@ impl Context {
                 signature: cdef.signature.clone(),
             });
             ModuleInfo {
+                friends: mdef.friends.clone(),
                 structs,
                 functions,
                 constants,
@@ -103,17 +112,15 @@ impl Context {
             constraints: vec![],
             errors,
             locals: UniqueMap::new(),
-            in_loop: false,
-            break_type: None,
+            loop_info: LoopInfo(LoopInfo_::NotInLoop),
             modules,
         }
     }
 
     pub fn reset_for_module_item(&mut self) {
-        assert!(!self.in_loop, "ICE in_loop should be reset after the loop");
         assert!(
-            self.break_type.is_none(),
-            "ICE in_loop should be reset after the loop"
+            matches!(&self.loop_info, LoopInfo(LoopInfo_::NotInLoop)),
+            "ICE loop_info should be reset after the loop"
         );
         self.return_type = None;
         self.locals = UniqueMap::new();
@@ -234,8 +241,11 @@ impl Context {
         declared: UniqueMap<Var, ()>,
     ) {
         // remove new locals from inner scope
-        for (new_local, _) in declared.iter().filter(|(v, _)| !old_locals.contains_key(v)) {
-            self.locals.remove(&new_local);
+        for (_, new_local, _) in declared
+            .iter()
+            .filter(|(_, v, _)| !old_locals.contains_key_(v))
+        {
+            self.locals.remove_(&new_local);
         }
 
         // return old type
@@ -257,6 +267,35 @@ impl Context {
 
     pub fn is_current_function(&self, m: &ModuleIdent, f: &FunctionName) -> bool {
         self.is_current_module(m) && matches!(&self.current_function, Some(curf) if curf == f)
+    }
+
+    fn is_in_script_context(&self) -> bool {
+        match (&self.current_module, &self.current_function) {
+            // in a constant
+            (_, None) => false,
+            // in a script function
+            (None, Some(_)) => true,
+            // in a module function
+            (Some(current_m), Some(current_f)) => {
+                let current_finfo = self.function_info(current_m, current_f);
+                match &current_finfo.visibility {
+                    FunctionVisibility::Public(_)
+                    | FunctionVisibility::Friend(_)
+                    | FunctionVisibility::Internal => false,
+                    FunctionVisibility::Script(_) => true,
+                }
+            }
+        }
+    }
+
+    fn current_module_is_a_friend_of(&self, m: &ModuleIdent) -> bool {
+        match &self.current_module {
+            None => false,
+            Some(current_mident) => {
+                let minfo = self.module_info(m);
+                minfo.friends.contains_key(current_mident)
+            }
+        }
     }
 
     fn module_info(&self, m: &ModuleIdent) -> &ModuleInfo {
@@ -289,7 +328,7 @@ impl Context {
         &self.struct_definition(m, n).type_parameters
     }
 
-    fn function_info(&mut self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
+    fn function_info(&self, m: &ModuleIdent, n: &FunctionName) -> &FunctionInfo {
         self.module_info(m)
             .functions
             .get(n)
@@ -302,6 +341,42 @@ impl Context {
             Some(m) => &self.module_info(m).constants,
         };
         constants.get(n).expect("ICE should have failed in naming")
+    }
+
+    pub fn in_loop(&self) -> bool {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop => false,
+            LoopInfo_::BreakTypeUnknown | LoopInfo_::BreakType(_) => true,
+        }
+    }
+
+    pub fn get_break_type(&self) -> Option<&Type> {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop | LoopInfo_::BreakTypeUnknown => None,
+            LoopInfo_::BreakType(t) => Some(&*t),
+        }
+    }
+
+    pub fn set_break_type(&mut self, t: Type) {
+        match &self.loop_info.0 {
+            LoopInfo_::NotInLoop => (),
+            LoopInfo_::BreakTypeUnknown | LoopInfo_::BreakType(_) => {
+                self.loop_info.0 = LoopInfo_::BreakType(Box::new(t))
+            }
+        }
+    }
+
+    pub fn enter_loop(&mut self) -> LoopInfo {
+        std::mem::replace(&mut self.loop_info, LoopInfo(LoopInfo_::BreakTypeUnknown))
+    }
+
+    // Reset loop info and return the loop's break type, if it has one
+    pub fn exit_loop(&mut self, old_info: LoopInfo) -> Option<Type> {
+        match std::mem::replace(&mut self.loop_info, old_info).0 {
+            LoopInfo_::NotInLoop => panic!("ICE exit_loop called while not in a loop"),
+            LoopInfo_::BreakTypeUnknown => None,
+            LoopInfo_::BreakType(t) => Some(*t),
+        }
     }
 }
 
@@ -731,16 +806,46 @@ pub fn make_function_type(
         BTreeMap::new()
     };
     let defined_loc = finfo.defined_loc;
-    match &finfo.visibility {
-        FunctionVisibility::Internal if !in_current_module => {
-            let internal_msg = "This function is internal to its module. Only 'public' functions \
-                                can be called outside of their module";
+    match finfo.visibility {
+        FunctionVisibility::Internal if in_current_module => (),
+        FunctionVisibility::Internal => {
+            let internal_msg = format!(
+                "This function is internal to its module. \
+                    Only '{}', '{}', and '{}' functions can be called outside of their module",
+                FunctionVisibility::PUBLIC,
+                FunctionVisibility::SCRIPT,
+                FunctionVisibility::FRIEND
+            );
             context.error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
-                (defined_loc, internal_msg.into()),
+                (defined_loc, internal_msg),
             ])
         }
-        _ => (),
+        FunctionVisibility::Script(_) if context.is_in_script_context() => (),
+        FunctionVisibility::Script(vis_loc) => {
+            let internal_msg = format!(
+                "This function can only be called from a script context, \
+                                i.e. a 'script' function or a '{}' function",
+                FunctionVisibility::SCRIPT
+            );
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (vis_loc, internal_msg),
+            ])
+        }
+        FunctionVisibility::Friend(_)
+            if in_current_module || context.current_module_is_a_friend_of(m) => {}
+        FunctionVisibility::Friend(vis_loc) => {
+            let internal_msg = format!(
+                "This function can only be called from a 'friend' of module '{}'",
+                m
+            );
+            context.error(vec![
+                (loc, format!("Invalid call to '{}::{}'", m, f)),
+                (vis_loc, internal_msg),
+            ])
+        }
+        FunctionVisibility::Public(_) => (),
     };
     (defined_loc, ty_args, params, acquires, return_ty)
 }
@@ -1090,7 +1195,11 @@ pub fn instantiate(context: &mut Context, sp!(loc, t_): Type) -> Type {
         Unit => Unit,
         UnresolvedError => UnresolvedError,
         Anything => make_tvar(context, loc).value,
-        Ref(mut_, b) => Ref(mut_, Box::new(instantiate(context, *b))),
+        Ref(mut_, b) => {
+            let inner = *b;
+            context.add_base_type_constraint(loc, "Invalid reference type", inner.clone());
+            Ref(mut_, Box::new(instantiate(context, inner)))
+        }
         Apply(kopt, n, ty_args) => instantiate_apply(context, loc, kopt, n, ty_args),
         x @ Param(_) => x,
         Var(_) => panic!("ICE instantiate type variable"),
@@ -1322,12 +1431,13 @@ fn join_impl(
             }
         }
         (sp!(loc, Var(id)), other) | (other, sp!(loc, Var(id))) if subst.get(*id).is_none() => {
-            match join_bind_tvar(&mut subst, *loc, *id, other.clone()) {
-                Err(()) => Err(TypingError::Incompatible(
+            if join_bind_tvar(&mut subst, *loc, *id, other.clone())? {
+                Ok((subst, sp(*loc, Var(*id))))
+            } else {
+                Err(TypingError::Incompatible(
                     Box::new(sp(*loc, Var(*id))),
                     Box::new(other.clone()),
-                )),
-                Ok(()) => Ok((subst, sp(*loc, Var(*id)))),
+                ))
             }
         }
         (sp!(loc, Var(id)), other) => {
@@ -1404,9 +1514,10 @@ fn join_tvar(
     let (mut subst, new_ty) = join_impl(subst, case, &ty1, &ty2)?;
     match subst.get(new_tvar) {
         Some(sp!(tloc, _)) => Err(TypingError::RecursiveType(*tloc)),
-        None => match join_bind_tvar(&mut subst, loc2, new_tvar, new_ty) {
-            Ok(()) => Ok((subst, sp(loc2, Var(new_tvar)))),
-            Err(()) => {
+        None => {
+            if join_bind_tvar(&mut subst, loc2, new_tvar, new_ty)? {
+                Ok((subst, sp(loc2, Var(new_tvar))))
+            } else {
                 let ty1 = match ty1 {
                     sp!(loc, Anything) => sp(loc, Var(id1)),
                     t => t,
@@ -1417,7 +1528,7 @@ fn join_tvar(
                 };
                 Err(TypingError::Incompatible(Box::new(ty1), Box::new(ty2)))
             }
-        },
+        }
     }
 }
 
@@ -1428,16 +1539,43 @@ fn forward_tvar(subst: &Subst, id: TVar) -> TVar {
     }
 }
 
-fn join_bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: Type) -> Result<(), ()> {
+fn join_bind_tvar(subst: &mut Subst, loc: Loc, tvar: TVar, ty: Type) -> Result<bool, TypingError> {
+    assert!(
+        subst.get(tvar).is_none(),
+        "ICE join_bind_tvar called on bound tvar"
+    );
+
+    fn used_tvars(used: &mut BTreeMap<TVar, Loc>, sp!(loc, t_): &Type) {
+        use Type_ as T;
+        match t_ {
+            T::Var(v) => {
+                used.insert(*v, *loc);
+            }
+            T::Ref(_, inner) => used_tvars(used, inner),
+            T::Apply(_, _, inners) => inners
+                .iter()
+                .rev()
+                .for_each(|inner| used_tvars(used, inner)),
+            T::Unit | T::Param(_) | T::Anything | T::UnresolvedError => (),
+        }
+    }
+
     // check not necessary for soundness but improves error message structure
     if !check_num_tvar(&subst, loc, tvar, &ty) {
-        return Err(());
+        return Ok(false);
     }
+
+    let used = &mut BTreeMap::new();
+    used_tvars(used, &ty);
+    if let Some(_rec_loc) = used.get(&tvar) {
+        return Err(TypingError::RecursiveType(loc));
+    }
+
     match &ty.value {
         Type_::Anything => (),
         _ => subst.insert(tvar, ty),
     }
-    Ok(())
+    Ok(true)
 }
 
 fn check_num_tvar(subst: &Subst, loc: Loc, tvar: TVar, ty: &Type) -> bool {

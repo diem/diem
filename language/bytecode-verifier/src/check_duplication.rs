@@ -37,6 +37,7 @@ impl<'a> DuplicationChecker<'a> {
         Self::check_constants(module.constant_pool())?;
         Self::check_signatures(module.signatures())?;
         Self::check_module_handles(module.module_handles())?;
+        Self::check_module_handles(module.friend_decls())?;
         Self::check_struct_handles(module.struct_handles())?;
         Self::check_function_handles(module.function_handles())?;
         Self::check_function_instantiations(module.function_instantiations())?;
@@ -272,7 +273,7 @@ impl<'a> DuplicationChecker<'a> {
             let acquires = function_def.acquires_global_resources.iter();
             if Self::first_duplicate_element(acquires).is_some() {
                 return Err(verification_error(
-                    StatusCode::DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                    StatusCode::DUPLICATE_ACQUIRES_ANNOTATION,
                     IndexKind::FunctionDefinition,
                     idx as TableIndex,
                 ));

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/friend_decl_missing_semicolon.move:6:1 ───
+   │
+ 6 │ }
+   │ ^ Unexpected '}'
+   ·
+ 6 │ }
+   │ - Expected ';'
+   │
+

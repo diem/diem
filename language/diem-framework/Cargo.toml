@@ -1,0 +1,38 @@
+[package]
+name = "diem-framework"
+version = "0.1.0"
+edition = "2018"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem stdlib"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1.0.38"
+bytecode-verifier = { path = "../bytecode-verifier" }
+abigen = { path = "../move-prover/abigen" }
+docgen = { path = "../move-prover/docgen" }
+errmapgen = { path = "../move-prover/errmapgen" }
+move-lang = { path = "../move-lang" }
+move-prover = { path = "../move-prover" }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+bcs = "0.1.2"
+vm = { path = "../vm" }
+transaction-builder-generator = { path = "../transaction-builder/generator" }
+
+clap = "2.33.3"
+log = "0.4.14"
+rayon = "1.5.0"
+sha2 = "0.9.3"
+walkdir = "2.3.1"
+
+[dev-dependencies]
+datatest-stable = { path = "../../common/datatest-stable" }
+
+[features]
+default = []
+fuzzing = ["diem-types/fuzzing"]

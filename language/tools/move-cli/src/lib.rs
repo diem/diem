@@ -9,12 +9,10 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
     parser,
-    value::MoveTypeLayout,
     vm_status::StatusCode,
 };
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
-use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 use vm::{
     access::ModuleAccess,
@@ -24,7 +22,7 @@ use vm::{
 
 use anyhow::{anyhow, bail, Result};
 use std::{
-    collections::BTreeMap,
+    collections::{btree_map, BTreeMap},
     convert::TryFrom,
     fs,
     path::{Path, PathBuf},
@@ -271,22 +269,17 @@ impl OnDiskStateView {
         Ok(())
     }
 
-    /// Save `resource` on disk under the path `addr`/`tag`
     pub fn save_resource(
         &self,
         addr: AccountAddress,
         tag: StructTag,
-        layout: MoveTypeLayout,
-        resource: Value,
+        bcs_bytes: &[u8],
     ) -> Result<()> {
         let path = self.get_resource_path(addr, tag);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
-        let bcs = resource
-            .simple_serialize(&layout)
-            .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
-        Ok(fs::write(path, &bcs)?)
+        Ok(fs::write(path, bcs_bytes)?)
     }
 
     pub fn save_event(
@@ -294,17 +287,20 @@ impl OnDiskStateView {
         event_key: &[u8],
         event_sequence_number: u64,
         event_type: TypeTag,
-        event_layout: &MoveTypeLayout,
-        event_value: Value,
+        event_data: Vec<u8>,
     ) -> Result<()> {
         let key = EventKey::try_from(event_key)?;
-        let event_data = event_value
-            .simple_serialize(event_layout)
-            .ok_or_else(|| anyhow!("Failed to serialize event"))?;
-        let event = ContractEvent::new(key, event_sequence_number, event_type, event_data);
+        self.save_contract_event(ContractEvent::new(
+            key,
+            event_sequence_number,
+            event_type,
+            event_data,
+        ))
+    }
 
+    pub fn save_contract_event(&self, event: ContractEvent) -> Result<()> {
         // save event data in handle_address/EVENTS_DIR/handle_number
-        let path = self.get_event_path(&key);
+        let path = self.get_event_path(event.key());
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?;
         }
@@ -315,44 +311,64 @@ impl OnDiskStateView {
     }
 
     /// Save `module` on disk under the path `module.address()`/`module.name()`
-    fn save_module(&self, module: &CompiledModule) -> Result<()> {
-        let path = self.get_module_path(&module.self_id());
+    pub fn save_module(&self, module_id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
+        let path = self.get_module_path(module_id);
         if !path.exists() {
             fs::create_dir_all(path.parent().unwrap())?
         }
-
-        let mut module_bytes = vec![];
-        module.serialize(&mut module_bytes)?;
-
         Ok(fs::write(path, &module_bytes)?)
     }
 
-    /// Save all the modules in the local cache, re-generate mv_interfaces if required.
-    pub fn save_modules(&self, modules: &[CompiledModule]) -> Result<()> {
-        for module in modules {
-            self.save_module(module)?;
-        }
-
-        // sync with build_dir for updates of mv_interfaces if new modules are added
-        if !modules.is_empty() {
-            move_lang::generate_interface_files(
-                &[self
-                    .storage_dir
+    // keep the mv_interfaces generated in the build_dir in-sync with the modules on storage. The
+    // mv_interfaces will be used for compilation and the modules will be used for linking.
+    fn sync_interface_files(&self) -> Result<()> {
+        move_lang::generate_interface_files(
+            &[self
+                .storage_dir
+                .clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()],
+            Some(
+                self.build_dir
                     .clone()
                     .into_os_string()
                     .into_string()
-                    .unwrap()],
-                Some(
-                    self.build_dir
-                        .clone()
-                        .into_os_string()
-                        .into_string()
-                        .unwrap(),
-                ),
-                false,
-            )?;
+                    .unwrap(),
+            ),
+            false,
+        )?;
+        Ok(())
+    }
+
+    /// Save all the modules in the local cache, re-generate mv_interfaces if required.
+    pub fn save_modules<'a>(
+        &self,
+        modules: impl IntoIterator<Item = &'a (ModuleId, Vec<u8>)>,
+    ) -> Result<()> {
+        let mut is_empty = true;
+        for (module_id, module_bytes) in modules.into_iter() {
+            self.save_module(module_id, module_bytes)?;
+            is_empty = false;
         }
 
+        // sync with build_dir for updates of mv_interfaces if new modules are added
+        if !is_empty {
+            self.sync_interface_files()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn delete_module(&self, id: &ModuleId) -> Result<()> {
+        let path = self.get_module_path(id);
+        fs::remove_file(path)?;
+
+        // delete addr directory if this address is now empty
+        let addr_path = self.get_addr_path(id.address());
+        if addr_path.read_dir()?.next().is_none() {
+            fs::remove_dir(addr_path)?
+        }
         Ok(())
     }
 
@@ -379,9 +395,9 @@ impl OnDiskStateView {
         self.iter_paths(move |p| self.is_event_path(p))
     }
 
-    /// Return a map of module ID -> module for all modules in the self.storage_dir.
-    /// Returns an Err if a module does not deserialize
-    pub fn get_all_modules(&self) -> Result<BTreeMap<ModuleId, CompiledModule>> {
+    /// Build the code cache based on all modules in the self.storage_dir.
+    /// Returns an Err if a module does not deserialize.
+    pub fn get_code_cache(&self) -> Result<CodeCache> {
         let mut modules = BTreeMap::new();
         for path in self.module_paths() {
             let module = CompiledModule::deserialize(&Self::get_bytes(&path)?.unwrap())
@@ -391,7 +407,7 @@ impl OnDiskStateView {
                 bail!("Duplicate module {:?}", id)
             }
         }
-        Ok(modules)
+        Ok(CodeCache(modules))
     }
 }
 
@@ -408,6 +424,60 @@ impl RemoteCache for OnDiskStateView {
     ) -> PartialVMResult<Option<Vec<u8>>> {
         self.get_resource_bytes(*address, struct_tag.clone())
             .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
+    }
+}
+
+/// Holds a closure of modules and provides operations against the closure (e.g., finding all
+/// dependencies of a module).
+pub struct CodeCache(BTreeMap<ModuleId, CompiledModule>);
+
+impl CodeCache {
+    pub fn all_modules(&self) -> Vec<&CompiledModule> {
+        self.0.values().collect()
+    }
+
+    pub fn get_module(&self, module_id: &ModuleId) -> Result<&CompiledModule> {
+        self.0
+            .get(module_id)
+            .ok_or_else(|| anyhow!("Cannot find module {}", module_id))
+    }
+
+    pub fn get_immediate_module_dependencies(
+        &self,
+        module: &CompiledModule,
+    ) -> Result<Vec<&CompiledModule>> {
+        module
+            .immediate_dependencies()
+            .into_iter()
+            .map(|module_id| self.get_module(&module_id))
+            .collect::<Result<Vec<_>>>()
+    }
+
+    pub fn get_all_module_dependencies(
+        &self,
+        module: &CompiledModule,
+    ) -> Result<BTreeMap<ModuleId, &CompiledModule>> {
+        fn get_all_module_dependencies_recursive<'a>(
+            all_deps: &mut BTreeMap<ModuleId, &'a CompiledModule>,
+            module_id: ModuleId,
+            loader: &'a CodeCache,
+        ) -> Result<()> {
+            if let btree_map::Entry::Vacant(entry) = all_deps.entry(module_id) {
+                let module = loader.get_module(entry.key())?;
+                let next_deps = module.immediate_dependencies();
+                entry.insert(module);
+                for next in next_deps {
+                    get_all_module_dependencies_recursive(all_deps, next, loader)?;
+                }
+            }
+            Ok(())
+        }
+
+        let mut all_deps = BTreeMap::new();
+        for dep in module.immediate_dependencies() {
+            get_all_module_dependencies_recursive(&mut all_deps, dep, self)?;
+        }
+        Ok(all_deps)
     }
 }
 

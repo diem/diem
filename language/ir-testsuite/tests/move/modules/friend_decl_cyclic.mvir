@@ -1,0 +1,16 @@
+module A {
+}
+
+//! new-transaction
+
+module B {
+    friend {{default}}.A;
+}
+
+//! new-transaction
+
+module A {
+    friend {{default}}.B;
+}
+
+// check: CYCLIC_MODULE_FRIENDSHIP

@@ -215,7 +215,7 @@ multi-signatures, with signer accountability. This type of signature supports K
 out-of N semantics, for K ≤ N ≤ 32.
 
 The implementation, exposed as a Move standard library module
-[(Authenticator)](https://github.com/diem/diem/blob/master/language/stdlib/modules/Authenticator.move),
+[(Authenticator)](https://github.com/diem/diem/blob/master/language/diem-framework/modules/Authenticator.move),
 is currently simply a multiple-signature container —rather than a distinct
 signing scheme (e.g. MuSig). Nonetheless, we plan to improve it in further
 DIPs, while expanding the scope of threshold signing.

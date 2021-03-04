@@ -18,7 +18,6 @@ fun main() {
     assert(DiemTimestamp::now_microseconds() == 1000000, 76);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script{
@@ -28,7 +27,6 @@ fun main() {
     assert(DiemTimestamp::now_microseconds() != 2000000, 77);
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vivian
@@ -39,4 +37,3 @@ fun main(account: &signer) {
     DiemTimestamp::update_global_time(account, {{vivian}}, 20);
 }
 }
-// check: "Keep(ABORTED { code: 514,"

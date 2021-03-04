@@ -3,7 +3,7 @@ name: JSON-RPC Compat Warning
 on:
   pull_request:
     types: [opened, synchronized]
-    paths: ['json-rpc/**.rs']
+    paths: ["json-rpc/**.rs"]
 
 jobs:
   warn-about-compat-requirements:
@@ -15,7 +15,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: comment
-        uses: diem/actions/comment@a9c5709
+        uses: diem/actions/comment@faa14430e68d54a269628f385e69a207e4e413d5
         with:
           comment: |
             **This PR may have modified JSON-RPC server code.**

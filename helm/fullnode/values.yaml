@@ -1,0 +1,123 @@
+chain:
+  era: 24
+  name: testnet
+  genesisConfigmap:
+
+diem_chains:
+  testnet:
+    id: TESTNET
+    waypoint: 0:3139c30efe6dbde4228efb9df32c137dc3a2490b97ab6a086897be1d0cb336f0
+    seed_addrs:
+      4223dd0eeb0b0d78720a8990700955e1:
+      - "/dns4/fn.testnet.diem.com/tcp/6182/ln-noise-ik/d29d01bed8ab6c30921b327823f7e92c63f8371456fb110256e8c0e8911f4938/ln-handshake/0"
+
+rust_log: info
+
+image:
+  repo: diem/validator
+  tag: release-1.1_a1abfc34
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 2
+    memory: 4Gi
+  requests:
+    cpu: 2
+    memory: 3Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+storage:
+  # Set this to a StorageClass available on your Kubernetes cluster
+  class:
+  size: 350Gi
+
+service:
+  # Change this to LoadBalancer to expose the JSON-RPC endpoint externally
+  type: ClusterIP
+  externalTrafficPolicy:
+  loadBalancerSourceRanges: []
+  annotations: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+  annotations: {}
+
+logging:
+  address:
+
+backup:
+  image:
+    repo: diem/tools
+    tag: release-1.1_a1abfc34
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 1
+      memory: 1Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  enable: false
+  config:
+    location:
+    s3:
+      bucket:
+    gcs:
+      bucket:
+    azure:
+      account:
+      container:
+      sas:
+    state_snapshot_interval: 200000
+    transaction_batch_size: 100000
+
+backup_verify:
+  schedule: "@daily"
+  resources:
+    limits:
+      cpu: 0.5
+      memory: 512Mi
+    requests:
+      cpu: 0.5
+      memory: 512Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+restore:
+  image:
+    repo: diem/tools
+    tag: release-1.1_a1abfc34
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 2
+      memory: 4Gi
+    requests:
+      cpu: 2
+      memory: 3Gi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  config:
+    location:
+    s3:
+      bucket:
+    gcs:
+      bucket:
+    azure:
+      account:
+      container:
+      sas:
+    trusted_waypoints: []

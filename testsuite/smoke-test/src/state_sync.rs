@@ -11,7 +11,6 @@ use crate::{
     workspace_builder,
 };
 use diem_config::config::NodeConfig;
-use diem_crypto::HashValue;
 use diem_types::waypoint::Waypoint;
 use std::{fs, path::PathBuf};
 
@@ -275,7 +274,8 @@ fn test_state_sync_multichunk_epoch() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/smoke-test/src/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let stdlib_source_dir =
+        workspace_builder::workspace_root().join("language/diem-framework/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let mut script_compiled_paths = client.compile_program(script_params).unwrap();
@@ -290,12 +290,11 @@ fn test_state_sync_multichunk_epoch() {
         .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
         .unwrap();
 
-    // Bump epoch by trigger a reconfig by modifying allow list for multiple epochs
+    // Bump epoch by trigger a reconfig for multiple epochs
     for curr_epoch in 1..=2 {
         // bumps epoch from curr_epoch -> curr_epoch + 1
-        let hash = hex::encode(&HashValue::random().to_vec());
         client
-            .add_to_script_allow_list(&["add_to_script_allow_list", hash.as_str()], true)
+            .enable_custom_script(&["enable_custom_script"], true)
             .unwrap();
         assert_eq!(
             client

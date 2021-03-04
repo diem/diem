@@ -10,7 +10,6 @@ script{
 fun main() {
 }
 }
-// check: TRANSACTION_EXPIRED
 
 //! new-transaction
 //! expiration-time: 100
@@ -18,7 +17,6 @@ script{
 fun main() {
 }
 }
-// check: TRANSACTION_EXPIRED
 
 //! new-transaction
 //! expiration-time: 101
@@ -26,7 +24,6 @@ script{
 fun main() {
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 86500
@@ -34,7 +31,6 @@ script{
 fun main() {
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -46,7 +42,6 @@ script{
 fun main() {
 }
 }
-// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 101
@@ -54,7 +49,6 @@ script{
 fun main() {
 }
 }
-// check: TRANSACTION_EXPIRED
 
 //! new-transaction
 //! expiration-time: 18446744073710
@@ -62,4 +56,3 @@ script{
 fun main() {
 }
 }
-// check: "Keep(EXECUTED)"

@@ -6,8 +6,10 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::DependencyChecker;
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use bytecode_verifier::{cyclic_dependencies, dependencies};
+use compiled_stdlib::{
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
+};
 use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use diem_state_view::StateView;
 use diem_types::{
@@ -22,28 +24,30 @@ use diem_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_status::KeptVMStatus,
+    vm_status::{KeptVMStatus, StatusCode},
 };
-use language_e2e_tests::executor::FakeExecutor;
+use language_e2e_tests::{data_store::FakeDataStore, executor::FakeExecutor};
 use mirai_annotations::checked_verify;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants},
     language_storage::ModuleId,
 };
 use once_cell::sync::Lazy;
+use regex::{Captures, Regex};
 use std::{
     collections::HashMap,
     fmt::{self, Debug},
     str::FromStr,
 };
 use vm::{
-    errors::{Location, VMError},
+    access::ModuleAccess,
+    errors::{Location, PartialVMError, VMError},
     file_format::{CompiledModule, CompiledScript},
     views::ModuleView,
 };
 
 static PRECOMPILED_TXN_SCRIPTS: Lazy<HashMap<String, CompiledScript>> = Lazy::new(|| {
-    StdlibScript::all()
+    LegacyStdlibScript::all()
         .into_iter()
         .map(|script| {
             let name = script.name();
@@ -227,7 +231,7 @@ impl fmt::Display for EvaluationLog {
 }
 
 fn fetch_script_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     script: &CompiledScript,
 ) -> Vec<CompiledModule> {
     let inner = script.as_inner();
@@ -237,32 +241,32 @@ fn fetch_script_dependencies(
             inner.identifiers[handle.name.0 as usize].clone(),
         )
     });
-    fetch_dependencies(exec, idents)
+    fetch_dependencies(data_store, idents)
 }
 
 fn fetch_module_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     module: &CompiledModule,
 ) -> Vec<CompiledModule> {
     let idents = ModuleView::new(module)
         .module_handles()
         .map(|handle_view| handle_view.module_id());
-    fetch_dependencies(exec, idents)
+    fetch_dependencies(data_store, idents)
 }
 
 fn fetch_dependencies(
-    exec: &mut FakeExecutor,
+    data_store: &FakeDataStore,
     idents: impl Iterator<Item = ModuleId>,
 ) -> Vec<CompiledModule> {
     // idents.into_inner().
     idents
-        .flat_map(|ident| fetch_dependency(exec, ident))
+        .flat_map(|ident| fetch_dependency(data_store, ident))
         .collect()
 }
 
-fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<CompiledModule> {
+fn fetch_dependency(data_store: &FakeDataStore, ident: ModuleId) -> Option<CompiledModule> {
     let ap = AccessPath::from(&ident);
-    let blob: Vec<u8> = exec.get_state_view().get(&ap).ok().flatten()?;
+    let blob: Vec<u8> = data_store.get(&ap).ok().flatten()?;
     let compiled: CompiledModule = CompiledModule::deserialize(&blob).ok()?;
     match bytecode_verifier::verify_module(&compiled) {
         Ok(_) => Some(compiled),
@@ -273,20 +277,40 @@ fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<Compiled
 /// Verify a script with its dependencies.
 pub fn verify_script(
     script: CompiledScript,
-    deps: &[CompiledModule],
+    data_store: &FakeDataStore,
 ) -> std::result::Result<CompiledScript, VMError> {
     bytecode_verifier::verify_script(&script)?;
-    DependencyChecker::verify_script(&script, deps)?;
+
+    let imm_deps = fetch_script_dependencies(data_store, &script);
+    dependencies::verify_script(&script, &imm_deps)?;
+
     Ok(script)
 }
 
 /// Verify a module with its dependencies.
 pub fn verify_module(
     module: CompiledModule,
-    deps: &[CompiledModule],
+    data_store: &FakeDataStore,
 ) -> std::result::Result<CompiledModule, VMError> {
     bytecode_verifier::verify_module(&module)?;
-    DependencyChecker::verify_module(&module, deps)?;
+
+    let imm_deps = fetch_module_dependencies(data_store, &module);
+    dependencies::verify_module(&module, &imm_deps)?;
+
+    cyclic_dependencies::verify_module(
+        &module,
+        |module_id| {
+            fetch_dependency(data_store, module_id.clone())
+                .map(|module| module.immediate_dependencies())
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+        },
+        |module_id| {
+            fetch_dependency(data_store, module_id.clone())
+                .map(|module| module.immediate_friends())
+                .ok_or_else(|| PartialVMError::new(StatusCode::MISSING_DEPENDENCY))
+        },
+    )?;
+
     Ok(module)
 }
 
@@ -445,7 +469,7 @@ fn run_transaction_exp_mode(
     transaction: SignedTransaction,
     log: &mut EvaluationLog,
     config: &TransactionConfig,
-) -> Result<()> {
+) {
     let mut outputs = exec
         .execute_block_and_keep_vm_status(vec![transaction])
         .unwrap();
@@ -489,8 +513,6 @@ fn run_transaction_exp_mode(
             checked_verify!(txn_output.write_set().is_empty());
         }
     }
-
-    Ok(())
 }
 
 /// Serializes the script then deserializes it.
@@ -538,7 +560,6 @@ fn eval_transaction<TComp: Compiler>(
     global_config: &GlobalConfig,
     compiler: &mut TComp,
     exec: &mut FakeExecutor,
-    idx: usize,
     transaction: &Transaction,
     log: &mut EvaluationLog,
 ) -> Result<Status> {
@@ -558,8 +579,6 @@ fn eval_transaction<TComp: Compiler>(
     let sender_addr = *transaction.config.sender.address();
 
     // Start processing a new transaction.
-    log.append(EvaluationOutput::Transaction(idx));
-
     // stage 1: Compile the script/module
     if transaction.config.is_stage_disabled(Stage::Compiler) {
         return Ok(Status::Success);
@@ -577,7 +596,23 @@ fn eval_transaction<TComp: Compiler>(
                     log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
                 }
             };
-            unwrap_or_abort!(compiler.compile(compiler_log, sender_addr, &transaction.input))
+
+            // Compiler error messages may contain temporary file names, causing tests to be non-deterministic.
+            // The following code get them filtered out using regex.
+            static FILENAME_PAT: Lazy<Regex> =
+                Lazy::new(|| Regex::new(r"[A-Za-z0-9_/.]+:([0-9]+):([0-9]+)").unwrap());
+
+            let compiler_res = compiler.compile(compiler_log, sender_addr, &transaction.input);
+            let filtered_compiler_res = compiler_res.map_err(|err| {
+                let msg = err.to_string();
+                let filtered = FILENAME_PAT
+                    .replace_all(&msg, |caps: &Captures| {
+                        format!("(file):{}:{}", &caps[1], &caps[2])
+                    })
+                    .to_string();
+                format_err!("{}", filtered)
+            });
+            unwrap_or_abort!(filtered_compiler_res)
         };
 
     match parsed_script_or_module {
@@ -595,8 +630,7 @@ fn eval_transaction<TComp: Compiler>(
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Stage(Stage::Verifier));
             }
-            let deps = fetch_script_dependencies(exec, &compiled_script);
-            let compiled_script = match verify_script(compiled_script, &deps) {
+            let compiled_script = match verify_script(compiled_script, exec.get_state_view()) {
                 Ok(script) => script,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
@@ -624,7 +658,7 @@ fn eval_transaction<TComp: Compiler>(
                 make_script_transaction(&exec, &transaction.config, compiled_script)?;
 
             if global_config.exp_mode {
-                run_transaction_exp_mode(exec, script_transaction, log, &transaction.config)?;
+                run_transaction_exp_mode(exec, script_transaction, log, &transaction.config);
             } else {
                 let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction));
                 log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
@@ -646,8 +680,7 @@ fn eval_transaction<TComp: Compiler>(
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Stage(Stage::Verifier));
             }
-            let deps = fetch_module_dependencies(exec, &compiled_module);
-            let compiled_module = match verify_module(compiled_module, &deps) {
+            let compiled_module = match verify_module(compiled_module, exec.get_state_view()) {
                 Ok(module) => module,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
@@ -675,7 +708,7 @@ fn eval_transaction<TComp: Compiler>(
                 make_module_transaction(&exec, &transaction.config, compiled_module)?;
 
             if global_config.exp_mode {
-                run_transaction_exp_mode(exec, module_transaction, log, &transaction.config)?;
+                run_transaction_exp_mode(exec, module_transaction, log, &transaction.config);
             } else {
                 let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction));
                 log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
@@ -730,15 +763,16 @@ pub fn eval<TComp: Compiler>(
             FakeExecutor::from_fresh_genesis()
         }
     } else {
+        let stdlib_modules = stdlib_modules(if compiler.use_compiled_genesis() {
+            StdLibOptions::Compiled
+        } else {
+            StdLibOptions::Fresh
+        });
+        let module_bytes = stdlib_modules.bytes_vec();
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            stdlib_modules(if compiler.use_compiled_genesis() {
-                StdLibOptions::Compiled
-            } else {
-                StdLibOptions::Fresh
-            })
-            .to_vec(),
+            &module_bytes,
             Some(config.validator_accounts),
             VMPublishingOption::open(),
         )
@@ -748,10 +782,11 @@ pub fn eval<TComp: Compiler>(
     }
 
     for (idx, command) in commands.iter().enumerate() {
+        log.append(EvaluationOutput::Transaction(idx));
         match command {
             Command::Transaction(transaction) => {
                 let status =
-                    eval_transaction(config, &mut compiler, &mut exec, idx, transaction, &mut log)?;
+                    eval_transaction(config, &mut compiler, &mut exec, transaction, &mut log)?;
                 if !config.exp_mode {
                     log.append(EvaluationOutput::Status(status));
                 }

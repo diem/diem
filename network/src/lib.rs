@@ -6,13 +6,14 @@
 #![recursion_limit = "1024"]
 // </Black magic>
 
-pub use interface::NetworkProvider;
+// TODO(philiphayes): uncomment when feature stabilizes (est. 1.50.0)
+// tracking issue: https://github.com/rust-lang/rust/issues/78835
+// #![doc = include_str!("../README.md")]
 
 pub mod connectivity_manager;
 pub mod constants;
 pub mod counters;
 pub mod error;
-pub mod interface;
 pub mod logging;
 pub mod noise;
 pub mod peer;

@@ -36,7 +36,7 @@ use futures::{
 };
 use itertools::zip;
 use std::cmp::min;
-use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
+use tokio::time::{sleep, sleep_until, Instant as TokioInstant};
 
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -48,11 +48,8 @@ struct Args {
 
     #[structopt(long, help = "If set, tries to connect to a diem-swarm instead of aws")]
     swarm: bool,
-    #[structopt(
-        long,
-        help = "If set, tries to use premainnet peer instead of localhost"
-    )]
-    premainnet: bool,
+    #[structopt(long, help = "If set, tries to use public peers instead of localhost")]
+    vasp: bool,
 
     #[structopt(long, group = "action")]
     run: Option<String>,
@@ -127,7 +124,7 @@ pub async fn main() {
 
     if args.diag {
         let util = BasicSwarmUtil::setup(&args);
-        exit_on_error(util.diag(args.premainnet).await);
+        exit_on_error(util.diag(args.vasp).await);
         return;
     } else if args.emit_tx && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
@@ -161,7 +158,7 @@ pub async fn main() {
                     "Setting up runner failed with {}, waiting for {:?} before terminating",
                     e, wait_on_failure
                 );
-                delay_for(wait_on_failure).await;
+                sleep(wait_on_failure).await;
             }
             panic!("Failed to setup cluster test runner: {}", e);
         }
@@ -174,7 +171,7 @@ pub async fn main() {
                 "Command failed with {}, waiting for {:?} before terminating",
                 e, wait_on_failure
             );
-            delay_for(wait_on_failure).await;
+            sleep(wait_on_failure).await;
             warn!("Tearing down cluster now");
         }
     }
@@ -315,7 +312,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
         wait_committed: !args.burst,
     };
     let duration = Duration::from_secs(args.duration);
-    let mut emitter = TxEmitter::new(cluster, args.premainnet, args.invalid_tx);
+    let mut emitter = TxEmitter::new(cluster, args.vasp);
     let stats = emitter
         .emit_txn_for_with_stats(
             duration,
@@ -325,6 +322,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
                 workers_per_ac,
                 thread_params,
                 gas_price: 0,
+                invalid_tx: args.invalid_tx,
             },
             10,
         )
@@ -367,23 +365,19 @@ impl BasicSwarmUtil {
             .map(|peer| parse_host_port(peer).expect("Failed to parse host_port"))
             .collect();
 
-        let cluster = Cluster::from_host_port(
-            parsed_peers,
-            &args.mint_file,
-            args.chain_id,
-            args.premainnet,
-        );
+        let cluster =
+            Cluster::from_host_port(parsed_peers, &args.mint_file, args.chain_id, args.vasp);
         Self { cluster }
     }
 
-    pub async fn diag(&self, premainnet: bool) -> Result<()> {
-        let emitter = TxEmitter::new(&self.cluster, premainnet, 0);
+    pub async fn diag(&self, vasp: bool) -> Result<()> {
+        let emitter = TxEmitter::new(&self.cluster, vasp);
         let mut faucet_account: Option<AccountData> = None;
         let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
             let client = instance.json_rpc_client();
             print!("Getting faucet account sequence number on {}...", instance);
-            let account = if premainnet {
+            let account = if vasp {
                 emitter
                     .load_dd_account(&client)
                     .await
@@ -457,7 +451,7 @@ impl BasicSwarmUtil {
                 if Instant::now() > deadline {
                     bail!("Not all full nodes were updated and transaction expired");
                 }
-                tokio::time::delay_for(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
         println!("Looks like all full nodes are healthy!");
@@ -481,6 +475,7 @@ impl ClusterTestRunner {
 
     /// Discovers cluster, setup log, etc
     pub async fn setup(args: &Args) -> Result<Self> {
+        let start_time = Instant::now();
         let current_tag = args.deploy.as_deref().unwrap_or("master");
         let cluster_swarm = ClusterSwarmKube::new()
             .await
@@ -509,9 +504,11 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let tx_emitter = TxEmitter::new(&cluster, args.premainnet, args.invalid_tx);
+        let tx_emitter = TxEmitter::new(&cluster, args.vasp);
         let github = GitHub::new();
-        let report = SuiteReport::new();
+        let mut report = SuiteReport::new();
+        let end_time = (Instant::now() - start_time).as_secs() as u64;
+        report.report_text(format!("Test runner setup time spent {} secs", end_time));
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
@@ -521,6 +518,7 @@ impl ClusterTestRunner {
                 wait_committed: !args.burst,
             },
             gas_price: 0,
+            invalid_tx: args.invalid_tx,
         };
         let emit_to_validator =
             if cluster.fullnode_instances().len() < cluster.validator_instances().len() {
@@ -595,16 +593,20 @@ impl ClusterTestRunner {
         info!("Starting suite");
         let suite_started = Instant::now();
         for experiment in suite.experiments {
+            let start_time = Instant::now();
             let experiment_name = format!("{}", experiment);
             let experiment_result = self
                 .run_single_experiment(experiment, None)
                 .await
                 .map_err(move |e| format_err!("Experiment `{}` failed: `{}`", experiment_name, e));
+            let end_time = (Instant::now() - start_time).as_secs() as u64;
             if let Err(e) = experiment_result.as_ref() {
                 self.report.report_text(e.to_string());
                 self.print_report();
                 experiment_result?;
             }
+            self.report
+                .report_text_same_line(format!(", time spent {} secs", end_time))
         }
         info!(
             "Suite completed in {:?}",
@@ -715,8 +717,12 @@ impl ClusterTestRunner {
             &self.cluster_swarm,
             &self.current_tag[..],
         );
-        let mut deadline_future = delay_until(TokioInstant::from_std(deadline)).fuse();
+        let deadline_future = sleep_until(TokioInstant::from_std(deadline)).fuse();
         let mut run_future = experiment.run(&mut context).fuse();
+        let sleep = sleep(HEALTH_POLL_INTERVAL).fuse();
+        tokio::pin!(sleep);
+        tokio::pin!(deadline_future);
+
         loop {
             select! {
                 _delay = deadline_future => {
@@ -725,7 +731,7 @@ impl ClusterTestRunner {
                 result = run_future => {
                     return result.map_err(|e|format_err!("Failed to run experiment: {}", e));
                 }
-                _delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
+                _delay = sleep => {
                     let events = self.logs.recv_all();
                     if let Err(s) = self.health_check_runner.run(
                         &events,

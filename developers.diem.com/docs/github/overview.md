@@ -1,6 +1,7 @@
 ---
 id: overview
 title: GitHub Projects
+hide_right_sidebar: true
 ---
 
 ## Available Projects

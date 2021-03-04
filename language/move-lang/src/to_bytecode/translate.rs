@@ -39,14 +39,14 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     let mut errors = vec![];
     let orderings = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .map(|(m, mdef)| (m, mdef.dependency_order))
         .collect();
     let sdecls = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .flat_map(|(m, mdef)| {
-            mdef.structs.iter().map(move |(s, sdef)| {
+            mdef.structs.key_cloned_iter().map(move |(s, sdef)| {
                 let key = (m.clone(), s);
                 let is_nominal_resource = sdef.resource_opt.is_some();
                 let kinds = type_parameters(sdef.type_parameters.clone());
@@ -56,9 +56,9 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
         .collect();
     let fdecls = prog
         .modules
-        .iter()
+        .key_cloned_iter()
         .flat_map(|(m, mdef)| {
-            mdef.functions.iter().map(move |(f, fdef)| {
+            mdef.functions.key_cloned_iter().map(move |(f, fdef)| {
                 let key = (m.clone(), f);
                 let seen = seen_structs(&fdef.signature);
                 let sig = function_signature(&mut Context::new(None), fdef.signature.clone());
@@ -136,15 +136,17 @@ fn module(
         })
         .collect();
 
-    let addr = DiemAddress::new(ident.0.value.address.to_u8());
-    let mname = ident.0.value.name.clone();
+    let addr = DiemAddress::new(ident.value.0.to_u8());
+    let mname = ident.value.1.clone();
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
         struct_declarations,
         function_declarations,
     );
     let ir_module = IR::ModuleDefinition {
-        name: IR::ModuleName::new(mname.0.value),
+        name: IR::ModuleName::new(mname),
+        // TODO: add friends here
+        friends: vec![],
         imports,
         explicit_dependency_declarations,
         structs,
@@ -449,6 +451,8 @@ fn function(
 fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
     match v {
         FunctionVisibility::Public(_) => IR::FunctionVisibility::Public,
+        FunctionVisibility::Script(_) => IR::FunctionVisibility::Script,
+        FunctionVisibility::Friend(_) => IR::FunctionVisibility::Friend,
         FunctionVisibility::Internal => IR::FunctionVisibility::Internal,
     }
 }
@@ -702,7 +706,7 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
             exp_(context, code, ecode);
             code.push(sp(loc, B::Abort));
         }
-        C::Return(e) => {
+        C::Return { exp: e, .. } => {
             exp_(context, code, e);
             code.push(sp(loc, B::Ret));
         }
@@ -712,7 +716,7 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
                 code.push(sp(loc, B::Pop));
             }
         }
-        C::Jump(lbl) => code.push(sp(loc, B::Branch(label(lbl)))),
+        C::Jump { target, .. } => code.push(sp(loc, B::Branch(label(target)))),
         C::JumpIf {
             cond,
             if_true,
@@ -815,6 +819,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             exp(context, code, mcall.arguments);
             module_call(
                 context,
+                loc,
                 code,
                 mcall.module,
                 mcall.name,
@@ -912,13 +917,13 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
 
 fn module_call(
     context: &mut Context,
+    loc: Loc,
     code: &mut IR::BytecodeBlock,
     mident: ModuleIdent,
     fname: FunctionName,
     tys: Vec<H::BaseType>,
 ) {
     use IR::Bytecode_ as B;
-    let loc = fname.loc();
     let (m, n) = context.qualified_function_name(&mident, fname);
     code.push(sp(loc, B::Call(m, n, base_types(context, tys))))
 }

@@ -171,12 +171,18 @@ impl CompiledModuleStrategyGen {
             1..=self.size,
         );
 
+        //
+        // Friend generator
+        //
+        let friends_strat = vec(any::<(PropIndex, PropIndex)>(), 1..=self.size);
+
         // Note that prop_test only allows a tuple of length up to 10
         (
             (address_pool_strat, identifiers_strat, constant_pool_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
             (function_handles_strat, function_defs_strat),
+            friends_strat,
         )
             .prop_map(
                 |(
@@ -184,6 +190,7 @@ impl CompiledModuleStrategyGen {
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
                     (function_handle_gens, function_def_gens),
+                    friend_decl_gens,
                 )| {
                     //
                     // leaf pools
@@ -210,6 +217,19 @@ impl CompiledModuleStrategyGen {
                         }
                     }
                     let module_handles_len = module_handles.len();
+
+                    //
+                    // Friend Declarations
+                    let friend_decl_set: BTreeSet<_> = friend_decl_gens
+                        .into_iter()
+                        .map(|(address_gen, name_gen)| ModuleHandle {
+                            address: AddressIdentifierIndex(
+                                address_gen.index(address_identifiers_len) as TableIndex,
+                            ),
+                            name: IdentifierIndex(name_gen.index(identifiers_len) as TableIndex),
+                        })
+                        .collect();
+                    let friend_decls = friend_decl_set.into_iter().collect();
 
                     //
                     // struct handles
@@ -296,6 +316,7 @@ impl CompiledModuleStrategyGen {
                         struct_handles,
                         function_handles,
                         field_handles,
+                        friend_decls,
 
                         struct_def_instantiations,
                         function_instantiations,

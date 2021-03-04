@@ -17,7 +17,7 @@ use diem_types::vm_status::StatusCode;
 use mirai_annotations::*;
 use vm::{
     errors::{PartialVMError, PartialVMResult},
-    file_format::{Bytecode, CodeOffset, Kind},
+    file_format::{Bytecode, CodeOffset},
 };
 
 pub(crate) fn verify<'a>(
@@ -43,28 +43,24 @@ fn execute_inner(
     offset: CodeOffset,
 ) -> PartialVMResult<()> {
     match bytecode {
-        Bytecode::StLoc(idx) => match (state.local_state(*idx), state.local_kind(*idx)) {
-            (LocalState::MaybeResourceful, _)
-            | (LocalState::Available, Kind::Resource)
-            | (LocalState::Available, Kind::All) => {
+        Bytecode::StLoc(idx) => match state.local_state(*idx) {
+            LocalState::MaybeAvailable | LocalState::Available
+                if !state.local_abilities(*idx).has_drop() =>
+            {
                 return Err(state.error(StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR, offset))
             }
             _ => state.set_available(*idx),
         },
 
         Bytecode::MoveLoc(idx) => match state.local_state(*idx) {
-            LocalState::MaybeResourceful | LocalState::Unavailable => {
+            LocalState::MaybeAvailable | LocalState::Unavailable => {
                 return Err(state.error(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
             }
             LocalState::Available => state.set_unavailable(*idx),
         },
 
         Bytecode::CopyLoc(idx) => match state.local_state(*idx) {
-            LocalState::MaybeResourceful => {
-                // checked in type checking
-                return Err(state.error(StatusCode::VERIFIER_INVARIANT_VIOLATION, offset));
-            }
-            LocalState::Unavailable => {
+            LocalState::MaybeAvailable | LocalState::Unavailable => {
                 return Err(state.error(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
             }
             LocalState::Available => (),
@@ -72,7 +68,7 @@ fn execute_inner(
 
         Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
             match state.local_state(*idx) {
-                LocalState::Unavailable | LocalState::MaybeResourceful => {
+                LocalState::Unavailable | LocalState::MaybeAvailable => {
                     return Err(state.error(StatusCode::BORROWLOC_UNAVAILABLE_ERROR, offset))
                 }
                 LocalState::Available => (),
@@ -81,14 +77,16 @@ fn execute_inner(
 
         Bytecode::Ret => {
             let local_states = state.local_states();
-            let local_kinds = state.local_kinds();
-            checked_precondition!(local_states.len() == local_kinds.len());
-            for (local_state, local_kind) in local_states.iter().zip(local_kinds) {
-                match (local_state, local_kind) {
-                    (LocalState::MaybeResourceful, _)
-                    | (LocalState::Available, Kind::Resource)
-                    | (LocalState::Available, Kind::All) => {
-                        return Err(state.error(StatusCode::UNSAFE_RET_UNUSED_RESOURCES, offset))
+            let all_local_abilities = state.all_local_abilities();
+            checked_precondition!(local_states.len() == all_local_abilities.len());
+            for (local_state, local_abilities) in local_states.iter().zip(all_local_abilities) {
+                match local_state {
+                    LocalState::MaybeAvailable | LocalState::Available
+                        if !local_abilities.has_drop() =>
+                    {
+                        return Err(
+                            state.error(StatusCode::UNSAFE_RET_UNUSED_VALUES_WITHOUT_DROP, offset)
+                        )
                     }
                     _ => (),
                 }

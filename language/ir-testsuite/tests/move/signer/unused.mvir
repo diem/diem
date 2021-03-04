@@ -1,0 +1,8 @@
+module M {
+    t(s: signer) {
+        return;
+    }
+}
+
+// Used to be invalid
+// Now valid because signer has drop

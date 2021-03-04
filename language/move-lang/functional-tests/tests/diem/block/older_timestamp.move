@@ -18,5 +18,3 @@ fun main() {
 //! block-prologue
 //! proposer: vivian
 //! block-time: 11000000
-
-// check: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION

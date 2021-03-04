@@ -1,0 +1,16 @@
+//! account: alice
+//! account: bob
+
+//! sender: alice
+
+module M {
+}
+
+//! new-transaction
+//! sender: bob
+
+module N {
+    friend {{alice}}.M;
+}
+
+// check: INVALID_FRIEND_DECL_WITH_MODULES_OUTSIDE_ACCOUNT_ADDRESS

@@ -1,8 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
-use diem_crypto::HashValue;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     on_chain_config::DiemVersion,
     transaction::{Script, TransactionArgument, TransactionStatus},
@@ -17,9 +16,7 @@ use language_e2e_tests::{
     executor::FakeExecutor,
     transaction_status_eq,
 };
-use transaction_builder::{
-    encode_add_to_script_allow_list_script, encode_update_dual_attestation_limit_script,
-};
+use transaction_builder::encode_update_dual_attestation_limit_script;
 
 #[test]
 fn initial_diem_version() {
@@ -37,7 +34,9 @@ fn initial_diem_version() {
     let txn = account
         .transaction()
         .script(Script::new(
-            StdlibScript::UpdateDiemVersion.compiled_bytes().into_vec(),
+            LegacyStdlibScript::UpdateDiemVersion
+                .compiled_bytes()
+                .into_vec(),
             vec![],
             vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))
@@ -68,7 +67,9 @@ fn drop_txn_after_reconfiguration() {
     let txn = account
         .transaction()
         .script(Script::new(
-            StdlibScript::UpdateDiemVersion.compiled_bytes().into_vec(),
+            LegacyStdlibScript::UpdateDiemVersion
+                .compiled_bytes()
+                .into_vec(),
             vec![],
             vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))
@@ -163,35 +164,8 @@ fn update_script_allow_list() {
     let random_script = vec![];
     let txn = dr
         .transaction()
-        .script(Script::new(random_script.clone(), vec![], vec![]))
-        .sequence_number(1)
-        .sign();
-
-    assert_eq!(
-        executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
-    );
-
-    // DR append this hash to the allow list
-    executor.execute_and_apply(
-        dr.transaction()
-            .script(encode_add_to_script_allow_list_script(
-                HashValue::sha3_256_of(random_script.as_ref()).to_vec(),
-                0,
-            ))
-            .sequence_number(1)
-            .sign(),
-    );
-
-    // Regular accounts can send empty bytes txn to the network.
-    let random_script = vec![];
-    let txn = sender
-        .account()
-        .transaction()
         .script(Script::new(random_script, vec![], vec![]))
-        .sequence_number(10)
-        .max_gas_amount(100_000)
-        .gas_unit_price(1)
+        .sequence_number(1)
         .sign();
 
     assert_eq!(

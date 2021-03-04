@@ -1,0 +1,9 @@
+module M {
+    t(s1: signer, s2: signer) {
+        s1 = move(s2);
+        return;
+    }
+}
+
+// Used to be invalid
+// Now valid because signer has drop

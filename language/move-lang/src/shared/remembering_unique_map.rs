@@ -32,7 +32,7 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.len()
     }
 
-    pub fn add(&mut self, key: K, value: V) -> Result<(), K::Loc> {
+    pub fn add(&mut self, key: K, value: V) -> Result<(), (K, K::Loc)> {
         self.map.add(key, value)
     }
 
@@ -177,6 +177,10 @@ impl<K: TName, V> Iterator for IntoIter<K, V> {
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
 
 impl<K: TName, V> IntoIterator for RememberingUniqueMap<K, V> {
@@ -195,15 +199,19 @@ impl<K: TName, V> IntoIterator for RememberingUniqueMap<K, V> {
 pub struct Iter<'a, K: TName, V>(unique_map::Iter<'a, K, V>);
 
 impl<'a, K: TName, V> Iterator for Iter<'a, K, V> {
-    type Item = (K, &'a V);
+    type Item = (K::Loc, &'a K::Key, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a RememberingUniqueMap<K, V> {
-    type Item = (K, &'a V);
+    type Item = (K::Loc, &'a K::Key, &'a V);
     type IntoIter = Iter<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -219,15 +227,19 @@ impl<'a, K: TName, V> IntoIterator for &'a RememberingUniqueMap<K, V> {
 pub struct IterMut<'a, K: TName, V>(unique_map::IterMut<'a, K, V>);
 
 impl<'a, K: TName, V> Iterator for IterMut<'a, K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0.size_hint()
+    }
 }
 
 impl<'a, K: TName, V> IntoIterator for &'a mut RememberingUniqueMap<K, V> {
-    type Item = (K, &'a mut V);
+    type Item = (K::Loc, &'a K::Key, &'a mut V);
     type IntoIter = IterMut<'a, K, V>;
 
     fn into_iter(self) -> Self::IntoIter {

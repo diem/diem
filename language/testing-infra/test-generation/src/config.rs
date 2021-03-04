@@ -62,21 +62,22 @@ pub const INHABITATION_INSTRUCTION_LIMIT: usize = 1000;
 /// The module generation settings that are used for generation module scaffolding for bytecode
 /// generation.
 pub fn module_generation_settings() -> ModuleGeneratorOptions {
-    let mut generation_options = ModuleGeneratorOptions::default();
-    generation_options.min_table_size = 10;
-    // The more structs, and the larger the number of type parameters the more complex the
-    // functions and bytecode sequences generated. Be careful about setting these parameters too
-    // large -- this can lead to expontial increases in the size and number of struct
-    // instantiations that can be generated.
-    generation_options.max_ty_params = 4;
-    generation_options.max_functions = 6;
-    generation_options.max_fields = 10;
-    generation_options.max_structs = 6;
-    generation_options.args_for_ty_params = true;
-    generation_options.references_allowed = false;
-    // Test generation cannot currently cope with resources
-    generation_options.add_resources = false;
-    generation_options
+    ModuleGeneratorOptions {
+        min_table_size: 10,
+        // The more structs, and the larger the number of type parameters the more complex the
+        // functions and bytecode sequences generated. Be careful about setting these parameters too
+        // large -- this can lead to expontial increases in the size and number of struct
+        // instantiations that can be generated.
+        max_ty_params: 4,
+        max_functions: 6,
+        max_fields: 10,
+        max_structs: 6,
+        args_for_ty_params: true,
+        references_allowed: false,
+        // Test generation cannot currently cope with resources
+        add_resources: false,
+        ..Default::default()
+    }
 }
 
 /// Command line arguments for the tool

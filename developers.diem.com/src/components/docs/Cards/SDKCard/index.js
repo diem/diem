@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 
 import BaseContainer from '../BaseContainer';
 import Link from 'src/components/Link';
-import {WithBackgroundImage} from 'libra-docusaurus-components';
+import {WithBackgroundImage} from 'diem-docusaurus-components';
 
 import classnames from 'classnames';
 import styles from './styles.module.css';

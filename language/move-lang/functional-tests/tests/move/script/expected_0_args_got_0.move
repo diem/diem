@@ -1,0 +1,5 @@
+//! args:
+
+script {
+fun main() {}
+}

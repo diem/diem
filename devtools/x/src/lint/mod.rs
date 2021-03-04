@@ -13,6 +13,7 @@ mod license;
 mod toml;
 mod whitespace;
 mod workspace_classify;
+mod workspace_hack;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
@@ -21,11 +22,13 @@ pub struct Args {
 }
 
 pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
+    let core_config = xctx.core().config();
     let workspace_config = xctx.config().workspace_config();
 
     let project_linters: &[&dyn ProjectLinter] = &[
         &guppy::BannedDeps::new(&workspace_config.banned_deps),
-        &guppy::DirectDepDups,
+        &guppy::DirectDepDups::new(&core_config.hakari)?,
+        &workspace_hack::GenerateWorkspaceHack,
     ];
 
     let package_linters: &[&dyn PackageLinter] = &[
@@ -33,11 +36,14 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::CrateNamesPaths,
         &guppy::IrrelevantBuildDeps,
         &guppy::OverlayFeatures::new(&workspace_config.overlay),
-        &guppy::WorkspaceHack,
+        &guppy::UnpublishedPackagesOnlyUsePathDependencies::new(),
+        &guppy::PublishedPackagesDontDependOnUnpublishedPackages,
+        &guppy::OnlyPublishToCratesIo,
         &workspace_classify::DefaultOrTestOnly::new(
             xctx.core().package_graph()?,
             &workspace_config.test_only,
         )?,
+        &workspace_hack::WorkspaceHackDep::new(xctx.core())?,
     ];
 
     let file_path_linters: &[&dyn FilePathLinter] = &[

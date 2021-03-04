@@ -42,7 +42,7 @@ module M3 {
 
 }
 
-module M3 {
+module M4 {
     use 0x42::M1;
 
     struct A { b: B }

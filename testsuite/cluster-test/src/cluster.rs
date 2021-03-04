@@ -34,7 +34,7 @@ impl Cluster {
         peers: Vec<(String, u32, Option<u32>)>,
         mint_file: &str,
         chain_id: ChainId,
-        premainnet: bool,
+        vasp: bool,
     ) -> Self {
         let http_client = Client::new();
         let instances: Vec<Instance> = peers
@@ -50,7 +50,7 @@ impl Cluster {
             })
             .collect();
 
-        let mint_key_pair = if premainnet {
+        let mint_key_pair = if vasp {
             dummy_key_pair()
         } else {
             KeyPair::from(generate_key::load_key(mint_file))
@@ -174,7 +174,7 @@ impl Cluster {
         let mut sub = vec![];
         let mut rem = self.validator_instances.clone();
         for _ in 0..c {
-            let idx_remove = rng.gen_range(0, rem.len());
+            let idx_remove = rng.gen_range(0..rem.len());
             let instance = rem.remove(idx_remove);
             sub.push(instance);
         }
@@ -190,7 +190,7 @@ impl Cluster {
         let mut sub = vec![];
         let mut rem = self.fullnode_instances.clone();
         for _ in 0..c {
-            let idx_remove = rng.gen_range(0, rem.len());
+            let idx_remove = rng.gen_range(0..rem.len());
             let instance = rem.remove(idx_remove);
             sub.push(instance);
         }

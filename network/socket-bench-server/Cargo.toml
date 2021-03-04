@@ -10,18 +10,17 @@ publish = false
 edition = "2018"
 
 [dependencies]
-futures = "0.3.8"
-tokio = { version = "0.2.22", features = ["full"] }
-tokio-util = { version = "0.3.1", features = ["codec"] }
+futures = "0.3.12"
+tokio = { version = "1.2.0", features = ["full"] }
+tokio-util = { version = "0.6.3", features = ["compat", "codec"] }
 
 diem-crypto = { path = "../../crypto/crypto" }
 diem-config = { path = "../../config" }
-diem-logger = { path = "../../common/logger", version = "0.1.0" }
-diem-network-address = { path = "../network-address", version = "0.1.0" }
+diem-logger = { path = "../../common/logger" }
 diem-types = { path = "../../types" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-memsocket = { path = "../../network/memsocket", version = "0.1.0" }
-netcore = { path = "../../network/netcore", version = "0.1.0", features = ["fuzzing", "testing"] }
-network = { path = "../../network", version = "0.1.0", features = ["testing", "fuzzing"] }
-network-builder = { path = "../../network/builder", version = "0.1.0"}
-rand = "0.7.3"
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+memsocket = { path = "../memsocket" }
+netcore = { path = "../netcore", features = ["fuzzing", "testing"] }
+network = { path = "../.", features = ["testing", "fuzzing"] }
+network-builder = { path = "../builder"}
+rand = "0.8.3"

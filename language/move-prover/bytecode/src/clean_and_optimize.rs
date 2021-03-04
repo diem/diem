@@ -5,7 +5,7 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
@@ -27,8 +27,8 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         &self,
         _targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        mut data: FunctionData,
+    ) -> FunctionData {
         if func_env.is_native() {
             // Nothing to do
             return data;
@@ -37,7 +37,7 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
         // Run optimizer
         let instrs = std::mem::take(&mut data.code);
         let new_instrs = Optimizer {
-            _target: &FunctionTarget::new(func_env, &data),
+            target: &FunctionTarget::new(func_env, &data),
         }
         .run(instrs);
         data.code = new_instrs;
@@ -54,7 +54,7 @@ impl FunctionTargetProcessor for CleanAndOptimizeProcessor {
 
 /// A data flow analysis state used for optimization analysis. Currently it tracks the nodes
 /// which have been updated but not yet written back.
-#[derive(Clone, Default, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, PartialOrd)]
 struct AnalysisState {
     unwritten: BTreeSet<BorrowNode>,
 }
@@ -72,7 +72,7 @@ impl AbstractDomain for AnalysisState {
 }
 
 struct Optimizer<'a> {
-    _target: &'a FunctionTarget<'a>,
+    target: &'a FunctionTarget<'a>,
 }
 
 impl<'a> TransferFunctions for Optimizer<'a> {
@@ -83,14 +83,22 @@ impl<'a> TransferFunctions for Optimizer<'a> {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
-        if let Call(_, _, oper, srcs) = instr {
+        if let Call(_, _, oper, srcs, _) = instr {
             match oper {
                 WriteRef => {
                     state.unwritten.insert(Reference(srcs[0]));
                 }
-                WriteBack(Reference(dest)) => {
+                WriteBack(Reference(dest), _) => {
                     if state.unwritten.contains(&Reference(srcs[0])) {
                         state.unwritten.insert(Reference(*dest));
+                    }
+                }
+                Function(..) => {
+                    // Mark &mut parameters to functions as unwritten.
+                    for src in srcs {
+                        if self.target.get_local_type(*src).is_mutable_reference() {
+                            state.unwritten.insert(Reference(*src));
+                        }
                     }
                 }
                 _ => {}
@@ -120,7 +128,7 @@ impl<'a> Optimizer<'a> {
             if !new_instrs.is_empty() {
                 // Perform peephole optimization
                 match (&new_instrs[new_instrs.len() - 1], &instr) {
-                    (Call(_, _, UnpackRef, srcs1), Call(_, _, PackRef, srcs2))
+                    (Call(_, _, UnpackRef, srcs1, _), Call(_, _, PackRef, srcs2, _))
                         if srcs1[0] == srcs2[0] =>
                     {
                         // skip this redundant unpack/pack pair.
@@ -131,7 +139,7 @@ impl<'a> Optimizer<'a> {
                 }
             }
             // Remove unnecessary WriteBack
-            if let Call(_, _, WriteBack(_), srcs) = &instr {
+            if let Call(_, _, WriteBack(_, _), srcs, _) = &instr {
                 if let Some(unwritten) =
                     data.get(&(code_offset as CodeOffset)).map(|d| &d.unwritten)
                 {

@@ -116,13 +116,13 @@ mod tests {
             buffer_size in 1usize..100,
             max_in_progress in 1usize..100,
         ) {
-            let mut rt = Runtime::new().unwrap();
+            let rt = Runtime::new().unwrap();
             rt.block_on(async {
                 let num_sleeps = sleeps_ms.len();
 
                 let outputs = futures::stream::iter(
                     sleeps_ms.into_iter().enumerate().map(|(n, sleep_ms)| async move {
-                        tokio::time::delay_for(Duration::from_millis(sleep_ms)).await;
+                        tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
                         n
                     })
                 ).buffered_x(buffer_size, max_in_progress)

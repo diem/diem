@@ -10,6 +10,7 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt::Debug,
     ops::{Deref, DerefMut},
 };
 use vm::file_format::CodeOffset;
@@ -30,7 +31,7 @@ impl JoinResult {
     }
 }
 
-pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq {
+pub trait AbstractDomain: Clone + Sized + Eq + PartialOrd + PartialEq + Debug {
     fn join(&mut self, other: &Self) -> JoinResult;
 }
 
@@ -57,7 +58,7 @@ impl<E: Clone + Ord + Sized> DerefMut for SetDomain<E> {
     }
 }
 
-impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
+impl<E: Clone + Ord + Sized + Debug> AbstractDomain for SetDomain<E> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             JoinResult::Unchanged
@@ -70,8 +71,51 @@ impl<E: Clone + Ord + Sized> AbstractDomain for SetDomain<E> {
     }
 }
 
+impl<E: Clone + Ord> std::iter::FromIterator<E> for SetDomain<E> {
+    fn from_iter<I: IntoIterator<Item = E>>(iter: I) -> Self {
+        let mut s = SetDomain::default();
+        for e in iter {
+            s.insert(e);
+        }
+        s
+    }
+}
+
+impl<E: Clone + Ord> std::iter::IntoIterator for SetDomain<E> {
+    type Item = E;
+    type IntoIter = std::collections::btree_set::IntoIter<E>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<E: Clone + Ord + Sized> SetDomain<E> {
+    pub fn singleton(e: E) -> Self {
+        let mut s = SetDomain::default();
+        s.insert(e);
+        s
+    }
+
+    pub fn of_set(s: BTreeSet<E>) -> Self {
+        Self(s)
+    }
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct MapDomain<K: Ord, V: AbstractDomain>(pub BTreeMap<K, V>);
+
+impl<K: Ord, V: AbstractDomain> MapDomain<K, V> {
+    /// join `v` with self[k] if `k` is bound, insert `v` otherwise
+    pub fn insert_join(&mut self, k: K, v: V) {
+        self.0
+            .entry(k)
+            .and_modify(|old_v| {
+                old_v.join(&v);
+            })
+            .or_insert(v);
+    }
+}
 
 impl<K: Ord, V: AbstractDomain> Default for MapDomain<K, V> {
     fn default() -> Self {
@@ -79,7 +123,7 @@ impl<K: Ord, V: AbstractDomain> Default for MapDomain<K, V> {
     }
 }
 
-impl<K: Clone + Sized + Eq + Ord, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
+impl<K: Clone + Sized + Eq + Ord + Debug, V: AbstractDomain> AbstractDomain for MapDomain<K, V> {
     fn join(&mut self, other: &Self) -> JoinResult {
         if self == other {
             JoinResult::Unchanged
@@ -130,13 +174,17 @@ pub trait TransferFunctions {
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
     ) -> Self::State {
+        if cfg.is_dummmy(block_id) {
+            return state;
+        }
+        let instr_inds = cfg.instr_indexes(block_id).unwrap();
         if Self::BACKWARD {
-            for offset in cfg.instr_indexes(block_id).rev() {
+            for offset in instr_inds.rev() {
                 let instr = &instrs[offset as usize];
                 self.execute(&mut state, instr, offset);
             }
         } else {
-            for offset in cfg.instr_indexes(block_id) {
+            for offset in instr_inds {
                 let instr = &instrs[offset as usize];
                 self.execute(&mut state, instr, offset);
             }
@@ -156,26 +204,23 @@ pub trait DataflowAnalysis: TransferFunctions {
     ) -> StateMap<Self::State> {
         let mut state_map: StateMap<Self::State> = StateMap::new();
         let mut work_list = VecDeque::new();
-        for entry_block_id in cfg.entry_blocks() {
-            work_list.push_back(entry_block_id);
-            state_map.insert(
-                entry_block_id,
-                BlockState {
-                    pre: initial_state.clone(),
-                    post: initial_state.clone(),
-                },
-            );
-        }
+        work_list.push_back(cfg.entry_block());
+        state_map.insert(
+            cfg.entry_block(),
+            BlockState {
+                pre: initial_state.clone(),
+                post: initial_state.clone(),
+            },
+        );
         while let Some(block_id) = work_list.pop_front() {
-            let pre = state_map.remove(&block_id).expect("basic block").pre;
-            let post = self.execute_block(block_id, pre.clone(), &instrs, cfg);
+            let pre = state_map.get(&block_id).expect("basic block").pre.clone();
+            let post = self.execute_block(block_id, pre, &instrs, cfg);
 
             // propagate postcondition of this block to successor blocks
             for next_block_id in cfg.successors(block_id) {
                 match state_map.get_mut(next_block_id) {
                     Some(next_block_res) => {
                         let join_result = next_block_res.pre.join(&post);
-
                         match join_result {
                             JoinResult::Unchanged => {
                                 // Pre is the same after join. Reanalyzing this block would produce
@@ -202,9 +247,8 @@ pub trait DataflowAnalysis: TransferFunctions {
                     }
                 }
             }
-            state_map.insert(block_id, BlockState { pre, post });
+            state_map.get_mut(&block_id).expect("basic block").post = post;
         }
-
         state_map
     }
 
@@ -226,17 +270,20 @@ pub trait DataflowAnalysis: TransferFunctions {
         let mut result = BTreeMap::new();
         for (block_id, block_state) in state_map {
             let mut state = block_state.pre;
-            if Self::BACKWARD {
-                for offset in cfg.instr_indexes(block_id).rev() {
-                    let after = state.clone();
-                    self.execute(&mut state, &instrs[offset as usize], offset);
-                    result.insert(offset, f(&state, &after));
-                }
-            } else {
-                for offset in cfg.instr_indexes(block_id) {
-                    let before = state.clone();
-                    self.execute(&mut state, &instrs[offset as usize], offset);
-                    result.insert(offset, f(&before, &state));
+            if !cfg.is_dummmy(block_id) {
+                let instr_inds = cfg.instr_indexes(block_id).unwrap();
+                if Self::BACKWARD {
+                    for offset in instr_inds.rev() {
+                        let after = state.clone();
+                        self.execute(&mut state, &instrs[offset as usize], offset);
+                        result.insert(offset, f(&state, &after));
+                    }
+                } else {
+                    for offset in instr_inds {
+                        let before = state.clone();
+                        self.execute(&mut state, &instrs[offset as usize], offset);
+                        result.insert(offset, f(&before, &state));
+                    }
                 }
             }
         }

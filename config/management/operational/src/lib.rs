@@ -19,7 +19,7 @@ mod network_checker;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_helper;
 
-use diem_secure_json_rpc::VMStatusView;
+use diem_client::views::VMStatusView;
 use diem_types::account_address::AccountAddress;
 use serde::Serialize;
 

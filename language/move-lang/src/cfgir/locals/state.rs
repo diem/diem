@@ -41,7 +41,7 @@ impl LocalStates {
         let mut states = LocalStates {
             local_states: UniqueMap::new(),
         };
-        for (var, _) in local_types.iter() {
+        for (var, _) in local_types.key_cloned_iter() {
             let local_state = LocalState::Unavailable(var.loc());
             states.set_state(var.clone(), local_state)
         }
@@ -64,7 +64,7 @@ impl LocalStates {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (Var, &LocalState)> {
-        self.local_states.iter()
+        self.local_states.key_cloned_iter()
     }
 
     #[allow(dead_code)]
@@ -85,7 +85,7 @@ impl AbstractDomain for LocalStates {
     fn join(&mut self, other: &Self) -> JoinResult {
         use LocalState as L;
         let mut result = JoinResult::Unchanged;
-        for (local, other_state) in other.local_states.iter() {
+        for (local, other_state) in other.local_states.key_cloned_iter() {
             match (self.get_state(&local), other_state) {
                 // equal so nothing to do
                 (L::Unavailable(_), L::Unavailable(_))
@@ -98,7 +98,7 @@ impl AbstractDomain for LocalStates {
                 (_, L::MaybeUnavailable { .. }) => {
                     result = JoinResult::Changed;
                     let state = other_state.clone();
-                    self.set_state(local.clone(), state)
+                    self.set_state(local, state)
                 }
 
                 // Available in one but not the other, so maybe unavailable
@@ -112,7 +112,7 @@ impl AbstractDomain for LocalStates {
                         unavailable,
                     };
 
-                    self.set_state(local.clone(), state)
+                    self.set_state(local, state)
                 }
             }
         }

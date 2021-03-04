@@ -128,7 +128,10 @@ impl DbReader for MockDbReader {
         &self,
         _address: AccountAddress,
         _version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         unimplemented!()
     }
 

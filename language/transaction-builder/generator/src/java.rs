@@ -431,7 +431,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
         }
         doc = format!("{}\n@return {}", doc, return_doc);
         let text = textwrap::indent(&doc, " * ").replace("\n\n", "\n *\n");
-        format!("/**\n{} */\n", text)
+        format!("/**\n{}\n */\n", text)
     }
 
     fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {

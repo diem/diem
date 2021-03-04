@@ -115,7 +115,7 @@ fn best_cycle_loc<'a>(
 
 fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, N::ModuleDefinition>) {
     modules
-        .iter()
+        .key_cloned_iter()
         .for_each(|(mident, mdef)| module(context, mident, mdef))
 }
 
@@ -123,15 +123,15 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &N::ModuleDefinition
     context.current_module = Some(mident);
     mdef.structs
         .iter()
-        .for_each(|(_, sdef)| struct_def(context, sdef));
+        .for_each(|(_, _, sdef)| struct_def(context, sdef));
     mdef.functions
         .iter()
-        .for_each(|(_, fdef)| function(context, fdef));
+        .for_each(|(_, _, fdef)| function(context, fdef));
 }
 
 fn struct_def(context: &mut Context, sdef: &N::StructDefinition) {
     if let N::StructFields::Defined(fields) = &sdef.fields {
-        fields.iter().for_each(|(_, (_, bt))| type_(context, bt));
+        fields.iter().for_each(|(_, _, (_, bt))| type_(context, bt));
     }
 }
 
@@ -215,7 +215,7 @@ fn lvalue(context: &mut Context, sp!(loc, a_): &N::LValue) {
     if let L::Unpack(m, _, bs_opt, f) = a_ {
         context.add_usage(m, *loc);
         types_opt(context, bs_opt);
-        lvalues(context, f.iter().map(|(_, (_, b))| b));
+        lvalues(context, f.iter().map(|(_, _, (_, b))| b));
     }
 }
 
@@ -273,7 +273,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         E::Pack(m, _, bs_opt, fes) => {
             context.add_usage(m, *loc);
             types_opt(context, bs_opt);
-            fes.iter().for_each(|(_, (_, e))| exp(context, e))
+            fes.iter().for_each(|(_, _, (_, e))| exp(context, e))
         }
 
         E::ExpList(es) => es.iter().for_each(|e| exp(context, e)),

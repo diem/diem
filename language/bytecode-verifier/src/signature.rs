@@ -10,9 +10,9 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        Bytecode, CodeUnit, CompiledModule, CompiledScript, FunctionDefinition, FunctionHandle,
-        Kind, Signature, SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation,
-        TableIndex,
+        AbilitySet, Bytecode, CodeUnit, CompiledModule, CompiledScript, FunctionDefinition,
+        FunctionHandle, Signature, SignatureIndex, SignatureToken, StructDefinition,
+        StructFieldInformation, TableIndex,
     },
     IndexKind,
 };
@@ -66,7 +66,6 @@ impl<'a> SignatureChecker<'a> {
         };
 
         for (idx, fh) in function_handles.iter().enumerate() {
-            // Update the type parameter kinds to the function being checked
             self.check_signature(fh.return_)
                 .map_err(|err| err_handler(err, idx))?;
             self.check_instantiation(fh.return_, &fh.type_parameters)
@@ -87,7 +86,6 @@ impl<'a> SignatureChecker<'a> {
                 StructFieldInformation::Declared(fields) => fields,
             };
             let struct_handle = self.resolver.struct_handle_at(struct_def.struct_handle);
-            // Update the type parameter kinds to the struct being checked
             let err_handler = |err: PartialVMError, idx| {
                 err.at_index(IndexKind::FieldDefinition, idx as TableIndex)
                     .at_index(IndexKind::StructDefinition, struct_def_idx as TableIndex)
@@ -122,7 +120,7 @@ impl<'a> SignatureChecker<'a> {
         Ok(())
     }
 
-    fn verify_code(&self, code: &CodeUnit, type_parameters: &[Kind]) -> PartialVMResult<()> {
+    fn verify_code(&self, code: &CodeUnit, type_parameters: &[AbilitySet]) -> PartialVMResult<()> {
         self.check_signature(code.locals)?;
         self.check_instantiation(code.locals, type_parameters)?;
 
@@ -145,6 +143,7 @@ impl<'a> SignatureChecker<'a> {
                 | UnpackGeneric(idx)
                 | ExistsGeneric(idx)
                 | MoveFromGeneric(idx)
+                | MoveToGeneric(idx)
                 | ImmBorrowGlobalGeneric(idx)
                 | MutBorrowGlobalGeneric(idx) => {
                     let struct_inst = self.resolver.struct_instantiation_at(*idx)?;
@@ -158,7 +157,29 @@ impl<'a> SignatureChecker<'a> {
                         type_parameters,
                     )
                 }
-                _ => Ok(()),
+                ImmBorrowFieldGeneric(idx) | MutBorrowFieldGeneric(idx) => {
+                    let field_inst = self.resolver.field_instantiation_at(*idx)?;
+                    let field_handle = self.resolver.field_handle_at(field_inst.handle)?;
+                    let struct_def = self.resolver.struct_def_at(field_handle.owner)?;
+                    let struct_handle = self.resolver.struct_handle_at(struct_def.struct_handle);
+                    let type_arguments = &self.resolver.signature_at(field_inst.type_parameters).0;
+                    self.check_signature_tokens(type_arguments)?;
+                    self.check_generic_instance(
+                        type_arguments,
+                        &struct_handle.type_parameters,
+                        type_parameters,
+                    )
+                }
+
+                // List out the other options explicitly so there's a compile error if a new
+                // bytecode gets added.
+                Pop | Ret | Branch(_) | BrTrue(_) | BrFalse(_) | LdU8(_) | LdU64(_) | LdU128(_)
+                | LdConst(_) | CastU8 | CastU64 | CastU128 | LdTrue | LdFalse | Call(_)
+                | Pack(_) | Unpack(_) | ReadRef | WriteRef | FreezeRef | Add | Sub | Mul | Mod
+                | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt
+                | Le | Ge | CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_)
+                | ImmBorrowLoc(_) | MutBorrowField(_) | ImmBorrowField(_) | MutBorrowGlobal(_)
+                | ImmBorrowGlobal(_) | Exists(_) | MoveTo(_) | MoveFrom(_) | Abort | Nop => Ok(()),
             };
             result.map_err(|err| {
                 err.append_message_with_separator(' ', format!("at offset {} ", offset))
@@ -207,14 +228,22 @@ impl<'a> SignatureChecker<'a> {
         }
     }
 
-    fn check_instantiation(&self, idx: SignatureIndex, kinds: &[Kind]) -> PartialVMResult<()> {
+    fn check_instantiation(
+        &self,
+        idx: SignatureIndex,
+        type_parameters: &[AbilitySet],
+    ) -> PartialVMResult<()> {
         for ty in &self.resolver.signature_at(idx).0 {
-            self.check_type_instantiation(ty, kinds)?
+            self.check_type_instantiation(ty, type_parameters)?
         }
         Ok(())
     }
 
-    fn check_type_instantiation(&self, ty: &SignatureToken, kinds: &[Kind]) -> PartialVMResult<()> {
+    fn check_type_instantiation(
+        &self,
+        ty: &SignatureToken,
+        type_parameters: &[AbilitySet],
+    ) -> PartialVMResult<()> {
         match ty {
             SignatureToken::StructInstantiation(idx, type_arguments) => {
                 // Check that the instantiation satisfies the `idx` struct's constraints
@@ -222,29 +251,29 @@ impl<'a> SignatureChecker<'a> {
                 // i.e. it cannot be checked unless we are inside some module member. The only case
                 // where that happens is when checking the signature pool itself
                 let sh = self.resolver.struct_handle_at(*idx);
-                self.check_generic_instance(type_arguments, &sh.type_parameters, kinds)
+                self.check_generic_instance(type_arguments, &sh.type_parameters, type_parameters)
             }
             _ => Ok(()),
         }
     }
 
-    // Checks if the given types are well defined and satisfy the given kind constraints in
-    // the given context.
+    // Checks if the given types are well defined and satisfy the constraints in the given context.
     fn check_generic_instance(
         &self,
         type_arguments: &[SignatureToken],
-        scope_kinds: &[Kind],
-        global_kinds: &[Kind],
+        constraints: &[AbilitySet],
+        global_abilities: &[AbilitySet],
     ) -> PartialVMResult<()> {
-        let kinds = type_arguments
+        let abilities = type_arguments
             .iter()
-            .map(|ty| self.resolver.kind(ty, global_kinds));
-        for ((c, k), ty) in scope_kinds.iter().zip(kinds).zip(type_arguments) {
-            if !k.is_sub_kind_of(*c) {
-                return Err(PartialVMError::new(StatusCode::CONSTRAINT_KIND_MISMATCH)
+            .map(|ty| self.resolver.abilities(ty, global_abilities));
+        for ((constraint, given), ty) in constraints.iter().zip(abilities).zip(type_arguments) {
+            if !constraint.is_subset(given) {
+                return Err(PartialVMError::new(StatusCode::CONSTRAINT_NOT_SATISFIED)
                     .with_message(format!(
-                        "expected kind {:?} got type actual {:?} with incompatible kind {:?}",
-                        c, ty, k
+                        "expected type with abilities {:?} got type actual {:?} with incompatible \
+                        abilities {:?}",
+                        constraint, ty, given
                     )));
             }
         }

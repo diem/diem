@@ -1,0 +1,471 @@
+name: ci-test
+
+on:
+  push:
+    branches: [auto, canary]
+  pull_request:
+    branches: [main, master, release-*, gha-test-*]
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  max_threads: 16
+  pre_command: cd /opt/git/diem/
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
+      changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
+      test-rust: ${{ steps.rust-changes.outputs.changes-found }}
+      test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
+      test-website-build: ${{ steps.website-changes.outputs.changes-found }}
+      test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # This ensures that the tip of the PR is checked out instead of the merge between the base ref and the tip
+          # On `push` this value will be empty and will "do-the-right-thing"
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - name: Git Hooks and Checks
+        run: ./scripts/git-checks.sh
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: ci-test.yml
+      - id: rust-changes
+        name: find rust/cargo changes.
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^documentation\|^docker\|^scripts\|^.circleci'
+          invert: "true"
+      - id: non-rust-lint-changes
+        name: find shell/dockerfile changes
+        uses: ./.github/actions/matches
+        with:
+          pattern: 'Dockerfile$\|.*.sh$'
+      - id: dev-setup-sh-changes
+        name: find dev-setup.sh/base docker image changes
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh'
+      - id: website-changes
+        name: find website changes.
+        uses: ./.github/actions/matches
+        with:
+          pattern: "^documentation"
+
+  dev-setup-sh-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-dev-setup == 'true' }}
+    strategy:
+      matrix:
+        target_os: [alpine, centos, arch, github]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - name: build image with dev-setup.sh
+        run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
+
+  non-rust-lint:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 10
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-non-rust-lint == 'true'  }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - name: shell lints
+        run: |
+          shellcheck scripts/dev_setup.sh && \
+          shellcheck scripts/dockerhub_prune.sh && \
+          shellcheck .github/actions/changes/get_pr_info.sh && \
+          shellcheck docker/build_push.sh && \
+          shellcheck docker/docker_republish.sh
+      - name: docker lints
+        uses: ./.github/actions/docker-checks
+
+  lint:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs: prepare
+    #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: cargo lint
+        run: $pre_command && cargo x lint
+      - name: cargo clippy
+        run: $pre_command && cargo xclippy --workspace --all-targets
+      - name: cargo clippy tcb
+        run: $pre_command && cargo xclippy --members lec --members lsr --members key-manager
+      - name: cargo fmt
+        run: $pre_command && cargo xfmt --check
+      - uses: ./.github/actions/build-teardown
+
+  unit-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 50
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run unit tests
+        run: |
+          $pre_command && cargo x test --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          sccache -s
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - uses: ./.github/actions/build-teardown
+
+  codegen-unit-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 60
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run codegen unit tests
+        run: $pre_command && cargo x test --jobs ${max_threads} -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" -- --ignored
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - uses: ./.github/actions/build-teardown
+
+  e2e-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 40
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [0, 1] # set the env runners to the count below.
+    env:
+      runners: 2
+      E2E_RETRIES: 3
+      FLAKY_TESTS_FILE: /tmp/failures
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - name: split tests
+        run: |
+          cd /opt/git/diem/
+          cargo x test --package smoke-test -- --list | \
+            grep "::" | sed 's/: .*$//' > e2e_tests
+          echo -e "Found $(wc -l e2e_tests) tests."
+          # Splits the e2e test via round robin in to ${runners} number of files with single digit extensions.
+          split -n r/${runners} -d -a 1 e2e_tests /tmp/tests.
+          rm e2e_tests
+          mv /tmp/tests.${{ matrix.runner }} /tmp/tests_to_run
+          echo -e "This runner will run these tests\n$(cat /tmp/tests_to_run)"
+      - name: run e2e tests
+        run: |
+          set +e
+          num_fails=0
+          cd /opt/git/diem/
+          export RUST_BACKTRACE=full
+          failed_tests=
+          for target in $(cat /tmp/tests_to_run) ; do
+            retry=0
+            status=1
+            while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
+              cargo x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
+              status=$?
+              retry=$((retry + 1))
+              if [[ $status != 0 ]] ; then
+                 echo Failed to execute $target, $retry times
+              fi
+              sleep 10
+            done
+            if [[ $status != 0 ]] ; then
+              num_fails=$((num_fails + 1))
+              echo failed to execute $target
+              failed_tests="${target}\n${failed_tests}"
+            elif [[ $retry > 1 ]]; then
+              echo "$target passed after $retry tries" >> ${FLAKY_TESTS_FILE}
+            fi
+          done
+          if [ -e ${FLAKY_TESTS_FILE} ]; then
+            msg="Found flaky tests\n$(cat ${FLAKY_TESTS_FILE})"
+            echo -e $msg
+            echo -e $msg > ${MESSAGE_PAYLOAD_FILE}
+          fi
+          if [[ $num_fails != 0 ]]; then
+            echo -e "$num_fails test(s) failed:\n${failed_tests}"
+          else
+            echo -e "No issues detected in this build". > ${MESSAGE_PAYLOAD_FILE}
+          fi
+          exit $num_fails
+      - name: "Send Message"
+        uses: ./.github/actions/slack-file
+        with:
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          webhook: ${{ secrets.WEBHOOK_FLAKY_TESTS }}
+
+  docker-compose-test:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs: prepare
+    #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/check-machine
+        with:
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - name: install expect
+        run: |
+          sudo apt --assume-yes update
+          sudo apt --assume-yes install expect
+      - name: build validator docker image
+        run: docker/diem-build.sh docker/validator/Dockerfile libra/validator:test
+      - name: build faucet image
+        run: docker/diem-build.sh docker/faucet/Dockerfile libra/faucet:test
+      - name: build client image
+        run: docker/diem-build.sh docker/client/Dockerfile libra/client:test
+      - name: run validator-client test
+        run: docker/compose/test_docker_compose.sh
+        env:
+          IMAGE_TAG: "test"
+
+  crypto-unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/check-machine
+        with:
+          min-cpu: 2
+          min-ram: 7
+          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run crypto unit tests
+        run: |
+          cd /opt/git/diem/crypto/crypto
+          $CARGO $CARGOFLAGS test --features='u64' --no-default-features
+          $CARGO $CARGOFLAGS test --features='u32' --no-default-features
+      - uses: ./.github/actions/build-teardown
+
+  # Compile (but don't run) the benchmarks, to insulate against bit rot
+  build-benchmarks:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: build benchmarks
+        run: cargo x bench --no-run
+      - uses: ./.github/actions/build-teardown
+
+  build-dev:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - run: cd /opt/git/diem/ && cargo xcheck -j ${max_threads} --members production
+      - run: cd /opt/git/diem/ && cargo xcheck -j ${max_threads} --workspace --all-targets
+      - run: |
+          cd /opt/git/diem
+          rustup target add powerpc-unknown-linux-gnu
+          cargo xcheck -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+      - uses: ./.github/actions/build-teardown
+
+  perf-benchmarks:
+    name: run-perf-benchmarks
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 30
+    needs:
+      - prepare
+      - build-benchmarks
+    env:
+      CRITERION_HOME: /tmp/benches
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: Download the previous baseline
+        continue-on-error: true
+        uses: actions/download-artifact@v2
+        with:
+          name: bench-baseline
+      - name: Run performance benchamrks
+        run: |
+          # Replace this with a cargo x bench
+          cargo bench --package language-benchmarks
+      - name: Archive criterion results
+        uses: actions/upload-artifact@v2
+        with:
+          name: bench-baseline
+          retention-days: 5
+          path: |
+            /tmp/benches
+
+  success:
+    name: ci-test-success
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    #always run this job even if needed jobs failed or are skipped.
+    if: ${{ always() }}
+    needs:
+      - prepare
+      - dev-setup-sh-test
+      - non-rust-lint
+      - lint
+      - unit-test
+      - codegen-unit-test
+      - e2e-test
+      - docker-compose-test
+      - crypto-unit-test
+      - build-benchmarks
+      - build-dev
+    steps:
+      - run: |
+          echo prepare: ${{ needs.prepare.result }}
+          echo dev-setup-sh-test: ${{ needs.dev-setup-sh-test.result }}
+          echo non-rust-lint: ${{ needs.non-rust-lint.result }}
+          echo lint: ${{ needs.lint.result }}
+          echo unit-test: ${{ needs.unit-test.result }}
+          echo codegen-unit-test: ${{ needs.codegen-unit-test.result }}
+          echo e2e-test: ${{ needs.e2e-test.result }}
+          echo docker-compose-test: ${{ needs.docker-compose-test.result }}
+          echo crypto-unit-test: ${{ needs.crypto-unit-test.result }}
+          echo build-benchmarks: ${{ needs.build-benchmarks.result }}
+          echo build-dev: ${{ needs.build-dev.result }}
+          success="${{
+            needs.prepare.result=='success'
+            && (needs.dev-setup-sh-test.result=='success' || needs.dev-setup-sh-test.result=='skipped')
+            && (needs.non-rust-lint.result=='success' || needs.non-rust-lint.result=='skipped')
+            && (needs.lint.result=='success' || needs.lint.result=='skipped')
+            && (needs.unit-test.result=='success' || needs.unit-test.result=='skipped')
+            && (needs.codegen-unit-test.result=='success' || needs.codegen-unit-test.result=='skipped')
+            && (needs.e2e-test.result=='success' || needs.e2e-test.result=='skipped')
+            && (needs.docker-compose-test.result=='success' || needs.docker-compose-test.result=='skipped')
+            && (needs.crypto-unit-test.result=='success' || needs.crypto-unit-test.result=='skipped')
+            && (needs.build-benchmarks.result=='success' || needs.build-benchmarks.result=='skipped')
+            && (needs.build-dev.result=='success' || needs.build-dev.result=='skipped')
+          }}"
+          if [[ "$success" != "true" ]]; then
+            exit 1;
+          fi

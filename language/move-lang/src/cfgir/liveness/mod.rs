@@ -91,11 +91,12 @@ fn command(state: &mut LivenessState, sp!(_, cmd_): &Command) {
             exp(state, er);
             exp(state, el)
         }
-        C::Return(e) | C::Abort(e) | C::IgnoreAndPop { exp: e, .. } | C::JumpIf { cond: e, .. } => {
-            exp(state, e)
-        }
+        C::Return { exp: e, .. }
+        | C::Abort(e)
+        | C::IgnoreAndPop { exp: e, .. }
+        | C::JumpIf { cond: e, .. } => exp(state, e),
 
-        C::Jump(_) => (),
+        C::Jump { .. } => (),
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
@@ -270,12 +271,12 @@ mod last_usage {
                 exp(context, el);
                 exp(context, er)
             }
-            C::Return(e)
+            C::Return { exp: e, .. }
             | C::Abort(e)
             | C::IgnoreAndPop { exp: e, .. }
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
-            C::Jump(_) => (),
+            C::Jump { .. } => (),
             C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
@@ -296,9 +297,9 @@ mod last_usage {
                         DisplayVar::Orig(v_str) => {
                             if !v.starts_with_underscore() {
                                 let msg = format!(
-                                    "Unused assignment or binding for local '{}'. \
-                                    Consider removing, replacing with '_', \
-                                    or prefixing with '_' (e.g., '_{}')",
+                                    "Unused assignment or binding for local '{}'. Consider \
+                                     removing, replacing with '_', or prefixing with '_' (e.g., \
+                                     '_{}')",
                                     v_str, v_str
                                 );
                                 context.error(vec![(l.loc, msg)]);

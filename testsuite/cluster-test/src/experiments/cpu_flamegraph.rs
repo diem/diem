@@ -62,6 +62,7 @@ impl Experiment for CpuFlamegraph {
             context.cluster.validator_instances().to_vec(),
             context.global_emit_job_request,
             0,
+            0,
         );
         let emit_future = context
             .tx_emitter
@@ -72,7 +73,7 @@ impl Experiment for CpuFlamegraph {
         let filename = "diem-node-perf.svg";
         let command = generate_perf_flamegraph_command(&filename, &run_id, self.duration_secs);
         let flame_graph = self.perf_instance.util_cmd(command, "generate-flamegraph");
-        let flame_graph_future = tokio::time::delay_for(buffer)
+        let flame_graph_future = tokio::time::sleep(buffer)
             .then(|_| async move { flame_graph.await })
             .boxed();
         let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);

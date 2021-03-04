@@ -17,13 +17,13 @@ pub mod test_helper;
 
 pub mod backup;
 pub mod errors;
+pub mod metrics;
 pub mod schema;
 
 mod change_set;
 mod event_store;
 mod ledger_counters;
 mod ledger_store;
-mod metrics;
 mod pruner;
 mod state_store;
 mod system_store;
@@ -44,9 +44,10 @@ use crate::{
     ledger_counters::LedgerCounters,
     ledger_store::LedgerStore,
     metrics::{
-        DIEM_STORAGE_API_LATENCY_SECONDS, DIEM_STORAGE_CF_SIZE_BYTES, DIEM_STORAGE_COMMITTED_TXNS,
+        DIEM_STORAGE_API_LATENCY_SECONDS, DIEM_STORAGE_COMMITTED_TXNS,
         DIEM_STORAGE_LATEST_TXN_VERSION, DIEM_STORAGE_LEDGER_VERSION,
         DIEM_STORAGE_NEXT_BLOCK_EPOCH, DIEM_STORAGE_OTHER_TIMERS_SECONDS,
+        DIEM_STORAGE_ROCKSDB_PROPERTIES,
     },
     pruner::Pruner,
     schema::*,
@@ -75,8 +76,16 @@ use diem_types::{
     },
 };
 use itertools::{izip, zip_eq};
+use once_cell::sync::Lazy;
 use schemadb::{ColumnFamilyName, Options, DB, DEFAULT_CF_NAME};
-use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    iter::Iterator,
+    path::Path,
+    sync::{mpsc, Arc, Mutex},
+    thread::{self, JoinHandle},
+    time::{Duration, Instant},
+};
 use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 
 const MAX_LIMIT: u64 = 1000;
@@ -84,6 +93,38 @@ const MAX_LIMIT: u64 = 1000;
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.
 const MAX_NUM_EPOCH_ENDING_LEDGER_INFO: usize = 100;
+
+static ROCKSDB_PROPERTY_MAP: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
+    [
+        (
+            "diem_rocksdb_live_sst_files_size_bytes",
+            "rocksdb.live-sst-files-size",
+        ),
+        (
+            "diem_rocksdb_all_memtables_size_bytes",
+            "rocksdb.size-all-mem-tables",
+        ),
+        (
+            "diem_rocksdb_num_running_compactions",
+            "rocksdb.num-running-compactions",
+        ),
+        (
+            "diem_rocksdb_num_running_flushes",
+            "rocksdb.num-running-flushes",
+        ),
+        (
+            "diem_rocksdb_block_cache_usage_bytes",
+            "rocksdb.block-cache-usage",
+        ),
+        (
+            "diem_rocksdb_cf_size_bytes",
+            "rocksdb.estimate-live-data-size",
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
 
 fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
     if num_requested > max_allowed {
@@ -100,6 +141,62 @@ fn gen_rocksdb_options(config: &RocksdbConfig) -> Options {
     db_opts
 }
 
+fn update_rocksdb_properties(db: &DB) -> Result<()> {
+    let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
+        .with_label_values(&["update_rocksdb_properties"])
+        .start_timer();
+    for cf_name in DiemDB::column_families() {
+        for (property_name, rocksdb_property_argument) in &*ROCKSDB_PROPERTY_MAP {
+            DIEM_STORAGE_ROCKSDB_PROPERTIES
+                .with_label_values(&[cf_name, property_name])
+                .set(db.get_property(cf_name, rocksdb_property_argument)? as i64);
+        }
+    }
+    Ok(())
+}
+
+#[derive(Debug)]
+struct RocksdbPropertyReporter {
+    sender: Mutex<mpsc::Sender<()>>,
+    join_handle: Option<JoinHandle<()>>,
+}
+
+impl RocksdbPropertyReporter {
+    fn new(db: Arc<DB>) -> Self {
+        let (send, recv) = mpsc::channel();
+        let join_handle = Some(thread::spawn(move || loop {
+            if let Err(e) = update_rocksdb_properties(&db) {
+                warn!(
+                    error = ?e,
+                    "Updating rocksdb property failed."
+                );
+            }
+            // report rocksdb properties each 10 seconds
+            match recv.recv_timeout(Duration::from_secs(10)) {
+                Ok(_) => break,
+                Err(mpsc::RecvTimeoutError::Timeout) => (),
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            }
+        }));
+        Self {
+            sender: Mutex::new(send),
+            join_handle,
+        }
+    }
+}
+
+impl Drop for RocksdbPropertyReporter {
+    fn drop(&mut self) {
+        // Notify the property reporting thread to exit
+        self.sender.lock().unwrap().send(()).unwrap();
+        self.join_handle
+            .take()
+            .expect("Rocksdb property reporting thread must exist.")
+            .join()
+            .expect("Rocksdb property reporting thread should join peacefully.");
+    }
+}
+
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Diem data structures.
 #[derive(Debug)]
@@ -110,6 +207,7 @@ pub struct DiemDB {
     state_store: Arc<StateStore>,
     event_store: Arc<EventStore>,
     system_store: SystemStore,
+    rocksdb_property_reporter: RocksdbPropertyReporter,
     pruner: Option<Pruner>,
 }
 
@@ -142,6 +240,7 @@ impl DiemDB {
             state_store: Arc::new(StateStore::new(Arc::clone(&db))),
             transaction_store: Arc::new(TransactionStore::new(Arc::clone(&db))),
             system_store: SystemStore::new(Arc::clone(&db)),
+            rocksdb_property_reporter: RocksdbPropertyReporter::new(Arc::clone(&db)),
             pruner: prune_window.map(|n| Pruner::new(Arc::clone(&db), n)),
         }
     }
@@ -180,13 +279,13 @@ impl DiemDB {
             )?
         };
 
+        let ret = Self::new_with_db(db, prune_window);
         info!(
             path = path,
             time_ms = %instant.elapsed().as_millis(),
             "Opened DiemDB.",
         );
-
-        Ok(Self::new_with_db(db, prune_window))
+        Ok(ret)
     }
 
     pub fn open_as_secondary<P: AsRef<Path> + Clone>(
@@ -222,6 +321,11 @@ impl DiemDB {
             RocksdbConfig::default(),
         )
         .expect("Unable to open DiemDB")
+    }
+
+    /// This force the db to update rocksdb properties immediately.
+    pub fn update_rocksdb_properties(&self) -> Result<()> {
+        update_rocksdb_properties(&self.db)
     }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
@@ -325,7 +429,7 @@ impl DiemDB {
     }
 
     // ================================== Private APIs ==================================
-    fn get_events_by_event_key(
+    fn get_events_with_proof_by_event_key(
         &self,
         event_key: &EventKey,
         start_seq_num: u64,
@@ -350,7 +454,7 @@ impl DiemDB {
         let (first_seq, real_limit) = get_first_seq_num_and_limit(order, cursor, limit)?;
 
         // Query the index.
-        let mut event_keys = self.event_store.lookup_events_by_key(
+        let mut event_indices = self.event_store.lookup_events_by_key(
             &event_key,
             first_seq,
             real_limit,
@@ -364,14 +468,14 @@ impl DiemDB {
         // 90, we will get 90 to 100 from the index lookup above. Seeing that the last item
         // is 100 instead of 110 tells us 110 is out of bound.
         if order == Order::Descending {
-            if let Some((seq_num, _, _)) = event_keys.last() {
+            if let Some((seq_num, _, _)) = event_indices.last() {
                 if *seq_num < cursor {
-                    event_keys = Vec::new();
+                    event_indices = Vec::new();
                 }
             }
         }
 
-        let mut events_with_proof = event_keys
+        let mut events_with_proof = event_indices
             .into_iter()
             .map(|(seq, ver, idx)| {
                 let (event, event_proof) = self
@@ -447,12 +551,12 @@ impl DiemDB {
             .collect::<Result<Vec<_>>>()?;
 
         // Transaction updates. Gather transaction hashes.
-        zip_eq(first_version..=last_version, txns_to_commit)
-            .map(|(ver, txn_to_commit)| {
+        zip_eq(first_version..=last_version, txns_to_commit).try_for_each(
+            |(ver, txn_to_commit)| {
                 self.transaction_store
                     .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
-            })
-            .collect::<Result<()>>()?;
+            },
+        )?;
 
         // Transaction accumulator updates. Get result root hash.
         let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
@@ -480,23 +584,6 @@ impl DiemDB {
     /// LedgerCounters.
     fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
         self.db.write_schemas(sealed_cs.batch)?;
-
-        let _timer = DIEM_STORAGE_OTHER_TIMERS_SECONDS
-            .with_label_values(&["get_approximate_cf_sizes"])
-            .start_timer();
-        match self.db.get_approximate_sizes_cf() {
-            Ok(cf_sizes) => {
-                for (cf_name, size) in cf_sizes {
-                    DIEM_STORAGE_CF_SIZE_BYTES
-                        .with_label_values(&[&cf_name])
-                        .set(size as i64);
-                }
-            }
-            Err(err) => warn!(
-                error = ?err,
-                "Failed to get approximate size of column families.",
-            ),
-        }
 
         Ok(())
     }
@@ -650,7 +737,8 @@ impl DbReader for DiemDB {
                     .ledger_info()
                     .version();
             }
-            let events = self.get_events_by_event_key(event_key, start, order, limit, version)?;
+            let events =
+                self.get_events_with_proof_by_event_key(event_key, start, order, limit, version)?;
             Ok(events)
         })
     }
@@ -756,7 +844,10 @@ impl DbReader for DiemDB {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         gauged_api("get_account_state_with_proof_by_version", || {
             self.state_store
                 .get_account_state_with_proof_by_version(address, version)
@@ -804,6 +895,17 @@ impl DbReader for DiemDB {
                 None => 0,
             };
             Ok(ts)
+        })
+    }
+
+    fn get_last_version_before_timestamp(
+        &self,
+        timestamp: u64,
+        ledger_version: Version,
+    ) -> Result<Version> {
+        gauged_api("get_last_version_before_timestamp", || {
+            self.event_store
+                .get_last_version_before_timestamp(timestamp, ledger_version)
         })
     }
 

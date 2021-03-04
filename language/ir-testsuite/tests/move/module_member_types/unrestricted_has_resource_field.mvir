@@ -1,4 +1,4 @@
-// check: INVALID_RESOURCE_FIELD
+// check: FIELD_MISSING_TYPE_ABILITY
 
 module Test {
 import 0x1.XUS;

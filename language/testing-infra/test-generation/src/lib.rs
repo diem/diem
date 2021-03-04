@@ -29,16 +29,17 @@ use module_generation::generate_module;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     language_storage::TypeTag,
+    value::MoveValue,
     vm_status::VMStatus,
 };
 use move_vm_runtime::logging::NoContextLog;
-use move_vm_types::{gas_schedule::CostStrategy, values::Value};
+use move_vm_types::gas_schedule::CostStrategy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, Kind, SignatureToken,
+        AbilitySet, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken,
         StructHandleIndex,
     },
 };
@@ -64,15 +65,17 @@ fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
         let sig_idx = module.function_handle_at(handle).parameters;
         module.signature_at(sig_idx).clone()
     };
-    let main_args: Vec<Value> = function_signature
+    let main_args: Vec<Vec<u8>> = function_signature
         .0
         .iter()
         .map(|sig_tok| match sig_tok {
-            SignatureToken::Address => Value::address(AccountAddress::ZERO),
-            SignatureToken::U64 => Value::u64(0),
-            SignatureToken::Bool => Value::bool(true),
+            SignatureToken::Address => MoveValue::Address(AccountAddress::ZERO)
+                .simple_serialize()
+                .unwrap(),
+            SignatureToken::U64 => MoveValue::U64(0).simple_serialize().unwrap(),
+            SignatureToken::Bool => MoveValue::Bool(true).simple_serialize().unwrap(),
             SignatureToken::Vector(inner_tok) if **inner_tok == SignatureToken::U8 => {
-                Value::vector_u8(vec![])
+                MoveValue::Vector(vec![]).simple_serialize().unwrap()
             }
             _ => unimplemented!("Unsupported argument type: {:#?}", sig_tok),
         })
@@ -93,7 +96,7 @@ fn execute_function_in_module<S: StateView>(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
-    args: Vec<Value>,
+    args: Vec<Vec<u8>>,
     state_view: &S,
 ) -> Result<(), VMStatus> {
     let module_id = module.self_id();
@@ -125,11 +128,11 @@ fn execute_function_in_module<S: StateView>(
                     &entry_name,
                     ty_args,
                     args,
-                    sender,
                     &mut cost_strategy,
                     &log_context,
                 )
-                .map_err(|e| e.into_vm_status())
+                .map_err(|e| e.into_vm_status())?;
+            Ok(())
         })
     }
 }
@@ -387,42 +390,34 @@ pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> Sign
     }
 }
 
-pub fn kind(module: &impl ModuleAccess, ty: &SignatureToken, constraints: &[Kind]) -> Kind {
+pub fn abilities(
+    module: &impl ModuleAccess,
+    ty: &SignatureToken,
+    constraints: &[AbilitySet],
+) -> AbilitySet {
     use SignatureToken::*;
 
     match ty {
-        // The primitive types & references have kind unrestricted.
-        Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
-        Signer => Kind::Resource,
+        Bool | U8 | U64 | U128 | Address => AbilitySet::PRIMITIVES,
+
+        Reference(_) | MutableReference(_) => AbilitySet::REFERENCES,
+        Signer => AbilitySet::SIGNER,
         TypeParameter(idx) => constraints[*idx as usize],
-        Vector(ty) => kind(module, ty, constraints),
+        Vector(ty) => AbilitySet::polymorphic_abilities(
+            AbilitySet::VECTOR,
+            vec![abilities(module, ty, constraints)].into_iter(),
+        ),
         Struct(idx) => {
             let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            }
+            sh.abilities
         }
         StructInstantiation(idx, type_args) => {
             let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                return Kind::Resource;
-            }
-            // Gather the kinds of the type actuals.
-            let kinds = type_args
+            let declared_abilities = sh.abilities;
+            let type_argument_abilities = type_args
                 .iter()
-                .map(|ty| kind(module, ty, constraints))
-                .collect::<Vec<_>>();
-            // Derive the kind of the struct.
-            //   - If any of the type actuals is `all`, then the struct is `all`.
-            //     - `all` means some part of the type can be either `resource` or
-            //       `unrestricted`.
-            //     - Therefore it is also impossible to determine the kind of the type as a
-            //       whole, and thus `all`.
-            //   - If none of the type actuals is `all`, then the struct is a resource if
-            //     and only if one of the type actuals is `resource`.
-            kinds.iter().cloned().fold(Kind::Copyable, Kind::join)
+                .map(|ty| abilities(module, ty, constraints));
+            AbilitySet::polymorphic_abilities(declared_abilities, type_argument_abilities)
         }
     }
 }

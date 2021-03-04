@@ -25,6 +25,16 @@ impl Annotations {
         self.map.get(&id).and_then(|d| d.downcast_ref::<T>())
     }
 
+    /// Gets annotation of type T or creates one from default.
+    pub fn get_or_default_mut<T: Any + Default>(&mut self) -> &mut T {
+        let id = TypeId::of::<T>();
+        self.map
+            .entry(id)
+            .or_insert_with(|| Box::new(T::default()))
+            .downcast_mut::<T>()
+            .expect("cast successful")
+    }
+
     /// Sets annotation of type T.
     pub fn set<T: Any>(&mut self, x: T) {
         let id = TypeId::of::<T>();

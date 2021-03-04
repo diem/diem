@@ -178,8 +178,7 @@ pub fn consensus_runtime() -> runtime::Runtime {
         ::diem_logger::Logger::new().level(Level::Debug).init();
     }
 
-    runtime::Builder::new()
-        .threaded_scheduler()
+    runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")

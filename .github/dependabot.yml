@@ -4,7 +4,7 @@ updates:
     directory: "/"
     allow:
       # The undocumented default is to open prs for only direct dependencies.
-      - dependency-type: all
+      - dependency-type: direct
     schedule:
       interval: "daily"
     labels:
@@ -43,7 +43,7 @@ updates:
       - "dependencies"
 
   - package-ecosystem: "docker"
-    directory: "/docker/ci/circleci"
+    directory: "/docker/ci/github"
     schedule:
       interval: "daily"
     labels:
@@ -83,7 +83,7 @@ updates:
       - "dependencies"
 
   - package-ecosystem: "docker"
-    directory: "/docker/mint"
+    directory: "/docker/faucet"
     schedule:
       interval: "daily"
     labels:

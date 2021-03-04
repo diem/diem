@@ -37,7 +37,7 @@ impl ContentLinter for LicenseHeader {
             Some(content) => content,
             None => {
                 // This is not a UTF-8 file -- don't analyze it.
-                return Ok(RunStatus::Skipped(SkipReason::NonUtf8));
+                return Ok(RunStatus::Skipped(SkipReason::NonUtf8Content));
             }
         };
 

@@ -6,7 +6,7 @@ use crate::{
     dataflow_analysis::{
         AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
     },
-    function_target::{FunctionTarget, FunctionTargetData},
+    function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Operation},
 };
@@ -34,13 +34,24 @@ pub fn get_modified_memory<'env>(
         .modified_memory
 }
 
+pub fn get_directly_modified_memory<'env>(
+    target: &'env FunctionTarget,
+) -> &'env BTreeSet<QualifiedId<StructId>> {
+    &target
+        .get_annotations()
+        .get::<UsageState>()
+        .expect("Invariant violation: target not analyzed")
+        .directly_modified_memory
+}
+
 /// The annotation for usage of functions. This is computed by the function target processor.
-#[derive(Clone, Default, Eq, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialOrd, PartialEq)]
 struct UsageState {
     // The memory which is directly and transitively accessed by this function.
     used_memory: SetDomain<QualifiedId<StructId>>,
-    // The memory which is directly and transitiviely modfied by this function.
+    // The memory which is directly and transitively modified by this function.
     modified_memory: SetDomain<QualifiedId<StructId>>,
+    directly_modified_memory: SetDomain<QualifiedId<StructId>>,
 }
 
 impl AbstractDomain for UsageState {
@@ -49,8 +60,12 @@ impl AbstractDomain for UsageState {
         match (
             self.used_memory.join(&other.used_memory),
             self.modified_memory.join(&other.modified_memory),
+            self.directly_modified_memory
+                .join(&other.directly_modified_memory),
         ) {
-            (JoinResult::Unchanged, JoinResult::Unchanged) => JoinResult::Unchanged,
+            (JoinResult::Unchanged, JoinResult::Unchanged, JoinResult::Unchanged) => {
+                JoinResult::Unchanged
+            }
             _ => JoinResult::Changed,
         }
     }
@@ -61,7 +76,11 @@ struct MemoryUsageAnalysis<'a> {
 }
 
 impl<'a> DataflowAnalysis for MemoryUsageAnalysis<'a> {}
-impl<'a> CompositionalAnalysis for MemoryUsageAnalysis<'a> {}
+impl<'a> CompositionalAnalysis<UsageState> for MemoryUsageAnalysis<'a> {
+    fn to_summary(&self, state: UsageState, _fun_target: &FunctionTarget) -> UsageState {
+        state
+    }
+}
 pub struct UsageProcessor();
 
 impl UsageProcessor {
@@ -75,8 +94,8 @@ impl FunctionTargetProcessor for UsageProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        data: FunctionData,
+    ) -> FunctionData {
         let mut initial_state = UsageState::default();
         let func_target = FunctionTarget::new(func_env, &data);
         func_target.get_modify_targets().keys().for_each(|target| {
@@ -101,7 +120,7 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
         use Bytecode::*;
         use Operation::*;
 
-        if let Call(_, _, oper, _) = code {
+        if let Call(_, _, oper, _, _) = code {
             match oper {
                 Function(mid, fid, _) => {
                     if let Some(summary) = self.cache.get::<UsageState>(mid.qualified(*fid)) {
@@ -111,9 +130,10 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
                 }
                 MoveTo(mid, sid, _) | MoveFrom(mid, sid, _) | BorrowGlobal(mid, sid, _) => {
                     state.modified_memory.insert(mid.qualified(*sid));
+                    state.directly_modified_memory.insert(mid.qualified(*sid));
                     state.used_memory.insert(mid.qualified(*sid));
                 }
-                Exists(mid, sid, _) | GetField(mid, sid, ..) | GetGlobal(mid, sid, _) => {
+                Exists(mid, sid, _) | GetGlobal(mid, sid, _) => {
                     state.used_memory.insert(mid.qualified(*sid));
                 }
                 _ => {}

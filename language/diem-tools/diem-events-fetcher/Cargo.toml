@@ -12,14 +12,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.37"
-hex = "0.4.2"
-reqwest = { version = "0.10.10", features = ["blocking", "json"] }
+anyhow = "1.0.38"
+hex = "0.4.3"
+reqwest = { version = "0.11.1", features = ["blocking", "json"] }
 structopt = "0.3.21"
-futures = "0.3.8"
-tokio = { version = "0.2.22", features = ["full"] }
+futures = "0.3.12"
+tokio = { version = "1.2.0", features = ["full"] }
 
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-diem-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diem-client = { path = "../../../sdk/client" }
+diem-types = { path = "../../../types" }
 bcs = "0.1.2"

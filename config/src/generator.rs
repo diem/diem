@@ -6,12 +6,13 @@
 
 use crate::{
     config::{
-        DiscoveryMethod, NetworkConfig, NodeConfig, SeedAddresses, TestConfig, HANDSHAKE_VERSION,
+        DiscoveryMethod, NetworkConfig, NodeConfig, Peer, PeerRole, PeerSet, TestConfig,
+        HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
-use diem_network_address::NetworkAddress;
 use rand::{rngs::StdRng, SeedableRng};
+use std::collections::{HashMap, HashSet};
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
@@ -43,32 +44,50 @@ pub fn validator_swarm(
 
     // set the first validator as every validators' initial configured seed peer.
     let seed_config = &nodes[0].validator_network.as_ref().unwrap();
-    let seed_addrs = build_seed_addrs(&seed_config, seed_config.listen_address.clone());
+    let seeds = build_seed_for_network(&seed_config);
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();
-        network.seed_addrs = seed_addrs.clone();
+        network.seeds = seeds.clone();
     }
 
     ValidatorSwarm { nodes }
 }
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
-    let mut config = NodeConfig::default();
-    config.test = Some(TestConfig::open_module());
-    validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
+    let config = NodeConfig {
+        test: Some(TestConfig::open_module()),
+        ..Default::default()
+    };
+    validator_swarm(&config, nodes, [1u8; 32], true)
 }
 
-/// Convenience function that builds a `SeedAddresses` containing a single peer
+/// Convenience function that builds a `PeerSet` containing a single peer for testing
 /// with a fully formatted `NetworkAddress` containing its network identity pubkey
 /// and handshake protocol version.
-pub fn build_seed_addrs(
-    seed_config: &NetworkConfig,
-    seed_base_addr: NetworkAddress,
-) -> SeedAddresses {
-    let seed_pubkey = diem_crypto::PrivateKey::public_key(&seed_config.identity_key());
-    let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
+pub fn build_seed_for_network(seed_config: &NetworkConfig) -> PeerSet {
+    let seed_role = match &seed_config.network_id {
+        NetworkId::Validator => PeerRole::Validator,
+        network_id => {
+            if network_id.is_vfn_network() {
+                PeerRole::ValidatorFullNode
+            } else {
+                PeerRole::Upstream
+            }
+        }
+    };
 
-    let mut seed_addrs = SeedAddresses::default();
-    seed_addrs.insert(seed_config.peer_id(), vec![seed_addr]);
-    seed_addrs
+    let seed_pubkey = diem_crypto::PrivateKey::public_key(&seed_config.identity_key());
+    let seed_addr = seed_config
+        .listen_address
+        .clone()
+        .append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
+
+    let mut keys = HashSet::new();
+    keys.insert(seed_pubkey);
+    let mut seeds = HashMap::default();
+    seeds.insert(
+        seed_config.peer_id(),
+        Peer::new(vec![seed_addr], keys, seed_role),
+    );
+    seeds
 }

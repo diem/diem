@@ -41,7 +41,7 @@ impl BoundedExecutor {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let permit = self.semaphore.clone().acquire_owned().await;
+        let permit = self.semaphore.clone().acquire_owned().await.unwrap();
         self.spawn_with_permit(f, permit)
     }
 
@@ -87,7 +87,7 @@ mod test {
         sync::atomic::{AtomicU32, Ordering},
         time::Duration,
     };
-    use tokio::{runtime::Runtime, time::delay_for};
+    use tokio::{runtime::Runtime, time::sleep};
 
     #[test]
     fn try_spawn() {
@@ -123,7 +123,7 @@ mod test {
     }
 
     fn yield_task() -> impl Future<Output = ()> {
-        delay_for(Duration::from_millis(1)).map(|_| ())
+        sleep(Duration::from_millis(1)).map(|_| ())
     }
 
     // spawn NUM_TASKS futures on a BoundedExecutor, ensuring that no more than

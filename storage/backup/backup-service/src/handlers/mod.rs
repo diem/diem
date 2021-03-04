@@ -48,7 +48,6 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
                 send_size_prefixed_bcs_bytes(bh.get_account_iter(version), sender)
             })
         })
-        .map(unwrap_or_500)
         .recover(handle_rejection);
 
     // GET state_root_proof/<version>
@@ -78,7 +77,6 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
                 },
             )
         })
-        .map(unwrap_or_500)
         .recover(handle_rejection);
 
     // GET transactions/<start_version>/<num_transactions>
@@ -95,7 +93,6 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
                 .await
             })
         })
-        .map(unwrap_or_500)
         .recover(handle_rejection);
 
     // GET transaction_range_proof/<first_version>/<last_version>

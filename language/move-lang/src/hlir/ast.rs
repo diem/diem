@@ -165,7 +165,6 @@ pub enum Statement_ {
     Loop {
         block: Block,
         has_break: bool,
-        has_return_abort: bool,
     },
 }
 pub type Statement = Spanned<Statement_>;
@@ -189,14 +188,20 @@ pub enum Command_ {
     Assign(Vec<LValue>, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
     Abort(Exp),
-    Return(Exp),
+    Return {
+        from_user: bool,
+        exp: Exp,
+    },
     Break,
     Continue,
     IgnoreAndPop {
         pop_num: usize,
         exp: Exp,
     },
-    Jump(Label),
+    Jump {
+        from_user: bool,
+        target: Label,
+    },
     JumpIf {
         cond: Exp,
         if_true: Label,
@@ -216,6 +221,13 @@ pub type LValue = Spanned<LValue_>;
 //**************************************************************************************************
 // Expressions
 //**************************************************************************************************
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum UnitCase {
+    Trailing,
+    Implicit,
+    FromUser,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleCall {
@@ -237,7 +249,7 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
 #[derive(Debug, PartialEq)]
 pub enum UnannotatedExp_ {
-    Unit { trailing: bool },
+    Unit { case: UnitCase },
     Value(Value),
     Move { from_user: bool, var: Var },
     Copy { from_user: bool, var: Var },
@@ -299,7 +311,7 @@ impl Command_ {
         match self {
             Break | Continue => panic!("ICE break/continue not translated to jumps"),
             Assign(_, _) | Mutate(_, _) | IgnoreAndPop { .. } => false,
-            Abort(_) | Return(_) | Jump(_) | JumpIf { .. } => true,
+            Abort(_) | Return { .. } | Jump { .. } | JumpIf { .. } => true,
         }
     }
 
@@ -307,8 +319,10 @@ impl Command_ {
         use Command_::*;
         match self {
             Break | Continue => panic!("ICE break/continue not translated to jumps"),
-            Assign(_, _) | Mutate(_, _) | IgnoreAndPop { .. } | Jump(_) | JumpIf { .. } => false,
-            Abort(_) | Return(_) => true,
+            Assign(_, _) | Mutate(_, _) | IgnoreAndPop { .. } | Jump { .. } | JumpIf { .. } => {
+                false
+            }
+            Abort(_) | Return { .. } => true,
         }
     }
 
@@ -319,7 +333,7 @@ impl Command_ {
             Assign(ls, e) => ls.is_empty() && e.is_unit(),
             IgnoreAndPop { exp: e, .. } => e.is_unit(),
 
-            Mutate(_, _) | Return(_) | Abort(_) | JumpIf { .. } | Jump(_) => false,
+            Mutate(_, _) | Return { .. } | Abort(_) | JumpIf { .. } | Jump { .. } => false,
         }
     }
 
@@ -332,9 +346,9 @@ impl Command_ {
             Mutate(_, _) | Assign(_, _) | IgnoreAndPop { .. } => {
                 panic!("ICE Should not be last command in block")
             }
-            Abort(_) | Return(_) => (),
-            Jump(lbl) => {
-                successors.insert(*lbl);
+            Abort(_) | Return { .. } => (),
+            Jump { target, .. } => {
+                successors.insert(*target);
             }
             JumpIf {
                 if_true, if_false, ..
@@ -355,12 +369,7 @@ impl Exp {
 
 impl UnannotatedExp_ {
     pub fn is_unit(&self) -> bool {
-        matches!(
-            self,
-            UnannotatedExp_::Unit {
-                trailing: _trailing,
-            }
-        )
+        matches!(self, UnannotatedExp_::Unit { case: _case })
     }
 }
 
@@ -528,7 +537,7 @@ impl std::fmt::Display for Label {
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Program { modules, scripts } = self;
-        for (m, mdef) in modules {
+        for (m, mdef) in modules.key_cloned_iter() {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
@@ -550,7 +559,7 @@ impl AstDebug for Script {
             function_name,
             function,
         } = self;
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
@@ -573,15 +582,15 @@ impl AstDebug for ModuleDefinition {
             w.writeln("source module")
         }
         w.writeln(&format!("dependency order #{}", dependency_order));
-        for sdef in structs {
+        for sdef in structs.key_cloned_iter() {
             sdef.ast_debug(w);
             w.new_line();
         }
-        for cdef in constants {
+        for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
         }
-        for fdef in functions {
+        for fdef in functions.key_cloned_iter() {
             fdef.ast_debug(w);
             w.new_line();
         }
@@ -659,7 +668,7 @@ impl AstDebug for (&UniqueMap<Var, SingleType>, &Block) {
         let (locals, body) = self;
         w.write("locals:");
         w.indent(4, |w| {
-            w.list(*locals, ",", |w, (v, st)| {
+            w.list(*locals, ",", |w, (_, v, st)| {
                 w.write(&format!("{}: ", v));
                 st.ast_debug(w);
                 true
@@ -823,17 +832,10 @@ impl AstDebug for Statement_ {
                 w.write(")");
                 w.block(|w| block.ast_debug(w))
             }
-            S::Loop {
-                block,
-                has_break,
-                has_return_abort,
-            } => {
+            S::Loop { block, has_break } => {
                 w.write("loop");
                 if *has_break {
                     w.write("#has_break");
-                }
-                if *has_return_abort {
-                    w.write("#has_return_abort");
                 }
                 w.write(" ");
                 w.block(|w| block.ast_debug(w))
@@ -861,7 +863,11 @@ impl AstDebug for Command_ {
                 w.write("abort ");
                 e.ast_debug(w);
             }
-            C::Return(e) => {
+            C::Return { exp: e, from_user } if *from_user => {
+                w.write("return@");
+                e.ast_debug(w);
+            }
+            C::Return { exp: e, .. } => {
                 w.write("return ");
                 e.ast_debug(w);
             }
@@ -873,7 +879,8 @@ impl AstDebug for Command_ {
                 w.write(" = ");
                 exp.ast_debug(w);
             }
-            C::Jump(lbl) => w.write(&format!("jump {}", lbl.0)),
+            C::Jump { target, from_user } if *from_user => w.write(&format!("jump@{}", target.0)),
+            C::Jump { target, .. } => w.write(&format!("jump {}", target.0)),
             C::JumpIf {
                 cond,
                 if_true,
@@ -898,10 +905,15 @@ impl AstDebug for UnannotatedExp_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use UnannotatedExp_ as E;
         match self {
-            E::Unit { trailing } if !trailing => w.write("()"),
             E::Unit {
-                trailing: _trailing,
+                case: UnitCase::FromUser,
+            } => w.write("()"),
+            E::Unit {
+                case: UnitCase::Implicit,
             } => w.write("/*()*/"),
+            E::Unit {
+                case: UnitCase::Trailing,
+            } => w.write("/*;()*/"),
             E::Value(v) => v.ast_debug(w),
             E::Move {
                 from_user: false,

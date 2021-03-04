@@ -32,12 +32,17 @@ fn build_upgrade_writeset() {
 
     let module =
         compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program).0;
-
+    let module_bytes = {
+        let mut v = vec![];
+        module.serialize(&mut v).unwrap();
+        v
+    };
     let change_set = build_changeset(
         executor.get_state_view(),
         |session| {
             session.set_diem_version(11);
         },
+        &[module_bytes],
         &[module.clone()],
     );
 

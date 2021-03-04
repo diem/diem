@@ -1,0 +1,28 @@
+# This buildspec is for AWS Codebuild
+version: 0.2
+
+env:
+  secrets-manager:
+    DOCKERHUB_USERNAME: dockerhub_ro_username
+    DOCKERHUB_PASSWORD: dockerhub_ro_password
+
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+  pre_build:
+    commands:
+      - echo logging in to dockerhub.
+      - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - bash docker/faucet/build.sh
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      # Tag and push the docker images
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region us-west-2)
+      - SOURCE=diem/faucet:latest TARGET_REPO=$DIEM_MINT_REPO TARGET_TAGS="${TAGS}:dev_$(git rev-parse --short=8  HEAD)" docker/tag-and-push.sh

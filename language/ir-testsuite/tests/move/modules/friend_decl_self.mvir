@@ -1,0 +1,4 @@
+module M {
+    friend {{default}}.M;
+}
+// check: INVALID_FRIEND_DECL_WITH_SELF

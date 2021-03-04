@@ -59,7 +59,6 @@ struct Context {
     local_scope: UniqueMap<Var, Var>,
     used_locals: BTreeSet<Var>,
     signature: Option<H::FunctionSignature>,
-    has_return_abort: bool,
 }
 
 impl Context {
@@ -71,7 +70,6 @@ impl Context {
             local_scope: UniqueMap::new(),
             used_locals: BTreeSet::new(),
             signature: None,
-            has_return_abort: false,
         }
     }
 
@@ -129,7 +127,7 @@ impl Context {
 
     pub fn add_struct_fields(&mut self, structs: &UniqueMap<StructName, H::StructDefinition>) {
         assert!(self.structs.is_empty());
-        for (sname, sdef) in structs.iter() {
+        for (sname, sdef) in structs.key_cloned_iter() {
             let mut fields = UniqueMap::new();
             let field_map = match &sdef.fields {
                 H::StructFields::Native(_) => continue,
@@ -288,14 +286,19 @@ fn function_body_defined(
 ) -> (UniqueMap<Var, H::SingleType>, Block) {
     let mut body = VecDeque::new();
     context.signature = Some(signature.clone());
-    assert!(!context.has_return_abort);
     let final_exp = block(context, &mut body, loc, Some(&signature.return_type), seq);
     match &final_exp.exp.value {
         H::UnannotatedExp_::Unreachable => (),
         _ => {
             use H::{Command_ as C, Statement_ as S};
             let eloc = final_exp.exp.loc;
-            let ret = sp(eloc, C::Return(final_exp));
+            let ret = sp(
+                eloc,
+                C::Return {
+                    from_user: false,
+                    exp: final_exp,
+                },
+            );
             body.push_back(sp(eloc, S::Command(ret)))
         }
     }
@@ -304,7 +307,6 @@ fn function_body_defined(
     check_trailing_unit(context, &mut body);
     remove_unused_bindings(&unused, &mut body);
     context.signature = None;
-    context.has_return_abort = false;
     (locals, body)
 }
 
@@ -471,7 +473,12 @@ fn block(
         None => {
             return H::exp(
                 sp(loc, H::Type_::Unit),
-                sp(loc, H::UnannotatedExp_::Unit { trailing: false }),
+                sp(
+                    loc,
+                    H::UnannotatedExp_::Unit {
+                        case: H::UnitCase::FromUser,
+                    },
+                ),
             )
         }
         Some(sp!(_, S::Seq(last))) => last,
@@ -537,12 +544,11 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
             body: loop_body,
             has_break,
         } => {
-            let (loop_block, has_return_abort) = statement_loop_body(context, *loop_body);
+            let loop_block = statement_loop_body(context, *loop_body);
 
             S::Loop {
                 block: loop_block,
                 has_break,
-                has_return_abort,
             }
         }
         TE::Block(seq) => {
@@ -560,15 +566,11 @@ fn statement(context: &mut Context, result: &mut Block, e: T::Exp) {
     result.push_back(sp(eloc, stmt_))
 }
 
-fn statement_loop_body(context: &mut Context, body: T::Exp) -> (Block, bool) {
-    let old_has_return_abort = context.has_return_abort;
-    context.has_return_abort = false;
+fn statement_loop_body(context: &mut Context, body: T::Exp) -> Block {
     let mut loop_block = Block::new();
     let el = exp_(context, &mut loop_block, None, body);
     ignore_and_pop(&mut loop_block, el);
-    let has_return_abort = context.has_return_abort;
-    context.has_return_abort = context.has_return_abort || old_has_return_abort;
-    (loop_block, has_return_abort)
+    loop_block
 }
 
 //**************************************************************************************************
@@ -589,7 +591,7 @@ fn declare_bind(context: &mut Context, sp!(_, bind_): &T::LValue) {
         }
         L::Unpack(_, _, _, fields) | L::BorrowUnpack(_, _, _, _, fields) => fields
             .iter()
-            .for_each(|(_, (_, (_, b)))| declare_bind(context, b)),
+            .for_each(|(_, _, (_, (_, b)))| declare_bind(context, b)),
     }
 }
 
@@ -960,24 +962,27 @@ fn exp_impl(
                 block: loop_block,
             };
             result.push_back(sp(eloc, s_));
-            HE::Unit { trailing: false }
+            HE::Unit {
+                case: H::UnitCase::Implicit,
+            }
         }
         TE::Loop {
             has_break,
             body: loop_body,
         } => {
-            let (loop_block, has_return_abort) = statement_loop_body(context, *loop_body);
+            let loop_block = statement_loop_body(context, *loop_body);
 
             let s_ = S::Loop {
                 block: loop_block,
                 has_break,
-                has_return_abort,
             };
             result.push_back(sp(eloc, s_));
             if !has_break {
                 HE::Unreachable
             } else {
-                HE::Unit { trailing: false }
+                HE::Unit {
+                    case: H::UnitCase::Implicit,
+                }
             }
         }
         TE::Block(seq) => return block(context, result, eloc, None, seq),
@@ -986,14 +991,18 @@ fn exp_impl(
         TE::Return(te) => {
             let expected_type = context.signature.as_ref().map(|s| s.return_type.clone());
             let e = exp_(context, result, expected_type.as_ref(), *te);
-            context.has_return_abort = true;
-            let c = sp(eloc, C::Return(e));
+            let c = sp(
+                eloc,
+                C::Return {
+                    from_user: true,
+                    exp: e,
+                },
+            );
             result.push_back(sp(eloc, S::Command(c)));
             HE::Unreachable
         }
         TE::Abort(te) => {
             let e = exp_(context, result, None, *te);
-            context.has_return_abort = true;
             let c = sp(eloc, C::Abort(e));
             result.push_back(sp(eloc, S::Command(c)));
             HE::Unreachable
@@ -1012,17 +1021,27 @@ fn exp_impl(
             let expected_type = expected_types(context, eloc, lvalue_ty);
             let e = exp_(context, result, Some(&expected_type), *te);
             assign_command(context, result, eloc, assigns, e);
-            HE::Unit { trailing: false }
+            HE::Unit {
+                case: H::UnitCase::Implicit,
+            }
         }
         TE::Mutate(tl, tr) => {
             let er = exp(context, result, None, *tr);
             let el = exp(context, result, None, *tl);
             let c = sp(eloc, C::Mutate(el, er));
             result.push_back(sp(eloc, S::Command(c)));
-            HE::Unit { trailing: false }
+            HE::Unit {
+                case: H::UnitCase::Implicit,
+            }
         }
         // All other expressiosn
-        TE::Unit { trailing } => HE::Unit { trailing },
+        TE::Unit { trailing } => HE::Unit {
+            case: if trailing {
+                H::UnitCase::Trailing
+            } else {
+                H::UnitCase::FromUser
+            },
+        },
         TE::Value(v) => HE::Value(v),
         TE::Constant(_m, c) => {
             // Currently only private constants exist
@@ -1159,7 +1178,7 @@ fn exp_impl(
         }
         TE::TempBorrow(mut_, te) => {
             let eb = exp_(context, result, None, *te);
-            let tmp = match bind_exp(context, result, eb).exp.value {
+            let tmp = match bind_exp_impl(context, result, eb, true).exp.value {
                 HE::Move {
                     from_user: false,
                     var,
@@ -1249,13 +1268,7 @@ fn make_temps(context: &mut Context, loc: Loc, ty: H::Type) -> Vec<(Var, H::Sing
 }
 
 fn bind_exp(context: &mut Context, result: &mut Block, e: H::Exp) -> H::Exp {
-    if let H::UnannotatedExp_::Unreachable = &e.exp.value {
-        return e;
-    }
-    let loc = e.exp.loc;
-    let ty = e.ty.clone();
-    let tmps = make_temps(context, loc, ty.clone());
-    H::exp(ty, sp(loc, bind_exp_(result, loc, tmps, e)))
+    bind_exp_impl(context, result, e, false)
 }
 
 fn bind_exp_(
@@ -1264,15 +1277,45 @@ fn bind_exp_(
     tmps: Vec<(Var, H::SingleType)>,
     e: H::Exp,
 ) -> H::UnannotatedExp_ {
+    bind_exp_impl_(result, loc, tmps, e, false)
+}
+
+fn bind_exp_impl(
+    context: &mut Context,
+    result: &mut Block,
+    e: H::Exp,
+    bind_unreachable: bool,
+) -> H::Exp {
+    if matches!(&e.exp.value, H::UnannotatedExp_::Unreachable) && !bind_unreachable {
+        return e;
+    }
+    let loc = e.exp.loc;
+    let ty = e.ty.clone();
+    let tmps = make_temps(context, loc, ty.clone());
+    H::exp(
+        ty,
+        sp(loc, bind_exp_impl_(result, loc, tmps, e, bind_unreachable)),
+    )
+}
+
+fn bind_exp_impl_(
+    result: &mut Block,
+    loc: Loc,
+    tmps: Vec<(Var, H::SingleType)>,
+    e: H::Exp,
+    bind_unreachable: bool,
+) -> H::UnannotatedExp_ {
     use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as E};
-    if let H::UnannotatedExp_::Unreachable = &e.exp.value {
+    if matches!(&e.exp.value, H::UnannotatedExp_::Unreachable) && !bind_unreachable {
         return H::UnannotatedExp_::Unreachable;
     }
 
     if tmps.is_empty() {
         let cmd = sp(loc, C::IgnoreAndPop { pop_num: 0, exp: e });
         result.push_back(sp(loc, S::Command(cmd)));
-        return E::Unit { trailing: false };
+        return E::Unit {
+            case: H::UnitCase::Implicit,
+        };
     }
     let lvalues = tmps
         .iter()
@@ -1529,7 +1572,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
 fn bind_for_short_circuit_sequence(seq: &T::Sequence) -> bool {
     use T::SequenceItem_ as TItem;
     seq.len() != 1
-        || match &seq[1].value {
+        || match &seq[0].value {
             TItem::Seq(e) => bind_for_short_circuit(e),
             item @ TItem::Declare(_) | item @ TItem::Bind(_, _, _) => {
                 panic!("ICE unexpected item in short circuit check: {:?}", item)
@@ -1550,27 +1593,53 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
     }
     macro_rules! hignored {
         ($loc:pat, $e:pat) => {
-            hcmd!(_, C::IgnoreAndPop { exp: H::Exp { exp: sp!($loc, $e), .. }, .. })
+            hcmd!(
+                _,
+                C::IgnoreAndPop {
+                    exp: H::Exp {
+                        exp: sp!($loc, $e),
+                        ..
+                    },
+                    ..
+                }
+            )
         };
     }
     macro_rules! trailing {
         ($uloc: pat) => {
-           hcmd!(
-               _,
-               C::IgnoreAndPop {
-                    exp: H::Exp { exp: sp!($uloc, E::Unit { trailing: true }), .. }, ..
+            hcmd!(
+                _,
+                C::IgnoreAndPop {
+                    exp: H::Exp {
+                        exp: sp!(
+                            $uloc,
+                            E::Unit {
+                                case: H::UnitCase::Trailing
+                            }
+                        ),
+                        ..
+                    },
+                    ..
                 }
             )
-        }
+        };
     }
     macro_rules! trailing_returned {
         ($uloc:pat) => {
             hcmd!(
                 _,
-                C::Return(H::Exp {
-                    exp: sp!($uloc, E::Unit { trailing: true }),
+                C::Return {
+                    exp: H::Exp {
+                        exp: sp!(
+                            $uloc,
+                            E::Unit {
+                                case: H::UnitCase::Trailing
+                            }
+                        ),
+                        ..
+                    },
                     ..
-                })
+                }
             )
         };
     }
@@ -1580,7 +1649,7 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
             Some(hcmd!(_, C::Break))
                 | Some(hcmd!(_, C::Continue))
                 | Some(hcmd!(_, C::Abort(_)))
-                | Some(hcmd!(_, C::Return(_)))
+                | Some(hcmd!(_, C::Return { .. }))
                 | Some(hignored!(_, E::Unreachable))
         )
     }
@@ -1607,14 +1676,32 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
         return;
     }
     match (&block[len - 2], &block[len - 1]) {
-        (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing!(uloc))
-        | (sp!(loc, S::IfElse { if_block, else_block, ..}), trailing_returned!(uloc))
-            if divergent_block(if_block) && divergent_block(else_block) =>
-        {
+        (
+            sp!(
+                loc,
+                S::IfElse {
+                    if_block,
+                    else_block,
+                    ..
+                }
+            ),
+            trailing!(uloc),
+        )
+        | (
+            sp!(
+                loc,
+                S::IfElse {
+                    if_block,
+                    else_block,
+                    ..
+                }
+            ),
+            trailing_returned!(uloc),
+        ) if divergent_block(if_block) && divergent_block(else_block) => {
             invalid_trailing_unit!(context, *loc, *uloc)
         }
-        (sp!(loc, S::Loop { has_break, ..}), trailing!(uloc))
-        | (sp!(loc, S::Loop { has_break, ..}), trailing_returned!(uloc))
+        (sp!(loc, S::Loop { has_break, .. }), trailing!(uloc))
+        | (sp!(loc, S::Loop { has_break, .. }), trailing_returned!(uloc))
             if !has_break =>
         {
             invalid_trailing_unit!(context, *loc, *uloc)
@@ -1625,8 +1712,8 @@ fn check_trailing_unit(context: &mut Context, block: &mut Block) {
         | (hcmd!(loc, C::Continue), trailing_returned!(uloc))
         | (hcmd!(loc, C::Abort(_)), trailing!(uloc))
         | (hcmd!(loc, C::Abort(_)), trailing_returned!(uloc))
-        | (hcmd!(loc, C::Return(_)), trailing!(uloc))
-        | (hcmd!(loc, C::Return(_)), trailing_returned!(uloc))
+        | (hcmd!(loc, C::Return { .. }), trailing!(uloc))
+        | (hcmd!(loc, C::Return { .. }), trailing_returned!(uloc))
         | (hignored!(loc, E::Unreachable), trailing!(uloc))
         | (hignored!(loc, E::Unreachable), trailing_returned!(uloc)) => {
             invalid_trailing_unit!(context, *loc, *uloc)
@@ -1675,7 +1762,7 @@ fn check_unused_locals(
     let mut errors = Vec::new();
     // report unused locals
     for (v, _) in locals
-        .iter()
+        .key_cloned_iter()
         .filter(|(v, _)| !used.contains(v) && !v.starts_with_underscore())
     {
         let vstr = match display_var(v.value()) {

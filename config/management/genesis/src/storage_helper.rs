@@ -14,9 +14,13 @@ use diem_global_constants::{
     SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use diem_management::{error::Error, secure_backend::DISK};
-use diem_network_address::NetworkAddress;
 use diem_secure_storage::{CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage};
-use diem_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
+use diem_types::{
+    chain_id::ChainId,
+    network_address::{self, NetworkAddress},
+    transaction::Transaction,
+    waypoint::Waypoint,
+};
 use std::{fs::File, path::Path};
 use structopt::StructOpt;
 
@@ -94,8 +98,8 @@ impl StorageHelper {
         encryptor.initialize().unwrap();
         encryptor
             .add_key(
-                diem_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                diem_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY,
+                network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+                network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY,
             )
             .unwrap();
     }

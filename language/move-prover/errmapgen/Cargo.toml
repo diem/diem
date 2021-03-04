@@ -8,18 +8,18 @@ license = "Apache-2.0"
 
 [dependencies]
 # diem dependencies
-move-model = { path = "../../move-model", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-diem-types = { path = "../../../types", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+move-model = { path = "../../move-model" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+diem-types = { path = "../../../types" }
+move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"
 
 # external dependencies
-log = "0.4.11"
-anyhow = "1.0.37"
-serde = { version = "1.0.117", features = ["derive"] }
+log = "0.4.14"
+anyhow = "1.0.38"
+serde = { version = "1.0.123", features = ["derive"] }
 
 [dev-dependencies]
 codespan-reporting = "0.8.0"
-move-prover = { path = "..", version = "0.1.0" }
-datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
+move-prover = { path = ".." }
+datatest-stable = { path = "../../../common/datatest-stable" }

@@ -10,20 +10,16 @@ module.exports = function(context, options) {
           alias: {
             CSS: path.resolve(__dirname, '../../src/css'),
             components: path.resolve(__dirname, '../../src/components'),
+            'diem-cli': path.resolve(__dirname, '../../diem-cli/src'),
+            'diem-docusaurus-components': path.resolve(
+              __dirname,
+              '../../node_modules/@libra-opensource/diem-docusaurus-components',
+            ),
             docs: path.resolve(__dirname, '../../docs'),
             img: path.resolve(__dirname, '../../static/img'),
-            'diem-cli': path.resolve(__dirname, '../../diem-cli/src'),
             react: path.resolve('./node_modules/react'),
             src: path.resolve(__dirname, '../../src'),
           }
-        },
-        module: {
-          rules: [
-            {
-              test: /\.svg$/,
-              use: ['@svgr/webpack'],
-            },
-          ],
         },
         node: {
           fs: 'empty',

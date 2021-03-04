@@ -9,7 +9,7 @@ An event emitted during a transaction
 
 | Name                | Type                     | Description                                                    |
 |---------------------|--------------------------|----------------------------------------------------------------|
-| key                 | string                   | Gobally unique identifier of event stream                      |
+| key                 | string                   | Globally unique identifier of event stream                     |
 | sequence_number     | unsigned int64           | Sequence number of the current event in the given even stream  |
 | transaction_version | unsigned int64           | Version of the transaction that emitted this event             |
 | data                | [EventData](#event-data) | Typed event data object                                        |
@@ -131,7 +131,7 @@ Event emitted when a new block is created
 |---------------|------------------------------|---------------------------------------|
 | type          | string                       | Constant string "newblock"            |
 | round         | unsigned int64               | Round number                          |
-| proposer      | unsigned int64               | proposer account address, hex-encoded |
+| proposer      | string                       | proposer account address, hex-encoded |
 | proposed_time | unsigned int64(microseconds) | proposed timestamp                    |
 
 #### receivedmint

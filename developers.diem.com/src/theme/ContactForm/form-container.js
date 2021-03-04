@@ -8,7 +8,7 @@ import EnableCookies from './enable-cookies';
 import FieldSet from './fieldset';
 import FormHeader from './form-header';
 import ResetCookie from './reset-cookie';
-import utils from 'libra-docusaurus-components/src/utils';
+import utils from 'diem-docusaurus-components/src/utils';
 
 const {getCookie} = utils;
 

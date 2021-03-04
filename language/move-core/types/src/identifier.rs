@@ -33,23 +33,27 @@ use ref_cast::RefCast;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, fmt, ops::Deref};
 
+/// Return true if this character can appear in a Move identifier.
+///
+/// Note: there are stricter restrictions on whether a character can begin a Move
+/// identifier--only alphabetic characters are allowed here.
+pub fn is_valid_identifier_char(c: char) -> bool {
+    matches!(c, '_' | 'a'..='z' | 'A'..='Z' | '0'..='9')
+}
+
 /// Describes what identifiers are allowed.
 ///
 /// For now this is deliberately restrictive -- we would like to evolve this in the future.
 // TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
 fn is_valid(s: &str) -> bool {
-    fn is_underscore_alpha_or_digit(c: char) -> bool {
-        matches!(c, '_' | 'a'..='z' | 'A'..='Z' | '0'..='9')
-    }
-
     if s == "<SELF>" {
         return true;
     }
     let len = s.len();
     let mut chars = s.chars();
     match chars.next() {
-        Some('a'..='z') | Some('A'..='Z') => chars.all(is_underscore_alpha_or_digit),
-        Some('_') if len > 1 => chars.all(is_underscore_alpha_or_digit),
+        Some('a'..='z') | Some('A'..='Z') => chars.all(is_valid_identifier_char),
+        Some('_') if len > 1 => chars.all(is_valid_identifier_char),
         _ => false,
     }
 }

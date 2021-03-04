@@ -7,8 +7,9 @@ use move_core_types::language_storage::ModuleId;
 use move_vm::{
     access::ModuleAccess,
     file_format::{
-        CompiledModule, FunctionDefinition, Kind, SignatureToken, StructDefinition,
-        StructFieldInformation, StructHandleIndex, TypeParameterIndex,
+        AbilitySet, CompiledModule, FunctionDefinition, ModuleHandle, SignatureToken,
+        StructDefinition, StructFieldInformation, StructHandleIndex, TypeParameterIndex,
+        Visibility,
     },
 };
 use std::{collections::BTreeMap, fs};
@@ -50,25 +51,37 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
 
     let mut context = Context::new(&module);
     let mut members = vec![];
-    for sdef in module.struct_defs() {
-        members.push(write_struct_def(&mut context, sdef))
+
+    for fdecl in module.friend_decls() {
+        members.push(write_friend_decl(&mut context, fdecl));
     }
-    if !members.is_empty() {
+    if !module.friend_decls().is_empty() {
         members.push("".to_string());
     }
 
-    let mut public_funs = module
+    for sdef in module.struct_defs() {
+        members.push(write_struct_def(&mut context, sdef));
+    }
+    if !module.struct_defs().is_empty() {
+        members.push("".to_string());
+    }
+
+    let mut externally_visible_funs = module
         .function_defs()
         .iter()
-        .filter(|fdef| fdef.is_public)
+        .filter(|fdef| match fdef.visibility {
+            Visibility::Public | Visibility::Script | Visibility::Friend => true,
+            Visibility::Private => false,
+        })
         .peekable();
-    if public_funs.peek().is_some() {
+    let has_externally_visible_funs = externally_visible_funs.peek().is_some();
+    if has_externally_visible_funs {
         members.push(format!("    {}", DISCLAIMER));
     }
-    for public_fdef in public_funs {
-        members.push(write_function_def(&mut context, public_fdef));
+    for fdef in externally_visible_funs {
+        members.push(write_function_def(&mut context, fdef));
     }
-    if !members.is_empty() {
+    if has_externally_visible_funs {
         members.push("".to_string());
     }
 
@@ -126,14 +139,24 @@ impl<'a> Context<'a> {
 const DISCLAIMER: &str =
     "// NOTE: Functions are 'native' for simplicity. They may or may not be native in actuality.";
 
+fn write_friend_decl(ctx: &mut Context, fdecl: &ModuleHandle) -> String {
+    format!(
+        "friend {}::{}",
+        ctx.module
+            .address_identifier_at(fdecl.address)
+            .short_str_lossless(),
+        ctx.module.identifier_at(fdecl.name),
+    )
+}
+
 fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
     let mut out = String::new();
 
     let shandle = ctx.module.struct_handle_at(sdef.struct_handle);
-    let resource_mod = if shandle.is_nominal_resource {
-        "resource "
-    } else {
-        ""
+    let resource_mod = match ability_to_kind(shandle.abilities) {
+        Kind::Resource => "resource ",
+        Kind::Copyable => "",
+        Kind::All => panic!("Unsupported ability set for struct"),
     };
 
     push_line!(
@@ -173,7 +196,8 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
     let parameters = &ctx.module.signature_at(fhandle.parameters).0;
     let return_ = &ctx.module.signature_at(fhandle.return_).0;
     format!(
-        "    native public fun {}{}({}){};",
+        "    native {}fun {}{}({}){};",
+        write_visibility(fdef.visibility),
         ctx.module.identifier_at(fhandle.name),
         write_type_paramters(&fhandle.type_parameters),
         write_parameters(ctx, parameters),
@@ -181,7 +205,17 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
     )
 }
 
-fn write_type_paramters(tps: &[Kind]) -> String {
+fn write_visibility(visibility: Visibility) -> String {
+    match visibility {
+        Visibility::Public => "public ",
+        Visibility::Script => "public(script) ",
+        Visibility::Friend => "public(friend) ",
+        Visibility::Private => "",
+    }
+    .to_string()
+}
+
+fn write_type_paramters(tps: &[AbilitySet]) -> String {
     if tps.is_empty() {
         return "".to_string();
     }
@@ -189,11 +223,11 @@ fn write_type_paramters(tps: &[Kind]) -> String {
     let tp_and_constraints = tps
         .iter()
         .enumerate()
-        .map(|(idx, kind)| {
+        .map(|(idx, abs)| {
             format!(
                 "{}{}",
                 write_type_parameter(idx as TypeParameterIndex),
-                write_kind_contraint(kind)
+                write_kind_contraint(ability_to_kind(*abs))
             )
         })
         .collect::<Vec<_>>()
@@ -201,7 +235,7 @@ fn write_type_paramters(tps: &[Kind]) -> String {
     format!("<{}>", tp_and_constraints)
 }
 
-fn write_kind_contraint(kind: &Kind) -> String {
+fn write_kind_contraint(kind: Kind) -> String {
     match kind {
         Kind::All => "".to_string(),
         Kind::Resource => ": resource".to_string(),
@@ -286,4 +320,20 @@ fn write_struct_handle_type(ctx: &mut Context, idx: StructHandleIndex) -> String
 
 fn write_type_parameter(idx: TypeParameterIndex) -> String {
     format!("T{}", idx)
+}
+
+// Temporary helpers until abilities+constraints are added to the source language
+enum Kind {
+    Copyable,
+    Resource,
+    All,
+}
+
+fn ability_to_kind(abs: AbilitySet) -> Kind {
+    match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
+        (true, true, false) => Kind::Copyable,
+        (false, false, true) => Kind::Resource,
+        (false, false, false) => Kind::All,
+        _ => panic!("Unsupported ability set"),
+    }
 }

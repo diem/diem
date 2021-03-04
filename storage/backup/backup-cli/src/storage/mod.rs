@@ -44,7 +44,8 @@ pub type FileHandleRef = str;
 /// `create_backup()` and `create_for_write()` don't contain funny characters tricky to deal with
 /// in shell commands.
 /// Specifically, names follow the pattern "\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,126}\z"
-#[cfg_attr(test, derive(Debug, Hash, Eq, PartialEq))]
+#[cfg_attr(test, derive(Hash, Eq, PartialEq))]
+#[derive(Debug)]
 pub struct ShellSafeName(String);
 
 impl ShellSafeName {
@@ -155,6 +156,8 @@ pub trait BackupStorage: Send + Sync {
     /// handle, or the same file handle when accessed later, so there's no need to return one. This
     /// also means a local cache must download each metadata file from remote at least once, to
     /// uncover potential storage glitch sooner.
+    /// Behavior on duplicated names is undefined, overwriting the content upon an existing name
+    /// is straightforward and acceptable.
     /// See `list_metadata_files`.
     async fn save_metadata_line(&self, name: &ShellSafeName, content: &TextLine) -> Result<()>;
     /// The backup system always asks for all metadata files and cache and build index on top of

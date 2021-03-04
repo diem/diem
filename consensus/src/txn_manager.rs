@@ -16,7 +16,7 @@ use fail::fail_point;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
 use std::time::Duration;
-use tokio::time::{delay_for, timeout};
+use tokio::time::{sleep, timeout};
 
 const NO_TXN_DELAY: u64 = 30;
 
@@ -25,12 +25,18 @@ const NO_TXN_DELAY: u64 = 30;
 pub struct MempoolProxy {
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     poll_count: u64,
+    /// Timeout for consensus to get an ack from mempool for executed transactions (in milliseconds)
+    mempool_executed_txn_timeout_ms: u64,
+    /// Timeout for consensus to pull transactions from mempool and get a response (in milliseconds)
+    mempool_txn_pull_timeout_ms: u64,
 }
 
 impl MempoolProxy {
     pub fn new(
         consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
         poll_count: u64,
+        mempool_txn_pull_timeout_ms: u64,
+        mempool_executed_txn_timeout_ms: u64,
     ) -> Self {
         assert!(
             poll_count > 0,
@@ -39,6 +45,8 @@ impl MempoolProxy {
         Self {
             consensus_to_mempool_sender,
             poll_count,
+            mempool_txn_pull_timeout_ms,
+            mempool_executed_txn_timeout_ms,
         }
     }
 
@@ -57,7 +65,11 @@ impl MempoolProxy {
         // wait for response
         match monitor!(
             "pull_txn",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(
+                Duration::from_millis(self.mempool_txn_pull_timeout_ms),
+                callback_rcv
+            )
+            .await
         ) {
             Err(_) => {
                 Err(anyhow::anyhow!("[consensus] did not receive GetBlockResponse on time").into())
@@ -98,7 +110,7 @@ impl TxnManager for MempoolProxy {
             count -= 1;
             let txns = self.pull_internal(max_size, exclude_txns.clone()).await?;
             if txns.is_empty() && no_pending_txns && count > 0 {
-                delay_for(Duration::from_millis(NO_TXN_DELAY)).await;
+                sleep(Duration::from_millis(NO_TXN_DELAY)).await;
                 continue;
             }
             break txns;
@@ -149,7 +161,11 @@ impl TxnManager for MempoolProxy {
 
         if let Err(e) = monitor!(
             "notify_mempool",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(
+                Duration::from_millis(self.mempool_executed_txn_timeout_ms),
+                callback_rcv
+            )
+            .await
         ) {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e).into())
         } else {

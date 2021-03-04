@@ -1,0 +1,81 @@
+name: daily
+
+on:
+  schedule:
+    - cron: "14 14 * * *"
+  # Uncomment below to test.
+  #push:
+  #  branches: [gha-test-*, canary, auto]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    container:
+      image: libra/build_environment:github-1
+    strategy:
+      fail-fast: false
+      matrix:
+        #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
+        #to test in canary add in canary here.....
+        target-branch: [master, release-1.1]
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.target-branch }}
+      - uses: ./.github/actions/build-setup
+      - name: install cargo-audit
+        run: cargo install --force cargo-audit
+      - name: audit crates
+        # List of ignored RUSTSEC
+        # 1. RUSTSEC-2021-0020 - Not impacted, see #7723
+        run: |
+          $CARGO $CARGOFLAGS audit --ignore RUSTSEC-2021-0020 >> $MESSAGE_PAYLOAD_FILE
+      - uses: ./.github/actions/slack-file
+        with:
+          webhook: ${{ secrets.WEBHOOK_AUDIT }}
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+        if: ${{ failure() }}
+      - uses: ./.github/actions/build-teardown
+
+  coverage:
+    runs-on: ubuntu-latest-xl
+    container:
+      image: libra/build_environment:github-1
+    env:
+      CODECOV_OUTPUT: codecov
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/build-setup
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.DIEM_S3_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.DIEM_S3_AWS_REGION }}
+      - name: produce coverage
+        run: cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 16 || true
+      - name: Push Coverage Reports to S3
+        run: |
+          set -x
+          SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
+          PREFIX="ci-artifacts.diem.com/coverage";
+          #Push grcov
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
+          echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+          #Push lcov
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
+          aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
+          echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+      - name: "Send Message"
+        uses: ./.github/actions/slack-file
+        with:
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          webhook: ${{ secrets.WEBHOOK_COVERAGE }}
+      # Disabling for now as this is not critical for job success.   TODO: fix it up.
+      #- name: publish to codecov.io
+      #  run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
+      #- uses: ./.github/actions/build-teardown

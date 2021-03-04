@@ -10,7 +10,7 @@ use mirai_annotations::*;
 use move_core_types::{
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
-        MAX_TRANSACTION_SIZE_IN_BYTES,
+        InternalGasUnits, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_status::StatusCode,
 };
@@ -32,7 +32,7 @@ use vm::{
 /// Every client must use an instance of this type to interact with the Move VM.
 pub struct CostStrategy<'a> {
     cost_table: &'a CostTable,
-    gas_left: GasUnits<GasCarrier>,
+    gas_left: InternalGasUnits<GasCarrier>,
     charge: bool,
 }
 
@@ -43,7 +43,7 @@ impl<'a> CostStrategy<'a> {
     /// This is the instantiation that must be used when executing a user script.
     pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
-            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
+            gas_left: cost_table.gas_constants.to_internal_units(gas_left),
             cost_table,
             charge: true,
         }
@@ -55,7 +55,7 @@ impl<'a> CostStrategy<'a> {
     /// code that does not have to charge the user.
     pub fn system(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
-            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
+            gas_left: cost_table.gas_constants.to_internal_units(gas_left),
             cost_table,
             charge: false,
         }
@@ -68,12 +68,13 @@ impl<'a> CostStrategy<'a> {
 
     /// Return the gas left.
     pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.gas_left
-            .map(|gas| gas / self.cost_table.gas_constants.gas_unit_scaling_factor)
+        self.cost_table
+            .gas_constants
+            .to_external_units(self.gas_left)
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.
-    pub fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> PartialVMResult<()> {
+    pub fn deduct_gas(&mut self, amount: InternalGasUnits<GasCarrier>) -> PartialVMResult<()> {
         if !self.charge {
             return Ok(());
         }
@@ -85,7 +86,7 @@ impl<'a> CostStrategy<'a> {
             Ok(())
         } else {
             // Zero out the internal gas state
-            self.gas_left = GasUnits::new(0);
+            self.gas_left = InternalGasUnits::new(0);
             Err(PartialVMError::new(StatusCode::OUT_OF_GAS))
         }
     }
@@ -280,7 +281,7 @@ pub fn zero_cost_schedule() -> CostTable {
 pub fn calculate_intrinsic_gas(
     transaction_size: AbstractMemorySize<GasCarrier>,
     gas_constants: &GasConstants,
-) -> GasUnits<GasCarrier> {
+) -> InternalGasUnits<GasCarrier> {
     precondition!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
     let min_transaction_fee = gas_constants.min_transaction_gas_units;
 

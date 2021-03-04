@@ -11,13 +11,15 @@
 use crate::schema::JELLYFISH_MERKLE_NODE_CF_NAME;
 use anyhow::Result;
 use byteorder::{BigEndian, WriteBytesExt};
-use diem_jellyfish_merkle::node_type::{Node, NodeKey};
-use diem_types::transaction::Version;
+use diem_jellyfish_merkle::node_type::NodeKey;
+use diem_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, SeekKeyCodec, ValueCodec},
 };
 use std::mem::size_of;
+
+type Node = diem_jellyfish_merkle::node_type::Node<AccountStateBlob>;
 
 define_schema!(
     JellyfishMerkleNodeSchema,

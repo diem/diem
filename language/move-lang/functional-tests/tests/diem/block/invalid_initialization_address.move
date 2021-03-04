@@ -4,4 +4,3 @@ fun main(account: &signer) {
     DiemBlock::initialize_block_metadata(account);
 }
 }
-// check: "Keep(ABORTED { code: 1,"

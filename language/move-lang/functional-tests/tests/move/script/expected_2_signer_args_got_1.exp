@@ -1,0 +1,3 @@
+[0] Transaction(0)
+[1] Move VM Status: ERROR { status_code: NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH }
+[2] Transaction Status: Keep(MISCELLANEOUS_ERROR)

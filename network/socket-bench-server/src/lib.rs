@@ -6,8 +6,7 @@
 use diem_config::network_id::NetworkContext;
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use diem_logger::prelude::*;
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_types::network_address::NetworkAddress;
 use futures::{
     future::Future,
     io::{AsyncRead, AsyncWrite},
@@ -15,13 +14,10 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use memsocket::MemorySocket;
-use netcore::{
-    compat::IoCompat,
-    transport::{
-        memory::MemoryTransport,
-        tcp::{TcpSocket, TcpTransport},
-        Transport, TransportExt,
-    },
+use netcore::transport::{
+    memory::MemoryTransport,
+    tcp::{TcpSocket, TcpTransport},
+    Transport, TransportExt,
 };
 use network::{
     constants,
@@ -31,7 +27,7 @@ use network::{
 use rand::prelude::*;
 use std::{env, ffi::OsString, io, sync::Arc};
 use tokio::runtime::Handle;
-use tokio_util::codec::Framed;
+use tokio_util::{codec::Framed, compat::FuturesAsyncReadCompatExt};
 
 #[derive(Debug)]
 pub struct Args {
@@ -87,7 +83,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
         let public = private.public_key();
-        let peer_id = PeerId::from_identity_public_key(public);
+        let peer_id = diem_types::account_address::from_identity_public_key(public);
         let noise_config = Arc::new(NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(peer_id),
             private,
@@ -108,7 +104,7 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
         let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
         let private = x25519::PrivateKey::generate(&mut rng);
         let public = private.public_key();
-        let peer_id = PeerId::from_identity_public_key(public);
+        let peer_id = diem_types::account_address::from_identity_public_key(public);
         let noise_config = Arc::new(NoiseUpgrader::new(
             NetworkContext::mock_with_peer_id(peer_id),
             private,
@@ -141,7 +137,7 @@ where
                     match f_stream.await {
                         Ok(stream) => {
                             let codec = network_message_frame_codec(constants::MAX_FRAME_SIZE);
-                            let mut stream = Framed::new(IoCompat::new(stream), codec);
+                            let mut stream = Framed::new(stream.compat(), codec);
 
                             tokio::task::spawn(async move {
                                 // Drain all messages from the client.
@@ -174,7 +170,8 @@ where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     E: ::std::error::Error + Send + Sync + 'static,
 {
-    let (listener, server_addr) = executor.enter(move || transport.listen_on(listen_addr).unwrap());
+    let _gaurd = executor.enter();
+    let (listener, server_addr) = transport.listen_on(listen_addr).unwrap();
     executor.spawn(server_stream_handler(listener));
     server_addr
 }

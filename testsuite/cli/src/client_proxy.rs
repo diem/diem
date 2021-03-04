@@ -9,11 +9,11 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Error, Result};
 use compiled_stdlib::StdLibOptions;
 use compiler::Compiler;
+use diem_client::{views, WaitForTransactionError};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
 };
-use diem_json_rpc_client::async_client::{types as jsonrpc, WaitForTransactionError};
 use diem_logger::prelude::{error, info};
 use diem_temppath::TempPath;
 use diem_types::{
@@ -30,10 +30,11 @@ use diem_types::{
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
-        parse_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
+        parse_transaction_argument, ChangeSet, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version, WriteSetPayload,
     },
     waypoint::Waypoint,
+    write_set::{WriteOp, WriteSetMut},
 };
 use diem_wallet::{io_utils, WalletLibrary};
 use num_traits::{
@@ -242,7 +243,8 @@ impl ClientProxy {
 
     /// Returns the ledger info corresonding to the latest epoch change
     /// (could further be used for e.g., generating a waypoint)
-    pub fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
+    pub fn latest_epoch_change_li(&mut self) -> Option<&LedgerInfoWithSignatures> {
+        self.client.update_and_verify_state_proof().unwrap();
         self.client.latest_epoch_change_li()
     }
 
@@ -592,35 +594,6 @@ impl ClientProxy {
         }
     }
 
-    /// Add a hash to the allowlist that could be executed by the network.
-    pub fn add_to_script_allow_list(
-        &mut self,
-        space_delim_strings: &[&str],
-        is_blocking: bool,
-    ) -> Result<()> {
-        ensure!(
-            space_delim_strings[0] == "add_to_script_allow_list" || space_delim_strings[0] == "a",
-            "inconsistent command '{}' for add_to_script_allow_list",
-            space_delim_strings[0]
-        );
-        ensure!(
-            space_delim_strings.len() == 2,
-            "Invalid number of arguments for adding hash to script whitelist"
-        );
-        match self.diem_root_account {
-            Some(_) => self.association_transaction_with_local_diem_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_add_to_script_allow_list_script(
-                        hex::decode(space_delim_strings[1])?,
-                        self.diem_root_account.as_ref().unwrap().sequence_number,
-                    ),
-                ),
-                is_blocking,
-            ),
-            None => unimplemented!(),
-        }
-    }
-
     /// Modify the stored DiemVersion on chain.
     pub fn change_diem_version(
         &mut self,
@@ -667,7 +640,7 @@ impl ClientProxy {
         match self.diem_root_account {
             Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::WriteSet(WriteSetPayload::Direct(
-                    transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
+                    encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
                 )),
                 is_blocking,
             ),
@@ -683,8 +656,13 @@ impl ClientProxy {
         while start.elapsed() < DEFAULT_WAIT_TIMEOUT {
             let account_txn = self.client.get_txn_by_acc_seq(&address, seq, false)?;
             if let Some(txn) = account_txn {
-                if txn.transaction.unwrap().sequence_number >= seq {
-                    return Ok(());
+                if let views::TransactionDataView::UserTransaction {
+                    sequence_number, ..
+                } = txn.transaction
+                {
+                    if sequence_number >= seq {
+                        return Ok(());
+                    }
                 }
             }
             std::thread::sleep(time::Duration::from_millis(10));
@@ -715,7 +693,7 @@ impl ClientProxy {
     pub fn wait_for_signed_transaction(
         &mut self,
         txn: &SignedTransaction,
-    ) -> Result<jsonrpc::Transaction> {
+    ) -> Result<views::TransactionView> {
         let (tx, rx) = std::sync::mpsc::channel();
         if !self.quiet_wait {
             let _handler = std::thread::spawn(move || loop {
@@ -1006,7 +984,7 @@ impl ClientProxy {
     pub fn get_latest_account(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<jsonrpc::Account>> {
+    ) -> Result<Option<views::AccountView>> {
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments to get latest account"
@@ -1016,7 +994,8 @@ impl ClientProxy {
     }
 
     /// Get the latest version
-    pub fn get_latest_version(&self) -> Version {
+    pub fn get_latest_version(&mut self) -> Version {
+        self.client.update_and_verify_state_proof().unwrap();
         self.client.trusted_state().latest_version()
     }
 
@@ -1037,7 +1016,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<jsonrpc::Transaction>> {
+    ) -> Result<Option<views::TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by account and sequence number"
@@ -1069,7 +1048,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_range(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Vec<jsonrpc::Transaction>> {
+    ) -> Result<Vec<views::TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by range"
@@ -1145,7 +1124,7 @@ impl ClientProxy {
     pub fn get_events_by_account_and_type(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<(Vec<jsonrpc::Event>, jsonrpc::Account)> {
+    ) -> Result<(Vec<views::EventView>, views::AccountView)> {
         ensure!(
             space_delim_strings.len() == 5,
             "Invalid number of arguments, required 5, given {}",
@@ -1241,7 +1220,7 @@ impl ClientProxy {
     }
 
     /// Test JSON RPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<jsonrpc::Metadata> {
+    pub fn test_validator_connection(&mut self) -> Result<views::MetadataView> {
         self.client.update_and_verify_state_proof()?;
         self.client.get_metadata()
     }
@@ -1271,9 +1250,13 @@ impl ClientProxy {
     fn get_account_and_update(
         &mut self,
         address: &AccountAddress,
-    ) -> Result<Option<jsonrpc::Account>> {
+    ) -> Result<Option<views::AccountView>> {
         let account = self.client.get_account(address)?;
-        self.client.update_and_verify_state_proof()?;
+        // This isn't used by anything except to keep track of the current version and to simulate
+        // some potential verifiable clients, which is yet to be implemented. It also has some
+        // challenges in handling retries if the upstream hasn't yet arrived at the expected
+        // version and breaks with our testnet deployment, so disabling this for now.
+        // self.client.update_and_verify_state_proof()?;
 
         if let Some(ref ac) = account.as_ref() {
             self.update_account_seq(address, ac.sequence_number)
@@ -1310,7 +1293,7 @@ impl ClientProxy {
     fn get_account_resource_and_update(
         &mut self,
         address: &AccountAddress,
-    ) -> Result<jsonrpc::Account> {
+    ) -> Result<views::AccountView> {
         self.get_account_and_update(address)?
             .ok_or_else(|| format_err!("No account exists at {:?}", address))
     }
@@ -1331,7 +1314,7 @@ impl ClientProxy {
                 Ok(resp) => match resp {
                     Some(account_view) => (
                         account_view.sequence_number,
-                        Some(hex::decode(account_view.authentication_key)?),
+                        Some(account_view.authentication_key.into_bytes()?),
                         AccountStatus::Persisted,
                     ),
                     None => (0, authentication_key_opt, AccountStatus::Local),
@@ -1410,7 +1393,8 @@ impl ClientProxy {
         Ok(auth_key)
     }
 
-    fn association_transaction_with_local_diem_root_account(
+    /// Send a transaction signed by the local diem_root credential
+    pub fn association_transaction_with_local_diem_root_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
@@ -1598,6 +1582,23 @@ impl ClientProxy {
             self.chain_id,
         )
     }
+}
+
+// Update WriteSet
+fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
+    let mut write_set = WriteSetMut::new(vec![]);
+    let stdlib_modules = compiled_stdlib::stdlib_modules(option);
+    let bytes = stdlib_modules.bytes_vec();
+    for (module, bytes) in stdlib_modules.compiled_modules.iter().zip(bytes) {
+        write_set.push((
+            AccessPath::code_access_path(module.self_id()),
+            WriteOp::Value(bytes),
+        ));
+    }
+    ChangeSet::new(
+        write_set.freeze().expect("Failed to create writeset"),
+        vec![],
+    )
 }
 
 fn parse_transaction_argument_for_client(s: &str) -> Result<TransactionArgument> {

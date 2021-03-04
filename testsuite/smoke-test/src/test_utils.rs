@@ -124,6 +124,12 @@ pub mod diem_swarm_utils {
         .unwrap()
     }
 
+    /// Returns the JSON RPC url pointing to a node at the given
+    /// node index.
+    pub fn get_json_rpc_url(swarm: &DiemSwarm, node_index: usize) -> String {
+        format!("http://127.0.0.1:{}", swarm.get_client_port(node_index))
+    }
+
     /// Returns a JSON RPC based Diem Interface pointing to a node at the given
     /// node index.
     pub fn get_json_rpc_diem_interface(

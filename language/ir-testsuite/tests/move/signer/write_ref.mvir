@@ -1,0 +1,9 @@
+module M {
+    t(sref: &mut signer, s: signer) {
+        *copy(sref) = move(s);
+        return;
+    }
+}
+
+// Used to be invalid
+// Now valid because signer has drop

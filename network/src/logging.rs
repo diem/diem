@@ -7,8 +7,7 @@
 //! ```
 //! use diem_config::network_id::NetworkContext;
 //! use diem_logger::info;
-//! use diem_network_address::NetworkAddress;
-//! use diem_types::PeerId;
+//! use diem_types::{PeerId, network_address::NetworkAddress};
 //! use network::logging::NetworkSchema;
 //!
 //! info!(
@@ -27,8 +26,7 @@ use crate::{
 };
 use diem_config::network_id::NetworkContext;
 use diem_logger::Schema;
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use netcore::transport::ConnectionOrigin;
 
 #[derive(Schema)]

@@ -7,7 +7,7 @@ sidebar_label: Integration Guide
 ## Overview
 
 >
-> **Note:** This guide is intended to provide a [Regulated Virtual Asset Service Provider (VASP)](reference/glossary.md#Regulated-VASP), with the necessary information needed to integrate a wallet with the Diem Payment Network (DPN).  This guide assumes that you are a Regulated VASP, and that you have been permissioned by Diem Networks as a participant on DPN.   For more information on the Regulated VASP authorization process, please see [Prospective VASP](reference/prospective-vasps.md). This guide also assumes you have undergone and passed a Diem Networks security penetration test (PEN) to check for exploitable vulnerabilities.
+> **Note:** This guide is intended to provide a [Regulated Virtual Asset Service Provider (VASP)](reference/glossary.md#regulated-vasp), with the necessary information needed to integrate a wallet with the Diem Payment Network (DPN).  This guide assumes that you are a Regulated VASP, and that you have been permissioned by Diem Networks as a participant on DPN. This guide also assumes you have undergone and passed a Diem Networks security penetration test (PEN) to check for exploitable vulnerabilities.
 >
 
 ## Getting Started
@@ -21,7 +21,7 @@ Before you create your Regulated VASP account, you will need to become familiar 
 
 DPN supports the following on-chain institutional accounts:
 
-* Regulated VASP Accounts: These accounts are reserved for [Regulated VASP](/reference/glossary.md#Regulated-VASP) that operate on the DPN usually on behalf of end users. These are of two types - [ParentVASP and ChildVASP accounts](#account-roles).
+* Regulated VASP Accounts: These accounts are reserved for [Regulated VASP](/reference/glossary.md#regulated-vasp) that operate on the DPN usually on behalf of end users. These are of two types - [ParentVASP and ChildVASP accounts](#account-roles).
 * Designated Dealer Accounts: These accounts are reserved for designated dealers that have contracted with Diem Networks to mint and burn Diem Coins.
 
 
@@ -49,26 +49,26 @@ Learn more about account concepts [here](core/accounts.md).
 1. **[Generate Keys](core/accounts.md#addresses-authentication-keys-and-cryptographic-keys)**: Generate an ed25519 keypair and associated authentication key for your on-chain Regulated VASP account.
 2. **Share Account Info**: Share the following with the Diem Networks Treasury offline.
     1. Your public key
-    2. Initial currency: Coin1, or ALL. Learn more about choosing currencies [here](#choose-currencies).
+    2. Initial currency: XUS, or ALL. Learn more about choosing currencies [here](#choose-currencies).
     3. A human-readable VASP name to use on-chain. Diem Networks will need to check if this is a unique value.
 3. **DPN Creates Parent Account**: Diem Networks will send a transaction that creates a [ParentVASP account](#account-roles) with your authentication key.
-4. **Set up Base URL and Compliance Public Key for Off-Chain APIs**: In order to use off-chain APIs, you must send a transaction to set the base URL and compliance public key values on your parent account using [this](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-rotate_dual_attestation_info) transaction script.
-5. **Create Child Account**: If you want to, you can create a new [ChildVASP account](#account-roles) from your ParentVASP account using this transaction [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-create_child_vasp_account). You can only create ChildVASP accounts using your ParentVASP account.
+4. **Set up Base URL and Compliance Public Key for Off-Chain APIs**: In order to use off-chain APIs, you must send a transaction to set the base URL and compliance public key values on your parent account using [this](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-rotate_dual_attestation_info) transaction script.
+5. **Create Child Account**: If you want to, you can create a new [ChildVASP account](#account-roles) from your ParentVASP account using this transaction [script](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-create_child_vasp_account). You can only create ChildVASP accounts using your ParentVASP account.
 6. **Start Transacting**: Once the previous steps have been completed, you can send transactions from your account on-chain using the keypair from step (1).
 
 
 #### Choose Currencies
 When you are creating your ParentVASP account, you will need to choose at least one Diem Coin currency. The Diem Coin currencies that are currently available on the DPN are:
 
-*   `Coin1`(a USD stablecoin)
+*   `XUS`(a USD stablecoin)
 
 At such time that more one Diem Coin currency is available, you can share with DPN which [Diem Coin currencies](core/accounts.md#currencies-and-balances]) you would like to associate with your account. You can also request DPN to choose all Diem Coin currencies available.
 
 >
->Note: When available, at the Move level, these will be different generic instantiations of the same Diem type (i.e. `Diem<Coin1>`).
+>Note: When available, at the Move level, these will be different generic instantiations of the same Diem type (i.e. `Diem<XUS>`).
 >
 
-You can [add new Diem Coin currencies to an existing account](core/transaction-types.md#adding-a-currency-to-an-account) via the `add_currency_to_account` transaction [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-add_currency_to_account). You can add all currencies offered on DPN to your child VASP accounts by using the `add_all_currencies` flag in the account creation scripts.
+You can [add new Diem Coin currencies to an existing account](core/transaction-types.md#adding-a-currency-to-an-account) via the `add_currency_to_account` transaction [script](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-add_currency_to_account). You can add all currencies offered on DPN to your child VASP accounts by using the `add_all_currencies` flag in the account creation scripts.
 
 
 ### Submit a Transaction on the Network
@@ -162,7 +162,7 @@ You can do these by setting the following parameters:
 | -------------- | -------------- |
 | `max_gas_units`: This is the maximum amount of gas units that can be used to execute a transaction. By setting a value for this parameter, you can ensure that a transaction uses only a certain number of computational resources. | To help you choose a value for `max_gas_amount`, we will be publishing a list of suggested `max_gas_amount` for each transaction before launch. We will be keeping the current lockdown restrictions the world-over in consideration for this list.<br/><br/>On testnet: `600 < max_gas_amount ≤ 2,000,000` |
 | `gas_price`: This is a way to move from the abstract units of resource consumption that are used in the virtual machine (VM) — gas units — into a transaction fee in the specified gas currency. | For launch, you can set the `gas_price` to be zero or almost zero, allowing you to submit transactions without high charges. This is because the network shouldn’t have high contention.<br/><br/>On testnet: `0 ≤ gas_price ≤ 10,000`|
-| `gas_currency_code`: This is the currency of the transaction fee (which is at most `gas_price * max_gas_amount`) charged to the client.  | The `gas_currency` must be a registered currency on-chain ("Coin1" on testnet), and must be one of the held currencies of the sending account. E.g. setting the `gas_currency` to "Coin3" would cause the transaction to be rejected since Coin3 is not a registered currency on-chain, and the sending account does not hold that currency.|
+| `gas_currency_code`: This is the currency of the transaction fee (which is at most `gas_price * max_gas_amount`) charged to the client.  | The `gas_currency` must be a registered currency on-chain (`XUS` on testnet), and must be one of the held currencies of the sending account. E.g. setting the `gas_currency` to "Coin3" would cause the transaction to be rejected since Coin3 is not a registered currency on-chain, and the sending account does not hold that currency.|
 
 You can learn more about gas and how it works [here](core/gas.md).
 
@@ -202,7 +202,7 @@ where the amount structure is:
 | Name | Type | Description|
 | -------- | -------| ------------------- |
 | `amount` | u64 | Amount in base currency units (e.g. microdiem).|
-| `currency` | String | Currency code (e.g. "Coin1") |
+| `currency` | String | Currency code (e.g. `XUS`) |
 
 
 More information on event structures, and how they can be queried and the surrounding data in the JSON responses can be found [here](https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md).
@@ -213,7 +213,7 @@ To check for new transactions posted to your account, you need to [query the blo
 * If you are receiving the transaction, you query for the ReceivedPaymentEvent event.
 
 #### Send Payments
-You can send payments using this transaction [script](https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md#script-peer_to_peer_with_metadata).
+You can send payments using this transaction [script](https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md#script-peer_to_peer_with_metadata).
 
 This script requires the following:
 

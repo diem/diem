@@ -28,6 +28,6 @@ error:
    │                                        ^ Duplicate type parameter declared with name 'T'
    ·
  3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │                           - Previously defined here
+   │              - Previously defined here
    │
 

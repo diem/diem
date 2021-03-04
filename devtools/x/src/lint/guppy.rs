@@ -4,7 +4,9 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
-use guppy::{graph::feature::FeatureFilterFn, Version};
+use anyhow::anyhow;
+use guppy::{graph::feature::FeatureFilterFn, Version, VersionReq};
+use hakari::summaries::HakariBuilderSummary;
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::OsStr,
@@ -156,15 +158,11 @@ impl PackageLinter for CrateNamesPaths {
         }
 
         let workspace_path = ctx.workspace_path();
-        if let Some(path) = workspace_path.to_str() {
-            if path.contains('_') {
-                out.write(
-                    LintLevel::Error,
-                    "workspace path contains '_' (use '-' instead)",
-                );
-            }
-        } else {
-            // Workspace path is invalid UTF-8. A different lint should catch this.
+        if workspace_path.as_str().contains('_') {
+            out.write(
+                LintLevel::Error,
+                "workspace path contains '_' (use '-' instead)",
+            );
         }
 
         for build_target in ctx.metadata().build_targets() {
@@ -182,47 +180,6 @@ impl PackageLinter for CrateNamesPaths {
                     );
                 }
             }
-        }
-
-        Ok(RunStatus::Executed)
-    }
-}
-
-/// Ensure diem-workspace-hack is a dependency
-#[derive(Debug)]
-pub struct WorkspaceHack;
-
-impl Linter for WorkspaceHack {
-    fn name(&self) -> &'static str {
-        "workspace-hack"
-    }
-}
-
-impl PackageLinter for WorkspaceHack {
-    fn run<'l>(
-        &self,
-        ctx: &PackageContext<'l>,
-        out: &mut LintFormatter<'l, '_>,
-    ) -> Result<RunStatus<'l>> {
-        let package = ctx.metadata();
-        let pkg_graph = ctx.package_graph();
-        let workspace_hack_id = pkg_graph
-            .workspace()
-            .member_by_name("diem-workspace-hack")
-            .expect("can't find diem-workspace-hack package")
-            .id();
-
-        // diem-workspace-hack does not need to depend on itself
-        if package.id() == workspace_hack_id {
-            return Ok(RunStatus::Executed);
-        }
-
-        let has_links = package.direct_links().next().is_some();
-        let has_hack_dep = pkg_graph
-            .directly_depends_on(package.id(), workspace_hack_id)
-            .expect("valid package ID");
-        if has_links && !has_hack_dep {
-            out.write(LintLevel::Error, "missing diem-workspace-hack dependency");
         }
 
         Ok(RunStatus::Executed)
@@ -261,15 +218,27 @@ impl PackageLinter for IrrelevantBuildDeps {
 
 /// Ensure that packages within the workspace only depend on one version of a third-party crate.
 #[derive(Debug)]
-pub struct DirectDepDups;
+pub struct DirectDepDups<'cfg> {
+    hakari_package: &'cfg str,
+}
 
-impl Linter for DirectDepDups {
+impl<'cfg> DirectDepDups<'cfg> {
+    pub fn new(hakari_config: &'cfg HakariBuilderSummary) -> crate::Result<Self> {
+        let hakari_package = hakari_config
+            .hakari_package
+            .as_deref()
+            .ok_or_else(|| anyhow!("hakari.hakari-package not defined in x.toml"))?;
+        Ok(Self { hakari_package })
+    }
+}
+
+impl<'cfg> Linter for DirectDepDups<'cfg> {
     fn name(&self) -> &'static str {
         "direct-dep-dups"
     }
 }
 
-impl ProjectLinter for DirectDepDups {
+impl<'cfg> ProjectLinter for DirectDepDups<'cfg> {
     fn run<'l>(
         &self,
         ctx: &ProjectContext<'l>,
@@ -282,6 +251,10 @@ impl ProjectLinter for DirectDepDups {
         package_graph.query_workspace().resolve_with_fn(|_, link| {
             // Collect direct dependencies of workspace packages.
             let (from, to) = link.endpoints();
+            if from.name() == self.hakari_package {
+                // Skip the workspace hack package.
+                return false;
+            }
             if from.in_workspace() && !to.in_workspace() {
                 direct_deps
                     .entry(to.name())
@@ -405,8 +378,129 @@ impl<'cfg> PackageLinter for OverlayFeatures<'cfg> {
 }
 
 fn feature_str(feature: Option<&str>) -> &str {
-    match feature {
-        Some(feature) => feature,
-        None => "[base]",
+    feature.unwrap_or("[base]")
+}
+
+/// Ensure that all unpublished packages only use path dependencies for workspace dependencies
+#[derive(Debug)]
+pub struct UnpublishedPackagesOnlyUsePathDependencies {
+    no_version_req: VersionReq,
+}
+
+impl UnpublishedPackagesOnlyUsePathDependencies {
+    pub fn new() -> Self {
+        Self {
+            no_version_req: VersionReq::parse(">=0.0.0").expect(">=0.0.0 should be a valid req"),
+        }
+    }
+}
+
+impl Linter for UnpublishedPackagesOnlyUsePathDependencies {
+    fn name(&self) -> &'static str {
+        "unpublished-packages-only-use-path-dependencies"
+    }
+}
+
+impl PackageLinter for UnpublishedPackagesOnlyUsePathDependencies {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        // Skip all packages which aren't 'publish = false'
+        if !matches!(metadata.publish(), Some(&[])) {
+            return Ok(RunStatus::Executed);
+        }
+
+        for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
+            if direct_dep.version_req() != &self.no_version_req {
+                let msg = format!(
+                    "unpublished package specifies a version of first-party dependency '{}'; \
+                    unpublished packages should only use path dependencies for first-party packages.",
+                    direct_dep.dep_name(),
+                );
+                out.write(LintLevel::Error, msg);
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
+
+/// Ensure that all published packages only depend on other, published packages
+#[derive(Debug)]
+pub struct PublishedPackagesDontDependOnUnpublishedPackages;
+
+impl Linter for PublishedPackagesDontDependOnUnpublishedPackages {
+    fn name(&self) -> &'static str {
+        "published-packages-dont-depend-on-unpublished-packages"
+    }
+}
+
+impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        // Skip all packages which aren't publishable
+        if matches!(metadata.publish(), Some(&[])) {
+            return Ok(RunStatus::Executed);
+        }
+
+        for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
+            // If the direct dependency isn't publishable
+            if matches!(direct_dep.to().publish(), Some(&[])) {
+                out.write(
+                    LintLevel::Error,
+                    format!(
+                        "published package can't depend on unpublished package '{}'",
+                        direct_dep.dep_name()
+                    ),
+                );
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
+
+/// Only allow crates to be published to crates.io
+#[derive(Debug)]
+pub struct OnlyPublishToCratesIo;
+
+impl Linter for OnlyPublishToCratesIo {
+    fn name(&self) -> &'static str {
+        "only-publish-to-crates-io"
+    }
+}
+
+impl PackageLinter for OnlyPublishToCratesIo {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        match metadata.publish() {
+            Some(&[]) => {}
+            Some(&[ref r]) if r == "crates-io" => {}
+            _ => {
+                out.write(
+                    LintLevel::Error,
+                    "published package should only be publishable to crates.io. \
+                        If you intend to publish this package, ensure the 'publish' \
+                        field in the package's Cargo.toml is 'publish = [\"crates-io\"]. \
+                        Otherwise set the 'publish' field to 'publish = false'.",
+                );
+            }
+        }
+
+        Ok(RunStatus::Executed)
     }
 }

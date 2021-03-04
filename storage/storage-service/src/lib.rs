@@ -51,7 +51,13 @@ impl StorageService {
     fn get_account_state_with_proof_by_version(
         &self,
         req: &storage_interface::GetAccountStateWithProofByVersionRequest,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof), Error> {
+    ) -> Result<
+        (
+            Option<AccountStateBlob>,
+            SparseMerkleProof<AccountStateBlob>,
+        ),
+        Error,
+    > {
         Ok(self
             .db
             .get_account_state_with_proof_by_version(req.address, req.version)?)
@@ -75,14 +81,16 @@ impl StorageService {
     fn run(self, config: &NodeConfig) -> JoinHandle<()> {
         let mut network_server =
             NetworkServer::new("storage", config.storage.address, config.storage.timeout_ms);
-        thread::spawn(move || loop {
+        let ret = thread::spawn(move || loop {
             if let Err(e) = self.process_one_message(&mut network_server) {
                 warn!(
                     error = ?e,
                     "Failed to process message.",
                 );
             }
-        })
+        });
+        info!("StorageService spawned.");
+        ret
     }
 
     fn process_one_message(&self, network_server: &mut NetworkServer) -> Result<(), Error> {

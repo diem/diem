@@ -1,0 +1,19 @@
+module N {
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+    public(friend) foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+}
+
+// check: BACKWARD_INCOMPATIBLE_MODULE_UPDATE

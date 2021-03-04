@@ -1,11 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_json_rpc::views::EventDataView;
+
 use crate::test_utils::{diem_swarm_utils::get_diem_event_fetcher, setup_swarm_and_client_proxy};
 
 #[test]
 fn test_event_fetcher() {
-    let mut runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
 
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
     let events_fetcher = get_diem_event_fetcher(&env.validator_swarm, 0);
@@ -47,6 +49,15 @@ fn test_event_fetcher() {
     let evt1 = sent_events.pop().unwrap();
     let evt2 = sent_events.pop().unwrap();
 
-    assert!(evt1.data.unwrap().amount.unwrap().amount == 4000000);
-    assert!(evt2.data.unwrap().amount.unwrap().amount == 3000000);
+    if let EventDataView::SentPayment { amount, .. } = evt1.data {
+        assert_eq!(amount.amount, 4000000);
+    } else {
+        panic!("invalid event");
+    }
+
+    if let EventDataView::SentPayment { amount, .. } = evt2.data {
+        assert_eq!(amount.amount, 3000000);
+    } else {
+        panic!("invalid event");
+    }
 }

@@ -6,11 +6,9 @@
 
 ---
 
-[![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://developers.diem.com/docs/rustdocs/)
-[![CircleCI](https://circleci.com/gh/diem/diem.svg?style=shield)](https://circleci.com/gh/diem/diem)
+[![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://diem.github.io/diem/)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
-[![codecov](https://codecov.io/gh/diem/diem/branch/master/graph/badge.svg)](https://codecov.io/gh/diem/diem)
 
 Diem Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
@@ -33,7 +31,7 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 
 ### Try Diem Core
 * [My First Transaction](https://developers.diem.com/docs/core/my-first-transaction)
-* [Getting Started With Move](https://developers.diem.com/docs/move/overview)
+* [Getting Started With Move](https://developers.diem.com/docs/move/move-introduction)
 
 ### Technical Papers
 * [The Diem Blockchain](https://developers.diem.com/docs/technical-papers/the-diem-blockchain-paper)
@@ -42,22 +40,6 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 
 ### Blog
 * [Diem: The Path Forward](https://developers.diem.com/blog/2019/06/18/the-path-forward/)
-
-### Diem Codebase
-
-* [Diem Core Overview](https://developers.diem.com/docs/core/diem-core-overview)
-* [Admission Control](https://developers.diem.com/docs/crates/admission-control)
-* [Bytecode Verifier](https://developers.diem.com/docs/crates/bytecode-verifier)
-* [Consensus](https://developers.diem.com/docs/crates/consensus)
-* [Crypto](https://developers.diem.com/docs/crates/crypto)
-* [Execution](https://developers.diem.com/docs/crates/executor)
-* [Mempool](https://developers.diem.com/docs/crates/mempool)
-* [Move IR Compiler](https://developers.diem.com/docs/crates/ir-to-bytecode)
-* [Move Language](https://developers.diem.com/docs/crates/move-language)
-* [Network](https://developers.diem.com/docs/crates/network)
-* [Storage](https://developers.diem.com/docs/crates/storage)
-* [Virtual Machine](https://developers.diem.com/docs/crates/vm)
-
 
 ## Community
 

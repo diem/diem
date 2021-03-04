@@ -25,7 +25,7 @@ pub struct MockTransactionManager {
 
 impl MockTransactionManager {
     pub fn new(consensus_to_mempool_sender: Option<mpsc::Sender<ConsensusRequest>>) -> Self {
-        let mempool_proxy = consensus_to_mempool_sender.map(|s| MempoolProxy::new(s, 1));
+        let mempool_proxy = consensus_to_mempool_sender.map(|s| MempoolProxy::new(s, 1, 1, 1));
         Self {
             rejected_txns: vec![],
             mempool_proxy,
@@ -38,7 +38,7 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
     let mut statuses = vec![];
     // generate count + 1 status to mock the block metadata txn in mempool proxy
     for _ in 0..=count {
-        let random_status = match rand::thread_rng().gen_range(0, 1000) {
+        let random_status = match rand::thread_rng().gen_range(0..1000) {
             0 => TransactionStatus::Discard(StatusCode::UNKNOWN_VALIDATION_STATUS),
             _ => TransactionStatus::Keep(KeptVMStatus::Executed),
         };

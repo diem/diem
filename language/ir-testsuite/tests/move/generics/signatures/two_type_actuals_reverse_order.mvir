@@ -6,7 +6,7 @@ module M {
         return;
     }
 }
-// check: CONSTRAINT_KIND_MISMATCH
+// check: CONSTRAINT_NOT_SATISFIED
 
 //! new-transaction
 module M2 {
@@ -18,4 +18,4 @@ module M2 {
         return;
     }
 }
-// check: CONSTRAINT_KIND_MISMATCH
+// check: CONSTRAINT_NOT_SATISFIED

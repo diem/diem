@@ -8,6 +8,7 @@ use move_vm_types::{
     natives::function::{native_gas, NativeContext, NativeResult},
     values::Value,
 };
+use smallvec::smallvec;
 use std::{collections::VecDeque, convert::TryFrom};
 use vm::errors::PartialVMResult;
 
@@ -29,8 +30,7 @@ pub fn native_ed25519_publickey_validation(
 
     // This deserialization performs point-on-curve and small subgroup checks
     let valid = ed25519::Ed25519PublicKey::try_from(&key_bytes[..]).is_ok();
-    let return_values = vec![Value::bool(valid)];
-    Ok(NativeResult::ok(cost, return_values))
+    Ok(NativeResult::ok(cost, smallvec![Value::bool(valid)]))
 }
 
 pub fn native_ed25519_signature_verification(
@@ -54,16 +54,19 @@ pub fn native_ed25519_signature_verification(
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
-            return Ok(NativeResult::ok(cost, vec![Value::bool(false)]));
+            return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)]));
         }
     };
     let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_slice()) {
         Ok(pk) => pk,
         Err(_) => {
-            return Ok(NativeResult::ok(cost, vec![Value::bool(false)]));
+            return Ok(NativeResult::ok(cost, smallvec![Value::bool(false)]));
         }
     };
 
     let verify_result = sig.verify_arbitrary_msg(msg.as_slice(), &pk).is_ok();
-    Ok(NativeResult::ok(cost, vec![Value::bool(verify_result)]))
+    Ok(NativeResult::ok(
+        cost,
+        smallvec![Value::bool(verify_result)],
+    ))
 }

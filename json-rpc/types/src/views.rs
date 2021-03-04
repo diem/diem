@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Error, Result};
-use compiled_stdlib::transaction_scripts::StdlibScript;
 use diem_crypto::HashValue;
 use diem_types::{
     account_config::{
@@ -16,21 +15,15 @@ use diem_types::{
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
-    transaction::{Script, Transaction, TransactionArgument, TransactionPayload},
-    vm_status::KeptVMStatus,
 };
 use move_core_types::{
-    account_address::AccountAddress,
-    identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
+    account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag,
     move_resource::MoveResource,
-    vm_status::AbortLocation,
 };
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
-    default::Default,
 };
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -413,75 +406,72 @@ impl From<HashValue> for BytesView {
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MoveAbortExplanationView {
-    category: String,
-    category_description: String,
-    reason: String,
-    reason_description: String,
+    pub category: String,
+    pub category_description: String,
+    pub reason: String,
+    pub reason_description: String,
 }
 
-impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
-    type Error = ();
-    fn try_from(status: &KeptVMStatus) -> Result<MoveAbortExplanationView, Self::Error> {
-        match status {
-            KeptVMStatus::MoveAbort(AbortLocation::Module(module_id), abort_code) => {
-                let error_context = move_explain::get_explanation(module_id, *abort_code);
-                error_context
-                    .map(|context| MoveAbortExplanationView {
-                        category: context.category.code_name,
-                        category_description: context.category.code_description,
-                        reason: context.reason.code_name,
-                        reason_description: context.reason.code_description,
-                    })
-                    .ok_or(())
-            }
-            _ => Err(()),
-        }
+impl std::fmt::Display for MoveAbortExplanationView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Error Category: {}", self.category)?;
+        writeln!(f, "\tCategory Description: {}", self.category_description)?;
+        writeln!(f, "Error Reason: {}", self.reason)?;
+        writeln!(f, "\tReason Description: {}", self.reason_description)
     }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum VMStatusView {
-    #[serde(rename = "executed")]
     Executed,
-    #[serde(rename = "out_of_gas")]
     OutOfGas,
-    #[serde(rename = "move_abort")]
     MoveAbort {
         location: String,
         abort_code: u64,
         explanation: Option<MoveAbortExplanationView>,
     },
-    #[serde(rename = "execution_failure")]
     ExecutionFailure {
         location: String,
         function_index: u16,
         code_offset: u16,
     },
-    #[serde(rename = "miscellaneous_error")]
     MiscellaneousError,
+    VerificationError,
+    DeserializationError,
+    PublishingFailure,
 }
 
-impl From<&KeptVMStatus> for VMStatusView {
-    fn from(status: &KeptVMStatus) -> Self {
-        match status {
-            KeptVMStatus::Executed => VMStatusView::Executed,
-            KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
-            KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusView::MoveAbort {
-                explanation: MoveAbortExplanationView::try_from(status).ok(),
-                location: loc.to_string(),
-                abort_code: *abort_code,
-            },
-            KeptVMStatus::ExecutionFailure {
+impl std::fmt::Display for VMStatusView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VMStatusView::Executed => write!(f, "Executed"),
+            VMStatusView::OutOfGas => write!(f, "Out of Gas"),
+            VMStatusView::MoveAbort {
                 location,
-                function,
+                abort_code,
+                explanation,
+            } => {
+                write!(f, "Move Abort: {} at {}", abort_code, location)?;
+                if let Some(explanation) = explanation {
+                    write!(f, "\nExplanation:\n{}", explanation)?
+                }
+                Ok(())
+            }
+            VMStatusView::ExecutionFailure {
+                location,
+                function_index,
                 code_offset,
-            } => VMStatusView::ExecutionFailure {
-                location: location.to_string(),
-                function_index: *function,
-                code_offset: *code_offset,
-            },
-            KeptVMStatus::MiscellaneousError => VMStatusView::MiscellaneousError,
+            } => write!(
+                f,
+                "Execution failure: {} {} {}",
+                location, function_index, code_offset
+            ),
+            VMStatusView::MiscellaneousError => write!(f, "Miscellaneous Error"),
+            VMStatusView::VerificationError => write!(f, "Verification Error"),
+            VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
+            VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
         }
     }
 }
@@ -572,54 +562,10 @@ pub struct ScriptView {
 }
 
 impl ScriptView {
-    fn unknown() -> Self {
+    pub fn unknown() -> Self {
         ScriptView {
             r#type: "unknown".to_string(),
             ..Default::default()
-        }
-    }
-}
-
-impl From<Transaction> for TransactionDataView {
-    fn from(tx: Transaction) -> Self {
-        match tx {
-            Transaction::BlockMetadata(t) => TransactionDataView::BlockMetadata {
-                timestamp_usecs: t.timestamp_usec(),
-            },
-            Transaction::GenesisTransaction(_) => TransactionDataView::WriteSet {},
-            Transaction::UserTransaction(t) => {
-                let script_hash = match t.payload() {
-                    TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()),
-                    _ => HashValue::zero(),
-                };
-
-                let script_bytes: BytesView = match t.payload() {
-                    TransactionPayload::Script(s) => bcs::to_bytes(s).unwrap_or_default(),
-                    _ => vec![],
-                }
-                .into();
-
-                let script: ScriptView = match t.payload() {
-                    TransactionPayload::Script(s) => s.into(),
-                    _ => ScriptView::unknown(),
-                };
-
-                TransactionDataView::UserTransaction {
-                    sender: t.sender().into(),
-                    signature_scheme: t.authenticator().scheme().to_string(),
-                    signature: t.authenticator().signature_bytes().into(),
-                    public_key: t.authenticator().public_key_bytes().into(),
-                    sequence_number: t.sequence_number(),
-                    chain_id: t.chain_id().id(),
-                    max_gas_amount: t.max_gas_amount(),
-                    gas_unit_price: t.gas_unit_price(),
-                    gas_currency: t.gas_currency_code().to_string(),
-                    expiration_timestamp_secs: t.expiration_timestamp_secs(),
-                    script_hash: script_hash.into(),
-                    script_bytes,
-                    script,
-                }
-            }
         }
     }
 }
@@ -673,54 +619,6 @@ impl From<AccountRole> for AccountRoleView {
                 ),
             },
         }
-    }
-}
-
-impl From<&Script> for ScriptView {
-    fn from(script: &Script) -> Self {
-        let name = StdlibScript::try_from(script.code())
-            .map_or("unknown".to_string(), |name| format!("{}", name));
-        let ty_args: Vec<String> = script
-            .ty_args()
-            .iter()
-            .map(|type_tag| match type_tag {
-                TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
-                tag => format!("{}", tag),
-            })
-            .collect();
-        let mut view = ScriptView {
-            r#type: name.clone(),
-            code: Some(script.code().into()),
-            arguments: Some(
-                script
-                    .args()
-                    .iter()
-                    .map(|arg| format!("{:?}", &arg))
-                    .collect(),
-            ),
-            type_arguments: Some(ty_args.clone()),
-            ..Default::default()
-        };
-
-        // handle legacy fields, backward compatible
-        if name == "peer_to_peer_with_metadata" {
-            if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
-                &script.args()[..]
-            {
-                view.receiver = Some(receiver.into());
-                view.amount = Some(*amount);
-                view.currency = Some(
-                    ty_args
-                        .get(0)
-                        .unwrap_or(&"unknown_currency".to_string())
-                        .to_string(),
-                );
-                view.metadata = Some(BytesView::from(metadata));
-                view.metadata_signature = Some(BytesView::from(metadata_signature));
-            }
-        }
-
-        view
     }
 }
 

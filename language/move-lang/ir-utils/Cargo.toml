@@ -7,8 +7,8 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 structopt = "0.3.21"
 move-lang = { path = ".." }
 move-lang-test-utils = { path = "../test-utils" }
-regex = "1.4.2"
+regex = "1.4.3"

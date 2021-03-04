@@ -31,7 +31,7 @@
 version: "3.8"
 services:
     fullnode:
-        image: libra/validator:testnet
+        image: libra/validator:devnet
         volumes:
             - type: volume
               source: db

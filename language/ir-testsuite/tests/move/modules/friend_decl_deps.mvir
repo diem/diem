@@ -1,0 +1,18 @@
+module N {
+    public foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+    import {{default}}.N;
+    public(friend) foo() {
+        N.foo();
+        return;
+    }
+}
+
+// check: INVALID_FRIEND_DECL_WITH_MODULES_IN_DEPENDENCIES

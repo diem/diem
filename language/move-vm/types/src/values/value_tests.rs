@@ -34,7 +34,7 @@ fn locals() -> PartialVMResult<()> {
 #[test]
 fn struct_pack_and_unpack() -> PartialVMResult<()> {
     let vals = vec![Value::u8(10), Value::u64(20), Value::u128(30)];
-    let s = Struct::pack(vec![Value::u8(10), Value::u64(20), Value::u128(30)], false);
+    let s = Struct::pack(vec![Value::u8(10), Value::u64(20), Value::u128(30)]);
     let unpacked: Vec<_> = s.unpack()?.collect();
 
     assert!(vals.len() == unpacked.len());
@@ -50,7 +50,7 @@ fn struct_borrow_field() -> PartialVMResult<()> {
     let mut locals = Locals::new(1);
     locals.store_loc(
         0,
-        Value::struct_(Struct::pack(vec![Value::u8(10), Value::bool(false)], false)),
+        Value::struct_(Struct::pack(vec![Value::u8(10), Value::bool(false)])),
     )?;
     let r: StructRef = locals.borrow_loc(0)?.value_as()?;
 
@@ -77,10 +77,10 @@ fn struct_borrow_nested() -> PartialVMResult<()> {
     let mut locals = Locals::new(1);
 
     fn inner(x: u64) -> Value {
-        Value::struct_(Struct::pack(vec![Value::u64(x)], false))
+        Value::struct_(Struct::pack(vec![Value::u64(x)]))
     }
     fn outer(x: u64) -> Value {
-        Value::struct_(Struct::pack(vec![Value::u8(10), inner(x)], false))
+        Value::struct_(Struct::pack(vec![Value::u8(10), inner(x)]))
     }
 
     locals.store_loc(0, outer(20))?;
@@ -118,80 +118,5 @@ fn global_value_non_struct() -> PartialVMResult<()> {
     let r = locals.borrow_loc(0)?;
     assert!(GlobalValue::cached(r).is_err());
 
-    Ok(())
-}
-
-fn dummy_resource() -> Value {
-    Value::struct_(Struct::pack(vec![Value::bool(true)], true))
-}
-
-#[test]
-fn cannot_copy_resource() -> PartialVMResult<()> {
-    let v = dummy_resource();
-    assert!(v.copy_value().is_err());
-    Ok(())
-}
-
-#[test]
-fn container_ref_cannot_read_resource() -> PartialVMResult<()> {
-    let gv = GlobalValue::cached(dummy_resource())?;
-    let r: Reference = gv.borrow_global()?.value_as()?;
-    assert!(r.read_ref().is_err());
-    Ok(())
-}
-
-#[test]
-fn container_ref_cannot_overwrite_resource() -> PartialVMResult<()> {
-    let gv = GlobalValue::cached(dummy_resource())?;
-    let r: Reference = gv.borrow_global()?.value_as()?;
-    assert!(r.write_ref(dummy_resource()).is_err());
-    Ok(())
-}
-
-#[test]
-fn locals_indexed_ref_cannot_read_resource() -> PartialVMResult<()> {
-    let mut locals = Locals::new(1);
-    locals.store_loc(0, dummy_resource())?;
-    let r: Reference = locals.borrow_loc(0)?.value_as()?;
-    assert!(r.read_ref().is_err());
-    Ok(())
-}
-
-#[test]
-fn locals_indexed_ref_cannot_overwrite_resource() -> PartialVMResult<()> {
-    let mut locals = Locals::new(1);
-    locals.store_loc(0, dummy_resource())?;
-    let r: Reference = locals.borrow_loc(0)?.value_as()?;
-    assert!(r.write_ref(dummy_resource()).is_err());
-    Ok(())
-}
-
-// TODO: consider adding tests for vector_indexed_ref here once we cleanup the vector APIs.
-
-#[test]
-fn locals_cannot_copy_but_can_move_resource() -> PartialVMResult<()> {
-    let mut locals = Locals::new(1);
-    let v = dummy_resource();
-    locals.store_loc(0, v)?;
-    assert!(locals.copy_loc(0).is_err());
-    assert!(locals.move_loc(0).is_ok());
-    Ok(())
-}
-
-#[test]
-fn locals_cannot_overwrite_resource() -> PartialVMResult<()> {
-    let mut locals = Locals::new(1);
-    let v1 = dummy_resource();
-    let v2 = dummy_resource();
-    locals.store_loc(0, v1)?;
-    assert!(locals.store_loc(0, v2).is_err());
-    Ok(())
-}
-
-#[test]
-fn locals_check_resources() -> PartialVMResult<()> {
-    let mut locals = Locals::new(1);
-    locals.store_loc(0, dummy_resource())?;
-    assert!(locals.check_resources_for_return().is_err());
     Ok(())
 }

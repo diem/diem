@@ -31,15 +31,16 @@ const MAX_BUCKETS: usize = 32;
 /// * A position can set more than once -- it remains set after the first time.
 ///
 /// # Examples:
-/// ```ignore
+/// ```
+/// use diem_bitvec::BitVec;
 /// let mut bv = BitVec::default();
 /// bv.set(2);
 /// bv.set(5);
 /// assert!(bv.is_set(2));
 /// assert!(bv.is_set(5));
 /// assert_eq!(false, bv.is_set(0));
-/// assert_eq!(bv1.count_ones(), 2);
-/// assert_eq!(bv1.last_set_bit(), 3);
+/// assert_eq!(bv.count_ones(), 2);
+/// assert_eq!(bv.last_set_bit(), Some(5));
 ///
 /// // A bitwise AND of BitVec can be performed by using the `&` operator.
 /// let mut bv1 = BitVec::default();
@@ -213,13 +214,19 @@ mod test {
         p5.set(10);
         assert!(p5.is_set(10));
         assert_eq!(p5.last_set_bit(), Some(10));
-        assert_eq!(p5.inner, vec![0b0000_0001, 0b0110_0000])
+        assert_eq!(p5.inner, vec![0b0000_0001, 0b0110_0000]);
+
+        let p6 = BitVec {
+            inner: vec![0b1000_0000],
+        };
+        assert_eq!(p6.inner.len(), 1);
+        assert_eq!(p6.last_set_bit(), Some(0));
     }
 
     #[test]
     fn test_empty() {
         let p = BitVec::default();
-        for i in 0..std::u8::MAX {
+        for i in 0..=std::u8::MAX {
             assert_eq!(false, p.is_set(i));
         }
     }

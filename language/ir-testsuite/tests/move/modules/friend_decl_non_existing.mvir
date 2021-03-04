@@ -1,0 +1,5 @@
+module M {
+    friend {{default}}.Nonexistent;
+}
+
+// check: MISSING_DEPENDENCY

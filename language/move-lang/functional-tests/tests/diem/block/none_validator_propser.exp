@@ -1,0 +1,7 @@
+[0] Transaction(0)
+[1] Output(TransactionOutput(TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [(AccessPath { address: 0000000000000000000000000a550c18, path: 0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100 }, Value(010000000000000001000000000000001811000000000000000000000000000000000000000a550c18)), (AccessPath { address: 0000000000000000000000000a550c18, path: 01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300 }, Value(40420f0000000000))] }), events: [ContractEvent { key: EventKey([17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]), index: 0, type: Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("DiemBlock"), name: Identifier("NewBlockEvent"), type_params: [] }), event_data: "000000000000000051c1b9fc2f32d6f2fff669823ef31cbe0040420f0000000000" }], gas_used: 100000000, status: Keep(EXECUTED) }))
+[2] Transaction(1)
+[3] Move VM Status: EXECUTED
+[4] Transaction Status: Keep(EXECUTED)
+[5] Transaction(2)
+[6] VerificationError(ERROR { status_code: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION })

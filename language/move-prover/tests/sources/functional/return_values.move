@@ -1,4 +1,5 @@
 module TestReturnValue {
+
     public fun one_two(): (u64, u64) {
         (1, 2)
     }

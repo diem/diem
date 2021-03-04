@@ -128,18 +128,18 @@ impl<'a> Context<'a> {
 
 pub fn modules(errors: &mut Errors, modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>) {
     let tparams = modules
-        .iter()
+        .key_cloned_iter()
         .map(|(mname, mdef)| {
             let tparams = mdef
                 .functions
-                .iter()
+                .key_cloned_iter()
                 .map(|(fname, fdef)| (fname, &fdef.signature.type_parameters))
                 .collect();
             (mname, tparams)
         })
         .collect();
     modules
-        .iter()
+        .key_cloned_iter()
         .for_each(|(mname, m)| module(errors, &tparams, mname, m))
 }
 
@@ -163,7 +163,7 @@ fn module<'a>(
     let context = &mut Context::new(tparams, mname);
     module
         .functions
-        .iter()
+        .key_cloned_iter()
         .for_each(|(_fname, fdef)| function_body(context, &fdef.body));
     let graph = context.instantiation_graph();
     // - get the strongly connected components
@@ -249,7 +249,7 @@ fn exp(context: &mut Context, e: &T::Exp) {
         }
 
         E::Pack(_, _, _, fields) => {
-            for (_, (_, (_, fe))) in fields.iter() {
+            for (_, _, (_, (_, fe))) in fields.iter() {
                 exp(context, fe)
             }
         }

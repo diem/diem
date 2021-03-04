@@ -5,7 +5,7 @@
 
 import diem_types as diem
 import serde_types as st
-import diem_stdlib as stdlib
+import diem_framework as stdlib
 
 
 def main() -> None:

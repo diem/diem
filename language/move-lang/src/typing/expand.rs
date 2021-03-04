@@ -261,7 +261,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
 
         E::Pack(_, _, bs, fields) => {
             types(context, bs);
-            for (_, (_, (bt, fe))) in fields.iter_mut() {
+            for (_, _, (_, (bt, fe))) in fields.iter_mut() {
                 type_(context, bt);
                 exp(context, fe)
             }
@@ -289,7 +289,7 @@ fn lvalue(context: &mut Context, b: &mut T::LValue) {
         }
         L::BorrowUnpack(_, _, _, bts, fields) | L::Unpack(_, _, bts, fields) => {
             types(context, bts);
-            for (_, (_, (bt, innerb))) in fields.iter_mut() {
+            for (_, _, (_, (bt, innerb))) in fields.iter_mut() {
                 type_(context, bt);
                 lvalue(context, innerb)
             }

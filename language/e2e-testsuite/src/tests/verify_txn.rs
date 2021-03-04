@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use compiler::Compiler;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_types::{
@@ -22,8 +22,8 @@ use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
+    value::{serialize_values, MoveValue},
 };
-use move_vm_types::values::Value;
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm::file_format::CompiledModule;
 
@@ -106,7 +106,7 @@ fn verify_simple_payment() {
     args.push(TransactionArgument::U8Vector(vec![]));
     args.push(TransactionArgument::U8Vector(vec![]));
 
-    let p2p_script = StdlibScript::PeerToPeerWithMetadata
+    let p2p_script = LegacyStdlibScript::PeerToPeerWithMetadata
         .compiled_bytes()
         .into_vec();
 
@@ -223,6 +223,8 @@ fn verify_simple_payment() {
     // We test these in the reverse order that they appear in verify_transaction, and build up
     // the errors one-by-one to make sure that we are both catching all of them, and
     // that we are doing so in the specified order.
+    let gas_constants = &GasConstants::default();
+
     let txn = sender
         .account()
         .transaction()
@@ -232,7 +234,7 @@ fn verify_simple_payment() {
             args.clone(),
         ))
         .sequence_number(10)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get() + 1)
         .max_gas_amount(1_000_000)
         .sign();
     assert_prologue_parity!(
@@ -241,35 +243,36 @@ fn verify_simple_payment() {
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 
+    // Test for a max_gas_amount that is insufficient to pay the minimum fee.
+    // Find the minimum transaction gas units and subtract 1.
+    let mut gas_limit = gas_constants
+        .to_external_units(gas_constants.min_transaction_gas_units)
+        .get();
+    if gas_limit > 0 {
+        gas_limit -= 1;
+    }
+    // Calculate how many extra bytes of transaction arguments to add to ensure
+    // that the minimum transaction gas gets rounded up when scaling to the
+    // external gas units. (Ignore the size of the script itself for simplicity.)
+    let extra_txn_bytes = if gas_constants.gas_unit_scaling_factor
+        > gas_constants.min_transaction_gas_units.get()
+    {
+        gas_constants.large_transaction_cutoff.get()
+            + (gas_constants.gas_unit_scaling_factor / gas_constants.intrinsic_gas_per_byte.get())
+    } else {
+        0
+    };
     let txn = sender
         .account()
         .transaction()
         .script(Script::new(
             p2p_script.clone(),
             vec![account_config::xus_tag()],
-            args.clone(),
+            vec![TransactionArgument::U8(42); extra_txn_bytes as usize],
         ))
         .sequence_number(10)
-        .max_gas_amount(1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
-        .sign();
-    assert_prologue_parity!(
-        executor.verify_transaction(txn.clone()).status(),
-        executor.execute_transaction(txn).status(),
-        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
-    );
-
-    let txn = sender
-        .account()
-        .transaction()
-        .script(Script::new(
-            p2p_script.clone(),
-            vec![account_config::xus_tag()],
-            args.clone(),
-        ))
-        .sequence_number(10)
-        .max_gas_amount(GasConstants::default().min_transaction_gas_units.get() - 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_limit)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -286,8 +289,8 @@ fn verify_simple_payment() {
             args,
         ))
         .sequence_number(10)
-        .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_constants.maximum_number_of_gas_units.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -301,11 +304,11 @@ fn verify_simple_payment() {
         .script(Script::new(
             p2p_script.clone(),
             vec![account_config::xus_tag()],
-            vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
+            vec![TransactionArgument::U8(42); MAX_TRANSACTION_SIZE_IN_BYTES as usize],
         ))
         .sequence_number(10)
-        .max_gas_amount(GasConstants::default().maximum_number_of_gas_units.get() + 1)
-        .gas_unit_price(GasConstants::default().max_price_per_gas_unit.get())
+        .max_gas_amount(gas_constants.maximum_number_of_gas_units.get() + 1)
+        .gas_unit_price(gas_constants.max_price_per_gas_unit.get())
         .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -758,7 +761,7 @@ pub fn test_open_publishing() {
     );
 }
 
-fn bad_module() -> CompiledModule {
+fn bad_module() -> (CompiledModule, Vec<u8>) {
     let bad_module_code = "
     module Test {
         resource R1 { b: bool }
@@ -776,12 +779,18 @@ fn bad_module() -> CompiledModule {
     let compiler = Compiler {
         ..Compiler::default()
     };
-    compiler
+    let module = compiler
         .into_compiled_module("file_name", bad_module_code)
-        .expect("Failed to compile")
+        .expect("Failed to compile");
+    let mut bytes = vec![];
+    module.serialize(&mut bytes).unwrap();
+    (module, bytes)
 }
 
-fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> CompiledModule {
+fn good_module_uses_bad(
+    address: AccountAddress,
+    bad_dep: CompiledModule,
+) -> (CompiledModule, Vec<u8>) {
     let good_module_code = "
     module Test2 {
         import 0x1.Test;
@@ -801,9 +810,12 @@ fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> Com
         extra_deps: vec![bad_dep],
         ..Compiler::default()
     };
-    compiler
+    let module = compiler
         .into_compiled_module("file_name", good_module_code)
-        .expect("Failed to compile")
+        .expect("Failed to compile");
+    let mut bytes = vec![];
+    module.serialize(&mut bytes).unwrap();
+    (module, bytes)
 }
 
 #[test]
@@ -812,8 +824,8 @@ fn test_script_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let module = bad_module();
-    executor.add_module(&module.self_id(), &module);
+    let (module, bytes) = bad_module();
+    executor.add_module(&module.self_id(), bytes);
 
     // Create a module that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -863,16 +875,14 @@ fn test_module_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
     executor.add_account_data(&sender);
     let good_module = {
-        let m = good_module_uses_bad(*sender.address(), bad_module);
-        let mut serialized_module = Vec::<u8>::new();
-        m.serialize(&mut serialized_module).unwrap();
+        let (_, serialized_module) = good_module_uses_bad(*sender.address(), bad_module);
         diem_types::transaction::Module::new(serialized_module)
     };
 
@@ -901,8 +911,8 @@ fn test_type_tag_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let module = bad_module();
-    executor.add_module(&module.self_id(), &module);
+    let (module, bytes) = bad_module();
+    executor.add_module(&module.self_id(), bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -957,12 +967,13 @@ fn test_script_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -1011,12 +1022,13 @@ fn test_module_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -1069,12 +1081,13 @@ fn test_type_tag_transitive_dependency_fails_verification() {
     executor.set_golden_file(current_function_name!());
 
     // Get a module that fails verification into the store.
-    let bad_module = bad_module();
-    executor.add_module(&bad_module.self_id(), &bad_module);
+    let (bad_module, bad_module_bytes) = bad_module();
+    executor.add_module(&bad_module.self_id(), bad_module_bytes);
 
     // Create a module that tries to use that module.
-    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
-    executor.add_module(&good_module.self_id(), &good_module);
+    let (good_module, good_module_bytes) =
+        good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), good_module_bytes);
 
     // Create a transaction that tries to use that module.
     let sender = executor.create_raw_account_data(1_000_000, 10);
@@ -1135,7 +1148,7 @@ fn charge_gas_invalid_args() {
         .account()
         .transaction()
         .script(Script::new(
-            StdlibScript::PeerToPeerWithMetadata
+            LegacyStdlibScript::PeerToPeerWithMetadata
                 .compiled_bytes()
                 .into_vec(),
             vec![account_config::xus_tag()],
@@ -1153,6 +1166,10 @@ fn charge_gas_invalid_args() {
 
 #[test]
 pub fn publish_and_register_new_currency() {
+    // Test creating and registering a new currency and verify that it can
+    // only be used to pay transaction fees after it is initialized for that
+    // purpose.
+
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::allowlist_genesis();
     executor.set_golden_file(current_function_name!());
@@ -1245,11 +1262,10 @@ pub fn publish_and_register_new_currency() {
         "DesignatedDealer",
         "add_currency",
         vec![coin_tag.clone()],
-        vec![
-            Value::transaction_argument_signer_reference(*dd.address()),
-            Value::transaction_argument_signer_reference(*tc_account.address()),
-        ],
-        tc_account.address(),
+        serialize_values(&vec![
+            MoveValue::Signer(*dd.address()),
+            MoveValue::Signer(*tc_account.address()),
+        ]),
     );
 
     let txn = tc_account
@@ -1289,17 +1305,14 @@ pub fn publish_and_register_new_currency() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn.clone()).status(),
-        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
+        StatusCode::BAD_TRANSACTION_FEE_CURRENCY
     );
 
     executor.exec(
         "TransactionFee",
         "add_txn_fee_currency",
         vec![coin_tag],
-        vec![Value::transaction_argument_signer_reference(
-            *tc_account.address(),
-        )],
-        tc_account.address(),
+        serialize_values(&vec![MoveValue::Signer(*tc_account.address())]),
     );
 
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);

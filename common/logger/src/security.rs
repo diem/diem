@@ -5,6 +5,8 @@
 //! The security module gathers security-related logs:
 //! logs to detect malicious behavior from other validators.
 //!
+//! TODO: This likely belongs outside of the logging crate
+//!
 //! ```
 //! use diem_logger::{error, SecurityEvent};
 //!

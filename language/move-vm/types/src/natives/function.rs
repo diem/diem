@@ -18,9 +18,10 @@
 
 use crate::{gas_schedule::NativeCostIndex, loaded_data::runtime_types::Type, values::Value};
 use move_core_types::{
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits},
     value::MoveTypeLayout,
 };
+use smallvec::SmallVec;
 use std::fmt::Write;
 use vm::errors::PartialVMResult;
 
@@ -48,8 +49,6 @@ pub trait NativeContext {
     ) -> PartialVMResult<bool>;
     /// Get the a data layout via the type.
     fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
-    /// Whether a type is a resource or not.
-    fn is_resource(&self, ty: &Type) -> bool;
 }
 
 /// Result of a native function execution requires charges for execution cost.
@@ -63,14 +62,14 @@ pub trait NativeContext {
 /// must be expressed in a `NativeResult` with a cost and a VMStatus.
 pub struct NativeResult {
     /// The cost for running that function, whether successfully or not.
-    pub cost: GasUnits<GasCarrier>,
+    pub cost: InternalGasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
-    pub result: Result<Vec<Value>, u64>,
+    pub result: Result<SmallVec<[Value; 1]>, u64>,
 }
 
 impl NativeResult {
     /// Return values of a successful execution.
-    pub fn ok(cost: GasUnits<GasCarrier>, values: Vec<Value>) -> Self {
+    pub fn ok(cost: InternalGasUnits<GasCarrier>, values: SmallVec<[Value; 1]>) -> Self {
         NativeResult {
             cost,
             result: Ok(values),
@@ -81,7 +80,7 @@ impl NativeResult {
     /// failure of the VM which would raise a `PartialVMError` error directly.
     /// The only thing the funciton can specify is its abort code, as if it had invoked the `Abort`
     /// bytecode instruction
-    pub fn err(cost: GasUnits<GasCarrier>, abort_code: u64) -> Self {
+    pub fn err(cost: InternalGasUnits<GasCarrier>, abort_code: u64) -> Self {
         NativeResult {
             cost,
             result: Err(abort_code),
@@ -91,7 +90,11 @@ impl NativeResult {
 
 /// Return the native gas entry in `CostTable` for the given key.
 /// The key is the specific native function index known to `CostTable`.
-pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUnits<GasCarrier> {
+pub fn native_gas(
+    table: &CostTable,
+    key: NativeCostIndex,
+    size: usize,
+) -> InternalGasUnits<GasCarrier> {
     let gas_amt = table.native_cost(key as u8);
     let memory_size = AbstractMemorySize::new(std::cmp::max(1, size) as GasCarrier);
     debug_assert!(memory_size.get() > 0);

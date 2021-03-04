@@ -18,7 +18,7 @@ use diem_mempool::ConsensusRequest;
 use diem_types::on_chain_config::OnChainConfigPayload;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
-use state_synchronizer::StateSynchronizerClient;
+use state_sync::client::StateSyncClient;
 use std::sync::Arc;
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
@@ -28,14 +28,13 @@ pub fn start_consensus(
     node_config: &NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
-    state_sync_client: StateSynchronizerClient,
+    state_sync_client: StateSyncClient,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     diem_db: Arc<dyn DbReader>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
-    let runtime = runtime::Builder::new()
+    let runtime = runtime::Builder::new_multi_thread()
         .thread_name("consensus")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!");
@@ -43,6 +42,8 @@ pub fn start_consensus(
     let txn_manager = Arc::new(MempoolProxy::new(
         consensus_to_mempool_sender,
         node_config.consensus.mempool_poll_count,
+        node_config.consensus.mempool_txn_pull_timeout_ms,
+        node_config.consensus.mempool_executed_txn_timeout_ms,
     ));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
     let state_computer = Arc::new(ExecutionProxy::new(

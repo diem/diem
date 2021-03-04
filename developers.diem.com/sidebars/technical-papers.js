@@ -5,6 +5,7 @@ const Sidebar = [
   standaloneLink('technical-papers/move-paper'),
   standaloneLink('technical-papers/state-machine-replication-paper'),
   standaloneLink('technical-papers/the-diem-blockchain-paper'),
+  standaloneLink('technical-papers/jellyfish-merkle-tree-paper'),
   ...getReference(),
 ];
 

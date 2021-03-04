@@ -26,6 +26,7 @@ use diem_logger::prelude::*;
 use diem_trace::prelude::*;
 use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use executor_types::{Error, StateComputeResult};
+use short_hex_str::AsShortHexStr;
 use std::{collections::vec_deque::VecDeque, sync::Arc, time::Duration};
 
 #[cfg(test)]

@@ -137,6 +137,26 @@ fn invalid_struct_as_type_actual_in_exists() {
     m.freeze().unwrap_err();
 }
 
+#[test]
+fn invalid_friend_module_address() {
+    let mut m = basic_test_module();
+    m.friend_decls.push(ModuleHandle {
+        address: AddressIdentifierIndex::new(m.address_identifiers.len() as TableIndex),
+        name: IdentifierIndex::new(0),
+    });
+    m.freeze().unwrap_err();
+}
+
+#[test]
+fn invalid_friend_module_name() {
+    let mut m = basic_test_module();
+    m.friend_decls.push(ModuleHandle {
+        address: AddressIdentifierIndex::new(0),
+        name: IdentifierIndex::new(m.identifiers.len() as TableIndex),
+    });
+    m.freeze().unwrap_err();
+}
+
 proptest! {
     #[test]
     fn valid_bounds(_module in CompiledModule::valid_strategy(20)) {
@@ -195,9 +215,11 @@ proptest! {
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
-        let mut module = CompiledModuleMut::default();
-        module.identifiers = identifiers;
-        module.address_identifiers = address_identifiers;
+        let module = CompiledModuleMut {
+            identifiers,
+            address_identifiers,
+            ..Default::default()
+        };
 
         prop_assert_eq!(
             BoundsChecker::verify(&module).map_err(|e| e.major_status()),

@@ -40,6 +40,8 @@ fn safety_rules(
             None,
             None,
             true,
+            None,
+            None,
         ));
         storage.reset_and_clear().unwrap();
 

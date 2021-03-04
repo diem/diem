@@ -13,9 +13,9 @@ use mirai_annotations::*;
 use vm::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{
-        Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex, FunctionHandle, Kind,
-        LocalIndex, Signature, SignatureToken, SignatureToken as ST, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
+        AbilitySet, Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex,
+        FunctionHandle, LocalIndex, Signature, SignatureToken, SignatureToken as ST,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
 };
 
@@ -64,6 +64,11 @@ impl<'a> TypeSafetyChecker<'a> {
 
     fn local_at(&self, i: LocalIndex) -> &SignatureToken {
         self.locals.local_at(i)
+    }
+
+    fn abilities(&self, t: &SignatureToken) -> AbilitySet {
+        self.resolver
+            .abilities(&t, self.function_view.type_parameters())
     }
 
     fn error(&self, status: StatusCode, offset: CodeOffset) -> PartialVMError {
@@ -172,9 +177,9 @@ fn borrow_global(
     }
 
     let struct_def = verifier.resolver.struct_def_at(idx)?;
-    let struct_handle = verifier.resolver.struct_handle_at(struct_def.struct_handle);
-    if !struct_handle.is_nominal_resource {
-        return Err(verifier.error(StatusCode::BORROWGLOBAL_NO_RESOURCE_ERROR, offset));
+    let struct_type = materialize_type(struct_def.struct_handle, type_args);
+    if !verifier.abilities(&struct_type).has_key() {
+        return Err(verifier.error(StatusCode::BORROWGLOBAL_WITHOUT_KEY_ABILITY, offset));
     }
 
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
@@ -254,7 +259,7 @@ fn unpack(
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
 
     // Pop an abstract value from the stack and check if its type is equal to the one
-    // declared. TODO: is it safe to not call verify the kinds if the types are equal?
+    // declared.
     let arg = verifier.stack.pop().unwrap();
     if arg != struct_type {
         return Err(verifier.error(StatusCode::UNPACK_TYPE_MISMATCH_ERROR, offset));
@@ -271,19 +276,23 @@ fn exists(
     verifier: &mut TypeSafetyChecker,
     offset: CodeOffset,
     struct_def: &StructDefinition,
+    type_args: &Signature,
 ) -> PartialVMResult<()> {
-    if !verifier
-        .resolver
-        .struct_handle_at(struct_def.struct_handle)
-        .is_nominal_resource
-    {
-        return Err(verifier.error(StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR, offset));
+    let struct_type = materialize_type(struct_def.struct_handle, type_args);
+    if !verifier.abilities(&struct_type).has_key() {
+        return Err(verifier.error(
+            StatusCode::EXISTS_WITHOUT_KEY_ABILITY_OR_BAD_ARGUMENT,
+            offset,
+        ));
     }
 
     let operand = verifier.stack.pop().unwrap();
     if operand != ST::Address {
         // TODO better error here
-        return Err(verifier.error(StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR, offset));
+        return Err(verifier.error(
+            StatusCode::EXISTS_WITHOUT_KEY_ABILITY_OR_BAD_ARGUMENT,
+            offset,
+        ));
     }
 
     verifier.stack.push(ST::Bool);
@@ -293,16 +302,12 @@ fn exists(
 fn move_from(
     verifier: &mut TypeSafetyChecker,
     offset: CodeOffset,
-    def_idx: StructDefinitionIndex,
+    struct_def: &StructDefinition,
     type_args: &Signature,
 ) -> PartialVMResult<()> {
-    let struct_def = verifier.resolver.struct_def_at(def_idx)?;
-    if !verifier
-        .resolver
-        .struct_handle_at(struct_def.struct_handle)
-        .is_nominal_resource
-    {
-        return Err(verifier.error(StatusCode::MOVEFROM_NO_RESOURCE_ERROR, offset));
+    let struct_type = materialize_type(struct_def.struct_handle, type_args);
+    if !verifier.abilities(&struct_type).has_key() {
+        return Err(verifier.error(StatusCode::MOVEFROM_WITHOUT_KEY_ABILITY, offset));
     }
 
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
@@ -321,18 +326,15 @@ fn move_to(
     struct_def: &StructDefinition,
     type_args: &Signature,
 ) -> PartialVMResult<()> {
-    if !verifier
-        .resolver
-        .struct_handle_at(struct_def.struct_handle)
-        .is_nominal_resource
-    {
-        return Err(verifier.error(StatusCode::MOVETO_NO_RESOURCE_ERROR, offset));
+    let struct_type = materialize_type(struct_def.struct_handle, type_args);
+    if !verifier.abilities(&struct_type).has_key() {
+        return Err(verifier.error(StatusCode::MOVETO_WITHOUT_KEY_ABILITY, offset));
     }
 
     let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    let resource_operand = verifier.stack.pop().unwrap();
+    let key_struct_operand = verifier.stack.pop().unwrap();
     let signer_reference_operand = verifier.stack.pop().unwrap();
-    if resource_operand != struct_type {
+    if key_struct_operand != struct_type {
         return Err(verifier.error(StatusCode::MOVETO_TYPE_MISMATCH_ERROR, offset));
     }
     match signer_reference_operand {
@@ -352,11 +354,11 @@ fn verify_instr(
     match bytecode {
         Bytecode::Pop => {
             let operand = verifier.stack.pop().unwrap();
-            let kind = verifier
+            let abilities = verifier
                 .resolver
-                .kind(&operand, verifier.function_view.type_parameters());
-            if kind != Kind::Copyable {
-                return Err(verifier.error(StatusCode::POP_RESOURCE_ERROR, offset));
+                .abilities(&operand, verifier.function_view.type_parameters());
+            if !abilities.has_drop() {
+                return Err(verifier.error(StatusCode::POP_WITHOUT_DROP_ABILITY, offset));
             }
         }
 
@@ -456,15 +458,14 @@ fn verify_instr(
 
         Bytecode::CopyLoc(idx) => {
             let local_signature = verifier.local_at(*idx).clone();
-            match verifier
+            if !verifier
                 .resolver
-                .kind(&local_signature, verifier.function_view.type_parameters())
+                .abilities(&local_signature, verifier.function_view.type_parameters())
+                .has_copy()
             {
-                Kind::Resource | Kind::All => {
-                    return Err(verifier.error(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
-                }
-                Kind::Copyable => verifier.stack.push(local_signature),
+                return Err(verifier.error(StatusCode::COPYLOC_WITHOUT_COPY_ABILITY, offset));
             }
+            verifier.stack.push(local_signature)
         }
 
         Bytecode::MoveLoc(idx) => {
@@ -516,11 +517,10 @@ fn verify_instr(
             let operand = verifier.stack.pop().unwrap();
             match operand {
                 ST::Reference(inner) | ST::MutableReference(inner) => {
-                    let kind = verifier
-                        .resolver
-                        .kind(&inner, verifier.function_view.type_parameters());
-                    if kind != Kind::Copyable {
-                        return Err(verifier.error(StatusCode::READREF_RESOURCE_ERROR, offset));
+                    if !verifier.abilities(&inner).has_copy() {
+                        return Err(
+                            verifier.error(StatusCode::READREF_WITHOUT_COPY_ABILITY, offset)
+                        );
                     }
                     verifier.stack.push(*inner);
                 }
@@ -539,16 +539,10 @@ fn verify_instr(
                     )
                 }
             };
-            let kind = verifier.resolver.kind(
-                &ref_inner_signature,
-                verifier.function_view.type_parameters(),
-            );
-            match kind {
-                Kind::Resource | Kind::All => {
-                    return Err(verifier.error(StatusCode::WRITEREF_RESOURCE_ERROR, offset))
-                }
-                Kind::Copyable => (),
+            if !verifier.abilities(&ref_inner_signature).has_drop() {
+                return Err(verifier.error(StatusCode::WRITEREF_WITHOUT_DROP_ABILITY, offset));
             }
+
             if val_operand != ref_inner_signature {
                 return Err(verifier.error(StatusCode::WRITEREF_TYPE_MISMATCH_ERROR, offset));
             }
@@ -625,11 +619,7 @@ fn verify_instr(
         Bytecode::Eq | Bytecode::Neq => {
             let operand1 = verifier.stack.pop().unwrap();
             let operand2 = verifier.stack.pop().unwrap();
-            let kind1 = verifier
-                .resolver
-                .kind(&operand1, verifier.function_view.type_parameters());
-            let is_copyable = kind1 == Kind::Copyable;
-            if is_copyable && operand1 == operand2 {
+            if verifier.abilities(&operand1).has_drop() && operand1 == operand2 {
                 verifier.stack.push(ST::Bool);
             } else {
                 return Err(verifier.error(StatusCode::EQUALITY_OP_TYPE_MISMATCH_ERROR, offset));
@@ -668,21 +658,26 @@ fn verify_instr(
 
         Bytecode::Exists(idx) => {
             let struct_def = verifier.resolver.struct_def_at(*idx)?;
-            exists(verifier, offset, struct_def)?
+            exists(verifier, offset, struct_def, &Signature(vec![]))?
         }
 
         Bytecode::ExistsGeneric(idx) => {
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
             let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
-            exists(verifier, offset, struct_def)?
+            let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
+            exists(verifier, offset, struct_def, type_args)?
         }
 
-        Bytecode::MoveFrom(idx) => move_from(verifier, offset, *idx, &Signature(vec![]))?,
+        Bytecode::MoveFrom(idx) => {
+            let struct_def = verifier.resolver.struct_def_at(*idx)?;
+            move_from(verifier, offset, struct_def, &Signature(vec![]))?
+        }
 
         Bytecode::MoveFromGeneric(idx) => {
             let struct_inst = verifier.resolver.struct_instantiation_at(*idx)?;
+            let struct_def = verifier.resolver.struct_def_at(struct_inst.def)?;
             let type_args = verifier.resolver.signature_at(struct_inst.type_parameters);
-            move_from(verifier, offset, struct_inst.def, type_args)?
+            move_from(verifier, offset, struct_def, type_args)?
         }
 
         Bytecode::MoveTo(idx) => {

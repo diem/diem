@@ -1,5 +1,5 @@
 [grcov.installer]
-version = "0.5.15"
+version = "0.6.1"
 
 [system-tests]
 smoke-test = { path = "smoke-test" }
@@ -14,7 +14,7 @@ prefix = "sccache/diem/"
 public = true
 region = "us-west-2"
 endpoint = "https://s3-us-west-2.amazonaws.com"
-required-cargo-home = "/opt/cargo"
+required-cargo-home = "/opt/cargo/"
 required-git-home = "/opt/git/diem"
 envs = [
    #To debug sccache uncomment the two lines below.
@@ -45,11 +45,55 @@ warn = [
     "clippy::wildcard_dependencies",
 ]
 
+[hakari]
+version = "v2"
+hakari-package = "diem-workspace-hack"
+unify-target-host = "replicate-target-as-host"
+
+[[hakari.platforms]]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "unknown"
+
+[[hakari.platforms]]
+triple = "x86_64-apple-darwin"
+target-features = "unknown"
+
+# Ideally we'd have powerpc-unknown-linux-gnu here as well, but unification causes openssl-sys to be included,
+# and openssl can't be cross-compiled without extra work. This may need to be fixed in hakari through being able
+# to say "consider only these packages for these target platforms".
+
+# Don't consider the crypto packages as they do weird things with mutually exclusive features.
+[[hakari.omitted-packages]]
+name = "diem-crypto"
+version = "0.1.0"
+workspace-path = "crypto/crypto"
+
+[[hakari.omitted-packages]]
+name = "diem-crypto-derive"
+version = "0.1.0"
+workspace-path = "crypto/crypto-derive"
+
+# Also exclude the devtools packages since they get compiled with a different set of options.
+[[hakari.omitted-packages]]
+name = "x"
+version = "0.1.0"
+workspace-path = "devtools/x"
+
+[[hakari.omitted-packages]]
+name = "x-core"
+version = "0.1.0"
+workspace-path = "devtools/x-core"
+
+[[hakari.omitted-packages]]
+name = "x-lint"
+version = "0.1.0"
+workspace-path = "devtools/x-lint"
+
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
 version = "v2"
 include-dev = false
-proc-macros-on-target = false
+initials-platform = "standard"
 
 [summaries.default.target-platform]
 triple = "x86_64-unknown-linux-gnu"
@@ -67,7 +111,7 @@ workspace-path = "common/workspace-hack"
 [summaries.full]
 version = "v2"
 include-dev = true
-proc-macros-on-target = false
+initials-platform = "standard"
 # Don't set target or host platforms, or omitted packages, for the full set.
 
 [workspace]
@@ -120,12 +164,13 @@ members = [
     "diem-documentation-tool",
     "diem-fuzz",
     "diem-fuzzer",
+    "diem-json-rpc-client",
     "diem-proptest-helpers",
     "diem-retrier",
     "diem-smoke-test-attribute",
     "diem-swarm",
-    "diem-transaction-replay",
     "diem-wallet",
+    "diemdb-benchmark",
     "executor-benchmark",
     "executor-test-helpers",
     "functional-tests",
@@ -147,7 +192,6 @@ members = [
     "smoke-test",
     "socket-bench-server",
     "test-generation",
-    "time-service",
     "x",
     "x-core",
     "x-lint",
@@ -205,13 +249,19 @@ mark-changed = "all"
 
 [[determinator.path-rule]]
 # Ignore website and other ancillary files, and scripts not listed above.
-globs = ["developers.diem.com/**/*", "documentation/**/*", "docker/**/*", "specifications/**/*", "scripts/**/*"]
+globs = ["developers.diem.com/**/*", "documentation/**/*", "docker/**/*", "helm/**/*", "specifications/**/*", "scripts/**/*"]
 mark-changed = []
 
 [[determinator.path-rule]]
 # A bunch of images that should be ignored, I guess.
 globs = ["diem.png", ".assets/diem.png", "storage/data.png"]
 mark-changed = []
+
+[[determinator.path-rule]]
+# Required by get_stdlib_script_abis in transaction-builder-generator.
+globs = ["language/diem-framework/compiled/transaction_scripts/abi/**/*"]
+mark-changed = ["transaction-builder-generator"]
+post-rule = "skip-rules"
 
 [[determinator.package-rule]]
 # x controls the build process, so if it changes, build everything.

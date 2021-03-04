@@ -1,0 +1,25 @@
+[0] Transaction(0)
+[1] Output(TransactionOutput(TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [(AccessPath { address: 0000000000000000000000000a550c18, path: 0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100 }, Value(010000000000000001000000000000001811000000000000000000000000000000000000000a550c18)), (AccessPath { address: 0000000000000000000000000a550c18, path: 01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300 }, Value(00e1f50500000000))] }), events: [ContractEvent { key: EventKey([17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]), index: 0, type: Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("DiemBlock"), name: Identifier("NewBlockEvent"), type_params: [] }), event_data: "000000000000000051c1b9fc2f32d6f2fff669823ef31cbe0000e1f50500000000" }], gas_used: 100000000, status: Keep(EXECUTED) }))
+[2] Transaction(1)
+[3] Move VM Status: ERROR { status_code: TRANSACTION_EXPIRED }
+[4] Transaction Status: Discard(TRANSACTION_EXPIRED)
+[5] Transaction(2)
+[6] Move VM Status: ERROR { status_code: TRANSACTION_EXPIRED }
+[7] Transaction Status: Discard(TRANSACTION_EXPIRED)
+[8] Transaction(3)
+[9] Move VM Status: EXECUTED
+[10] Transaction Status: Keep(EXECUTED)
+[11] Transaction(4)
+[12] Move VM Status: EXECUTED
+[13] Transaction Status: Keep(EXECUTED)
+[14] Transaction(5)
+[15] Output(TransactionOutput(TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [(AccessPath { address: 0000000000000000000000000a550c18, path: 0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100 }, Value(020000000000000002000000000000001811000000000000000000000000000000000000000a550c18)), (AccessPath { address: 0000000000000000000000000a550c18, path: 01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300 }, Value(4023050600000000))] }), events: [ContractEvent { key: EventKey([17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]), index: 1, type: Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("DiemBlock"), name: Identifier("NewBlockEvent"), type_params: [] }), event_data: "000000000000000051c1b9fc2f32d6f2fff669823ef31cbe004023050600000000" }], gas_used: 100000000, status: Keep(EXECUTED) }))
+[16] Transaction(6)
+[17] Move VM Status: EXECUTED
+[18] Transaction Status: Keep(EXECUTED)
+[19] Transaction(7)
+[20] Move VM Status: ERROR { status_code: TRANSACTION_EXPIRED }
+[21] Transaction Status: Discard(TRANSACTION_EXPIRED)
+[22] Transaction(8)
+[23] Move VM Status: EXECUTED
+[24] Transaction Status: Keep(EXECUTED)

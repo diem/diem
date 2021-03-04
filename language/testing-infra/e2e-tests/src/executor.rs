@@ -9,7 +9,9 @@ use crate::{
     golden_outputs::GoldenOutputs,
     keygen::KeyGen,
 };
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibModules, StdLibOptions,
+};
 use diem_crypto::HashValue;
 use diem_state_view::StateView;
 use diem_types::{
@@ -24,21 +26,16 @@ use diem_types::{
     write_set::WriteSet,
 };
 use diem_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, DiemVM, DiemVMValidator,
-    VMExecutor, VMValidator,
+    convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, DiemVMValidator, VMExecutor,
+    VMValidator,
 };
 use move_core_types::{
-    account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
-use vm::CompiledModule;
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
 
@@ -78,9 +75,9 @@ impl FakeExecutor {
 
     pub fn allowlist_genesis() -> Self {
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
             None,
-            VMPublishingOption::locked(StdlibScript::allowlist()),
+            VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
         )
     }
 
@@ -93,7 +90,7 @@ impl FakeExecutor {
         }
 
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Compiled).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(),
             None,
             publishing_options,
         )
@@ -110,23 +107,32 @@ impl FakeExecutor {
     }
 
     pub fn set_golden_file(&mut self, test_name: &str) {
-        self.executed_output = Some(GoldenOutputs::new(test_name));
+        // 'test_name' includes ':' in the names, lets re-write these to be '_'s so that these
+        // files can persist on windows machines.
+        let file_name = test_name.replace(':', "_");
+        self.executed_output = Some(GoldenOutputs::new(&file_name));
     }
 
     /// Creates an executor with only the standard library Move modules published and not other
     /// initialization done.
     pub fn stdlib_only_genesis() -> Self {
         let mut genesis = Self::no_genesis();
-        for module in stdlib_modules(StdLibOptions::Compiled) {
+        let StdLibModules {
+            bytes_opt,
+            compiled_modules,
+        } = stdlib_modules(StdLibOptions::Compiled);
+        let bytes = bytes_opt.unwrap();
+        assert!(bytes.len() == compiled_modules.len());
+        for (module, bytes) in compiled_modules.iter().zip(bytes) {
             let id = module.self_id();
-            genesis.add_module(&id, module);
+            genesis.add_module(&id, bytes.to_vec());
         }
         genesis
     }
 
     /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
-        genesis_modules: Vec<CompiledModule>,
+        genesis_modules: &[Vec<u8>],
         validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {
@@ -173,8 +179,8 @@ impl FakeExecutor {
     /// Adds a module to this executor's data store.
     ///
     /// Does not do any sort of verification on the module.
-    pub fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
-        self.data_store.add_module(module_id, module)
+    pub fn add_module(&mut self, module_id: &ModuleId, module_blob: Vec<u8>) {
+        self.data_store.add_module(module_id, module_blob)
     }
 
     /// Reads the resource [`Value`] for an account from this executor's data store.
@@ -337,8 +343,7 @@ impl FakeExecutor {
         module_name: &str,
         function_name: &str,
         type_params: Vec<TypeTag>,
-        args: Vec<Value>,
-        sender: &AccountAddress,
+        args: Vec<Vec<u8>>,
     ) {
         let write_set = {
             let cost_table = zero_cost_schedule();
@@ -353,7 +358,6 @@ impl FakeExecutor {
                     &Self::name(function_name),
                     type_params,
                     args,
-                    *sender,
                     &mut cost_strategy,
                     &log_context,
                 )
@@ -365,9 +369,9 @@ impl FakeExecutor {
                         e.into_vm_status()
                     )
                 });
-            let effects = session.finish().expect("Failed to generate txn effects");
-            let (writeset, _events) =
-                txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            let (changeset, events) = session.finish().expect("Failed to generate txn effects");
+            let (writeset, _events) = convert_changeset_and_events(changeset, events)
+                .expect("Failed to generate writeset");
             writeset
         };
         self.data_store.add_write_set(&write_set);
@@ -378,8 +382,7 @@ impl FakeExecutor {
         module_name: &str,
         function_name: &str,
         type_params: Vec<TypeTag>,
-        args: Vec<Value>,
-        sender: &AccountAddress,
+        args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
         let cost_table = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
@@ -393,14 +396,13 @@ impl FakeExecutor {
                 &Self::name(function_name),
                 type_params,
                 args,
-                *sender,
                 &mut cost_strategy,
                 &log_context,
             )
             .map_err(|e| e.into_vm_status())?;
-        let effects = session.finish().expect("Failed to generate txn effects");
+        let (changeset, events) = session.finish().expect("Failed to generate txn effects");
         let (writeset, _events) =
-            txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            convert_changeset_and_events(changeset, events).expect("Failed to generate writeset");
         Ok(writeset)
     }
 }

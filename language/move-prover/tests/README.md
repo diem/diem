@@ -1,7 +1,7 @@
 # Tests for Move Prover
 
 This directory contains the tests for Move Prover. The tests are defined by the `.move` files in this tree,
-as well as all the `.move` files in the [Diem framework](../../stdlib).
+as well as all the `.move` files in the [Diem framework](../../diem-framework).
 
 *Note*: in order to run these tests locally, you must have installed tools and setup a few environment variables.
 See [`../doc/user/install.md`](../doc/user/install.md) for details. If the environment variables for
@@ -11,7 +11,7 @@ configuring the prover are not set as described there, all tests and this direct
 those files, use `UPBL=1 cargo test`. To update or test a single file, you can also provide a fragment of the move
 source path.
 
-*Note*: there are two sets of tests here. The basic ones are those in `./sources` and in `../../stdlib`. Those are run
+*Note*: there are two sets of tests here. The basic ones are those in `./sources` and in `../../diem-framework`. Those are run
 by default and are merge blockers for submitting changes. An extended set of tests is found `./xsources`. Those
 are only run if the environment variable `MVP_TEST_X=1` is set.
 

@@ -10,6 +10,7 @@ use diem_metrics::{
 use diem_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use once_cell::sync::Lazy;
+use short_hex_str::AsShortHexStr;
 
 // some type labels
 pub const REQUEST_LABEL: &str = "request";
@@ -60,7 +61,7 @@ pub static DIEM_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
 });
 
 pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId, v: i64) {
-    if network_context.role().is_validator() {
+    if network_context.network_id().is_validator_network() {
         DIEM_NETWORK_PEER_CONNECTED
             .with_label_values(&[
                 network_context.role().as_str(),
@@ -449,6 +450,15 @@ pub static PENDING_PEER_NETWORK_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "diem_network_pending_peer_network_notifications",
         "Number of pending peer network notifications"
+    )
+    .unwrap()
+});
+
+pub static NETWORK_RATE_LIMIT_METRICS: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "diem_network_rate_limit_test",
+        "Network Rate Limiting Metrics",
+        &["direction", "key", "metric"]
     )
     .unwrap()
 });

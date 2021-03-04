@@ -45,6 +45,8 @@ pub fn test_bootstrap(
         DEFAULT_BATCH_SIZE_LIMIT,
         DEFAULT_PAGE_SIZE_LIMIT,
         DEFAULT_CONTENT_LENGTH_LIMIT,
+        &None,
+        &None,
         diem_db,
         mp_sender,
         RoleType::Validator,
@@ -271,7 +273,10 @@ impl DbReader for MockDiemDB {
         &self,
         address: AccountAddress,
         _version: u64,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         Ok((
             self.get_latest_account_state(address)?,
             SparseMerkleProof::new(None, vec![]),

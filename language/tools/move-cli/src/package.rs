@@ -11,12 +11,12 @@ use std::{
     path::Path,
 };
 
+use diem_framework::{COMPILED_EXTENSION, MOVE_EXTENSION};
 use move_lang::{
     compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
     path_to_string,
 };
 use std::path::PathBuf;
-use stdlib::{COMPILED_EXTENSION, MOVE_EXTENSION};
 use vm::file_format::CompiledModule;
 
 /// Directory name for the package source files under package/<name>
@@ -25,9 +25,9 @@ const PKG_SOURCE_DIR: &str = "source_files";
 const PKG_BINARY_DIR: &str = "compiled";
 
 /// Content for the stdlib directory
-const DIR_STDLIB: Dir = include_dir!("../../stdlib/modules");
+const DIR_STDLIB: Dir = include_dir!("../../diem-framework/modules");
 /// Content for the nursery directory
-const DIR_NURSERY: Dir = include_dir!("../../stdlib/nursery");
+const DIR_NURSERY: Dir = include_dir!("../../diem-framework/nursery");
 
 /// The portion in the stdlib directory that are considered stdlib
 const STDLIB_MODULE_FILES: [&str; 8] = [
@@ -163,8 +163,13 @@ impl MovePackage {
             fs::create_dir_all(&pkg_bin_path)?;
 
             // compile the source files
-            let (_files, compiled_units) =
-                move_compile_and_report(&[path_to_string(&pkg_src_path)?], &src_dirs, None, None)?;
+            let (_files, compiled_units) = move_compile_and_report(
+                &[path_to_string(&pkg_src_path)?],
+                &src_dirs,
+                None,
+                None,
+                false,
+            )?;
 
             // save modules and ignore scripts
             for unit in compiled_units {
@@ -173,7 +178,7 @@ impl MovePackage {
                         let mut data = vec![];
                         module.serialize(&mut data)?;
                         let file_path = pkg_bin_path
-                            .join(ident.0.value.name.0.value)
+                            .join(ident.value.1)
                             .with_extension(COMPILED_EXTENSION);
                         let mut fp = File::create(file_path)?;
                         fp.write_all(&data)?;

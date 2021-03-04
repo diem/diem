@@ -29,10 +29,7 @@
 //! ```
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
-#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
-use vanilla_curve25519_dalek as curve25519_dalek;
-#[cfg(any(feature = "vanilla-u64", feature = "vanilla-u32"))]
-use vanilla_ed25519_dalek as ed25519_dalek;
+#![allow(clippy::integer_arithmetic)]
 
 use crate::{
     hash::{CryptoHash, CryptoHasher},

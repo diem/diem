@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2020-01-08 Removing known_version from verifying APIs
+
+Since the servers are pruning old ledger info states, it is easy for any call with a given known_version value to fail, unless that version is the last one of an epoch, since then it is preserved to provide epoch change proofs.
+To use the verifying API, people are expected to do batch calls with a `get_state_proof` call to make sure they get a matching response from the server.
+
 ## 2020-12-22 Add `get_events_with_proof` APIs
 
 This allows to verify events since transactions and their proofs are not covering all events.

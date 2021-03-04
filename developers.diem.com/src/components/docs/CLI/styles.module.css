@@ -2,10 +2,10 @@
  * we use a global stylesheet to style it. However, for media queries,
  * we still need to use a css module file to import the variables
  */
-@value mobile-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
-@value medium-tablet-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
-@value large-tablet-breakpoint-query from '~libra-docusaurus-components/src/variables.module.css';
-@value desktop-breakpoint-max-query from '~libra-docusaurus-components/src/variables.module.css';
+@value mobile-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value medium-tablet-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
+@value large-tablet-breakpoint-query from '~diem-docusaurus-components/src/variables.module.css';
+@value desktop-breakpoint-max-query from '~diem-docusaurus-components/src/variables.module.css';
 
 @media mobile-breakpoint-max-query {
   :global(.cli) > div {

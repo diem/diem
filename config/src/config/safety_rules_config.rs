@@ -6,8 +6,7 @@ use crate::{
     keys::ConfigKey,
 };
 use diem_crypto::{ed25519::Ed25519PrivateKey, Uniform};
-use diem_network_address::NetworkAddress;
-use diem_types::{waypoint::Waypoint, PeerId};
+use diem_types::{network_address::NetworkAddress, waypoint::Waypoint, PeerId};
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{

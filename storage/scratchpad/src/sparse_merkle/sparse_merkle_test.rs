@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    node::{LeafNode, LeafValue, SparseMerkleNode},
-    AccountStatus, ProofRead, SparseMerkleTree,
+    node::{LeafNode, LeafValue},
+    AccountStatus, ProofRead,
 };
 use diem_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -23,20 +23,28 @@ fn hash_leaf(key: HashValue, value_hash: HashValue) -> HashValue {
     SparseMerkleLeafNode::new(key, value_hash).hash()
 }
 
-#[derive(Default)]
-struct ProofReader(HashMap<HashValue, SparseMerkleProof>);
+struct ProofReader<V>(HashMap<HashValue, SparseMerkleProof<V>>);
 
-impl ProofReader {
-    fn new(key_with_proof: Vec<(HashValue, SparseMerkleProof)>) -> Self {
+impl<V> ProofReader<V> {
+    fn new(key_with_proof: Vec<(HashValue, SparseMerkleProof<V>)>) -> Self {
         ProofReader(key_with_proof.into_iter().collect())
     }
 }
 
-impl ProofRead for ProofReader {
-    fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof> {
+impl<V> Default for ProofReader<V> {
+    fn default() -> Self {
+        Self(HashMap::new())
+    }
+}
+
+impl<V> ProofRead<V> for ProofReader<V> {
+    fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof<V>> {
         self.0.get(&key)
     }
 }
+
+type SparseMerkleNode = super::node::SparseMerkleNode<AccountStateBlob>;
+type SparseMerkleTree = super::SparseMerkleTree<AccountStateBlob>;
 
 #[test]
 fn test_construct_subtree_zero_siblings() {
@@ -60,7 +68,7 @@ fn test_construct_subtree_three_siblings() {
     let key = b"hello".test_only_hash();
     let blob = AccountStateBlob::from(b"world".to_vec());
     let leaf_hash = hash_leaf(key, blob.hash());
-    let node = SparseMerkleNode::new_leaf(key, LeafValue::BlobHash(blob.hash()));
+    let node = SparseMerkleNode::new_leaf(key, LeafValue::ValueHash(blob.hash()));
     let bits = vec![false, false, true];
     let a_hash = HashValue::new([2; HashValue::LENGTH]);
     let b_hash = HashValue::new([3; HashValue::LENGTH]);
@@ -96,7 +104,7 @@ fn test_construct_subtree_with_new_leaf_override_existing_leaf() {
     let old_blob = AccountStateBlob::from(b"old_old_old".to_vec());
     let new_blob = AccountStateBlob::from(b"new_new_new".to_vec());
 
-    let existing_leaf = LeafNode::new(key, LeafValue::BlobHash(old_blob.hash()));
+    let existing_leaf = LeafNode::new(key, LeafValue::ValueHash(old_blob.hash()));
 
     let subtree = SparseMerkleTree::construct_subtree_with_new_leaf(
         key,
@@ -132,7 +140,7 @@ fn test_construct_subtree_with_new_leaf_create_extension() {
     assert_eq!(existing_key[0], 0b0100_0010);
     assert_eq!(new_key[0], 0b0100_1011);
 
-    let existing_leaf = LeafNode::new(existing_key, LeafValue::BlobHash(existing_blob.hash()));
+    let existing_leaf = LeafNode::new(existing_key, LeafValue::ValueHash(existing_blob.hash()));
 
     let subtree = SparseMerkleTree::construct_subtree_with_new_leaf(
         new_key,
@@ -195,7 +203,7 @@ fn test_construct_subtree_at_bottom_found_leaf_node() {
 
     let current_node = Arc::new(SparseMerkleNode::new_leaf(
         existing_key,
-        LeafValue::BlobHash(existing_blob_hash),
+        LeafValue::ValueHash(existing_blob_hash),
     ));
     let remaining_bits = {
         let mut iter = new_key.iter_bits();

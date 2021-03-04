@@ -30,7 +30,7 @@ fn protocols_to_from_vec() {
 #[test]
 fn represents_same_network() {
     let mut handshake_msg = HandshakeMsg::new_for_testing();
-    handshake_msg.network_id = NetworkId::Private("h1".to_string());
+    handshake_msg.network_id = NetworkId::vfn_network();
 
     // succeeds: Positive case
     let h1 = handshake_msg.clone();

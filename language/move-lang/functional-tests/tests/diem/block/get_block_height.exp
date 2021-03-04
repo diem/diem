@@ -1,0 +1,13 @@
+[0] Transaction(0)
+[1] Move VM Status: EXECUTED
+[2] Transaction Status: Keep(EXECUTED)
+[3] Transaction(1)
+[4] Output(TransactionOutput(TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [(AccessPath { address: 0000000000000000000000000a550c18, path: 0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100 }, Value(010000000000000001000000000000001811000000000000000000000000000000000000000a550c18)), (AccessPath { address: 0000000000000000000000000a550c18, path: 01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300 }, Value(00e1f50500000000))] }), events: [ContractEvent { key: EventKey([17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]), index: 0, type: Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("DiemBlock"), name: Identifier("NewBlockEvent"), type_params: [] }), event_data: "000000000000000051c1b9fc2f32d6f2fff669823ef31cbe0000e1f50500000000" }], gas_used: 100000000, status: Keep(EXECUTED) }))
+[5] Transaction(2)
+[6] Move VM Status: EXECUTED
+[7] Transaction Status: Keep(EXECUTED)
+[8] Transaction(3)
+[9] Output(TransactionOutput(TransactionOutput { write_set: WriteSet(WriteSetMut { write_set: [(AccessPath { address: 0000000000000000000000000a550c18, path: 0100000000000000000000000000000001094469656d426c6f636b0d426c6f636b4d6574616461746100 }, Value(020000000000000002000000000000001811000000000000000000000000000000000000000a550c18)), (AccessPath { address: 0000000000000000000000000a550c18, path: 01000000000000000000000000000000010d4469656d54696d657374616d701743757272656e7454696d654d6963726f7365636f6e647300 }, Value(4023050600000000))] }), events: [ContractEvent { key: EventKey([17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]), index: 1, type: Struct(StructTag { address: 00000000000000000000000000000001, module: Identifier("DiemBlock"), name: Identifier("NewBlockEvent"), type_params: [] }), event_data: "000000000000000051c1b9fc2f32d6f2fff669823ef31cbe004023050600000000" }], gas_used: 100000000, status: Keep(EXECUTED) }))
+[10] Transaction(4)
+[11] Move VM Status: EXECUTED
+[12] Transaction Status: Keep(EXECUTED)

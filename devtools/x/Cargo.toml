@@ -8,22 +8,23 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-determinator = "0.1.1"
-serde = { version = "1.0.117", features = ["derive"] }
-serde_json = "1.0.61"
+camino = "1.0.2"
+determinator = "0.3.0"
+serde = { version = "1.0.123", features = ["derive"] }
+serde_json = "1.0.64"
 structopt = "0.3.21"
-anyhow = "1.0.37"
+anyhow = "1.0.38"
 colored-diff = "0.2.2"
-guppy = { version = "0.6.2", features = ["summaries"] }
+guppy = { version = "0.8.0", features = ["summaries"] }
+hakari = "0.2.0"
 indoc = "1.0.3"
 toml = "0.5.8"
-env_logger = "0.8.2"
-log = "0.4.11"
+env_logger = "0.8.3"
+log = "0.4.14"
 chrono = "0.4.19"
 globset = "0.4.6"
-regex = "1.4.2"
+regex = "1.4.3"
 rayon = "1.5.0"
 indexmap = "1.6.1"
-x-core = { version = "0.1.0", path = "../x-core" }
-x-lint = { version = "0.1.0", path = "../x-lint" }
-diem-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+x-core = { path = "../x-core" }
+x-lint = { path = "../x-lint" }

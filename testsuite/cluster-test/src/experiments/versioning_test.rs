@@ -96,6 +96,7 @@ impl Experiment for ValidatorVersioning {
                     context.cluster.validator_instances().to_vec(),
                     context.global_emit_job_request,
                     0,
+                    0,
                 ),
                 150,
             )
@@ -194,7 +195,7 @@ impl Experiment for ValidatorVersioning {
         let txn3 = txn_gen(&mut account_1)?;
 
         full_node_client
-            .submit_transaction(txn3.clone())
+            .submit(&txn3)
             .await
             .map_err(|e| format_err!("Transaction should pass the full node mempool: {}", e))?;
 
@@ -219,7 +220,7 @@ impl Experiment for ValidatorVersioning {
         info!("8. Send a transaction to make sure it gets dropped by the full node mempool.");
 
         let updated_full_node = context.cluster.random_fullnode_instance().json_rpc_client();
-        if updated_full_node.submit_transaction(txn3).await.is_ok() {
+        if updated_full_node.submit(&txn3).await.is_ok() {
             return Err(format_err!(
                 "Transaction should not be accepted by the full node."
             ));

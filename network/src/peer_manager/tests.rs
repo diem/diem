@@ -13,23 +13,30 @@ use crate::{
         messaging::v1::{ErrorCode, NetworkMessage, NetworkMessageSink, NetworkMessageStream},
     },
     transport,
-    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
+    transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
 use anyhow::anyhow;
 use bytes::Bytes;
 use channel::{diem_channel, message_queues::QueueStyle};
-use diem_config::{config::MAX_INBOUND_CONNECTIONS, network_id::NetworkContext};
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_config::{
+    config::{PeerRole, MAX_INBOUND_CONNECTIONS},
+    network_id::NetworkContext,
+};
+use diem_infallible::RwLock;
+use diem_rate_limiter::rate_limit::TokenBucketRateLimiter;
+use diem_time_service::TimeService;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{channel::oneshot, io::AsyncWriteExt, stream::StreamExt};
 use memsocket::MemorySocket;
-use netcore::{
-    compat::IoCompat,
-    transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
+use netcore::transport::{
+    boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt,
 };
-use std::{collections::HashMap, iter::FromIterator};
+use std::{collections::HashMap, sync::Arc};
 use tokio::runtime::Handle;
+use tokio_util::compat::{
+    FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt,
+};
 
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
@@ -51,7 +58,7 @@ pub fn build_test_transport(
                     origin,
                     MessagingProtocolVersion::V1,
                     [TEST_PROTOCOL].iter().into(),
-                    TrustLevel::Untrusted,
+                    PeerRole::Unknown,
                 ),
             })
         })
@@ -92,18 +99,21 @@ fn build_test_peer_manager(
 
     let peer_manager = PeerManager::new(
         executor,
+        TimeService::mock(),
         build_test_transport(),
         NetworkContext::mock_with_peer_id(peer_id),
         "/memory/0".parse().unwrap(),
+        Arc::new(RwLock::new(HashMap::new())),
         peer_manager_request_rx,
         connection_reqs_rx,
-        HashMap::from_iter([(TEST_PROTOCOL, hello_tx)].iter().cloned()),
+        [(TEST_PROTOCOL, hello_tx)].iter().cloned().collect(),
         vec![conn_status_tx],
         constants::NETWORK_CHANNEL_SIZE,
         constants::MAX_CONCURRENT_NETWORK_REQS,
-        constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         constants::MAX_FRAME_SIZE,
         MAX_INBOUND_CONNECTIONS,
+        TokenBucketRateLimiter::open("inbound"),
+        TokenBucketRateLimiter::open("outbound"),
     );
 
     (
@@ -116,9 +126,10 @@ fn build_test_peer_manager(
 }
 
 async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
-    let (read_half, write_half) = tokio::io::split(IoCompat::new(connection));
-    let mut msg_tx = NetworkMessageSink::new(IoCompat::new(write_half), constants::MAX_FRAME_SIZE);
-    let mut msg_rx = NetworkMessageStream::new(IoCompat::new(read_half), constants::MAX_FRAME_SIZE);
+    let (read_half, write_half) = tokio::io::split(connection.compat());
+    let mut msg_tx =
+        NetworkMessageSink::new(write_half.compat_write(), constants::MAX_FRAME_SIZE, None);
+    let mut msg_rx = NetworkMessageStream::new(read_half.compat(), constants::MAX_FRAME_SIZE, None);
 
     // Send a garbage frame to trigger an expected Error response message
     msg_tx
@@ -228,7 +239,7 @@ fn create_connection<TSocket: transport::TSocket>(
             origin,
             MessagingProtocolVersion::V1,
             [TEST_PROTOCOL].iter().into(),
-            TrustLevel::Untrusted,
+            PeerRole::Unknown,
         ),
     }
 }
@@ -236,7 +247,7 @@ fn create_connection<TSocket: transport::TSocket>(
 #[test]
 fn peer_manager_simultaneous_dial_two_inbound() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -284,7 +295,7 @@ fn peer_manager_simultaneous_dial_two_inbound() {
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbound_remote_id_larger() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -333,7 +344,7 @@ fn peer_manager_simultaneous_dial_inbound_outbound_remote_id_larger() {
 #[test]
 fn peer_manager_simultaneous_dial_inbound_outbound_own_id_larger() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -382,7 +393,7 @@ fn peer_manager_simultaneous_dial_inbound_outbound_own_id_larger() {
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -431,7 +442,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -480,7 +491,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
 #[test]
 fn peer_manager_simultaneous_dial_two_outbound() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -525,7 +536,7 @@ fn peer_manager_simultaneous_dial_two_outbound() {
 
 #[test]
 fn peer_manager_simultaneous_dial_disconnect_event() {
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -553,7 +564,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
                 ConnectionOrigin::Inbound,
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
-                TrustLevel::Untrusted,
+                PeerRole::Unknown,
             ),
             DisconnectReason::ConnectionLost,
         );
@@ -568,7 +579,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
 #[test]
 fn test_dial_disconnect() {
     ::diem_logger::Logger::init_for_testing();
-    let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
+    let runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
@@ -608,7 +619,7 @@ fn test_dial_disconnect() {
                 ConnectionOrigin::Outbound,
                 MessagingProtocolVersion::V1,
                 [TEST_PROTOCOL].iter().into(),
-                TrustLevel::Untrusted,
+                PeerRole::Unknown,
             ),
             DisconnectReason::Requested,
         );

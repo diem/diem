@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    abilities,
     abstract_state::{AbstractState, AbstractValue, BorrowState, Mutability},
     config::ALLOW_MEMORY_UNSAFE,
     error::VMError,
-    get_struct_handle_from_reference, get_type_actuals_from_reference, kind, substitute,
+    get_struct_handle_from_reference, get_type_actuals_from_reference, substitute,
 };
 use vm::{
     access::*,
     file_format::{
-        FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiationIndex,
-        Kind, SignatureIndex, SignatureToken, StructDefInstantiationIndex, StructDefinitionIndex,
-        StructFieldInformation,
+        Ability, AbilitySet, FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex,
+        FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation,
     },
     views::{FunctionHandleView, StructDefinitionView, ViewInternals},
 };
@@ -95,22 +96,26 @@ impl Subst {
 // Kind Operations
 //---------------------------------------------------------------------------
 
-/// Given a signature token, returns the kind of this token in the module context, and kind
+/// Given a signature token, returns the abilities of this token in the module context, and
 /// instantiation for the function.
-pub fn kind_for_token(state: &AbstractState, token: &SignatureToken, kinds: &[Kind]) -> Kind {
-    kind(&state.module.module, token, kinds)
+pub fn abilities_for_token(
+    state: &AbstractState,
+    token: &SignatureToken,
+    type_paramters: &[AbilitySet],
+) -> AbilitySet {
+    abilities(&state.module.module, token, type_paramters)
 }
 
-/// Given a locals signature index, determine the kind for each signature token. Restricted for
-/// determining kinds at the top-level only. This is reflected in the use of
+/// Given a locals signature index, determine the abilities for each signature token. Restricted for
+/// determining abilities at the top-level only. This is reflected in the use of
 /// `state.instantiation[..]` as the kind context.
-pub fn kinds_for_instantiation(
+pub fn abilities_for_instantiation(
     state: &AbstractState,
     instantiation: &[SignatureToken],
-) -> Vec<Kind> {
+) -> Vec<AbilitySet> {
     instantiation
         .iter()
-        .map(|token| kind(&state.module.module, token, &state.instantiation[..]))
+        .map(|token| abilities(&state.module.module, token, &state.instantiation[..]))
         .collect()
 }
 
@@ -149,11 +154,11 @@ pub fn stack_top_is_castable_to(state: &AbstractState, typ: SignatureToken) -> b
 
 /// Determine the abstract value at `index` is of the given kind, if it exists.
 /// If it does not exist, return `false`.
-pub fn stack_kind_is(state: &AbstractState, index: usize, kind: Kind) -> bool {
+pub fn stack_has_ability(state: &AbstractState, index: usize, ability: Ability) -> bool {
     if index < state.stack_len() {
         match state.stack_peek(index) {
             Some(abstract_value) => {
-                return abstract_value.kind == kind;
+                return abstract_value.abilities.has_ability(ability);
             }
             None => return false,
         }
@@ -161,20 +166,19 @@ pub fn stack_kind_is(state: &AbstractState, index: usize, kind: Kind) -> bool {
     false
 }
 
-/// Determine if the abstract value at `index` has a kind that is a subkind of the kind for the
-/// instruction kind. e.g. if the instruction takes a type of kind `All` then it is OK to fit in a
-/// value with a type of kind `Copyable`.
-pub fn stack_kind_is_subkind(state: &AbstractState, index: usize, instruction_kind: Kind) -> bool {
+pub fn stack_has_all_abilities(state: &AbstractState, index: usize, abilities: AbilitySet) -> bool {
     if !stack_has(state, index, None) {
         return false;
     }
     let stack_value = state.stack_peek(index).unwrap();
-    stack_value.kind.is_sub_kind_of(instruction_kind)
+    abilities.is_subset(stack_value.abilities)
 }
 
-/// Check whether the local at `index` is of the given kind
-pub fn local_kind_is(state: &AbstractState, index: u8, kind: Kind) -> bool {
-    state.local_kind_is(index as usize, kind).unwrap_or(false)
+/// Check whether the local at `index` has the given ability
+pub fn local_has_ability(state: &AbstractState, index: u8, ability: Ability) -> bool {
+    state
+        .local_has_ability(index as usize, ability)
+        .unwrap_or(false)
 }
 
 //---------------------------------------------------------------------------
@@ -200,6 +204,7 @@ pub fn stack_has(
 pub fn stack_has_polymorphic_eq(state: &AbstractState, index1: usize, index2: usize) -> bool {
     if stack_has(state, index2, None) {
         state.stack_peek(index1) == state.stack_peek(index2)
+            && stack_has_ability(state, index1, Ability::Drop)
     } else {
         false
     }
@@ -237,7 +242,7 @@ pub fn stack_ref_polymorphic_eq(state: &AbstractState, index1: usize, index2: us
                 SignatureToken::MutableReference(token) | SignatureToken::Reference(token) => {
                     let abstract_value_inner = AbstractValue {
                         token: (*token).clone(),
-                        kind: kind_for_token(&state, &*token, &state.instantiation[..]),
+                        abilities: abilities_for_token(&state, &*token, &state.instantiation[..]),
                     };
                     return Some(abstract_value_inner) == state.stack_peek(index2);
                 }
@@ -385,7 +390,7 @@ pub fn stack_satisfies_struct_signature(
             token_view.as_inner().clone()
         };
         let has = if let SignatureToken::TypeParameter(idx) = &ty {
-            if stack_kind_is_subkind(state, i, type_parameters[*idx as usize]) {
+            if stack_has_all_abilities(state, i, type_parameters[*idx as usize]) {
                 let stack_tok = state.stack_peek(i).unwrap();
                 substitution.check_and_add(state, stack_tok.token, ty)
             } else {
@@ -394,7 +399,7 @@ pub fn stack_satisfies_struct_signature(
         } else {
             let abstract_value = AbstractValue {
                 token: ty,
-                kind: kind(&state.module.module, token_view.as_inner(), type_parameters),
+                abilities: abilities(&state.module.module, token_view.as_inner(), type_parameters),
             };
             stack_has(state, i, Some(abstract_value))
         };
@@ -426,17 +431,14 @@ pub fn get_struct_instantiation_for_state(
     let struct_def = state.module.module.struct_def_at(struct_index);
     let struct_def = StructDefinitionView::new(&state.module.module, struct_def);
     let typs = struct_def.type_parameters();
-    for (index, kind) in typs.iter().enumerate() {
+    for (index, abilities) in typs.iter().enumerate() {
         if !partial_instantiation.subst.contains_key(&index) {
-            match kind {
-                Kind::All | Kind::Copyable => {
-                    partial_instantiation
-                        .subst
-                        .insert(index, SignatureToken::U64);
-                }
-                Kind::Resource => {
-                    unimplemented!("[Struct Instantiation] Need to fill in resource type params");
-                }
+            if abilities.has_key() {
+                unimplemented!("[Struct Instantiation] Need to fill in resource type params");
+            } else {
+                partial_instantiation
+                    .subst
+                    .insert(index, SignatureToken::U64);
             }
         }
     }
@@ -471,17 +473,30 @@ pub fn stack_has_struct_inst(
 }
 
 /// Determine if a struct at the given index is a resource
-pub fn struct_is_resource(state: &AbstractState, struct_index: StructDefinitionIndex) -> bool {
+pub fn struct_abilities(
+    state: &AbstractState,
+    struct_index: StructDefinitionIndex,
+    type_args: &Signature,
+) -> AbilitySet {
     let struct_def = state.module.module.struct_def_at(struct_index);
-    StructDefinitionView::new(&state.module.module, struct_def).is_nominal_resource()
+    let struct_handle = state
+        .module
+        .module
+        .struct_handle_at(struct_def.struct_handle);
+    let type_argument_abilities = abilities_for_instantiation(state, &type_args.0);
+    AbilitySet::polymorphic_abilities(struct_handle.abilities, type_argument_abilities)
 }
 
-pub fn struct_inst_is_resource(
+pub fn struct_inst_abilities(
     state: &AbstractState,
     struct_index: StructDefInstantiationIndex,
-) -> bool {
+) -> AbilitySet {
     let struct_inst = state.module.module.struct_instantiation_at(struct_index);
-    struct_is_resource(state, struct_inst.def)
+    let type_args = state
+        .module
+        .module
+        .signature_at(struct_inst.type_parameters);
+    struct_abilities(state, struct_inst.def, type_args)
 }
 
 pub fn stack_struct_has_field_inst(
@@ -580,7 +595,7 @@ pub fn create_struct(
             SignatureToken::StructInstantiation(struct_def.struct_handle, ty_instantiation.clone())
         }
     };
-    let struct_kind = kind_for_token(&state, &sig_tok, &state.instantiation[..]);
+    let struct_kind = abilities_for_token(&state, &sig_tok, &state.instantiation);
     let struct_value = AbstractValue::new_struct(sig_tok, struct_kind);
     state.register_set(struct_value);
     Ok(state)
@@ -631,7 +646,7 @@ pub fn stack_unpack_struct(
         Some(inst) => state.module.instantiantiation_at(inst).clone(),
         None => vec![],
     };
-    let kinds = kinds_for_instantiation(&state_copy, &ty_instantiation);
+    let abilities = abilities_for_instantiation(&state_copy, &ty_instantiation);
     let struct_def = state_copy.module.module.struct_def_at(struct_index);
     let struct_def_view = StructDefinitionView::new(&state_copy.module.module, struct_def);
     let token_views = struct_def_view
@@ -642,7 +657,7 @@ pub fn stack_unpack_struct(
     for token_view in token_views {
         let abstract_value = AbstractValue {
             token: substitute(token_view.as_inner(), &ty_instantiation),
-            kind: kind_for_token(&state, &token_view.as_inner(), &kinds),
+            abilities: abilities_for_token(&state, &token_view.as_inner(), &abilities),
         };
         state = stack_push(&state, abstract_value)?;
     }
@@ -665,7 +680,7 @@ pub fn stack_struct_borrow_field(
 ) -> Result<AbstractState, VMError> {
     let mut state = state.clone();
     let typs = struct_ref_instantiation(&mut state)?;
-    let kinds = kinds_for_instantiation(&state, &typs);
+    let abilities = abilities_for_instantiation(&state, &typs);
     let field_handle = state.module.module.field_handle_at(field_index);
     let struct_def = state.module.module.struct_def_at(field_handle.owner);
     let field_signature = match &struct_def.field_information {
@@ -684,7 +699,7 @@ pub fn stack_struct_borrow_field(
     // the correctness of this.
     let abstract_value = AbstractValue {
         token: SignatureToken::MutableReference(Box::new(reified_field_sig)),
-        kind: kind_for_token(&state, &field_signature, &kinds),
+        abilities: abilities_for_token(&state, &field_signature, &abilities),
     };
     state = stack_push(&state, abstract_value)?;
     Ok(state)
@@ -707,14 +722,14 @@ pub fn register_dereference(state: &AbstractState) -> Result<AbstractState, VMEr
             SignatureToken::MutableReference(token) => {
                 state.register_set(AbstractValue {
                     token: *token,
-                    kind: abstract_value.kind,
+                    abilities: abstract_value.abilities,
                 });
                 Ok(state)
             }
             SignatureToken::Reference(token) => {
                 state.register_set(AbstractValue {
                     token: *token,
-                    kind: abstract_value.kind,
+                    abilities: abstract_value.abilities,
                 });
                 Ok(state)
             }
@@ -739,14 +754,14 @@ pub fn stack_push_register_borrow(
             Mutability::Mutable => {
                 state.stack_push(AbstractValue {
                     token: SignatureToken::MutableReference(Box::new(abstract_value.token)),
-                    kind: abstract_value.kind,
+                    abilities: abstract_value.abilities,
                 });
                 Ok(state)
             }
             Mutability::Immutable => {
                 state.stack_push(AbstractValue {
                     token: SignatureToken::Reference(Box::new(abstract_value.token)),
-                    kind: abstract_value.kind,
+                    abilities: abstract_value.abilities,
                 });
                 Ok(state)
             }
@@ -775,17 +790,17 @@ pub fn stack_satisfies_function_signature(
     let parameters = &state_copy.module.module.signatures()[function_handle.parameters.0 as usize];
     for (i, parameter) in parameters.0.iter().rev().enumerate() {
         let has = if let SignatureToken::TypeParameter(idx) = parameter {
-            if stack_kind_is_subkind(state, i, type_parameters[*idx as usize]) {
+            if stack_has_all_abilities(state, i, type_parameters[*idx as usize]) {
                 let stack_tok = state.stack_peek(i).unwrap();
                 substitution.check_and_add(state, stack_tok.token, parameter.clone())
             } else {
                 false
             }
         } else {
-            let kind = kind(&state.module.module, parameter, type_parameters);
+            let abilities = abilities(&state.module.module, parameter, type_parameters);
             let abstract_value = AbstractValue {
                 token: parameter.clone(),
-                kind,
+                abilities,
             };
             stack_has(&state, i, Some(abstract_value))
         };
@@ -826,11 +841,11 @@ pub fn stack_function_call(
     if let Some(inst) = instantiation {
         ty_instantiation = state_copy.module.instantiantiation_at(inst)
     }
-    let kinds = kinds_for_instantiation(&state_copy, ty_instantiation);
+    let abilities = abilities_for_instantiation(&state_copy, ty_instantiation);
     for return_type in return_.0.iter() {
         let abstract_value = AbstractValue {
             token: substitute(return_type, &ty_instantiation),
-            kind: kind_for_token(&state, return_type, &kinds),
+            abilities: abilities_for_token(&state, return_type, &abilities),
         };
         state = stack_push(&state, abstract_value)?;
     }
@@ -860,17 +875,14 @@ pub fn get_function_instantiation_for_state(
     let function_handle = state.module.module.function_handle_at(func_inst.handle);
     let function_handle = FunctionHandleView::new(&state.module.module, function_handle);
     let typs = function_handle.type_parameters();
-    for (index, kind) in typs.iter().enumerate() {
+    for (index, abilities) in typs.iter().enumerate() {
         if !partial_instantiation.subst.contains_key(&index) {
-            match kind {
-                Kind::All | Kind::Copyable => {
-                    partial_instantiation
-                        .subst
-                        .insert(index, SignatureToken::U64);
-                }
-                Kind::Resource => {
-                    unimplemented!("[Struct Instantiation] Need to fill in resource type params");
-                }
+            if abilities.has_key() {
+                unimplemented!("[Struct Instantiation] Need to fill in resource type params");
+            } else {
+                partial_instantiation
+                    .subst
+                    .insert(index, SignatureToken::U64);
             }
         }
     }
@@ -957,9 +969,9 @@ macro_rules! state_stack_has_integer {
 /// Wrapper for enclosing the arguments of `stack_kind_is` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_stack_kind_is {
+macro_rules! state_stack_has_ability {
     ($e: expr, $a: expr) => {
-        Box::new(move |state| stack_kind_is(state, $e, $a))
+        Box::new(move |state| stack_has_ability(state, $e, $a))
     };
 }
 
@@ -1026,12 +1038,12 @@ macro_rules! state_local_availability_is {
     };
 }
 
-/// Wrapper for enclosing the arguments of `local_kind_is` so that only the `state` needs
+/// Wrapper for enclosing the arguments of `state_local_has_ability` so that only the `state` needs
 /// to be given.
 #[macro_export]
-macro_rules! state_local_kind_is {
+macro_rules! state_local_has_ability {
     ($e: expr, $a: expr) => {
-        Box::new(move |state| local_kind_is(state, $e, $a))
+        Box::new(move |state| local_has_ability(state, $e, $a))
     };
 }
 
@@ -1158,19 +1170,21 @@ macro_rules! state_stack_unpack_struct_inst {
     };
 }
 
-/// Wrapper for enclosing the arguments of `struct_is_resource` so that only the
+/// Wrapper for enclosing the arguments of `struct_abilities` so that only the
 /// `state` needs to be given.
 #[macro_export]
-macro_rules! state_struct_is_resource {
+macro_rules! state_struct_has_key {
     ($e: expr) => {
-        Box::new(move |state| struct_is_resource(state, $e))
+        Box::new(move |state| {
+            struct_abilities(state, $e, &vm::file_format::Signature(vec![])).has_key()
+        })
     };
 }
 
 #[macro_export]
-macro_rules! state_struct_inst_is_resource {
+macro_rules! state_struct_inst_has_key {
     ($e: expr) => {
-        Box::new(move |state| struct_inst_is_resource(state, $e))
+        Box::new(move |state| struct_inst_abilities(state, $e).has_key())
     };
 }
 

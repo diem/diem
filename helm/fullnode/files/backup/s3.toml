@@ -1,0 +1,13 @@
+env_vars = []
+
+[commands]
+create_backup = 'echo "$BACKUP_NAME"'
+create_for_write = '''
+    FILE_HANDLE="$BACKUP_HANDLE/$FILE_NAME"
+    echo "$FILE_HANDLE"
+    exec 1>&-
+    gzip -c | aws s3 cp - "s3://$BUCKET/$SUB_DIR/$FILE_HANDLE"
+'''
+open_for_read = 'aws s3 cp "s3://$BUCKET/$SUB_DIR/$FILE_HANDLE" - | gzip -cd'
+save_metadata_line= 'gzip -c | aws s3 cp - "s3://$BUCKET/$SUB_DIR/metadata/$FILE_NAME"'
+list_metadata_files = '(aws s3 ls s3://$BUCKET/$SUB_DIR/metadata/ ||:) | sed -ne "s#.* \(.*\)#metadata/\1#p"'

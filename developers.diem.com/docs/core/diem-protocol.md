@@ -4,7 +4,7 @@ title: 'Basic Concepts & Terms'
 sidebar_label: Diem Protocol
 ---
 
-The Diem Blockchain (referred to as blockchain in the rest of this page) is a cryptographically authenticated distributed database. This document briefly describes the key concepts of the  blockchain. For a detailed description of all the elements of the  blockchain, refer to the [Diem Blockchain technical paper]().
+The Diem Blockchain (referred to as blockchain in the rest of this page) is a cryptographically authenticated distributed database. This document briefly describes the key concepts of the  blockchain. For a detailed description of all the elements of the  blockchain, refer to the [Diem Blockchain technical paper](/docs/technical-papers/the-diem-blockchain-paper).
 
 The Diem Blockchain is operated by a distributed network of [validator nodes](#validator-node-validators), also known as validators. The validators collectively follow a [consensus protocol](/reference/glossary.md#consensus) to agree on the ordering and execution of transactions on the blockchain.
 

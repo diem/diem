@@ -1,6 +1,7 @@
 ---
 id: security
 title: Security
+hide_right_sidebar: true
 ---
 
 This document outlines security procedures and general policies for the Diem project.
@@ -11,7 +12,6 @@ This document outlines security procedures and general policies for the Diem pro
 
 The Diem team and community take all security bugs in the Diem project
 seriously to ensure the security of the Diem Blockchain.
-
 
 You can also report security bugs by emailing us directly at [security@diem.com](mailto:security@diem.com).
 

@@ -45,5 +45,5 @@ pub const TRANSACTION_DATA_USER: &str = "user";
 pub const TRANSACTION_DATA_UNKNOWN: &str = "unknown";
 
 // Script#type field values, only set unknown type here,
-// other types, plese see https://github.com/diem/diem/blob/master/language/stdlib/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
+// other types, plese see https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
 pub const SCRIPT_UNKNOWN: &str = "unknown";

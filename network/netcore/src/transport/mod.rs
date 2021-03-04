@@ -11,10 +11,9 @@
 //! [`Transport`]: crate::transport::Transport
 //! [`TransportExt`]: crate::transport::TransportExt
 
-use diem_network_address::NetworkAddress;
-use diem_types::PeerId;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{future::Future, stream::Stream};
-use serde::{export::Formatter, Serialize};
+use serde::Serialize;
 use std::fmt;
 
 pub mod and_then;
@@ -43,13 +42,13 @@ impl ConnectionOrigin {
 }
 
 impl fmt::Debug for ConnectionOrigin {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
 impl fmt::Display for ConnectionOrigin {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }

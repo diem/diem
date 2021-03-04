@@ -294,7 +294,7 @@ script {
 use {{default}}::ApprovedPayment;
 use 0x1::XDX::XDX;
 fun main(account: &signer) {
-    let payment_id = x"7";
+    let payment_id = x"07";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
     ApprovedPayment::deposit_to_payee<XDX>(account, {{alice3}}, 1000, payment_id, signature);
 }
@@ -307,7 +307,7 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 fun main(account: &signer) {
-    let pubkey = x"10000000000000000000000000000000000000000000000000000000000000000";
+    let pubkey = x"010000000000000000000000000000000000000000000000000000000000000000";
     ApprovedPayment::publish(account, pubkey);
 }
 }
@@ -320,7 +320,7 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 fun main(account: &signer) {
-    let pubkey = x"100";
+    let pubkey = x"0100";
     ApprovedPayment::publish(account, pubkey);
 }
 }

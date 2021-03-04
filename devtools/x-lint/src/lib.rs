@@ -12,8 +12,9 @@ pub mod package;
 pub mod project;
 pub mod runner;
 
+use camino::Utf8Path;
 use guppy::PackageId;
-use std::{borrow::Cow, fmt, path::Path};
+use std::{borrow::Cow, fmt};
 
 /// Represents a linter.
 pub trait Linter: Send + Sync + fmt::Debug {
@@ -81,12 +82,12 @@ pub enum RunStatus<'l> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum SkipReason<'l> {
-    /// This file was not valid UTF-8.
-    NonUtf8,
+    /// This file's content was not valid UTF-8.
+    NonUtf8Content,
     /// This extension was unsupported.
     UnsupportedExtension(Option<&'l str>),
     /// The given file was unsupported by this linter.
-    UnsupportedFile(&'l Path),
+    UnsupportedFile(&'l Utf8Path),
     /// The given package was unsupported by this linter.
     UnsupportedPackage(&'l PackageId),
     /// The given file was excepted by a glob rule
@@ -162,10 +163,10 @@ pub enum LintKind<'l> {
     Project,
     Package {
         name: &'l str,
-        workspace_path: &'l Path,
+        workspace_path: &'l Utf8Path,
     },
-    FilePath(&'l Path),
-    Content(&'l Path),
+    FilePath(&'l Utf8Path),
+    Content(&'l Utf8Path),
 }
 
 impl<'l> fmt::Display for LintKind<'l> {
@@ -175,9 +176,9 @@ impl<'l> fmt::Display for LintKind<'l> {
             LintKind::Package {
                 name,
                 workspace_path,
-            } => write!(f, "package '{}' (at {})", name, workspace_path.display()),
-            LintKind::FilePath(path) => write!(f, "file path {}", path.display()),
-            LintKind::Content(path) => write!(f, "content {}", path.display()),
+            } => write!(f, "package '{}' (at {})", name, workspace_path),
+            LintKind::FilePath(path) => write!(f, "file path {}", path),
+            LintKind::Content(path) => write!(f, "content {}", path),
         }
     }
 }

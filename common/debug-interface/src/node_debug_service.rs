@@ -15,9 +15,8 @@ pub struct NodeDebugService {
 
 impl NodeDebugService {
     pub fn new(address: SocketAddr, logger: Option<Arc<Logger>>) -> Self {
-        let runtime = Builder::new()
+        let runtime = Builder::new_multi_thread()
             .thread_name("nodedebug")
-            .threaded_scheduler()
             .enable_all()
             .build()
             .expect("[rpc] failed to create runtime");
@@ -68,8 +67,9 @@ impl NodeDebugService {
 
         let routes = log.or(warp::get().and(metrics.or(events)));
 
-        let server = runtime.enter(move || warp::serve(routes).bind(address));
-        runtime.handle().spawn(server);
+        runtime
+            .handle()
+            .spawn(async move { warp::serve(routes).bind(address).await });
 
         Self { runtime }
     }

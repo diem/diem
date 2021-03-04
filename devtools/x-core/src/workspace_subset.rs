@@ -2,20 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{core_config::SubsetConfig, Result, SystemError};
+use camino::Utf8PathBuf;
 use guppy::{
     graph::{
         cargo::{CargoOptions, CargoResolverVersion, CargoSet},
-        feature::{default_filter, FeatureFilter, FeatureQuery, FeatureSet},
-        PackageGraph, PackageMetadata, PackageQuery,
+        feature::{FeatureFilter, FeatureSet, StandardFeatures},
+        DependencyDirection, PackageGraph, PackageMetadata, PackageSet,
     },
     PackageId,
 };
 use serde::Deserialize;
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fs, path::Path};
 use toml::de;
 
 /// Contains information about all the subsets specified in this workspace.
@@ -38,28 +35,31 @@ impl<'g> WorkspaceSubsets<'g> {
         project_root: &Path,
         config: &BTreeMap<String, SubsetConfig>,
     ) -> Result<Self> {
-        let cargo_opts = CargoOptions::new()
-            .with_version(CargoResolverVersion::V2)
-            .with_dev_deps(false);
+        let mut cargo_opts = CargoOptions::new();
+        cargo_opts
+            .set_version(CargoResolverVersion::V2)
+            .set_include_dev(false);
 
         let default_members = Self::read_default_members(project_root)?;
 
         // Look up default members by path.
-        let default_query = graph
-            .query_workspace_paths(&default_members)
+        let initial_packages = graph
+            .resolve_workspace_paths(&default_members)
             .map_err(|err| SystemError::guppy("querying default members", err))?;
-        let default_members = WorkspaceSubset::new(&default_query, default_filter(), &cargo_opts);
+        let default_members =
+            WorkspaceSubset::new(&initial_packages, StandardFeatures::Default, &cargo_opts);
 
         // For each of the subset configs, look up the packages by name.
         let subsets = config
             .iter()
             .map(|(name, config)| {
-                let query = graph
-                    .query_workspace_names(&config.root_members)
+                let initial_packages = graph
+                    .resolve_workspace_names(&config.root_members)
                     .map_err(|err| {
                         SystemError::guppy(format!("querying members for subset '{}'", name), err)
                     })?;
-                let subset = WorkspaceSubset::new(&query, default_filter(), &cargo_opts);
+                let subset =
+                    WorkspaceSubset::new(&initial_packages, StandardFeatures::Default, &cargo_opts);
                 Ok((name.clone(), subset))
             })
             .collect::<Result<_, _>>()?;
@@ -91,7 +91,7 @@ impl<'g> WorkspaceSubsets<'g> {
     // Helper methods
     // ---
 
-    fn read_default_members(project_root: &Path) -> Result<Vec<PathBuf>> {
+    fn read_default_members(project_root: &Path) -> Result<Vec<Utf8PathBuf>> {
         #[derive(Deserialize)]
         struct RootToml {
             workspace: Workspace,
@@ -100,7 +100,7 @@ impl<'g> WorkspaceSubsets<'g> {
         #[derive(Deserialize)]
         struct Workspace {
             #[serde(rename = "default-members")]
-            default_members: Vec<PathBuf>,
+            default_members: Vec<Utf8PathBuf>,
         }
 
         let root_toml = project_root.join("Cargo.toml");
@@ -125,15 +125,15 @@ impl<'g> WorkspaceSubset<'g> {
     /// Creates a new subset by simulating a Cargo build on the specified workspace paths, with
     /// the given feature filter.
     pub fn new<'a>(
-        package_query: &PackageQuery<'g>,
+        initial_packages: &PackageSet<'g>,
         feature_filter: impl FeatureFilter<'g>,
         cargo_opts: &CargoOptions<'_>,
     ) -> Self {
         // Use the Cargo resolver to figure out which packages will be included.
-        let build_set = package_query
-            .to_feature_query(feature_filter)
-            .resolve_cargo(cargo_opts)
-            .expect("resolve cargo should always succeed");
+        let build_set = initial_packages
+            .to_feature_set(feature_filter)
+            .into_cargo_set(cargo_opts)
+            .expect("into_cargo_set should always succeed");
         let unified_set = build_set.host_features().union(build_set.target_features());
 
         Self {
@@ -142,17 +142,17 @@ impl<'g> WorkspaceSubset<'g> {
         }
     }
 
-    /// Returns the original query that this subset was constructed from.
-    pub fn query(&self) -> &FeatureQuery<'g> {
-        self.build_set.original_query()
+    /// Returns the initial members that this subset was constructed from.
+    pub fn initials(&self) -> &FeatureSet<'g> {
+        self.build_set.initials()
     }
 
     /// Returns the status of the given package ID in the subset.
     pub fn status_of(&self, package_id: &PackageId) -> WorkspaceStatus {
         if self
             .build_set
-            .original_query()
-            .starts_from_package(package_id)
+            .initials()
+            .contains_package(package_id)
             .unwrap_or(false)
         {
             WorkspaceStatus::RootMember
@@ -170,7 +170,10 @@ impl<'g> WorkspaceSubset<'g> {
 
     /// Returns a list of root packages in this subset, ignoring transitive dependencies.
     pub fn root_members<'a>(&'a self) -> impl Iterator<Item = PackageMetadata<'g>> + 'a {
-        self.build_set.original_query().initial_packages()
+        self.build_set
+            .initials()
+            .packages_with_features(DependencyDirection::Forward)
+            .map(|f| *f.package())
     }
 
     /// Returns the set of packages and features that would be built from this subset.

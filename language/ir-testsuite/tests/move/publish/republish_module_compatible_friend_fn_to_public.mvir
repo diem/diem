@@ -1,0 +1,33 @@
+module N {
+    foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+    public(friend) foo() {
+        return;
+    }
+}
+
+//! new-transaction
+
+module N {
+    import {{default}}.M;
+    foo() {
+        M.foo();
+        return;
+    }
+}
+
+//! new-transaction
+
+module M {
+    friend {{default}}.N;
+    public foo() {
+        return;
+    }
+}

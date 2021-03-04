@@ -7,14 +7,20 @@ use crate::{
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
 };
+use anyhow::{ensure, Result};
 use diem_config::config::{NodeConfig, RoleType};
 use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
-use futures::future::join_all;
+use futures::future::{join_all, Either};
 use rand::{rngs::OsRng, RngCore};
 use serde_json::{map::Map, Value};
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    ops::Sub,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
@@ -57,6 +63,15 @@ struct RpcResponseLog<'a> {
     response: &'a JsonRpcResponse,
 }
 
+// HealthCheckParams is optional params for different layer's health check.
+// If no param is provided, server return 200 by default to indicate HTTP server is running health.
+#[derive(serde::Deserialize)]
+struct HealthCheckParams {
+    // Health check returns 200 when this param is provided and meet the following condition:
+    //   server latest ledger info timestamp >= server current time timestamp + duration_secs
+    pub duration_secs: Option<u64>,
+}
+
 #[macro_export]
 macro_rules! log_response {
     ($trace_id: expr, $resp: expr, $is_batch: expr) => {
@@ -82,21 +97,22 @@ pub fn bootstrap(
     batch_size_limit: u16,
     page_size_limit: u16,
     content_len_limit: usize,
+    tls_cert_path: &Option<String>,
+    tls_key_path: &Option<String>,
     diem_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
 ) -> Runtime {
-    let runtime = Builder::new()
+    let runtime = Builder::new_multi_thread()
         .thread_name("json-rpc")
-        .threaded_scheduler()
         .enable_all()
         .build()
         .expect("[json-rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
     let service = JsonRpcService::new(
-        diem_db,
+        diem_db.clone(),
         mp_sender,
         role,
         chain_id,
@@ -147,7 +163,10 @@ pub fn bootstrap(
 
     let health_route = warp::path!("-" / "healthy")
         .and(warp::path::end())
-        .map(|| "diem-node:ok");
+        .and(warp::query().map(move |params: HealthCheckParams| params))
+        .and(warp::any().map(move || diem_db.clone()))
+        .and(warp::any().map(SystemTime::now))
+        .and_then(health_check);
 
     let full_route = health_route.or(route_v1.or(route_root));
 
@@ -158,7 +177,17 @@ pub fn bootstrap(
     //
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
-    let server = runtime.enter(move || warp::serve(full_route).bind(address));
+    let _guard = runtime.enter();
+    let server = match tls_cert_path {
+        None => Either::Left(warp::serve(full_route).bind(address)),
+        Some(cert_path) => Either::Right(
+            warp::serve(full_route)
+                .tls()
+                .cert_path(cert_path)
+                .key_path(tls_key_path.as_ref().unwrap())
+                .bind(address),
+        ),
+    };
     runtime.handle().spawn(server);
     runtime
 }
@@ -175,11 +204,43 @@ pub fn bootstrap_from_config(
         config.json_rpc.batch_size_limit,
         config.json_rpc.page_size_limit,
         config.json_rpc.content_length_limit,
+        &config.json_rpc.tls_cert_path,
+        &config.json_rpc.tls_key_path,
         diem_db,
         mp_sender,
         config.base.role,
         chain_id,
     )
+}
+
+async fn health_check(
+    params: HealthCheckParams,
+    db: Arc<dyn DbReader>,
+    now: SystemTime,
+) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    if let Some(duration) = params.duration_secs {
+        let ledger_info = db
+            .get_latest_ledger_info()
+            .map_err(|_| reject::custom(HealthCheckError))?;
+        let timestamp = ledger_info.ledger_info().timestamp_usecs();
+
+        check_latest_ledger_info_timestamp(duration, timestamp, now)
+            .map_err(|_| reject::custom(HealthCheckError))?;
+    }
+    Ok(Box::new("diem-node:ok"))
+}
+
+pub fn check_latest_ledger_info_timestamp(
+    duration_sec: u64,
+    timestamp_usecs: u64,
+    now: SystemTime,
+) -> Result<()> {
+    let timestamp = Duration::from_micros(timestamp_usecs);
+    let expectation = now
+        .sub(Duration::from_secs(duration_sec))
+        .duration_since(UNIX_EPOCH)?;
+    ensure!(timestamp >= expectation);
+    Ok(())
 }
 
 /// JSON RPC entry point
@@ -340,21 +401,12 @@ async fn rpc_request_handler(
     }
 
     // parse parameters
-    let params;
-    match request.get("params") {
-        Some(Value::Array(parameters)) => {
-            params = parameters.to_vec();
-        }
+    let params = match request.get("params") {
+        Some(Value::Array(parameters)) => parameters.to_vec(),
         _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_params(None),
-                request_type_label,
-                "unknown",
-            );
-            return response;
+            vec![]
         }
-    }
+    };
 
     let request_params = JsonRpcRequest {
         trace_id,
@@ -466,3 +518,7 @@ fn verify_protocol(request: &Map<String, Value>) -> Result<(), JsonRpcError> {
 struct DatabaseError;
 
 impl Reject for DatabaseError {}
+
+#[derive(Debug)]
+struct HealthCheckError;
+impl warp::reject::Reject for HealthCheckError {}

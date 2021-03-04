@@ -69,7 +69,7 @@ impl<'env> Abigen<'env> {
     /// Generates ABIs for all script modules in the environment (excluding the dependency set).
     pub fn gen(&mut self) {
         for module in self.env.get_modules() {
-            if module.is_script_module() && !module.is_dependency() {
+            if module.is_script_module() && module.is_target() {
                 let mut path = PathBuf::from(&self.options.output_directory);
                 path.push(
                     PathBuf::from(module.get_source_path())
@@ -155,7 +155,9 @@ impl<'env> Abigen<'env> {
                     U128 => TypeTag::U128,
                     Address => TypeTag::Address,
                     Signer => TypeTag::Signer,
-                    Num | Range | TypeValue => bail!("Type {:?} is not allowed in scripts.", ty0),
+                    Num | Range | TypeValue | EventStore => {
+                        bail!("Type {:?} is not allowed in scripts.", ty0)
+                    }
                 }
             }
             Reference(_, _) => {
@@ -171,6 +173,7 @@ impl<'env> Abigen<'env> {
             | TypeParameter(_)
             | Fun(_, _)
             | TypeDomain(_)
+            | ResourceDomain(..)
             | TypeLocal(_)
             | Error
             | Var(_) => bail!("Type {:?} is not allowed in scripts.", ty0),

@@ -61,7 +61,13 @@ impl StorageClient {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> std::result::Result<(Option<AccountStateBlob>, SparseMerkleProof), Error> {
+    ) -> std::result::Result<
+        (
+            Option<AccountStateBlob>,
+            SparseMerkleProof<AccountStateBlob>,
+        ),
+        Error,
+    > {
         self.request(StorageRequest::GetAccountStateWithProofByVersionRequest(
             Box::new(GetAccountStateWithProofByVersionRequest::new(
                 address, version,
@@ -90,7 +96,10 @@ impl DbReader for StorageClient {
         &self,
         address: AccountAddress,
         version: u64,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         Ok(Self::get_account_state_with_proof_by_version(
             self, address, version,
         )?)

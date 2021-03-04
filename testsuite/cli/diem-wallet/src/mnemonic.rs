@@ -52,7 +52,7 @@ impl Mnemonic {
     pub fn from(s: &str) -> Result<Mnemonic> {
         let words: Vec<_> = s.split(' ').collect();
         let len = words.len();
-        if len < 12 || len > 24 || len % 3 != 0 {
+        if !(12..=24).contains(&len) || len % 3 != 0 {
             return Err(WalletError::DiemWalletGeneric(
                 "Mnemonic must have a word count of the following lengths: 24, 21, 18, 15, 12"
                     .to_string(),
@@ -94,7 +94,7 @@ impl Mnemonic {
     /// Generate mnemonic from entropy byte-array.
     pub fn mnemonic(entropy: &[u8]) -> Result<Mnemonic> {
         let len = entropy.len();
-        if len < 16 || len > 32 || len % 4 != 0 {
+        if !(16..=32).contains(&len) || len % 4 != 0 {
             return Err(WalletError::DiemWalletGeneric(
                 "Entropy data for mnemonic must have one of the following byte lengths: \
                  32, 28, 24, 20, 16"

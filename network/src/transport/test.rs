@@ -6,37 +6,45 @@ use crate::{
     transport::*,
 };
 use bytes::{Bytes, BytesMut};
-use diem_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use diem_config::{
+    config::{Peer, PeerRole, PeerSet, HANDSHAKE_VERSION},
+    network_id::NetworkContext,
+};
 use diem_crypto::{test_utils::TEST_SEED, traits::Uniform, x25519};
 use diem_infallible::RwLock;
-use diem_network_address::{NetworkAddress, Protocol::*};
-use diem_types::{chain_id::ChainId, PeerId};
+use diem_time_service::MockTimeService;
+use diem_types::{
+    chain_id::ChainId,
+    network_address::{NetworkAddress, Protocol::*},
+    PeerId,
+};
 use futures::{future, io::AsyncWriteExt, stream::StreamExt};
 use netcore::{
     framing::{read_u16frame, write_u16frame},
     transport::{memory, ConnectionOrigin, Transport},
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    sync::Arc,
-};
+use std::{collections::HashMap, io, sync::Arc};
 use tokio::runtime::Runtime;
 
 /// helper to build trusted peer map
 fn build_trusted_peers(
     id1: PeerId,
     key1: &x25519::PrivateKey,
+    role1: PeerRole,
     id2: PeerId,
     key2: &x25519::PrivateKey,
-) -> Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>> {
+    role2: PeerRole,
+) -> Arc<RwLock<PeerSet>> {
     let pubkey_set1 = [key1.public_key()].iter().copied().collect();
     let pubkey_set2 = [key2.public_key()].iter().copied().collect();
     Arc::new(RwLock::new(
-        vec![(id1, pubkey_set1), (id2, pubkey_set2)]
-            .into_iter()
-            .collect(),
+        vec![
+            (id1, Peer::new(Vec::new(), pubkey_set1, role1)),
+            (id2, Peer::new(Vec::new(), pubkey_set2, role2)),
+        ]
+        .into_iter()
+        .collect(),
     ))
 }
 
@@ -51,9 +59,10 @@ fn setup<TTransport>(
     auth: Auth,
 ) -> (
     Runtime,
+    MockTimeService,
     (PeerId, DiemNetTransport<TTransport>),
     (PeerId, DiemNetTransport<TTransport>),
-    Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    Arc<RwLock<PeerSet>>,
     SupportedProtocols,
 )
 where
@@ -64,6 +73,7 @@ where
     TTransport::Listener: Send + 'static,
 {
     let rt = Runtime::new().unwrap();
+    let time_service = TimeService::mock();
 
     let mut rng = StdRng::from_seed(TEST_SEED);
     let listener_key = x25519::PrivateKey::generate(&mut rng);
@@ -78,8 +88,10 @@ where
                 let trusted_peers = build_trusted_peers(
                     dialer_peer_id,
                     &dialer_key,
+                    PeerRole::Validator,
                     listener_peer_id,
                     &listener_key,
+                    PeerRole::Validator,
                 );
 
                 (
@@ -91,13 +103,18 @@ where
                 )
             }
             Auth::MaybeMutual => {
-                let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
-                let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
+                let listener_peer_id = diem_types::account_address::from_identity_public_key(
+                    listener_key.public_key(),
+                );
+                let dialer_peer_id =
+                    diem_types::account_address::from_identity_public_key(dialer_key.public_key());
                 let trusted_peers = build_trusted_peers(
                     dialer_peer_id,
                     &dialer_key,
+                    PeerRole::Validator,
                     listener_peer_id,
                     &listener_key,
+                    PeerRole::Validator,
                 );
 
                 (
@@ -109,8 +126,11 @@ where
                 )
             }
             Auth::ServerOnly => {
-                let listener_peer_id = PeerId::from_identity_public_key(listener_key.public_key());
-                let dialer_peer_id = PeerId::from_identity_public_key(dialer_key.public_key());
+                let listener_peer_id = diem_types::account_address::from_identity_public_key(
+                    listener_key.public_key(),
+                );
+                let dialer_peer_id =
+                    diem_types::account_address::from_identity_public_key(dialer_key.public_key());
                 let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
                 (
@@ -130,6 +150,7 @@ where
     let listener_transport = DiemNetTransport::new(
         base_transport.clone(),
         NetworkContext::mock_with_peer_id(listener_peer_id),
+        time_service.clone(),
         listener_key,
         listener_auth_mode,
         HANDSHAKE_VERSION,
@@ -141,6 +162,7 @@ where
     let dialer_transport = DiemNetTransport::new(
         base_transport,
         NetworkContext::mock_with_peer_id(dialer_peer_id),
+        time_service.clone(),
         dialer_key,
         dialer_auth_mode,
         HANDSHAKE_VERSION,
@@ -151,6 +173,7 @@ where
 
     (
         rt,
+        time_service.into_mock(),
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
@@ -200,18 +223,18 @@ fn test_transport_success<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         _trusted_peers,
         supported_protocols,
     ) = setup(base_transport, auth);
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
     let supported_protocols_clone = supported_protocols.clone();
 
@@ -283,7 +306,8 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
@@ -293,11 +317,10 @@ fn test_transport_rejects_unauthed_dialer<TTransport>(
     // remove dialer from trusted_peers set
     trusted_peers.write().remove(&dialer_peer_id).unwrap();
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
 
     // we try to accept one inbound connection from the dialer. however, the
@@ -337,18 +360,18 @@ fn test_transport_maybe_mutual<TTransport>(
     TTransport::Listener: Send + 'static,
 {
     let (
-        mut rt,
+        rt,
+        _mock_time,
         (listener_peer_id, listener_transport),
         (dialer_peer_id, dialer_transport),
         trusted_peers,
         supported_protocols,
     ) = setup(base_transport, Auth::MaybeMutual);
 
-    let (mut inbounds, listener_addr) = rt.enter(|| {
-        listener_transport
-            .listen_on(listen_addr.parse().unwrap())
-            .unwrap()
-    });
+    let _guard = rt.enter();
+    let (mut inbounds, listener_addr) = listener_transport
+        .listen_on(listen_addr.parse().unwrap())
+        .unwrap();
     expect_formatted_addr(&listener_addr);
     let supported_protocols_clone = supported_protocols.clone();
 
@@ -372,7 +395,14 @@ fn test_transport_maybe_mutual<TTransport>(
             conn.metadata.application_protocols,
             supported_protocols_clone,
         );
-        assert_eq!(conn.metadata.trust_level, TrustLevel::Trusted);
+        assert_eq!(
+            conn.metadata.role,
+            trusted_peers
+                .read()
+                .get(&conn.metadata.remote_peer_id)
+                .unwrap()
+                .role
+        );
 
         // test the socket works
         let msg = write_read_msg(&mut conn.socket, b"foobar").await;
@@ -399,7 +429,7 @@ fn test_transport_maybe_mutual<TTransport>(
             conn.metadata.application_protocols,
             supported_protocols_clone,
         );
-        assert_eq!(conn.metadata.trust_level, TrustLevel::Untrusted);
+        assert_eq!(conn.metadata.role, PeerRole::Unknown);
 
         // test the socket works
         let msg = write_read_msg(&mut conn.socket, b"foobar").await;

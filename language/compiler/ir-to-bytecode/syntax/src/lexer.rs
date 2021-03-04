@@ -84,6 +84,8 @@ pub enum Tok {
     Native,
     Old,
     Public,
+    Script,
+    Friend,
     Requires,
     Resource,
     /// Return in the specification language
@@ -415,6 +417,7 @@ fn get_name_token(name: &str) -> Tok {
         "ensures" => Tok::Ensures,
         "false" => Tok::False,
         "freeze" => Tok::Freeze,
+        "friend" => Tok::Friend,
         "global" => Tok::Global,              // spec language
         "global_exists" => Tok::GlobalExists, // spec language
         "to_u8" => Tok::ToU8,
@@ -434,6 +437,7 @@ fn get_name_token(name: &str) -> Tok {
         "resource" => Tok::Resource,
         "RET" => Tok::SpecReturn,
         "return" => Tok::Return,
+        "script" => Tok::Script,
         "signer" => Tok::Signer,
         "struct" => Tok::Struct,
         "succeeds_if" => Tok::SucceedsIf,

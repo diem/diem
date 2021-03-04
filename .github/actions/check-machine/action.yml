@@ -1,0 +1,62 @@
+name: "Check CI Machine"
+description: |
+  GHA hardware seems to vary so lets keep track.
+inputs:
+  webhook-gha-hardware:
+    description: slack webhook url to send failed hardware messages.
+    required: true
+  min-cpu:
+    description: Minimum number of expected CPUs.
+    required: false
+    default: "16"
+  min-ram:
+    description: Minimum gig of ram expected.
+    required: false
+    default: "57"
+runs:
+  using: "composite"
+  steps:
+    - name: CPUInfo
+      shell: bash
+      env:
+        WEBHOOK: ${{ inputs.webhook-gha-hardware }}
+      run: |
+        echo webhook-gha-hardware: ${WEBHOOK}
+        cat /proc/cpuinfo | grep "model name" | head -1 | tee -a /tmp/machine_info
+        cat /proc/cpuinfo | grep "cpu cores" | head -1 | tee -a /tmp/machine_info
+        nproc | tee -a /tmp/machine_info
+        nproc >> /tmp/cpu_count
+    - name: MemInfo
+      shell: bash
+      run: |
+        cat /proc/meminfo | grep MemTotal | tee -a /tmp/machine_info
+        cat /proc/meminfo | grep MemTotal | sed 's/[^0-9]*//g' >> /tmp/mem_count
+    - name: Disk Free
+      shell: bash
+      run: |
+        df -h
+    - name: Message Slack channel if Machines Vary From Norm.
+      shell: bash
+      env:
+        WEBHOOK: ${{ inputs.webhook-gha-hardware }}
+      run: |
+        set -x
+        # specify the expected machine.
+        cpu=$(cat /tmp/cpu_count)
+        mem=$(cat /tmp/mem_count)
+        mismatch=false
+        if [[ "$cpu" != "${{ inputs.min-cpu }}" ]]; then
+          mismatch=true
+        fi
+        if [[ "$mem" -lt "${{ inputs.min-ram }}000000" ]]; then
+          mismatch=true
+        fi
+        build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        echo BUILD_URL=$build_url
+        if [[ "$mismatch" == "true" ]]; then
+          if [[ -n "${WEBHOOK}" ]]; then
+            ./.github/actions/slack-file/message_file_to_slack.sh -w "${WEBHOOK}" -f /tmp/machine_info -u "${build_url}"
+          else
+            echo Chances are this is PR, and secrest are not available, not reporting machine.
+          fi
+        fi

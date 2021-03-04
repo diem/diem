@@ -11,7 +11,7 @@ use std::time::Duration;
 #[derive(Clone)]
 pub struct MempoolTransaction {
     pub txn: SignedTransaction,
-    // system expiration time of transaction. It should be removed from mempool by that time
+    // System expiration time of the transaction. It should be removed from mempool by that time.
     pub expiration_time: Duration,
     pub gas_amount: u64,
     pub ranking_score: u64,
@@ -50,13 +50,12 @@ impl MempoolTransaction {
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize, Hash, Serialize)]
 pub enum TimelineState {
-    // transaction is ready for broadcast
-    // Associated integer represents it's position in log of such transactions
+    // The transaction is ready for broadcast.
+    // Associated integer represents it's position in the log of such transactions.
     Ready(u64),
-    // transaction is not yet ready for broadcast
-    // but it might change in a future
+    // Transaction is not yet ready for broadcast, but it might change in a future.
     NotReady,
-    // transaction will never be qualified for broadcasting
-    // currently we don't broadcast transactions originated on other peers
+    // Transaction will never be qualified for broadcasting.
+    // Currently we don't broadcast transactions originated on other peers.
     NonQualified,
 }

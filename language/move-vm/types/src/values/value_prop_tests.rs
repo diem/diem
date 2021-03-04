@@ -1,15 +1,15 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::values::{prop::layout_kinfo_and_value_strategy, Value};
+use crate::values::{prop::layout_and_value_strategy, Value};
 use move_core_types::value::MoveValue;
 use proptest::prelude::*;
 
 proptest! {
     #[test]
-    fn serializer_round_trip((layout, kinfo, value) in layout_kinfo_and_value_strategy()) {
+    fn serializer_round_trip((layout, value) in layout_and_value_strategy()) {
         let blob = value.simple_serialize(&layout).expect("must serialize");
-        let value_deserialized = Value::simple_deserialize(&blob, &kinfo, &layout).expect("must deserialize");
+        let value_deserialized = Value::simple_deserialize(&blob, &layout).expect("must deserialize");
         assert!(value.equals(&value_deserialized).unwrap());
 
         let move_value = value.as_move_value(&layout);

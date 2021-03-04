@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format::{
-    Kind, Signature, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
+    Ability, AbilitySet, Signature, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
     TypeParameterIndex,
 };
 use proptest::{
@@ -12,26 +12,48 @@ use proptest::{
 };
 
 #[derive(Clone, Debug)]
-pub enum KindGen {
-    Resource,
-    Copyable,
-    All,
+pub enum AbilitySetGen {
+    Empty,
+    Copy,
+    Drop,
+    Store,
+    CopyDrop,
+    CopyStore,
+    DropStore,
+    CopyDropStore,
 }
 
-impl KindGen {
+impl AbilitySetGen {
     pub fn strategy() -> impl Strategy<Value = Self> {
-        use KindGen::*;
+        use AbilitySetGen as G;
 
-        static KINDS: &[KindGen] = &[Resource, Copyable, All];
+        static KINDS: &[AbilitySetGen] = &[
+            G::Empty,
+            G::Copy,
+            G::Drop,
+            G::Store,
+            G::CopyDrop,
+            G::CopyStore,
+            G::DropStore,
+            G::CopyDropStore,
+        ];
 
         select(KINDS)
     }
 
-    pub fn materialize(self) -> Kind {
+    pub fn materialize(self) -> AbilitySet {
+        use AbilitySetGen as G;
+
+        let empty = AbilitySet::EMPTY;
         match self {
-            KindGen::Resource => Kind::Resource,
-            KindGen::Copyable => Kind::Copyable,
-            KindGen::All => Kind::All,
+            G::Empty => empty,
+            G::Copy => empty | Ability::Copy,
+            G::Drop => empty | Ability::Drop,
+            G::Store => empty | Ability::Store,
+            G::CopyDrop => empty | Ability::Copy | Ability::Drop,
+            G::CopyStore => empty | Ability::Copy | Ability::Store,
+            G::DropStore => empty | Ability::Drop | Ability::Store,
+            G::CopyDropStore => empty | Ability::Copy | Ability::Drop | Ability::Store,
         }
     }
 }
@@ -152,10 +174,11 @@ impl SignatureTokenGen {
                         SignatureToken::Struct(StructHandleIndex(struct_idx as TableIndex))
                     } else {
                         let mut type_params = vec![];
-                        for kind in &sh.type_parameters {
-                            match kind {
-                                Kind::Copyable | Kind::All => type_params.push(SignatureToken::U64),
-                                Kind::Resource => type_params.push(SignatureToken::Signer),
+                        for abs in &sh.type_parameters {
+                            assert!(!abs.has_key());
+                            match (abs.has_copy(), abs.has_drop(), abs.has_store()) {
+                                (false, true, false) => type_params.push(SignatureToken::Signer),
+                                _ => type_params.push(SignatureToken::U64),
                             }
                         }
                         SignatureToken::StructInstantiation(

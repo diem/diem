@@ -3,6 +3,7 @@
 
 use crate::{prelude::*, LintContext};
 use guppy::graph::PackageGraph;
+use hakari::Hakari;
 use std::path::{Path, PathBuf};
 use x_core::{WorkspaceSubset, XCoreContext};
 
@@ -32,6 +33,11 @@ impl<'l> ProjectContext<'l> {
         Self { core }
     }
 
+    /// Returns the core context.
+    pub fn core(&self) -> &'l XCoreContext {
+        self.core
+    }
+
     /// Returns the project root.
     pub fn project_root(&self) -> &'l Path {
         self.core.project_root()
@@ -53,6 +59,11 @@ impl<'l> ProjectContext<'l> {
     /// those that Cargo would ignore.
     pub fn default_members(&self) -> Result<&WorkspaceSubset> {
         Ok(self.core.subsets()?.default_members())
+    }
+
+    /// Returns Hakari information.
+    pub fn hakari(&self) -> Result<Hakari<'l, 'static>> {
+        Ok(self.core.hakari_builder()?.compute())
     }
 }
 

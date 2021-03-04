@@ -7,7 +7,9 @@ mod genesis_context;
 pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
-use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::{
+    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
+};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
@@ -22,31 +24,29 @@ use diem_types::{
     contract_event::ContractEvent,
     on_chain_config::VMPublishingOption,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
-        WriteSetPayload,
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, WriteSetPayload,
     },
 };
-use diem_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
+use diem_vm::{convert_changeset_and_events, data_cache::StateViewCache};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
+    transaction_argument::convert_txn_args,
+    value::{serialize_values, MoveValue},
 };
 use move_vm_runtime::{
-    data_cache::TransactionEffects,
     logging::{LogContext, NoContextLog},
     move_vm::MoveVM,
     session::Session,
 };
-use move_vm_types::{
-    gas_schedule::{zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use std::collections::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
-use vm::{file_format::SignatureToken, CompiledModule};
+use vm::CompiledModule;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -84,21 +84,11 @@ pub fn encode_genesis_transaction(
         &treasury_compliance_key,
         operator_assignments,
         operator_registrations,
-        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
+        stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(), // Must use compiled stdlib,
         vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::allowlist())),
+            .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
         chain_id,
     )))
-}
-
-fn merge_txn_effects(
-    mut effects_1: TransactionEffects,
-    effects_2: TransactionEffects,
-) -> TransactionEffects {
-    effects_1.resources.extend(effects_2.resources);
-    effects_1.modules.extend(effects_2.modules);
-    effects_1.events.extend(effects_2.events);
-    effects_1
 }
 
 pub fn encode_genesis_change_set(
@@ -106,15 +96,17 @@ pub fn encode_genesis_change_set(
     treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
-    stdlib_modules: &[CompiledModule],
+    stdlib_modules: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> ChangeSet {
+    let mut stdlib_module_map: BTreeMap<ModuleId, &Vec<u8>> = BTreeMap::new();
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
-        let module_id = module.self_id();
+        let module_id = CompiledModule::deserialize(module).unwrap().self_id();
         state_view.add_module(&module_id, &module);
+        stdlib_module_map.insert(module_id, module);
     }
     let data_cache = StateViewCache::new(&state_view);
 
@@ -154,45 +146,31 @@ pub fn encode_genesis_change_set(
         create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
     }
 
-    let effects_1 = session.finish().unwrap();
+    let (mut changeset1, mut events1) = session.finish().unwrap();
 
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, &log_context, stdlib_modules);
-    let effects_2 = session.finish().unwrap();
+    publish_stdlib(&mut session, &log_context, stdlib_module_map);
+    let (changeset2, events2) = session.finish().unwrap();
 
-    let effects = merge_txn_effects(effects_1, effects_2);
+    changeset1.squash(changeset2).unwrap();
+    events1.extend(events2);
 
-    let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();
+    let (write_set, events) = convert_changeset_and_events(changeset1, events1).unwrap();
 
     assert!(!write_set.iter().any(|(_, op)| op.is_deletion()));
     verify_genesis_write_set(&events);
     ChangeSet::new(write_set, events)
 }
 
-/// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect()
-}
-
 fn exec_function(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    sender: AccountAddress,
     module_name: &str,
     function_name: &str,
     ty_args: Vec<TypeTag>,
-    args: Vec<Value>,
+    args: Vec<Vec<u8>>,
 ) {
     session
         .execute_function(
@@ -203,7 +181,6 @@ fn exec_function(
             &Identifier::new(function_name).unwrap(),
             ty_args,
             args,
-            sender,
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
             log_context,
         )
@@ -214,7 +191,7 @@ fn exec_function(
                 function_name,
                 e.into_vm_status()
             )
-        })
+        });
 }
 
 fn exec_script(
@@ -251,14 +228,13 @@ fn create_and_initialize_main_accounts(
     let root_diem_root_address = account_config::diem_root_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
 
-    let initial_allow_list = Value::constant_vector_generic(
+    let initial_allow_list = MoveValue::Vector(
         publishing_option
             .script_allow_list
             .into_iter()
-            .map(|hash| Value::vector_u8(hash.to_vec().into_iter())),
-        &Box::new(SignatureToken::Vector(Box::new(SignatureToken::U8))),
-    )
-    .unwrap();
+            .map(|hash| MoveValue::vector_u8(hash.to_vec().into_iter().collect()))
+            .collect(),
+    );
 
     let genesis_gas_schedule = &INITIAL_GAS_SCHEDULE;
     let instr_gas_costs = bcs::to_bytes(&genesis_gas_schedule.instruction_table)
@@ -269,21 +245,20 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_diem_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
-        vec![
-            Value::transaction_argument_signer_reference(root_diem_root_address),
-            Value::transaction_argument_signer_reference(tc_account_address),
-            Value::vector_u8(diem_root_auth_key.to_vec()),
-            Value::vector_u8(treasury_compliance_auth_key.to_vec()),
+        serialize_values(&vec![
+            MoveValue::Signer(root_diem_root_address),
+            MoveValue::Signer(tc_account_address),
+            MoveValue::vector_u8(diem_root_auth_key.to_vec()),
+            MoveValue::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
-            Value::bool(publishing_option.is_open_module),
-            Value::vector_u8(instr_gas_costs),
-            Value::vector_u8(native_gas_costs),
-            Value::u8(chain_id.id()),
-        ],
+            MoveValue::Bool(publishing_option.is_open_module),
+            MoveValue::vector_u8(instr_gas_costs),
+            MoveValue::vector_u8(native_gas_costs),
+            MoveValue::U8(chain_id.id()),
+        ]),
     );
 
     // Bump the sequence number for the Association account. If we don't do this and a
@@ -293,17 +268,16 @@ fn create_and_initialize_main_accounts(
     exec_function(
         session,
         log_context,
-        root_diem_root_address,
         "DiemAccount",
         "epilogue",
         vec![xdx_ty.clone()],
-        vec![
-            Value::transaction_argument_signer_reference(root_diem_root_address),
-            Value::u64(/* txn_sequence_number */ 0),
-            Value::u64(/* txn_gas_price */ 0),
-            Value::u64(/* txn_max_gas_units */ 0),
-            Value::u64(/* gas_units_remaining */ 0),
-        ],
+        serialize_values(&vec![
+            MoveValue::Signer(root_diem_root_address),
+            MoveValue::U64(/* txn_sequence_number */ 0),
+            MoveValue::U64(/* txn_gas_price */ 0),
+            MoveValue::U64(/* txn_max_gas_units */ 0),
+            MoveValue::U64(/* gas_units_remaining */ 0),
+        ]),
     );
 }
 
@@ -340,18 +314,15 @@ fn create_and_initialize_testnet_minting(
     exec_function(
         session,
         log_context,
-        account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
         vec![account_config::xus_tag()],
-        vec![
-            Value::transaction_argument_signer_reference(
-                account_config::treasury_compliance_account_address(),
-            ),
-            Value::address(account_config::testnet_dd_account_address()),
-            Value::u64(3),
-            Value::u64(std::u64::MAX),
-        ],
+        serialize_values(&vec![
+            MoveValue::Signer(account_config::treasury_compliance_account_address()),
+            MoveValue::Address(account_config::testnet_dd_account_address()),
+            MoveValue::U64(3),
+            MoveValue::U64(std::u64::MAX),
+        ]),
     );
 
     // mint XUS.
@@ -456,44 +427,36 @@ fn create_and_initialize_owners_operators(
         exec_function(
             session,
             log_context,
-            diem_root_address,
             "DiemSystem",
             "add_validator",
             vec![],
-            vec![
-                Value::transaction_argument_signer_reference(diem_root_address),
-                Value::address(owner_address),
-            ],
+            serialize_values(&vec![
+                MoveValue::Signer(diem_root_address),
+                MoveValue::Address(owner_address),
+            ]),
         );
     }
-}
-
-fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &CompiledModule> {
-    stdlib_modules
-        .iter()
-        .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
 }
 
 /// Publish the standard library.
 fn publish_stdlib(
     session: &mut Session<StateViewCache>,
     log_context: &impl LogContext,
-    stdlib: &[CompiledModule],
+    stdlib: BTreeMap<ModuleId, &Vec<u8>>,
 ) {
-    for module in remove_genesis(stdlib) {
-        assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
-        let mut module_vec = vec![];
-        module.serialize(&mut module_vec).unwrap();
+    let genesis_removed = stdlib
+        .iter()
+        .filter(|(module_id, _bytes)| module_id.name().as_str() != GENESIS_MODULE_NAME);
+    for (module_id, bytes) in genesis_removed {
+        assert!(module_id.name().as_str() != GENESIS_MODULE_NAME);
         session
             .publish_module(
-                module_vec,
-                *module.self_id().address(),
+                (*bytes).clone(),
+                *module_id.address(),
                 &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
                 log_context,
             )
-            .unwrap_or_else(|e| {
-                panic!("Failure publishing module {:?}, {:?}", module.self_id(), e)
-            });
+            .unwrap_or_else(|e| panic!("Failure publishing module {:?}, {:?}", module_id, e));
     }
 }
 
@@ -502,7 +465,6 @@ fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogCont
     exec_function(
         session,
         log_context,
-        account_config::diem_root_address(),
         "DiemConfig",
         "emit_genesis_reconfiguration_event",
         vec![],
@@ -542,7 +504,7 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
     generate_test_genesis(
-        &stdlib_modules(stdlib_options),
+        &stdlib_modules(stdlib_options).bytes_vec(),
         VMPublishingOption::open(),
         None,
     )
@@ -556,8 +518,8 @@ pub fn test_genesis_transaction() -> Transaction {
 
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
     generate_test_genesis(
-        &stdlib_modules(StdLibOptions::Compiled),
-        VMPublishingOption::locked(StdlibScript::allowlist()),
+        &stdlib_modules(StdLibOptions::Compiled).bytes_vec(),
+        VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
         count,
     )
 }
@@ -618,7 +580,7 @@ impl Validator {
 }
 
 pub fn generate_test_genesis(
-    stdlib_modules: &[CompiledModule],
+    stdlib_modules: &[Vec<u8>],
     vm_publishing_option: VMPublishingOption,
     count: Option<usize>,
 ) -> (ChangeSet, Vec<Validator>) {

@@ -1,0 +1,3 @@
+[0] Transaction(0)
+[1] Move VM Status: ERROR { status_code: FAILED_TO_DESERIALIZE_ARGUMENT }
+[2] Transaction Status: Keep(MISCELLANEOUS_ERROR)

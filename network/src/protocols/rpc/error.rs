@@ -64,8 +64,8 @@ impl From<oneshot::Canceled> for RpcError {
     }
 }
 
-impl From<tokio::time::Elapsed> for RpcError {
-    fn from(_err: tokio::time::Elapsed) -> RpcError {
+impl From<tokio::time::error::Elapsed> for RpcError {
+    fn from(_err: tokio::time::error::Elapsed) -> RpcError {
         RpcError::TimedOut
     }
 }

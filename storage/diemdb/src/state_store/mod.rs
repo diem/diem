@@ -14,19 +14,22 @@ use crate::{
     },
 };
 use anyhow::Result;
-use diem_crypto::{hash::CryptoHash, HashValue};
+use diem_crypto::HashValue;
 use diem_jellyfish_merkle::{
-    node_type::{LeafNode, Node, NodeKey},
-    JellyfishMerkleTree, NodeBatch, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
+    node_type::NodeKey, JellyfishMerkleTree, TreeReader, TreeWriter, ROOT_NIBBLE_HEIGHT,
 };
 use diem_types::{
-    account_address::AccountAddress,
+    account_address::{AccountAddress, HashAccountAddress},
     account_state_blob::AccountStateBlob,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,
 };
 use schemadb::{SchemaBatch, DB};
 use std::{collections::HashMap, sync::Arc};
+
+type LeafNode = diem_jellyfish_merkle::node_type::LeafNode<AccountStateBlob>;
+type Node = diem_jellyfish_merkle::node_type::Node<AccountStateBlob>;
+type NodeBatch = diem_jellyfish_merkle::NodeBatch<AccountStateBlob>;
 
 #[derive(Debug)]
 pub(crate) struct StateStore {
@@ -43,7 +46,10 @@ impl StateStore {
         &self,
         address: AccountAddress,
         version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         JellyfishMerkleTree::new(self).get_with_proof(address.hash(), version)
     }
 
@@ -75,7 +81,7 @@ impl StateStore {
             .collect::<Vec<_>>();
 
         let (new_root_hash_vec, tree_update_batch) =
-            JellyfishMerkleTree::new(self).put_blob_sets(blob_sets, first_version)?;
+            JellyfishMerkleTree::new(self).put_value_sets(blob_sets, first_version)?;
 
         let num_versions = new_root_hash_vec.len();
         assert_eq!(num_versions, tree_update_batch.node_stats.len());
@@ -137,7 +143,7 @@ impl StateStore {
     }
 }
 
-impl TreeReader for StateStore {
+impl TreeReader<AccountStateBlob> for StateStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
         Ok(self.db.get::<JellyfishMerkleNodeSchema>(node_key)?)
     }
@@ -204,7 +210,7 @@ impl TreeReader for StateStore {
     }
 }
 
-impl TreeWriter for StateStore {
+impl TreeWriter<AccountStateBlob> for StateStore {
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
         let mut batch = SchemaBatch::new();
         add_node_batch(&mut batch, node_batch)?;

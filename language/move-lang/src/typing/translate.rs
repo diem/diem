@@ -51,19 +51,22 @@ fn module(
     let N::ModuleDefinition {
         is_source_module,
         dependency_order,
+        friends,
         mut structs,
         functions: n_functions,
         constants: nconstants,
     } = mdef;
+    // TODO: translate friends
     structs
         .iter_mut()
-        .for_each(|(name, s)| struct_def(context, name, s));
+        .for_each(|(_, _, s)| struct_def(context, s));
     let constants = nconstants.map(|name, c| constant(context, name, c));
     let functions = n_functions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
         is_source_module,
         dependency_order,
+        friends,
         structs,
         functions,
         constants,
@@ -208,7 +211,7 @@ fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
             "Invalid parameter type",
             param_ty.clone(),
         );
-        if let Err(prev_loc) = declared.add(param.clone(), ()) {
+        if let Err((param, prev_loc)) = declared.add(param.clone(), ()) {
             context.error(vec![
                 (
                     param.loc(),
@@ -447,7 +450,7 @@ mod check_valid_constant {
                 REFERENCE_CASE
             }
             E::Pack(_, _, _, fields) => {
-                for (_, (_, (_, fe))) in fields {
+                for (_, _, (_, (_, fe))) in fields {
                     exp(context, fe)
                 }
                 "Structs are"
@@ -513,7 +516,7 @@ mod check_valid_constant {
 // Structs
 //**************************************************************************************************
 
-fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinition) {
+fn struct_def(context: &mut Context, s: &mut N::StructDefinition) {
     assert!(context.constraints.is_empty());
     context.reset_for_module_item();
 
@@ -522,13 +525,13 @@ fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinit
         N::StructFields::Defined(m) => m,
     };
 
-    for (_field, idx_ty) in field_map.iter() {
+    for (_field_loc, _field, idx_ty) in field_map.iter() {
         let inst_ty = core::instantiate(context, idx_ty.1.clone());
         context.add_base_type_constraint(inst_ty.loc, "Invalid field type", inst_ty);
     }
     core::solve_constraints(context);
 
-    for (_field, idx_ty) in field_map.iter_mut() {
+    for (_field_loc, _field_, idx_ty) in field_map.iter_mut() {
         expand::type_(context, &mut idx_ty.1);
     }
 }
@@ -1041,25 +1044,25 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (sp(eloc, Type_::Anything), TE::Abort(ecode))
         }
         NE::Break => {
-            if !context.in_loop {
+            if !context.in_loop() {
                 context.error(vec![(
                     eloc,
                     "Invalid usage of 'break'. 'break' can only be used inside a loop body",
                 )]);
             }
             let current_break_ty = sp(eloc, Type_::Unit);
-            let break_ty = match &context.break_type {
+            let break_ty = match context.get_break_type() {
                 None => current_break_ty,
                 Some(t) => {
                     let t = t.clone();
                     join(context, eloc, || "Invalid break.", current_break_ty, t)
                 }
             };
-            context.break_type = Some(break_ty);
+            context.set_break_type(break_ty);
             (sp(eloc, Type_::Anything), TE::Break)
         }
         NE::Continue => {
-            if !context.in_loop {
+            if !context.in_loop() {
                 context.error(vec![(
                     eloc,
                     "Invalid usage of 'continue'. 'continue' can only be used inside a loop body",
@@ -1223,11 +1226,9 @@ fn loop_body(
     is_loop: bool,
     nloop: Box<N::Exp>,
 ) -> (bool, Type, Box<T::Exp>) {
-    let old_in_loop = std::mem::replace(&mut context.in_loop, true);
-    let old_break_type = std::mem::replace(&mut context.break_type, None);
+    let old_loop_info = context.enter_loop();
     let eloop = exp(context, nloop);
-    context.in_loop = old_in_loop;
-    let break_type = std::mem::replace(&mut context.break_type, old_break_type);
+    let break_type_opt = context.exit_loop(old_loop_info);
 
     let lloc = eloop.exp.loc;
     subtype(
@@ -1237,11 +1238,11 @@ fn loop_body(
         eloop.ty.clone(),
         sp(lloc, Type_::Unit),
     );
-    let has_break = break_type.is_some();
+    let has_break = break_type_opt.is_some();
     let ty = if is_loop && !has_break {
         core::make_tvar(context, lloc)
     } else {
-        break_type.unwrap_or_else(|| sp(eloc, Type_::Unit))
+        break_type_opt.unwrap_or_else(|| sp(eloc, Type_::Unit))
     };
     (has_break, ty, eloop)
 }
@@ -1391,7 +1392,7 @@ fn lvalue(
                     var_ty
                 }
             };
-            if let Err(prev_loc) = seen_locals.add(var.clone(), ()) {
+            if let Err((var, prev_loc)) = seen_locals.add(var.clone(), ()) {
                 let error = match case {
                     C::Bind => {
                         let msg = format!(
@@ -1555,18 +1556,18 @@ fn add_field_types<T>(
         N::StructFields::Native(nloc) => {
             let msg = format!(
                 "Invalid {} usage for native struct '{}::{}'. Native structs cannot be directly \
-                 constructed/deconstructd, and their fields cannot be dirctly accessed",
+                 constructed/deconstructed, and their fields cannot be dirctly accessed",
                 verb, m, n
             );
             context.error(vec![(loc, msg), (nloc, "Declared 'native' here".into())]);
             return fields.map(|f, (idx, x)| (idx, (context.error_type(f.loc()), x)));
         }
     };
-    for (f, _) in fields_ty.iter() {
-        if fields.get(&f).is_none() {
+    for (_, f_, _) in &fields_ty {
+        if fields.get_(&f_).is_none() {
             context.error(vec![(
                 loc,
-                format!("Missing {} for field '{}' in '{}::{}'", verb, f, m, n),
+                format!("Missing {} for field '{}' in '{}::{}'", verb, f_, m, n),
             )])
         }
     }

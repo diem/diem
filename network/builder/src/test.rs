@@ -15,7 +15,7 @@ fn test_network_builder() {
 #[test]
 fn test_direct_send() {
     ::diem_logger::Logger::init_for_testing();
-    let mut tn = setup_network();
+    let tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;
     let mut dialer_sender = tn.dialer_sender;
@@ -60,7 +60,7 @@ fn test_direct_send() {
 #[test]
 fn test_rpc() {
     ::diem_logger::Logger::init_for_testing();
-    let mut tn = setup_network();
+    let tn = setup_network();
     let dialer_peer_id = tn.dialer_peer_id;
     let mut dialer_events = tn.dialer_events;
     let mut dialer_sender = tn.dialer_sender;

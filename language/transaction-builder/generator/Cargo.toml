@@ -6,25 +6,26 @@ description = "Diem transaction-builder"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
+publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.37"
+anyhow = "1.0.38"
 heck = "0.3.2"
-regex = "1.4.2"
+regex = "1.4.3"
 structopt = "0.3.21"
-textwrap = "0.13.2"
+textwrap = "0.13.4"
 serde-reflection = "0.3.2"
-serde-generate = "0.17.0"
-serde_yaml = "0.8.14"
+serde-generate = "0.18.0"
+serde_yaml = "0.8.17"
 
-diem-types = { path = "../../../types", version = "0.1.0" }
-diem-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = { path = "../../move-core/types" }
 bcs = "0.1.2"
 
 [dev-dependencies]
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 which = "4.0.2"
 
 [features]

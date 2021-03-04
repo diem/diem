@@ -1,0 +1,69 @@
+name: "CI Environment Setup"
+description: |
+  Setup a common environment for CI jobs.
+  This should in general be a no-op as it should be run inside a docker container which already has all the components installed.
+  Importantly the installation script checks the versions of tools and will install newer versions if specified for most tools.
+runs:
+  using: "composite"
+  steps:
+    - name: CPUInfo
+      shell: bash
+      run: |
+        if [[ "$(uname -s)" == "Linux" ]]; then
+          cat /proc/cpuinfo | grep "model name" | head -1
+          cat /proc/cpuinfo | grep "cpu cores" | head -1
+        fi
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+          sysctl -n machdep.cpu.brand_string
+          sysctl -n hw.ncpu
+        fi
+    - name: MemInfo
+      shell: bash
+      run: |
+        if [[ "$(uname -s)" == "Linux" ]]; then
+          cat /proc/meminfo | grep MemTotal
+        fi
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+          echo $(( $(sysctl hw.memsize | sed 's/hw.memsize: //') / 1073741824 )) gb
+        fi
+    - name: reconfigure container for gha runner
+      shell: bash
+      run: |
+        echo 'CARGO_HOME=/opt/cargo/' | tee -a $GITHUB_ENV
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+          sudo dscl . append /Groups/wheel GroupMembership $USER
+          sudo mkdir -p /opt/cargo || true
+          sudo mkdir -p /opt/git || true
+          sudo chmod -R g+rw /opt/
+          sudo chgrp -R wheel /opt/
+          mv /Users/runner/work/diem/diem /opt/git/diem
+          ln -s /opt/git/diem /Users/runner/work/diem/diem
+          cd /opt/git/diem
+        fi
+
+        # prepare move lang prover tooling.
+        # By setting these values the dev-setup.sh script can detect already installed executables (and check versions).
+        echo 'Z3_EXE='${HOME}/bin/z3 | tee -a $GITHUB_ENV
+        echo 'DOTNET_ROOT='${HOME}/.dotnet/ | tee -a $GITHUB_ENV
+        echo 'BOOGIE_EXE='${HOME}/.dotnet/tools/boogie | tee -a $GITHUB_ENV
+        echo "$HOME/bin" | tee -a $GITHUB_PATH
+        echo "/opt/cargo/bin" | tee -a $GITHUB_PATH
+        echo '/usr/lib/golang/bin' | tee -a $GITHUB_PATH
+    - name: install common dependencies (should be ~ 10 seconds in a linux build, on mac it's a beast.)
+      shell: bash
+      run: scripts/dev_setup.sh -t -o -b -p -y -s
+    - id: rust-environment
+      shell: bash
+      run: |
+        echo 'RUST_BACKTRACE=1' | tee -a $GITHUB_ENV
+        echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
+        echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV
+        echo 'RUST_NIGHTLY='$(cat cargo-toolchain) | tee -a $GITHUB_ENV
+
+        # Turn on the experimental feature resolver in cargo. See:
+        # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+        echo 'CARGOFLAGS='$(cat cargo-flags) | tee -a $GITHUB_ENV
+        # Use nightly version of cargo to access the new feature resolver
+        echo 'CARGO='$(rustup which cargo --toolchain "$(cat cargo-toolchain)") | tee -a $GITHUB_ENV
+        # Pin the version of RUSTC used for all invocations of cargo
+        echo 'RUSTUP_TOOLCHAIN='$(cat rust-toolchain) | tee -a $GITHUB_ENV

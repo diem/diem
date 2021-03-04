@@ -181,7 +181,10 @@ impl DbReader for FakeDb {
         &self,
         _address: AccountAddress,
         _version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+    ) -> Result<(
+        Option<AccountStateBlob>,
+        SparseMerkleProof<AccountStateBlob>,
+    )> {
         unimplemented!();
     }
 

@@ -1,7 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::storage::{BackupHandle, FileHandle};
+use crate::{
+    storage::{BackupHandle, FileHandle},
+    utils::error_notes::ErrorNotes,
+};
 use anyhow::Result;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -76,9 +79,10 @@ pub struct CommandAdapterConfig {
 
 impl CommandAdapterConfig {
     pub async fn load_from_file(path: &PathBuf) -> Result<Self> {
-        let mut file = tokio::fs::File::open(path).await?;
+        let path_str = path.to_str().unwrap_or_default();
+        let mut file = tokio::fs::File::open(path).await.err_notes(path_str)?;
         let mut content = Vec::new();
-        file.read_to_end(&mut content).await?;
+        file.read_to_end(&mut content).await.err_notes(path_str)?;
 
         Ok(toml::from_slice(&content)?)
     }

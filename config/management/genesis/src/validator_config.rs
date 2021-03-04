@@ -3,8 +3,7 @@
 
 use diem_global_constants::OWNER_ACCOUNT;
 use diem_management::{constants, error::Error, secure_backend::SharedBackend};
-use diem_network_address::NetworkAddress;
-use diem_types::transaction::Transaction;
+use diem_types::{network_address::NetworkAddress, transaction::Transaction};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]

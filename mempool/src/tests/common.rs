@@ -14,7 +14,7 @@ use diem_types::{
 };
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashSet, iter::FromIterator};
+use std::collections::HashSet;
 
 pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     (
@@ -98,7 +98,6 @@ impl TestTransaction {
     }
 }
 
-// adds transactions to mempool
 pub(crate) fn add_txns_to_mempool(
     pool: &mut CoreMempool,
     txns: Vec<TestTransaction>,
@@ -152,7 +151,7 @@ pub(crate) fn batch_add_signed_txn(
     Ok(())
 }
 
-// helper struct that keeps state between `.get_block` calls. Imitates work of Consensus
+// Helper struct that keeps state between `.get_block` calls. Imitates work of Consensus.
 pub struct ConsensusMock(HashSet<TxnPointer>);
 
 impl ConsensusMock {
@@ -168,9 +167,12 @@ impl ConsensusMock {
         let block = mempool.get_block(block_size, self.0.clone());
         self.0 = self
             .0
-            .union(&HashSet::from_iter(
-                block.iter().map(|t| (t.sender(), t.sequence_number())),
-            ))
+            .union(
+                &block
+                    .iter()
+                    .map(|t| (t.sender(), t.sequence_number()))
+                    .collect(),
+            )
             .cloned()
             .collect();
         block

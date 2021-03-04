@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    access_path::Path,
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChainIdResource,
@@ -18,7 +19,7 @@ use crate::{
 };
 use anyhow::{format_err, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
-use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
 #[derive(Default, Deserialize, PartialEq, Serialize)]
@@ -200,10 +201,20 @@ impl AccountState {
     pub fn get_resource<T: MoveResource + DeserializeOwned>(&self) -> Result<Option<T>> {
         self.get_resource_impl(&T::struct_tag().access_vector())
     }
+
+    /// Return an iterator over the module values stored under this account
+    pub fn get_modules(&self) -> impl Iterator<Item = &Vec<u8>> {
+        self.0.iter().filter_map(
+            |(k, v)| match Path::try_from(k).expect("Invalid access path") {
+                Path::Code(_) => Some(v),
+                Path::Resource(_) => None,
+            },
+        )
+    }
 }
 
 impl fmt::Debug for AccountState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: add support for other types of resources
         let account_resource_str = self
             .get_account_resource()

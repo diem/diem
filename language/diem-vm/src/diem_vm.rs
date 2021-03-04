@@ -23,20 +23,19 @@ use diem_types::{
 use fail::fail_point;
 use move_core_types::{
     account_address::AccountAddress,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    effects::{ChangeSet as MoveChangeSet, Event as MoveEvent},
+    gas_schedule::{CostTable, GasAlgebra, GasUnits, InternalGasUnits},
     identifier::IdentStr,
+    language_storage::ModuleId,
+    value::{serialize_values, MoveValue},
 };
-
 use move_vm_runtime::{
-    data_cache::{RemoteCache, TransactionEffects},
-    logging::LogContext,
+    data_cache::RemoteCache,
+    logging::{expect_no_verification_errors, LogContext},
     move_vm::MoveVM,
     session::Session,
 };
-use move_vm_types::{
-    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy},
-    values::Value,
-};
+use move_vm_types::gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy};
 use std::{convert::TryFrom, sync::Arc};
 use vm::errors::Location;
 
@@ -161,7 +160,8 @@ impl DiemVMImpl {
         // The submitted transactions max gas units needs to be at least enough to cover the
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
-        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
+        let min_txn_fee =
+            gas_constants.to_external_units(calculate_intrinsic_gas(raw_bytes_len, gas_constants));
         if txn_data.max_gas_amount().get() < min_txn_fee.get() {
             warn!(
                 *log_context,
@@ -226,20 +226,21 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &SCRIPT_PROLOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                    Value::vector_u8(txn_data.script_hash.clone()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                    MoveValue::vector_u8(txn_data.script_hash.clone()),
+                ]),
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
 
@@ -266,19 +267,20 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &MODULE_PROLOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                ]),
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
 
@@ -309,17 +311,18 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(gas_remaining),
+                ]),
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_epilogue_error(err, log_context))
     }
 
@@ -344,17 +347,18 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &USER_EPILOGUE_NAME,
                 vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::U64(txn_gas_price),
+                    MoveValue::U64(txn_max_gas_units),
+                    MoveValue::U64(gas_remaining),
+                ]),
                 cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|e| {
                 expect_only_successful_execution(e, USER_EPILOGUE_NAME.as_str(), log_context)
             })
@@ -380,17 +384,18 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_PROLOGUE_NAME,
                 vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_sequence_number),
+                    MoveValue::vector_u8(txn_public_key),
+                    MoveValue::U64(txn_expiration_timestamp_secs),
+                    MoveValue::U8(chain_id.id()),
+                ]),
                 &mut cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|err| convert_prologue_error(err, log_context))
     }
 
@@ -410,15 +415,16 @@ impl DiemVMImpl {
                 &account_config::ACCOUNT_MODULE,
                 &WRITESET_EPILOGUE_NAME,
                 vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_data.sequence_number),
-                    Value::bool(should_trigger_reconfiguration),
-                ],
-                txn_data.sender,
+                serialize_values(&vec![
+                    MoveValue::Signer(txn_data.sender),
+                    MoveValue::U64(txn_data.sequence_number),
+                    MoveValue::Bool(should_trigger_reconfiguration),
+                ]),
                 &mut cost_strategy,
                 log_context,
             )
+            .map(|_return_vals| ())
+            .map_err(|err| expect_no_verification_errors(err, log_context))
             .or_else(|e| {
                 expect_only_successful_execution(e, WRITESET_EPILOGUE_NAME.as_str(), log_context)
             })
@@ -469,52 +475,56 @@ impl<'a> DiemVMInternals<'a> {
     }
 }
 
-pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
+pub fn convert_changeset_and_events_cached<C: AccessPathCache>(
     ap_cache: &mut C,
-    effects: TransactionEffects,
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
 
-    for (addr, vals) in effects.resources {
-        for (struct_tag, val_opt) in vals {
+    for (addr, account_changeset) in changeset.accounts {
+        for (struct_tag, blob_opt) in account_changeset.resources {
             let ap = ap_cache.get_resource_path(addr, struct_tag);
-            let op = match val_opt {
+            let op = match blob_opt {
                 None => WriteOp::Deletion,
-                Some((ty_layout, val)) => {
-                    let blob = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
-                        StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-                    ))?;
-
-                    WriteOp::Value(blob)
-                }
+                Some(blob) => WriteOp::Value(blob),
             };
+            ops.push((ap, op))
+        }
+
+        for (name, blob_opt) in account_changeset.modules {
+            let ap = ap_cache.get_module_path(ModuleId::new(addr, name));
+            let op = match blob_opt {
+                None => WriteOp::Deletion,
+                Some(blob) => WriteOp::Value(blob),
+            };
+
             ops.push((ap, op))
         }
     }
 
-    for (module_id, blob) in effects.modules {
-        ops.push((ap_cache.get_module_path(module_id), WriteOp::Value(blob)))
-    }
-
     let ws = WriteSetMut::new(ops)
         .freeze()
-        .map_err(|_| VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR))?;
+        .map_err(|_| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
 
-    let events = effects
-        .events
+    let events = events
         .into_iter()
-        .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
-            let msg = val.simple_serialize(&ty_layout).ok_or(VMStatus::Error(
-                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
-            ))?;
+        .map(|(guid, seq_num, ty_tag, blob)| {
             let key = EventKey::try_from(guid.as_slice())
                 .map_err(|_| VMStatus::Error(StatusCode::EVENT_KEY_MISMATCH))?;
-            Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
+            Ok(ContractEvent::new(key, seq_num, ty_tag, blob))
         })
         .collect::<Result<Vec<_>, VMStatus>>()?;
 
     Ok((ws, events))
+}
+
+pub fn convert_changeset_and_events(
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
+) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
+    convert_changeset_and_events_cached(&mut (), changeset, events)
 }
 
 pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
@@ -535,7 +545,7 @@ pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
             )
             .get();
     cost_strategy
-        .deduct_gas(GasUnits::new(total_cost))
+        .deduct_gas(InternalGasUnits::new(total_cost))
         .map_err(|p_err| p_err.finish(Location::Undefined).into_vm_status())
 }
 
@@ -551,8 +561,8 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         .sub(cost_strategy.remaining_gas())
         .get();
 
-    let effects = session.finish().map_err(|e| e.into_vm_status())?;
-    let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
+    let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+    let (write_set, events) = convert_changeset_and_events_cached(ap_cache, changeset, events)?;
 
     Ok(TransactionOutput::new(
         write_set,
@@ -560,12 +570,6 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         gas_used,
         TransactionStatus::Keep(status),
     ))
-}
-
-pub fn txn_effects_to_writeset_and_events(
-    effects: TransactionEffects,
-) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
-    txn_effects_to_writeset_and_events_cached(&mut (), effects)
 }
 
 #[test]

@@ -21,7 +21,6 @@ pub use log_tail::{LogTail, TraceTail};
 use std::{
     collections::{HashMap, HashSet},
     env, fmt,
-    iter::FromIterator,
     time::{Duration, Instant},
 };
 use termion::color::*;
@@ -174,8 +173,8 @@ impl HealthCheckRunner {
         messages.push(format!(""));
         messages.push(format!(""));
 
-        let affected_validators_set_refs = HashSet::from_iter(affected_validators_set.iter());
-        let failed_set: HashSet<&String> = HashSet::from_iter(failed.iter());
+        let affected_validators_set_refs: HashSet<_> = affected_validators_set.iter().collect();
+        let failed_set: HashSet<_> = failed.iter().collect();
         let has_unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
 
         if print_failures.should_print(has_unexpected_failures) {

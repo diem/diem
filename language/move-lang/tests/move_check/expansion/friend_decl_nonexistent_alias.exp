@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/friend_decl_nonexistent_alias.move:3:12 ───
+   │
+ 3 │     friend Nonexistent;
+   │            ^^^^^^^^^^^ Unbound module alias 'Nonexistent'
+   │
+

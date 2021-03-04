@@ -176,12 +176,32 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().function_defs
     }
 
+    fn friend_decls(&self) -> &[ModuleHandle] {
+        &self.as_module().as_inner().friend_decls
+    }
+
     fn module_id_for_handle(&self, module_handle_idx: &ModuleHandle) -> ModuleId {
         self.as_module().module_id_for_handle(module_handle_idx)
     }
 
     fn self_id(&self) -> ModuleId {
         self.as_module().self_id()
+    }
+
+    fn immediate_dependencies(&self) -> Vec<ModuleId> {
+        let self_handle = self.self_handle();
+        self.module_handles()
+            .iter()
+            .filter(|&handle| handle != self_handle)
+            .map(|handle| self.module_id_for_handle(handle))
+            .collect()
+    }
+
+    fn immediate_friends(&self) -> Vec<ModuleId> {
+        self.friend_decls()
+            .iter()
+            .map(|handle| self.module_id_for_handle(handle))
+            .collect()
     }
 }
 
@@ -258,6 +278,18 @@ pub trait ScriptAccess: Sync {
 
     fn code(&self) -> &CodeUnit {
         &self.as_script().as_inner().code
+    }
+
+    fn immediate_dependencies(&self) -> Vec<ModuleId> {
+        self.module_handles()
+            .iter()
+            .map(|handle| {
+                ModuleId::new(
+                    *self.address_identifier_at(handle.address),
+                    self.identifier_at(handle.name).to_owned(),
+                )
+            })
+            .collect()
     }
 }
 

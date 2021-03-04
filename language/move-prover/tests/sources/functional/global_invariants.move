@@ -30,6 +30,10 @@ module TestGlobalInvariants {
         move_to<S>(account, S{x: 0});
         move_to<R>(account, R{x: 0});
     }
+    spec fun create_R {
+        requires !exists<R>(Signer::spec_address_of(account));
+        requires !exists<S>(Signer::spec_address_of(account));
+    }
 
     public fun create_R_invalid(account: &signer) {
         // We cannot create an R without having an S.

@@ -1,0 +1,15 @@
+============ after processor `eliminate_imm_refs` ================
+
+[variant baseline]
+pub fun Trafo::div($t0|x: u64, $t1|y: u64): u64 {
+     var $t2: u64
+     var $t3: u64
+     var $t4: u64
+  0: trace_local[x]($t0)
+  1: trace_local[y]($t1)
+  2: $t2 := copy($t0)
+  3: $t3 := copy($t1)
+  4: $t4 := /($t2, $t3)
+  5: trace_return[0]($t4)
+  6: return $t4
+}

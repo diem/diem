@@ -103,4 +103,4 @@ module Tester {
         return move(c1) == move(c2);
     }
 }
-// check: READREF_RESOURCE_ERROR
+// check: READREF_WITHOUT_COPY_ABILITY

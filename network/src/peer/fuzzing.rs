@@ -2,24 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants::MAX_FRAME_SIZE,
-    interface::NetworkProvider,
+    constants,
+    peer::Peer,
     protocols::wire::{
         handshake::v1::{MessagingProtocolVersion, SupportedProtocols},
         messaging::v1::{NetworkMessage, NetworkMessageSink},
     },
     testutils::fake_socket::ReadOnlyTestSocketVec,
-    transport::{Connection, ConnectionId, ConnectionMetadata, TrustLevel},
+    transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
-use diem_config::network_id::NetworkContext;
-use diem_network_address::NetworkAddress;
+use channel::{diem_channel, message_queues::QueueStyle};
+use diem_config::{config::PeerRole, network_id::NetworkContext};
 use diem_proptest_helpers::ValueGenerator;
-use diem_types::PeerId;
+use diem_time_service::TimeService;
+use diem_types::{network_address::NetworkAddress, PeerId};
 use futures::{executor::block_on, future, io::AsyncReadExt, sink::SinkExt, stream::StreamExt};
 use memsocket::MemorySocket;
 use netcore::transport::ConnectionOrigin;
 use proptest::{arbitrary::any, collection::vec};
+use std::time::Duration;
 
 /// Generate a sequence of `NetworkMessage`, bcs serialize them, and write them
 /// out to a buffer using our length-prefixed message codec.
@@ -27,7 +29,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
     let network_msgs = gen.generate(vec(any::<NetworkMessage>(), 1..20));
 
     let (write_socket, mut read_socket) = MemorySocket::new_pair();
-    let mut writer = NetworkMessageSink::new(write_socket, MAX_FRAME_SIZE);
+    let mut writer = NetworkMessageSink::new(write_socket, constants::MAX_FRAME_SIZE, None);
 
     // Write the `NetworkMessage`s to a fake socket
     let f_send = async move {
@@ -58,8 +60,7 @@ pub fn fuzz(data: &[u8]) {
     // runtime and sometimes blocks when trying to shutdown the runtime.
     //
     // https://github.com/tokio-rs/tokio/pull/2649
-    let mut rt = tokio::runtime::Builder::new()
-        .basic_scheduler()
+    let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
@@ -87,32 +88,39 @@ pub fn fuzz(data: &[u8]) {
                 ProtocolId::ConsensusRpc,
                 ProtocolId::ConsensusDirectSend,
                 ProtocolId::MempoolDirectSend,
-                ProtocolId::StateSynchronizerDirectSend,
+                ProtocolId::StateSyncDirectSend,
                 ProtocolId::DiscoveryDirectSend,
                 ProtocolId::HealthCheckerRpc,
             ]
             .iter(),
         ),
-        TrustLevel::Untrusted,
+        PeerRole::Unknown,
     );
     let connection = Connection { socket, metadata };
 
     let (connection_notifs_tx, connection_notifs_rx) = channel::new_test(8);
-    let max_concurrent_reqs = 8;
-    let max_concurrent_notifs = 8;
     let channel_size = 8;
 
-    // Spin up a new `Peer` actor through the `NetworkProvider` interface.
-    let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
+    let (peer_reqs_tx, peer_reqs_rx) = diem_channel::new(QueueStyle::FIFO, channel_size, None);
+    let (peer_notifs_tx, peer_notifs_rx) = diem_channel::new(QueueStyle::FIFO, channel_size, None);
+
+    // Spin up a new `Peer` actor
+    let peer = Peer::new(
         network_context,
-        executor,
+        executor.clone(),
+        TimeService::mock(),
         connection,
         connection_notifs_tx,
-        max_concurrent_reqs,
-        max_concurrent_notifs,
-        channel_size,
-        MAX_FRAME_SIZE,
+        peer_reqs_rx,
+        peer_notifs_tx,
+        Duration::from_millis(constants::INBOUND_RPC_TIMEOUT_MS),
+        constants::MAX_CONCURRENT_INBOUND_RPCS,
+        constants::MAX_CONCURRENT_OUTBOUND_RPCS,
+        constants::MAX_FRAME_SIZE,
+        None,
+        None,
     );
+    executor.spawn(peer.start());
 
     rt.block_on(async move {
         // Wait for "remote" to disconnect (we read all data and socket read
@@ -122,8 +130,8 @@ pub fn fuzz(data: &[u8]) {
 
         // ACK the "remote" d/c and drop our handle to the Peer actor. Then wait
         // for all network notifs to drain out and finish.
-        drop(network_reqs_tx);
-        network_notifs_rx.collect::<Vec<_>>().await;
+        drop(peer_reqs_tx);
+        peer_notifs_rx.collect::<Vec<_>>().await;
     });
 }
 

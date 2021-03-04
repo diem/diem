@@ -1,6 +1,6 @@
 import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
 
-import utils from 'libra-docusaurus-components/src/utils';
+import utils from 'diem-docusaurus-components/src/utils';
 
 const {getCookie} = utils;
 

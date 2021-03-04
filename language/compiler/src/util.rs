@@ -7,12 +7,12 @@ use diem_types::account_address::AccountAddress;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use move_ir_types::location::Loc;
 use std::{fs, path::Path};
-use vm::{access::ModuleAccess, file_format::CompiledModule};
+use vm::file_format::CompiledModule;
 
-pub fn do_compile_module<T: ModuleAccess>(
+pub fn do_compile_module(
     source_path: &Path,
     address: AccountAddress,
-    dependencies: &[T],
+    dependencies: &[CompiledModule],
 ) -> (CompiledModule, SourceMap<Loc>) {
     let source = fs::read_to_string(source_path)
         .with_context(|| format!("Unable to read file: {:?}", source_path))

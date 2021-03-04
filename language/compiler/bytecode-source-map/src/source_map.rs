@@ -236,9 +236,9 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
     }
 
     pub fn make_local_name_to_index_map(&self) -> BTreeMap<&String, LocalIndex> {
-        self.locals
+        self.parameters
             .iter()
-            .chain(self.parameters.iter())
+            .chain(&self.locals)
             .enumerate()
             .map(|(i, (n, _))| (n, i as LocalIndex))
             .collect()

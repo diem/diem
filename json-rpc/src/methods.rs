@@ -4,6 +4,7 @@
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::{
     errors::JsonRpcError,
+    util::{transaction_data_view_from_transaction, vm_status_view_from_kept_vm_status},
     views::{
         AccountStateWithProofView, AccountView, BytesView, CurrencyInfoView, EventView,
         EventWithProofView, MetadataView, StateProofView, TransactionView, TransactionsProofsView,
@@ -237,7 +238,9 @@ async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<
     let (req_sender, callback) = oneshot::channel();
 
     fail_point!("jsonrpc::method::submit::mempool_sender", |_| {
-        Err(anyhow::anyhow!("Injected error for mempool_sender call error").into())
+        Err(anyhow::anyhow!(
+            "Injected error for mempool_sender call error"
+        ))
     });
 
     service
@@ -393,9 +396,9 @@ async fn get_transactions(
             version: start_version + v as u64,
             hash: tx.hash().into(),
             bytes: bcs::to_bytes(&tx)?.into(),
-            transaction: tx.into(),
+            transaction: transaction_data_view_from_transaction(tx),
             events,
-            vm_status: info.status().into(),
+            vm_status: vm_status_view_from_kept_vm_status(info.status()),
             gas_used: info.gas_used(),
         });
     }
@@ -410,17 +413,19 @@ async fn get_transactions_with_proofs(
     let start_version: u64 = request.parse_param(0, "start_version")?;
     let limit: u64 = request.parse_param(1, "limit")?;
 
+    let req_version: u64 = request.version();
+
     // Notice limit is a u16 normally, but some APIs require u64 below
     service.validate_page_size_limit(limit as usize)?;
 
-    if start_version > request.version() {
+    if start_version > req_version {
         return Ok(None);
     }
 
     // We do not fetch events since they don't come with proofs.
     let txs = service
         .db
-        .get_transactions(start_version, limit, request.version(), false)?;
+        .get_transactions(start_version, limit, req_version, false)?;
 
     let mut blobs = vec![];
     for t in txs.transactions.iter() {
@@ -472,9 +477,9 @@ async fn get_account_transaction(
             version: tx_version,
             hash: tx.transaction.hash().into(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: tx.transaction.into(),
+            transaction: transaction_data_view_from_transaction(tx.transaction),
             events,
-            vm_status: tx.proof.transaction_info().status().into(),
+            vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),
         }))
     } else {
@@ -514,11 +519,7 @@ async fn get_events_with_proofs(
     let start: u64 = request.parse_param(1, "start")?;
     let limit: u64 = request.parse_param(2, "limit")?;
 
-    let version: u64 = if request.params.len() == 4 {
-        request.parse_version_param(3, "version")?
-    } else {
-        request.version()
-    };
+    let req_version = request.version();
 
     service.validate_page_size_limit(limit as usize)?;
 
@@ -527,10 +528,9 @@ async fn get_events_with_proofs(
         start,
         Order::Ascending,
         limit,
-        Some(version),
+        Some(req_version),
     )?;
 
-    let req_version = request.version();
     let mut results = vec![];
 
     for event in events_with_proofs
@@ -623,9 +623,9 @@ async fn get_account_transactions(
             version: tx.version,
             hash: tx.transaction.hash().into(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
-            transaction: tx.transaction.into(),
+            transaction: transaction_data_view_from_transaction(tx.transaction),
             events,
-            vm_status: tx.proof.transaction_info().status().into(),
+            vm_status: vm_status_view_from_kept_vm_status(tx.proof.transaction_info().status()),
             gas_used: tx.proof.transaction_info().gas_used(),
         });
     }
@@ -706,13 +706,6 @@ pub(crate) fn build_registry() -> RpcRegistry {
         0
     );
     register_rpc_method!(registry, "get_events", get_events, 3, 0);
-    register_rpc_method!(
-        registry,
-        "get_events_with_proofs",
-        get_events_with_proofs,
-        3,
-        1
-    );
     register_rpc_method!(registry, "get_currencies", get_currencies, 0, 0);
     register_rpc_method!(registry, "get_network_status", get_network_status, 0, 0);
 
@@ -730,6 +723,13 @@ pub(crate) fn build_registry() -> RpcRegistry {
         "get_transactions_with_proofs",
         get_transactions_with_proofs,
         2,
+        0
+    );
+    register_rpc_method!(
+        registry,
+        "get_events_with_proofs",
+        get_events_with_proofs,
+        3,
         0
     );
 

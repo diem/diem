@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::storage::command_adapter::config::EnvVar;
+use crate::{storage::command_adapter::config::EnvVar, utils::error_notes::ErrorNotes};
 use anyhow::{bail, ensure, Result};
 use diem_logger::prelude::*;
 use futures::{
@@ -14,7 +14,7 @@ use std::{
     process::Stdio,
 };
 use tokio::{
-    io::{AsyncRead, AsyncWrite},
+    io::{AsyncRead, AsyncWrite, ReadBuf},
     macros::support::Pin,
     process::{Child, ChildStdin, ChildStdout},
 };
@@ -77,9 +77,17 @@ impl SpawnedCommand {
         {
             cmd.env(&v.key, &v.value);
         }
-        let child = cmd.spawn()?;
-        ensure!(child.stdin.is_some(), "child.stdin is None.");
-        ensure!(child.stdout.is_some(), "child.stdout is None.");
+        let child = cmd.spawn().err_notes(&cmd)?;
+        ensure!(
+            child.stdin.is_some(),
+            "child.stdin is None. cmd: {:?}",
+            &command,
+        );
+        ensure!(
+            child.stdout.is_some(),
+            "child.stdout is None. cmd: {:?}",
+            &command,
+        );
 
         Ok(Self { command, child })
     }
@@ -136,22 +144,23 @@ impl<'a> AsyncRead for ChildStdoutAsDataSource<'a> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<tokio::io::Result<usize>> {
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<::std::io::Result<()>> {
         if self.child.is_some() {
+            let filled_before_poll = buf.filled().len();
             let res = Pin::new(self.child.as_mut().unwrap().stdout()).poll_read(cx, buf);
-            if let Poll::Ready(Ok(0)) = res {
-                // hit EOF, start joining self.child
-                self.join_fut = Some(self.child.take().unwrap().join().boxed());
-            } else {
-                return res;
+            match res {
+                Poll::Ready(Ok(())) if buf.filled().len() == filled_before_poll => {
+                    // hit EOF, start joining self.child
+                    self.join_fut = Some(self.child.take().unwrap().join().boxed());
+                }
+                _ => return res,
             }
         }
 
         Pin::new(self.join_fut.as_mut().unwrap())
             .poll(cx)
-            .map_ok(|_| 0)
-            .map_err(|e| tokio::io::Error::new(tokio::io::ErrorKind::Other, e))
+            .map_err(|e| ::std::io::Error::new(::std::io::ErrorKind::Other, e))
     }
 }
 

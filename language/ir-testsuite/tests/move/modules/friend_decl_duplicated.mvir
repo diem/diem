@@ -1,0 +1,11 @@
+module A {
+}
+
+//! new-transaction
+
+module B {
+    friend {{default}}.A;
+    friend {{default}}.A;
+}
+
+// check: DUPLICATE_ELEMENT

@@ -12,14 +12,14 @@ script {
         0 == 1;
         false == true;
         0x42 == 0x43;
-        x"42" == x"422";
+        x"42" == x"0422";
         b"hello" == b"XhelloX";
         0 != 1;
         0 != 1;
         0 != 1;
         false != true;
         0x42 != 0x43;
-        x"42" != x"422";
+        x"42" != x"0422";
         b"hello" != b"XhelloX";
         0 != 0;
         0 != 0;

@@ -6,8 +6,8 @@ use crate::{
     dataflow_analysis::{
         AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
     },
-    function_target::FunctionTargetData,
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
+    function_target::{FunctionData, FunctionTarget},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
 use diem_types::account_config;
@@ -34,7 +34,7 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
         let is_script = module_env.is_script_module();
         if is_script || module_name == "Genesis" {
             for func_env in module_env.get_functions() {
-                let fun_target = targets.get_target(&func_env);
+                let fun_target = targets.get_target(&func_env, FunctionVariant::Baseline);
                 let annotation = fun_target
                     .get_annotations()
                     .get::<PackedTypesState>()
@@ -72,7 +72,7 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
     packed_types
 }
 
-#[derive(Clone, Default, Eq, PartialOrd, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialOrd, PartialEq)]
 struct PackedTypesState {
     // Closed types (i.e., with no free type variables) that may be directly or transitively packed by this function.
     closed_types: SetDomain<StructTag>,
@@ -105,7 +105,7 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
         use Bytecode::*;
         use Operation::*;
 
-        if let Call(_, _, oper, _) = instr {
+        if let Call(_, _, oper, ..) = instr {
             match oper {
                 Pack(mid, sid, types) => {
                     let env = self.cache.global_env();
@@ -150,7 +150,16 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
 }
 
 impl<'a> DataflowAnalysis for PackedTypesAnalysis<'a> {}
-impl<'a> CompositionalAnalysis for PackedTypesAnalysis<'a> {}
+impl<'a> CompositionalAnalysis<PackedTypesState> for PackedTypesAnalysis<'a> {
+    fn to_summary(
+        &self,
+        state: PackedTypesState,
+        _fun_target: &FunctionTarget,
+    ) -> PackedTypesState {
+        state
+    }
+}
+
 pub struct PackedTypesProcessor();
 impl PackedTypesProcessor {
     pub fn new() -> Box<Self> {
@@ -163,8 +172,8 @@ impl FunctionTargetProcessor for PackedTypesProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionTargetData,
-    ) -> FunctionTargetData {
+        data: FunctionData,
+    ) -> FunctionData {
         let initial_state = PackedTypesState::default();
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = PackedTypesAnalysis { cache };

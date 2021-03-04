@@ -267,7 +267,7 @@ impl Block {
             // we can say that too far is 5 minutes in the future
             const TIMEBOUND: u64 = 300_000_000;
             ensure!(
-                self.timestamp_usecs() <= current_ts.as_micros() as u64 + TIMEBOUND,
+                self.timestamp_usecs() <= (current_ts.as_micros() as u64).saturating_add(TIMEBOUND),
                 "Blocks must not be too far in the future"
             );
         }

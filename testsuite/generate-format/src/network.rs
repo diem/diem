@@ -5,7 +5,7 @@ use diem_crypto::{
     traits::Uniform,
     x25519::{PrivateKey, PublicKey},
 };
-use diem_network_address as address;
+use diem_types::network_address as address;
 use network::protocols::wire::{handshake, messaging};
 use rand::{rngs::StdRng, SeedableRng};
 use serde_reflection::{Registry, Result, Samples, Tracer, TracerConfig};

@@ -1,4 +1,4 @@
-FROM debian:buster-20201209@sha256:5b5fa7e155b1f19dffb996ea64e55520b80d5bd7a8fdb5aed1acabd217e9ed59 AS toolchain
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475 AS toolchain
 
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
@@ -23,7 +23,7 @@ COPY . /diem
 RUN ./docker/build-common.sh
 
 ### Production Image ###
-FROM debian:buster-20201209@sha256:5b5fa7e155b1f19dffb996ea64e55520b80d5bd7a8fdb5aed1acabd217e9ed59  AS prod
+FROM debian:buster-20210208@sha256:1092695e843ad975267131f27a2b523128c4e03d2d96574bbdd7cf949ed51475  AS pre-prod
 
 RUN apt-get update && apt-get -y install libssl1.1 wget busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
@@ -32,6 +32,13 @@ RUN cd /usr/local/bin && wget "https://releases.hashicorp.com/vault/1.5.0/vault_
 RUN mkdir -p /opt/diem/bin
 COPY --from=builder /diem/target/release/diem-genesis-tool /usr/local/bin
 COPY --from=builder /diem/target/release/diem-operational-tool /usr/local/bin
+
+FROM pre-prod as testing
+
+RUN /usr/local/bin/diem-genesis-tool -h
+RUN /usr/local/bin/diem-operational-tool -h
+
+FROM pre-prod as prod
 
 ARG BUILD_DATE
 ARG GIT_REV

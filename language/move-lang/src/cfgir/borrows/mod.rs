@@ -25,7 +25,7 @@ struct BorrowSafety {
 impl BorrowSafety {
     fn new<T>(local_types: &UniqueMap<Var, T>) -> Self {
         let mut local_numbers = UniqueMap::new();
-        for (idx, (v, _)) in local_types.iter().enumerate() {
+        for (idx, (v, _)) in local_types.key_cloned_iter().enumerate() {
             local_numbers.add(v, idx).unwrap();
         }
         Self { local_numbers }
@@ -121,7 +121,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             context.borrow_state.release_values(values);
         }
 
-        C::Return(e) => {
+        C::Return { exp: e, .. } => {
             let values = exp(context, e);
             let errors = context.borrow_state.return_(*loc, values);
             context.add_errors(errors);
@@ -131,7 +131,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             assert!(!value.is_ref());
             context.borrow_state.abort()
         }
-        C::Jump(_) => (),
+        C::Jump { .. } => (),
         C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
@@ -253,11 +253,12 @@ fn exp(context: &mut Context, parent_e: &Exp) -> Values {
         E::BinopExp(e1, sp!(_, BinOp_::Eq), e2) | E::BinopExp(e1, sp!(_, BinOp_::Neq), e2) => {
             let v1 = assert_single_value(exp(context, e1));
             let v2 = assert_single_value(exp(context, e2));
+            // must check separately incase of using a local with an unassigned value
             if v1.is_ref() {
-                // derefrence releases the id and checks that it is readable
-                assert!(v2.is_ref());
                 let (errors, _) = context.borrow_state.dereference(e1.exp.loc, v1);
                 assert!(errors.is_empty(), "ICE eq freezing failed");
+            }
+            if v2.is_ref() {
                 let (errors, _) = context.borrow_state.dereference(e1.exp.loc, v2);
                 assert!(errors.is_empty(), "ICE eq freezing failed");
             }

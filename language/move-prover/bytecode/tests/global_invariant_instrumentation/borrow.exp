@@ -1,0 +1,59 @@
+============ initial translation from Move ================
+
+[variant baseline]
+pub fun Test::borrow($t0|a: address) {
+     var $t1|r: &mut Test::R
+     var $t2: address
+     var $t3: &mut Test::R
+     var $t4: &mut Test::R
+     var $t5: &u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: &mut Test::R
+     var $t10: &mut u64
+  0: $t2 := copy($t0)
+  1: $t3 := borrow_global<Test::R>($t2)
+  2: $t1 := $t3
+  3: $t4 := copy($t1)
+  4: $t5 := borrow_field<Test::R>.x($t4)
+  5: $t6 := read_ref($t5)
+  6: $t7 := 1
+  7: $t8 := +($t6, $t7)
+  8: $t9 := move($t1)
+  9: $t10 := borrow_field<Test::R>.x($t9)
+ 10: write_ref($t10, $t8)
+ 11: return ()
+}
+
+============ after pipeline `global_invariant_instrumentation` ================
+
+[variant verification]
+pub fun Test::borrow($t0|a: address) {
+     var $t1|r: &mut Test::R
+     var $t2: &mut Test::R
+     var $t3: num
+     var $t4: u64
+     var $t5: u64
+     var $t6: u64
+     var $t7: &mut u64
+     # global invariant at tests/global_invariant_instrumentation/borrow.move:7:9+57
+  0: assume forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+  1: assume WellFormed($t0)
+  2: assume forall $rsc: ResourceDomain<Test::R>(): WellFormed($rsc)
+  3: $t2 := borrow_global<Test::R>($t0) on_abort goto 14 with $t3
+  4: $t4 := get_field<Test::R>.x($t2)
+  5: $t5 := 1
+  6: $t6 := +($t4, $t5) on_abort goto 14 with $t3
+  7: $t7 := borrow_field<Test::R>.x($t2)
+  8: write_ref($t7, $t6)
+  9: write_back[Reference($t2)]($t7)
+ 10: write_back[Test::R]($t2)
+     # global invariant at tests/global_invariant_instrumentation/borrow.move:7:9+57
+     # VC: global memory invariant does not hold at tests/global_invariant_instrumentation/borrow.move:7:9+57
+ 11: assert forall a: TypeDomain<address>(): Gt(select Test::R.x(global<Test::R>(a)), 0)
+ 12: label L1
+ 13: return ()
+ 14: label L2
+ 15: abort($t3)
+}

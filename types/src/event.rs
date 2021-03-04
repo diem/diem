@@ -41,10 +41,8 @@ impl EventKey {
 
     /// Get the account address part in this event key
     pub fn get_creator_address(&self) -> AccountAddress {
-        let mut arr_bytes = [0u8; AccountAddress::LENGTH];
-        arr_bytes.copy_from_slice(&self.0[EventKey::LENGTH - AccountAddress::LENGTH..]);
-
-        AccountAddress::new(arr_bytes)
+        AccountAddress::try_from(&self.0[EventKey::LENGTH - AccountAddress::LENGTH..])
+            .expect("get_creator_address failed")
     }
 
     /// If this is the `ith` EventKey` created by `get_creator_address()`, return `i`

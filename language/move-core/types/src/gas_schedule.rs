@@ -120,7 +120,13 @@ define_gas_unit! {
 define_gas_unit! {
     name: GasUnits,
     carrier: GasCarrier,
-    doc: "A newtype wrapper around the underlying carrier for the gas cost."
+    doc: "Units of gas as seen by clients of the Move VM."
+}
+
+define_gas_unit! {
+    name: InternalGasUnits,
+    carrier: GasCarrier,
+    doc: "Units of gas used within the Move VM, scaled for fine-grained accounting."
 }
 
 define_gas_unit! {
@@ -130,7 +136,7 @@ define_gas_unit! {
 }
 
 /// One unit of gas
-pub const ONE_GAS_UNIT: GasUnits<GasCarrier> = GasUnits(1);
+pub const ONE_GAS_UNIT: InternalGasUnits<GasCarrier> = InternalGasUnits(1);
 
 /// The maximum size representable by AbstractMemorySize
 pub const MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> =
@@ -159,21 +165,21 @@ pub const MAX_TRANSACTION_SIZE_IN_BYTES: GasCarrier = 4096;
 #[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
 pub struct GasConstants {
     /// The cost per-byte read from global storage.
-    pub global_memory_per_byte_cost: GasUnits<GasCarrier>,
+    pub global_memory_per_byte_cost: InternalGasUnits<GasCarrier>,
 
     /// The cost per-byte written to storage.
-    pub global_memory_per_byte_write_cost: GasUnits<GasCarrier>,
+    pub global_memory_per_byte_write_cost: InternalGasUnits<GasCarrier>,
 
     /// The flat minimum amount of gas required for any transaction.
     /// Charged at the start of execution.
-    pub min_transaction_gas_units: GasUnits<GasCarrier>,
+    pub min_transaction_gas_units: InternalGasUnits<GasCarrier>,
 
     /// Any transaction over this size will be charged an additional amount per byte.
     pub large_transaction_cutoff: AbstractMemorySize<GasCarrier>,
 
     /// The units of gas that to be charged per byte over the `large_transaction_cutoff` in addition to
     /// `min_transaction_gas_units` for transactions whose size exceeds `large_transaction_cutoff`.
-    pub intrinsic_gas_per_byte: GasUnits<GasCarrier>,
+    pub intrinsic_gas_per_byte: InternalGasUnits<GasCarrier>,
 
     /// ~5 microseconds should equal one unit of computational gas. We bound the maximum
     /// computational time of any given transaction at roughly 20 seconds. We want this number and
@@ -195,14 +201,24 @@ pub struct GasConstants {
     pub default_account_size: AbstractMemorySize<GasCarrier>,
 }
 
+impl GasConstants {
+    pub fn to_internal_units(&self, units: GasUnits<GasCarrier>) -> InternalGasUnits<GasCarrier> {
+        InternalGasUnits::new(units.get() * self.gas_unit_scaling_factor)
+    }
+
+    pub fn to_external_units(&self, units: InternalGasUnits<GasCarrier>) -> GasUnits<GasCarrier> {
+        GasUnits::new(units.get() / self.gas_unit_scaling_factor)
+    }
+}
+
 impl Default for GasConstants {
     fn default() -> Self {
         Self {
-            global_memory_per_byte_cost: GasUnits(4),
-            global_memory_per_byte_write_cost: GasUnits(9),
-            min_transaction_gas_units: GasUnits(600),
+            global_memory_per_byte_cost: InternalGasUnits(4),
+            global_memory_per_byte_write_cost: InternalGasUnits(9),
+            min_transaction_gas_units: InternalGasUnits(600),
             large_transaction_cutoff: LARGE_TRANSACTION_CUTOFF,
-            intrinsic_gas_per_byte: GasUnits(8),
+            intrinsic_gas_per_byte: InternalGasUnits(8),
             maximum_number_of_gas_units: GasUnits(4_000_000),
             min_price_per_gas_unit: GasPrice(0),
             max_price_per_gas_unit: GasPrice(10_000),
@@ -241,24 +257,21 @@ impl CostTable {
 /// - memory cost: how much memory is required for the instruction, and storage overhead
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct GasCost {
-    pub instruction_gas: GasUnits<GasCarrier>,
-    pub memory_gas: GasUnits<GasCarrier>,
+    pub instruction_gas: InternalGasUnits<GasCarrier>,
+    pub memory_gas: InternalGasUnits<GasCarrier>,
 }
 
 impl GasCost {
     pub fn new(instr_gas: GasCarrier, mem_gas: GasCarrier) -> Self {
         Self {
-            instruction_gas: GasUnits::new(instr_gas),
-            memory_gas: GasUnits::new(mem_gas),
+            instruction_gas: InternalGasUnits::new(instr_gas),
+            memory_gas: InternalGasUnits::new(mem_gas),
         }
     }
 
-    /// Take a GasCost from our gas schedule and convert it to a total gas charge in `GasUnits`.
-    ///
-    /// This is used internally for converting from a `GasCost` which is a triple of numbers
-    /// represeing instruction, stack, and memory consumption into a number of `GasUnits`.
+    /// Convert a GasCost to a total gas charge in `InternalGasUnits`.
     #[inline]
-    pub fn total(&self) -> GasUnits<GasCarrier> {
+    pub fn total(&self) -> InternalGasUnits<GasCarrier> {
         self.instruction_gas.add(self.memory_gas)
     }
 }

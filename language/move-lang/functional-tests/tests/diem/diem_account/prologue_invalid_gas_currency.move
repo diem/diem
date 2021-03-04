@@ -43,4 +43,4 @@ script {
     }
 }
 // XXX/FIXME
-// check: "Discard(INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)"
+// check: "Discard(BAD_TRANSACTION_FEE_CURRENCY)"

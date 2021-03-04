@@ -45,13 +45,13 @@ fn format_diff(expected: String, actual: String) -> String {
 // Runs all tests under the test/testsuite directory.
 fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
-    let deps = vec![STD_LIB_DIR.to_string()];
+    let deps = minimal_stdlib_files();
     let sender = Some(Address::parse_str(SENDER).unwrap());
 
     let exp_path = path.with_extension(EXP_EXT);
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None)?;
+    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None, false)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

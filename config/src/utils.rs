@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::NodeConfig;
-use diem_network_address::{NetworkAddress, Protocol};
 use diem_types::{
     account_address::AccountAddress,
+    network_address::{NetworkAddress, Protocol},
     transaction::{authenticator::AuthenticationKey, Transaction},
 };
 use get_if_addrs::get_if_addrs;

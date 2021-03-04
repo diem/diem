@@ -284,7 +284,7 @@ These are FullNodes used by DPN Participants to forward transactions to the vali
 
 - **Move** is a new programming language that implements all the transactions on the Diem Blockchain.
 - It has two different kinds of code &mdash; [transaction scripts](#transaction-script) and [Move modules](#move-module).
-- For further information on Move, refer to the [Move technical paper](/move/move-paper.md)
+- For further information on Move, refer to the [Move technical paper](/docs/technical-papers/move-paper)
 
 ### Move Bytecode
 
@@ -364,7 +364,7 @@ Under the DPN Rules, a VASP is defined as a natural or legal person that as a bu
 
 ### Sequence Number
 
-- The **sequence number** for an account indicates the number of transactions that have been sent from that account. It is incremented every time a transaction sent from that account is executed or aborted and stored in the blockchain.
+- The **sequence number** for an account indicates the number of transactions that have been submitted and committed on chain from that account. It is incremented every time a transaction sent from that account is executed or aborted and stored in the blockchain.
 - A transaction is executed only if it matches the current sequence number for the sender account. This helps sequence multiple transactions from the same sender and prevents replay attacks.
 - If the current sequence number of an account A is X, then a transaction T on account A will only be executed if T's sequence number is X.
 - These transactions will be held in mempool until they are the next sequence number for that account (or until they expire).

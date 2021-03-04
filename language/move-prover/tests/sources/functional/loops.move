@@ -1,5 +1,4 @@
 module VerifyLoops {
-
     spec module {
         pragma verify=true;
     }

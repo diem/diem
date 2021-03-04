@@ -40,7 +40,7 @@ impl Pad {
     fn pad_identifier_table(&mut self, module: &mut CompiledModuleMut) {
         module.identifiers = (0..(self.table_size + module.identifiers.len()))
             .map(|_| {
-                let len = self.gen.gen_range(10, self.options.max_string_size);
+                let len = self.gen.gen_range(10..self.options.max_string_size);
                 Identifier::new(random_string(&mut self.gen, len)).unwrap()
             })
             .collect()

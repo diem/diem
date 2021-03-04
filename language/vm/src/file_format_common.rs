@@ -25,8 +25,7 @@ impl BinaryConstants {
     /// The blob that must start a binary.
     pub const DIEM_MAGIC_SIZE: usize = 4;
     pub const DIEM_MAGIC: [u8; BinaryConstants::DIEM_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
-    /// The `DIEM_MAGIC` size, 4 byte for major version and 1 byte
-    /// for table count.
+    /// The `DIEM_MAGIC` size, 4 byte for major version and 1 byte for table count.
     pub const HEADER_SIZE: usize = BinaryConstants::DIEM_MAGIC_SIZE + 5;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
@@ -96,6 +95,7 @@ pub enum TableType {
     FUNCTION_DEFS           = 0xC,
     FIELD_HANDLE            = 0xD,
     FIELD_INST              = 0xE,
+    FRIEND_DECLS            = 0xF,
 }
 
 /// Constants for signature blob values.
@@ -116,25 +116,6 @@ pub enum SerializedType {
     VECTOR                  = 0xA,
     STRUCT_INST             = 0xB,
     SIGNER                  = 0xC,
-}
-
-#[rustfmt::skip]
-#[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug)]
-pub enum SerializedNominalResourceFlag {
-    NOMINAL_RESOURCE        = 0x1,
-    NORMAL_STRUCT           = 0x2,
-}
-
-#[rustfmt::skip]
-#[allow(non_camel_case_types)]
-#[repr(u8)]
-#[derive(Clone, Copy, Debug)]
-pub enum SerializedKind {
-    ALL                     = 0x1,
-    COPYABLE                = 0x2,
-    RESOURCE                = 0x3,
 }
 
 #[rustfmt::skip]
@@ -326,16 +307,16 @@ pub(crate) fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 
-pub fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
-    let mut buf = [0; 4];
-    cursor.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
-}
-
 pub fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
     let mut buf = [0; 1];
     cursor.read_exact(&mut buf)?;
     Ok(buf[0])
+}
+
+pub fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
+    let mut buf = [0; 4];
+    cursor.read_exact(&mut buf)?;
+    Ok(u32::from_le_bytes(buf))
 }
 
 pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
@@ -362,6 +343,154 @@ pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     }
     bail!("invalid ULEB128 repr for usize");
 }
+
+//
+// Bytecode evolution
+//
+
+/// Version 1: the initial version
+pub const VERSION_1: u32 = 1;
+
+/// Version 2: changes compared with version 1
+///  + function visibility stored in separate byte before the flags byte
+///  + the flags byte now contains only the is_native information (at bit 0x2)
+///  + the "friend" visibility modifier
+///  + friend list for modules
+pub const VERSION_2: u32 = 2;
+
+// Mark which version is the latest version
+pub const VERSION_MAX: u32 = VERSION_2;
+
+pub(crate) mod versioned_data {
+    use crate::{errors::*, file_format_common::*};
+    use move_core_types::vm_status::StatusCode;
+    use std::io::{Cursor, Read};
+    pub struct VersionedBinary<'a> {
+        version: u32,
+        binary: &'a [u8],
+    }
+
+    pub struct VersionedCursor<'a> {
+        version: u32,
+        cursor: Cursor<&'a [u8]>,
+    }
+
+    impl<'a> VersionedBinary<'a> {
+        fn new(binary: &'a [u8]) -> BinaryLoaderResult<(Self, Cursor<&'a [u8]>)> {
+            let mut cursor = Cursor::<&'a [u8]>::new(binary);
+            let mut magic = [0u8; BinaryConstants::DIEM_MAGIC_SIZE];
+            if let Ok(count) = cursor.read(&mut magic) {
+                if count != BinaryConstants::DIEM_MAGIC_SIZE || magic != BinaryConstants::DIEM_MAGIC
+                {
+                    return Err(PartialVMError::new(StatusCode::BAD_MAGIC));
+                }
+            } else {
+                return Err(PartialVMError::new(StatusCode::MALFORMED)
+                    .with_message("Bad binary header".to_string()));
+            }
+            let version = match read_u32(&mut cursor) {
+                Ok(v) => v,
+                Err(_) => {
+                    return Err(PartialVMError::new(StatusCode::MALFORMED)
+                        .with_message("Bad binary header".to_string()));
+                }
+            };
+            if version == 0 || version > VERSION_MAX {
+                return Err(PartialVMError::new(StatusCode::UNKNOWN_VERSION));
+            }
+            Ok((Self { version, binary }, cursor))
+        }
+
+        #[allow(dead_code)]
+        pub fn version(&self) -> u32 {
+            self.version
+        }
+
+        pub fn new_cursor(&self, start: usize, end: usize) -> VersionedCursor<'a> {
+            VersionedCursor {
+                version: self.version,
+                cursor: Cursor::new(&self.binary[start..end]),
+            }
+        }
+
+        pub fn slice(&self, start: usize, end: usize) -> &'a [u8] {
+            &self.binary[start..end]
+        }
+    }
+
+    impl<'a> VersionedCursor<'a> {
+        /// Verifies the correctness of the "static" part of the binary's header.
+        /// If valid, returns a cursor to the binary
+        pub fn new(binary: &'a [u8]) -> BinaryLoaderResult<Self> {
+            let (binary, cursor) = VersionedBinary::new(binary)?;
+            Ok(VersionedCursor {
+                version: binary.version,
+                cursor,
+            })
+        }
+
+        #[allow(dead_code)]
+        pub fn version(&self) -> u32 {
+            self.version
+        }
+
+        pub fn position(&self) -> u64 {
+            self.cursor.position()
+        }
+
+        #[allow(dead_code)]
+        pub fn binary(&self) -> VersionedBinary<'a> {
+            VersionedBinary {
+                version: self.version,
+                binary: self.cursor.get_ref(),
+            }
+        }
+
+        pub fn read_u8(&mut self) -> Result<u8> {
+            read_u8(&mut self.cursor)
+        }
+
+        #[allow(dead_code)]
+        pub fn read_u32(&mut self) -> Result<u32> {
+            read_u32(&mut self.cursor)
+        }
+
+        pub fn read_uleb128_as_u64(&mut self) -> Result<u64> {
+            read_uleb128_as_u64(&mut self.cursor)
+        }
+
+        pub fn read_new_binary<'b>(
+            &mut self,
+            buffer: &'b mut Vec<u8>,
+            n: usize,
+        ) -> BinaryLoaderResult<VersionedBinary<'b>> {
+            debug_assert!(buffer.is_empty());
+            let mut tmp_buffer = vec![0; n];
+            match self.cursor.read_exact(&mut tmp_buffer) {
+                Err(_) => Err(PartialVMError::new(StatusCode::MALFORMED)),
+                Ok(()) => {
+                    *buffer = tmp_buffer;
+                    Ok(VersionedBinary {
+                        version: self.version,
+                        binary: buffer,
+                    })
+                }
+            }
+        }
+
+        #[cfg(test)]
+        pub fn new_for_test(version: u32, cursor: Cursor<&'a [u8]>) -> Self {
+            Self { version, cursor }
+        }
+    }
+
+    impl<'a> Read for VersionedCursor<'a> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            self.cursor.read(buf)
+        }
+    }
+}
+pub(crate) use versioned_data::{VersionedBinary, VersionedCursor};
 
 /// The encoding of the instruction is the serialized form of it, but disregarding the
 /// serialization of the instruction's argument(s).
