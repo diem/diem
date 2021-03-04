@@ -1,0 +1,37 @@
+# File copied from storage/backup/backup-cli/src/storage/command_adapter/azure.sample.toml
+
+env_vars = []
+
+[commands]
+create_backup = '''
+    # backup handle is the same with input backup name, output to stdout
+    echo "$BACKUP_NAME"
+'''
+
+create_for_write = '''
+    # file handle is the file name under the folder with the name of the backup handle
+    FILE_HANDLE="$BACKUP_HANDLE/$FILE_NAME"
+    # output file handle to stdout
+    echo "$FILE_HANDLE"
+    # close stdout
+    exec 1>&-
+    # route stdin to file handle
+    gzip -c | azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/$FILE_HANDLE$SAS" > /dev/null
+'''
+
+open_for_read = '''
+    # need to close stdin by "</dev/null" since azcopy gets confused about the direction of the pipe, even though we supply --from-to
+    # route file handle content to stdout
+    azcopy cp --from-to BlobPipe "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/$FILE_HANDLE$SAS" < /dev/null | gzip -cd
+'''
+
+save_metadata_line= '''
+    # save the line to a new file under the metadata folder
+    gzip -c | azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$SUBDIR/metadata/$FILE_NAME$SAS"
+'''
+
+list_metadata_files = '''
+    # list files under the metadata folder
+    (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata/$SAS" ||:) \
+    | sed -ne "s#; .*##;s#INFO: \(.*\)#metadata/\1#p"
+'''

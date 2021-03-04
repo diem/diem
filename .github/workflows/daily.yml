@@ -79,3 +79,31 @@ jobs:
       #- name: publish to codecov.io
       #  run: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcovhtml/lcov.info -F unittest;
       #- uses: ./.github/actions/build-teardown
+
+  transaction-replay:
+    runs-on: ubuntu-latest-xl
+    container:
+      image: libra/build_environment:github-1
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+      ACCOUNT: ${{ secrets.TRANSACTION_REPLAY_ACCOUNT }}
+      CONTAINER: backup
+      SUB_DIR: e2
+      SAS: ""
+      CONFIG: .github/workflows/transaction-replay.toml
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/build-setup
+      - name: install azcopy
+        run: |
+          # Download AzCopy
+          curl -sL -o downloadazcopy-v10-linux "https://aka.ms/downloadazcopy-v10-linux"
+          # Expand Archive
+          tar -xvf downloadazcopy-v10-linux
+          # Move AzCopy to the destination you want to store it
+          cp ./azcopy_linux_amd64_*/azcopy /usr/bin/
+          rm -rf downloadazcopy-v10-linux azcopy_linux_amd64_*
+      - name: replay transactions
+        run: |
+          cargo run --release --bin db-restore -- --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
+      - uses: ./.github/actions/build-teardown
