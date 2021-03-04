@@ -318,8 +318,8 @@ impl<R: RetryStrategy> Client<R> {
             return Err(err);
         }
         if retries < retry.max_retries(&err) {
-            match retries.checked_add(1) {
-                Some(i) if i < retry.max_retries(&err) => {
+            match checked!(retries + 1) {
+                Ok(i) if i < retry.max_retries(&err) => {
                     retries = i;
                 }
                 _ => return Err(err),
