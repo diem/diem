@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Sleep, SleepTrait, TimeServiceTrait, ZERO_DURATION};
-use infallible::Mutex;
 use futures::future::Future;
+use infallible::{Mutex, checked};
 use std::{
     cmp::max,
     collections::btree_map::BTreeMap,
@@ -248,10 +248,8 @@ impl Inner {
 
     fn next_sleep_index(&mut self) -> SleepIndex {
         let index = self.next_sleep_index;
-        self.next_sleep_index = self
-            .next_sleep_index
-            .checked_add(1)
-            .expect("too many sleep entries");
+        self.next_sleep_index =
+            checked!(index + 1).expect("too many sleep entries");
         index
     }
 

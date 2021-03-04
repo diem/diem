@@ -30,6 +30,7 @@ diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-temppath = { path = "../../../common/temppath" }
 fallible = { path = "../../../common/fallible" }
+infallible = { path = "../../../common/infallible" }
 transaction-builder = { path = "../../../language/transaction-builder" }
 
 [features]

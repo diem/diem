@@ -3,6 +3,7 @@
 
 use crate::{validate_transaction::ValidateTransaction, TransactionContext};
 use diem_management::error::Error;
+use infallible::checked;
 use std::{thread::sleep, time};
 use structopt::StructOpt;
 
@@ -52,8 +53,7 @@ impl AutoValidate {
             }
 
             sleep(time::Duration::from_secs(self.sleep_interval));
-            time_slept = time_slept
-                .checked_add(self.sleep_interval)
+            time_slept = checked!(time_slept + self.sleep_interval)
                 .expect("Integer overflow/underflow detected: unexpected amount of time slept!");
         }
 

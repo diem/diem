@@ -75,11 +75,10 @@ impl QuorumCert {
         ledger_info: &LedgerInfo,
         genesis_id: HashValue,
     ) -> QuorumCert {
+        let new_epoch = checked!(ledger_info.epoch() + 1)
+        .expect("Integer overflow when creating cert for genesis from ledger info");
         let ancestor = BlockInfo::new(
-            ledger_info
-                .epoch()
-                .checked_add(1)
-                .expect("Integer overflow when creating cert for genesis from ledger info"),
+            new_epoch,
             0,
             genesis_id,
             ledger_info.transaction_accumulator_hash(),
