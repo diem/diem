@@ -1,12 +1,12 @@
 [package]
 name = "move-core-types"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Core types for Move"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
-publish = false
+publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
@@ -23,13 +23,12 @@ serde = { version = "1.0.124", default-features = false }
 serde_bytes = "0.11.5"
 thiserror = "1.0.24"
 
-diem-workspace-hack = { path = "../../../common/workspace-hack" }
-
 [dev-dependencies]
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 regex = "1.4.3"
 serde_json = "1.0.64"
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [features]
 default = []

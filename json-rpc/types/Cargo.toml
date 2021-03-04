@@ -1,12 +1,12 @@
 [package]
 name = "diem-json-rpc-types"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem JSONRPC Types"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
-publish = false
+publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
@@ -17,10 +17,12 @@ serde_json = "1.0.64"
 prost = "0.7.0"
 
 bcs = "0.1.2"
-diem-types = { path = "../../types" }
-diem-crypto = { path = "../../crypto/crypto" }
+diem-types = { path = "../../types", version = "0.0.1" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.0.1"  }
+move-core-types = { path = "../../language/move-core/types", version = "0.0.1"  }
+
+[dev-dependencies]
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-move-core-types = { path = "../../language/move-core/types" }
 
 [build-dependencies]
 prost-build = "0.7.0"

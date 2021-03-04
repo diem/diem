@@ -1,22 +1,22 @@
 [package]
 name = "diem-crypto-derive"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem custom derives for `diem-crypto`"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
-publish = false
+publish = ["crates-io"]
 edition = "2018"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-diem-workspace-hack = { path = "../../common/workspace-hack" }
 syn = { version = "1.0.58", features = ["derive"] }
 quote = "1.0.9"
 proc-macro2 = "1.0.24"
 
 [dev-dependencies]
 anyhow = "1.0.38"
+diem-workspace-hack = { path = "../../common/workspace-hack" }

@@ -1,12 +1,12 @@
 [package]
 name = "diem-client"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem JSON-RPC client"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
-publish = false
+publish = ["crates-io"]
 edition = "2018"
 
 [features]
@@ -21,13 +21,15 @@ hex = "0.4.3"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"
 
-diem-crypto = { path = "../../crypto/crypto" }
-diem-json-rpc-types  = { path = "../../json-rpc/types" }
-diem-types = { path = "../../types" }
-diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-crypto = { path = "../../crypto/crypto", version = "0.0.1" }
+diem-json-rpc-types  = { path = "../../json-rpc/types", version = "0.0.1" }
+diem-types = { path = "../../types", version = "0.0.1" }
 
 # Optional Dependencies
 reqwest = { version = "0.11.1", features = ["json"], optional = true }
 tokio = { version = "1.2.0", features = ["time"], default_features = false, optional = true }
 ureq = { version = "1.5.4", features = ["json", "native-tls"], default-features = false, optional = true }
 ipnet = { version = "2.3", optional = true }
+
+[dev-dependencies]
+diem-workspace-hack = { path = "../../common/workspace-hack" }

@@ -1,0 +1,26 @@
+[package]
+name = "diem-sdk"
+version = "0.0.1"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem types"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = ["crates-io"]
+edition = "2018"
+
+[features]
+default = ["client"]
+client = ["diem-client"]
+
+[dependencies]
+diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
+diem-types = { path = "../types", version = "0.0.1"}
+move-core-types = { path = "../language/move-core/types", version = "0.0.1" }
+diem-transaction-builder = { path = "../client/transaction-builder", version = "0.0.1" }
+
+# Optional Dependencies
+diem-client = { path = "./client", version = "0.0.1", optional = true }
+
+[dev-dependencies]
+diem-workspace-hack = { path = "../common/workspace-hack" }

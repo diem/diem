@@ -1,12 +1,12 @@
 [package]
 name = "diem-types"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Diem types"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
-publish = false
+publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
@@ -28,10 +28,9 @@ thiserror = "1.0.24"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
 bcs = "0.1.2"
-diem-crypto = { path = "../crypto/crypto" }
-diem-crypto-derive = { path = "../crypto/crypto-derive" }
-diem-workspace-hack = { path = "../common/workspace-hack" }
-move-core-types = { path = "../language/move-core/types" }
+diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
+diem-crypto-derive = { path = "../crypto/crypto-derive", version = "0.0.1" }
+move-core-types = { path = "../language/move-core/types", version = "0.0.1" }
 
 [dev-dependencies]
 regex = "1.4.3"
@@ -41,6 +40,7 @@ serde_json = "1.0.64"
 
 diem-crypto = { path = "../crypto/crypto", features = ["fuzzing"] }
 move-core-types = { path = "../language/move-core/types", features = ["fuzzing"]  }
+diem-workspace-hack = { path = "../common/workspace-hack" }
 
 [features]
 default = []
