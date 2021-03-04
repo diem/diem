@@ -11,8 +11,8 @@ use move_model::{
     code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
     model::{
-        FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter,
-        QualifiedId, StructEnv, TypeConstraint, TypeParameter,
+        FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, ModuleId,
+        NamedConstantEnv, Parameter, QualifiedId, StructEnv, TypeConstraint, TypeParameter,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -50,6 +50,7 @@ const KEYWORDS: &[&str] = &[
     "move",
     "native",
     "public",
+    "friend",
     "resource",
     "return",
     "spec",
@@ -657,7 +658,7 @@ impl<'env> Docgen<'env> {
 
         let funs = module_env
             .get_functions()
-            .filter(|f| self.options.include_private_fun || f.is_public())
+            .filter(|f| self.options.include_private_fun || f.is_exposed())
             .sorted_by(|a, b| Ord::cmp(&a.get_loc(), &b.get_loc()))
             .collect_vec();
         if !funs.is_empty() {
@@ -1081,7 +1082,12 @@ impl<'env> Docgen<'env> {
     /// Generates documentation for a function signature.
     fn function_header_display(&self, func_env: &FunctionEnv<'_>) -> String {
         let name = self.name_string(func_env.get_name());
-        let visibility = if func_env.is_public() { "public " } else { "" };
+        let visibility = match func_env.visibility() {
+            FunctionVisibility::Public => "public ",
+            FunctionVisibility::Friend => "public(friend) ",
+            FunctionVisibility::Script => "public(script) ",
+            FunctionVisibility::Private => "",
+        };
         let tctx = &self.type_display_context_for_fun(&func_env);
         let params = func_env
             .get_parameters()

@@ -15,6 +15,14 @@ The script `yet_another` is documented in its own file.
 
 > {{move-include other}}
 
+## Some other scripts from a module
+
+> {{move-include OneTypeOfScript}}
+
+This is another module full of script funs too:
+
+> {{move-include AnotherTypeOfScript}}
+
 ## Index
 
 > {{move-index}}

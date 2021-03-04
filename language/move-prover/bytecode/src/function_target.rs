@@ -9,7 +9,10 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast::{Exp, Spec},
-    model::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId, TypeParameter},
+    model::{
+        FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId,
+        TypeParameter,
+    },
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
 };
@@ -158,6 +161,11 @@ impl<'env> FunctionTarget<'env> {
     /// Returns true if this function is public.
     pub fn is_public(&self) -> bool {
         self.func_env.is_public()
+    }
+
+    /// Returns the visibility of this function.
+    pub fn visibility(&self) -> FunctionVisibility {
+        self.func_env.visibility()
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).
@@ -421,7 +429,12 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         write!(
             f,
             "{}fun {}::{}",
-            if self.is_public() { "pub " } else { "" },
+            match self.func_env.visibility() {
+                FunctionVisibility::Public => "pub ",
+                FunctionVisibility::Friend => "pub(friend) ",
+                FunctionVisibility::Script => "pub(script) ",
+                FunctionVisibility::Private => "",
+            },
             self.func_env
                 .module_env
                 .get_name()

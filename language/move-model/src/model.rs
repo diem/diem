@@ -67,6 +67,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use std::any::{Any, TypeId};
+pub use vm::file_format::Visibility as FunctionVisibility;
 
 // =================================================================================================
 /// # Constants
@@ -2374,6 +2375,8 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(OPAQUE_PRAGMA, || false)
     }
 
+    /// TODO: Change the definition of this function so that it only returns true if this function
+    /// is `public`.
     /// Returns true if this function is public.
     pub fn is_public(&self) -> bool {
         // The main function of a script is implicitly public
@@ -2388,6 +2391,32 @@ impl<'env> FunctionEnv<'env> {
                 Visibility::Friend => unimplemented!("Friend visibility not yet supported"),
                 Visibility::Private => false,
             }
+    }
+
+    /// Return the visibility of this function
+    pub fn visibility(&self) -> FunctionVisibility {
+        self.definition_view().visibility()
+    }
+
+    /// Return whether this function is exposed outside of the module.
+    pub fn is_exposed(&self) -> bool {
+        self.module_env.is_script_module()
+            || match self.definition_view().visibility() {
+                Visibility::Public | Visibility::Script | Visibility::Friend => true,
+                Visibility::Private => false,
+            }
+    }
+
+    /// Returns true if the function is a script function
+    pub fn is_script(&self) -> bool {
+        // The main function of a scipt is a script function
+        self.module_env.is_script_module()
+            || self.definition_view().visibility() == Visibility::Script
+    }
+
+    /// Return true if this function is a friend function
+    pub fn is_friend(&self) -> bool {
+        self.definition_view().visibility() == Visibility::Friend
     }
 
     /// Returns true if invariants are declared disabled in body of function
