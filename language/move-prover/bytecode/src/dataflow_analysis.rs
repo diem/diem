@@ -22,7 +22,7 @@ pub enum JoinResult {
 }
 
 impl JoinResult {
-    pub fn join(self, other: JoinResult) -> JoinResult {
+    pub fn combine(self, other: JoinResult) -> JoinResult {
         use JoinResult::*;
         match (self, other) {
             (Unchanged, Unchanged) => Unchanged,

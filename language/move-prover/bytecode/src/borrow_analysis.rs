@@ -596,21 +596,21 @@ impl AbstractDomain for BorrowInfo {
         let mut borrowed_changed = JoinResult::Unchanged;
         for (src, dests) in other.borrowed_by.iter() {
             for (dest, edges) in dests {
-                let new_edges = self
+                let edges_changed = self
                     .borrowed_by
                     .entry(src.clone())
                     .or_default()
                     .entry(dest.clone())
                     .or_default()
                     .join(edges);
-                borrowed_changed = borrowed_changed.join(new_edges)
+                borrowed_changed = borrowed_changed.combine(edges_changed)
             }
         }
         borrowed_changed
-            .join(moved_changed)
-            .join(spliced_changed)
-            .join(unchecked_changed)
-            .join(live_changed)
+            .combine(moved_changed)
+            .combine(spliced_changed)
+            .combine(unchecked_changed)
+            .combine(live_changed)
     }
 }
 
