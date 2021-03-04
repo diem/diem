@@ -4,11 +4,13 @@
 //! Data flow analysis computing borrow information for preparation of memory_instrumentation.
 
 use crate::{
-    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
+    dataflow_analysis::{
+        AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
+    },
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnnotation,
-    stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation},
+    stackless_bytecode::{AssignKind, BorrowEdge, BorrowNode, Bytecode, Operation, StrongEdge},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
@@ -19,29 +21,70 @@ use move_model::{
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
+/// Borrow graph edge abstract domain.
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum EdgeDomain {
+    Top,
+    EdgeSet(SetDomain<StrongEdge>),
+}
+
+impl std::fmt::Display for EdgeDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EdgeDomain::Top => write!(f, "*"),
+            EdgeDomain::EdgeSet(edgeset) => write!(
+                f,
+                "{}",
+                edgeset.iter().map(|edge| format!("{}", edge)).join(", ")
+            ),
+        }
+    }
+}
+
+impl AbstractDomain for EdgeDomain {
+    fn join(&mut self, other: &Self) -> JoinResult {
+        match self {
+            Self::Top => JoinResult::Unchanged,
+            Self::EdgeSet(edges1) => match other {
+                Self::Top => {
+                    *self = Self::Top;
+                    JoinResult::Changed
+                }
+                Self::EdgeSet(edges2) => edges1.join(edges2),
+            },
+        }
+    }
+}
+
+impl std::default::Default for EdgeDomain {
+    fn default() -> Self {
+        Self::EdgeSet(SetDomain::default())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Default)]
 pub struct BorrowInfo {
     /// Contains the nodes which are alive. This excludes nodes which are alive because
     /// other nodes which are alive borrow from them.
-    live_nodes: BTreeSet<BorrowNode>,
+    live_nodes: SetDomain<BorrowNode>,
 
     /// Contains the nodes which are unchecked regards their pack/unpack invariant.
     /// These are nodes derived from &mut parameters of private functions for which we do
     /// not perform pack/unpack.
-    unchecked_nodes: BTreeSet<BorrowNode>,
+    unchecked_nodes: SetDomain<BorrowNode>,
 
     /// Contains the nodes which have been updated via a Splice operation.
-    spliced_nodes: BTreeSet<BorrowNode>,
+    spliced_nodes: SetDomain<BorrowNode>,
 
     /// Contains the nodes which have been moved via a move instruction.
-    moved_nodes: BTreeSet<BorrowNode>,
+    moved_nodes: SetDomain<BorrowNode>,
 
     /// Forward borrow information.
-    borrowed_by: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    borrowed_by: BTreeMap<BorrowNode, BTreeMap<BorrowNode, EdgeDomain>>,
 
     /// Backward borrow information. This field is not used during analysis, but computed once
     /// analysis is done.
-    borrows_from: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    borrows_from: BTreeMap<BorrowNode, BTreeMap<BorrowNode, EdgeDomain>>,
 }
 
 impl BorrowInfo {
@@ -49,7 +92,7 @@ impl BorrowInfo {
     pub fn get_children(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
         self.borrowed_by
             .get(node)
-            .map(|s| s.iter().collect_vec())
+            .map(|s| s.keys().collect_vec())
             .unwrap_or_else(Vec::new)
     }
 
@@ -57,8 +100,16 @@ impl BorrowInfo {
     pub fn get_parents(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
         self.borrows_from
             .get(node)
-            .map(|s| s.iter().collect_vec())
+            .map(|s| s.keys().collect_vec())
             .unwrap_or_else(Vec::new)
+    }
+
+    /// Gets incoming edges (together with sources) of this node.
+    pub fn get_incoming(&self, node: &BorrowNode) -> BTreeMap<BorrowNode, EdgeDomain> {
+        self.borrows_from
+            .get(node)
+            .cloned()
+            .unwrap_or_else(BTreeMap::new)
     }
 
     /// Checks whether a node is in use. A node is used if it is in the live_nodes set
@@ -169,13 +220,13 @@ impl BorrowInfo {
                 .map(|node| format!("{}", node.display(func_target)))
                 .join(", "),
         );
-        let borrows_str = |(node, borrows): (&BorrowNode, &BTreeSet<BorrowNode>)| {
+        let borrows_str = |(node1, borrows): (&BorrowNode, &BTreeMap<BorrowNode, EdgeDomain>)| {
             format!(
                 "{} -> {{{}}}",
-                node.display(func_target),
+                node1.display(func_target),
                 borrows
                     .iter()
-                    .map(|borrow| borrow.display(func_target))
+                    .map(|(node2, edges)| format!("({}, {})", edges, node2.display(func_target)))
                     .join(", ")
             )
         };
@@ -198,22 +249,39 @@ impl BorrowInfo {
         self.live_nodes.remove(node);
     }
 
-    fn add_edge(&mut self, parent: BorrowNode, child: BorrowNode) -> bool {
-        assert_ne!(parent, child);
+    fn add_edge(&mut self, parent: BorrowNode, child: BorrowNode, weight: BorrowEdge) -> bool {
         if self.unchecked_nodes.contains(&parent) {
             // If the parent node is unchecked, so is the child node.
             self.unchecked_nodes.insert(child.clone());
         }
-        self.borrowed_by.entry(parent).or_default().insert(child)
+        match self
+            .borrowed_by
+            .entry(parent.clone())
+            .or_default()
+            .entry(child.clone())
+            .or_default()
+        {
+            EdgeDomain::Top => false,
+            EdgeDomain::EdgeSet(edges) => match weight {
+                BorrowEdge::Weak => {
+                    self.borrowed_by
+                        .entry(parent)
+                        .or_default()
+                        .insert(child, EdgeDomain::Top);
+                    true
+                }
+                BorrowEdge::Strong(edge) => edges.insert(edge),
+            },
+        }
     }
 
     fn consolidate(&mut self) {
-        for (parent, childs) in &self.borrowed_by {
-            for child in childs {
+        for (src, outgoing) in &self.borrowed_by {
+            for (dst, edges) in outgoing {
                 self.borrows_from
-                    .entry(child.clone())
+                    .entry(dst.clone())
                     .or_default()
-                    .insert(parent.clone());
+                    .insert(src.clone(), edges.clone());
             }
         }
     }
@@ -234,11 +302,13 @@ impl BorrowAnnotation {
 }
 
 /// Borrow analysis processor.
-pub struct BorrowAnalysisProcessor {}
+pub struct BorrowAnalysisProcessor {
+    strong_edges: bool,
+}
 
 impl BorrowAnalysisProcessor {
-    pub fn new() -> Box<Self> {
-        Box::new(BorrowAnalysisProcessor {})
+    pub fn new(strong_edges: bool) -> Box<Self> {
+        Box::new(BorrowAnalysisProcessor { strong_edges })
     }
 }
 
@@ -254,7 +324,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             BorrowAnnotation(BTreeMap::new())
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
-            let analyzer = BorrowAnalysis::new(&func_target);
+            let analyzer = BorrowAnalysis::new(&func_target, self.strong_edges);
             let result = analyzer.analyze(&data.code);
             let propagator = PropagateSplicedAnalysis::new(result);
             BorrowAnnotation(propagator.run(&data.code))
@@ -273,10 +343,11 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
+    strong_edges: bool,
 }
 
 impl<'a> BorrowAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget<'a>) -> Self {
+    fn new(func_target: &'a FunctionTarget<'a>, strong_edges: bool) -> Self {
         let livevar_annotation = func_target
             .get_annotations()
             .get::<LiveVarAnnotation>()
@@ -285,6 +356,7 @@ impl<'a> BorrowAnalysis<'a> {
         Self {
             func_target,
             livevar_annotation,
+            strong_edges,
         }
     }
 
@@ -337,7 +409,15 @@ impl<'a> BorrowAnalysis<'a> {
             .collect();
         state.borrowed_by = std::mem::take(&mut state.borrowed_by)
             .into_iter()
-            .map(|(src, dests)| (remap(src), dests.into_iter().map(remap).collect()))
+            .map(|(src, dests)| {
+                (
+                    remap(src),
+                    dests
+                        .into_iter()
+                        .map(|(node, edges)| (remap(node), edges))
+                        .collect(),
+                )
+            })
             .collect();
     }
 }
@@ -363,7 +443,15 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                     }
                     AssignKind::Copy => {
                         state.add_node(dest_node.clone());
-                        state.add_edge(src_node, dest_node);
+                        if self.strong_edges {
+                            state.add_edge(
+                                src_node,
+                                dest_node,
+                                BorrowEdge::Strong(StrongEdge::Empty),
+                            );
+                        } else {
+                            state.add_edge(src_node, dest_node, BorrowEdge::Weak);
+                        }
                     }
                 }
             }
@@ -378,7 +466,15 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                         let dest_node = self.borrow_node(dests[0]);
                         let src_node = self.borrow_node(srcs[0]);
                         state.add_node(dest_node.clone());
-                        state.add_edge(src_node, dest_node);
+                        if self.strong_edges {
+                            state.add_edge(
+                                src_node,
+                                dest_node,
+                                BorrowEdge::Strong(StrongEdge::Empty),
+                            );
+                        } else {
+                            state.add_edge(src_node, dest_node, BorrowEdge::Weak);
+                        }
                     }
                     BorrowGlobal(mid, sid, _)
                         if livevar_annotation_at.after.contains(&dests[0]) =>
@@ -389,19 +485,41 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             id: *sid,
                         });
                         state.add_node(dest_node.clone());
-                        state.add_edge(src_node, dest_node);
+                        if self.strong_edges {
+                            state.add_edge(
+                                src_node,
+                                dest_node,
+                                BorrowEdge::Strong(StrongEdge::Empty),
+                            );
+                        } else {
+                            state.add_edge(src_node, dest_node, BorrowEdge::Weak);
+                        }
                     }
-                    BorrowField(..) if livevar_annotation_at.after.contains(&dests[0]) => {
+                    BorrowField(_, _, _, offset)
+                        if livevar_annotation_at.after.contains(&dests[0]) =>
+                    {
                         let dest_node = self.borrow_node(dests[0]);
                         let src_node = self.borrow_node(srcs[0]);
                         state.add_node(dest_node.clone());
-                        state.add_edge(src_node, dest_node);
+                        if self.strong_edges {
+                            state.add_edge(
+                                src_node,
+                                dest_node,
+                                BorrowEdge::Strong(StrongEdge::Offset(*offset)),
+                            );
+                        } else {
+                            state.add_edge(src_node, dest_node, BorrowEdge::Weak);
+                        }
                     }
                     Splice(map) => {
                         let child_node = self.borrow_node(srcs[0]);
                         state.add_node(child_node.clone());
                         for parent in map.values() {
-                            state.add_edge(self.borrow_node(*parent), child_node.clone());
+                            state.add_edge(
+                                self.borrow_node(*parent),
+                                child_node.clone(),
+                                BorrowEdge::Weak,
+                            );
                             state.spliced_nodes.insert(self.borrow_node(*parent));
                             state.unchecked_nodes.insert(child_node.clone());
                         }
@@ -434,7 +552,11 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                     if livevar_annotation_at.after.contains(&dest) {
                                         state.add_node(dest_node.clone());
                                     }
-                                    state.add_edge(src_node, dest_node.clone());
+                                    state.add_edge(
+                                        src_node.clone(),
+                                        dest_node.clone(),
+                                        BorrowEdge::Weak,
+                                    );
                                 }
                             }
                         }
@@ -467,22 +589,28 @@ impl<'a> DataflowAnalysis for BorrowAnalysis<'a> {}
 
 impl AbstractDomain for BorrowInfo {
     fn join(&mut self, other: &Self) -> JoinResult {
-        let live_changed = extend_set(&mut self.live_nodes, &other.live_nodes);
-        let unchecked_changed = extend_set(&mut self.unchecked_nodes, &other.unchecked_nodes);
-        let spliced_changed = extend_set(&mut self.spliced_nodes, &other.spliced_nodes);
-        let moved_changed = extend_set(&mut self.moved_nodes, &other.moved_nodes);
-        let mut changed = live_changed || unchecked_changed || spliced_changed || moved_changed;
+        let live_changed = self.live_nodes.join(&other.live_nodes);
+        let unchecked_changed = self.unchecked_nodes.join(&other.unchecked_nodes);
+        let spliced_changed = self.spliced_nodes.join(&other.spliced_nodes);
+        let moved_changed = self.moved_nodes.join(&other.moved_nodes);
+        let mut borrowed_changed = JoinResult::Unchanged;
         for (src, dests) in other.borrowed_by.iter() {
-            for dest in dests {
-                let is_new = self.add_edge(src.clone(), dest.clone());
-                changed = changed || is_new;
+            for (dest, edges) in dests {
+                let new_edges = self
+                    .borrowed_by
+                    .entry(src.clone())
+                    .or_default()
+                    .entry(dest.clone())
+                    .or_default()
+                    .join(edges);
+                borrowed_changed = borrowed_changed.join(new_edges)
             }
         }
-        if changed {
-            JoinResult::Changed
-        } else {
-            JoinResult::Unchanged
-        }
+        borrowed_changed
+            .join(moved_changed)
+            .join(spliced_changed)
+            .join(unchecked_changed)
+            .join(live_changed)
     }
 }
 
@@ -554,8 +682,8 @@ impl PropagateSplicedAnalysis {
             if let Some((SplicedState { spliced: before }, SplicedState { spliced: after })) =
                 data.remove(code_offset)
             {
-                info.before.spliced_nodes = before;
-                info.after.spliced_nodes = after;
+                info.before.spliced_nodes = SetDomain::of_set(before);
+                info.after.spliced_nodes = SetDomain::of_set(after);
             }
         }
         borrow

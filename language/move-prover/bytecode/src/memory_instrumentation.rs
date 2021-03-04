@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    borrow_analysis::BorrowAnnotation,
+    borrow_analysis::{BorrowAnnotation, EdgeDomain},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
@@ -259,14 +259,27 @@ impl<'a> Instrumenter<'a> {
                     }
                 }
                 // Generate write_back for this reference.
-                for parent in before.get_parents(&node) {
-                    instrumented_bytecodes.push(Bytecode::Call(
-                        self.clone_attr(attr_id),
-                        vec![],
-                        Operation::WriteBack(parent.clone(), BorrowEdge::Weak),
-                        vec![*idx],
-                        None,
-                    ));
+                for (parent, edge_dom_ele) in before.get_incoming(&node) {
+                    match edge_dom_ele {
+                        EdgeDomain::Top => instrumented_bytecodes.push(Bytecode::Call(
+                            self.clone_attr(attr_id),
+                            vec![],
+                            Operation::WriteBack(parent.clone(), BorrowEdge::Weak),
+                            vec![*idx],
+                            None,
+                        )),
+                        EdgeDomain::EdgeSet(edges) => {
+                            for edge in edges {
+                                instrumented_bytecodes.push(Bytecode::Call(
+                                    self.clone_attr(attr_id),
+                                    vec![],
+                                    Operation::WriteBack(parent.clone(), BorrowEdge::Strong(edge)),
+                                    vec![*idx],
+                                    None,
+                                ))
+                            }
+                        }
+                    }
                 }
             }
         }

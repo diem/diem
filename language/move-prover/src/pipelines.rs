@@ -5,11 +5,11 @@
 
 use crate::cli::Options;
 use bytecode::{
-    borrow_analysis::BorrowAnalysisProcessor, borrow_analysis_v2,
+    borrow_analysis::BorrowAnalysisProcessor,
     clean_and_optimize::CleanAndOptimizeProcessor, eliminate_imm_refs::EliminateImmRefsProcessor,
     function_target_pipeline::FunctionTargetProcessor, livevar_analysis::LiveVarAnalysisProcessor,
     loop_analysis::LoopAnalysisProcessor, memory_instrumentation::MemoryInstrumentationProcessor,
-    memory_instrumentation_v2, mut_ref_instrumentation::MutRefInstrumenter,
+    mut_ref_instrumentation::MutRefInstrumenter,
     reaching_def_analysis::ReachingDefProcessor, usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
 };
@@ -22,7 +22,7 @@ pub fn pipelines(options: &Options) -> Vec<Box<dyn FunctionTargetProcessor>> {
             MutRefInstrumenter::new(),
             ReachingDefProcessor::new(),
             LiveVarAnalysisProcessor::new(),
-            BorrowAnalysisProcessor::new(),
+            BorrowAnalysisProcessor::new(options.strong_edges),
             MemoryInstrumentationProcessor::new(),
             CleanAndOptimizeProcessor::new(),
             UsageProcessor::new(),
@@ -31,17 +31,6 @@ pub fn pipelines(options: &Options) -> Vec<Box<dyn FunctionTargetProcessor>> {
         ]
     } else {
         // Enter your pipeline here
-        vec![
-            EliminateImmRefsProcessor::new(),
-            MutRefInstrumenter::new(),
-            ReachingDefProcessor::new(),
-            LiveVarAnalysisProcessor::new(),
-            borrow_analysis_v2::BorrowAnalysisProcessor::new(),
-            memory_instrumentation_v2::MemoryInstrumentationProcessor::new(),
-            CleanAndOptimizeProcessor::new(),
-            UsageProcessor::new(),
-            VerificationAnalysisProcessor::new(),
-            LoopAnalysisProcessor::new(),
-        ]
+        panic!("No experimental pipeline set");
     }
 }

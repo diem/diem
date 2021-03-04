@@ -75,6 +75,8 @@ pub struct Options {
     pub errmapgen: ErrmapOptions,
     /// Whether to run experimental pipeline
     pub experimental_pipeline: bool,
+    /// Whether to use strong edges in borrow analtsis
+    pub strong_edges: bool,
 }
 
 impl Default for Options {
@@ -97,6 +99,7 @@ impl Default for Options {
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
             experimental_pipeline: false,
+            strong_edges: false,
         }
     }
 }
@@ -361,6 +364,11 @@ impl Options {
                 .short("e")
                 .help("whether to run experimental pipeline")
             ).arg(
+            Arg::with_name("strong_edges")
+            .long("strong_edges")
+            .help("whether to use strong edges in borrow analysis")
+            )
+            .arg(
                 Arg::with_name("exp_mut_param")
                     .long("exp-mut-param")
                     .help("exp_mut_param experiment")
@@ -484,6 +492,9 @@ impl Options {
         }
         if matches.is_present("experimental_pipeline") {
             options.experimental_pipeline = true;
+        }
+        if matches.is_present("strong_edges") {
+            options.strong_edges = true;
         }
         if matches.is_present("timeout") {
             options.backend.vc_timeout = matches.value_of("timeout").unwrap().parse::<usize>()?;
