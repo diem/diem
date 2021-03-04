@@ -5,13 +5,12 @@
 
 use crate::cli::Options;
 use bytecode::{
-    borrow_analysis::BorrowAnalysisProcessor,
-    clean_and_optimize::CleanAndOptimizeProcessor, eliminate_imm_refs::EliminateImmRefsProcessor,
+    borrow_analysis::BorrowAnalysisProcessor, clean_and_optimize::CleanAndOptimizeProcessor,
+    eliminate_imm_refs::EliminateImmRefsProcessor,
     function_target_pipeline::FunctionTargetProcessor, livevar_analysis::LiveVarAnalysisProcessor,
     loop_analysis::LoopAnalysisProcessor, memory_instrumentation::MemoryInstrumentationProcessor,
-    mut_ref_instrumentation::MutRefInstrumenter,
-    reaching_def_analysis::ReachingDefProcessor, usage_analysis::UsageProcessor,
-    verification_analysis::VerificationAnalysisProcessor,
+    mut_ref_instrumentation::MutRefInstrumenter, reaching_def_analysis::ReachingDefProcessor,
+    usage_analysis::UsageProcessor, verification_analysis::VerificationAnalysisProcessor,
 };
 
 /// Allows client to decide between one of two pipelines for ease of benchmarking
