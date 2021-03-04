@@ -13,7 +13,10 @@ use crate::{
         EPOCH_ENDING_EPOCH, HEARTBEAT_TS, STATE_SNAPSHOT_VERSION, TRANSACTION_VERSION,
     },
     storage::BackupStorage,
-    utils::{backup_service_client::BackupServiceClient, unix_timestamp_sec, GlobalBackupOpt},
+    utils::{
+        backup_service_client::BackupServiceClient, unix_timestamp_sec, ConcurrentDownloadsOpt,
+        GlobalBackupOpt,
+    },
 };
 use anyhow::{anyhow, ensure, Result};
 use diem_logger::prelude::*;
@@ -43,6 +46,8 @@ pub struct BackupCoordinatorOpt {
     // slower than expected.
     #[structopt(long, default_value = "100000")]
     pub transaction_batch_size: usize,
+    #[structopt(flatten)]
+    pub concurernt_downloads: ConcurrentDownloadsOpt,
 }
 
 impl BackupCoordinatorOpt {
@@ -69,6 +74,7 @@ pub struct BackupCoordinator {
     metadata_cache_opt: MetadataCacheOpt,
     state_snapshot_interval: usize,
     transaction_batch_size: usize,
+    concurrent_downloads: usize,
 }
 
 impl BackupCoordinator {
@@ -86,14 +92,18 @@ impl BackupCoordinator {
             metadata_cache_opt: opt.metadata_cache_opt,
             state_snapshot_interval: opt.state_snapshot_interval,
             transaction_batch_size: opt.transaction_batch_size,
+            concurrent_downloads: opt.concurernt_downloads.get(),
         }
     }
     pub async fn run(&self) -> Result<()> {
         // Connect to both the local Diem node and the backup storage.
-        let backup_state =
-            metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
-                .await?
-                .get_storage_state();
+        let backup_state = metadata::cache::sync_and_load(
+            &self.metadata_cache_opt,
+            Arc::clone(&self.storage),
+            self.concurrent_downloads,
+        )
+        .await?
+        .get_storage_state();
 
         // On new DbState retrieved:
         // `watch_db_state` informs `backup_epoch_endings` via channel 1,

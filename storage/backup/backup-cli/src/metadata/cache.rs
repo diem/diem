@@ -55,6 +55,7 @@ impl MetadataCacheOpt {
 pub async fn sync_and_load(
     opt: &MetadataCacheOpt,
     storage: Arc<dyn BackupStorage>,
+    concurrent_downloads: usize,
 ) -> Result<MetadataView> {
     let timer = Instant::now();
     let cache_dir = opt.cache_dir();
@@ -134,8 +135,8 @@ pub async fn sync_and_load(
     });
     futures::stream::iter(futs)
         .buffered_x(
-            num_cpus::get() * 2, /* buffer size */
-            num_cpus::get(),     /* concurrency */
+            concurrent_downloads * 2, /* buffer size */
+            concurrent_downloads,     /* concurrency */
         )
         .collect::<Result<Vec<_>>>()
         .await?;

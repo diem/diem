@@ -10,7 +10,7 @@ use crate::{
     utils::{
         backup_service_client::BackupServiceClient,
         test_utils::{start_local_backup_service, tmp_db_with_random_content},
-        GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt, TrustedWaypointOpt,
+        ConcurrentDownloadsOpt, GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt, TrustedWaypointOpt,
     },
 };
 use diem_config::config::RocksdbConfig;
@@ -84,6 +84,7 @@ fn end_to_end() {
                 target_version: Some(target_version),
                 trusted_waypoints: TrustedWaypointOpt::default(),
                 rocksdb_opt: RocksdbOpt::default(),
+                concurernt_downloads: ConcurrentDownloadsOpt::default(),
             }
             .try_into()
             .unwrap(),

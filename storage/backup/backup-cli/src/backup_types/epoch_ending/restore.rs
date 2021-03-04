@@ -355,8 +355,8 @@ impl EpochHistoryRestoreController {
             .preheat()
         });
         let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(
-            num_cpus::get() * 2, /* buffer size */
-            num_cpus::get(),     /* concurrency */
+            self.global_opt.concurrent_downloads * 2, /* buffer size */
+            self.global_opt.concurrent_downloads,     /* concurrency */
         );
 
         let mut next_epoch = 0u64;

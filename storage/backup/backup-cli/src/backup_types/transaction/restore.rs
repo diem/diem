@@ -422,8 +422,10 @@ impl TransactionRestoreBatchController {
         });
 
         let mut futs_stream = futures::stream::iter(futs_iter).buffered_x(
-            num_cpus::get() * 3, /* more buffer here because the preheat of txns is heavy and variates more in execution time. */
-            num_cpus::get(), /* concurrency */
+            // more buffer here because the preheat of txns is heavy and variates more in execution
+            // time
+            self.global_opt.concurrent_downloads * 3,
+            self.global_opt.concurrent_downloads, /* concurrency */
         );
         while let Some(preheated_txn_restore) = futs_stream.next().await {
             let v = preheated_txn_restore.get_last_version();

@@ -74,9 +74,12 @@ impl RestoreCoordinator {
     }
 
     async fn run_impl(self) -> Result<()> {
-        let metadata_view =
-            metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
-                .await?;
+        let metadata_view = metadata::cache::sync_and_load(
+            &self.metadata_cache_opt,
+            Arc::clone(&self.storage),
+            self.global_opt.concurrent_downloads,
+        )
+        .await?;
 
         let transactions = metadata_view.select_transaction_backups(self.target_version())?;
         let actual_target_version = self.get_actual_target_version(&transactions)?;

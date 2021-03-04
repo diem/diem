@@ -89,6 +89,9 @@ pub struct GlobalRestoreOpt {
 
     #[structopt(flatten)]
     pub rocksdb_opt: RocksdbOpt,
+
+    #[structopt(flatten)]
+    pub concurernt_downloads: ConcurrentDownloadsOpt,
 }
 
 pub enum RestoreRunMode {
@@ -142,6 +145,7 @@ pub struct GlobalRestoreOptions {
     pub target_version: Version,
     pub trusted_waypoints: Arc<HashMap<Version, Waypoint>>,
     pub run_mode: Arc<RestoreRunMode>,
+    pub concurrent_downloads: usize,
 }
 
 impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
@@ -149,6 +153,7 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
 
     fn try_from(opt: GlobalRestoreOpt) -> Result<Self> {
         let target_version = opt.target_version.unwrap_or(Version::max_value());
+        let concurrent_downloads = opt.concurernt_downloads.get();
         let run_mode = if let Some(db_dir) = &opt.db_dir {
             let restore_handler = Arc::new(DiemDB::open(
                 db_dir,
@@ -165,6 +170,7 @@ impl TryFrom<GlobalRestoreOpt> for GlobalRestoreOptions {
             target_version,
             trusted_waypoints: Arc::new(opt.trusted_waypoints.verify()?),
             run_mode: Arc::new(run_mode),
+            concurrent_downloads,
         })
     }
 }
@@ -197,6 +203,22 @@ impl TrustedWaypointOpt {
                 })?;
         }
         Ok(trusted_waypoints)
+    }
+}
+
+#[derive(Clone, Copy, Default, StructOpt)]
+pub struct ConcurrentDownloadsOpt {
+    #[structopt(
+        long,
+        help = "[Defaults to number of CPUs] \
+        number of concurrent downloads including metadata files from the backup storage."
+    )]
+    concurrent_downloads: Option<usize>,
+}
+
+impl ConcurrentDownloadsOpt {
+    pub fn get(&self) -> usize {
+        self.concurrent_downloads.unwrap_or_else(num_cpus::get)
     }
 }
 

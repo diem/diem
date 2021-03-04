@@ -17,7 +17,7 @@ use backup_cli::{
     storage::StorageOpt,
     utils::{
         backup_service_client::{BackupServiceClient, BackupServiceClientOpt},
-        GlobalBackupOpt,
+        ConcurrentDownloadsOpt, GlobalBackupOpt,
     },
 };
 use diem_logger::{prelude::*, Level, Logger};
@@ -63,6 +63,8 @@ struct OneShotQueryNodeStateOpt {
 struct OneShotQueryBackupStorageStateOpt {
     #[structopt(flatten)]
     metadata_cache: MetadataCacheOpt,
+    #[structopt(flatten)]
+    concurrent_downloads: ConcurrentDownloadsOpt,
     #[structopt(subcommand)]
     storage: StorageOpt,
 }
@@ -150,6 +152,7 @@ async fn main_impl() -> Result<()> {
                     let view = cache::sync_and_load(
                         &opt.metadata_cache,
                         opt.storage.init_storage().await?,
+                        opt.concurrent_downloads.get(),
                     )
                     .await?;
                     println!("{}", view.get_storage_state())

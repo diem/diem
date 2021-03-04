@@ -11,7 +11,7 @@ use crate::{
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
         backup_service_client::BackupServiceClient, test_utils::tmp_db_with_random_content,
-        GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt, TrustedWaypointOpt,
+        ConcurrentDownloadsOpt, GlobalBackupOpt, GlobalRestoreOpt, RocksdbOpt, TrustedWaypointOpt,
     },
 };
 use backup_service::start_backup_service;
@@ -82,6 +82,7 @@ fn end_to_end() {
                 target_version: Some(target_version),
                 trusted_waypoints: TrustedWaypointOpt::default(),
                 rocksdb_opt: RocksdbOpt::default(),
+                concurernt_downloads: ConcurrentDownloadsOpt::default(),
             }
             .try_into()
             .unwrap(),
@@ -218,6 +219,7 @@ async fn test_trusted_waypoints_impl(
             target_version: None,
             trusted_waypoints: TrustedWaypointOpt::default(),
             rocksdb_opt: RocksdbOpt::default(),
+            concurernt_downloads: ConcurrentDownloadsOpt::default(),
         }
         .try_into()
         .unwrap(),
@@ -237,6 +239,7 @@ async fn test_trusted_waypoints_impl(
                 trust_waypoint: trusted_waypoints,
             },
             rocksdb_opt: RocksdbOpt::default(),
+            concurernt_downloads: ConcurrentDownloadsOpt::default(),
         }
         .try_into()
         .unwrap(),
