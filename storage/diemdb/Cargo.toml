@@ -29,7 +29,7 @@ diem-crypto = { path = "../../crypto/crypto" }
 diem-jellyfish-merkle = { path = "../jellyfish-merkle" }
 diem-logger = { path = "../../common/logger" }
 diem-metrics = { path = "../../common/metrics" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
 diem-temppath = { path = "../../common/temppath", optional = true }
 diem-types = { path = "../../types" }

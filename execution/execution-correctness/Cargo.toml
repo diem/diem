@@ -18,7 +18,7 @@ diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-global-constants = { path = "../../config/global-constants"}
 diem-logger = { path = "../../common/logger" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-secure-net = { path = "../../secure/net" }
 diem-secure-storage = { path = "../../secure/storage" }
 diem-temppath = { path = "../../common/temppath" }

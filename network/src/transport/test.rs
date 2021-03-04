@@ -11,7 +11,7 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_crypto::{test_utils::TEST_SEED, traits::Uniform, x25519};
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_time_service::MockTimeService;
 use diem_types::{
     chain_id::ChainId,

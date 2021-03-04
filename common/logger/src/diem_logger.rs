@@ -15,7 +15,7 @@ use crate::{
 };
 use backtrace::Backtrace;
 use chrono::{SecondsFormat, Utc};
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::{

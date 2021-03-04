@@ -14,10 +14,10 @@ use crate::{
     },
 };
 use anyhow::Result;
-use diem_infallible::Mutex;
 use diem_jellyfish_merkle::StaleNodeIndex;
 use diem_logger::prelude::*;
 use diem_types::transaction::Version;
+use infallible::Mutex;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};
 use std::{
     iter::Peekable,

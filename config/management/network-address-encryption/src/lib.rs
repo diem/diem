@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use diem_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_secure_storage::{Error as StorageError, KVStorage, Storage};
 use diem_types::{
     account_address::AccountAddress,

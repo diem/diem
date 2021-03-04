@@ -21,7 +21,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
 };
 use diem_crypto::HashValue;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_trace::prelude::*;
 use diem_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};

@@ -14,7 +14,7 @@ use diem_config::{
     config::{MempoolConfig, PeerNetworkId, UpstreamConfig},
     network_id::NetworkId,
 };
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
 use itertools::Itertools;

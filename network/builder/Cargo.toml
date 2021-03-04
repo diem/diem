@@ -21,7 +21,7 @@ channel = { path = "../../common/channel" }
 bcs = "0.1.2"
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-logger = { path = "../../common/logger" }
 diem-metrics = {path = "../../common/metrics"}
 diem-network-address-encryption = {path = "../../config/management/network-address-encryption"}

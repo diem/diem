@@ -24,7 +24,7 @@ thiserror = "1.0.24"
 bcs = "0.1.2"
 diem-crypto = { path = "../../crypto/crypto" }
 diem-crypto-derive = { path = "../../crypto/crypto-derive" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-nibble = { path = "../../common/nibble" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }

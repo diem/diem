@@ -13,7 +13,7 @@ use diem_config::{
     config::{MempoolConfig, PeerNetworkId},
     network_id::NodeNetworkId,
 };
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,

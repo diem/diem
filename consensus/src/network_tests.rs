@@ -16,7 +16,7 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_types::{block_info::BlockInfo, PeerId};
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use network::{

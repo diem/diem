@@ -10,7 +10,7 @@ use diem_config::{
     network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::{test_utils::TEST_SEED, x25519, Uniform};
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_metrics::IntCounterVec;
 use diem_time_service::TimeService;
 use diem_types::{chain_id::ChainId, network_address::NetworkAddress, PeerId};

@@ -16,7 +16,7 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_crypto::{noise, x25519};
-use diem_infallible::{duration_since_epoch, RwLock};
+use infallible::{duration_since_epoch, RwLock};
 use diem_logger::trace;
 use diem_types::PeerId;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Sleep, SleepTrait, TimeServiceTrait, ZERO_DURATION};
-use diem_infallible::Mutex;
+use infallible::Mutex;
 use futures::future::Future;
 use std::{
     cmp::max,

@@ -7,7 +7,7 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

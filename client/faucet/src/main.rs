@@ -126,7 +126,6 @@ impl warp::reject::Reject for ServerInternalError {}
 mod tests {
     use crate::routes;
     use diem_faucet::mint;
-    use diem_infallible::RwLock;
     use diem_types::{
         account_address::AccountAddress,
         transaction::{
@@ -134,6 +133,7 @@ mod tests {
             TransactionPayload::Script,
         },
     };
+    use infallible::RwLock;
     use std::{collections::HashMap, convert::TryFrom, sync::Arc};
     use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;

@@ -115,7 +115,7 @@ impl TimeService for ClockTimeService {
     }
 
     fn get_current_timestamp(&self) -> Duration {
-        diem_infallible::duration_since_epoch()
+        infallible::duration_since_epoch()
     }
 
     fn sleep(&self, t: Duration) {

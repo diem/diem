@@ -280,7 +280,6 @@ dependencies = [
  "bytes 1.0.1",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-jellyfish-merkle",
  "diem-logger",
  "diem-proptest-helpers",
@@ -295,6 +294,7 @@ dependencies = [
  "executor-types",
  "futures",
  "hex",
+ "infallible",
  "itertools 0.10.0",
  "num_cpus",
  "once_cell",
@@ -759,7 +759,6 @@ name = "channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "diem-infallible",
  "diem-metrics",
  "diem-types",
  "diem-workspace-hack",
@@ -835,7 +834,6 @@ dependencies = [
  "diem-client",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-temppath",
@@ -844,6 +842,7 @@ dependencies = [
  "diem-workspace-hack",
  "generate-key",
  "hex",
+ "infallible",
  "num-traits",
  "once_cell",
  "proptest",
@@ -882,7 +881,6 @@ dependencies = [
  "diem-crypto",
  "diem-genesis-tool",
  "diem-global-constants",
- "diem-infallible",
  "diem-logger",
  "diem-management",
  "diem-mempool",
@@ -900,6 +898,7 @@ dependencies = [
  "futures",
  "generate-key",
  "hex",
+ "infallible",
  "itertools 0.10.0",
  "k8s-openapi",
  "kube",
@@ -1021,7 +1020,6 @@ dependencies = [
  "consensus-types",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-mempool",
  "diem-metrics",
@@ -1070,10 +1068,10 @@ dependencies = [
  "bcs",
  "diem-crypto",
  "diem-crypto-derive",
- "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
  "executor-types",
+ "infallible",
  "mirai-annotations",
  "proptest",
  "serde",
@@ -1558,12 +1556,12 @@ dependencies = [
  "diem-client",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-types",
  "diem-workspace-hack",
  "generate-key",
  "hex",
+ "infallible",
  "move-core-types",
  "rand 0.8.3",
  "reqwest",
@@ -1703,13 +1701,6 @@ name = "diem-global-constants"
 version = "0.1.0"
 
 [[package]]
-name = "diem-infallible"
-version = "0.1.0"
-dependencies = [
- "diem-workspace-hack",
-]
-
-[[package]]
 name = "diem-jellyfish-merkle"
 version = "0.1.0"
 dependencies = [
@@ -1718,10 +1709,10 @@ dependencies = [
  "byteorder",
  "diem-crypto",
  "diem-crypto-derive",
- "diem-infallible",
  "diem-nibble",
  "diem-types",
  "diem-workspace-hack",
+ "infallible",
  "mirai-annotations",
  "num-derive",
  "num-traits",
@@ -1794,6 +1785,7 @@ dependencies = [
  "diem-workspace-hack",
  "futures",
  "hex",
+ "infallible",
  "rand 0.8.3",
  "reqwest",
  "serde",
@@ -1870,11 +1862,11 @@ version = "0.1.0"
 dependencies = [
  "backtrace",
  "chrono",
- "diem-infallible",
  "diem-log-derive",
  "diem-workspace-hack",
  "erased-serde",
  "hostname",
+ "infallible",
  "once_cell",
  "prometheus",
  "serde",
@@ -1915,7 +1907,6 @@ dependencies = [
  "channel",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-proptest-helpers",
@@ -1977,11 +1968,11 @@ dependencies = [
  "base64 0.13.0",
  "bcs",
  "diem-global-constants",
- "diem-infallible",
  "diem-logger",
  "diem-secure-storage",
  "diem-types",
  "diem-workspace-hack",
+ "infallible",
  "rand 0.8.3",
  "serde",
  "thiserror",
@@ -2075,7 +2066,6 @@ dependencies = [
 name = "diem-rate-limiter"
 version = "0.1.0"
 dependencies = [
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-workspace-hack",
@@ -2127,13 +2117,13 @@ dependencies = [
  "diem-crypto",
  "diem-crypto-derive",
  "diem-github-client",
- "diem-infallible",
  "diem-logger",
  "diem-temppath",
  "diem-time-service",
  "diem-vault-client",
  "diem-workspace-hack",
  "enum_dispatch",
+ "infallible",
  "rand 0.8.3",
  "serde",
  "serde_json",
@@ -2207,10 +2197,11 @@ dependencies = [
 name = "diem-time-service"
 version = "0.1.0"
 dependencies = [
- "diem-infallible",
  "diem-workspace-hack",
  "enum_dispatch",
  "futures",
+ "futures 0.3.12",
+ "infallible",
  "pin-project 1.0.5",
  "thiserror",
  "tokio",
@@ -2465,7 +2456,6 @@ dependencies = [
  "byteorder",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-jellyfish-merkle",
  "diem-logger",
  "diem-metrics",
@@ -2473,6 +2463,7 @@ dependencies = [
  "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
+ "infallible",
  "itertools 0.10.0",
  "move-core-types",
  "num-derive",
@@ -2772,7 +2763,6 @@ dependencies = [
  "diem-crypto",
  "diem-genesis-tool",
  "diem-global-constants",
- "diem-infallible",
  "diem-logger",
  "diem-secure-net",
  "diem-secure-storage",
@@ -2783,6 +2773,7 @@ dependencies = [
  "executor",
  "executor-test-helpers",
  "executor-types",
+ "infallible",
  "rand 0.8.3",
  "serde",
  "storage-client",
@@ -2802,7 +2793,6 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-secure-net",
@@ -2816,6 +2806,7 @@ dependencies = [
  "executor-test-helpers",
  "executor-types",
  "fail",
+ "infallible",
  "itertools 0.10.0",
  "move-core-types",
  "once_cell",
@@ -2836,7 +2827,6 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",
- "diem-infallible",
  "diem-logger",
  "diem-types",
  "diem-vm",
@@ -2844,6 +2834,7 @@ dependencies = [
  "diemdb",
  "executor",
  "executor-types",
+ "infallible",
  "itertools 0.10.0",
  "rand 0.8.3",
  "rayon",
@@ -3632,6 +3623,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "infallible"
+version = "0.1.0"
+dependencies = [
+ "diem-workspace-hack",
+]
+
+[[package]]
 name = "input_buffer"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4068,7 +4066,6 @@ name = "memsocket"
 version = "0.1.0"
 dependencies = [
  "bytes 1.0.1",
- "diem-infallible",
  "diem-workspace-hack",
  "futures",
  "once_cell",
@@ -4435,12 +4432,12 @@ dependencies = [
  "bytecode-verifier",
  "compiler",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-state-view",
  "diem-workspace-hack",
  "fail",
  "hex",
+ "infallible",
  "mirai-annotations",
  "move-core-types",
  "move-lang",
@@ -4558,7 +4555,6 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-crypto-derive",
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-proptest-helpers",
@@ -4569,6 +4565,7 @@ dependencies = [
  "futures",
  "futures-util",
  "hex",
+ "infallible",
  "maplit",
  "memsocket",
  "netcore",
@@ -4600,7 +4597,6 @@ dependencies = [
  "channel",
  "diem-config",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-metrics",
  "diem-network-address-encryption",
@@ -6086,7 +6082,6 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-global-constants",
- "diem-infallible",
  "diem-logger",
  "diem-proptest-helpers",
  "diem-secure-net",
@@ -6096,6 +6091,7 @@ dependencies = [
  "diem-types",
  "diem-vault-client",
  "diem-workspace-hack",
+ "infallible",
  "once_cell",
  "proptest",
  "rand 0.8.3",
@@ -6158,9 +6154,9 @@ name = "scratchpad"
 version = "0.1.0"
 dependencies = [
  "diem-crypto",
- "diem-infallible",
  "diem-types",
  "diem-workspace-hack",
+ "infallible",
  "itertools 0.10.0",
  "proptest",
 ]
@@ -6561,7 +6557,6 @@ dependencies = [
  "diem-events-fetcher",
  "diem-genesis-tool",
  "diem-global-constants",
- "diem-infallible",
  "diem-json-rpc",
  "diem-key-manager",
  "diem-logger",
@@ -6581,6 +6576,7 @@ dependencies = [
  "diem-writeset-generator",
  "generate-key",
  "hex",
+ "infallible",
  "num 0.3.1",
  "num-traits",
  "once_cell",
@@ -6655,7 +6651,6 @@ dependencies = [
  "diem-config",
  "diem-crypto",
  "diem-genesis-tool",
- "diem-infallible",
  "diem-logger",
  "diem-mempool",
  "diem-metrics",
@@ -6768,11 +6763,11 @@ dependencies = [
  "anyhow",
  "bcs",
  "diem-crypto",
- "diem-infallible",
  "diem-logger",
  "diem-secure-net",
  "diem-types",
  "diem-workspace-hack",
+ "infallible",
  "serde",
  "storage-interface",
 ]

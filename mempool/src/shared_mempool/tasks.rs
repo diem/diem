@@ -17,7 +17,7 @@ use crate::{
 };
 use anyhow::Result;
 use diem_config::config::PeerNetworkId;
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_logger::prelude::*;
 use diem_metrics::HistogramTimer;
 use diem_types::{
@@ -381,7 +381,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                 let mut mempool = mempool.lock();
                 // gc before pulling block as extra protection against txns that may expire in consensus
                 // Note: this gc operation relies on the fact that consensus uses the system time to determine block timestamp
-                let curr_time = diem_infallible::duration_since_epoch();
+                let curr_time = infallible::duration_since_epoch();
                 mempool.gc_by_expiration_time(curr_time);
                 let block_size = cmp::max(max_block_size, 1);
                 txns = mempool.get_block(block_size, exclude_transactions);

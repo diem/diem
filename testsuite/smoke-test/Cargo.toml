@@ -32,7 +32,7 @@ diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
 diem-global-constants = { path = "../../config/global-constants" }
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-json-rpc = { path = "../../json-rpc" }
 diem-key-manager = { path = "../../secure/key-manager" }
 diem-logger = { path = "../../common/logger" }

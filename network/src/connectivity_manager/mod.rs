@@ -36,7 +36,7 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_crypto::x25519;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_time_service::{TimeService, TimeServiceTrait};
 use diem_types::{network_address::NetworkAddress, PeerId};

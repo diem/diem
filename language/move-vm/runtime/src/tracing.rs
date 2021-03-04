@@ -6,7 +6,7 @@ use crate::debug::DebugContext;
 
 #[cfg(debug_assertions)]
 use ::{
-    diem_infallible::Mutex,
+    infallible::Mutex,
     move_vm_types::values::Locals,
     once_cell::sync::Lazy,
     std::{

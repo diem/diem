@@ -6,7 +6,7 @@ use crate::{
     shared_mempool::{peer_manager::PeerManager, tasks, types::SharedMempool},
 };
 use diem_config::config::NodeConfig;
-use diem_infallible::{Mutex, RwLock};
+use infallible::{Mutex, RwLock};
 use diem_types::transaction::SignedTransaction;
 use proptest::{
     arbitrary::any,

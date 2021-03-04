@@ -7,7 +7,7 @@ use crate::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
 use diem_config::{config::PeerSet, network_id::NetworkContext};
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_time_service::TimeService;
 use std::{sync::Arc, time::Duration};
 use tokio::runtime::Handle;

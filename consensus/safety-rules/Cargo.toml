@@ -18,7 +18,7 @@ bcs = "0.1.2"
 diem-config = { path = "../../config" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-global-constants = { path = "../../config/global-constants"}
-diem-infallible = { path = "../../common/infallible" }
+infallible = { path = "../../common/infallible" }
 diem-logger = { path = "../../common/logger" }
 diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
 diem-secure-net = { path = "../../secure/net" }

@@ -7,8 +7,8 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use diem_crypto::ed25519::Ed25519Signature;
-use diem_infallible::RwLock;
 use diem_types::epoch_change::EpochChangeProof;
+use infallible::RwLock;
 use std::sync::Arc;
 
 /// A local interface into SafetyRules. Constructed in such a way that the container / caller

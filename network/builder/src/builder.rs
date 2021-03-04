@@ -20,7 +20,7 @@ use diem_config::{
     network_id::NetworkContext,
 };
 use diem_crypto::x25519::PublicKey;
-use diem_infallible::RwLock;
+use infallible::RwLock;
 use diem_logger::prelude::*;
 use diem_metrics::IntCounterVec;
 use diem_network_address_encryption::Encryptor;

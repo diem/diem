@@ -382,7 +382,7 @@ impl TransactionStore {
         &mut self,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
     ) {
-        let now = diem_infallible::duration_since_epoch();
+        let now = infallible::duration_since_epoch();
 
         self.gc(now, true, metrics_cache);
     }
