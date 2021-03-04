@@ -110,6 +110,8 @@ pub async fn sync_and_load(
         async move {
             let file_handle = fh_by_h_ref.get(*h).expect("In map.");
             let local_file = cache_dir_ref.join(*h);
+            let local_tmp_file = cache_dir_ref.join(format!(".{}", *h));
+            // download to tmp file ".xxxxxx"
             tokio::io::copy(
                 &mut storage_ref
                     .open_for_read(file_handle)
@@ -118,11 +120,14 @@ pub async fn sync_and_load(
                 &mut OpenOptions::new()
                     .write(true)
                     .create_new(true)
-                    .open(&local_file)
+                    .open(&local_tmp_file)
                     .await
                     .err_notes(&local_file)?,
             )
             .await?;
+            // rename to target file only if successful; stale tmp file caused by failure will be
+            // reclaimed on next run
+            tokio::fs::rename(local_tmp_file, local_file).await?;
             NUM_META_DOWNLOAD.inc();
             Ok(())
         }
