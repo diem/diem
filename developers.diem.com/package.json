@@ -16,7 +16,7 @@
     "@docusaurus/plugin-client-redirects": "^2.0.0-alpha.70",
     "@docusaurus/preset-classic": "^2.0.0-alpha.70",
     "@libra-opensource/diem-cli": "^0.8.1",
-    "@libra-opensource/diem-docusaurus-components": "0.1.17",
+    "@libra-opensource/diem-docusaurus-components": "0.1.19",
     "@svgr/webpack": "^5.4.0",
     "bootstrap": "^4.5.3",
     "classnames": "^2.2.6",
