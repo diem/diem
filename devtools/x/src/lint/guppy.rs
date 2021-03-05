@@ -452,7 +452,10 @@ impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
             return Ok(RunStatus::Executed);
         }
 
-        for direct_dep in metadata.direct_links().filter(|p| p.to().in_workspace()) {
+        for direct_dep in metadata
+            .direct_links()
+            .filter(|p| !p.dev_only() && p.to().in_workspace())
+        {
             // If the direct dependency isn't publishable
             if matches!(direct_dep.to().publish(), Some(&[])) {
                 out.write(
