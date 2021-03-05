@@ -121,13 +121,17 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                 out.write(LintLevel::Error, msg);
             }
             (None, WorkspaceStatus::RootMember, false) => {
-                // Library, listed in default members. It shouldn't be.
-                let msg = indoc!(
-                    "library package, listed in default-members:
-                     * if test-only, add to test-only in x.toml instead
-                     * otherwise, remove it from default-members and make it a dependency of a binary"
-                );
-                out.write(LintLevel::Error, msg);
+                if matches!(package.publish(), Some(&[])) {
+                    // Library, listed in default members. It shouldn't be.
+                    // unless it is a published library
+                    let msg = indoc!(
+                        "library package, listed in default-members:
+                         * if test-only, add to test-only in x.toml instead
+                         * if the library is intended to be published, add `publish = [\"crates-io\"] to the Cargo.toml of this package
+                         * otherwise, remove it from default-members and make it a dependency of a binary"
+                    );
+                    out.write(LintLevel::Error, msg);
+                }
             }
             (None, WorkspaceStatus::RootMember, true) => {
                 // Library, listed in default members and in test-only. It shouldn't be.
