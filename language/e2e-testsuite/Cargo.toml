@@ -21,7 +21,7 @@ move-core-types = { path = "../move-core/types" }
 move-vm-runtime = { path = "../move-vm/runtime" }
 move-vm-types = { path = "../move-vm/types" }
 transaction-builder = { path = "../transaction-builder"}
-transaction-builder-generated = { path = "../../client/transaction-builder"}
+diem-transaction-builder = { path = "../../client/transaction-builder"}
 vm = { path = "../vm" }
 diem-vm = { path = "../diem-vm" }
 proptest = "1.0.0"
@@ -31,4 +31,4 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-writeset-generator = { path = "../diem-tools/writeset-transaction-generator"}
 
 [features]
-default = ["transaction-builder-generated/fuzzing"]
+default = ["diem-transaction-builder/fuzzing"]

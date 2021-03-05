@@ -1560,6 +1560,7 @@ dependencies = [
  "diem-crypto",
  "diem-infallible",
  "diem-logger",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "generate-key",
@@ -1573,7 +1574,6 @@ dependencies = [
  "structopt 0.3.21",
  "tempfile",
  "tokio",
- "transaction-builder-generated",
  "warp",
 ]
 
@@ -1751,6 +1751,7 @@ dependencies = [
  "diem-proptest-helpers",
  "diem-temppath",
  "diem-trace",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
@@ -1774,7 +1775,6 @@ dependencies = [
  "serde_json",
  "storage-interface",
  "tokio",
- "transaction-builder-generated",
  "vm-genesis",
  "vm-validator",
  "warp",
@@ -1836,6 +1836,7 @@ dependencies = [
  "diem-secure-push-metrics",
  "diem-secure-storage",
  "diem-time-service",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -1850,7 +1851,6 @@ dependencies = [
  "storage-interface",
  "thiserror",
  "tokio",
- "transaction-builder-generated",
  "vm-validator",
 ]
 
@@ -2232,6 +2232,20 @@ dependencies = [
  "serde_json",
  "structopt 0.3.21",
  "tokio",
+]
+
+[[package]]
+name = "diem-transaction-builder"
+version = "0.1.0"
+dependencies = [
+ "bcs",
+ "diem-types",
+ "diem-workspace-hack",
+ "move-core-types",
+ "once_cell",
+ "proptest",
+ "proptest-derive",
+ "serde",
 ]
 
 [[package]]
@@ -3924,6 +3938,7 @@ dependencies = [
  "compiler",
  "diem-crypto",
  "diem-logger",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -3935,7 +3950,6 @@ dependencies = [
  "proptest",
  "serde_json",
  "transaction-builder",
- "transaction-builder-generated",
  "vm",
 ]
 
@@ -7404,23 +7418,9 @@ dependencies = [
 name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
+ "diem-transaction-builder",
  "diem-workspace-hack",
  "mirai-annotations",
- "transaction-builder-generated",
-]
-
-[[package]]
-name = "transaction-builder-generated"
-version = "0.1.0"
-dependencies = [
- "bcs",
- "diem-types",
- "diem-workspace-hack",
- "move-core-types",
- "once_cell",
- "proptest",
- "proptest-derive",
- "serde",
 ]
 
 [[package]]

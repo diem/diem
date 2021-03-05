@@ -51,7 +51,7 @@ impl MintParams {
         seq: u64,
     ) -> diem_types::transaction::TransactionPayload {
         diem_types::transaction::TransactionPayload::Script(
-            transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
+            diem_transaction_builder::stdlib::encode_create_parent_vasp_account_script(
                 self.currency_code(),
                 0, // sliding nonce
                 self.receiver(),
@@ -67,7 +67,7 @@ impl MintParams {
         seq: u64,
     ) -> diem_types::transaction::TransactionPayload {
         diem_types::transaction::TransactionPayload::Script(
-            transaction_builder_generated::stdlib::encode_create_designated_dealer_script(
+            diem_transaction_builder::stdlib::encode_create_designated_dealer_script(
                 self.currency_code(),
                 0, // sliding nonce
                 self.receiver(),
@@ -80,7 +80,7 @@ impl MintParams {
 
     fn p2p_script(&self) -> diem_types::transaction::TransactionPayload {
         diem_types::transaction::TransactionPayload::Script(
-            transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
+            diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
                 self.currency_code(),
                 self.receiver(),
                 self.amount,

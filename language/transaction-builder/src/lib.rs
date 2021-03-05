@@ -4,4 +4,4 @@
 #![forbid(unsafe_code)]
 
 // TODO: remove
-pub use transaction_builder_generated::stdlib::*;
+pub use diem_transaction_builder::stdlib::*;

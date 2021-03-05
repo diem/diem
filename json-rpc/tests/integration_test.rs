@@ -5,6 +5,7 @@ use serde_json::json;
 
 use compiled_stdlib::shim::tmp_new_transaction_script_builders;
 use diem_crypto::hash::CryptoHash;
+use diem_transaction_builder::stdlib;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -17,7 +18,6 @@ use diem_types::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use std::{convert::TryInto, ops::Deref};
-use transaction_builder_generated::stdlib;
 
 use diem_json_rpc_types::views::EventView;
 
@@ -449,7 +449,7 @@ fn create_test_cases() -> Vec<Test> {
                     let txn1 = {
                         let account1 = env.get_account(0, 0);
                         let account2 = env.get_account(1, 0);
-                        let script = transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
+                        let script = diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
                             xus_tag(),
                             account2.address,
                             100,

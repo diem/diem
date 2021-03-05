@@ -1,5 +1,5 @@
 [package]
-name = "transaction-builder-generated"
+name = "diem-transaction-builder"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Generated transaction builders"

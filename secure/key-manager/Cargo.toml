@@ -27,7 +27,7 @@ diem-secure-storage = { path = "../storage" }
 diem-time-service = { path = "../../common/time-service" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-transaction-builder-generated = { path = "../../client/transaction-builder" }
+diem-transaction-builder = { path = "../../client/transaction-builder" }
 
 [dev-dependencies]
 futures = "0.3.12"

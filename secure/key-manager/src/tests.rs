@@ -736,7 +736,7 @@ fn verify_validator_config_info_mismatch<T: DiemInterface>(mut node: Node<T>) {
     // Build a transaction updating the validator config consensus key on chain
     let mut rng = StdRng::from_seed([44u8; 32]);
     let new_consensus_key = Ed25519PrivateKey::generate(&mut rng).public_key();
-    let script = transaction_builder_generated::stdlib::encode_register_validator_config_script(
+    let script = diem_transaction_builder::stdlib::encode_register_validator_config_script(
         node.get_account_from_storage(OWNER_ACCOUNT),
         new_consensus_key.to_bytes().to_vec(),
         Vec::new(),

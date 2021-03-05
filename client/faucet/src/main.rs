@@ -127,6 +127,7 @@ mod tests {
     use crate::routes;
     use diem_faucet::mint;
     use diem_infallible::RwLock;
+    use diem_transaction_builder::stdlib::ScriptCall;
     use diem_types::{
         account_address::AccountAddress,
         transaction::{
@@ -135,7 +136,6 @@ mod tests {
         },
     };
     use std::{collections::HashMap, convert::TryFrom, sync::Arc};
-    use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;
 
     fn setup(

@@ -67,15 +67,14 @@ impl Env {
 
     pub fn create_parent_vasp(&mut self) {
         let vasp = Account::gen();
-        let script =
-            transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
-                xus_tag(),
-                0, // sliding nonce
-                vasp.address,
-                vasp.auth_key().prefix().to_vec(),
-                format!("Novi {}", self.vasps.len()).as_bytes().to_owned(),
-                false, /* add all currencies */
-            );
+        let script = diem_transaction_builder::stdlib::encode_create_parent_vasp_account_script(
+            xus_tag(),
+            0, // sliding nonce
+            vasp.address,
+            vasp.auth_key().prefix().to_vec(),
+            format!("Novi {}", self.vasps.len()).as_bytes().to_owned(),
+            false, /* add all currencies */
+        );
         let txn = self.create_txn(&self.tc, script);
         self.submit_and_wait(txn);
         self.vasps.push(vasp);
@@ -83,7 +82,7 @@ impl Env {
 
     pub fn create_child_vasp(&mut self, parent_vasp_index: usize, amount: u64) {
         let child = Account::gen();
-        let script = transaction_builder_generated::stdlib::encode_create_child_vasp_account_script(
+        let script = diem_transaction_builder::stdlib::encode_create_child_vasp_account_script(
             xus_tag(),
             child.address,
             child.auth_key().prefix().to_vec(),
@@ -96,14 +95,13 @@ impl Env {
     }
 
     pub fn transfer_coins_to_vasp(&mut self, index: usize, amount: u64) {
-        let script =
-            transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                xus_tag(),
-                self.vasps[index].address,
-                amount,
-                vec![],
-                vec![],
-            );
+        let script = diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
+            xus_tag(),
+            self.vasps[index].address,
+            amount,
+            vec![],
+            vec![],
+        );
         let txn = self.create_txn(&self.dd, script);
         self.submit_and_wait(txn);
     }
@@ -127,15 +125,14 @@ impl Env {
     ) -> SignedTransaction {
         let (rid, rcid) = receiver;
         let receiver_address = self.vasps[rid].children[rcid].address;
-        let script =
-            transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                xus_tag(),
-                receiver_address,
-                amount,
-                // todo: add metadata
-                vec![],
-                vec![],
-            );
+        let script = diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
+            xus_tag(),
+            receiver_address,
+            amount,
+            // todo: add metadata
+            vec![],
+            vec![],
+        );
         self.create_txn(&self.vasps[sender.0].children[sender.1], script)
     }
 

@@ -399,7 +399,7 @@ pub fn build_rotation_transaction(
     chain_id: ChainId,
 ) -> RawTransaction {
     let script =
-        transaction_builder_generated::stdlib::encode_set_validator_config_and_reconfigure_script(
+        diem_transaction_builder::stdlib::encode_set_validator_config_and_reconfigure_script(
             owner_address,
             consensus_key.to_bytes().to_vec(),
             network_addresses,
