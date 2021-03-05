@@ -79,6 +79,56 @@ jobs:
       - name: build image with dev-setup.sh
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
+  build-images:
+    runs-on: ubuntu-latest-xl
+    continue-on-error: false
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    env:
+      TAG: github-1
+      DOCKERHUB_ORG: libra
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 #get all the history!!!
+      - id: changes
+        name: determine changes
+        uses: ./.github/actions/changes
+        with:
+          workflow-file: docker-publish.yml
+      - name: Sign in to dockerhub, install image signing cert.
+        uses: ./.github/actions/dockerhub_login
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: pre build docker images
+        run: |
+          if  [[ ! "$CHANGES_TARGET_BRANCH" =~ "^release-[0-9|.]+$" ]] && [[ ! "$CHANGES_TARGET_BRANCH" =~ "^gha-test-[0-9|.]+$" ]] ; then
+            echo Targeting branch $CHANGES_TARGET_BRANCH will not pre-publish docker images.
+          fi
+      - name: pre-release docker images
+        run: |
+          BRANCH="$CHANGES_TARGET_BRANCH"
+          success=0
+          tmpfile=$(mktemp)
+          echo "Failed to push:" > "${tmpfile}"
+          docker/build_push.sh -u -p -b ${BRANCH} -n client || success=$(echo "client" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n init || success=$(echo "init" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n faucet || success=$(echo "faucet" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=$(echo "tools" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
+          docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test || success=$(echo "cluster-test" >> "${tmpfile}"; echo 1)
+          if [[ "$success" == "1" ]]; then
+            cat "${tmpfile}"
+          fi
+          exit $success
+        env:
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+
   non-rust-lint:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 10

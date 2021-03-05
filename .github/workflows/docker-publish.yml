@@ -2,7 +2,7 @@ name: docker-publish.yml
 
 on:
   push:
-    branches: [auto, master, release-*]
+    branches: [master, release-*]
 
 jobs:
   build-images:
