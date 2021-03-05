@@ -30,7 +30,7 @@ futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.87", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -73,7 +73,7 @@ futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.87", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -119,7 +119,7 @@ futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.87", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -162,7 +162,7 @@ futures-util = { version = "0.3.12", features = ["alloc", "async-await", "async-
 hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "http1", "http2", "runtime", "server", "socket2", "stream", "tcp"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.87", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
