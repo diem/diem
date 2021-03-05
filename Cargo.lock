@@ -893,6 +893,7 @@ dependencies = [
  "itertools 0.10.0",
  "k8s-openapi",
  "kube",
+ "move-core-types",
  "network",
  "network-builder",
  "num_cpus",

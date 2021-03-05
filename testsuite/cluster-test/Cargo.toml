@@ -55,6 +55,7 @@ diem-time-service = { path = "../../common/time-service" }
 diem-trace = {path = "../../common/trace"}
 diem-types = { path = "../../types", features = ["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+move-core-types = { path = "../../language/move-core/types" }
 network = { path = "../../network" }
 network-builder = { path = "../../network/builder" }
 seed-peer-generator = { path = "../../config/seed-peer-generator" }

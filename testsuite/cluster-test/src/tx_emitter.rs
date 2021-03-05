@@ -869,7 +869,7 @@ async fn query_sequence_numbers(
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_CURRENCY_CODE: &str = XUS_NAME;
-const TXN_EXPIRATION_SECONDS: i64 = 50;
+const TXN_EXPIRATION_SECONDS: i64 = 150;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;

@@ -10,7 +10,7 @@ use crate::{
         CompatiblityTestParams, CpuFlamegraphParams, Experiment, ExperimentParam,
         PerformanceBenchmarkParams, PerformanceBenchmarkThreeRegionSimulationParams,
         RebootRandomValidatorsParams, ReconfigurationParams, RecoveryTimeParams,
-        TwinValidatorsParams,
+        TwinValidatorsParams, ValidatorVersioningParams,
     },
 };
 use anyhow::{format_err, Result};
@@ -129,6 +129,26 @@ impl ExperimentSuite {
         Ok(Self { experiments })
     }
 
+    fn new_versioning_suite(cluster: &Cluster) -> Result<Self> {
+        let count: usize = match env::var("BATCH_SIZE") {
+            Ok(val) => val
+                .parse()
+                .map_err(|e| format_err!("Failed to parse BATCH_SIZE {}: {}", val, e))?,
+            Err(_) => cluster.validator_instances().len() / 2,
+        };
+        let updated_image_tag = env::var("UPDATE_TO_TAG")
+            .map_err(|_| format_err!("Expected environment variable UPDATE_TO_TAG"))?;
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            ValidatorVersioningParams {
+                count,
+                updated_image_tag,
+            }
+            .build(cluster),
+        ));
+        Ok(Self { experiments })
+    }
+
     fn new_invalid_tx_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
@@ -147,6 +167,7 @@ impl ExperimentSuite {
             "twin" => Ok(Self::new_twin_suite(cluster)),
             "land_blocking" => Ok(Self::new_land_blocking_suite(cluster)),
             "land_blocking_compat" => Self::new_land_blocking_compat_suite(cluster),
+            "versioning" => Self::new_versioning_suite(cluster),
             "invalid" => Ok(Self::new_invalid_tx_suite(cluster)),
             other => Err(format_err!("Unknown suite: {}", other)),
         }
