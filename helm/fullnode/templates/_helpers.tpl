@@ -129,3 +129,7 @@ Create the name of the service account to use
 {{ .Values.backup.pushGateway }}
 {{- end -}}
 {{- end -}}
+
+{{- define "backup.loggingAddress" -}}
+{{ .Values.logging.address }}
+{{- end -}}

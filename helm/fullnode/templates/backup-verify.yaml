@@ -43,6 +43,8 @@ spec:
               value: "debug"
             - name: RUST_BACKTRACE
               value: "1"
+            - name: STRUCT_LOG_TCP_ADDR
+              value: {{ include "backup.loggingAddress" $ | quote }}
             - name: PUSH_METRICS_ENDPOINT
               value: "{{- include "backup.pushGateway" $ }}/metrics/job/{{- .Values.backup_verify.jobName | default "db_backup_verify" }}"
             {{- include "backup.backupEnvironment" (dict "config" $.Values.backup.config "era" $.Values.chain.era) | nindent 12 }}

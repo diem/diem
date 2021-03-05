@@ -60,6 +60,8 @@ spec:
           value: "debug"
         - name: RUST_BACKTRACE
           value: "1"
+        - name: STRUCT_LOG_TCP_ADDR
+          value: {{ include "backup.loggingAddress" $ | quote }}
         {{- if (include "backup.pushGateway" $) }}
         - name: PUSH_METRICS_ENDPOINT
           value: "{{- include "backup.pushGateway" $ }}/metrics/job/{{- .jobName | default "db_backup" }}"

@@ -11,6 +11,6 @@ create_for_write = '''
 open_for_read = 'azcopy cp --from-to BlobPipe "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/$FILE_HANDLE$SAS" < /dev/null | gzip -cd'
 save_metadata_line= 'gzip -c | azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata/$FILE_NAME$SAS"'
 list_metadata_files = '''
-    (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata$SAS" ||:) \
-    | sed -ne "s#INFO: \(.*\); Content Length:.*#metadata/\1#p"
+    (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/$SUB_DIR/metadata/$SAS" ||:) \
+    | sed -ne "s#; .*##;s#INFO: \(.*\)#metadata/\1#p"
 '''
