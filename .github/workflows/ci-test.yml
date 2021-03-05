@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     continue-on-error: false
     needs: prepare
-    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ github.event_name == 'push' && needs.prepare.outputs.test-rust == 'true' }}
     env:
       TAG: github-1
       DOCKERHUB_ORG: libra
