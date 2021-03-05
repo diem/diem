@@ -1,0 +1,97 @@
+============ after processor `global_invariant_instrumenter` ================
+
+[variant verification]
+pub fun Trafo::opaque_caller($t0|addr: address) {
+     var $t1: bool
+     var $t2: num
+     var $t3: bool
+  0: assume WellFormed($t0)
+  1: assume forall $rsc: ResourceDomain<Trafo::R>(): WellFormed($rsc)
+  2: @1 := save_mem(Trafo::R)
+  3: trace_local[addr]($t0)
+     # >> opaque call: Trafo::opaque_decr($t0)
+  4: nop
+     # VC: caller does not have permission to modify `Trafo::R` at given address at modifies.move:22:7+17
+  5: assert CanModify<Trafo::R>($t0)
+  6: assume Eq($t1, Or(Not(exists<Trafo::R>($t0)), Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), 0)))
+  7: if ($t1) goto 8 else goto 11
+  8: label L4
+  9: trace_abort($t2)
+ 10: goto 35
+ 11: label L3
+ 12: @2 := save_mem(Trafo::R)
+ 13: modifies global<Trafo::R>($t0)
+ 14: assume exists<Trafo::R>($t0)
+ 15: assume Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), Sub(select Trafo::R.x(global[@2]<Trafo::R>($t0)), 1))
+     # << opaque call: Trafo::opaque_decr($t0)
+ 16: nop
+     # >> opaque call: Trafo::opaque_decr($t0)
+ 17: nop
+     # VC: caller does not have permission to modify `Trafo::R` at given address at modifies.move:23:7+17
+ 18: assert CanModify<Trafo::R>($t0)
+ 19: assume Eq($t3, Or(Not(exists<Trafo::R>($t0)), Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), 0)))
+ 20: if ($t3) goto 21 else goto 24
+ 21: label L6
+ 22: trace_abort($t2)
+ 23: goto 35
+ 24: label L5
+ 25: @3 := save_mem(Trafo::R)
+ 26: modifies global<Trafo::R>($t0)
+ 27: assume exists<Trafo::R>($t0)
+ 28: assume Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), Sub(select Trafo::R.x(global[@3]<Trafo::R>($t0)), 1))
+     # << opaque call: Trafo::opaque_decr($t0)
+ 29: nop
+ 30: label L1
+     # VC: function does not abort under this condition at modifies.move:27:7+27
+ 31: assert Not(Not(exists[@1]<Trafo::R>($t0)))
+     # VC: function does not abort under this condition at modifies.move:28:7+32
+ 32: assert Not(Lt(select Trafo::R.x(global[@1]<Trafo::R>($t0)), 2))
+     # VC: post-condition does not hold at modifies.move:29:7+56
+ 33: assert Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), Sub(select Trafo::R.x(global[@1]<Trafo::R>($t0)), 2))
+ 34: return ()
+ 35: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at modifies.move:25:3+196
+ 36: assert Or(Not(exists[@1]<Trafo::R>($t0)), Lt(select Trafo::R.x(global[@1]<Trafo::R>($t0)), 2))
+ 37: abort($t2)
+}
+
+
+[variant verification]
+pub fun Trafo::opaque_decr($t0|addr: address) {
+     var $t1|r: &mut Trafo::R
+     var $t2: &mut Trafo::R
+     var $t3: num
+     var $t4: u64
+     var $t5: u64
+     var $t6: u64
+     var $t7: &mut u64
+  0: assume WellFormed($t0)
+  1: assume forall $rsc: ResourceDomain<Trafo::R>(): WellFormed($rsc)
+  2: @0 := save_mem(Trafo::R)
+  3: trace_local[addr]($t0)
+     # VC: caller does not have permission to modify `Trafo::R` at given address at modifies.move:9:15+17
+  4: assert CanModify<Trafo::R>($t0)
+  5: $t2 := borrow_global<Trafo::R>($t0) on_abort goto 20 with $t3
+  6: trace_local[r]($t2)
+  7: $t4 := get_field<Trafo::R>.x($t2)
+  8: $t5 := 1
+  9: $t6 := -($t4, $t5) on_abort goto 20 with $t3
+ 10: $t7 := borrow_field<Trafo::R>.x($t2)
+ 11: write_ref($t7, $t6)
+ 12: write_back[Reference($t2)]($t7)
+ 13: write_back[Trafo::R]($t2)
+ 14: label L1
+     # VC: function does not abort under this condition at modifies.move:15:7+27
+ 15: assert Not(Not(exists[@0]<Trafo::R>($t0)))
+     # VC: function does not abort under this condition at modifies.move:16:7+33
+ 16: assert Not(Eq<u64>(select Trafo::R.x(global[@0]<Trafo::R>($t0)), 0))
+     # VC: post-condition does not hold at modifies.move:17:7+24
+ 17: assert exists<Trafo::R>($t0)
+     # VC: post-condition does not hold at modifies.move:18:7+56
+ 18: assert Eq<u64>(select Trafo::R.x(global<Trafo::R>($t0)), Sub(select Trafo::R.x(global[@0]<Trafo::R>($t0)), 1))
+ 19: return ()
+ 20: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at modifies.move:12:3+247
+ 21: assert Or(Not(exists[@0]<Trafo::R>($t0)), Eq<u64>(select Trafo::R.x(global[@0]<Trafo::R>($t0)), 0))
+ 22: abort($t3)
+}

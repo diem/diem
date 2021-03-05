@@ -1,0 +1,23 @@
+============ after processor `global_invariant_instrumenter` ================
+
+[variant verification]
+pub fun Trafo::div($t0|x: u64, $t1|y: u64): u64 {
+     var $t2: u64
+     var $t3: num
+  0: assume WellFormed($t0)
+  1: assume WellFormed($t1)
+  2: trace_local[x]($t0)
+  3: trace_local[y]($t1)
+  4: $t2 := /($t0, $t1) on_abort goto 10 with $t3
+  5: trace_return[0]($t2)
+  6: label L1
+     # VC: function does not abort under this condition at simple.move:10:7+17
+  7: assert Not(Eq<u64>($t1, 0))
+     # VC: post-condition does not hold at simple.move:11:7+24
+  8: assert Eq<u64>($t2, Div($t0, $t1))
+  9: return $t2
+ 10: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at simple.move:9:3+73
+ 11: assert Eq<u64>($t1, 0)
+ 12: abort($t3)
+}

@@ -4,14 +4,12 @@
 pub fun Trafo::opaque_caller($t0|addr: address) {
      var $t1: address
      var $t2: address
-     var $t3: address
-  0: $t3 := move($t0)
-  1: trace_local[addr]($t3)
-  2: $t1 := copy($t3)
-  3: Trafo::opaque_decr($t3)
-  4: $t2 := copy($t3)
-  5: Trafo::opaque_decr($t3)
-  6: return ()
+  0: trace_local[addr]($t0)
+  1: $t1 := copy($t0)
+  2: Trafo::opaque_decr($t0)
+  3: $t2 := copy($t0)
+  4: Trafo::opaque_decr($t0)
+  5: return ()
 }
 
 
@@ -27,20 +25,18 @@ pub fun Trafo::opaque_decr($t0|addr: address) {
      var $t8: u64
      var $t9: &mut Trafo::R
      var $t10: &mut u64
-     var $t11: address
-  0: $t11 := move($t0)
-  1: trace_local[addr]($t11)
-  2: $t2 := copy($t11)
-  3: $t3 := borrow_global<Trafo::R>($t11)
-  4: $t1 := $t3
-  5: trace_local[r]($t1)
-  6: $t4 := copy($t1)
-  7: $t5 := get_field<Trafo::R>.x($t1)
-  8: $t6 := move($t5)
-  9: $t7 := 1
- 10: $t8 := -($t5, $t7)
- 11: $t9 := move($t1)
- 12: $t10 := borrow_field<Trafo::R>.x($t1)
- 13: write_ref($t10, $t8)
- 14: return ()
+  0: trace_local[addr]($t0)
+  1: $t2 := copy($t0)
+  2: $t3 := borrow_global<Trafo::R>($t0)
+  3: $t1 := $t3
+  4: trace_local[r]($t3)
+  5: $t4 := copy($t3)
+  6: $t5 := get_field<Trafo::R>.x($t3)
+  7: $t6 := move($t5)
+  8: $t7 := 1
+  9: $t8 := -($t5, $t7)
+ 10: $t9 := move($t3)
+ 11: $t10 := borrow_field<Trafo::R>.x($t3)
+ 12: write_ref($t10, $t8)
+ 13: return ()
 }

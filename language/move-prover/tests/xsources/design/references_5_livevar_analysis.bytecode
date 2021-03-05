@@ -1,28 +1,24 @@
 ============ after processor `livevar_analysis` ================
 
 [variant baseline]
-pub fun Trafo::incr_ref($t0|r: u64): u64 {
+pub fun Trafo::incr_ref($t0|r: &mut u64) {
      var $t1: u64
-     var $t2: &mut u64
+     var $t2: u64
      var $t3: u64
-     var $t4: u64
-     var $t5: u64
      # live vars: r
-  0: $t1 := move($t0)
-     # live vars: $t1
-  1: $t2 := borrow_local($t1)
-     # live vars: $t1, $t2
-  2: trace_local[r]($t2)
-     # live vars: $t1, $t2
-  3: $t3 := read_ref($t2)
-     # live vars: $t1, $t2, $t3
-  4: $t4 := 1
-     # live vars: $t1, $t2, $t3, $t4
-  5: $t5 := +($t3, $t4)
-     # live vars: $t1, $t2, $t5
-  6: write_ref($t2, $t5)
-     # live vars: $t1
-  7: return $t1
+  0: trace_local[r]($t0)
+     # live vars: r
+  1: $t1 := read_ref($t0)
+     # live vars: r, $t1
+  2: $t2 := 1
+     # live vars: r, $t1, $t2
+  3: $t3 := +($t1, $t2)
+     # live vars: r, $t3
+  4: write_ref($t0, $t3)
+     # live vars: r
+  5: trace_local[r]($t0)
+     # live vars:
+  6: return ()
 }
 
 
@@ -32,69 +28,62 @@ pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
      var $t2|r2: Trafo::R
      var $t3|r_ref: &mut Trafo::R
      var $t4|tmp#$4: &mut Trafo::R
-     var $t5: bool
+     var $t5: u64
      var $t6: u64
-     var $t7: u64
+     var $t7: &mut Trafo::R
      var $t8: &mut Trafo::R
-     var $t9: &mut Trafo::R
-     var $t10: &mut u64
-     var $t11: u64
+     var $t9: &mut u64
+     var $t10: Trafo::R
      # live vars: b
-  0: $t5 := move($t0)
-     # live vars: $t5
-  1: trace_local[b]($t5)
-     # live vars: $t5
-  2: $t6 := 1
-     # live vars: $t5, $t6
-  3: $t1 := pack Trafo::R($t6)
-     # live vars: r1, $t5
-  4: trace_local[r1]($t1)
-     # live vars: r1, $t5
-  5: $t7 := 2
-     # live vars: r1, $t5, $t7
-  6: $t2 := pack Trafo::R($t7)
-     # live vars: r1, r2, $t5
-  7: trace_local[r2]($t2)
-     # live vars: r1, r2, $t5
-  8: if ($t5) goto 11 else goto 9
+  0: trace_local[b]($t0)
+     # live vars: b
+  1: $t5 := 1
+     # live vars: b, $t5
+  2: $t1 := pack Trafo::R($t5)
+     # live vars: b, r1
+  3: trace_local[r1]($t1)
+     # live vars: b, r1
+  4: $t6 := 2
+     # live vars: b, r1, $t6
+  5: $t2 := pack Trafo::R($t6)
+     # live vars: b, r1, r2
+  6: trace_local[r2]($t2)
+     # live vars: b, r1, r2
+  7: if ($t0) goto 10 else goto 8
      # live vars: r2
-  9: label L1
+  8: label L1
      # live vars: r2
- 10: goto 16
+  9: goto 15
      # live vars: r1, r2
- 11: label L0
+ 10: label L0
      # live vars: r1, r2
- 12: $t8 := borrow_local($t1)
+ 11: $t7 := borrow_local($t1)
+     # live vars: r2, $t7
+ 12: $t4 := $t7
+     # live vars: r2, tmp#$4, $t7
+ 13: trace_local[tmp#$4]($t7)
+     # live vars: r2, tmp#$4
+ 14: goto 19
+     # live vars: r2
+ 15: label L2
+     # live vars: r2
+ 16: $t8 := borrow_local($t2)
      # live vars: r2, $t8
- 13: $t4 := $t8
+ 17: $t4 := $t8
      # live vars: r2, tmp#$4, $t8
- 14: trace_local[tmp#$4]($t8)
+ 18: trace_local[tmp#$4]($t8)
      # live vars: r2, tmp#$4
- 15: goto 20
-     # live vars: r2
- 16: label L2
-     # live vars: r2
- 17: $t9 := borrow_local($t2)
+ 19: label L3
+     # live vars: r2, tmp#$4
+ 20: trace_local[r_ref]($t4)
+     # live vars: r2, tmp#$4
+ 21: $t9 := borrow_field<Trafo::R>.x($t4)
      # live vars: r2, $t9
- 18: $t4 := $t9
-     # live vars: r2, tmp#$4, $t9
- 19: trace_local[tmp#$4]($t9)
-     # live vars: r2, tmp#$4
- 20: label L3
-     # live vars: r2, tmp#$4
- 21: $t3 := $t4
-     # live vars: r2, r_ref
- 22: trace_local[r_ref]($t3)
-     # live vars: r2, r_ref
- 23: $t10 := borrow_field<Trafo::R>.x($t3)
-     # live vars: r2, $t10
- 24: $t11 := read_ref($t10)
-     # live vars: r2, $t10, $t11
- 25: $t11 := Trafo::incr_ref($t11)
-     # live vars: r2, $t10, $t11
- 26: write_ref($t10, $t11)
+ 22: Trafo::incr_ref($t9)
      # live vars: r2
- 27: trace_return[0]($t2)
-     # live vars: r2
- 28: return $t2
+ 23: $t10 := move($t2)
+     # live vars: $t10
+ 24: trace_return[0]($t10)
+     # live vars: $t10
+ 25: return $t10
 }

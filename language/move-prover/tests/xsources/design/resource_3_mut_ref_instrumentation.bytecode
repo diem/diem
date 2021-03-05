@@ -1,0 +1,41 @@
+============ after processor `mut_ref_instrumentation` ================
+
+[variant baseline]
+pub fun Signer::address_of($t0|s: signer): address {
+     var $t1: signer
+     var $t2: address
+     var $t3: address
+  0: trace_local[s]($t0)
+  1: $t1 := move($t0)
+  2: $t2 := Signer::borrow_address($t1)
+  3: $t3 := move($t2)
+  4: trace_return[0]($t3)
+  5: return $t3
+}
+
+
+[variant baseline]
+pub fun Trafo::dummy_need_signer_use_in_move($t0|account: signer): address {
+     var $t1: signer
+     var $t2: address
+  0: trace_local[account]($t0)
+  1: $t1 := move($t0)
+  2: $t2 := Signer::address_of($t1)
+  3: trace_return[0]($t2)
+  4: return $t2
+}
+
+
+[variant baseline]
+pub fun Trafo::publish($t0|account: signer, $t1|x: u64) {
+     var $t2: signer
+     var $t3: u64
+     var $t4: Trafo::R
+  0: trace_local[account]($t0)
+  1: trace_local[x]($t1)
+  2: $t2 := move($t0)
+  3: $t3 := copy($t1)
+  4: $t4 := pack Trafo::R($t3)
+  5: move_to<Trafo::R>($t4, $t2)
+  6: return ()
+}

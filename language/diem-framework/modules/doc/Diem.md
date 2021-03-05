@@ -1124,7 +1124,7 @@ a value equal to <code>amount</code>.
 
 
 
-<a name="0x1_Diem_currency_info$92"></a>
+<a name="0x1_Diem_currency_info$93"></a>
 
 
 <pre><code><b>let</b> currency_info = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
@@ -1355,7 +1355,7 @@ being preburned is a synthetic currency (<code>is_synthetic = <b>true</b></code>
 <b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{amount: coin.value};
-<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;;
+<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{amount: coin.value};
 </code></pre>
 
 
@@ -1406,7 +1406,7 @@ being preburned is a synthetic currency (<code>is_synthetic = <b>true</b></code>
 
 
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt; {
-    coin: <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;;
+    amount: u64;
     preburn_address: address;
     <a name="0x1_Diem_info$66"></a>
     <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
@@ -1416,7 +1416,7 @@ being preburned is a synthetic currency (<code>is_synthetic = <b>true</b></code>
     <b>let</b> handle = info.preburn_events;
     <a name="0x1_Diem_msg$69"></a>
     <b>let</b> msg = <a href="Diem.md#0x1_Diem_PreburnEvent">PreburnEvent</a> {
-        amount: coin.value,
+        amount,
         currency_code,
         preburn_address,
     };
@@ -1531,7 +1531,7 @@ dealer account <code>account</code>.
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_Diem_account_addr$93"></a>
+<a name="0x1_Diem_account_addr$94"></a>
 <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
 <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
@@ -1616,7 +1616,7 @@ this resource for the designated dealer <code>account</code>.
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_Diem_account_addr$94"></a>
+<a name="0x1_Diem_account_addr$95"></a>
 <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
 </code></pre>
@@ -1690,7 +1690,7 @@ requests can be outstanding in the same currency for a designated dealer.
 
 
 
-<a name="0x1_Diem_account_addr$95"></a>
+<a name="0x1_Diem_account_addr$96"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -1794,17 +1794,15 @@ number of preburn requests does not exceed <code><a href="Diem.md#0x1_Diem_MAX_O
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_Diem_account_addr$96"></a>
+<a name="0x1_Diem_account_addr$97"></a>
 <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<a name="0x1_Diem_preburns$97"></a>
+<a name="0x1_Diem_preburns$98"></a>
 <b>let</b> preburns = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr).preburns;
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
 <b>aborts_if</b> !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 <b>include</b> <a href="Diem.md#0x1_Diem_AddPreburnToQueueAbortsIf">AddPreburnToQueueAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) ==&gt;
-    <a href="Vector.md#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(preburns, <b>old</b>(preburns), preburn);
-<b>ensures</b> !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) ==&gt;
-    preburns == <a href="Vector.md#0x1_Vector_spec_singleton">Vector::spec_singleton</a>(preburn);
+<b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
+<b>ensures</b> <a href="Vector.md#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(preburns, <b>old</b>(preburns), preburn);
 </code></pre>
 
 
@@ -1881,14 +1879,8 @@ Calls to this function will fail if:
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_Diem_account_addr$98"></a>
-<b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr);
-<b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
-<b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
-<b>include</b> <a href="Diem.md#0x1_Diem_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(coin.value), amount: coin.value};
-<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{preburn_address: <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};
+<b>include</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">PreburnToEnsures</a>&lt;CoinType&gt;{amount: coin.value};
 </code></pre>
 
 
@@ -1906,15 +1898,52 @@ Calls to this function will fail if:
 </code></pre>
 
 
-Must abort if the account doesn't have the PreburnQueue or Preburn resource [[H4]][PERMISSION].
-This aborts condition is covered in the <code><a href="Diem.md#0x1_Diem_UpgradePreburnAbortsIf">UpgradePreburnAbortsIf</a></code> schema.
+Must abort if the account doesn't have the PreburnQueue or Preburn resource, or has not
+the correct role [[H4]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
+    <b>aborts_if</b> !(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr) || <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr));
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>;
     <b>include</b> <a href="Diem.md#0x1_Diem_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
     <b>include</b> <a href="Diem.md#0x1_Diem_UpgradePreburnAbortsIf">UpgradePreburnAbortsIf</a>&lt;CoinType&gt;;
     <b>include</b> <a href="Diem.md#0x1_Diem_AddPreburnToQueueAbortsIf">AddPreburnToQueueAbortsIf</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount)};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Diem_PreburnToEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">PreburnToEnsures</a>&lt;CoinType&gt; {
+    account: signer;
+    amount: u64;
+    <a name="0x1_Diem_account_addr$81"></a>
+    <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+}
+</code></pre>
+
+
+Removes the preburn resource if it exists
+
+
+<pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">PreburnToEnsures</a>&lt;CoinType&gt; {
+    <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr);
+}
+</code></pre>
+
+
+Publishes if it doesn't exists. Updates its state either way.
+
+
+<pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">PreburnToEnsures</a>&lt;CoinType&gt; {
+    <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
+    <b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
+    <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount)};
+    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{preburn_address: account_addr};
 }
 </code></pre>
 
@@ -2230,11 +2259,11 @@ Calls to this function will fail if the preburn <code>to_burn</code> area for <c
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_BurnWithResourceCapEmits">BurnWithResourceCapEmits</a>&lt;CoinType&gt; {
     preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;;
     preburn_address: address;
-    <a name="0x1_Diem_info$81"></a>
+    <a name="0x1_Diem_info$82"></a>
     <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
-    <a name="0x1_Diem_currency_code$82"></a>
+    <a name="0x1_Diem_currency_code$83"></a>
     <b>let</b> currency_code = <a href="Diem.md#0x1_Diem_spec_currency_code">spec_currency_code</a>&lt;CoinType&gt;();
-    <a name="0x1_Diem_handle$83"></a>
+    <a name="0x1_Diem_handle$84"></a>
     <b>let</b> handle = info.burn_events;
     emits <a href="Diem.md#0x1_Diem_BurnEvent">BurnEvent</a> {
             amount: <b>old</b>(preburn.to_burn.value),
@@ -2346,7 +2375,7 @@ at <code>preburn_address</code> does not contain a preburn request of the right 
     preburn_address: address;
     amount: u64;
     <b>include</b> <a href="Diem.md#0x1_Diem_RemovePreburnFromQueueEnsures">RemovePreburnFromQueueEnsures</a>&lt;CoinType&gt;;
-    <a name="0x1_Diem_info$84"></a>
+    <a name="0x1_Diem_info$85"></a>
     <b>let</b> info = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>ensures</b> info == update_field(<b>old</b>(info), preburn_value, <b>old</b>(info.preburn_value) - amount);
 }
@@ -2361,11 +2390,11 @@ at <code>preburn_address</code> does not contain a preburn request of the right 
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_CancelBurnWithCapEmits">CancelBurnWithCapEmits</a>&lt;CoinType&gt; {
     preburn_address: address;
     amount: u64;
-    <a name="0x1_Diem_info$85"></a>
+    <a name="0x1_Diem_info$86"></a>
     <b>let</b> info = TRACE(<a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;());
-    <a name="0x1_Diem_currency_code$86"></a>
+    <a name="0x1_Diem_currency_code$87"></a>
     <b>let</b> currency_code = <a href="Diem.md#0x1_Diem_spec_currency_code">spec_currency_code</a>&lt;CoinType&gt;();
-    <a name="0x1_Diem_handle$87"></a>
+    <a name="0x1_Diem_handle$88"></a>
     <b>let</b> handle = info.cancel_burn_events;
     emits <a href="Diem.md#0x1_Diem_CancelBurnEvent">CancelBurnEvent</a> {
            amount,
@@ -2421,7 +2450,7 @@ used for administrative burns, like unpacking an XDX coin or charging fees.
 <pre><code><b>include</b> <a href="Diem.md#0x1_Diem_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
 <a name="0x1_Diem_info$99"></a>
 <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
-<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{coin: coin, preburn_address: preburn_address};
+<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{amount: coin.value, preburn_address: preburn_address};
 <b>include</b> <a href="Diem.md#0x1_Diem_BurnWithResourceCapEmits">BurnWithResourceCapEmits</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;{to_burn: coin}};
 <b>ensures</b> preburn.to_burn.value == 0;
 <b>ensures</b> info == update_field(<b>old</b>(info), total_value, <b>old</b>(info.total_value) - coin.value);
@@ -2438,7 +2467,7 @@ used for administrative burns, like unpacking an XDX coin or charging fees.
     preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> coin.value == 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
     <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
-    <a name="0x1_Diem_info$88"></a>
+    <a name="0x1_Diem_info$89"></a>
     <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> info.total_value &lt; coin.value <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
@@ -3169,7 +3198,7 @@ rate is needed.
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_ApproxXdmForValueAbortsIf">ApproxXdmForValueAbortsIf</a>&lt;CoinType&gt; {
     from_value: num;
     <b>include</b> <a href="Diem.md#0x1_Diem_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Diem_xdx_exchange_rate$89"></a>
+    <a name="0x1_Diem_xdx_exchange_rate$90"></a>
     <b>let</b> xdx_exchange_rate = <a href="Diem.md#0x1_Diem_spec_xdx_exchange_rate">spec_xdx_exchange_rate</a>&lt;CoinType&gt;();
     <b>include</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">FixedPoint32::MultiplyAbortsIf</a>{val: from_value, multiplier: xdx_exchange_rate};
 }
@@ -3487,9 +3516,9 @@ Must abort if the account does not have the TreasuryCompliance Role [[H5]][PERMI
 
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_UpdateXDXExchangeRateEmits">UpdateXDXExchangeRateEmits</a>&lt;FromCoinType&gt; {
     xdx_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>;
-    <a name="0x1_Diem_handle$90"></a>
+    <a name="0x1_Diem_handle$91"></a>
     <b>let</b> handle = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).exchange_rate_update_events;
-    <a name="0x1_Diem_msg$91"></a>
+    <a name="0x1_Diem_msg$92"></a>
     <b>let</b> msg = <a href="Diem.md#0x1_Diem_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRateUpdateEvent</a> {
         currency_code: <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).currency_code,
         new_to_xdx_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_get_raw_value">FixedPoint32::get_raw_value</a>(xdx_exchange_rate)

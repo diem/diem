@@ -14,5 +14,5 @@ EXAMPLES="
  "
 
 for example in ${EXAMPLES}; do
-  cargo run -- -k --dump-bytecode --v2 ${example}
+  cargo run -- -k --dump-bytecode ${example}
 done

@@ -775,6 +775,11 @@ function {:inline} $UpdateMutation(m: $Mutation, v: $Value): $Mutation {
     $Mutation(l#$Mutation(m), p#$Mutation(m), v)
 }
 
+procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
+  var v': $Value;
+  m' := $Mutation(l#$Mutation(m), p#$Mutation(m), v');
+}
+
 // ============================================================================================
 // Instructions
 

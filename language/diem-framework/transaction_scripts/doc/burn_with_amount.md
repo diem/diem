@@ -121,7 +121,8 @@ held in the <code><a href="../../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
 <b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnAbortsIf">Diem::BurnAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="../../modules/doc/Diem.md#0x1_Diem_BurnEnsures">Diem::BurnEnsures</a>&lt;Token&gt;;

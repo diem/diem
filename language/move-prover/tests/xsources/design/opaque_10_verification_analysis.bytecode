@@ -1,0 +1,24 @@
+============ after processor `verification_analysis` ================
+
+[variant baseline]
+pub fun Trafo::opaque_caller($t0|x: u64): u64 {
+     var $t1: u64
+     var $t2: u64
+  0: trace_local[x]($t0)
+  1: $t1 := Trafo::opaque_decr($t0)
+  2: $t2 := Trafo::opaque_decr($t1)
+  3: trace_return[0]($t2)
+  4: return $t2
+}
+
+
+[variant baseline]
+pub fun Trafo::opaque_decr($t0|x: u64): u64 {
+     var $t1: u64
+     var $t2: u64
+  0: trace_local[x]($t0)
+  1: $t1 := 1
+  2: $t2 := -($t0, $t1)
+  3: trace_return[0]($t2)
+  4: return $t2
+}

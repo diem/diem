@@ -426,7 +426,7 @@ impl<'env> FunctionDataBuilder<'env> {
     pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
-        self.emit_with(|id| Bytecode::Call(id, vec![temp], Operation::Havoc, vec![], None));
+        self.emit_with(|id| Bytecode::Call(id, vec![], Operation::Havoc, vec![temp], None));
         (temp, temp_exp)
     }
 }

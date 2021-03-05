@@ -1649,7 +1649,8 @@ resource under <code>dd</code>.
 
 
 
-<pre><code><b>pragma</b> opaque;
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>pragma</b> opaque;
 <a name="0x1_DiemAccount_dd_addr$86"></a>
 <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
 <a name="0x1_DiemAccount_payer$87"></a>
@@ -1659,7 +1660,7 @@ resource under <code>dd</code>.
 <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
         == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">PreburnAbortsIf</a>&lt;Token&gt;;
-<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt;{dd_addr, payer};
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt;{dd, payer};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEmits">PreburnEmits</a>&lt;Token&gt;{dd_addr};
 </code></pre>
 
@@ -1686,7 +1687,7 @@ resource under <code>dd</code>.
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt; {
-    dd_addr: address;
+    dd: signer;
     payer: address;
     amount: u64;
     <a name="0x1_DiemAccount_payer_balance$60"></a>
@@ -1708,7 +1709,7 @@ The value of preburn at <code>dd_addr</code> increases by <code>amount</code>;
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt; {
-    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnEnsures">Diem::PreburnEnsures</a>&lt;Token&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">Diem::spec_make_preburn</a>(amount) };
+    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">Diem::PreburnToEnsures</a>&lt;Token&gt;{amount, account: dd};
 }
 </code></pre>
 
@@ -1723,7 +1724,7 @@ The value of preburn at <code>dd_addr</code> increases by <code>amount</code>;
     amount: u64;
     <a name="0x1_DiemAccount_preburn$68"></a>
     <b>let</b> preburn = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(dd_addr);
-    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">Diem::PreburnWithResourceEmits</a>&lt;Token&gt;{coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>{value: amount}, preburn_address: dd_addr};
+    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">Diem::PreburnWithResourceEmits</a>&lt;Token&gt;{preburn_address: dd_addr};
 }
 </code></pre>
 

@@ -25,6 +25,8 @@ const STDLIB_FLAGS: &[&str] = &["--dependency=../diem-framework/modules"];
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
+    // Use the below + `cargo test -- --test-threads=1` to identify a long running test
+    //println!(">>> testing {}", path.to_string_lossy().to_string());
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
     let baseline_valid =
         !no_boogie || !extract_test_directives(path, "// no-boogie-test")?.is_empty();

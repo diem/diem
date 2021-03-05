@@ -3805,7 +3805,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <b>let</b> cap = <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_spec_get_withdraw_cap">DiemAccount::spec_get_withdraw_cap</a>(account_addr);
 <b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
 <b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">DiemAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
-<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnEnsures">DiemAccount::PreburnEnsures</a>&lt;Token&gt;{dd_addr: account_addr, payer: account_addr};
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnEnsures">DiemAccount::PreburnEnsures</a>&lt;Token&gt;{dd: account, payer: account_addr};
 <b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,

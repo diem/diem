@@ -1,0 +1,96 @@
+============ after processor `spec_instrumenter` ================
+
+[variant baseline]
+pub fun Trafo::incr_ref($t0|r: &mut u64) {
+     var $t1: u64
+     var $t2: u64
+     var $t3: u64
+     var $t4: num
+  0: trace_local[r]($t0)
+  1: $t1 := read_ref($t0)
+  2: $t2 := 1
+  3: $t3 := +($t1, $t2) on_abort goto 8 with $t4
+  4: write_ref($t0, $t3)
+  5: trace_local[r]($t0)
+  6: label L1
+  7: return ()
+  8: label L2
+  9: abort($t4)
+}
+
+
+[variant verification]
+pub fun Trafo::incr_ref($t0|r: &mut u64) {
+     var $t1: u64
+     var $t2: u64
+     var $t3: u64
+     var $t4: u64
+     var $t5: num
+  0: assume WellFormed($t0)
+  1: $t1 := read_ref($t0)
+  2: trace_local[r]($t0)
+  3: $t2 := read_ref($t0)
+  4: $t3 := 1
+  5: $t4 := +($t2, $t3) on_abort goto 11 with $t5
+  6: write_ref($t0, $t4)
+  7: trace_local[r]($t0)
+  8: label L1
+     # VC: post-condition does not hold at references.move:12:5+24
+  9: assert Eq<u64>($t0, Add($t1, 1))
+ 10: return ()
+ 11: label L2
+ 12: abort($t5)
+}
+
+
+[variant verification]
+pub fun Trafo::use_incr_ref($t0|b: bool): Trafo::R {
+     var $t1|r1: Trafo::R
+     var $t2|r2: Trafo::R
+     var $t3|r_ref: &mut Trafo::R
+     var $t4|tmp#$4: &mut Trafo::R
+     var $t5: u64
+     var $t6: u64
+     var $t7: &mut Trafo::R
+     var $t8: &mut Trafo::R
+     var $t9: &mut u64
+     var $t10: num
+     var $t11: Trafo::R
+  0: assume WellFormed($t0)
+  1: trace_local[b]($t0)
+  2: $t5 := 1
+  3: $t1 := pack Trafo::R($t5)
+  4: trace_local[r1]($t1)
+  5: $t6 := 2
+  6: $t2 := pack Trafo::R($t6)
+  7: trace_local[r2]($t2)
+  8: if ($t0) goto 11 else goto 9
+  9: label L1
+ 10: goto 16
+ 11: label L0
+ 12: $t7 := borrow_local($t1)
+ 13: $t4 := $t7
+ 14: trace_local[tmp#$4]($t7)
+ 15: goto 20
+ 16: label L2
+ 17: $t8 := borrow_local($t2)
+ 18: $t4 := $t8
+ 19: trace_local[tmp#$4]($t8)
+ 20: label L3
+ 21: trace_local[r_ref]($t4)
+ 22: $t9 := borrow_field<Trafo::R>.x($t4)
+ 23: Trafo::incr_ref($t9) on_abort goto 33 with $t10
+ 24: write_back[Reference($t4)]($t9)
+ 25: write_back[LocalRoot($t1)]($t4)
+ 26: write_back[LocalRoot($t2)]($t4)
+ 27: $t11 := move($t2)
+ 28: trace_return[0]($t11)
+ 29: label L4
+     # VC: post-condition does not hold at references.move:23:7+31
+ 30: assert Implies($t0, Eq<Trafo::R>($t11, pack Trafo::R(2)))
+     # VC: post-condition does not hold at references.move:24:7+32
+ 31: assert Implies(Not($t0), Eq<Trafo::R>($t11, pack Trafo::R(3)))
+ 32: return $t11
+ 33: label L5
+ 34: abort($t10)
+}

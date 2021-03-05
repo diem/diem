@@ -36,6 +36,8 @@ pub struct SpecTranslator<'a, 'b> {
     type_args: &'b [Type],
     /// An optional substitution for parameters of the above function.
     param_substitution: Option<&'b [TempIndex]>,
+    /// Whether we translate the expression in a post state.
+    in_post_state: bool,
     /// An optional substitution for parameters
     /// A substitution for return vales.
     ret_locals: &'b [TempIndex],
@@ -209,6 +211,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             type_args,
             param_substitution,
             ret_locals,
+            in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
         };
@@ -231,6 +234,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             type_args: &[],
             param_substitution: Default::default(),
             ret_locals: Default::default(),
+            in_post_state: false,
             shadowed: Default::default(),
             result: Default::default(),
         };
@@ -278,11 +282,15 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .filter_kind(ConditionKind::Requires)
             .filter(is_applicable)
         {
+            self.in_post_state = false;
             let exp = self.translate_exp(&cond.exp, false);
             self.result.pre.push((cond.loc.clone(), exp));
         }
 
-        let translate_aborts_in_old = !for_call;
+        // Aborts conditions are translated in post state when they aren't handled for a call
+        // but for a definition. Otherwise, they are translated for a call of an opaque function
+        // and are evaluated in pre state.
+        self.in_post_state = !for_call;
         for cond in spec
             .filter_kind(ConditionKind::AbortsIf)
             .filter(is_applicable)
@@ -290,9 +298,9 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             let code_opt = if cond.additional_exps.is_empty() {
                 None
             } else {
-                Some(self.translate_exp(&cond.additional_exps[0], translate_aborts_in_old))
+                Some(self.translate_exp(&cond.additional_exps[0], self.in_post_state))
             };
-            let exp = self.translate_exp(&cond.exp, translate_aborts_in_old);
+            let exp = self.translate_exp(&cond.exp, self.in_post_state);
             self.result.aborts.push((cond.loc.clone(), exp, code_opt));
         }
 
@@ -302,7 +310,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         {
             let codes = cond
                 .all_exps()
-                .map(|e| self.translate_exp(e, translate_aborts_in_old))
+                .map(|e| self.translate_exp(e, self.in_post_state))
                 .collect_vec();
             self.result.aborts_with.push((cond.loc.clone(), codes));
         }
@@ -326,6 +334,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .filter_kind(ConditionKind::Ensures)
             .filter(is_applicable)
         {
+            self.in_post_state = true;
             let exp = self.translate_exp(&cond.exp, false);
             self.result.post.push((cond.loc.clone(), exp));
         }
@@ -334,11 +343,13 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             .filter_kind(ConditionKind::Modifies)
             .filter(is_applicable)
         {
+            self.in_post_state = false;
             let exp = self.translate_exp(&cond.exp, false);
             self.result.modifies.push((cond.loc.clone(), exp));
         }
 
         for cond in spec.filter_kind(ConditionKind::Emits).filter(is_applicable) {
+            self.in_post_state = true;
             let event_exp = self.translate_exp(&cond.exp, false);
             let handle_exp = self.translate_exp(&cond.additional_exps[0], false);
             let cond_exp = if cond.additional_exps.len() > 1 {
@@ -357,10 +368,15 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         match exp {
             Temporary(node_id, idx) => {
                 // Compute the effective index.
-                let effective_idx = if in_old {
-                    // We access a param inside of old context. We need to create
-                    // a temporary to save their value at function entry, and deliver this
-                    // temporary here.
+                let is_mut = self.fun_env.get_local_type(*idx).is_mutable_reference();
+                let effective_idx = if in_old || self.in_post_state && !is_mut {
+                    // We access a param inside of old context, or a value which might have been
+                    // mutated as we are in the post state. We need to create a temporary
+                    // to save their value at function entry, and deliver this temporary here.
+                    //
+                    // Notice that a redundant copy of a value (i.e. one which is not mutated)
+                    // is removed in by copy propagation, so we do not need to
+                    // care about optimizing this here.
                     self.save_param(self.apply_param_substitution(*idx))
                 } else {
                     self.apply_param_substitution(*idx)

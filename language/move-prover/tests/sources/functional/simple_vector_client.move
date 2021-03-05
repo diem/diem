@@ -341,10 +341,8 @@ module TestVector {
         (l, Vector::length(&v))
     }
     spec fun test_length3 {
-        ensures len(old(v)) == result_1;
+        ensures len(v) == result_1;
         ensures result_1 + 1 == result_2;
-        ensures v != old(v);
-        ensures len(v) == result_2;
     }
 
     fun test_length4(v: &mut vector<u64>) : (u64, u64)

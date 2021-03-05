@@ -33,7 +33,7 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use num::{BigUint, Num, ToPrimitive};
+use num::{BigUint, Num, One, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 use bytecode_source_map::source_map::SourceMap;
@@ -690,6 +690,20 @@ impl GlobalEnv {
     pub fn is_spec_fun_used(&self, module_id: ModuleId, spec_fun_id: SpecFunId) -> bool {
         self.used_spec_funs
             .contains(&module_id.qualified(spec_fun_id))
+    }
+
+    /// Returns true if the type represents the well-known event handle type.
+    pub fn is_wellknown_event_handle_type(&self, ty: &Type) -> bool {
+        if let Type::Struct(mid, sid, _) = ty {
+            let module_env = self.get_module(*mid);
+            let struct_env = module_env.get_struct(*sid);
+            let module_name = module_env.get_name();
+            module_name.addr() == &BigUint::one()
+                && &*self.symbol_pool.string(module_name.name()) == "Event"
+                && &*self.symbol_pool.string(struct_env.get_name()) == "EventHandle"
+        } else {
+            false
+        }
     }
 
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
@@ -1735,7 +1749,7 @@ impl<'env> StructEnv<'env> {
     /// Gets full name as string.
     pub fn get_full_name_str(&self) -> String {
         format!(
-            "{}:{}",
+            "{}::{}",
             self.module_env.get_name().display(self.symbol_pool()),
             self.get_name().display(self.symbol_pool())
         )
@@ -2163,7 +2177,7 @@ impl<'env> FunctionEnv<'env> {
     /// Gets full name as string.
     pub fn get_full_name_str(&self) -> String {
         format!(
-            "{}:{}",
+            "{}::{}",
             self.module_env.get_name().display(self.symbol_pool()),
             self.get_name().display(self.symbol_pool())
         )

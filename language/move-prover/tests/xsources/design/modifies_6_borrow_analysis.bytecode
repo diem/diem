@@ -2,73 +2,55 @@
 
 [variant baseline]
 pub fun Trafo::opaque_caller($t0|addr: address) {
-     var $t1: address
      # live_nodes: LocalRoot($t0)
-  0: $t1 := move($t0)
-     # live_nodes: LocalRoot($t1)
-     # moved_nodes: LocalRoot($t0)
-  1: trace_local[addr]($t1)
-     # live_nodes: LocalRoot($t1)
-     # moved_nodes: LocalRoot($t0)
-  2: Trafo::opaque_decr($t1)
-     # live_nodes: LocalRoot($t1)
-     # moved_nodes: LocalRoot($t0)
-  3: Trafo::opaque_decr($t1)
-     # live_nodes: LocalRoot($t1)
-     # moved_nodes: LocalRoot($t0)
-  4: return ()
+  0: trace_local[addr]($t0)
+     # live_nodes: LocalRoot($t0)
+  1: Trafo::opaque_decr($t0)
+     # live_nodes: LocalRoot($t0)
+  2: Trafo::opaque_decr($t0)
+     # live_nodes: LocalRoot($t0)
+  3: return ()
 }
 
 
 [variant baseline]
 pub fun Trafo::opaque_decr($t0|addr: address) {
      var $t1|r: &mut Trafo::R
-     var $t2: address
+     var $t2: &mut Trafo::R
      var $t3: u64
      var $t4: u64
      var $t5: u64
      var $t6: &mut u64
      # live_nodes: LocalRoot($t0)
-  0: $t2 := move($t0)
-     # live_nodes: LocalRoot($t2)
-     # moved_nodes: LocalRoot($t0)
-  1: trace_local[addr]($t2)
-     # live_nodes: LocalRoot($t2)
-     # moved_nodes: LocalRoot($t0)
-  2: $t1 := borrow_global<Trafo::R>($t2)
-     # live_nodes: LocalRoot($t2), Reference($t1)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}
-     # borrows_from: Reference($t1) -> {Trafo::R}
-  3: trace_local[r]($t1)
-     # live_nodes: LocalRoot($t2), Reference($t1)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}
-     # borrows_from: Reference($t1) -> {Trafo::R}
-  4: $t3 := get_field<Trafo::R>.x($t1)
-     # live_nodes: LocalRoot($t2), Reference($t1)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}
-     # borrows_from: Reference($t1) -> {Trafo::R}
-  5: $t4 := 1
-     # live_nodes: LocalRoot($t2), Reference($t1)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}
-     # borrows_from: Reference($t1) -> {Trafo::R}
-  6: $t5 := -($t3, $t4)
-     # live_nodes: LocalRoot($t2), Reference($t1)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}
-     # borrows_from: Reference($t1) -> {Trafo::R}
-  7: $t6 := borrow_field<Trafo::R>.x($t1)
-     # live_nodes: LocalRoot($t2), Reference($t6)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}, Reference($t1) -> {Reference($t6)}
-     # borrows_from: Reference($t1) -> {Trafo::R}, Reference($t6) -> {Reference($t1)}
-  8: write_ref($t6, $t5)
-     # live_nodes: LocalRoot($t2)
-     # moved_nodes: LocalRoot($t0)
-     # borrowed_by: Trafo::R -> {Reference($t1)}, Reference($t1) -> {Reference($t6)}
-     # borrows_from: Reference($t1) -> {Trafo::R}, Reference($t6) -> {Reference($t1)}
-  9: return ()
+  0: trace_local[addr]($t0)
+     # live_nodes: LocalRoot($t0)
+  1: $t2 := borrow_global<Trafo::R>($t0)
+     # live_nodes: LocalRoot($t0), Reference($t2)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}
+  2: trace_local[r]($t2)
+     # live_nodes: LocalRoot($t0), Reference($t2)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}
+  3: $t3 := get_field<Trafo::R>.x($t2)
+     # live_nodes: LocalRoot($t0), Reference($t2)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}
+  4: $t4 := 1
+     # live_nodes: LocalRoot($t0), Reference($t2)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}
+  5: $t5 := -($t3, $t4)
+     # live_nodes: LocalRoot($t0), Reference($t2)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}
+  6: $t6 := borrow_field<Trafo::R>.x($t2)
+     # live_nodes: LocalRoot($t0), Reference($t6)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t6))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}, Reference($t6) -> {(*, Reference($t2))}
+  7: write_ref($t6, $t5)
+     # live_nodes: LocalRoot($t0)
+     # borrowed_by: Trafo::R -> {(*, Reference($t2))}, Reference($t2) -> {(*, Reference($t6))}
+     # borrows_from: Reference($t2) -> {(*, Trafo::R)}, Reference($t6) -> {(*, Reference($t2))}
+  8: return ()
 }

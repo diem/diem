@@ -1,0 +1,70 @@
+============ after processor `global_invariant_instrumenter` ================
+
+[variant verification]
+pub fun Trafo::opaque_caller($t0|x: u64): u64 {
+     var $t1: bool
+     var $t2: num
+     var $t3: u64
+     var $t4: bool
+     var $t5: u64
+  0: assume WellFormed($t0)
+  1: trace_local[x]($t0)
+     # >> opaque call: $t1 := Trafo::opaque_decr($t0)
+  2: nop
+  3: assume Eq($t1, Eq<u64>($t0, 0))
+  4: if ($t1) goto 5 else goto 8
+  5: label L4
+  6: trace_abort($t2)
+  7: goto 27
+  8: label L3
+  9: assume Eq<u64>($t3, Sub($t0, 1))
+ 10: assume WellFormed($t3)
+     # << opaque call: $t1 := Trafo::opaque_decr($t0)
+ 11: nop
+     # >> opaque call: $t2 := Trafo::opaque_decr($t1)
+ 12: nop
+ 13: assume Eq($t4, Eq<u64>($t3, 0))
+ 14: if ($t4) goto 15 else goto 18
+ 15: label L6
+ 16: trace_abort($t2)
+ 17: goto 27
+ 18: label L5
+ 19: assume Eq<u64>($t5, Sub($t3, 1))
+ 20: assume WellFormed($t5)
+     # << opaque call: $t2 := Trafo::opaque_decr($t1)
+ 21: nop
+ 22: trace_return[0]($t5)
+ 23: label L1
+     # VC: function does not abort under this condition at opaque.move:18:7+16
+ 24: assert Not(Lt($t0, 2))
+     # VC: post-condition does not hold at opaque.move:19:7+24
+ 25: assert Eq<u64>($t5, Sub($t0, 2))
+ 26: return $t5
+ 27: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at opaque.move:17:3+82
+ 28: assert Lt($t0, 2)
+ 29: abort($t2)
+}
+
+
+[variant verification]
+pub fun Trafo::opaque_decr($t0|x: u64): u64 {
+     var $t1: u64
+     var $t2: u64
+     var $t3: num
+  0: assume WellFormed($t0)
+  1: trace_local[x]($t0)
+  2: $t1 := 1
+  3: $t2 := -($t0, $t1) on_abort goto 9 with $t3
+  4: trace_return[0]($t2)
+  5: label L1
+     # VC: function does not abort under this condition at opaque.move:10:7+17
+  6: assert Not(Eq<u64>($t0, 0))
+     # VC: post-condition does not hold at opaque.move:11:7+24
+  7: assert Eq<u64>($t2, Sub($t0, 1))
+  8: return $t2
+  9: label L2
+     # VC: abort not covered by any of the `aborts_if` clauses at opaque.move:8:3+102
+ 10: assert Eq<u64>($t0, 0)
+ 11: abort($t3)
+}

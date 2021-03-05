@@ -411,21 +411,27 @@ impl<'a> Instrumenter<'a> {
 
         self.builder.set_loc_from_attr(id);
 
-        if callee_opaque && (self.options.dump_bytecode || self.options.stable_test_output) {
-            // Add a debug comment about the original function call to easier identify
-            // the opaque call in dumped bytecode.
-            let bc = Call(
-                id,
-                dests.clone(),
-                Operation::Function(mid, fid, targs.clone()),
-                srcs.clone(),
-                aa,
-            );
-            self.builder.set_next_debug_comment(format!(
-                "original call of opaque function: {}",
-                bc.display(&self.builder.get_target(), &Default::default())
-            ))
-        }
+        let opaque_display =
+            if callee_opaque && (self.options.dump_bytecode || self.options.stable_test_output) {
+                // Add a debug comment about the original function call to easier identify
+                // the opaque call in dumped bytecode.
+                let bc = Call(
+                    id,
+                    dests.clone(),
+                    Operation::Function(mid, fid, targs.clone()),
+                    srcs.clone(),
+                    aa,
+                );
+                let bc_display = bc
+                    .display(&self.builder.get_target(), &Default::default())
+                    .to_string();
+                self.builder
+                    .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
+                self.builder.emit_with(Nop);
+                Some(bc_display)
+            } else {
+                None
+            };
 
         // Emit pre conditions if this is the verification variant or if the callee
         // is opaque. For inlined callees outside of verification entry points, we skip
@@ -509,6 +515,26 @@ impl<'a> Instrumenter<'a> {
                 self.builder.emit_with(|id| Prop(id, Modifies, modifies));
             }
 
+            // Havoc all &mut parameters, their post-value are to be determined by the post
+            // conditions.
+            //
+            // There is some special case here about EventHandle types. Even though
+            // they are `&mut`, they are never modified, and this is not expressed in the
+            // specifications. We treat this by skipping the Havoc for them. TODO: find a better
+            // solution
+            for src in &srcs {
+                let ty = &self.builder.data.local_types[*src];
+                if ty.is_mutable_reference()
+                    && !self
+                        .builder
+                        .global_env()
+                        .is_wellknown_event_handle_type(ty.skip_reference())
+                {
+                    self.builder
+                        .emit_with(|id| Call(id, vec![], Operation::Havoc, vec![*src], None));
+                }
+            }
+
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
                 self.builder.emit_with(|id| Prop(id, Assume, cond));
@@ -540,6 +566,13 @@ impl<'a> Instrumenter<'a> {
             if callee_env.is_pragma_true(EMITS_IS_PARTIAL_PRAGMA, || false) {
                 self.builder
                     .emit(Call(id, vec![], Operation::EventStoreDiverge, vec![], None));
+            }
+
+            // If enabled, mark end of opaque function call.
+            if let Some(bc_display) = opaque_display {
+                self.builder
+                    .set_next_debug_comment(format!("<< opaque call: {}", bc_display));
+                self.builder.emit_with(Nop);
             }
         }
     }

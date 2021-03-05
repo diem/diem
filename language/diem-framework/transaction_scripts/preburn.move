@@ -61,7 +61,7 @@ spec fun preburn {
     let cap = DiemAccount::spec_get_withdraw_cap(account_addr);
     include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
     include DiemAccount::PreburnAbortsIf<Token>{dd: account, cap: cap};
-    include DiemAccount::PreburnEnsures<Token>{dd_addr: account_addr, payer: account_addr};
+    include DiemAccount::PreburnEnsures<Token>{dd: account, payer: account_addr};
 
     aborts_with [check]
         Errors::NOT_PUBLISHED,

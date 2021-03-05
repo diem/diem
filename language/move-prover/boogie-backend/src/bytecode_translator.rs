@@ -960,10 +960,19 @@ impl<'env> ModuleTranslator<'env> {
                         );
                     }
                     Havoc => {
-                        let dest_str = str_local(dests[0]);
-                        emitln!(self.writer, "havoc {};", dest_str);
-                        let ty = fun_target.get_local_type(dests[0]);
-                        let check = boogie_well_formed_check(self.module_env.env, &dest_str, ty);
+                        let temp_str = str_local(srcs[0]);
+                        let ty = fun_target.get_local_type(srcs[0]);
+                        if ty.is_mutable_reference() {
+                            emitln!(
+                                self.writer,
+                                "call {} := $HavocMutation({});",
+                                temp_str,
+                                temp_str
+                            );
+                        } else {
+                            emitln!(self.writer, "havoc {};", temp_str);
+                        }
+                        let check = boogie_well_formed_check(self.module_env.env, &temp_str, ty);
                         if !check.is_empty() {
                             emitln!(self.writer, &check);
                         }
