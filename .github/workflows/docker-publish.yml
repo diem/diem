@@ -2,7 +2,7 @@ name: docker-publish.yml
 
 on:
   push:
-    branches: [auto, master, release-*]
+    branches: [master, release-*]
 
 jobs:
   build-images:
@@ -10,7 +10,6 @@ jobs:
     continue-on-error: false
     env:
       TAG: github-1
-      DOCKERHUB_ORG: libra
     steps:
       - uses: actions/checkout@v2
         with:
@@ -20,7 +19,7 @@ jobs:
         uses: ./.github/actions/changes
         with:
           workflow-file: docker-publish.yml
-      - name: setup_aws_erc_login
+      - name: setup_aws_ecr_login
         run: |
           echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.AWS_ECR_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
       - name: Configure AWS credentials
