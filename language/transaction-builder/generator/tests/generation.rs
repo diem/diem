@@ -299,6 +299,7 @@ fn test_that_java_code_compiles_and_demo_runs() {
 }
 
 #[test]
+#[ignore]
 fn test_that_csharp_code_compiles_and_demo_runs() {
     let registry = get_diem_registry();
     let abis = get_stdlib_script_abis();
