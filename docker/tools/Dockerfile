@@ -45,6 +45,8 @@ COPY --from=builder /diem/target/release/db-bootstrapper /usr/local/bin
 COPY --from=builder /diem/target/release/db-backup /usr/local/bin
 COPY --from=builder /diem/target/release/db-backup-verify /usr/local/bin
 COPY --from=builder /diem/target/release/db-restore /usr/local/bin
+COPY --from=builder /diem/target/release/diem-transaction-replay /usr/local/bin
+COPY --from=builder /diem/target/release/diem-writeset-generator /usr/local/bin
 
 ARG BUILD_DATE
 ARG GIT_REV
