@@ -28,7 +28,12 @@ pub mod fuzzing;
 const MAX_NUM_KEY_VERSIONS: u32 = 4;
 
 /// Default request timeouts for vault operations.
-const DEFAULT_CONNECTION_TIMEOUT_MS: u64 = 100;
+/// Note: there is a bug in ureq v 1.5.4 where it's not currently possible to set
+/// different timeouts for connections and operations. The connection timeout
+/// will override any other timeouts (including reads and writes). This has been
+/// fixed in ureq 2. Once we upgrade, we'll be able to have separate timeouts.
+/// Until then, the connection timeout is used for all operations.
+const DEFAULT_CONNECTION_TIMEOUT_MS: u64 = 1_000;
 const DEFAULT_RESPONSE_TIMEOUT_MS: u64 = 1_000;
 
 #[derive(Debug, Error, PartialEq)]
