@@ -129,7 +129,7 @@ Let's create a function in `Coin.move` to create coins. We'll call our function 
 
 
 ```=
-address 0x1 {
+address 0x2 {
     module Coin {
 
         struct Coin {
@@ -156,7 +156,7 @@ With this change, we should be able to update our script `test-coin.move` to cal
 ```=
 script {
 
-    use 0x1::Coin;
+    use 0x2::Coin;
 
     fun main() {
         let _coin = Coin::mint(100);
