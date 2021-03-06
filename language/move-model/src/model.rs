@@ -2375,8 +2375,8 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(OPAQUE_PRAGMA, || false)
     }
 
-    /// TODO: Change the definition of this function so that it only returns true if this function
-    /// is `public`.
+    /// TODO: Either remove or change the definition of this function so that it only returns true
+    /// if this function is `public`.
     /// Returns true if this function is public.
     pub fn is_public(&self) -> bool {
         // The main function of a script is implicitly public
@@ -2396,6 +2396,16 @@ impl<'env> FunctionEnv<'env> {
     /// Return the visibility of this function
     pub fn visibility(&self) -> FunctionVisibility {
         self.definition_view().visibility()
+    }
+
+    /// Return the visibility string for this function. Useful for formatted printing.
+    pub fn visibility_str(&self) -> &str {
+        match self.visibility() {
+            Visibility::Public => "public ",
+            Visibility::Friend => "public(friend) ",
+            Visibility::Script => "public(script) ",
+            Visibility::Private => "",
+        }
     }
 
     /// Return whether this function is exposed outside of the module.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
@@ -16,7 +16,7 @@ use std::{
     path::PathBuf,
 };
 /// Output transaction builders and decoders in TypeScript for the given ABIs.
-pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
+pub fn output(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Result<()> {
     write_script_calls(out, abis)?;
     write_helpers(out, abis)
 }
@@ -66,7 +66,7 @@ export enum Types {{
 }
 
 /// Output transaction helper functions for the given ABIs.
-fn write_helpers(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
+fn write_helpers(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Result<()> {
     let mut emitter = TypeScriptEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(2)),
     };
@@ -117,7 +117,7 @@ fn write_helpers(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     writeln!(emitter.out, "}};")
 }
 
-fn write_script_calls(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
+fn write_script_calls(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("diemTypes");
     let script_registry: BTreeMap<_, _> = vec![(
         "ScriptCall".to_string(),
@@ -170,7 +170,7 @@ import {{ BcsSerializer }} from '../bcs/bcsSerializer';
         Ok(())
     }
 
-    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\n{}static encode{}Script({}): DiemTypes.Script {{",
@@ -198,7 +198,7 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
         writeln!(self.out, "}}")
     }
 
-    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nstatic decode{}Script({}script: DiemTypes.Script): ScriptCallVariant{0} {{",
@@ -246,7 +246,7 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
         Ok(())
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_code_constant(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nstatic {}_CODE = Stdlib.fromHexString('{}');",
@@ -260,7 +260,7 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
         Ok(())
     }
 
-    fn output_script_args_definition(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_args_definition(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(self.out, "{}: {{", abi.name().to_camel_case())?;
         writeln!(
             self.out,
@@ -310,7 +310,7 @@ return new DiemTypes.Script(code, tyArgs, args);"#,
         Ok(())
     }
 
-    fn output_script_args_callbacks(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_args_callbacks(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         let mut args_with_types = abi
             .ty_args()
             .iter()
@@ -458,7 +458,16 @@ impl crate::SourceInstaller for Installer {
         let dir_path = self.install_dir.join(name);
         std::fs::create_dir_all(&dir_path)?;
         let mut file = std::fs::File::create(dir_path.join("index.ts"))?;
-        output(&mut file, abis)?;
+        // TODO(#7876): Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
+        output(&mut file, &abis)?;
         Ok(())
     }
 }

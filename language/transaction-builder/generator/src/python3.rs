@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use heck::{CamelCase, ShoutySnakeCase};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
@@ -16,12 +16,13 @@ use std::{
     path::PathBuf,
 };
 
+// TODO(#7876): Update to handle script function ABIs
 /// Output transaction builders in Python for the given ABIs.
 pub fn output(
     out: &mut dyn Write,
     serde_package_name: Option<String>,
     diem_package_name: Option<String>,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
 ) -> Result<()> {
     let mut emitter = PythonEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
@@ -106,7 +107,11 @@ def decode_script(script: Script) -> ScriptCall:
         )
     }
 
-    fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_script_call_enum_with_imports(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
         let diem_types_module = match &self.diem_package_name {
             None => "diem_types".into(),
             Some(package) => format!("{}.diem_types", package),
@@ -146,7 +151,8 @@ def decode_script(script: Script) -> ScriptCall:
         Ok(())
     }
 
-    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\ndef encode_{}_script({}) -> Script:",
@@ -180,7 +186,8 @@ def decode_script(script: Script) -> ScriptCall:
         Ok(())
     }
 
-    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\ndef decode_{}_script({}script: Script) -> ScriptCall:",
@@ -217,7 +224,8 @@ def decode_script(script: Script) -> ScriptCall:
         Ok(())
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_code_constant(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\n{}_CODE = b\"{}\"",
@@ -230,7 +238,8 @@ def decode_script(script: Script) -> ScriptCall:
         )
     }
 
-    fn output_encoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_encoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -250,7 +259,8 @@ SCRIPT_ENCODER_MAP: typing.Dict[typing.Type[ScriptCall], typing.Callable[[Script
         writeln!(self.out, "}}\n")
     }
 
-    fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_decoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             "\nSCRIPT_DECODER_MAP: typing.Dict[bytes, typing.Callable[[Script], ScriptCall]] = {{"
@@ -268,7 +278,8 @@ SCRIPT_ENCODER_MAP: typing.Dict[typing.Type[ScriptCall], typing.Callable[[Script
         writeln!(self.out, "}}\n")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    // TODO: Update to handle script function ABIs
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
@@ -420,11 +431,20 @@ impl crate::SourceInstaller for Installer {
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
         let mut file = self.open_module_init_file(name)?;
+        // TODO: Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
         output(
             &mut file,
             self.serde_package_name.clone(),
             self.diem_package_name.clone(),
-            abis,
+            &abis,
         )?;
         Ok(())
     }

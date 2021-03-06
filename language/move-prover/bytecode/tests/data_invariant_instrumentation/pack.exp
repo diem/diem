@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Test::test_pack(): Test::R {
+public fun Test::test_pack(): Test::R {
      var $t0|r: Test::R
      var $t1|s: Test::S
      var $t2: u64
@@ -18,7 +18,7 @@ pub fun Test::test_pack(): Test::R {
 ============ after pipeline `data_invariant_instrumentation` ================
 
 [variant verification]
-pub fun Test::test_pack(): Test::R {
+public fun Test::test_pack(): Test::R {
      var $t0|r: Test::R
      var $t1|s: Test::S
      var $t2: u64

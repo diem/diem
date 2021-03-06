@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Test::publish($t0|s: &signer) {
+public fun Test::publish($t0|s: &signer) {
      var $t1: &signer
      var $t2: u64
      var $t3: Test::R
@@ -14,7 +14,7 @@ pub fun Test::publish($t0|s: &signer) {
 
 
 [variant baseline]
-pub fun Test::remove($t0|a: address): Test::R {
+public fun Test::remove($t0|a: address): Test::R {
      var $t1: address
      var $t2: Test::R
   0: $t1 := copy($t0)
@@ -25,7 +25,7 @@ pub fun Test::remove($t0|a: address): Test::R {
 ============ after pipeline `global_invariant_instrumentation` ================
 
 [variant verification]
-pub fun Test::publish($t0|s: signer) {
+public fun Test::publish($t0|s: signer) {
      var $t1: u64
      var $t2: Test::R
      var $t3: num
@@ -47,7 +47,7 @@ pub fun Test::publish($t0|s: signer) {
 
 
 [variant verification]
-pub fun Test::remove($t0|a: address): Test::R {
+public fun Test::remove($t0|a: address): Test::R {
      var $t1: Test::R
      var $t2: num
      # global invariant at tests/global_invariant_instrumentation/move.move:7:9+57

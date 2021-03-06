@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -25,7 +25,7 @@ pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnp
 
 
 [variant baseline]
-pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -49,7 +49,7 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut Te
 
 
 [variant baseline]
-pub fun TestPackUnpack::create(): TestPackUnpack::R {
+public fun TestPackUnpack::create(): TestPackUnpack::R {
      var $t0: u64
      var $t1: TestPackUnpack::S
      var $t2: TestPackUnpack::R
@@ -61,7 +61,7 @@ pub fun TestPackUnpack::create(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
+public fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
      var $t1|nested: TestPackUnpack::S
      var $t2|value: u64
      var $t3: TestPackUnpack::R
@@ -81,7 +81,7 @@ pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
+public fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
      var $t1|nested: TestPackUnpack::S
      var $t2: TestPackUnpack::R
      var $t3: TestPackUnpack::S
@@ -122,7 +122,7 @@ fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): &mut u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: &mut TestPackUnpack::R
      var $t3: &TestPackUnpack::S
      var $t4: &u64
@@ -166,7 +166,7 @@ pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: &mut TestPackUnpack::R
      var $t3: &TestPackUnpack::S
      var $t4: &u64
@@ -243,7 +243,7 @@ fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u
 
 
 [variant baseline]
-pub fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
+public fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: u64
      var $t3: &mut TestPackUnpack::S
      var $t4: &mut u64
@@ -268,7 +268,7 @@ fun TestPackUnpack::read_S_from_immutable($t0|s: &TestPackUnpack::S): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
@@ -290,7 +290,7 @@ pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -315,7 +315,7 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut T
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::R
@@ -352,7 +352,7 @@ pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64
@@ -379,7 +379,7 @@ pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64
@@ -406,7 +406,7 @@ pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackU
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64
@@ -434,7 +434,7 @@ pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack:
 ============ after pipeline `clean_and_optimize` ================
 
 [variant baseline]
-pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -457,7 +457,7 @@ pub fun TestPackUnpack::call_private_violating_invariant($t0|r: &mut TestPackUnp
 
 
 [variant baseline]
-pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R) {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -482,7 +482,7 @@ pub fun TestPackUnpack::call_public_violating_invariant_incorrect($t0|r: &mut Te
 
 
 [variant baseline]
-pub fun TestPackUnpack::create(): TestPackUnpack::R {
+public fun TestPackUnpack::create(): TestPackUnpack::R {
      var $t0: u64
      var $t1: TestPackUnpack::S
      var $t2: TestPackUnpack::R
@@ -494,7 +494,7 @@ pub fun TestPackUnpack::create(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
+public fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
      var $t1|nested: TestPackUnpack::S
      var $t2|value: u64
      var $t3: TestPackUnpack::S
@@ -506,7 +506,7 @@ pub fun TestPackUnpack::destroy($t0|r: TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
+public fun TestPackUnpack::extract_and_update($t0|r: TestPackUnpack::R): TestPackUnpack::S {
      var $t1|nested: TestPackUnpack::S
      var $t2: TestPackUnpack::S
      var $t3: u64
@@ -547,7 +547,7 @@ fun TestPackUnpack::get_value_ref($t0|r: &mut TestPackUnpack::R): &mut u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: TestPackUnpack::S
@@ -591,7 +591,7 @@ pub fun TestPackUnpack::move_ref_unchanged($t0|r1: &mut TestPackUnpack::R, $t1|r
 
 
 [variant baseline]
-pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
+public fun TestPackUnpack::move_ref_unchanged_invariant_incorrect($t0|r1: &mut TestPackUnpack::R, $t1|r2: &mut TestPackUnpack::R) {
      var $t2: TestPackUnpack::S
      var $t3: u64
      var $t4: TestPackUnpack::S
@@ -667,7 +667,7 @@ fun TestPackUnpack::private_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u
 
 
 [variant baseline]
-pub fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
+public fun TestPackUnpack::public_update_value($t0|s: &mut TestPackUnpack::S, $t1|v: u64) {
      var $t2: &mut u64
   0: $t2 := borrow_field<TestPackUnpack::S>.value($t0)
   1: write_ref($t2, $t1)
@@ -687,7 +687,7 @@ fun TestPackUnpack::read_S_from_immutable($t0|s: TestPackUnpack::S): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -703,7 +703,7 @@ pub fun TestPackUnpack::read_ref_unchanged($t0|r: &mut TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|s: &mut TestPackUnpack::S
      var $t2: &mut TestPackUnpack::S
      var $t3: u64
@@ -727,7 +727,7 @@ pub fun TestPackUnpack::select_value_violating_invariant_incorrect($t0|r: &mut T
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
+public fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
      var $t1|nested: &mut TestPackUnpack::S
      var $t2|tmp#$2: &mut TestPackUnpack::R
      var $t3: &mut TestPackUnpack::S
@@ -754,7 +754,7 @@ pub fun TestPackUnpack::update_ref_changed($t0|r: &mut TestPackUnpack::R): u64 {
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64
@@ -780,7 +780,7 @@ pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64
@@ -806,7 +806,7 @@ pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackU
 
 
 [variant baseline]
-pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
+public fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
      var $t0|r: TestPackUnpack::R
      var $t1|v_ref: &mut u64
      var $t2: u64

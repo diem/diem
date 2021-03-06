@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Test::borrow($t0|a: address) {
+public fun Test::borrow($t0|a: address) {
      var $t1|r: &mut Test::R
      var $t2: address
      var $t3: &mut Test::R
@@ -29,7 +29,7 @@ pub fun Test::borrow($t0|a: address) {
 ============ after pipeline `global_invariant_instrumentation` ================
 
 [variant verification]
-pub fun Test::borrow($t0|a: address) {
+public fun Test::borrow($t0|a: address) {
      var $t1|r: &mut Test::R
      var $t2: &mut Test::R
      var $t3: num

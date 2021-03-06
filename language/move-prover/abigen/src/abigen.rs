@@ -5,11 +5,14 @@
 use log::{debug, info, warn};
 
 use anyhow::bail;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use bytecode_verifier::script_signature;
+use diem_types::transaction::{
+    ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+};
 use heck::SnakeCase;
-use move_core_types::language_storage::TypeTag;
+use move_core_types::{identifier::IdentStr, language_storage::TypeTag};
 use move_model::{
-    model::{GlobalEnv, ModuleEnv},
+    model::{FunctionEnv, FunctionVisibility, GlobalEnv, ModuleEnv},
     ty,
 };
 use serde::{Deserialize, Serialize};
@@ -69,39 +72,81 @@ impl<'env> Abigen<'env> {
     /// Generates ABIs for all script modules in the environment (excluding the dependency set).
     pub fn gen(&mut self) {
         for module in self.env.get_modules() {
-            if module.is_script_module() && module.is_target() {
+            if module.is_target() {
                 let mut path = PathBuf::from(&self.options.output_directory);
-                path.push(
-                    PathBuf::from(module.get_source_path())
-                        .with_extension("abi")
-                        .file_name()
-                        .expect("file name"),
-                );
+                // We make a directory for all of the script function ABIs in a module. But, if
+                // it's a script, we don't create a directory.
+                if !module.is_script_module() {
+                    path.push(
+                        PathBuf::from(module.get_source_path())
+                            .file_stem()
+                            .expect("file extension"),
+                    )
+                }
 
-                match self.compute_abi(&module) {
-                    Ok(abi) => {
-                        self.output.insert(path.to_string_lossy().to_string(), abi);
-                    }
-                    Err(error) => panic!(
-                        "Error while processing script file {:?}: {}",
-                        module.get_source_path(),
-                        error
-                    ),
+                for abi in self
+                    .compute_abi(&module)
+                    .map_err(|err| {
+                        format!(
+                            "Error while processing file {:?}: {}",
+                            module.get_source_path(),
+                            err
+                        )
+                    })
+                    .unwrap()
+                {
+                    // If the module is a script module, then the generated ABI is a transaction
+                    // script ABI. If the module is not a script module, then all generated ABIs
+                    // are script function ABIs.
+                    let mut path = path.clone();
+                    path.push(
+                        PathBuf::from(abi.name())
+                            .with_extension("abi")
+                            .file_name()
+                            .expect("file name"),
+                    );
+                    self.output.insert(path.to_str().unwrap().to_string(), abi);
                 }
             }
         }
     }
 
-    /// Compute the ABI of a script module.
-    fn compute_abi(&self, module_env: &ModuleEnv<'env>) -> anyhow::Result<ScriptABI> {
-        let symbol_pool = module_env.symbol_pool();
-        let func = match module_env.get_functions().next() {
-            Some(f) => f,
-            None => bail!("A script module should define a function."),
+    /// Compute the ABIs of all script functions in a module.
+    fn compute_abi(&self, module_env: &ModuleEnv<'env>) -> anyhow::Result<Vec<ScriptABI>> {
+        // Get all the script functions in this module
+        let script_iter: Vec<_> = if module_env.is_script_module() {
+            module_env.get_functions().collect()
+        } else {
+            module_env
+                .get_functions()
+                .filter(|func| {
+                    let module = module_env.get_verified_module();
+                    let func_name = module_env.symbol_pool().string(func.get_name());
+                    let func_ident = IdentStr::new(&func_name).unwrap();
+                    // only pick up script functions that also have a script-callable signature.
+                    func.visibility() == FunctionVisibility::Script
+                        && script_signature::verify_module_script_function(module, func_ident)
+                            .is_ok()
+                })
+                .collect()
         };
+
+        let mut abis = Vec::new();
+        for func in script_iter.iter() {
+            abis.push(self.generate_abi_for_function(func, module_env)?);
+        }
+
+        Ok(abis)
+    }
+
+    fn generate_abi_for_function(
+        &self,
+        func: &FunctionEnv<'env>,
+        module_env: &ModuleEnv<'env>,
+    ) -> anyhow::Result<ScriptABI> {
+        let symbol_pool = module_env.symbol_pool();
         let name = symbol_pool.string(func.get_name()).to_string();
         let doc = func.get_doc().to_string();
-        let code = self.load_compiled_bytes(&module_env)?.to_vec();
         let ty_args = func
             .get_named_type_parameters()
             .iter()
@@ -123,7 +168,23 @@ impl<'env> Abigen<'env> {
                 },
             )
             .collect::<anyhow::Result<_>>()?;
-        Ok(ScriptABI::new(name, doc, code, ty_args, args))
+
+        // This is a transaction script, so include the code, but no module ID
+        if module_env.is_script_module() {
+            let code = self.load_compiled_bytes(&module_env)?.to_vec();
+            Ok(ScriptABI::TransactionScript(TransactionScriptABI::new(
+                name, doc, code, ty_args, args,
+            )))
+        } else {
+            // This is a script function, so no code. But we need to include the module ID
+            Ok(ScriptABI::ScriptFunction(ScriptFunctionABI::new(
+                name,
+                module_env.get_verified_module().self_id(),
+                doc,
+                ty_args,
+                args,
+            )))
+        }
     }
 
     fn load_compiled_bytes(&self, module_env: &ModuleEnv<'env>) -> anyhow::Result<Vec<u8>> {

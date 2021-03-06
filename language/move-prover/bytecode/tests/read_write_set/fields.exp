@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
+public fun Fields::borrow_read($t0|s: &Fields::S): u64 {
      var $t1: &Fields::S
      var $t2: &u64
      var $t3: u64
@@ -13,7 +13,7 @@ pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
 
 
 [variant baseline]
-pub fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
+public fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
      var $t1: &Fields::T<#0>
      var $t2: &u64
      var $t3: u64
@@ -26,7 +26,7 @@ pub fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
 ============ after pipeline `read_write_set` ================
 
 [variant baseline]
-pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
+public fun Fields::borrow_read($t0|s: &Fields::S): u64 {
      var $t1: &Fields::S
      var $t2: &u64
      var $t3: u64
@@ -46,7 +46,7 @@ pub fun Fields::borrow_read($t0|s: &Fields::S): u64 {
 
 
 [variant baseline]
-pub fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
+public fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
      var $t1: &Fields::T<#0>
      var $t2: &u64
      var $t3: u64

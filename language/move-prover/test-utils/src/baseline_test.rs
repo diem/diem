@@ -8,7 +8,7 @@ use anyhow::anyhow;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
 use std::{
-    fs::{remove_file, File},
+    fs::{self, remove_file, File},
     io::{Read, Write},
     path::Path,
 };
@@ -20,6 +20,7 @@ pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> anyho
     if update_baseline {
         if !text.is_empty() {
             // Update the baseline file.
+            baseline_file_name.parent().map(fs::create_dir_all);
             let mut file = File::create(baseline_file_name)?;
             write!(file, "{}", clean_for_baseline(text))?;
         } else {

@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
+public fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -30,7 +30,7 @@ pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
+public fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -55,7 +55,7 @@ pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
 ============ after pipeline `livevar` ================
 
 [variant baseline]
-pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
+public fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64
@@ -78,7 +78,7 @@ pub fun TestMutRefs::unpack($t0|r: &mut TestMutRefs::R): u64 {
 
 
 [variant baseline]
-pub fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
+public fun TestMutRefs::unpack_incorrect($t0|r: &mut TestMutRefs::R): u64 {
      var $t1|result: u64
      var $t2|tmp#$2: &mut TestMutRefs::R
      var $t3|value: &mut u64

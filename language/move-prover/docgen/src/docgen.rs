@@ -11,8 +11,8 @@ use move_model::{
     code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
     model::{
-        FunId, FunctionEnv, FunctionVisibility, GlobalEnv, Loc, ModuleEnv, ModuleId,
-        NamedConstantEnv, Parameter, QualifiedId, StructEnv, TypeConstraint, TypeParameter,
+        FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter,
+        QualifiedId, StructEnv, TypeConstraint, TypeParameter,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -1082,12 +1082,6 @@ impl<'env> Docgen<'env> {
     /// Generates documentation for a function signature.
     fn function_header_display(&self, func_env: &FunctionEnv<'_>) -> String {
         let name = self.name_string(func_env.get_name());
-        let visibility = match func_env.visibility() {
-            FunctionVisibility::Public => "public ",
-            FunctionVisibility::Friend => "public(friend) ",
-            FunctionVisibility::Script => "public(script) ",
-            FunctionVisibility::Private => "",
-        };
         let tctx = &self.type_display_context_for_fun(&func_env);
         let params = func_env
             .get_parameters()
@@ -1105,7 +1099,7 @@ impl<'env> Docgen<'env> {
         };
         format!(
             "{}fun {}{}({}){}",
-            visibility,
+            func_env.visibility_str(),
             name,
             self.type_parameter_list_display(&func_env.get_named_type_parameters()),
             params,

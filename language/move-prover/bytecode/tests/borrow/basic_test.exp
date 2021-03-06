@@ -41,7 +41,7 @@ fun TestBorrow::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
+public fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut TestBorrow::R
      var $t4: &mut u64
@@ -81,7 +81,7 @@ fun TestBorrow::test4(): TestBorrow::R {
 
 
 [variant baseline]
-pub fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
+public fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
      var $t1: &mut TestBorrow::R
      var $t2: &mut u64
   0: $t1 := move($t0)
@@ -304,7 +304,7 @@ fun TestBorrow::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
+public fun TestBorrow::test3($t0|r_ref: &mut TestBorrow::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut u64
      # live_nodes: LocalRoot($t1), Reference($t0)
@@ -354,7 +354,7 @@ fun TestBorrow::test4(): TestBorrow::R {
 
 
 [variant baseline]
-pub fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
+public fun TestBorrow::test5($t0|r_ref: &mut TestBorrow::R): &mut u64 {
      var $t1: &mut u64
      # live_nodes: Reference($t0)
   0: $t1 := borrow_field<TestBorrow::R>.x($t0)

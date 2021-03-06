@@ -53,6 +53,15 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let source_path = stdlib_dir_path.join("__init__.py");
 
     let mut source = std::fs::File::create(&source_path).unwrap();
+    // TODO(#7876): Update to handle script function ABIs
+    let abis = abis
+        .iter()
+        .cloned()
+        .filter_map(|abi| match abi {
+            ScriptABI::TransactionScript(abi) => Some(abi),
+            ScriptABI::ScriptFunction(_) => None,
+        })
+        .collect::<Vec<_>>();
     buildgen::python3::output(&mut source, None, None, &abis).unwrap();
 
     std::fs::copy(
@@ -146,6 +155,15 @@ test = false
     std::fs::create_dir(stdlib_dir_path.join("src")).unwrap();
     let source_path = stdlib_dir_path.join("src/lib.rs");
     let mut source = std::fs::File::create(&source_path).unwrap();
+    // TODO: Update to handle script function ABIs
+    let abis = abis
+        .iter()
+        .cloned()
+        .filter_map(|abi| match abi {
+            ScriptABI::TransactionScript(abi) => Some(abi),
+            ScriptABI::ScriptFunction(_) => None,
+        })
+        .collect::<Vec<_>>();
     buildgen::rust::output(&mut source, &abis, /* local types */ false).unwrap();
 
     std::fs::copy(

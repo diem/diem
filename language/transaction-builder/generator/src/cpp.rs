@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::indent::{IndentConfig, IndentedWriter};
 
@@ -12,7 +12,11 @@ use std::{
 };
 
 /// Output a header-only library providing C++ transaction builders for the given ABIs.
-pub fn output(out: &mut dyn Write, abis: &[ScriptABI], namespace: Option<&str>) -> Result<()> {
+pub fn output(
+    out: &mut dyn Write,
+    abis: &[TransactionScriptABI],
+    namespace: Option<&str>,
+) -> Result<()> {
     let mut emitter = CppEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
         namespace,
@@ -30,7 +34,7 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], namespace: Option<&str>) 
 /// Output the headers of a library providing C++ transaction builders for the given ABIs.
 pub fn output_library_header(
     out: &mut dyn Write,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
     namespace: Option<&str>,
 ) -> Result<()> {
     let mut emitter = CppEmitter {
@@ -50,7 +54,7 @@ pub fn output_library_header(
 /// Output the function definitions of a library providing C++ transaction builders for the given ABIs.
 pub fn output_library_body(
     out: &mut dyn Write,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
     library_name: &str,
     namespace: Option<&str>,
 ) -> Result<()> {
@@ -116,7 +120,7 @@ using namespace diem_types;
         Ok(())
     }
 
-    fn output_builder_declaration(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_builder_declaration(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         self.output_doc(abi.doc())?;
         writeln!(
             self.out,
@@ -132,7 +136,7 @@ using namespace diem_types;
         Ok(())
     }
 
-    fn output_builder_definition(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_builder_definition(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         if self.inlined_definitions {
             self.output_doc(abi.doc())?;
         }
@@ -268,10 +272,19 @@ impl crate::SourceInstaller for Installer {
         std::fs::create_dir_all(dir_path)?;
         let header_path = dir_path.join(name.to_string() + ".hpp");
         let mut header = std::fs::File::create(&header_path)?;
-        output_library_header(&mut header, abis, Some(name))?;
+        // TODO(#7876): Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
+        output_library_header(&mut header, &abis, Some(name))?;
         let body_path = dir_path.join(name.to_string() + ".cpp");
         let mut body = std::fs::File::create(&body_path)?;
-        output_library_body(&mut body, abis, name, Some(name))?;
+        output_library_body(&mut body, &abis, name, Some(name))?;
         Ok(())
     }
 }

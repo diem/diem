@@ -16,6 +16,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "bytecode-verifier",
  "codespan-reporting",
  "datatest-stable",
  "diem-temppath",

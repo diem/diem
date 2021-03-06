@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Test::test_borrow_imm<$tv0>(): u64 {
+public fun Test::test_borrow_imm<$tv0>(): u64 {
      var $t0|r: &Test::R<#0>
      var $t1: address
      var $t2: &Test::R<#0>
@@ -19,7 +19,7 @@ pub fun Test::test_borrow_imm<$tv0>(): u64 {
 
 
 [variant baseline]
-pub fun Test::test_borrow_mut<$tv0>(): u64 {
+public fun Test::test_borrow_mut<$tv0>(): u64 {
      var $t0|r: &mut Test::R<#0>
      var $t1: address
      var $t2: &mut Test::R<#0>
@@ -53,7 +53,7 @@ pub fun Test::test_borrow_mut<$tv0>(): u64 {
 
 
 [variant baseline]
-pub fun Test::test_borrow_mut_local(): Test::R<u64> {
+public fun Test::test_borrow_mut_local(): Test::R<u64> {
      var $t0|d: Test::R<u64>
      var $t1|r: &mut Test::R<u64>
      var $t2: u64
@@ -94,7 +94,7 @@ pub fun Test::test_borrow_mut_local(): Test::R<u64> {
 ============ after pipeline `data_invariant_instrumentation` ================
 
 [variant verification]
-pub fun Test::test_borrow_imm<$tv0>(): u64 {
+public fun Test::test_borrow_imm<$tv0>(): u64 {
      var $t0|r: Test::R<#0>
      var $t1: address
      var $t2: Test::R<#0>
@@ -112,7 +112,7 @@ pub fun Test::test_borrow_imm<$tv0>(): u64 {
 
 
 [variant verification]
-pub fun Test::test_borrow_mut<$tv0>(): u64 {
+public fun Test::test_borrow_mut<$tv0>(): u64 {
      var $t0|r: &mut Test::R<#0>
      var $t1: address
      var $t2: &mut Test::R<#0>
@@ -152,7 +152,7 @@ pub fun Test::test_borrow_mut<$tv0>(): u64 {
 
 
 [variant verification]
-pub fun Test::test_borrow_mut_local(): Test::R<u64> {
+public fun Test::test_borrow_mut_local(): Test::R<u64> {
      var $t0|d: Test::R<u64>
      var $t1|r: &mut Test::R<u64>
      var $t2: u64

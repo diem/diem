@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Signer::address_of($t0|s: &signer): address {
+public fun Signer::address_of($t0|s: &signer): address {
      var $t1: &signer
      var $t2: &address
      var $t3: address

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
@@ -19,7 +19,7 @@ use std::{
 /// Output transaction builders in Rust for the given ABIs.
 /// If `local_types` is true, we generate a file suitable for the Diem codebase itself
 /// rather than using serde-generated, standalone definitions.
-pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Result<()> {
+pub fn output(out: &mut dyn Write, abis: &[TransactionScriptABI], local_types: bool) -> Result<()> {
     let mut emitter = RustEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
         local_types,
@@ -90,7 +90,10 @@ where
         writeln!(self.out, "#![allow(clippy::unnecessary_wraps)]")
     }
 
-    fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_script_call_enum_with_imports(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
         let external_definitions = Self::get_external_definitions(self.local_types);
         let script_registry: BTreeMap<_, _> = vec![(
             "ScriptCall".to_string(),
@@ -171,7 +174,7 @@ impl ScriptCall {
             .collect()
     }
 
-    fn output_encode_method(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_encode_method(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -190,7 +193,7 @@ pub fn encode(self) -> Script {{"#
         writeln!(self.out, "}}\n")
     }
 
-    fn output_variant_encoder(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_variant_encoder(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         let params = std::iter::empty()
             .chain(abi.ty_args().iter().map(TypeArgumentABI::name))
             .chain(abi.args().iter().map(ArgumentABI::name))
@@ -231,7 +234,7 @@ pub fn decode(script: &Script) -> Option<ScriptCall> {{
         write!(self.out, "\n{}\n", text)
     }
 
-    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         self.output_comment(0, &common::prepare_doc_string(abi.doc()))?;
         write!(
             self.out,
@@ -277,7 +280,7 @@ Script {{
         Ok(())
     }
 
-    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nfn decode_{}_script({}script: &Script) -> Option<ScriptCall> {{",
@@ -322,7 +325,7 @@ Script {{
         Ok(())
     }
 
-    fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -348,7 +351,7 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         writeln!(self.out, "}});")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
@@ -387,7 +390,7 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
         )
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_code_constant(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nconst {}_CODE: &[u8] = &[{}];",
@@ -527,7 +530,16 @@ diem-types = {{ path = "../diem-types", version = "{}" }}
         std::fs::create_dir(dir_path.join("src"))?;
         let source_path = dir_path.join("src/lib.rs");
         let mut source = std::fs::File::create(&source_path)?;
-        output(&mut source, abis, /* local_types */ false)?;
+        // TODO(#7876): Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
+        output(&mut source, &abis, /* local_types */ false)?;
         Ok(())
     }
 }

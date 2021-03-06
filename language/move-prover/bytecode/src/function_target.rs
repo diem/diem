@@ -429,12 +429,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         write!(
             f,
             "{}fun {}::{}",
-            match self.func_env.visibility() {
-                FunctionVisibility::Public => "pub ",
-                FunctionVisibility::Friend => "pub(friend) ",
-                FunctionVisibility::Script => "pub(script) ",
-                FunctionVisibility::Private => "",
-            },
+            self.func_env.visibility_str(),
             self.func_env
                 .module_env
                 .get_name()

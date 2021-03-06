@@ -41,7 +41,7 @@ fun TestEliminateMutRefs::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, $t1|v: u64) {
+public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut TestEliminateMutRefs::R
      var $t4: &mut u64
@@ -81,7 +81,7 @@ fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
 
 
 [variant baseline]
-pub fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R): &mut u64 {
+public fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R): &mut u64 {
      var $t1: &mut TestEliminateMutRefs::R
      var $t2: &mut u64
   0: $t1 := move($t0)
@@ -299,7 +299,7 @@ fun TestEliminateMutRefs::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, $t1|v: u64) {
+public fun TestEliminateMutRefs::test3($t0|r_ref: &mut TestEliminateMutRefs::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut TestEliminateMutRefs::R
      var $t4: &mut u64
@@ -340,7 +340,7 @@ fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
 
 
 [variant baseline]
-pub fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R): &mut u64 {
+public fun TestEliminateMutRefs::test5($t0|r_ref: &mut TestEliminateMutRefs::R): &mut u64 {
      var $t1: &mut TestEliminateMutRefs::R
      var $t2: &mut u64
   0: $t1 := copy($t0)

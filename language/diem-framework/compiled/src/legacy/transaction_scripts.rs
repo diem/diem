@@ -9,7 +9,7 @@
 
 use anyhow::{anyhow, Error, Result};
 use diem_crypto::HashValue;
-use diem_types::transaction::{ScriptABI, SCRIPT_HASH_LENGTH};
+use diem_types::transaction::{ScriptABI, TransactionScriptABI, SCRIPT_HASH_LENGTH};
 use include_dir::{include_dir, Dir};
 use std::{convert::TryFrom, fmt, path::PathBuf};
 
@@ -127,15 +127,22 @@ impl LegacyStdlibScript {
     }
 
     /// Return the ABI of the script (including the bytecode).
-    pub fn abi(self) -> ScriptABI {
+    /// NB: For legacy scripts, the script ABI will always be a `TransactionScriptABI`.
+    pub fn abi(self) -> TransactionScriptABI {
         let mut path = PathBuf::from(self.name());
         path.set_extension("abi");
         let content = TXN_SCRIPTS_ABI_DIR
             .get_file(path.clone())
             .unwrap_or_else(|| panic!("File {:?} does not exist", path))
             .contents();
-        bcs::from_bytes(content)
+        match bcs::from_bytes::<ScriptABI>(content)
             .unwrap_or_else(|err| panic!("Failed to deserialize ABI file {:?}: {}", path, err))
+        {
+            ScriptABI::TransactionScript(abi) => abi,
+            ScriptABI::ScriptFunction(_) => {
+                panic!("Found a script function in the legacy ABIs -- this shouldn't happen")
+            }
+        }
     }
 
     /// Return the sha3-256 hash of the compiled script bytes.

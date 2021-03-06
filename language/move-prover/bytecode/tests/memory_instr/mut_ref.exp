@@ -1,13 +1,13 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
+public fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
   0: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
@@ -49,7 +49,7 @@ pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
+public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2|v: u64
      var $t3: address
@@ -82,7 +82,7 @@ pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: &mut TestMutRefs::T
      var $t3: &u64
@@ -124,7 +124,7 @@ pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1: &mut TestMutRefs::T
      var $t2: &u64
      var $t3: u64
@@ -145,7 +145,7 @@ pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
+public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: address
      var $t3: &mut TestMutRefs::TSum
@@ -255,7 +255,7 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
 
 
 [variant baseline]
-pub fun TestMutRefsUser::valid() {
+public fun TestMutRefsUser::valid() {
      var $t0|x: TestMutRefs::T
      var $t1: u64
      var $t2: TestMutRefs::T
@@ -274,14 +274,14 @@ pub fun TestMutRefsUser::valid() {
 ============ after pipeline `memory_instr` ================
 
 [variant baseline]
-pub fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
+public fun TestMutRefs::data_invariant($t0|_x: &mut TestMutRefs::T) {
   0: trace_local[_x]($t0)
   1: return ()
 }
 
 
 [variant baseline]
-pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
@@ -314,7 +314,7 @@ pub fun TestMutRefs::decrement_invalid($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
+public fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2|v: u64
      var $t3: address
@@ -337,7 +337,7 @@ pub fun TestMutRefs::delete($t0|x: TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: u64
      var $t3: u64
@@ -370,7 +370,7 @@ pub fun TestMutRefs::increment($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
+public fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
      var $t1: u64
      var $t2: u64
      var $t3: u64
@@ -387,7 +387,7 @@ pub fun TestMutRefs::increment_invalid($t0|x: &mut TestMutRefs::T) {
 
 
 [variant baseline]
-pub fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
+public fun TestMutRefs::new($t0|x: u64): TestMutRefs::T {
      var $t1|r: &mut TestMutRefs::TSum
      var $t2: address
      var $t3: &mut TestMutRefs::TSum
@@ -473,7 +473,7 @@ fun TestMutRefs::private_to_public_caller_invalid_data_invariant() {
 
 
 [variant baseline]
-pub fun TestMutRefsUser::valid() {
+public fun TestMutRefsUser::valid() {
      var $t0|x: TestMutRefs::T
      var $t1: u64
      var $t2: &mut TestMutRefs::T

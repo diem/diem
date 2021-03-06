@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun A::mutate_at($t0|addr: address) {
+public fun A::mutate_at($t0|addr: address) {
      var $t1|s: &mut A::S
      var $t2: address
      var $t3: &mut A::S
@@ -20,7 +20,7 @@ pub fun A::mutate_at($t0|addr: address) {
 
 
 [variant baseline]
-pub fun A::read_at($t0|addr: address): u64 {
+public fun A::read_at($t0|addr: address): u64 {
      var $t1|s: &A::S
      var $t2: address
      var $t3: &A::S
@@ -38,7 +38,7 @@ pub fun A::read_at($t0|addr: address): u64 {
 
 
 [variant baseline]
-pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
+public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
      var $t2|v: B::T
      var $t3|x0: u64
      var $t4|x1: u64
@@ -65,7 +65,7 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
 
 
 [variant baseline]
-pub fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
+public fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
      var $t2|x0: u64
      var $t3|x1: u64
      var $t4: address
@@ -91,7 +91,7 @@ pub fun B::move_to_test_incorrect($t0|account: &signer, $t1|addr2: address) {
 
 
 [variant baseline]
-pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
+public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
      var $t2|x0: u64
      var $t3|x1: u64
      var $t4: address
@@ -113,7 +113,7 @@ pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 
 [variant baseline]
-pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
+public fun B::mutate_S_test2_incorrect($t0|addr: address) {
      var $t1|x0: u64
      var $t2|x1: u64
      var $t3: address
@@ -135,7 +135,7 @@ pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
 
 
 [variant baseline]
-pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
+public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
      var $t2|t: &mut B::T
      var $t3|x0: u64
      var $t4|x1: u64
@@ -168,7 +168,7 @@ pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
 ============ after pipeline `spec_instrumentation` ================
 
 [variant verification]
-pub fun A::mutate_at($t0|addr: address) {
+public fun A::mutate_at($t0|addr: address) {
      var $t1|s: &mut A::S
      var $t2: &mut A::S
      var $t3: num
@@ -199,7 +199,7 @@ pub fun A::mutate_at($t0|addr: address) {
 
 
 [variant verification]
-pub fun A::read_at($t0|addr: address): u64 {
+public fun A::read_at($t0|addr: address): u64 {
      var $t1|s: A::S
      var $t2: A::S
      var $t3: num
@@ -223,7 +223,7 @@ pub fun A::read_at($t0|addr: address): u64 {
 
 
 [variant verification]
-pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
+public fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::T {
      var $t2|v: B::T
      var $t3|x0: u64
      var $t4|x1: u64
@@ -273,7 +273,7 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
 
 
 [variant verification]
-pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
+public fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
      var $t2|x0: u64
      var $t3|x1: u64
      var $t4: bool
@@ -325,7 +325,7 @@ pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
 
 
 [variant verification]
-pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
+public fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
      var $t2|x0: u64
      var $t3|x1: u64
      var $t4: bool
@@ -385,7 +385,7 @@ pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
 
 
 [variant verification]
-pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
+public fun B::mutate_S_test2_incorrect($t0|addr: address) {
      var $t1|x0: u64
      var $t2|x1: u64
      var $t3: bool
@@ -443,7 +443,7 @@ pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
 
 
 [variant verification]
-pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
+public fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
      var $t2|t: &mut B::T
      var $t3|x0: u64
      var $t4|x1: u64

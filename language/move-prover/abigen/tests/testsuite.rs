@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::Path;
+use std::{ffi::OsStr, path::Path};
 
 use codespan_reporting::term::termcolor::Buffer;
 use diem_temppath::TempPath;
@@ -11,7 +11,10 @@ use std::path::PathBuf;
 
 #[allow(unused_imports)]
 use log::debug;
-use std::{fs::File, io::Read};
+use std::{
+    fs::{self, File},
+    io::Read,
+};
 
 const FLAGS: &[&str] = &["--verbose=warn", "--abigen"];
 
@@ -29,27 +32,48 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     Ok(())
 }
 
+fn get_generated_abis(dir: &Path) -> std::io::Result<Vec<String>> {
+    let mut abi_paths = Vec::new();
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                abi_paths.append(&mut get_generated_abis(&path)?);
+            } else if let Some("abi") = path.extension().and_then(OsStr::to_str) {
+                abi_paths.push(path.to_str().unwrap().to_string());
+            }
+        }
+    }
+    Ok(abi_paths)
+}
+
 fn test_abigen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Result<()> {
-    let mut temp_path = PathBuf::from(TempPath::new().path());
+    let temp_path = PathBuf::from(TempPath::new().path());
     options.abigen.output_directory = temp_path.to_string_lossy().to_string();
-    let base_name = format!("{}.abi", path.file_stem().unwrap().to_str().unwrap());
-    temp_path.push(&base_name);
 
     let mut error_writer = Buffer::no_color();
-    let mut output = match run_move_prover(&mut error_writer, options) {
+    match run_move_prover(&mut error_writer, options) {
         Ok(()) => {
-            let mut contents = String::new();
-            debug!("writing to {}", temp_path.display());
-            if let Ok(mut file) = File::open(temp_path.as_path()) {
-                file.read_to_string(&mut contents).unwrap();
+            for abi_path in get_generated_abis(&temp_path)?.iter() {
+                let mut contents = String::new();
+                if let Ok(mut file) = File::open(abi_path) {
+                    file.read_to_string(&mut contents).unwrap();
+                }
+                let buf = PathBuf::from(abi_path);
+                let mut baseline_file_name = PathBuf::from(path);
+                baseline_file_name.pop();
+                baseline_file_name.push(buf.strip_prefix(&temp_path)?);
+                verify_or_update_baseline(&baseline_file_name, &contents)?;
             }
-            contents
         }
-        Err(err) => format!("Move prover abigen returns: {}\n", err),
+        Err(err) => {
+            let mut contents = format!("Move prover abigen returns: {}\n", err);
+            contents += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
+            let baseline_path = path.with_extension(suffix);
+            verify_or_update_baseline(&baseline_path, &contents)?;
+        }
     };
-    output += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
-    let baseline_path = path.with_extension(suffix);
-    verify_or_update_baseline(baseline_path.as_path(), &output)?;
     Ok(())
 }
 

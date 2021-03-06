@@ -41,7 +41,7 @@ fun TestPackref::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestPackref::test3($t0|r_ref: &mut TestPackref::R, $t1|v: u64) {
+public fun TestPackref::test3($t0|r_ref: &mut TestPackref::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut TestPackref::R
      var $t4: &mut u64
@@ -81,7 +81,7 @@ fun TestPackref::test4(): TestPackref::R {
 
 
 [variant baseline]
-pub fun TestPackref::test5($t0|r_ref: &mut TestPackref::R): &mut u64 {
+public fun TestPackref::test5($t0|r_ref: &mut TestPackref::R): &mut u64 {
      var $t1: &mut TestPackref::R
      var $t2: &mut u64
   0: $t1 := move($t0)
@@ -289,7 +289,7 @@ fun TestPackref::test2($t0|x_ref: &mut u64, $t1|v: u64) {
 
 
 [variant baseline]
-pub fun TestPackref::test3($t0|r_ref: &mut TestPackref::R, $t1|v: u64) {
+public fun TestPackref::test3($t0|r_ref: &mut TestPackref::R, $t1|v: u64) {
      var $t2|x_ref: &mut u64
      var $t3: &mut u64
   0: $t3 := borrow_field<TestPackref::R>.x($t0)
@@ -320,7 +320,7 @@ fun TestPackref::test4(): TestPackref::R {
 
 
 [variant baseline]
-pub fun TestPackref::test5($t0|r_ref: &mut TestPackref::R): &mut u64 {
+public fun TestPackref::test5($t0|r_ref: &mut TestPackref::R): &mut u64 {
      var $t1: &mut u64
   0: $t1 := borrow_field<TestPackref::R>.x($t0)
   1: trace_local[r_ref]($t0)

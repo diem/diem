@@ -23,7 +23,7 @@ pub mod csharp;
 /// Internals shared between languages.
 mod common;
 
-/// Read all ABI files in a directory.
+/// Read all ABI files in a directory. This supports both new and old `ScriptABI`s.
 pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<ScriptABI>> {
     let mut abis = Vec::<ScriptABI>::new();
     for entry in std::fs::read_dir(dir_path)? {
@@ -37,7 +37,7 @@ pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<S
         f.read_to_end(&mut buffer)?;
         abis.push(bcs::from_bytes(&buffer)?);
     }
-    // Sorting scripts by alphabetical order.
+    // Sort scripts by alphabetical order.
     #[allow(clippy::unnecessary_sort_by)]
     abis.sort_by(|a, b| a.name().cmp(b.name()));
     Ok(abis)

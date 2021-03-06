@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
+public fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
      var $t2: address
      var $t3: &mut Funtions::R
      var $t4: vector<u8>
@@ -14,7 +14,7 @@ pub fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
 
 
 [variant baseline]
-pub fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: bool): vector<address> {
+public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: bool): vector<address> {
      var $t3|tmp#$3: vector<address>
      var $t4: bool
      var $t5: vector<address>
@@ -39,7 +39,7 @@ pub fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: 
 
 
 [variant baseline]
-pub fun Funtions::id($t0|a: address): address {
+public fun Funtions::id($t0|a: address): address {
      var $t1: address
   0: $t1 := copy($t0)
   1: return $t1
@@ -47,7 +47,7 @@ pub fun Funtions::id($t0|a: address): address {
 
 
 [variant baseline]
-pub fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
+public fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
      var $t1: #0
   0: $t1 := move($t0)
   1: return $t1
@@ -55,7 +55,7 @@ pub fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
 
 
 [variant baseline]
-pub fun Funtions::id_ref($t0|a: &address): &address {
+public fun Funtions::id_ref($t0|a: &address): &address {
      var $t1: &address
   0: $t1 := move($t0)
   1: return $t1
@@ -63,7 +63,7 @@ pub fun Funtions::id_ref($t0|a: &address): &address {
 
 
 [variant baseline]
-pub fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
+public fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
      var $t1: &#0
   0: $t1 := move($t0)
   1: return $t1
@@ -71,7 +71,7 @@ pub fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
 
 
 [variant baseline]
-pub fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
+public fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
      var $t2: vector<u8>
      var $t3: &mut Funtions::R
      var $t4: &mut vector<u8>
@@ -85,7 +85,7 @@ pub fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
 ============ after pipeline `read_write_set` ================
 
 [variant baseline]
-pub fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
+public fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
      var $t2: address
      var $t3: &mut Funtions::R
      var $t4: vector<u8>
@@ -105,7 +105,7 @@ pub fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
 
 
 [variant baseline]
-pub fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: bool): vector<address> {
+public fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: bool): vector<address> {
      var $t3|tmp#$3: vector<address>
      var $t4: bool
      var $t5: vector<address>
@@ -135,7 +135,7 @@ pub fun Funtions::choice($t0|a: vector<address>, $t1|b: vector<address>, $t2|c: 
 
 
 [variant baseline]
-pub fun Funtions::id($t0|a: address): address {
+public fun Funtions::id($t0|a: address): address {
      var $t1: address
      # Accesses:
      #
@@ -148,7 +148,7 @@ pub fun Funtions::id($t0|a: address): address {
 
 
 [variant baseline]
-pub fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
+public fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
      var $t1: #0
      # Accesses:
      #
@@ -161,7 +161,7 @@ pub fun Funtions::id_generic<$tv0>($t0|t: #0): #0 {
 
 
 [variant baseline]
-pub fun Funtions::id_ref($t0|a: &address): &address {
+public fun Funtions::id_ref($t0|a: &address): &address {
      var $t1: &address
      # Accesses:
      #
@@ -174,7 +174,7 @@ pub fun Funtions::id_ref($t0|a: &address): &address {
 
 
 [variant baseline]
-pub fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
+public fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
      var $t1: &#0
      # Accesses:
      #
@@ -187,7 +187,7 @@ pub fun Funtions::id_ref_generic<$tv0>($t0|t: &#0): &#0 {
 
 
 [variant baseline]
-pub fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
+public fun Funtions::write_vec($t0|r: &mut Funtions::R, $t1|v: vector<u8>) {
      var $t2: vector<u8>
      var $t3: &mut Funtions::R
      var $t4: &mut vector<u8>

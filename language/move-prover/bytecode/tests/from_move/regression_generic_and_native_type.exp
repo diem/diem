@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
+public fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
      var $t2: &mut vector<#0>
      var $t3: &vector<#0>
      var $t4: bool
@@ -37,7 +37,7 @@ pub fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
 
 
 [variant baseline]
-pub fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
+public fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
      var $t2|i: u64
      var $t3|len: u64
      var $t4: u64
@@ -106,7 +106,7 @@ pub fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
 
 
 [variant baseline]
-pub fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
+public fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
      var $t2|i: u64
      var $t3|len: u64
      var $t4: u64
@@ -179,7 +179,7 @@ pub fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
 
 
 [variant baseline]
-pub fun Vector::is_empty<$tv0>($t0|v: &vector<#0>): bool {
+public fun Vector::is_empty<$tv0>($t0|v: &vector<#0>): bool {
      var $t1: &vector<#0>
      var $t2: u64
      var $t3: u64
@@ -193,7 +193,7 @@ pub fun Vector::is_empty<$tv0>($t0|v: &vector<#0>): bool {
 
 
 [variant baseline]
-pub fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
+public fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
      var $t2|len: u64
      var $t3|tmp#$3: u64
      var $t4|tmp#$4: &mut vector<#0>
@@ -271,7 +271,7 @@ pub fun Vector::remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
 
 
 [variant baseline]
-pub fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
+public fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
      var $t1|back_index: u64
      var $t2|front_index: u64
      var $t3|len: u64
@@ -350,7 +350,7 @@ pub fun Vector::reverse<$tv0>($t0|v: &mut vector<#0>) {
 
 
 [variant baseline]
-pub fun Vector::singleton<$tv0>($t0|e: #0): vector<#0> {
+public fun Vector::singleton<$tv0>($t0|e: #0): vector<#0> {
      var $t1|v: vector<#0>
      var $t2: vector<#0>
      var $t3: &mut vector<#0>
@@ -367,7 +367,7 @@ pub fun Vector::singleton<$tv0>($t0|e: #0): vector<#0> {
 
 
 [variant baseline]
-pub fun Vector::swap_remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
+public fun Vector::swap_remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
      var $t2|last_idx: u64
      var $t3: &mut vector<#0>
      var $t4: &vector<#0>
@@ -396,7 +396,7 @@ pub fun Vector::swap_remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
 
 
 [variant baseline]
-pub fun Signer::address_of($t0|s: &signer): address {
+public fun Signer::address_of($t0|s: &signer): address {
      var $t1: &signer
      var $t2: &address
      var $t3: address
@@ -408,7 +408,7 @@ pub fun Signer::address_of($t0|s: &signer): address {
 
 
 [variant baseline]
-pub fun Diem::market_cap<$tv0>(): u128 {
+public fun Diem::market_cap<$tv0>(): u128 {
      var $t0: address
      var $t1: &Diem::Info<#0>
      var $t2: &u128
@@ -422,7 +422,7 @@ pub fun Diem::market_cap<$tv0>(): u128 {
 
 
 [variant baseline]
-pub fun Diem::preburn<$tv0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: Diem::T<#0>) {
+public fun Diem::preburn<$tv0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: Diem::T<#0>) {
      var $t2|coin_value: u64
      var $t3|market_cap: &mut Diem::Info<#0>
      var $t4: &Diem::T<#0>
@@ -462,7 +462,7 @@ pub fun Diem::preburn<$tv0>($t0|preburn_ref: &mut Diem::Preburn<#0>, $t1|coin: D
 
 
 [variant baseline]
-pub fun Diem::preburn_to<$tv0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
+public fun Diem::preburn_to<$tv0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
      var $t2: &signer
      var $t3: address
      var $t4: &mut Diem::Preburn<#0>
@@ -477,7 +477,7 @@ pub fun Diem::preburn_to<$tv0>($t0|account: &signer, $t1|coin: Diem::T<#0>) {
 
 
 [variant baseline]
-pub fun Diem::preburn_value<$tv0>(): u64 {
+public fun Diem::preburn_value<$tv0>(): u64 {
      var $t0: address
      var $t1: &Diem::Info<#0>
      var $t2: &u64
@@ -491,7 +491,7 @@ pub fun Diem::preburn_value<$tv0>(): u64 {
 
 
 [variant baseline]
-pub fun Diem::value<$tv0>($t0|coin_ref: &Diem::T<#0>): u64 {
+public fun Diem::value<$tv0>($t0|coin_ref: &Diem::T<#0>): u64 {
      var $t1: &Diem::T<#0>
      var $t2: &u64
      var $t3: u64

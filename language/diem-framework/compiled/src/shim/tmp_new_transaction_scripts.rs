@@ -38,7 +38,11 @@ impl TmpStdlibScript {
 
     /// Return the Move bytecode that was produced by compiling this script.
     pub(crate) fn compiled_bytes(self) -> CompiledBytes {
-        CompiledBytes(self.abi().code().to_vec())
+        let abi = match self.abi() {
+            ScriptABI::TransactionScript(abi) => abi.code().to_vec(),
+            ScriptABI::ScriptFunction(abi) => panic!("Encountered a script function in tmp transaction builders. This is not supported yet! ABI: {:#?}", abi),
+        };
+        CompiledBytes(abi)
     }
 
     /// Return the ABI of the script (including the bytecode).

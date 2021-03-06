@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     csharp,
@@ -23,7 +23,7 @@ use std::{
 pub fn write_source_files(
     install_dir: std::path::PathBuf,
     namespace_name: &str,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
 ) -> Result<()> {
     write_script_call_files(install_dir.clone(), namespace_name, abis)?;
     write_helper_file(install_dir, namespace_name, abis)
@@ -33,7 +33,7 @@ pub fn write_source_files(
 fn write_helper_file(
     install_dir: std::path::PathBuf,
     namespace_name: &str,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
 ) -> Result<()> {
     let mut dir_path = install_dir;
     let parts = namespace_name.split('.').collect::<Vec<_>>();
@@ -79,7 +79,7 @@ fn write_helper_file(
 fn write_script_call_files(
     install_dir: std::path::PathBuf,
     namespace_name: &str,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
 ) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("Diem.Types");
     let script_registry: BTreeMap<_, _> = vec![(
@@ -201,7 +201,7 @@ public static ScriptCall DecodeScript(Script script) {{
         )
     }
 
-    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         let quoted_type_params: Vec<_> = abi
             .ty_args()
             .iter()
@@ -258,7 +258,7 @@ return new Script(
         writeln!(self.out, "}}")
     }
 
-    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nprivate static ScriptCall decode_{}_script(Script {}script) {{",
@@ -300,7 +300,7 @@ return new Script(
         Ok(())
     }
 
-    fn output_encoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_encoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -338,7 +338,7 @@ private static System.Collections.Generic.Dictionary<Type, EncodingHelper> initE
         writeln!(self.out, "}}")
     }
 
-    fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -366,7 +366,7 @@ private static System.Collections.Generic.Dictionary<ValueArray<byte>, DecodingH
         writeln!(self.out, "}}")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
@@ -407,7 +407,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
         )
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_code_constant(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nprivate static sbyte[] {}_CODE = {{{}}};",
@@ -502,7 +502,16 @@ impl crate::SourceInstaller for Installer {
         namespace_name: &str,
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
-        write_source_files(self.install_dir.clone(), namespace_name, abis)?;
+        // TODO(#7876): Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
+        write_source_files(self.install_dir.clone(), namespace_name, &abis)?;
         Ok(())
     }
 }

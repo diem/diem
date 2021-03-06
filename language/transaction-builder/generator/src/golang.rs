@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     golang,
@@ -23,7 +23,7 @@ pub fn output(
     serde_module_path: Option<String>,
     diem_module_path: Option<String>,
     package_name: String,
-    abis: &[ScriptABI],
+    abis: &[TransactionScriptABI],
 ) -> Result<()> {
     let mut emitter = GoEmitter {
         out: IndentedWriter::new(out, IndentConfig::Tab),
@@ -71,7 +71,10 @@ impl<T> GoEmitter<T>
 where
     T: Write,
 {
-    fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_script_call_enum_with_imports(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
         let diem_types_package = match &self.diem_module_path {
             Some(path) => format!("{}/diemtypes", path),
             None => "diemtypes".into(),
@@ -117,7 +120,7 @@ where
         Ok(())
     }
 
-    fn output_encode_method(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_encode_method(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -163,7 +166,7 @@ func DecodeScript(script *diemtypes.Script) (ScriptCall, error) {{
         )
     }
 
-    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\n{}\nfunc Encode{}Script({}) diemtypes.Script {{",
@@ -192,7 +195,7 @@ func DecodeScript(script *diemtypes.Script) (ScriptCall, error) {{
         writeln!(self.out, "}}")
     }
 
-    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nfunc decode_{}_script(script *diemtypes.Script) (ScriptCall, error) {{",
@@ -242,7 +245,7 @@ func DecodeScript(script *diemtypes.Script) (ScriptCall, error) {{
         Ok(())
     }
 
-    fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -261,7 +264,7 @@ var script_decoder_map = map[string]func(*diemtypes.Script) (ScriptCall, error) 
         writeln!(self.out, "}}")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
         let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
@@ -303,7 +306,7 @@ func decode_{0}_argument(arg diemtypes.TransactionArgument) (value {1}, err erro
         )
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+    fn output_code_constant(&mut self, abi: &TransactionScriptABI) -> Result<()> {
         writeln!(
             self.out,
             "\nvar {}_code = []byte {{{}}};",
@@ -416,12 +419,21 @@ impl crate::SourceInstaller for Installer {
         let dir_path = self.install_dir.join(name);
         std::fs::create_dir_all(&dir_path)?;
         let mut file = std::fs::File::create(dir_path.join("lib.go"))?;
+        // TODO(#7876): Update to handle script function ABIs
+        let abis = abis
+            .iter()
+            .cloned()
+            .filter_map(|abi| match abi {
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            })
+            .collect::<Vec<_>>();
         output(
             &mut file,
             self.serde_module_path.clone(),
             self.diem_module_path.clone(),
             name.to_string(),
-            abis,
+            &abis,
         )?;
         Ok(())
     }

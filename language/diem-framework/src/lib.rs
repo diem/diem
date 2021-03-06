@@ -5,6 +5,7 @@
 
 use abigen::AbigenOptions;
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
+use diem_types::transaction::ScriptABI;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
@@ -367,7 +368,16 @@ fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
 
 pub fn generate_rust_transaction_builders() {
     let abis = transaction_builder_generator::read_abis(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR)
-        .expect("Failed to read generated ABIs");
+        .expect("Failed to read generated ABIs")
+        .into_iter()
+        .filter_map(|abi| {
+            match abi {
+                // TODO remove this when updated to support script functions
+                ScriptABI::TransactionScript(abi) => Some(abi),
+                ScriptABI::ScriptFunction(_) => None,
+            }
+        })
+        .collect::<Vec<_>>();
     {
         let mut file = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
             .expect("Failed to open file for Rust script build generation");

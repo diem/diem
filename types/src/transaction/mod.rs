@@ -43,7 +43,10 @@ mod transaction_argument;
 
 pub use change_set::ChangeSet;
 pub use module::Module;
-pub use script::{ArgumentABI, Script, ScriptABI, TypeArgumentABI, SCRIPT_HASH_LENGTH};
+pub use script::{
+    ArgumentABI, Script, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+    SCRIPT_HASH_LENGTH,
+};
 
 use std::ops::Deref;
 pub use transaction_argument::{parse_transaction_argument, TransactionArgument};

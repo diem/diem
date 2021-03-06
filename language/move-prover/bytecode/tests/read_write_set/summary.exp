@@ -1,7 +1,7 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-pub fun Summary::write_addr() {
+public fun Summary::write_addr() {
      var $t0: address
   0: $t0 := 0x777
   1: Summary::write_caller2($t0)
@@ -10,7 +10,7 @@ pub fun Summary::write_addr() {
 
 
 [variant baseline]
-pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
+public fun Summary::write_callee($t0|s2: &mut Summary::S2) {
      var $t1: u64
      var $t2: &mut Summary::S2
      var $t3: &mut u64
@@ -23,7 +23,7 @@ pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
 
 
 [variant baseline]
-pub fun Summary::write_caller1($t0|a: address) {
+public fun Summary::write_caller1($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S2
   0: $t1 := copy($t0)
@@ -34,7 +34,7 @@ pub fun Summary::write_caller1($t0|a: address) {
 
 
 [variant baseline]
-pub fun Summary::write_caller2($t0|a: address) {
+public fun Summary::write_caller2($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S1
      var $t3: &mut Summary::S2
@@ -48,7 +48,7 @@ pub fun Summary::write_caller2($t0|a: address) {
 ============ after pipeline `read_write_set` ================
 
 [variant baseline]
-pub fun Summary::write_addr() {
+public fun Summary::write_addr() {
      var $t0: address
      # Accesses:
      # 0x777/0x2::Summary::S1: Borrow
@@ -64,7 +64,7 @@ pub fun Summary::write_addr() {
 
 
 [variant baseline]
-pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
+public fun Summary::write_callee($t0|s2: &mut Summary::S2) {
      var $t1: u64
      var $t2: &mut Summary::S2
      var $t3: &mut u64
@@ -84,7 +84,7 @@ pub fun Summary::write_callee($t0|s2: &mut Summary::S2) {
 
 
 [variant baseline]
-pub fun Summary::write_caller1($t0|a: address) {
+public fun Summary::write_caller1($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S2
      # Accesses:
@@ -102,7 +102,7 @@ pub fun Summary::write_caller1($t0|a: address) {
 
 
 [variant baseline]
-pub fun Summary::write_caller2($t0|a: address) {
+public fun Summary::write_caller2($t0|a: address) {
      var $t1: address
      var $t2: &mut Summary::S1
      var $t3: &mut Summary::S2

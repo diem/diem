@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
+use diem_types::transaction::{ArgumentABI, TransactionScriptABI, TypeArgumentABI};
 use heck::CamelCase;
 use move_core_types::language_storage::TypeTag;
 use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
@@ -51,7 +51,8 @@ fn quote_parameter_as_field(arg: &ArgumentABI) -> Named<Format> {
     }
 }
 
-pub(crate) fn make_abi_enum_container(abis: &[ScriptABI]) -> ContainerFormat {
+// TODO(#7876): Update to handle script function ABIs
+pub(crate) fn make_abi_enum_container(abis: &[TransactionScriptABI]) -> ContainerFormat {
     let mut variants = BTreeMap::new();
     for (index, abi) in abis.iter().enumerate() {
         let mut fields = Vec::new();
@@ -106,7 +107,10 @@ pub(crate) fn get_external_definitions(diem_types: &str) -> serde_generate::Exte
         .collect()
 }
 
-pub(crate) fn get_required_decoding_helper_types(abis: &[ScriptABI]) -> BTreeSet<&TypeTag> {
+// TODO(#7876): Update to handle script function ABIs
+pub(crate) fn get_required_decoding_helper_types(
+    abis: &[TransactionScriptABI],
+) -> BTreeSet<&TypeTag> {
     let mut required_types = BTreeSet::new();
     for abi in abis {
         for arg in abi.args() {
