@@ -29,6 +29,8 @@ ${CARGO} ${CARGOFLAGS} build --release \
          -p safety-rules \
          -p db-bootstrapper \
          -p backup-cli \
+         -p diem-transaction-replay \
+         -p diem-writeset-generator \
          "$@"
 
 # Build and overwrite the diem-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
