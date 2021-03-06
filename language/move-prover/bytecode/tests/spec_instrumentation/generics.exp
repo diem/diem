@@ -57,8 +57,8 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
   8: goto 17
   9: label L3
  10: modifies global<Generics::R<u64>>($t0)
- 11: assume Not(exists<Generics::R<u64>>($t0))
- 12: assume WellFormed($t3)
+ 11: assume WellFormed($t3)
+ 12: assume Not(exists<Generics::R<u64>>($t0))
      # << opaque call: $t1 := Generics::remove<u64>($t0)
  13: nop
  14: label L1

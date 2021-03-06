@@ -494,32 +494,37 @@ impl<'a> Instrumenter<'a> {
             // they are `&mut`, they are never modified, and this is not expressed in the
             // specifications. We treat this by skipping the Havoc for them. TODO: find a better
             // solution
-            for src in &srcs {
-                let ty = &self.builder.data.local_types[*src];
-                if ty.is_mutable_reference()
-                    && !self
-                        .builder
-                        .global_env()
-                        .is_wellknown_event_handle_type(ty.skip_reference())
-                {
-                    self.builder
-                        .emit_with(|id| Call(id, vec![], Operation::Havoc, vec![*src], None));
-                }
+            let mut_srcs = srcs
+                .iter()
+                .cloned()
+                .filter(|src| {
+                    let ty = &self.builder.data.local_types[*src];
+                    ty.is_mutable_reference()
+                        && !self
+                            .builder
+                            .global_env()
+                            .is_wellknown_event_handle_type(ty.skip_reference())
+                })
+                .collect_vec();
+            for src in &mut_srcs {
+                self.builder
+                    .emit_with(|id| Call(id, vec![], Operation::Havoc, vec![*src], None));
+            }
+
+            // Emit placeholders for assuming well-formedness of return values and mutable ref
+            // parameters.
+            for idx in mut_srcs.into_iter().chain(dests.iter().cloned()) {
+                let exp = self.builder.mk_call(
+                    &BOOL_TYPE,
+                    ast::Operation::WellFormed,
+                    vec![self.builder.mk_temporary(idx)],
+                );
+                self.builder.emit_with(move |id| Prop(id, Assume, exp));
             }
 
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
                 self.builder.emit_with(|id| Prop(id, Assume, cond));
-            }
-
-            // Emit placeholders for assuming well-formedness of return values.
-            for dest in dests {
-                let exp = self.builder.mk_call(
-                    &BOOL_TYPE,
-                    ast::Operation::WellFormed,
-                    vec![self.builder.mk_temporary(dest)],
-                );
-                self.builder.emit_with(move |id| Prop(id, Assume, exp));
             }
 
             // Emit the events in the `emits` specs of the callee.

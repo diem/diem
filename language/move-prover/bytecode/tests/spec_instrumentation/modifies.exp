@@ -245,8 +245,8 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
   8: trace_abort($t6)
   9: goto 29
  10: label L3
- 11: assume Eq<u64>($t7, select A::S.x(global<A::S>($t1)))
- 12: assume WellFormed($t7)
+ 11: assume WellFormed($t7)
+ 12: assume Eq<u64>($t7, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t5 := A::read_at($t1)
  13: nop
      # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:65:17+9
@@ -260,8 +260,8 @@ pub fun B::move_from_test_incorrect($t0|addr1: address, $t1|addr2: address): B::
  20: trace_abort($t6)
  21: goto 29
  22: label L5
- 23: assume Eq<u64>($t10, select A::S.x(global<A::S>($t1)))
- 24: assume WellFormed($t10)
+ 23: assume WellFormed($t10)
+ 24: assume Eq<u64>($t10, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t7 := A::read_at($t1)
  25: nop
  26: assert Eq<u64>($t7, $t10)
@@ -295,8 +295,8 @@ pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
   8: trace_abort($t5)
   9: goto 31
  10: label L3
- 11: assume Eq<u64>($t6, select A::S.x(global<A::S>($t1)))
- 12: assume WellFormed($t6)
+ 11: assume WellFormed($t6)
+ 12: assume Eq<u64>($t6, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t4 := A::read_at($t1)
  13: nop
  14: $t7 := 2
@@ -312,8 +312,8 @@ pub fun B::move_to_test_incorrect($t0|account: signer, $t1|addr2: address) {
  22: trace_abort($t5)
  23: goto 31
  24: label L5
- 25: assume Eq<u64>($t10, select A::S.x(global<A::S>($t1)))
- 26: assume WellFormed($t10)
+ 25: assume WellFormed($t10)
+ 26: assume Eq<u64>($t10, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t7 := A::read_at($t1)
  27: nop
  28: assert Eq<u64>($t6, $t10)
@@ -346,8 +346,8 @@ pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
   8: trace_abort($t5)
   9: goto 38
  10: label L3
- 11: assume Eq<u64>($t6, select A::S.x(global<A::S>($t1)))
- 12: assume WellFormed($t6)
+ 11: assume WellFormed($t6)
+ 12: assume Eq<u64>($t6, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t4 := A::read_at($t1)
  13: nop
      # >> opaque call: A::mutate_at($t0)
@@ -372,8 +372,8 @@ pub fun B::mutate_S_test1_incorrect($t0|addr1: address, $t1|addr2: address) {
  29: trace_abort($t5)
  30: goto 38
  31: label L7
- 32: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
- 33: assume WellFormed($t9)
+ 32: assume WellFormed($t9)
+ 33: assume Eq<u64>($t9, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t5 := A::read_at($t1)
  34: nop
  35: assert Eq<u64>($t6, $t9)
@@ -404,8 +404,8 @@ pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
   6: trace_abort($t4)
   7: goto 36
   8: label L3
-  9: assume Eq<u64>($t5, select A::S.x(global<A::S>($t0)))
- 10: assume WellFormed($t5)
+  9: assume WellFormed($t5)
+ 10: assume Eq<u64>($t5, select A::S.x(global<A::S>($t0)))
      # << opaque call: $t3 := A::read_at($t0)
  11: nop
      # >> opaque call: A::mutate_at($t0)
@@ -430,8 +430,8 @@ pub fun B::mutate_S_test2_incorrect($t0|addr: address) {
  27: trace_abort($t4)
  28: goto 36
  29: label L7
- 30: assume Eq<u64>($t8, select A::S.x(global<A::S>($t0)))
- 31: assume WellFormed($t8)
+ 30: assume WellFormed($t8)
+ 31: assume Eq<u64>($t8, select A::S.x(global<A::S>($t0)))
      # << opaque call: $t4 := A::read_at($t0)
  32: nop
  33: assert Eq<u64>($t5, $t8)
@@ -467,8 +467,8 @@ pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
   8: trace_abort($t6)
   9: goto 34
  10: label L3
- 11: assume Eq<u64>($t7, select A::S.x(global<A::S>($t1)))
- 12: assume WellFormed($t7)
+ 11: assume WellFormed($t7)
+ 12: assume Eq<u64>($t7, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t5 := A::read_at($t1)
  13: nop
      # VC: caller does not have permission to modify `B::T` at given address at tests/spec_instrumentation/modifies.move:38:17+17
@@ -487,8 +487,8 @@ pub fun B::mutate_at_test_incorrect($t0|addr1: address, $t1|addr2: address) {
  25: trace_abort($t6)
  26: goto 34
  27: label L5
- 28: assume Eq<u64>($t12, select A::S.x(global<A::S>($t1)))
- 29: assume WellFormed($t12)
+ 28: assume WellFormed($t12)
+ 29: assume Eq<u64>($t12, select A::S.x(global<A::S>($t1)))
      # << opaque call: $t9 := A::read_at($t1)
  30: nop
  31: assert Eq<u64>($t7, $t12)
