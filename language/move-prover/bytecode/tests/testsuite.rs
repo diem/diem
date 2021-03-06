@@ -150,7 +150,7 @@ fn get_tested_transformation_pipeline(
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let mut env: GlobalEnv = run_model_builder(sources, vec![], Some("0x2345467"))?;
+    let env: GlobalEnv = run_model_builder(sources, vec![], Some("0x2345467"))?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
         env.report_errors(&mut error_writer);

@@ -6,7 +6,7 @@
 use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
+    options::ProverOptions,
     usage_analysis,
 };
 use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, StructId};
@@ -56,11 +56,7 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         // Check the friend relation.
         check_friend_relation(fun_env);
 
-        let options = fun_env
-            .module_env
-            .env
-            .get_extension::<ProverOptions>()
-            .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
+        let options = ProverOptions::get(fun_env.module_env.env);
         let is_verified =
             if fun_env.module_env.is_target() && fun_env.should_verify(options.verify_scope) {
                 // This function needs to be verified because it is a user provided verification

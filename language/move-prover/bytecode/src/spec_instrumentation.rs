@@ -18,7 +18,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     livevar_analysis::LiveVarAnalysisProcessor,
-    options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
+    options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
     spec_translator::{SpecTranslator, TranslatedSpec},
     stackless_bytecode::{AbortAction, AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
@@ -96,11 +96,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             return data;
         }
 
-        let options = fun_env
-            .module_env
-            .env
-            .get_extension::<ProverOptions>()
-            .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
+        let options = ProverOptions::get(fun_env.module_env.env);
         let verification_info =
             verification_analysis::get_info(&FunctionTarget::new(fun_env, &data));
 
@@ -114,7 +110,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             let mut verification_data = data.fork(FunctionVariant::Verification);
             verification_data.annotations = annotations;
             verification_data = Instrumenter::run(
-                options,
+                &*options,
                 targets,
                 fun_env,
                 FunctionVariant::Verification,
@@ -129,7 +125,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
         // Instrument baseline variant only if it is inlined.
         if verification_info.inlined {
-            Instrumenter::run(options, targets, fun_env, FunctionVariant::Baseline, data)
+            Instrumenter::run(&*options, targets, fun_env, FunctionVariant::Baseline, data)
         } else {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper

@@ -398,7 +398,7 @@ pub struct GlobalEnv {
     /// A set containing spec functions which are called/used in specs.
     pub used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
     /// A type-indexed container for storing extension data in the environment.
-    extensions: BTreeMap<TypeId, Box<dyn Any>>,
+    extensions: RefCell<BTreeMap<TypeId, Box<dyn Any>>>,
 }
 
 impl GlobalEnv {
@@ -451,15 +451,28 @@ impl GlobalEnv {
     /// Stores extension data in the environment. This can be arbitrary data which is
     /// indexed by type. Used by tools which want to store their own data in the environment,
     /// like a set of tool dependent options/flags.
-    pub fn set_extension<T: Any>(&mut self, x: T) {
+    pub fn set_extension<T: Any>(&self, x: T) {
         let id = TypeId::of::<T>();
-        self.extensions.insert(id, Box::new(x));
+        self.extensions
+            .borrow_mut()
+            .insert(id, Box::new(Rc::new(x)));
     }
 
     /// Retrieves extension data from the environment. Use as in `env.get_extension::<T>()`.
-    pub fn get_extension<T: Any>(&self) -> Option<&T> {
+    /// An Rc<T> is returned because extension data is stored in a RefCell and we can't use
+    /// lifetimes (`&'a T`) to control borrowing.
+    pub fn get_extension<T: Any>(&self) -> Option<Rc<T>> {
         let id = TypeId::of::<T>();
-        self.extensions.get(&id).and_then(|d| d.downcast_ref::<T>())
+        self.extensions
+            .borrow()
+            .get(&id)
+            .and_then(|d| d.downcast_ref::<Rc<T>>().cloned())
+    }
+
+    /// Checks whether there is an extension of type `T`.
+    pub fn has_extension<T: Any>(&self) -> bool {
+        let id = TypeId::of::<T>();
+        self.extensions.borrow().contains_key(&id)
     }
 
     /// Create a new global id unique to this environment.

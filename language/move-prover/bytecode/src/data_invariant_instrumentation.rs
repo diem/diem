@@ -14,7 +14,7 @@ use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
+    options::ProverOptions,
     stackless_bytecode::{Bytecode, Operation, PropKind},
 };
 
@@ -47,12 +47,8 @@ impl FunctionTargetProcessor for DataInvariantInstrumentationProcessor {
             // Nothing to do.
             return data;
         }
-        let options = fun_env
-            .module_env
-            .env
-            .get_extension::<ProverOptions>()
-            .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
-        Instrumenter::run(options, targets, fun_env, data)
+        let options = ProverOptions::get(fun_env.module_env.env);
+        Instrumenter::run(&*options, targets, fun_env, data)
     }
 
     fn name(&self) -> String {

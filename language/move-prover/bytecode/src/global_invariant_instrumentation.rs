@@ -10,7 +10,7 @@ use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
-    options::{ProverOptions, PROVER_DEFAULT_OPTIONS},
+    options::ProverOptions,
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
     usage_analysis,
 };
@@ -51,13 +51,8 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessor {
             return data;
         }
 
-        let options = fun_env
-            .module_env
-            .env
-            .get_extension::<ProverOptions>()
-            .unwrap_or_else(|| &*PROVER_DEFAULT_OPTIONS);
-
-        Instrumenter::run(options, fun_env, data)
+        let options = ProverOptions::get(fun_env.module_env.env);
+        Instrumenter::run(&*options, fun_env, data)
     }
 
     fn name(&self) -> String {
