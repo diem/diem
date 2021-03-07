@@ -24,17 +24,33 @@ pub enum FunctionVariant {
     /// The baseline variant which was created from the original Move bytecode and is then
     /// subject of multiple transformations.
     Baseline,
-    /// The variant which is instrumented for verification. Only functions which are target
-    /// of verification have one of those.
-    Verification,
+    /// A variant which is instrumented for verification. Only functions which are target
+    /// of verification have one of those. There can be multiple verification variants,
+    /// identified by a well-known string.
+    Verification(&'static str),
 }
+
+impl FunctionVariant {
+    pub fn is_verified(&self) -> bool {
+        matches!(self, FunctionVariant::Verification(..))
+    }
+}
+
+/// The variant for regular verification.
+pub const REGULAR_VERIFICATION_VARIANT: &str = "";
 
 impl std::fmt::Display for FunctionVariant {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use FunctionVariant::*;
         match self {
             Baseline => write!(f, "baseline"),
-            Verification => write!(f, "verification"),
+            Verification(s) => {
+                if s.is_empty() {
+                    write!(f, "verification")
+                } else {
+                    write!(f, "verification[{}]", s)
+                }
+            }
         }
     }
 }
@@ -124,23 +140,6 @@ impl FunctionTargetsHolder {
                 )
             });
         FunctionTarget::new(func_env, &data)
-    }
-
-    /// Gets the function target from the variant which owns the annotations.
-    /// TODO(refactoring): the need for this function should be removed once refactoring
-    ///    finishes and old boilerplate can be removed.
-    pub fn get_annotated_target<'env>(
-        &'env self,
-        func_env: &'env FunctionEnv<'env>,
-    ) -> FunctionTarget<'env> {
-        if self
-            .get_target_variants(func_env)
-            .contains(&FunctionVariant::Verification)
-        {
-            self.get_target(func_env, FunctionVariant::Verification)
-        } else {
-            self.get_target(func_env, FunctionVariant::Baseline)
-        }
     }
 
     /// Gets all available variants for function.

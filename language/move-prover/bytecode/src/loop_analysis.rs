@@ -16,7 +16,7 @@ use crate::{
 use move_model::{ast, model::FunctionEnv};
 use std::collections::{BTreeMap, BTreeSet};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct LoopAnnotation {
     pub loop_targets: BTreeMap<Label, BTreeSet<usize>>,
 }

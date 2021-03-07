@@ -9,7 +9,7 @@ use log::{debug, info, log, warn};
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     options::ProverOptions,
     stackless_bytecode::{BorrowNode, Bytecode, Operation, PropKind},
     usage_analysis,
@@ -45,7 +45,7 @@ impl FunctionTargetProcessor for GlobalInvariantInstrumentationProcessor {
             // Nothing to do.
             return data;
         }
-        if data.variant != FunctionVariant::Verification && !fun_env.has_friend() {
+        if !data.variant.is_verified() && !fun_env.has_friend() {
             // Only need to instrument if this is a verification variant, or if the
             // function has a friend and is verified in the friends context.
             return data;
@@ -103,7 +103,7 @@ impl<'a> Instrumenter<'a> {
         let old_code = std::mem::take(&mut self.builder.data.code);
 
         // Emit entrypoint assumptions if this is a verification entry.
-        let assumed_at_update = if self.builder.data.variant == FunctionVariant::Verification {
+        let assumed_at_update = if self.builder.data.variant.is_verified() {
             self.instrument_entrypoint()
         } else {
             BTreeSet::new()

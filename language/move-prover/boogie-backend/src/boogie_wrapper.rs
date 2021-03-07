@@ -25,7 +25,7 @@ use crate::prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds};
 // DEBUG
 // use backtrace::Backtrace;
 use crate::options::BoogieOptions;
-use bytecode::function_target_pipeline::FunctionTargetsHolder;
+use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 use move_model::{
     ast::TempIndex,
     model::{NodeId, QualifiedId},
@@ -203,7 +203,8 @@ impl<'env> BoogieWrapper<'env> {
                     }
                     Temporary(fun, idx, value) if error.model.is_some() => {
                         let fun_env = self.env.get_function(*fun);
-                        let fun_target = self.targets.get_annotated_target(&fun_env);
+                        let fun_target =
+                            self.targets.get_target(&fun_env, FunctionVariant::Baseline);
                         if *idx < fun_target.get_local_count() {
                             let var_name = fun_target
                                 .get_local_name(*idx)
@@ -229,7 +230,8 @@ impl<'env> BoogieWrapper<'env> {
                     }
                     Result(fun, idx, value) if error.model.is_some() => {
                         let fun_env = self.env.get_function(*fun);
-                        let fun_target = self.targets.get_annotated_target(&fun_env);
+                        let fun_target =
+                            self.targets.get_target(&fun_env, FunctionVariant::Baseline);
                         let n = fun_target.get_return_count();
                         if *idx < n {
                             let var_name = if n > 1 {

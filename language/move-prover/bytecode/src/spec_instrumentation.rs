@@ -16,7 +16,10 @@ use move_model::{
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{
+        FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant,
+        REGULAR_VERIFICATION_VARIANT,
+    },
     livevar_analysis::LiveVarAnalysisProcessor,
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
@@ -103,29 +106,19 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
         if verification_info.verified {
             // Create a clone of the function data, moving annotations
             // out of this data and into the clone.
-            // TODO(refactoring): we cannot clone annotations because they use the Any type.
-            //   In any case, function variants should be revisited once refactoring is
-            //   finished and all the old boilerplate is removed.
-            let annotations = std::mem::take(&mut data.annotations);
-            let mut verification_data = data.fork(FunctionVariant::Verification);
-            verification_data.annotations = annotations;
-            verification_data = Instrumenter::run(
-                &*options,
-                targets,
-                fun_env,
-                FunctionVariant::Verification,
-                verification_data,
-            );
+            let mut verification_data =
+                data.fork(FunctionVariant::Verification(REGULAR_VERIFICATION_VARIANT));
+            verification_data = Instrumenter::run(&*options, targets, fun_env, verification_data);
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
-                FunctionVariant::Verification,
+                verification_data.variant,
                 verification_data,
             );
         }
 
         // Instrument baseline variant only if it is inlined.
         if verification_info.inlined {
-            Instrumenter::run(&*options, targets, fun_env, FunctionVariant::Baseline, data)
+            Instrumenter::run(&*options, targets, fun_env, data)
         } else {
             // Clear code but keep function data stub.
             // TODO(refactoring): the stub is currently still needed because boogie_wrapper
@@ -142,8 +135,6 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 
 struct Instrumenter<'a> {
     options: &'a ProverOptions,
-    targets: &'a mut FunctionTargetsHolder,
-    variant: FunctionVariant,
     builder: FunctionDataBuilder<'a>,
     spec: TranslatedSpec,
     ret_locals: Vec<TempIndex>,
@@ -159,7 +150,6 @@ impl<'a> Instrumenter<'a> {
         options: &'a ProverOptions,
         targets: &mut FunctionTargetsHolder,
         fun_env: &FunctionEnv<'a>,
-        variant: FunctionVariant,
         data: FunctionData,
     ) -> FunctionData {
         let mut builder = FunctionDataBuilder::new(fun_env, data);
@@ -197,8 +187,6 @@ impl<'a> Instrumenter<'a> {
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
             options,
-            targets,
-            variant,
             builder,
             spec,
             ret_locals,
@@ -220,6 +208,10 @@ impl<'a> Instrumenter<'a> {
         live_vars.process(targets, fun_env, data)
     }
 
+    fn is_verified(&self) -> bool {
+        self.builder.data.variant.is_verified()
+    }
+
     fn instrument(&mut self) {
         use Bytecode::*;
         use PropKind::*;
@@ -227,7 +219,7 @@ impl<'a> Instrumenter<'a> {
         // Extract and clear current code
         let old_code = std::mem::take(&mut self.builder.data.code);
 
-        if self.variant == FunctionVariant::Verification {
+        if self.is_verified() {
             // Inject well-formedness assumptions for parameters.
             for param in 0..self.builder.fun_env.get_parameter_count() {
                 let exp = self.builder.mk_call(
@@ -263,7 +255,7 @@ impl<'a> Instrumenter<'a> {
                 .emit_with(move |attr_id| Prop(attr_id, Assume, exp))
         }
 
-        if self.variant == FunctionVariant::Verification {
+        if self.is_verified() {
             // For the verification variant, we generate post-conditions. Inject any state
             // save instructions needed for this.
             for (mem, label) in &self.spec.saved_memory {
@@ -293,23 +285,7 @@ impl<'a> Instrumenter<'a> {
     }
 
     fn get_used_memory(&self) -> BTreeSet<QualifiedId<StructId>> {
-        // TODO(refactoring): we currently need to do some odd treatment to access the usage
-        //   annotation. The annotation is either in the verification variant or, if none
-        //   exists, in the Baseline variant. Furthermore, data of the currently processed
-        //   variant is detached from targets.
-        if self.builder.data.variant == FunctionVariant::Verification
-            || !self
-                .targets
-                .get_target_variants(self.builder.fun_env)
-                .contains(&FunctionVariant::Verification)
-        {
-            usage_analysis::get_used_memory(&self.builder.get_target()).clone()
-        } else {
-            usage_analysis::get_used_memory(
-                &self.targets.get_annotated_target(&self.builder.fun_env),
-            )
-            .clone()
-        }
+        usage_analysis::get_used_memory(&self.builder.get_target()).clone()
     }
 
     fn instrument_bytecode(&mut self, bc: Bytecode) {
@@ -433,11 +409,11 @@ impl<'a> Instrumenter<'a> {
         // is opaque. For inlined callees outside of verification entry points, we skip
         // emitting any pre-conditions because they are assumed already at entry into the
         // function.
-        if self.variant == FunctionVariant::Verification || callee_opaque {
+        if self.is_verified() || callee_opaque {
             for (loc, cond) in callee_spec.pre_conditions(&self.builder) {
                 // Determine whether we want to emit this as an assertion or an assumption.
-                let prop_kind = match self.variant {
-                    FunctionVariant::Verification => {
+                let prop_kind = match self.builder.data.variant {
+                    FunctionVariant::Verification(..) => {
                         self.builder
                             .set_loc_and_vc_info(loc, REQUIRES_FAILS_MESSAGE);
                         Assert
@@ -451,7 +427,7 @@ impl<'a> Instrumenter<'a> {
         // Emit modify permissions as assertions if this is the verification variant. For
         // non-verification variants, we don't need to do this because they are independently
         // verified.
-        if self.variant == FunctionVariant::Verification {
+        if self.is_verified() {
             let loc = self.builder.get_loc(id);
             for (_, cond) in &callee_spec.modifies {
                 let env = self.builder.global_env();
@@ -601,7 +577,7 @@ impl<'a> Instrumenter<'a> {
         let abort_label = self.abort_label;
         self.builder.emit_with(|id| Label(id, abort_label));
 
-        if self.variant == FunctionVariant::Verification {
+        if self.is_verified() {
             self.generate_abort_verify();
         }
 
@@ -689,7 +665,7 @@ impl<'a> Instrumenter<'a> {
         let ret_label = self.ret_label;
         self.builder.emit_with(|id| Label(id, ret_label));
 
-        if self.variant == FunctionVariant::Verification {
+        if self.is_verified() {
             // Emit the negation of all aborts conditions.
             for (loc, abort_cond, _) in &self.spec.aborts {
                 self.builder
@@ -746,9 +722,7 @@ impl<'a> Instrumenter<'a> {
         addr: &Exp,
     ) {
         let target = self.builder.get_target();
-        if self.variant == FunctionVariant::Verification
-            && target.get_modify_targets_for_type(&memory).is_some()
-        {
+        if self.is_verified() && target.get_modify_targets_for_type(&memory).is_some() {
             let env = self.builder.global_env();
             self.builder.set_loc_and_vc_info(
                 loc.clone(),
@@ -775,13 +749,14 @@ fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
             if func_env.is_native() || func_env.is_intrinsic() {
                 continue;
             }
-            let caller_func_target = targets.get_annotated_target(&func_env);
+            let caller_func_target = targets.get_target(&func_env, FunctionVariant::Baseline);
             for callee in func_env.get_called_functions() {
                 let callee_func_env = env.get_function(callee);
                 if callee_func_env.is_native() || callee_func_env.is_intrinsic() {
                     continue;
                 }
-                let callee_func_target = targets.get_annotated_target(&callee_func_env);
+                let callee_func_target =
+                    targets.get_target(&callee_func_env, FunctionVariant::Baseline);
                 let callee_modified_memory =
                     usage_analysis::get_modified_memory(&callee_func_target);
                 for target in caller_func_target.get_modify_targets().keys() {

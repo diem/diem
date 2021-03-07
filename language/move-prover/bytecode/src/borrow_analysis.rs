@@ -18,7 +18,10 @@ use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, QualifiedId},
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    borrow::BorrowMut,
+    collections::{BTreeMap, BTreeSet},
+};
 use vm::file_format::CodeOffset;
 
 /// Borrow graph edge abstract domain.
@@ -287,12 +290,14 @@ impl BorrowInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct BorrowInfoAtCodeOffset {
     pub before: BorrowInfo,
     pub after: BorrowInfo,
 }
 
 /// Borrow annotation computed by the borrow analysis processor.
+#[derive(Clone)]
 pub struct BorrowAnnotation(BTreeMap<CodeOffset, BorrowInfoAtCodeOffset>);
 
 impl BorrowAnnotation {
@@ -330,8 +335,10 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             BorrowAnnotation(propagator.run(&data.code))
         };
         // Annotate function target with computed borrow data.
-        data.annotations.set::<BorrowAnnotation>(borrow_annotation);
-        data.annotations.remove::<LiveVarAnnotation>();
+        data.annotations
+            .borrow_mut()
+            .set::<BorrowAnnotation>(borrow_annotation);
+        data.annotations.borrow_mut().remove::<LiveVarAnnotation>();
         data
     }
 

@@ -13,7 +13,7 @@
 use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::FunctionData,
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     options::ProverOptions,
     stackless_bytecode::{Bytecode, Operation, PropKind},
 };
@@ -72,8 +72,7 @@ impl<'a> Instrumenter<'a> {
     ) -> FunctionData {
         // Function is instrumented for verification if this is the verification variant,
         // or if it is function with a friend which is verified in the friends context.
-        let for_verification =
-            data.variant == FunctionVariant::Verification || fun_env.has_friend();
+        let for_verification = data.variant.is_verified() || fun_env.has_friend();
         let builder = FunctionDataBuilder::new(fun_env, data);
         let mut instrumenter = Instrumenter {
             _options: options,

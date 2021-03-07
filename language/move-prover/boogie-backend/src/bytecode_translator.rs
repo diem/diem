@@ -198,11 +198,14 @@ impl<'env> ModuleTranslator<'env> {
             if func_env.is_native() || func_env.is_intrinsic() {
                 continue;
             }
-            let verification_info =
-                verification_analysis::get_info(&self.targets.get_annotated_target(&func_env));
+            let verification_info = verification_analysis::get_info(
+                &self
+                    .targets
+                    .get_target(&func_env, FunctionVariant::Baseline),
+            );
             for variant in self.targets.get_target_variants(&func_env) {
-                if verification_info.verified && variant == FunctionVariant::Verification
-                    || verification_info.inlined && variant == FunctionVariant::Baseline
+                if verification_info.verified && variant.is_verified()
+                    || verification_info.inlined && !variant.is_verified()
                 {
                     self.translate_function(variant, &self.targets.get_target(&func_env, variant));
                 }
@@ -225,8 +228,8 @@ impl<'env> ModuleTranslator<'env> {
         let (args, rets) = self.generate_function_args_and_returns(fun_target);
 
         let (suffix, attribs) = match variant {
-            FunctionVariant::Baseline => ("", "{:inline 1} ".to_string()),
-            FunctionVariant::Verification => {
+            FunctionVariant::Baseline => ("".to_string(), "{:inline 1} ".to_string()),
+            FunctionVariant::Verification(flavor) => {
                 let timeout = fun_target
                     .func_env
                     .get_num_pragma(TIMEOUT_PRAGMA, || self.options.vc_timeout);
@@ -238,7 +241,11 @@ impl<'env> ModuleTranslator<'env> {
                 } else {
                     format!("{{:timeLimit {}}} ", timeout)
                 };
-                ("$verify", attribs)
+                if flavor.is_empty() {
+                    ("$verify".to_string(), attribs)
+                } else {
+                    (format!("$verify_{}", flavor), attribs)
+                }
             }
         };
         self.writer.set_location(&fun_target.get_loc());
@@ -356,7 +363,7 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Initial assumptions
-        if variant == FunctionVariant::Verification {
+        if variant.is_verified() {
             self.translate_verify_entry_assumptions(fun_target);
         }
 

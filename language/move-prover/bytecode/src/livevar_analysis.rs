@@ -19,13 +19,13 @@ use vm::file_format::CodeOffset;
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used
 /// before being overwritten.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct LiveVarInfoAtCodeOffset {
     pub before: BTreeSet<TempIndex>,
     pub after: BTreeSet<TempIndex>,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct LiveVarAnnotation(BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset>);
 
 impl LiveVarAnnotation {

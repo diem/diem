@@ -44,7 +44,7 @@ impl<'env> Clone for FunctionTarget<'env> {
 
 /// Holds the owned data belonging to a FunctionTarget, contained in a
 /// `FunctionTargetsHolder`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionData {
     /// The function variant.
     pub variant: FunctionVariant,
@@ -65,9 +65,10 @@ pub struct FunctionData {
     /// A map from byte code attribute to a message to be printed out if verification
     /// fails at this bytecode.
     pub vc_infos: BTreeMap<AttrId, String>,
-    /// Annotations associated with this function.
+    /// Annotations associated with this function. This is shared between multiple function
+    /// variants.
     pub annotations: Annotations,
-    /// A map from local names to temp indices in code.
+    /// A mapping from symbolic names to temporaries.
     pub name_to_index: BTreeMap<Symbol, usize>,
     /// A cache of targets modified by this function.
     pub modify_targets: BTreeMap<QualifiedId<StructId>, Vec<Exp>>,
@@ -379,16 +380,7 @@ impl FunctionData {
         assert_ne!(self.variant, new_variant);
         FunctionData {
             variant: new_variant,
-            code: self.code.clone(),
-            local_types: self.local_types.clone(),
-            return_types: self.return_types.clone(),
-            acquires_global_resources: self.acquires_global_resources.clone(),
-            locations: self.locations.clone(),
-            debug_comments: self.debug_comments.clone(),
-            vc_infos: self.vc_infos.clone(),
-            annotations: Default::default(),
-            name_to_index: self.name_to_index.clone(),
-            modify_targets: self.modify_targets.clone(),
+            ..self.clone()
         }
     }
 }
