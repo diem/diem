@@ -5,7 +5,6 @@
 
 use bytecode_source_map::{
     mapping::SourceMapping,
-    source_map::SourceMap,
     utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
@@ -89,20 +88,21 @@ fn main() {
 
     // TODO: make source mapping work with the Move source language
     let no_loc = Spanned::unsafe_no_loc(()).loc;
-    let mut source_mapping = if args.is_script {
-        let compiled_script = CompiledScript::deserialize(&bytecode_bytes)
-            .expect("Script blob can't be deserialized");
-        source_map
-            .or_else(|_| SourceMap::dummy_from_script(&compiled_script, no_loc))
-            .map(|source_map| SourceMapping::new_from_script(source_map, compiled_script))
-            .expect("Unable to build source mapping for compiled script")
-    } else {
-        let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
-            .expect("Module blob can't be deserialized");
-        source_map
-            .or_else(|_| SourceMap::dummy_from_module(&compiled_module, no_loc))
-            .map(|source_map| SourceMapping::new(source_map, compiled_module))
-            .expect("Unable to build source mapping for compiled module")
+    let mut source_mapping = {
+        let bytecode = if args.is_script {
+            CompiledScript::deserialize(&bytecode_bytes)
+                .expect("Script blob can't be deserialized")
+                .into_module()
+                .1
+        } else {
+            CompiledModule::deserialize(&bytecode_bytes).expect("Module blob can't be deserialized")
+        };
+        if let Ok(s) = source_map {
+            SourceMapping::new(s, bytecode)
+        } else {
+            SourceMapping::new_from_module(bytecode, no_loc)
+                .expect("Unable to build dummy source mapping")
+        }
     };
 
     if let Some(source_code) = source {

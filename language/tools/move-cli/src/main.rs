@@ -11,23 +11,24 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
     gas_schedule::{GasAlgebra, GasUnits},
+    identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     parser,
     transaction_argument::{convert_txn_args, TransactionArgument},
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, compiled_unit::CompiledUnit};
+use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_EXTENSION};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::CostStrategy;
 use vm::{
-    access::{ModuleAccess, ScriptAccess},
+    access::ModuleAccess,
     compatibility::Compatibility,
     errors::{PartialVMError, VMError},
-    file_format::{CompiledModule, CompiledScript, SignatureToken},
+    file_format::{AbilitySet, CompiledModule, CompiledScript, SignatureToken},
     normalized,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use std::{
     collections::BTreeMap,
     ffi::OsStr,
@@ -103,9 +104,14 @@ pub enum Command {
     /// This command compiles the script first before running it.
     #[structopt(name = "run")]
     Run {
-        /// Path to script to compile and run.
+        /// Path to .mv file containing either script or module bytecodes. If the file is a module, the
+        /// `script_name` parameter must be set.
         #[structopt(name = "script")]
         script_file: String,
+        /// Name of the script function inside `script_file` to call. Should only be set if `script_file`
+        /// points to a module.
+        #[structopt(name = "name")]
+        script_name: Option<String>,
         /// Possibly-empty list of signers for the current transaction (e.g., `account` in
         /// `main(&account: signer)`). Must match the number of signers expected by `script_file`.
         #[structopt(long = "signers")]
@@ -168,6 +174,21 @@ impl Move {
     /// current implementation.
     fn get_library_modules(&self) -> Result<Vec<CompiledModule>> {
         self.mode.compiled_modules(&self.get_package_dir())
+    }
+
+    /// Return `true` if `path` is a Move bytecode file based on its extension
+    fn is_bytecode_file(path: &Path) -> bool {
+        path.extension()
+            .map_or(false, |ext| ext == MOVE_COMPILED_EXTENSION)
+    }
+
+    /// Return `true` if path contains a valid Move bytecode module
+    fn contains_module(path: &Path) -> bool {
+        Self::is_bytecode_file(path)
+            && match fs::read(path) {
+                Ok(bytes) => CompiledModule::deserialize(&bytes).is_ok(),
+                Err(_) => false,
+            }
     }
 
     /// Prepare an OnDiskStateView that is ready to use. Library modules will be preloaded into the
@@ -315,6 +336,7 @@ fn publish(
 fn run(
     state: OnDiskStateView,
     script_file: &str,
+    script_name_opt: &Option<String>,
     signers: &[String],
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
@@ -362,13 +384,31 @@ fn run(
         Ok(script_opt)
     }
 
-    let script_opt = compile_script(&state, script_file, verbose)?;
-    let script = match script_opt {
-        Some(s) => s,
-        None => bail!("Unable to find script in file {:?}", script_file),
+    let path = Path::new(script_file);
+    if !path.exists() {
+        bail!("Script file {:?} does not exist", path)
     };
-    let mut script_bytes = vec![];
-    script.serialize(&mut script_bytes)?;
+    let bytecode = if Move::is_bytecode_file(path) {
+        assert!(
+            state.is_module_path(path) || !Move::contains_module(path),
+            "Attempting to run module {:?} outside of the `storage/` directory.
+move run` must be applied to a module inside `storage/`",
+            path
+        );
+        // script bytecode; read directly from file
+        fs::read(path)?
+    } else {
+        // script source file; compile first and then extract bytecode
+        let script_opt = compile_script(&state, script_file, verbose)?;
+        match script_opt {
+            Some(script) => {
+                let mut script_bytes = vec![];
+                script.serialize(&mut script_bytes)?;
+                script_bytes
+            }
+            None => bail!("Unable to find script in file {:?}", script_file),
+        }
+    };
 
     let signer_addresses = signers
         .iter()
@@ -382,20 +422,41 @@ fn run(
     let log_context = NoContextLog::new();
     let mut session = vm.new_session(&state);
 
-    let res = session.execute_script(
-        script_bytes,
-        vm_type_args.clone(),
-        vm_args,
-        signer_addresses.clone(),
-        &mut cost_strategy,
-        &log_context,
-    );
+    let script_type_parameters = vec![];
+    let script_parameters = vec![];
+    let res = match script_name_opt {
+        Some(script_name) => {
+            // script fun. parse module, extract script ID to pass to VM
+            let module = CompiledModule::deserialize(&bytecode)
+                .map_err(|e| anyhow!("Error deserializing module: {:?}", e))?;
+            session
+                .execute_script_function(
+                    &module.self_id(),
+                    &IdentStr::new(script_name)?,
+                    vm_type_args.clone(),
+                    vm_args,
+                    signer_addresses.clone(),
+                    &mut cost_strategy,
+                    &log_context,
+                )
+                .map(|_| ())
+        }
+        None => session.execute_script(
+            bytecode.to_vec(),
+            vm_type_args.clone(),
+            vm_args,
+            signer_addresses.clone(),
+            &mut cost_strategy,
+            &log_context,
+        ),
+    };
 
     if let Err(err) = res {
         explain_execution_error(
             err,
             &state,
-            &script,
+            &script_type_parameters,
+            &script_parameters,
             &vm_type_args,
             &signer_addresses,
             txn_args,
@@ -563,14 +624,12 @@ fn maybe_commit_effects(
 }
 
 fn explain_type_error(
-    script: &CompiledScript,
+    script_params: &[SignatureToken],
     signers: &[AccountAddress],
     txn_args: &[TransactionArgument],
 ) {
     use SignatureToken::*;
-    let script_params = script.signature_at(script.as_inner().parameters);
     let expected_num_signers = script_params
-        .0
         .iter()
         .filter(|t| match t {
             Reference(r) => r.is_signer(),
@@ -700,7 +759,8 @@ fn explain_publish_error(
 fn explain_execution_error(
     error: VMError,
     state: &OnDiskStateView,
-    script: &CompiledScript,
+    script_type_parameters: &[AbilitySet],
+    script_parameters: &[SignatureToken],
     vm_type_args: &[TypeTag],
     signers: &[AccountAddress],
     txn_args: &[TransactionArgument],
@@ -776,10 +836,10 @@ fn explain_execution_error(
         VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH) => println!(
             "Execution failed with incorrect number of type arguments: script expected {:?}, but \
              found {:?}",
-            &script.as_inner().type_parameters.len(),
+            script_type_parameters.len(),
             vm_type_args.len()
         ),
-        VMStatus::Error(TYPE_MISMATCH) => explain_type_error(script, signers, txn_args),
+        VMStatus::Error(TYPE_MISMATCH) => explain_type_error(script_parameters, signers, txn_args),
         VMStatus::Error(LINKER_ERROR) => {
             // TODO: is this the only reason we can see LINKER_ERROR?
             // Can we also see it if someone manually deletes modules in storage?
@@ -814,10 +874,16 @@ fn view(state: OnDiskStateView, file: &str) -> Result<()> {
                 println!("{}", event)
             }
         }
-    } else if state.is_module_path(path) {
-        match state.view_module(path)? {
-            Some(module) => println!("{}", module),
-            None => println!("Module not found."),
+    } else if Move::is_bytecode_file(path) {
+        let bytecode_opt = if Move::contains_module(path) {
+            OnDiskStateView::view_module(path)?
+        } else {
+            // bytecode extension, but not a module--assume it's a script
+            OnDiskStateView::view_script(path)?
+        };
+        match bytecode_opt {
+            Some(bytecode) => println!("{}", bytecode),
+            None => println!("Bytecode not found."),
         }
     } else {
         bail!("`move view <file>` must point to a valid file under storage")
@@ -933,6 +999,7 @@ fn main() -> Result<()> {
         }
         Command::Run {
             script_file,
+            script_name,
             signers,
             args,
             type_args,
@@ -943,6 +1010,7 @@ fn main() -> Result<()> {
             run(
                 state,
                 script_file,
+                script_name,
                 signers,
                 args,
                 type_args.to_vec(),

@@ -17,7 +17,7 @@ use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotato
 use vm::{
     access::ModuleAccess,
     errors::*,
-    file_format::{CompiledModule, FunctionDefinitionIndex},
+    file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
 };
 
 use anyhow::{anyhow, bail, Result};
@@ -89,6 +89,10 @@ impl OnDiskStateView {
             fs::create_dir_all(&path)?;
         }
         Ok(path.into_os_string().into_string().unwrap())
+    }
+
+    pub fn build_dir(&self) -> &PathBuf {
+        &self.build_dir
     }
 
     fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
@@ -236,24 +240,40 @@ impl OnDiskStateView {
             .collect()
     }
 
-    pub fn view_module(&self, module_path: &Path) -> Result<Option<String>> {
+    fn view_bytecode(path: &Path, is_module: bool) -> Result<Option<String>> {
         type Loc = u64;
-        if module_path.is_dir() {
-            bail!("Bad module path {:?}. Needed file, found directory")
+        if path.is_dir() {
+            bail!("Bad bytecode path {:?}. Needed file, found directory")
         }
 
-        Ok(match Self::get_bytes(module_path)? {
-            Some(module_bytes) => {
+        Ok(match Self::get_bytes(path)? {
+            Some(bytes) => {
                 // TODO: find or create source map and pass it to disassembler
-                let d: Disassembler<Loc> = Disassembler::from_module(
-                    CompiledModule::deserialize(&module_bytes)
-                        .map_err(|e| anyhow!("Failure deserializing module: {:?}", e))?,
-                    0,
-                )?;
+                let d: Disassembler<Loc> = if is_module {
+                    Disassembler::from_module(
+                        CompiledModule::deserialize(&bytes)
+                            .map_err(|e| anyhow!("Failure deserializing module: {:?}", e))?,
+                        0,
+                    )?
+                } else {
+                    Disassembler::from_script(
+                        CompiledScript::deserialize(&bytes)
+                            .map_err(|e| anyhow!("Failure deserializing script: {:?}", e))?,
+                        0,
+                    )?
+                };
                 Some(d.disassemble()?)
             }
             None => None,
         })
+    }
+
+    pub fn view_module(module_path: &Path) -> Result<Option<String>> {
+        Self::view_bytecode(module_path, true)
+    }
+
+    pub fn view_script(script_path: &Path) -> Result<Option<String>> {
+        Self::view_bytecode(script_path, false)
     }
 
     /// Delete resource stored on disk at the path `addr`/`tag`

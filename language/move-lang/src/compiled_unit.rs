@@ -61,7 +61,14 @@ impl CompiledUnit {
         }
     }
 
-    pub fn serialize(self) -> Vec<u8> {
+    pub fn loc(&self) -> &Loc {
+        match self {
+            CompiledUnit::Module { ident, .. } => &ident.locs.1,
+            CompiledUnit::Script { loc, .. } => loc,
+        }
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
         let mut serialized = Vec::<u8>::new();
         match self {
             CompiledUnit::Module { module, .. } => module.serialize(&mut serialized).unwrap(),

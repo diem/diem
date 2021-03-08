@@ -1,0 +1,34 @@
+Command `check`:
+error: 
+
+   ┌── src/modules/ScriptFun.move:3:3 ───
+   │
+ 3 │   resource struct Called { i: u64 }
+   │   ^^^^^^^^ Unexpected 'resource'
+   ·
+ 3 │   resource struct Called { i: u64 }
+   │   -------- Expected 'fun'
+   │
+
+Command `publish`:
+error: 
+
+   ┌── src/modules/ScriptFun.move:3:3 ───
+   │
+ 3 │   resource struct Called { i: u64 }
+   │   ^^^^^^^^ Unexpected 'resource'
+   ·
+ 3 │   resource struct Called { i: u64 }
+   │   -------- Expected 'fun'
+   │
+
+Command `run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv script_fun --signers 0xA --args 5`:
+Error: Script file "storage/0x00000000000000000000000000000002/modules/ScriptFun.mv" does not exist
+Command `view storage/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::ScriptFun::Called.bcs`:
+Error: `move view <file>` must point to a valid file under storage
+Command `run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv private_fun --signers 0xA`:
+Error: Script file "storage/0x00000000000000000000000000000002/modules/ScriptFun.mv" does not exist
+Command `run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv public_fun --signers 0xA`:
+Error: Script file "storage/0x00000000000000000000000000000002/modules/ScriptFun.mv" does not exist
+Command `run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv nonexistent_fun --signers 0xA`:
+Error: Script file "storage/0x00000000000000000000000000000002/modules/ScriptFun.mv" does not exist

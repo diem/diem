@@ -13,9 +13,10 @@ use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Ability, AbilitySet, Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition,
-        FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken, StructDefinition,
-        StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature, Visibility,
+        Ability, AbilitySet, Bytecode, CompiledModule, CompiledScript, FieldHandleIndex,
+        FunctionDefinition, FunctionDefinitionIndex, Signature, SignatureIndex, SignatureToken,
+        StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature,
+        Visibility,
     },
 };
 
@@ -68,6 +69,16 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         options.print_code = true;
         Ok(Self {
             source_mapper: SourceMapping::new_from_module(module, default_loc)?,
+            options,
+            coverage_map: None,
+        })
+    }
+
+    pub fn from_script(script: CompiledScript, default_loc: Location) -> Result<Self> {
+        let mut options = DisassemblerOptions::new();
+        options.print_code = true;
+        Ok(Self {
+            source_mapper: SourceMapping::new_from_script(script, default_loc)?,
             options,
             coverage_map: None,
         })
