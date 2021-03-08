@@ -96,6 +96,23 @@ impl VMValidator for DiemVMValidator {
             true,
         ) {
             Ok((price, _)) => (None, price),
+            // TODO: this is a hack for a one-time cluster test only, it should never be committed!
+            Err(VMStatus::Error(StatusCode::FEATURE_UNDER_GATING)) => {
+                let gas_price = txn.gas_unit_price();
+                let currency_code_string = txn.gas_currency_code();
+                let currency_code =
+                    match account_config::from_currency_code_string(currency_code_string) {
+                        Ok(code) => code,
+                        Err(_) => {
+                            unreachable!("This error should never be caught in this case branch")
+                        }
+                    };
+                let price = match get_currency_info(&currency_code, &remote_cache) {
+                    Ok(info) => info.convert_to_xdx(gas_price),
+                    Err(_) => unreachable!("This error should never be caught in this case branch"),
+                };
+                (None, price)
+            }
             Err(err) => (Some(err.status_code()), 0),
         };
 
