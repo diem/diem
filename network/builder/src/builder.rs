@@ -17,7 +17,7 @@ use diem_config::{
         MAX_CONNECTION_DELAY_MS, MAX_FRAME_SIZE, MAX_FULLNODE_OUTBOUND_CONNECTIONS,
         MAX_INBOUND_CONNECTIONS, NETWORK_CHANNEL_SIZE,
     },
-    network_id::NetworkContext,
+    network_id::{NetworkContext, NetworkId},
 };
 use diem_crypto::x25519::PublicKey;
 use diem_infallible::RwLock;
@@ -339,11 +339,21 @@ impl NetworkBuilder {
         channel_size: usize,
     ) -> &mut Self {
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let outbound_connection_limit = if !self.network_context.network_id().is_validator_network()
-        {
-            Some(max_outbound_connections)
-        } else {
-            None
+        let network_id = self.network_context.network_id();
+        let outbound_connection_limit = match network_id {
+            NetworkId::Validator => None,
+            NetworkId::Public => Some(max_outbound_connections),
+            NetworkId::Private(_) => {
+                if network_id.is_vfn_network() {
+                    // The VFN network is only a 1:1 connection, only FullNode does the calling
+                    match self.network_context.role() {
+                        RoleType::Validator => Some(0),
+                        RoleType::FullNode => Some(1),
+                    }
+                } else {
+                    Some(max_outbound_connections)
+                }
+            }
         };
 
         // Merge pubkeys that may be in the seed addresses
