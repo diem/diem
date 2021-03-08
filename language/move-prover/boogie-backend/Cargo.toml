@@ -13,7 +13,7 @@ bytecode = { path = "../bytecode" }
 move-model = { path = "../../move-model" }
 vm = { path = "../../vm" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-num = "0.3.0"
+num = "0.4.0"
 itertools = "0.10.0"
 diem-types = { path = "../../../types" }
 move-core-types = { path = "../../move-core/types" }

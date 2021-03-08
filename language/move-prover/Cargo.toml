@@ -33,7 +33,7 @@ handlebars = "3.5.3"
 hex = "0.4.3"
 itertools = "0.10.0"
 log = { version = "0.4.14", features = ["serde"] }
-num = "0.3.0"
+num = "0.4.0"
 pretty = "0.10.0"
 rand = "0.8.3"
 regex = "1.4.3"
