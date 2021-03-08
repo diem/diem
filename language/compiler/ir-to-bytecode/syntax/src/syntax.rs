@@ -391,6 +391,14 @@ fn parse_qualified_function_name(
         | Tok::BorrowGlobalMut
         | Tok::MoveFrom
         | Tok::MoveTo
+        | Tok::VecEmpty
+        | Tok::VecLen
+        | Tok::VecImmBorrow
+        | Tok::VecMutBorrow
+        | Tok::VecPushBack
+        | Tok::VecPopBack
+        | Tok::VecDestroyEmpty
+        | Tok::VecSwap
         | Tok::Freeze
         | Tok::ToU8
         | Tok::ToU64
@@ -522,6 +530,14 @@ fn parse_call_or_term_(tokens: &mut Lexer<'_>) -> Result<Exp_, ParseError<Loc, a
         | Tok::BorrowGlobalMut
         | Tok::MoveFrom
         | Tok::MoveTo
+        | Tok::VecEmpty
+        | Tok::VecLen
+        | Tok::VecImmBorrow
+        | Tok::VecMutBorrow
+        | Tok::VecPushBack
+        | Tok::VecPopBack
+        | Tok::VecDestroyEmpty
+        | Tok::VecSwap
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8
@@ -674,7 +690,9 @@ fn consume_end_of_generics(tokens: &mut Lexer<'_>) -> Result<(), ParseError<Loc,
 //     "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global_mut<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
+//     "move_to<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
+//     "vec_*<" <type_actuals: TypeActuals> ">" =>? { ... },
 //     "freeze" => Builtin::Freeze,
 // }
 
@@ -717,6 +735,46 @@ fn parse_builtin(tokens: &mut Lexer<'_>) -> Result<Builtin, ParseError<Loc, anyh
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_end_of_generics(tokens)?;
             Ok(Builtin::MoveTo(StructName::new(name), type_actuals))
+        }
+        Tok::VecEmpty => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecEmpty(type_actuals))
+        }
+        Tok::VecLen => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecLen(type_actuals))
+        }
+        Tok::VecImmBorrow => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecImmBorrow(type_actuals))
+        }
+        Tok::VecMutBorrow => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecMutBorrow(type_actuals))
+        }
+        Tok::VecPushBack => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecPushBack(type_actuals))
+        }
+        Tok::VecPopBack => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecPopBack(type_actuals))
+        }
+        Tok::VecDestroyEmpty => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecDestroyEmpty(type_actuals))
+        }
+        Tok::VecSwap => {
+            tokens.advance()?;
+            let type_actuals = parse_type_actuals(tokens)?;
+            Ok(Builtin::VecSwap(type_actuals))
         }
         Tok::Freeze => {
             tokens.advance()?;
@@ -890,6 +948,14 @@ fn parse_cmd_(tokens: &mut Lexer<'_>) -> Result<Cmd_, ParseError<Loc, anyhow::Er
         | Tok::BorrowGlobalMut
         | Tok::MoveFrom
         | Tok::MoveTo
+        | Tok::VecEmpty
+        | Tok::VecLen
+        | Tok::VecImmBorrow
+        | Tok::VecMutBorrow
+        | Tok::VecPushBack
+        | Tok::VecPopBack
+        | Tok::VecDestroyEmpty
+        | Tok::VecSwap
         | Tok::Freeze
         | Tok::DotNameValue
         | Tok::ToU8

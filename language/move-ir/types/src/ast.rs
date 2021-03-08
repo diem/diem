@@ -390,6 +390,23 @@ pub enum Builtin {
     /// Publish an instantiated struct object into signer's (signer is the first arg) account.
     MoveTo(StructName, Vec<Type>),
 
+    /// Create an empty vector
+    VecEmpty(Vec<Type>),
+    /// Get the length of a vector
+    VecLen(Vec<Type>),
+    /// Acquire an immutable reference to the element at a given index of the vector
+    VecImmBorrow(Vec<Type>),
+    /// Acquire a mutable reference to the element at a given index of the vector
+    VecMutBorrow(Vec<Type>),
+    /// Push an element to the end of the vector
+    VecPushBack(Vec<Type>),
+    /// Pop and return an element from the end of the vector
+    VecPopBack(Vec<Type>),
+    /// Destroy an empty vector
+    VecDestroyEmpty(Vec<Type>),
+    /// Swap the elements at twi indices in the vector
+    VecSwap(Vec<Type>),
+
     /// Convert a mutable reference into an immutable one
     Freeze,
 
@@ -1611,6 +1628,16 @@ impl fmt::Display for Builtin {
             }
             Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
             Builtin::MoveTo(t, tys) => write!(f, "move_to<{}{}>", t, format_type_actuals(tys)),
+            Builtin::VecEmpty(tys) => write!(f, "vec_empty{}", format_type_actuals(tys)),
+            Builtin::VecLen(tys) => write!(f, "vec_len{}", format_type_actuals(tys)),
+            Builtin::VecImmBorrow(tys) => write!(f, "vec_imm_borrow{}", format_type_actuals(tys)),
+            Builtin::VecMutBorrow(tys) => write!(f, "vec_mut_borrow{}", format_type_actuals(tys)),
+            Builtin::VecPushBack(tys) => write!(f, "vec_push_back{}", format_type_actuals(tys)),
+            Builtin::VecPopBack(tys) => write!(f, "vec_pop_back{}", format_type_actuals(tys)),
+            Builtin::VecDestroyEmpty(tys) => {
+                write!(f, "vec_destroy_empty{}", format_type_actuals(tys))
+            }
+            Builtin::VecSwap(tys) => write!(f, "vec_swap{}", format_type_actuals(tys)),
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::ToU8 => write!(f, "to_u8"),
             Builtin::ToU64 => write!(f, "to_u64"),

@@ -1676,7 +1676,88 @@ fn compile_call(
                             context.struct_instantiation_index(def_idx, type_actuals_id)?;
                         push_instr!(call.loc, Bytecode::MoveToGeneric(si_idx));
                     }
-                    function_frame.push()?;
+                    function_frame.pop()?; // pop the address
+                    function_frame.pop()?; // pop the value to be moved
+                    vec_deque![]
+                }
+                Builtin::VecEmpty(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecEmpty(type_actuals_id));
+
+                    function_frame.push()?; // push the return value
+
+                    // NOTE: we do actually infer the type here because we want to allow the type
+                    // actuals to have multiple tokens in order to test our bytecode verifier passes
+                    vec_deque![InferredType::Anything]
+                }
+                Builtin::VecLen(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecLen(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.push()?; // push the return value
+                    vec_deque![InferredType::U64]
+                }
+                Builtin::VecImmBorrow(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecImmBorrow(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.pop()?; // pop the index
+                    function_frame.push()?; // push the return value
+
+                    // NOTE: similar to VecEmpty, we do actually infer the type here
+                    vec_deque![InferredType::Anything]
+                }
+                Builtin::VecMutBorrow(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecMutBorrow(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.pop()?; // pop the index
+                    function_frame.push()?; // push the return value
+
+                    // NOTE: similar to VecEmpty, we do actually infer the type here
+                    vec_deque![InferredType::Anything]
+                }
+                Builtin::VecPushBack(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecPushBack(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.pop()?; // pop the value
+                    vec_deque![]
+                }
+                Builtin::VecPopBack(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecPopBack(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.push()?; // push the value
+                    vec_deque![InferredType::Anything]
+                }
+                Builtin::VecDestroyEmpty(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecDestroyEmpty(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    vec_deque![]
+                }
+                Builtin::VecSwap(tys) => {
+                    let tokens = compile_types(context, function_frame.type_parameters(), &tys)?;
+                    let type_actuals_id = context.signature_index(Signature(tokens))?;
+                    push_instr!(call.loc, Bytecode::VecSwap(type_actuals_id));
+
+                    function_frame.pop()?; // pop the vector ref
+                    function_frame.pop()?; // pop the first index
+                    function_frame.pop()?; // pop the second index
                     vec_deque![]
                 }
                 Builtin::Freeze => {
