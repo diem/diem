@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use anyhow::{ensure, Error, Result};
+use anyhow::{anyhow, Error, Result};
 use fallible::copy_from_slice::copy_slice_to_vec;
 use serde::{de, ser, Deserialize, Serialize};
 use std::{
@@ -65,8 +65,8 @@ impl EventKey {
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
         let mut output_bytes = [0; Self::LENGTH];
         let (lhs, rhs) = output_bytes.split_at_mut(8);
-        copy_slice_to_vec(&salt.to_le_bytes(), &mut lhs).expect("length mismatch");
-        copy_slice_to_vec(addr.as_ref(), &mut rhs).expect("length mismatch");
+        copy_slice_to_vec(&salt.to_le_bytes(), lhs).expect("length mismatch");
+        copy_slice_to_vec(addr.as_ref(), rhs).expect("length mismatch");
         EventKey(output_bytes)
     }
 }

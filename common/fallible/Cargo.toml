@@ -2,7 +2,7 @@
 name = "fallible"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Diem diem-infallible"
+description = "Diem fallible"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
