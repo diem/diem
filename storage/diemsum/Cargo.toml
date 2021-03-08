@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 structopt = "0.3.21"
-serde = "1.0.123"
+serde = "1.0.124"
 serde_json = "1.0.64"
 
 diemdb = { path = "../diemdb", features = ["diemsum"] }

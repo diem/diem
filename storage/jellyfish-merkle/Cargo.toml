@@ -18,7 +18,7 @@ num-traits = "0.2.14"
 proptest = { version = "1.0.0", optional = true }
 proptest-derive = { version = "0.3.0", optional = true }
 rand = { version = "0.8.3", optional = true }
-serde = { version = "1.0.123", features = ["derive"] }
+serde = { version = "1.0.124", features = ["derive"] }
 thiserror = "1.0.24"
 
 bcs = "0.1.2"

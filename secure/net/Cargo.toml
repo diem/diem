@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 once_cell = "1.7.2"
-serde = { version = "1.0.123", features = ["rc"], default-features = false }
+serde = { version = "1.0.124", features = ["rc"], default-features = false }
 thiserror = "1.0.24"
 
 diem-logger = { path = "../../common/logger" }

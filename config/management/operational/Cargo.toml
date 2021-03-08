@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 hex = "0.4.3"
-serde = { version = "1.0.123", features = ["rc"], default-features = false }
+serde = { version = "1.0.124", features = ["rc"], default-features = false }
 serde_json = "1.0.64"
 structopt = "0.3.21"
 thiserror = "1.0.24"

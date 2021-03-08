@@ -16,7 +16,7 @@ hex = "0.4.3"
 hmac = "0.10.1"
 byteorder = "1.4.2"
 pbkdf2 = "0.7.3"
-serde = "1.0.123"
+serde = "1.0.124"
 sha2 = "0.9.3"
 thiserror = "1.0.24"
 ed25519-dalek = { version = "0.1.0", package = "ed25519-dalek-fiat", default-features = false, features = ["std", "fiat_u64_backend"] }

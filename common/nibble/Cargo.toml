@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 diem-workspace-hack = { path = "../workspace-hack" }
 proptest = { version = "1.0.0", optional = true }
-serde = { version = "1.0.123", features = ["derive"] }
+serde = { version = "1.0.124", features = ["derive"] }
 
 [features]
 default = []

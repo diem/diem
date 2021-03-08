@@ -19,7 +19,7 @@ proptest = { version = "1.0.0", default-features = false, optional = true }
 proptest-derive = { version = "0.3.0", default-features = false, optional = true }
 rand = "0.8.3"
 ref-cast = "1.0.6"
-serde = { version = "1.0.123", default-features = false }
+serde = { version = "1.0.124", default-features = false }
 serde_bytes = "0.11.5"
 thiserror = "1.0.24"
 
