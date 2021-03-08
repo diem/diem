@@ -3,15 +3,18 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest_derive::Arbitrary;
-#[cfg(any(test, feature = "fuzzing"))]
-use rand::{rngs::OsRng, RngCore};
+use fallible::copy_from_slice::copy_slice_to_vec;
 use serde::{de, ser, Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
     str::FromStr,
+};
+
+#[cfg(any(test, feature = "fuzzing"))]
+use ::{
+    proptest_derive::Arbitrary,
+    rand::{rngs::OsRng, RngCore},
 };
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
@@ -62,8 +65,8 @@ impl EventKey {
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
         let mut output_bytes = [0; Self::LENGTH];
         let (lhs, rhs) = output_bytes.split_at_mut(8);
-        lhs.copy_from_slice(&salt.to_le_bytes());
-        rhs.copy_from_slice(addr.as_ref());
+        copy_slice_to_vec(&salt.to_le_bytes(), &mut lhs).expect("length mismatch");
+        copy_slice_to_vec(addr.as_ref(), &mut rhs).expect("length mismatch");
         EventKey(output_bytes)
     }
 }
@@ -136,13 +139,9 @@ impl TryFrom<&[u8]> for EventKey {
 
     /// Tries to convert the provided byte array into Event Key.
     fn try_from(bytes: &[u8]) -> Result<EventKey> {
-        ensure!(
-            bytes.len() == Self::LENGTH,
-            "The Event Key {:?} is of invalid length",
-            bytes
-        );
         let mut addr = [0u8; Self::LENGTH];
-        addr.copy_from_slice(bytes);
+        copy_slice_to_vec(bytes, &mut addr)
+            .map_err(|_| anyhow!("The Event Key {:?} is of invalid length", bytes))?;
         Ok(EventKey(addr))
     }
 }

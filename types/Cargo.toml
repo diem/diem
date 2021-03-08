@@ -31,6 +31,7 @@ bcs = "0.1.2"
 diem-crypto = { path = "../crypto/crypto" }
 diem-crypto-derive = { path = "../crypto/crypto-derive" }
 diem-workspace-hack = { path = "../common/workspace-hack" }
+fallible = { path = "../common/fallible" }
 move-core-types = { path = "../language/move-core/types" }
 
 [dev-dependencies]

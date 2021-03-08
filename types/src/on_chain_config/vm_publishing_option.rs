@@ -3,6 +3,7 @@
 
 use crate::{on_chain_config::OnChainConfig, transaction::SCRIPT_HASH_LENGTH};
 use anyhow::{format_err, Result};
+use fallible::copy_from_slice::copy_slice_to_vec;
 use serde::{Deserialize, Serialize};
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
@@ -71,7 +72,7 @@ impl OnChainConfig for VMPublishingOption {
                 .into_iter()
                 .map(|v| {
                     let mut hash: [u8; SCRIPT_HASH_LENGTH] = [0; SCRIPT_HASH_LENGTH];
-                    hash.copy_from_slice(v.as_ref());
+                    copy_slice_to_vec(v.as_ref(), &mut hash).expect("length mismatch");
                     hash
                 })
                 .collect(),

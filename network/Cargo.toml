@@ -43,6 +43,7 @@ diem-rate-limiter = { path = "../common/rate-limiter"}
 diem-time-service = { path = "../common/time-service", features = ["async"] }
 diem-types = { path = "../types" }
 diem-workspace-hack = { path = "../common/workspace-hack" }
+fallible = { path = "../common/fallible", version = "0.1.0"}
 memsocket = { path = "./memsocket", optional = true }
 netcore = { path = "./netcore" }
 num-variants = { path = "../common/num-variants" }

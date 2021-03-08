@@ -21,6 +21,7 @@ use std::{
 
 use diem_crypto::{noise, x25519};
 use diem_logger::prelude::*;
+use fallible::copy_from_slice::copy_slice_to_vec;
 
 //
 // NoiseStream
@@ -172,9 +173,10 @@ where
                 } => {
                     let bytes_to_copy =
                         ::std::cmp::min(decrypted_len as usize - *offset, buf.len());
-                    buf[..bytes_to_copy].copy_from_slice(
+                    copy_slice_to_vec(
                         &self.buffers.read_buffer[*offset..(*offset + bytes_to_copy)],
-                    );
+                        &mut buf[..bytes_to_copy],
+                    )?;
                     trace!(
                         "CopyDecryptedFrame: copied {}/{} bytes",
                         *offset + bytes_to_copy,

@@ -11,11 +11,13 @@ use diem_crypto::{
     CryptoMaterialError, HashValue, ValidCryptoMaterial, ValidCryptoMaterialStringExt,
 };
 use diem_crypto_derive::{CryptoHasher, DeserializeKey, SerializeKey};
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest_derive::Arbitrary;
+use fallible::copy_from_slice::copy_slice_to_vec;
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};
+
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
 
 /// A `TransactionAuthenticator` is an an abstraction of a signature scheme. It must know:
 /// (1) How to check its signature against a message and public key
@@ -179,14 +181,15 @@ impl AuthenticationKey {
     pub fn derived_address(&self) -> AccountAddress {
         // keep only last 16 bytes
         let mut array = [0u8; AccountAddress::LENGTH];
-        array.copy_from_slice(&self.0[Self::LENGTH - AccountAddress::LENGTH..]);
+        copy_slice_to_vec(&self.0[Self::LENGTH - AccountAddress::LENGTH..], &mut array)
+            .expect("length mismatch");
         AccountAddress::new(array)
     }
 
     /// Return the first AccountAddress::LENGTH bytes of this authentication key
     pub fn prefix(&self) -> [u8; AccountAddress::LENGTH] {
         let mut array = [0u8; AccountAddress::LENGTH];
-        array.copy_from_slice(&self.0[..AccountAddress::LENGTH]);
+        copy_slice_to_vec(&self.0[..AccountAddress::LENGTH], &mut array).expect("length mismatch");
         array
     }
 
@@ -251,11 +254,8 @@ impl TryFrom<&[u8]> for AuthenticationKey {
     type Error = CryptoMaterialError;
 
     fn try_from(bytes: &[u8]) -> std::result::Result<AuthenticationKey, CryptoMaterialError> {
-        if bytes.len() != Self::LENGTH {
-            return Err(CryptoMaterialError::WrongLengthError);
-        }
         let mut addr = [0u8; Self::LENGTH];
-        addr.copy_from_slice(bytes);
+        copy_slice_to_vec(&bytes, &mut addr).map_err(|_| CryptoMaterialError::WrongLengthError)?;
         Ok(AuthenticationKey(addr))
     }
 }
