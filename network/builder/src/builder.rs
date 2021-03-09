@@ -210,49 +210,32 @@ impl NetworkBuilder {
         // Sanity check seed addresses.
         config.verify_seeds().expect("Seeds must be well formed");
 
-        // Don't turn on connectivity manager if we're a public-facing server,
-        // for example.
-        //
-        // Cases that require connectivity manager:
-        //
-        // 1) mutual authentication networks currently require connmgr to set the
-        //    trusted peers set.
-        // 2) networks with a discovery protocol need connmgr to connect to newly
-        //    discovered peers.
-        // 3) if we have seed peers, then we need connmgr to connect to them.
-        // TODO(philiphayes): could probably use a better way to specify these cases
-        // TODO:  Why not add ConnectivityManager always?
-        if config.mutual_authentication
-            || config.discovery_method != DiscoveryMethod::None
-            || !config.seed_addrs.is_empty()
-            || !config.seeds.is_empty()
-        {
-            let mut seeds = config.seeds.clone();
+        // Always add connectivity manager, it's used for keeping track of known peers for
+        // Inbound and Outbound connections
+        let mut seeds = config.seeds.clone();
 
-            // Merge old seed configuration with new seed configuration
-            // TODO(gnazario): Once fully migrated, remove `seed_addrs`
-            config
-                .seed_addrs
-                .iter()
-                .map(|(peer_id, addrs)| {
-                    (peer_id, Peer::from_addrs(PeerRole::Upstream, addrs.clone()))
-                })
-                .for_each(|(peer_id, peer)| {
-                    let seed = seeds.entry(*peer_id).or_default();
-                    seed.extend(peer).unwrap();
-                });
+        // Merge old seed configuration with new seed configuration
+        // TODO(gnazario): Once fully migrated, remove `seed_addrs`
+        config
+            .seed_addrs
+            .iter()
+            .map(|(peer_id, addrs)| (peer_id, Peer::from_addrs(PeerRole::Upstream, addrs.clone())))
+            .for_each(|(peer_id, peer)| {
+                let seed = seeds.entry(*peer_id).or_default();
+                seed.extend(peer).unwrap();
+            });
 
-            network_builder.add_connectivity_manager(
-                &seeds,
-                trusted_peers,
-                config.max_outbound_connections,
-                config.connection_backoff_base,
-                config.max_connection_delay_ms,
-                config.connectivity_check_interval_ms,
-                config.network_channel_size,
-            );
-        }
+        network_builder.add_connectivity_manager(
+            &seeds,
+            trusted_peers,
+            config.max_outbound_connections,
+            config.connection_backoff_base,
+            config.max_connection_delay_ms,
+            config.connectivity_check_interval_ms,
+            config.network_channel_size,
+        );
 
+        // TODO: Why not always have onchain discovery?
         match &config.discovery_method {
             DiscoveryMethod::Onchain => {
                 network_builder.add_configuration_change_listener(pubkey, config.encryptor());
