@@ -418,16 +418,20 @@ where
     }
 
     fn choose_peers_to_dial(&mut self) -> Vec<(PeerId, DiscoveredPeer)> {
-        let to_connect: Vec<_> = self
-            .discovered_peers
-            .0
-            .iter()
-            .filter(|(peer_id, peer)| {
-                peer.is_eligible_to_be_dialed() // The node is eligible to dial
+        let eligible = self.discovered_peers.0.iter().filter(|(peer_id, peer)| {
+            peer.is_eligible_to_be_dialed() // The node is eligible to dial
                     && self.connected.get(peer_id).is_none() // The node is not already connected.
                     && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
-            })
-            .collect();
+        });
+
+        // Prioritize by `PeerRole`
+        let mut count: usize = 0;
+        let mut prioritized: HashMap<PeerRole, Vec<_>> = HashMap::new();
+        eligible.for_each(|(peer_id, peer)| {
+            let role = peer.role;
+            prioritized.entry(role).or_default().push((*peer_id, peer));
+            count = count.saturating_add(1);
+        });
 
         // Limit the number of dialed connections from a Full Node
         // This does not limit the number of incoming connections
@@ -435,16 +439,45 @@ where
         // including in flight dials.
         let to_connect_size = if let Some(conn_limit) = self.outbound_connection_limit {
             min(
-                conn_limit.saturating_sub(self.connected.len() + self.dial_queue.len()),
-                to_connect.len(),
+                conn_limit
+                    .saturating_sub(self.connected.len().saturating_add(self.dial_queue.len())),
+                count,
             )
         } else {
-            to_connect.len()
+            count
         };
-        to_connect
-            .choose_multiple(&mut self.rng, to_connect_size)
-            .map(|(peer_id, peer)| (**peer_id, (*peer).clone()))
-            .collect()
+
+        let network_id = self.network_context.network_id();
+        let role = self.network_context.role();
+        let peer_roles = if network_id.is_validator_network() {
+            network_id.p2p_roles(&role)
+        } else {
+            network_id.upstream_roles(&role)
+        };
+
+        let mut to_dial = Vec::new();
+        let mut connected_left = to_connect_size;
+        for peer_role in peer_roles {
+            if connected_left == 0 {
+                break;
+            }
+
+            if let Some(peers) = prioritized.get(peer_role) {
+                if connected_left >= peers.len() {
+                    peers
+                        .iter()
+                        .for_each(|(peer_id, peer)| to_dial.push((*peer_id, (*peer).clone())));
+                } else {
+                    peers
+                        .choose_multiple(&mut self.rng, connected_left)
+                        .for_each(|(peer_id, peer)| to_dial.push((*peer_id, (*peer).clone())));
+                }
+
+                connected_left = connected_left.saturating_sub(peers.len());
+            }
+        }
+
+        to_dial
     }
 
     fn queue_dial_peer<'a>(
