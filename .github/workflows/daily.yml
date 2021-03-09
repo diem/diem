@@ -107,3 +107,22 @@ jobs:
         run: |
           cargo run --release --bin db-restore -- --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
       - uses: ./.github/actions/build-teardown
+
+  prune-docker-images:
+    runs-on: ubuntu-latest
+    env:
+      TAG: github-1
+    steps:
+      - uses: actions/checkout@v2
+      - name: sign in to DockerHub; install image signing cert
+        uses: ./.github/actions/dockerhub_login
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: prune Docker image
+        if: ${{ github.ref != 'refs/heads/auto' }}
+        run: |
+          scripts/dockerhub_prune.sh -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_PASSWORD }}" -x

@@ -94,10 +94,6 @@ jobs:
           docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -g libra
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
-      - name: docker image pruning.
-        if: ${{ github.ref != 'refs/heads/auto' }}
-        run: |
-          scripts/dockerhub_prune.sh -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_PASSWORD }}" -x
       - name: push to novi ecr
         if: ${{ always() && github.ref != 'refs/heads/auto' }}
         run: |
