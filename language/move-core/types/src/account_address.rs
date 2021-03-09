@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Result};
 use hex::FromHex;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
@@ -46,30 +45,24 @@ impl AccountAddress {
         self.0
     }
 
-    pub fn from_hex_literal(literal: &str) -> Result<Self> {
-        ensure!(literal.starts_with("0x"), "literal must start with 0x.");
+    pub fn from_hex_literal(literal: &str) -> Result<Self, AccountAddressParseError> {
+        if !literal.starts_with("0x") {
+            return Err(AccountAddressParseError);
+        }
 
         let hex_len = literal.len() - 2;
-        let mut result = if hex_len % 2 != 0 {
-            let mut hex_str = String::with_capacity(hex_len + 1);
-            hex_str.push('0');
+
+        // If the string is too short, pad it
+        if hex_len < Self::LENGTH * 2 {
+            let mut hex_str = String::with_capacity(Self::LENGTH * 2);
+            for _ in 0..Self::LENGTH * 2 - hex_len {
+                hex_str.push('0');
+            }
             hex_str.push_str(&literal[2..]);
-            hex::decode(&hex_str)?
+            AccountAddress::from_hex(hex_str)
         } else {
-            hex::decode(&literal[2..])?
-        };
-
-        let len = result.len();
-        let padded_result = if len < Self::LENGTH {
-            let mut padded = Vec::with_capacity(Self::LENGTH);
-            padded.resize(Self::LENGTH - len, 0u8);
-            padded.append(&mut result);
-            padded
-        } else {
-            result
-        };
-
-        AccountAddress::try_from(padded_result).map_err(Into::into)
+            AccountAddress::from_hex(&literal[2..])
+        }
     }
 
     pub fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, AccountAddressParseError> {
@@ -320,6 +313,22 @@ mod tests {
         let address = AccountAddress::from_hex(hex).unwrap();
 
         assert_eq!(address.as_ref().to_vec(), bytes);
+    }
+
+    #[test]
+    fn test_from_hex_literal() {
+        let hex_literal = "0x1";
+        let hex = "00000000000000000000000000000001";
+
+        let address_from_literal = AccountAddress::from_hex_literal(hex_literal).unwrap();
+        let address = AccountAddress::from_hex(hex).unwrap();
+
+        assert_eq!(address_from_literal, address);
+
+        // Missing '0x'
+        AccountAddress::from_hex_literal(hex).unwrap_err();
+        // Too long
+        AccountAddress::from_hex_literal("0x100000000000000000000000000000001").unwrap_err();
     }
 
     #[test]

@@ -373,7 +373,7 @@ fn run(
     let signer_addresses = signers
         .iter()
         .map(|s| AccountAddress::from_hex_literal(&s))
-        .collect::<Result<Vec<AccountAddress>>>()?;
+        .collect::<Result<Vec<AccountAddress>, _>>()?;
     // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
     let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
