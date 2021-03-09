@@ -205,6 +205,11 @@ mark-changed = []
 globs = ["diem.png", ".assets/diem.png", "storage/data.png"]
 mark-changed = []
 
+[[determinator.path-rule]]
+# Ignore *.md documentation
+globs = ["*.md"]
+mark-changed = []
+
 [[determinator.package-rule]]
 # x controls the build process, so if it changes, build everything.
 on-affected = ["x"]
