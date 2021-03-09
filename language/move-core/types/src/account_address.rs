@@ -78,6 +78,10 @@ impl AccountAddress {
             .map(Self)
     }
 
+    pub fn to_hex(&self) -> String {
+        format!("{:x}", self)
+    }
+
     pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, AccountAddressParseError> {
         <[u8; Self::LENGTH]>::try_from(bytes.as_ref())
             .map_err(|_| AccountAddressParseError)
@@ -216,7 +220,7 @@ impl<'de> Deserialize<'de> for AccountAddress {
     {
         if deserializer.is_human_readable() {
             let s = <String>::deserialize(deserializer)?;
-            AccountAddress::try_from(s).map_err(D::Error::custom)
+            AccountAddress::from_hex(s).map_err(D::Error::custom)
         } else {
             // In order to preserve the Serde data model and help analysis tools,
             // make sure to wrap our value in a container with the same name
@@ -237,7 +241,7 @@ impl Serialize for AccountAddress {
         S: Serializer,
     {
         if serializer.is_human_readable() {
-            self.to_string().serialize(serializer)
+            self.to_hex().serialize(serializer)
         } else {
             // See comment in deserialize.
             serializer.serialize_newtype_struct("AccountAddress", &self.0)
@@ -337,6 +341,20 @@ mod tests {
         let address2: AccountAddress =
             serde_json::from_value(json_value).expect("serde_json::from_value fail.");
         assert_eq!(address, address2)
+    }
+
+    #[test]
+    fn test_serde_json() {
+        let hex = "ca843279e3427144cead5e4d5999a3d0";
+        let json_hex = "\"ca843279e3427144cead5e4d5999a3d0\"";
+
+        let address = AccountAddress::from_hex(hex).unwrap();
+
+        let json = serde_json::to_string(&address).unwrap();
+        let json_address: AccountAddress = serde_json::from_str(json_hex).unwrap();
+
+        assert_eq!(json, json_hex);
+        assert_eq!(address, json_address);
     }
 
     #[test]
