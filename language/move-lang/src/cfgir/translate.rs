@@ -12,6 +12,7 @@ use crate::{
     hlir::ast::{self as H, Label},
     parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
     shared::unique_map::UniqueMap,
+    FullyCompiledProgram,
 };
 use diem_types::account_address::AccountAddress as DiemAddress;
 use move_core_types::value::MoveValue;
@@ -40,10 +41,28 @@ struct Context {
 }
 
 impl Context {
-    pub fn new(prog: &H::Program, errors: Errors) -> Self {
-        let struct_declared_abilities = prog
-            .modules
-            .ref_map(|_m, mdef| mdef.structs.ref_map(|_s, sdef| sdef.abilities.clone()));
+    pub fn new(
+        pre_compiled_lib: Option<&FullyCompiledProgram>,
+        prog: &H::Program,
+        errors: Errors,
+    ) -> Self {
+        let all_modules = prog.modules.key_cloned_iter().chain(
+            pre_compiled_lib
+                .iter()
+                .map(|pre_compiled| {
+                    pre_compiled
+                        .hlir
+                        .modules
+                        .key_cloned_iter()
+                        .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+                })
+                .flatten(),
+        );
+        let struct_declared_abilities = UniqueMap::maybe_from_iter(
+            all_modules
+                .map(|(m, mdef)| (m, mdef.structs.ref_map(|_s, sdef| sdef.abilities.clone()))),
+        )
+        .unwrap();
         Context {
             errors,
             struct_declared_abilities,
@@ -133,10 +152,18 @@ impl Context {
 // Entry
 //**************************************************************************************************
 
-pub fn program(errors: Errors, prog: H::Program) -> (G::Program, Errors) {
-    let mut context = Context::new(&prog, errors);
-    let modules = modules(&mut context, prog.modules);
-    let scripts = scripts(&mut context, prog.scripts);
+pub fn program(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    errors: Errors,
+    prog: H::Program,
+) -> (G::Program, Errors) {
+    let mut context = Context::new(pre_compiled_lib, &prog, errors);
+    let H::Program {
+        modules: hmodules,
+        scripts: hscripts,
+    } = prog;
+    let modules = modules(&mut context, hmodules);
+    let scripts = scripts(&mut context, hscripts);
 
     (G::Program { modules, scripts }, context.get_errors())
 }

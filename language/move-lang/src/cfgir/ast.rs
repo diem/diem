@@ -18,7 +18,7 @@ use std::collections::{BTreeMap, VecDeque};
 // Program
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
@@ -28,7 +28,7 @@ pub struct Program {
 // Scripts
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Script {
     pub loc: Loc,
     pub constants: UniqueMap<ConstantName, Constant>,
@@ -40,7 +40,7 @@ pub struct Script {
 // Modules
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleDefinition {
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
@@ -55,7 +55,7 @@ pub struct ModuleDefinition {
 // Constants
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Constant {
     pub loc: Loc,
     pub signature: BaseType,
@@ -66,7 +66,7 @@ pub struct Constant {
 // Functions
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum FunctionBody_ {
     Native,
     Defined {
@@ -77,7 +77,7 @@ pub enum FunctionBody_ {
 }
 pub type FunctionBody = Spanned<FunctionBody_>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,

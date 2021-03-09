@@ -14,6 +14,7 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
+    FullyCompiledProgram,
 };
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, VecDeque};
@@ -22,10 +23,18 @@ use std::collections::{BTreeMap, VecDeque};
 // Entry
 //**************************************************************************************************
 
-pub fn program(prog: N::Program, errors: Errors) -> (T::Program, Errors) {
-    let mut context = Context::new(&prog, errors);
-    let modules = modules(&mut context, prog.modules);
-    let scripts = scripts(&mut context, prog.scripts);
+pub fn program(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    prog: N::Program,
+    errors: Errors,
+) -> (T::Program, Errors) {
+    let mut context = Context::new(pre_compiled_lib, &prog, errors);
+    let N::Program {
+        modules: nmodules,
+        scripts: nscripts,
+    } = prog;
+    let modules = modules(&mut context, nmodules);
+    let scripts = scripts(&mut context, nscripts);
 
     assert!(context.constraints.is_empty());
     let mut errors = context.get_errors();

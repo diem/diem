@@ -8,7 +8,8 @@ use functional_tests::{
     testsuite,
 };
 use move_lang::{
-    command_line::read_bool_env_var, compiled_unit::CompiledUnit, move_compile, shared::Address,
+    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors, shared::Address,
+    FullyCompiledProgram,
 };
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
@@ -17,16 +18,54 @@ pub const STD_LIB_DIR: &str = "../../diem-framework/modules";
 pub const FUNCTIONAL_TEST_DIR: &str = "tests";
 
 struct MoveSourceCompiler {
+    pre_compiled_deps: FullyCompiledProgram,
     deps: Vec<String>,
     temp_files: Vec<NamedTempFile>,
 }
 
 impl MoveSourceCompiler {
     fn new(deps: Vec<String>) -> Self {
+        let (files, program_res) =
+            move_lang::move_construct_pre_compiled_lib(&deps, None, None, false).unwrap();
+        let pre_compiled_deps = match program_res {
+            Ok(stdlib) => stdlib,
+            Err(errors) => {
+                eprintln!("!!!Standard library failed to compile!!!");
+                errors::report_errors(files, errors)
+            }
+        };
         MoveSourceCompiler {
-            deps,
+            pre_compiled_deps,
+            deps: vec![],
             temp_files: vec![],
         }
+    }
+
+    fn move_compile_with_stdlib(
+        &self,
+        targets: &[String],
+        sender: Option<Address>,
+    ) -> anyhow::Result<(
+        errors::FilesSourceText,
+        Result<Vec<CompiledUnit>, errors::Errors>,
+    )> {
+        let (files, pprog_and_comments_res) =
+            move_lang::move_parse(targets, &self.deps, sender, None)?;
+        let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+            Err(errors) => return Ok((files, Err(errors))),
+            Ok(res) => res,
+        };
+
+        let result = match move_lang::move_continue_up_to(
+            Some(&self.pre_compiled_deps),
+            move_lang::PassResult::Parser(sender_opt, pprog),
+            move_lang::Pass::Compilation,
+        ) {
+            Ok(move_lang::PassResult::Compilation(units)) => Ok(units),
+            Ok(_) => unreachable!(),
+            Err(errors) => Err(errors),
+        };
+        Ok((files, result))
     }
 }
 
@@ -56,7 +95,8 @@ impl Compiler for MoveSourceCompiler {
 
         let targets = &vec![cur_path.clone()];
         let sender = Some(sender_addr);
-        let (files, units_or_errors) = move_compile(targets, &self.deps, sender, None, false)?;
+
+        let (files, units_or_errors) = self.move_compile_with_stdlib(targets, sender)?;
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = if read_bool_env_var(testsuite::PRETTY) {

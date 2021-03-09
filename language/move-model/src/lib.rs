@@ -75,6 +75,7 @@ pub fn run_model_builder(
     }
     // Run the compiler up to expansion and clone a copy of the expansion program ast
     let (expansion_ast, expansion_result) = match move_continue_up_to(
+        None,
         MovePassResult::Parser(addr_opt, parsed_prog),
         MovePass::Expansion,
     ) {
@@ -88,7 +89,7 @@ pub fn run_model_builder(
         Ok(_) => unreachable!(),
     };
     // Run the compiler fully to the compiled units
-    let units = match move_continue_up_to(expansion_result, MovePass::Compilation) {
+    let units = match move_continue_up_to(None, expansion_result, MovePass::Compilation) {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);

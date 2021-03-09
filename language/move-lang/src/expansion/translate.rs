@@ -13,6 +13,7 @@ use crate::{
         ModuleName, StructName, Var,
     },
     shared::{unique_map::UniqueMap, *},
+    FullyCompiledProgram,
 };
 use move_ir_types::location::*;
 use std::{
@@ -114,19 +115,47 @@ impl Context {
 // Entry
 //**************************************************************************************************
 
-pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors) {
+pub fn program(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    prog: P::Program,
+    sender: Option<Address>,
+) -> (E::Program, Errors) {
     let module_members = {
         let mut members = UniqueMap::new();
         all_module_members(&mut members, sender, &prog.lib_definitions);
         all_module_members(&mut members, sender, &prog.source_definitions);
+        if let Some(pre_compiled) = pre_compiled_lib {
+            assert!(pre_compiled.parser.1.source_definitions.is_empty());
+            for def in pre_compiled.parser.1.lib_definitions.iter() {
+                match def {
+                    P::Definition::Module(_) => {
+                        unimplemented!("top level modules not supported in pre compiled lib")
+                    }
+                    P::Definition::Address(_, a, ms) => {
+                        for m in ms {
+                            if members.contains_key_(&(*a, m.name.value().to_owned())) {
+                                continue;
+                            }
+                            module_members(&mut members, *a, m)
+                        }
+                    }
+                    P::Definition::Script(_) => (),
+                }
+            }
+        }
         members
     };
     let mut context = Context::new(module_members);
     let mut module_map = UniqueMap::new();
     let mut scripts = vec![];
 
+    let P::Program {
+        source_definitions,
+        lib_definitions,
+    } = prog;
+
     context.is_source_module = false;
-    for def in prog.lib_definitions {
+    for def in lib_definitions {
         match def {
             P::Definition::Module(m) => module(&mut context, sender, &mut module_map, m),
             P::Definition::Address(_, addr, ms) => {
@@ -139,7 +168,7 @@ pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors
     }
 
     context.is_source_module = true;
-    for def in prog.source_definitions {
+    for def in source_definitions {
         match def {
             P::Definition::Module(m) => module(&mut context, sender, &mut module_map, m),
             P::Definition::Address(_, addr, ms) => {
@@ -358,10 +387,10 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 // Aliases
 //**************************************************************************************************
 
-fn all_module_members(
+fn all_module_members<'a>(
     members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
     sender: Option<Address>,
-    defs: &[P::Definition],
+    defs: impl IntoIterator<Item = &'a P::Definition>,
 ) {
     for def in defs {
         match def {

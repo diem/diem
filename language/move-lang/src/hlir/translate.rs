@@ -9,6 +9,7 @@ use crate::{
     parser::ast::{BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
+    FullyCompiledProgram,
 };
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -149,10 +150,17 @@ impl Context {
 // Entry
 //**************************************************************************************************
 
-pub fn program(prog: T::Program) -> (H::Program, Errors) {
+pub fn program(
+    _pre_compiled_lib: Option<&FullyCompiledProgram>,
+    prog: T::Program,
+) -> (H::Program, Errors) {
     let mut context = Context::new(vec![]);
-    let modules = modules(&mut context, prog.modules);
-    let scripts = scripts(&mut context, prog.scripts);
+    let T::Program {
+        modules: tmodules,
+        scripts: tscripts,
+    } = prog;
+    let modules = modules(&mut context, tmodules);
+    let scripts = scripts(&mut context, tscripts);
 
     (H::Program { modules, scripts }, context.get_errors())
 }

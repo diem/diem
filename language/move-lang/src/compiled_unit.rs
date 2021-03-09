@@ -17,26 +17,26 @@ use std::collections::BTreeMap;
 // Compiled Unit
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VarInfo {
     pub type_: H::SingleType,
     pub index: F::LocalIndex,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpecInfo {
     pub offset: F::CodeOffset,
     // Free locals that are used but not declared in the block
     pub used_locals: UniqueMap<Var, VarInfo>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionInfo {
     pub spec_info: BTreeMap<SpecId, SpecInfo>,
     pub parameters: Vec<(Var, VarInfo)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CompiledUnit {
     Module {
         ident: ModuleIdent,

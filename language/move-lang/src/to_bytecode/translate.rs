@@ -17,6 +17,7 @@ use crate::{
         ModuleIdent, StructName, UnaryOp, UnaryOp_, Var,
     },
     shared::{unique_map::UniqueMap, *},
+    FullyCompiledProgram,
 };
 use bytecode_source_map::source_map::SourceMap;
 use diem_types::account_address::AccountAddress as DiemAddress;
@@ -30,33 +31,59 @@ type CollectedInfo = (
     BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
 );
 
-//**************************************************************************************************
-// Entry
-//**************************************************************************************************
+fn extract_decls(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    prog: &G::Program,
+) -> (
+    HashMap<ModuleIdent, usize>,
+    HashMap<
+        (ModuleIdent, StructName),
+        (
+            BTreeSet<IR::Ability>,
+            Vec<(IR::TypeVar, BTreeSet<IR::Ability>)>,
+        ),
+    >,
+    HashMap<
+        (ModuleIdent, FunctionName),
+        (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+    >,
+) {
+    let pre_compiled_modules = || {
+        pre_compiled_lib
+            .iter()
+            .map(|pre_compiled| {
+                pre_compiled
+                    .cfgir
+                    .modules
+                    .key_cloned_iter()
+                    .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+            })
+            .flatten()
+    };
 
-pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
-    let mut units = vec![];
-    let mut errors = vec![];
-    let orderings = prog
-        .modules
-        .key_cloned_iter()
-        .map(|(m, mdef)| (m, mdef.dependency_order))
+    let mut max_ordering = 0;
+    let mut orderings: HashMap<ModuleIdent, usize> = pre_compiled_modules()
+        .map(|(m, mdef)| {
+            max_ordering = std::cmp::max(max_ordering, mdef.dependency_order);
+            (m, mdef.dependency_order)
+        })
         .collect();
-    let sdecls = prog
-        .modules
-        .key_cloned_iter()
+    for (m, mdef) in prog.modules.key_cloned_iter() {
+        orderings.insert(m, mdef.dependency_order + 1 + max_ordering);
+    }
+
+    let all_modules = || prog.modules.key_cloned_iter().chain(pre_compiled_modules());
+    let sdecls = all_modules()
         .flat_map(|(m, mdef)| {
             mdef.structs.key_cloned_iter().map(move |(s, sdef)| {
                 let key = (m.clone(), s);
                 let abilities = abilities(&sdef.abilities);
-                let kinds = type_parameters(sdef.type_parameters.clone());
-                (key, (abilities, kinds))
+                let type_parameters = type_parameters(sdef.type_parameters.clone());
+                (key, (abilities, type_parameters))
             })
         })
         .collect();
-    let fdecls = prog
-        .modules
-        .key_cloned_iter()
+    let fdecls = all_modules()
         .flat_map(|(m, mdef)| {
             mdef.functions.key_cloned_iter().map(move |(f, fdef)| {
                 let key = (m.clone(), f);
@@ -66,9 +93,27 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
             })
         })
         .collect();
+    (orderings, sdecls, fdecls)
+}
 
-    let mut source_modules = prog
-        .modules
+//**************************************************************************************************
+// Entry
+//**************************************************************************************************
+
+pub fn program(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    prog: G::Program,
+) -> Result<Vec<CompiledUnit>, Errors> {
+    let mut units = vec![];
+    let mut errors = vec![];
+
+    let (orderings, sdecls, fdecls) = extract_decls(pre_compiled_lib, &prog);
+    let G::Program {
+        modules: gmodules,
+        scripts: gscripts,
+    } = prog;
+
+    let mut source_modules = gmodules
         .into_iter()
         .filter(|(_, mdef)| mdef.is_source_module)
         .collect::<Vec<_>>();
@@ -79,7 +124,7 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
             Err(err) => errors.push(err),
         }
     }
-    for (key, s) in prog.scripts {
+    for (key, s) in gscripts {
         let G::Script {
             loc: _,
             constants,

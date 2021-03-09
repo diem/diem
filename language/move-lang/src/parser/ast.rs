@@ -48,13 +48,13 @@ macro_rules! new_name {
 // Program
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub source_definitions: Vec<Definition>,
     pub lib_definitions: Vec<Definition>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Definition {
     Module(ModuleDefinition),
@@ -62,7 +62,7 @@ pub enum Definition {
     Script(Script),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Script {
     pub loc: Loc,
     pub uses: Vec<Use>,
@@ -92,14 +92,14 @@ pub struct ModuleIdent {
     pub value: (Address, String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleDefinition {
     pub loc: Loc,
     pub name: ModuleName,
     pub members: Vec<ModuleMember>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ModuleMember {
     Function(Function),
     Struct(StructDefinition),
@@ -113,7 +113,7 @@ pub enum ModuleMember {
 // Friends
 //**************************************************************************************************
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Friend_ {
     Module(ModuleName),
     QualifiedModule(ModuleIdent),
@@ -130,7 +130,7 @@ new_name!(StructName);
 
 pub type ResourceLoc = Option<Loc>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct StructDefinition {
     pub loc: Loc,
     pub abilities: Vec<Ability>,
@@ -139,7 +139,7 @@ pub struct StructDefinition {
     pub fields: StructFields,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum StructFields {
     Defined(Vec<(Field, Type)>),
     Native(Loc),
@@ -173,7 +173,7 @@ pub enum FunctionBody_ {
 }
 pub type FunctionBody = Spanned<FunctionBody_>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 // (public?) foo<T1(: copyable?), ..., TN(: copyable?)>(x1: t1, ..., xn: tn): t1 * ... * tn {
 //    body
 //  }
@@ -193,7 +193,7 @@ pub struct Function {
 
 new_name!(ConstantName);
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Constant {
     pub loc: Loc,
     pub signature: Type,

@@ -81,6 +81,16 @@ pub enum PassResult {
     Compilation(Vec<CompiledUnit>),
 }
 
+pub struct FullyCompiledProgram {
+    pub parser: (Option<Address>, parser::ast::Program),
+    pub expansion: expansion::ast::Program,
+    pub naming: naming::ast::Program,
+    pub typing: typing::ast::Program,
+    pub hlir: hlir::ast::Program,
+    pub cfgir: cfgir::ast::Program,
+    pub compiled: Vec<CompiledUnit>,
+}
+
 /// Given a set of targets and a set of dependencies
 /// - Checks the targets with the dependencies (targets can be dependencies of other targets)
 /// - If the `sources_shadow_deps` flag is set, modules defined in targets can shadow (i.e.,
@@ -110,7 +120,8 @@ pub fn move_check(
         pprog
     };
 
-    let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::CFGIR) {
+    let result = match move_continue_up_to(None, PassResult::Parser(sender_opt, pprog), Pass::CFGIR)
+    {
         Ok(PassResult::CFGIR(_)) => Ok(()),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -165,8 +176,11 @@ pub fn move_compile(
         pprog
     };
 
-    let result = match move_continue_up_to(PassResult::Parser(sender_opt, pprog), Pass::Compilation)
-    {
+    let result = match move_continue_up_to(
+        None,
+        PassResult::Parser(sender_opt, pprog),
+        Pass::Compilation,
+    ) {
         Ok(PassResult::Compilation(units)) => Ok(units),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -211,10 +225,96 @@ pub fn move_parse(
     Ok((files, result))
 }
 
+/// Given a set of dependencies, precompile them and save the ASTs so that they can be used again
+/// to compile against without having to recompile these dependencies
+pub fn move_construct_pre_compiled_lib(
+    deps: &[String],
+    sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
+) -> anyhow::Result<(FilesSourceText, Result<FullyCompiledProgram, Errors>)> {
+    let (files, pprog_and_comments_res) =
+        move_parse(&[], deps, sender_opt, interface_files_dir_opt)?;
+    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+        Err(errors) => return Ok((files, Err(errors))),
+        Ok(res) => res,
+    };
+
+    let pprog = if sources_shadow_deps {
+        shadow_lib_module_definitions(pprog, sender_opt)
+    } else {
+        pprog
+    };
+
+    let start = PassResult::Parser(sender_opt, pprog);
+    let mut parser = None;
+    let mut expansion = None;
+    let mut naming = None;
+    let mut typing = None;
+    let mut hlir = None;
+    let mut cfgir = None;
+    let mut compiled = None;
+
+    let save_result = |cur: &PassResult| match cur {
+        PassResult::Parser(sender_opt, prog) => {
+            assert!(parser.is_none());
+            parser = Some((*sender_opt, prog.clone()))
+        }
+        PassResult::Expansion(eprog, errors) => {
+            if !errors.is_empty() {
+                return;
+            }
+            assert!(expansion.is_none());
+            expansion = Some(eprog.clone())
+        }
+        PassResult::Naming(nprog, errors) => {
+            if !errors.is_empty() {
+                return;
+            }
+            assert!(naming.is_none());
+            naming = Some(nprog.clone())
+        }
+        PassResult::Typing(tprog) => {
+            assert!(typing.is_none());
+            typing = Some(tprog.clone())
+        }
+        PassResult::HLIR(hprog, errors) => {
+            if !errors.is_empty() {
+                return;
+            }
+            assert!(hlir.is_none());
+            hlir = Some(hprog.clone());
+        }
+        PassResult::CFGIR(cprog) => {
+            assert!(cfgir.is_none());
+            cfgir = Some(cprog.clone());
+        }
+        PassResult::Compilation(units) => {
+            assert!(compiled.is_none());
+            compiled = Some(units.clone())
+        }
+    };
+    let result = run(None, start, Pass::Compilation, save_result).map(|_| FullyCompiledProgram {
+        parser: parser.unwrap(),
+        expansion: expansion.unwrap(),
+        naming: naming.unwrap(),
+        typing: typing.unwrap(),
+        hlir: hlir.unwrap(),
+        cfgir: cfgir.unwrap(),
+        compiled: compiled.unwrap(),
+    });
+
+    Ok((files, result))
+}
+
 /// Runs the compiler from a previous result until a stopping point.
 /// The stopping point is inclusive, meaning the pass specified by `until: Pass` will be run
-pub fn move_continue_up_to(pass: PassResult, until: Pass) -> Result<PassResult, Errors> {
-    run(pass, until)
+pub fn move_continue_up_to(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    pass: PassResult,
+    until: Pass,
+) -> Result<PassResult, Errors> {
+    run(pre_compiled_lib, pass, until, |_| ())
 }
 
 //**************************************************************************************************
@@ -507,38 +607,74 @@ impl PassResult {
     }
 }
 
-fn run(cur: PassResult, until: Pass) -> Result<PassResult, Errors> {
+fn run(
+    pre_compiled_lib: Option<&FullyCompiledProgram>,
+    cur: PassResult,
+    until: Pass,
+    mut result_check: impl FnMut(&PassResult),
+) -> Result<PassResult, Errors> {
+    result_check(&cur);
     if cur.equivalent_pass() >= until {
         return Ok(cur);
     }
 
     match cur {
         PassResult::Parser(sender_opt, prog) => {
-            let (eprog, errors) = expansion::translate::program(prog, sender_opt);
-            run(PassResult::Expansion(eprog, errors), until)
+            let (eprog, errors) = expansion::translate::program(pre_compiled_lib, prog, sender_opt);
+            run(
+                pre_compiled_lib,
+                PassResult::Expansion(eprog, errors),
+                until,
+                result_check,
+            )
         }
         PassResult::Expansion(eprog, errors) => {
-            let (nprog, errors) = naming::translate::program(eprog, errors);
-            run(PassResult::Naming(nprog, errors), until)
+            let (nprog, errors) = naming::translate::program(pre_compiled_lib, eprog, errors);
+            run(
+                pre_compiled_lib,
+                PassResult::Naming(nprog, errors),
+                until,
+                result_check,
+            )
         }
         PassResult::Naming(nprog, errors) => {
-            let (tprog, errors) = typing::translate::program(nprog, errors);
+            let (tprog, errors) = typing::translate::program(pre_compiled_lib, nprog, errors);
             check_errors(errors)?;
-            run(PassResult::Typing(tprog), until)
+            run(
+                pre_compiled_lib,
+                PassResult::Typing(tprog),
+                until,
+                result_check,
+            )
         }
         PassResult::Typing(tprog) => {
-            let (hprog, errors) = hlir::translate::program(tprog);
-            run(PassResult::HLIR(hprog, errors), until)
+            let (hprog, errors) = hlir::translate::program(pre_compiled_lib, tprog);
+            run(
+                pre_compiled_lib,
+                PassResult::HLIR(hprog, errors),
+                until,
+                result_check,
+            )
         }
         PassResult::HLIR(hprog, errors) => {
-            let (cprog, errors) = cfgir::translate::program(errors, hprog);
+            let (cprog, errors) = cfgir::translate::program(pre_compiled_lib, errors, hprog);
             check_errors(errors)?;
-            run(PassResult::CFGIR(cprog), until)
+            run(
+                pre_compiled_lib,
+                PassResult::CFGIR(cprog),
+                until,
+                result_check,
+            )
         }
         PassResult::CFGIR(cprog) => {
-            let compiled_units = to_bytecode::translate::program(cprog)?;
+            let compiled_units = to_bytecode::translate::program(pre_compiled_lib, cprog)?;
             assert!(until == Pass::Compilation);
-            run(PassResult::Compilation(compiled_units), Pass::Compilation)
+            run(
+                pre_compiled_lib,
+                PassResult::Compilation(compiled_units),
+                Pass::Compilation,
+                result_check,
+            )
         }
         PassResult::Compilation(_) => unreachable!("ICE Pass::Compilation is >= all passes"),
     }

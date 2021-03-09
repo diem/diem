@@ -20,7 +20,7 @@ use std::{
 // Program
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
     pub scripts: BTreeMap<String, Script>,
@@ -30,7 +30,7 @@ pub struct Program {
 // Scripts
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Script {
     pub loc: Loc,
     pub constants: UniqueMap<ConstantName, Constant>,
@@ -42,7 +42,7 @@ pub struct Script {
 // Modules
 //**************************************************************************************************
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ModuleDefinition {
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
@@ -57,14 +57,14 @@ pub struct ModuleDefinition {
 // Functions
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum FunctionBody_ {
     Defined(Sequence),
     Native,
 }
 pub type FunctionBody = Spanned<FunctionBody_>;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Function {
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
@@ -76,7 +76,7 @@ pub struct Function {
 // Constants
 //**************************************************************************************************
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Constant {
     pub loc: Loc,
     pub signature: Type,
@@ -87,7 +87,7 @@ pub struct Constant {
 // Expressions
 //**************************************************************************************************
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum LValue_ {
     Ignore,
@@ -105,7 +105,7 @@ pub type LValue = Spanned<LValue_>;
 pub type LValueList_ = Vec<LValue>;
 pub type LValueList = Spanned<LValueList_>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ModuleCall {
     pub module: ModuleIdent,
     pub name: FunctionName,
@@ -115,7 +115,7 @@ pub struct ModuleCall {
     pub acquires: BTreeMap<StructName, Loc>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
     MoveTo(Type),
@@ -127,7 +127,7 @@ pub enum BuiltinFunction_ {
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum UnannotatedExp_ {
     Unit { trailing: bool },
     Value(Value),
@@ -170,7 +170,7 @@ pub enum UnannotatedExp_ {
     UnresolvedError,
 }
 pub type UnannotatedExp = Spanned<UnannotatedExp_>;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Exp {
     pub ty: Type,
     pub exp: UnannotatedExp,
@@ -180,7 +180,7 @@ pub fn exp(ty: Type, exp: UnannotatedExp) -> Exp {
 }
 
 pub type Sequence = VecDeque<SequenceItem>;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SequenceItem_ {
     Seq(Box<Exp>),
     Declare(LValueList),
@@ -188,7 +188,7 @@ pub enum SequenceItem_ {
 }
 pub type SequenceItem = Spanned<SequenceItem_>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExpListItem {
     Single(Exp, Box<Type>),
     Splat(Loc, Exp, Vec<Type>),

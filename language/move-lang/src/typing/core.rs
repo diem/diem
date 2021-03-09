@@ -13,6 +13,7 @@ use crate::{
         Var,
     },
     shared::{unique_map::UniqueMap, *},
+    FullyCompiledProgram,
 };
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -88,8 +89,24 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(prog: &N::Program, errors: Errors) -> Self {
-        let modules = prog.modules.ref_map(|_ident, mdef| {
+    pub fn new(
+        pre_compiled_lib: Option<&FullyCompiledProgram>,
+        prog: &N::Program,
+        errors: Errors,
+    ) -> Self {
+        let all_modules = prog.modules.key_cloned_iter().chain(
+            pre_compiled_lib
+                .iter()
+                .map(|pre_compiled| {
+                    pre_compiled
+                        .naming
+                        .modules
+                        .key_cloned_iter()
+                        .filter(|(mident, _m)| !prog.modules.contains_key(mident))
+                })
+                .flatten(),
+        );
+        let modules = UniqueMap::maybe_from_iter(all_modules.map(|(mident, mdef)| {
             let structs = mdef.structs.clone();
             let functions = mdef.functions.ref_map(|fname, fdef| FunctionInfo {
                 defined_loc: fname.loc(),
@@ -101,13 +118,15 @@ impl Context {
                 defined_loc: cname.loc(),
                 signature: cdef.signature.clone(),
             });
-            ModuleInfo {
+            let minfo = ModuleInfo {
                 friends: mdef.friends.clone(),
                 structs,
                 functions,
                 constants,
-            }
-        });
+            };
+            (mident, minfo)
+        }))
+        .unwrap();
         Context {
             subst: Subst::empty(),
             current_module: None,
