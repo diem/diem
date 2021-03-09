@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Error, Result};
+use anyhow::{ensure, Result};
 use hex::FromHex;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
@@ -69,11 +69,17 @@ impl AccountAddress {
             result
         };
 
-        AccountAddress::try_from(padded_result)
+        AccountAddress::try_from(padded_result).map_err(Into::into)
     }
 
     pub fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, AccountAddressParseError> {
         <[u8; Self::LENGTH]>::from_hex(hex)
+            .map_err(|_| AccountAddressParseError)
+            .map(Self)
+    }
+
+    pub fn from_bytes<T: AsRef<[u8]>>(bytes: T) -> Result<Self, AccountAddressParseError> {
+        <[u8; Self::LENGTH]>::try_from(bytes.as_ref())
             .map_err(|_| AccountAddressParseError)
             .map(Self)
     }
@@ -133,37 +139,27 @@ impl fmt::UpperHex for AccountAddress {
     }
 }
 
-impl TryFrom<&[u8]> for AccountAddress {
-    type Error = Error;
-
-    /// Tries to convert the provided byte array into Address.
-    fn try_from(bytes: &[u8]) -> Result<AccountAddress> {
-        ensure!(
-            bytes.len() == Self::LENGTH,
-            "The Address {:?} is of invalid length",
-            bytes
-        );
-        let mut addr = [0u8; Self::LENGTH];
-        addr.copy_from_slice(bytes);
-        Ok(AccountAddress(addr))
+impl From<[u8; AccountAddress::LENGTH]> for AccountAddress {
+    fn from(bytes: [u8; AccountAddress::LENGTH]) -> Self {
+        Self::new(bytes)
     }
 }
 
-impl TryFrom<&[u8; AccountAddress::LENGTH]> for AccountAddress {
-    type Error = Error;
+impl TryFrom<&[u8]> for AccountAddress {
+    type Error = AccountAddressParseError;
 
     /// Tries to convert the provided byte array into Address.
-    fn try_from(bytes: &[u8; Self::LENGTH]) -> Result<AccountAddress> {
-        AccountAddress::try_from(&bytes[..])
+    fn try_from(bytes: &[u8]) -> Result<AccountAddress, AccountAddressParseError> {
+        Self::from_bytes(bytes)
     }
 }
 
 impl TryFrom<Vec<u8>> for AccountAddress {
-    type Error = Error;
+    type Error = AccountAddressParseError;
 
     /// Tries to convert the provided byte buffer into Address.
-    fn try_from(bytes: Vec<u8>) -> Result<AccountAddress> {
-        AccountAddress::try_from(&bytes[..])
+    fn try_from(bytes: Vec<u8>) -> Result<AccountAddress, AccountAddressParseError> {
+        Self::from_bytes(bytes)
     }
 }
 
@@ -198,11 +194,10 @@ impl From<&AccountAddress> for String {
 }
 
 impl TryFrom<String> for AccountAddress {
-    type Error = Error;
+    type Error = AccountAddressParseError;
 
-    fn try_from(s: String) -> Result<AccountAddress> {
-        let bytes_out = ::hex::decode(s)?;
-        AccountAddress::try_from(bytes_out.as_slice())
+    fn try_from(s: String) -> Result<AccountAddress, AccountAddressParseError> {
+        Self::from_hex(s)
     }
 }
 
@@ -332,7 +327,7 @@ mod tests {
     #[test]
     fn test_address_from_proto_invalid_length() {
         let bytes = vec![1; 123];
-        assert!(AccountAddress::try_from(&bytes[..]).is_err());
+        AccountAddress::from_bytes(bytes).unwrap_err();
     }
 
     #[test]
