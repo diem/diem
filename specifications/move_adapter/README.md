@@ -205,14 +205,14 @@ that this check does not ensure that the name corresponds to a currency
 recognized by the Diem Framework.
 
 * Normalize the `gas_unit_price` from the `RawTransaction` to the Diem (XDX)
-currency. If the the validation is successful, the normalized gas price is
+currency. If the validation is successful, the normalized gas price is
 returned as the `score` field of the `VMValidatorResult` for use in
 prioritizing the transaction. The normalization is calculated using the
 `to_xdx_exchange_rate` field of the on-chain `CurrencyInfo` for the specified
 gas currency. This can fail with a status code of
 `CURRENCY_INFO_DOES_NOT_EXIST` if the exchange rate cannot be retrieved.
 
-* Load the `RoleId` resource from the sender's account. If the the validation is
+* Load the `RoleId` resource from the sender's account. If the validation is
 successful, this value is returned as the `governance_role` field of the
 `VMValidatorResult` so that the client can choose to prioritize governance
 transactions.
@@ -226,7 +226,7 @@ by the `GasConstants` structure in the `DiemVMConfig` module.
 
 * Check if the transaction size exceeds the limit specified by the
 `max_transaction_size_in_bytes` field of `GasConstants`. If the transaction is
-too big, validation fails with a `EXCEEDED_MAX_TRANSACTION_SIZE` status code.
+too big, validation fails with an `EXCEEDED_MAX_TRANSACTION_SIZE` status code.
 
 * If the `max_gas_amount` field in the `RawTransaction` is larger than the
 `maximum_number_of_gas_units` field of `GasConstants`, then validation fails
@@ -652,9 +652,9 @@ the transaction fee. After dropping the side effects of the payment, however,
 the second attempt to run the epilogue should always succeed, because the
 validation process ensures that the account balance can cover the maximum
 transaction fee. If the second "failure" epilogue execution somehow fails (due
-to an internal inconsistency in the system), execution fails with a
+to an internal inconsistency in the system), execution fails with an
 `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION` status, and the transaction is
-discarded
+discarded.
 
 ### WriteSet Transactions
 
