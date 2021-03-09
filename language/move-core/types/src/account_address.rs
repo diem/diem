@@ -249,7 +249,13 @@ impl std::error::Error for AccountAddressParseError {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::AccountAddress;
+    use hex::FromHex;
+    use proptest::prelude::*;
+    use std::{
+        convert::{AsRef, TryFrom},
+        str::FromStr,
+    };
 
     #[test]
     fn test_short_str_lossless() {
@@ -266,5 +272,68 @@ mod tests {
         let address = AccountAddress::from_hex("00000000000000000000000000000000").unwrap();
 
         assert_eq!(address.short_str_lossless(), "0");
+    }
+
+    #[test]
+    fn test_address() {
+        let hex = "ca843279e3427144cead5e4d5999a3d0";
+        let bytes = Vec::from_hex(hex).expect("You must provide a valid Hex format");
+
+        assert_eq!(
+            bytes.len(),
+            AccountAddress::LENGTH as usize,
+            "Address {:?} is not {}-bytes long. Addresses must be {} bytes",
+            bytes,
+            AccountAddress::LENGTH,
+            AccountAddress::LENGTH,
+        );
+
+        let address = AccountAddress::from_hex(hex).unwrap();
+
+        assert_eq!(address.as_ref().to_vec(), bytes);
+    }
+
+    #[test]
+    fn test_ref() {
+        let address = AccountAddress::new([1u8; AccountAddress::LENGTH]);
+        let _: &[u8] = address.as_ref();
+    }
+
+    #[test]
+    fn test_address_from_proto_invalid_length() {
+        let bytes = vec![1; 123];
+        assert!(AccountAddress::try_from(&bytes[..]).is_err());
+    }
+
+    #[test]
+    fn test_deserialize_from_json_value() {
+        let address = AccountAddress::random();
+        let json_value = serde_json::to_value(address).expect("serde_json::to_value fail.");
+        let address2: AccountAddress =
+            serde_json::from_value(json_value).expect("serde_json::from_value fail.");
+        assert_eq!(address, address2)
+    }
+
+    #[test]
+    fn test_address_from_empty_string() {
+        assert!(AccountAddress::try_from("".to_string()).is_err());
+        assert!(AccountAddress::from_str("").is_err());
+    }
+
+    proptest! {
+        #[test]
+        fn test_address_string_roundtrip(addr in any::<AccountAddress>()) {
+            let s = String::from(&addr);
+            let addr2 = AccountAddress::try_from(s).expect("roundtrip to string should work");
+            prop_assert_eq!(addr, addr2);
+        }
+
+        #[test]
+        fn test_address_protobuf_roundtrip(addr in any::<AccountAddress>()) {
+            let bytes = addr.to_vec();
+            prop_assert_eq!(bytes.clone(), addr.as_ref());
+            let addr2 = AccountAddress::try_from(&bytes[..]).unwrap();
+            prop_assert_eq!(addr, addr2);
+        }
     }
 }
