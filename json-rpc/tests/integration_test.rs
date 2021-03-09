@@ -169,7 +169,7 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
-            name: "designated_dealer role type account",
+            name: "designated_dealer role type account no preburns",
             run: |env: &mut testing::Env| {
                 let address = format!(
                     "{:#x}",
@@ -205,13 +205,105 @@ fn create_test_cases() -> Vec<Test> {
                             "compliance_key": "",
                             "expiration_time": 18446744073709551615_u64,
                             "human_name": "moneybags",
-                            "preburn_balances": [],
+                            "preburn_balances": [
+                                {
+                                    "amount": 0_u64,
+                                    "currency": "XUS"
+                                }
+                            ],
+                            "preburn_queues": [
+                                {
+                                    "preburns": [],
+                                    "currency": "XUS",
+                                }
+                            ],
                             "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
                             "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
                             "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
                         },
                         "sent_events_key": "0400000000000000000000000000000000000000000000dd",
                         "sequence_number": 2
+                    }),
+                );
+            },
+        },
+        Test {
+            name: "designated_dealer role type account with preburns",
+            run: |env: &mut testing::Env| {
+                let address = format!(
+                    "{:#x}",
+                    diem_types::account_config::testnet_dd_account_address()
+                );
+                env.submit_and_wait(
+                    env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100))
+                );
+                env.submit_and_wait(
+                    env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 50))
+                );
+                env.submit_and_wait(
+                    env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 60))
+                );
+                let resp = env.send("get_account", json!([address]));
+                let mut result = resp.result.unwrap();
+                // as we generate account auth key, ignore it in assertion
+                assert_ne!(result["authentication_key"].as_str().unwrap(), "");
+                result["authentication_key"] = json!(null);
+                assert_eq!(
+                    result,
+                    json!({
+                        "address": address,
+                        "authentication_key": null,
+                        "balances": [
+                            {
+                                "amount": 0_u64,
+                                "currency": "XDX"
+                            },
+                            {
+                                "amount": 9223370036854775597_u64,
+                                "currency": "XUS"
+                            },
+                        ],
+                        "delegated_key_rotation_capability": false,
+                        "delegated_withdrawal_capability": false,
+                        "is_frozen": false,
+                        "received_events_key": "0300000000000000000000000000000000000000000000dd",
+                        "role": {
+                            "type": "designated_dealer",
+                            "base_url": "",
+                            "compliance_key": "",
+                            "expiration_time": 18446744073709551615_u64,
+                            "human_name": "moneybags",
+                            "preburn_balances": [
+                                {
+                                    "amount": 210_u64,
+                                    "currency": "XUS"
+                                }
+                            ],
+                            "preburn_queues": [
+                                {
+                                    "currency": "XUS",
+                                    "preburns": [
+                                        {
+                                            "amount": 100_u64,
+                                            "currency": "XUS"
+                                        },
+                                        {
+                                            "amount": 50_u64,
+                                            "currency": "XUS"
+                                        },
+                                        {
+                                            "amount": 60_u64,
+                                            "currency": "XUS"
+                                        },
+                                    ],
+                                }
+                            ],
+                            "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
+                            "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
+                            "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
+                        },
+                        "sent_events_key": "0400000000000000000000000000000000000000000000dd",
+                        "sequence_number": 5
                     }),
                 );
             },
@@ -499,7 +591,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type": "sentpayment"
                             },
                             "key": "0400000000000000000000000000000000000000000000dd",
-                            "sequence_number": 2,
+                            "sequence_number": 5,
                             "transaction_version": version
                         },
                         {
@@ -509,7 +601,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "type": "preburn"
                             },
                             "key": "07000000000000000000000000000000000000000a550c18",
-                            "sequence_number": 0,
+                            "sequence_number": 3,
                             "transaction_version": version
                         }
                     ]),

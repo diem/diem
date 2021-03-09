@@ -81,6 +81,12 @@ message AccountRole {
   // hex-encoded bytes
   string received_mint_events_key = 10 [json_name="received_mint_events_key"];
   repeated Amount preburn_balances = 11 [json_name="preburn_balances"];
+  repeated PreburnQueue preburn_queues = 12 [json_name="preburn_queues"];
+}
+
+message PreburnQueue {
+    string currency  = 1 [json_name="currency"];
+    repeated Amount preburns = 2 [json_name="preburns"];
 }
 
 message Event {

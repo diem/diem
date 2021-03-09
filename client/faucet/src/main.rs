@@ -476,6 +476,10 @@ mod tests {
                     "amount": 0,
                     "currency": "XDX"
                 }],
+                "preburn_queues": [{
+                    "currency": "XDX",
+                    "preburns": [],
+                }],
                 "type": "designated_dealer",
                 "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
                 "base_url_rotation_events_key": format!("0300000000000000{}", address),

@@ -13,6 +13,17 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-03-09 Add `preburn_queues` to `AccountRoleView` for designated dealers
+
+Designated dealers will now be able to have multiple preburn requests in-flight
+at the same time. This means that the `preburn` resource published under their
+account will be removed, and replaced with a `preburn_queue` resource the next
+time they send a preburn request. The view for a Designated Dealer has been
+updated to represent this new preburn queue and the outstanding preburn
+requests in it in the new field `preburn_queues`. This change is non-breaking
+as the values in the `preburn_balances` field are kept consistent with the sum
+of all outstanding burn requests in the preburn queue.
+
 ## 2020-01-08 Removing known_version from verifying APIs
 
 Since the servers are pruning old ledger info states, it is easy for any call with a given known_version value to fail, unless that version is the last one of an epoch, since then it is preserved to provide epoch change proofs.

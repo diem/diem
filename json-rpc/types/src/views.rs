@@ -7,8 +7,9 @@ use diem_types::{
     account_config::{
         AccountResource, AccountRole, AdminTransactionEvent, BalanceResource, BaseUrlRotationEvent,
         BurnEvent, CancelBurnEvent, ComplianceKeyRotationEvent, CreateAccountEvent,
-        CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToXDXExchangeRateUpdateEvent,
+        CurrencyInfoResource, DesignatedDealerPreburns, FreezingBit, MintEvent, NewBlockEvent,
+        NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
+        ToXDXExchangeRateUpdateEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -68,7 +69,61 @@ pub enum AccountRoleView {
         received_mint_events_key: BytesView,
         compliance_key_rotation_events_key: BytesView,
         base_url_rotation_events_key: BytesView,
+        preburn_queues: Option<Vec<PreburnQueueView>>,
     },
+}
+
+impl AccountRoleView {
+    pub(crate) fn convert_preburn_balances(
+        preburn_balances: DesignatedDealerPreburns,
+    ) -> (Vec<AmountView>, Option<Vec<PreburnQueueView>>) {
+        match preburn_balances {
+            DesignatedDealerPreburns::Preburn(preburn_balances) => {
+                let preburn_balances: Vec<_> = preburn_balances
+                    .iter()
+                    .map(|(currency_code, balance)| {
+                        AmountView::new(balance.coin(), &currency_code.as_str())
+                    })
+                    .collect();
+                let preburn_queues = preburn_balances
+                    .iter()
+                    .cloned()
+                    .map(|amt_view| {
+                        PreburnQueueView::new(amt_view.currency.clone(), vec![amt_view])
+                    })
+                    .collect();
+                (preburn_balances, Some(preburn_queues))
+            }
+            DesignatedDealerPreburns::PreburnQueue(preburn_queues) => {
+                let preburn_balances = preburn_queues
+                    .iter()
+                    .map(|(currency_code, preburns)| {
+                        let total_balance =
+                            preburns.preburns().iter().fold(0, |acc: u64, preburn| {
+                                acc.checked_add(preburn.coin()).unwrap()
+                            });
+                        AmountView::new(total_balance, &currency_code.as_str())
+                    })
+                    .collect();
+                let preburn_queues = preburn_queues
+                    .into_iter()
+                    .map(|(currency_code, preburns)| {
+                        PreburnQueueView::new(
+                            currency_code.to_string(),
+                            preburns
+                                .preburns()
+                                .iter()
+                                .map(|preburn| {
+                                    AmountView::new(preburn.coin(), &currency_code.as_str())
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                    })
+                    .collect();
+                (preburn_balances, Some(preburn_queues))
+            }
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -110,6 +165,18 @@ impl AccountView {
             is_frozen: freezing_bit.is_frozen(),
             role: AccountRoleView::from(account_role),
         }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct PreburnQueueView {
+    currency: String,
+    preburns: Vec<AmountView>,
+}
+
+impl PreburnQueueView {
+    pub fn new(currency: String, preburns: Vec<AmountView>) -> Self {
+        Self { currency, preburns }
     }
 }
 
@@ -594,30 +661,30 @@ impl From<AccountRole> for AccountRoleView {
                 dd_credential,
                 preburn_balances,
                 designated_dealer,
-            } => AccountRoleView::DesignatedDealer {
-                human_name: dd_credential.human_name().to_string(),
-                base_url: dd_credential.base_url().to_string(),
-                expiration_time: dd_credential.expiration_date(),
-                compliance_key: BytesView::from(dd_credential.compliance_public_key()),
-                preburn_balances: preburn_balances
-                    .iter()
-                    .map(|(currency_code, balance)| {
-                        AmountView::new(balance.coin(), &currency_code.as_str())
-                    })
-                    .collect(),
-                received_mint_events_key: BytesView::from(
-                    designated_dealer.received_mint_events().key().as_bytes(),
-                ),
-                compliance_key_rotation_events_key: BytesView::from(
-                    dd_credential
-                        .compliance_key_rotation_events()
-                        .key()
-                        .as_bytes(),
-                ),
-                base_url_rotation_events_key: BytesView::from(
-                    dd_credential.base_url_rotation_events().key().as_bytes(),
-                ),
-            },
+            } => {
+                let (preburn_balances, preburn_queues) =
+                    AccountRoleView::convert_preburn_balances(preburn_balances);
+                AccountRoleView::DesignatedDealer {
+                    human_name: dd_credential.human_name().to_string(),
+                    base_url: dd_credential.base_url().to_string(),
+                    expiration_time: dd_credential.expiration_date(),
+                    compliance_key: BytesView::from(dd_credential.compliance_public_key()),
+                    preburn_balances,
+                    received_mint_events_key: BytesView::from(
+                        designated_dealer.received_mint_events().key().as_bytes(),
+                    ),
+                    compliance_key_rotation_events_key: BytesView::from(
+                        dd_credential
+                            .compliance_key_rotation_events()
+                            .key()
+                            .as_bytes(),
+                    ),
+                    base_url_rotation_events_key: BytesView::from(
+                        dd_credential.base_url_rotation_events().key().as_bytes(),
+                    ),
+                    preburn_queues,
+                }
+            }
         }
     }
 }

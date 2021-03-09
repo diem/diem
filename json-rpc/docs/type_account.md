@@ -30,17 +30,18 @@ A Diem account.
 
 ### Attributes
 
-| Name                               | Type                           | Description                                                       |
-|------------------------------------|--------------------------------|-------------------------------------------------------------------|
-| type                               | string                         | "designated_dealer"                                               |
-| human_name                         | string                         | human-readable name of this designated dealer                     |
-| base_url                           | string                         | base URL for this designated dealer                               |
-| expiration_time                    | unsigned int64(microseconds)   | expiration time for this designated dealer                        |
-| compliance_key                     | string                         | compliance key for this designated dealer                         |
-| preburn balances                   | List<[Amount](type_amount.md)> | Preburn balances of this designated dealer                        |
-| received_mint_events_key           | string                         | key of received mint events for this designated dealer            |
-| compliance_key_rotation_events_key | string                         | key of compliance key rotation events for this designated dealer  |
-| base_url_rotation_events_key       | string                         | key of base url key rotation events for this designated dealer    |
+| Name                                 | Type                                        | Description                                                                                                  |
+| ------------------------------------ | --------------------------------            | -------------------------------------------------------------------                                          |
+| type                                 | string                                      | "designated_dealer"                                                                                          |
+| human_name                           | string                                      | human-readable name of this designated dealer                                                                |
+| base_url                             | string                                      | base URL for this designated dealer                                                                          |
+| expiration_time                      | unsigned int64(microseconds)                | expiration time for this designated dealer                                                                   |
+| compliance_key                       | string                                      | compliance key for this designated dealer                                                                    |
+| preburn balances                     | List<[Amount](type_amount.md)>              | Preburn balances of this designated dealer                                                                   |
+| received_mint_events_key             | string                                      | key of received mint events for this designated dealer                                                       |
+| compliance_key_rotation_events_key   | string                                      | key of compliance key rotation events for this designated dealer                                             |
+| base_url_rotation_events_key         | string                                      | key of base url key rotation events for this designated dealer                                               |
+| preburn_queues                       | List<[PreburnQueue](type_preburn_queue.md)> | Queue of outstanding preburn requests for this designated dealer. "null" if no preburn queues were returned. |
 
 
 ---
