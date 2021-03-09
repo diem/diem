@@ -371,8 +371,8 @@ pub type PeerSet = HashMap<PeerId, Peer>;
 pub enum PeerRole {
     Validator = 0,
     PreferredUpstream,
-    ValidatorFullNode,
     Upstream,
+    ValidatorFullNode,
     Downstream,
     Known,
     Unknown,

@@ -435,22 +435,33 @@ where
     }
 
     fn choose_peers_to_dial(&mut self) -> Vec<(PeerId, DiscoveredPeer)> {
-        let to_connect: Vec<_> = self
+        let network_id = self.network_context.network_id();
+        let role = self.network_context.role();
+        let roles_to_dial = network_id.upstream_roles(&role);
+        let mut eligible: Vec<_> = self
             .discovered_peers
             .0
             .iter()
             .filter(|(peer_id, peer)| {
                 peer.is_eligible_to_be_dialed() // The node is eligible to dial
-                    && self.connected.get(peer_id).is_none() // The node is not already connected.
-                    && self.dial_queue.get(peer_id).is_none() // There is no pending dial to this node.
+                && !self.connected.contains_key(peer_id) // The node is not already connected.
+                && !self.dial_queue.contains_key(peer_id) // There is no pending dial to this node.
+                && roles_to_dial.contains(&peer.role) // We can dial this role
             })
             .collect();
+
+        // Prioritize by PeerRole
+        // Shuffle so we don't get stuck on certain peers
+        eligible.shuffle(&mut self.rng);
+        eligible.sort_by(|(_, peer), (_, other)| peer.role.cmp(&other.role));
+
+        let num_eligible = eligible.len();
 
         // Limit the number of dialed connections from a Full Node
         // This does not limit the number of incoming connections
         // It enforces that a full node cannot have more outgoing connections than `connection_limit`
         // including in flight dials.
-        let to_connect_size = if let Some(conn_limit) = self.outbound_connection_limit {
+        let to_connect = if let Some(conn_limit) = self.outbound_connection_limit {
             let outbound_connections = self
                 .connected
                 .iter()
@@ -459,13 +470,15 @@ where
             min(
                 conn_limit
                     .saturating_sub(outbound_connections.saturating_add(self.dial_queue.len())),
-                to_connect.len(),
+                num_eligible,
             )
         } else {
-            to_connect.len()
+            num_eligible
         };
-        to_connect
-            .choose_multiple(&mut self.rng, to_connect_size)
+
+        eligible
+            .iter()
+            .take(to_connect)
             .map(|(peer_id, peer)| (**peer_id, (*peer).clone()))
             .collect()
     }
