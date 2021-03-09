@@ -810,8 +810,8 @@ pub fn make_function_type(
         FunctionVisibility::Internal if in_current_module => (),
         FunctionVisibility::Internal => {
             let internal_msg = format!(
-                "This function is internal to its module. \
-                    Only '{}', '{}', and '{}' functions can be called outside of their module",
+                "This function is internal to its module. Only '{}', '{}', and '{}' functions can \
+                 be called outside of their module",
                 FunctionVisibility::PUBLIC,
                 FunctionVisibility::SCRIPT,
                 FunctionVisibility::FRIEND
@@ -824,8 +824,8 @@ pub fn make_function_type(
         FunctionVisibility::Script(_) if context.is_in_script_context() => (),
         FunctionVisibility::Script(vis_loc) => {
             let internal_msg = format!(
-                "This function can only be called from a script context, \
-                                i.e. a 'script' function or a '{}' function",
+                "This function can only be called from a script context, i.e. a 'script' function \
+                 or a '{}' function",
                 FunctionVisibility::SCRIPT
             );
             context.error(vec![

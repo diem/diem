@@ -679,7 +679,8 @@ fn friend(context: &mut Context, friends: &mut UniqueMap<ModuleIdent, Loc>, pfri
         Some((mident, loc)) => {
             if let Err((mident, (old_friend_loc, _))) = friends.add(mident, loc) {
                 let msg = format!(
-                    "Duplicate friend declaration '{}'. Friend declarations in a module must be unique",
+                    "Duplicate friend declaration '{}'. Friend declarations in a module must be \
+                     unique",
                     mident
                 );
                 context.error(vec![

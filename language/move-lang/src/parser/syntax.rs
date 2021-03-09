@@ -331,8 +331,8 @@ fn parse_function_visibility(tokens: &mut Lexer<'_>) -> Result<FunctionVisibilit
             Some(Tok::Friend) => FunctionVisibility::Friend(loc),
             _ => {
                 let msg = format!(
-                    "Invalid visibility modifier. \
-                    Consider removing it or using one of '{}', '{}', or '{}'",
+                    "Invalid visibility modifier. Consider removing it or using one of '{}', \
+                     '{}', or '{}'",
                     FunctionVisibility::PUBLIC,
                     FunctionVisibility::SCRIPT,
                     FunctionVisibility::FRIEND
@@ -1114,7 +1114,8 @@ fn is_quant(tokens: &mut Lexer<'_>) -> bool {
 
 // Parses a quantifier expressions, assuming is_quant(tokens) is true.
 //
-//   <Quantifier> = ( "forall" | "exists" ) <QuantifierBindings> ({ (<Exp>)* })* ("where" <Exp>)? ":" Exp
+//   <Quantifier> =
+//       ( "forall" | "exists" ) <QuantifierBindings> ({ (<Exp>)* })* ("where" <Exp>)? ":" Exp
 //   <QuantifierBindings> = <QuantifierBind> ("," <QuantifierBind>)*
 //   <QuantifierBind> = <Identifier> ":" <Type> | <Identifier> "in" <Exp>
 //
