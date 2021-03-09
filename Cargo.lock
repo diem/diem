@@ -6148,6 +6148,7 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 name = "scratchpad"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "diem-crypto",
  "diem-infallible",
  "diem-types",

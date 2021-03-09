@@ -21,166 +21,186 @@ use diem_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use diem_infallible::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use diem_types::proof::{SparseMerkleInternalNode, SparseMerkleLeafNode};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
-/// We wrap the node in `RwLock`. The only case when we will update the node is when we
-/// drop a subtree originated from this node and commit things to storage. In that case we will
-/// replace the an `InternalNode` or a `LeafNode` with a `SubtreeNode`.
 #[derive(Debug)]
-pub struct SparseMerkleNode<V> {
-    node: RwLock<Node<V>>,
+pub(crate) struct InternalNode<V> {
+    pub left: SubTree<V>,
+    pub right: SubTree<V>,
 }
 
-impl<V> SparseMerkleNode<V>
+impl<V: CryptoHash> InternalNode<V> {
+    pub fn calc_hash(&self) -> HashValue {
+        SparseMerkleInternalNode::new(self.left.hash(), self.right.hash()).hash()
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct LeafNode<V> {
+    pub key: HashValue,
+    pub value: LeafValue<V>,
+}
+
+impl<V: CryptoHash> LeafNode<V> {
+    pub fn new(key: HashValue, value: LeafValue<V>) -> Self {
+        Self { key, value }
+    }
+    pub fn calc_hash(&self) -> HashValue {
+        SparseMerkleLeafNode::new(self.key, self.value.calc_hash()).hash()
+    }
+}
+
+impl<V> From<SparseMerkleLeafNode> for LeafNode<V>
 where
     V: CryptoHash,
 {
-    /// Constructs a new internal node given two children.
-    pub fn new_internal(left_child: Arc<Self>, right_child: Arc<Self>) -> Self {
+    fn from(leaf_node: SparseMerkleLeafNode) -> Self {
         Self {
-            node: RwLock::new(Node::new_internal(left_child, right_child)),
+            key: leaf_node.key(),
+            value: LeafValue::ValueHash(leaf_node.value_hash()),
         }
-    }
-
-    /// Constructs a new leaf node using given key and value.
-    pub fn new_leaf(key: HashValue, value: LeafValue<V>) -> Self {
-        Self {
-            node: RwLock::new(Node::new_leaf(key, value)),
-        }
-    }
-
-    /// Constructs a new subtree node with given root hash.
-    pub fn new_subtree(hash: HashValue) -> Self {
-        Self {
-            node: RwLock::new(Node::new_subtree(hash)),
-        }
-    }
-
-    /// Constructs a new empty node.
-    pub fn new_empty() -> Self {
-        Self {
-            node: RwLock::new(Node::new_empty()),
-        }
-    }
-
-    /// Get the read access of the wrapped node.
-    pub fn read_lock(&self) -> RwLockReadGuard<Node<V>> {
-        self.node.read()
-    }
-
-    /// Get the write access of the wrapped node.
-    pub fn write_lock(&self) -> RwLockWriteGuard<Node<V>> {
-        self.node.write()
     }
 }
 
-/// The underlying node is either `InternalNode`, `LeafNode`, `SubtreeNode` or `EmptyNode`.
 #[derive(Debug)]
-pub enum Node<V> {
+pub(crate) enum Node<V> {
     Internal(InternalNode<V>),
     Leaf(LeafNode<V>),
-    Subtree(SubtreeNode),
-    Empty,
 }
 
-impl<V> Node<V>
-where
-    V: CryptoHash,
-{
-    pub fn new_internal(
-        left_child: Arc<SparseMerkleNode<V>>,
-        right_child: Arc<SparseMerkleNode<V>>,
-    ) -> Self {
-        Node::Internal(InternalNode::new(left_child, right_child))
-    }
-
+impl<V: CryptoHash> Node<V> {
     pub fn new_leaf(key: HashValue, value: LeafValue<V>) -> Self {
-        Node::Leaf(LeafNode::new(key, value))
+        Self::Leaf(LeafNode::new(key, value))
     }
 
-    pub fn new_subtree(hash: HashValue) -> Self {
-        Node::Subtree(SubtreeNode::new(hash))
+    pub fn new_internal(left: SubTree<V>, right: SubTree<V>) -> Self {
+        Self::Internal(InternalNode { left, right })
     }
 
+    pub fn calc_hash(&self) -> HashValue {
+        match self {
+            Self::Internal(internal_node) => internal_node.calc_hash(),
+            Self::Leaf(leaf_node) => leaf_node.calc_hash(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum NodeHandle<V> {
+    Shared(Arc<Node<V>>),
+    Weak(Weak<Node<V>>),
+}
+
+impl<V> NodeHandle<V> {
+    pub fn new_unkonwn() -> Self {
+        Self::Weak(Weak::new())
+    }
+
+    pub fn new_shared(node: Node<V>) -> Self {
+        Self::Shared(Arc::new(node))
+    }
+
+    pub fn weak(&self) -> Self {
+        Self::Weak(match self {
+            Self::Shared(arc) => Arc::downgrade(arc),
+            Self::Weak(weak) => weak.clone(),
+        })
+    }
+
+    pub fn get_node_if_in_mem(&self) -> Option<Arc<Node<V>>> {
+        match self {
+            Self::Shared(arc) => Some(arc.clone()),
+            Self::Weak(weak) => weak.upgrade(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum SubTree<V> {
+    Empty,
+    NonEmpty {
+        hash: HashValue,
+        root: NodeHandle<V>,
+    },
+}
+
+impl<V: CryptoHash> SubTree<V> {
     pub fn new_empty() -> Self {
-        Node::Empty
+        Self::Empty
     }
 
-    #[cfg(test)]
-    pub fn is_subtree(&self) -> bool {
-        matches!(self, Node::Subtree(_))
+    pub fn new_unknown(hash: HashValue) -> Self {
+        Self::NonEmpty {
+            hash,
+            root: NodeHandle::new_unkonwn(),
+        }
     }
 
-    #[cfg(test)]
-    pub fn is_empty(&self) -> bool {
-        matches!(self, Node::Empty)
+    pub fn new_leaf_with_value(key: HashValue, value: V) -> Self {
+        Self::new_leaf_impl(key, LeafValue::Value(value))
+    }
+
+    pub fn new_leaf_with_value_hash(key: HashValue, value_hash: HashValue) -> Self {
+        Self::new_leaf_impl(key, LeafValue::ValueHash(value_hash))
+    }
+
+    fn new_leaf_impl(key: HashValue, value: LeafValue<V>) -> Self {
+        let leaf = Node::new_leaf(key, value);
+
+        Self::NonEmpty {
+            hash: leaf.calc_hash(),
+            root: NodeHandle::new_shared(leaf),
+        }
+    }
+
+    pub fn new_internal(left: Self, right: Self) -> Self {
+        let internal = Node::new_internal(left, right);
+
+        Self::NonEmpty {
+            hash: internal.calc_hash(),
+            root: NodeHandle::new_shared(internal),
+        }
     }
 
     pub fn hash(&self) -> HashValue {
         match self {
-            Node::Internal(node) => node.hash(),
-            Node::Leaf(node) => node.hash(),
-            Node::Subtree(node) => node.hash(),
-            Node::Empty => *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            Self::Empty => *SPARSE_MERKLE_PLACEHOLDER_HASH,
+            Self::NonEmpty { hash, .. } => *hash,
         }
     }
-}
 
-/// An internal node.
-#[derive(Debug)]
-pub struct InternalNode<V> {
-    /// The hash of this internal node which is the root hash of the subtree.
-    hash: HashValue,
-
-    /// Pointer to left child.
-    left_child: Arc<SparseMerkleNode<V>>,
-
-    /// Pointer to right child.
-    right_child: Arc<SparseMerkleNode<V>>,
-}
-
-impl<V> InternalNode<V>
-where
-    V: CryptoHash,
-{
-    fn new(left_child: Arc<SparseMerkleNode<V>>, right_child: Arc<SparseMerkleNode<V>>) -> Self {
-        match (&*left_child.read_lock(), &*right_child.read_lock()) {
-            (Node::Subtree(_), Node::Subtree(_)) => {
-                panic!("Two subtree children should have been merged into a single subtree node.")
-            }
-            (Node::Leaf(_), Node::Empty) => {
-                panic!("A leaf with an empty sibling should have been merged into a single leaf.")
-            }
-            (Node::Empty, Node::Leaf(_)) => {
-                panic!("A leaf with an empty sibling should have been merged into a single leaf.")
-            }
-            _ => (),
+    pub fn weak(&self) -> Self {
+        match self {
+            Self::Empty => Self::Empty,
+            Self::NonEmpty { hash, root } => Self::NonEmpty {
+                hash: *hash,
+                root: root.weak(),
+            },
         }
+    }
 
-        let hash = SparseMerkleInternalNode::new(
-            left_child.read_lock().hash(),
-            right_child.read_lock().hash(),
+    pub fn get_node_if_in_mem(&self) -> Option<Arc<Node<V>>> {
+        match self {
+            Self::Empty => None,
+            Self::NonEmpty { root, .. } => root.get_node_if_in_mem(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn is_unknown(&self) -> bool {
+        matches!(
+            self,
+            Self::NonEmpty {
+                root: NodeHandle::Weak(_),
+                ..
+            }
         )
-        .hash();
-        Self {
-            hash,
-            left_child,
-            right_child,
-        }
     }
 
-    fn hash(&self) -> HashValue {
-        self.hash
-    }
-
-    pub fn clone_left_child(&self) -> Arc<SparseMerkleNode<V>> {
-        Arc::clone(&self.left_child)
-    }
-
-    pub fn clone_right_child(&self) -> Arc<SparseMerkleNode<V>> {
-        Arc::clone(&self.right_child)
+    #[cfg(test)]
+    pub fn is_empty(&self) -> bool {
+        matches!(self, SubTree::Empty)
     }
 }
 
@@ -193,76 +213,11 @@ pub enum LeafValue<V> {
     ValueHash(HashValue),
 }
 
-/// A `LeafNode` represents a single account in the Sparse Merkle Tree.
-#[derive(Debug)]
-pub struct LeafNode<V> {
-    /// The key is the hash of the address.
-    key: HashValue,
-
-    /// The account content or its hash. It's possible that we don't know the value here. For
-    /// example, this leaf was loaded into memory as part of an non-inclusion proof. In that case
-    /// we only know the value's hash.
-    value: LeafValue<V>,
-
-    /// The hash of this leaf node which is Hash(key || Hash(value)).
-    hash: HashValue,
-}
-
-impl<V> LeafNode<V>
-where
-    V: CryptoHash,
-{
-    pub fn new(key: HashValue, value: LeafValue<V>) -> Self {
-        let value_hash = match value {
+impl<V: CryptoHash> LeafValue<V> {
+    pub fn calc_hash(&self) -> HashValue {
+        match self {
             LeafValue::Value(ref val) => val.hash(),
             LeafValue::ValueHash(ref val_hash) => *val_hash,
-        };
-        let hash = SparseMerkleLeafNode::new(key, value_hash).hash();
-        LeafNode { key, value, hash }
-    }
-
-    pub fn key(&self) -> HashValue {
-        self.key
-    }
-
-    pub fn value(&self) -> &LeafValue<V> {
-        &self.value
-    }
-
-    fn hash(&self) -> HashValue {
-        self.hash
-    }
-}
-
-impl<V> From<SparseMerkleLeafNode> for LeafNode<V>
-where
-    V: CryptoHash,
-{
-    fn from(leaf_node: SparseMerkleLeafNode) -> Self {
-        Self::new(
-            leaf_node.key(),
-            LeafValue::ValueHash(leaf_node.value_hash()),
-        )
-    }
-}
-
-/// A subtree node.
-#[derive(Debug)]
-pub struct SubtreeNode {
-    /// The root hash of the subtree represented by this node.
-    hash: HashValue,
-}
-
-impl SubtreeNode {
-    fn new(hash: HashValue) -> Self {
-        assert_ne!(
-            hash, *SPARSE_MERKLE_PLACEHOLDER_HASH,
-            "A subtree should never be empty."
-        );
-        SubtreeNode { hash }
-    }
-
-    pub fn hash(&self) -> HashValue {
-        self.hash
+        }
     }
 }

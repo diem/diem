@@ -67,13 +67,15 @@ mod node;
 #[cfg(test)]
 mod sparse_merkle_test;
 
-use self::node::{LeafNode, LeafValue, Node, SparseMerkleNode};
+use self::node::LeafValue;
+use crate::sparse_merkle::node::{Node, SubTree};
+use arc_swap::{ArcSwap, ArcSwapOption};
 use diem_crypto::{
     hash::{CryptoHash, HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use diem_types::proof::SparseMerkleProof;
-use std::sync::Arc;
+use std::{borrow::Borrow, sync::Arc};
 
 /// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
 #[derive(Debug, Eq, PartialEq)]
@@ -97,10 +99,23 @@ pub enum AccountStatus<V> {
     Unknown,
 }
 
-/// The Sparse Merkle Tree implementation.
 #[derive(Debug)]
+struct Inner<V> {
+    root: ArcSwap<SubTree<V>>,
+    base: ArcSwapOption<Inner<V>>,
+}
+
+impl<V: CryptoHash> Inner<V> {
+    fn prune(&self) {
+        self.root.store(Arc::new(self.root.load().as_ref().weak()));
+        self.base.store(None);
+    }
+}
+
+/// The Sparse Merkle Tree implementation.
+#[derive(Clone, Debug)]
 pub struct SparseMerkleTree<V> {
-    root: Arc<SparseMerkleNode<V>>,
+    inner: Arc<Inner<V>>,
 }
 
 impl<V> SparseMerkleTree<V>
@@ -111,13 +126,33 @@ where
     /// the scratch pad and the storage have identical state, so we use a single root hash to
     /// represent the entire state.
     pub fn new(root_hash: HashValue) -> Self {
-        SparseMerkleTree {
-            root: Arc::new(if root_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
-                SparseMerkleNode::new_subtree(root_hash)
+        Self::new_impl(
+            if root_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                SubTree::new_unknown(root_hash)
             } else {
-                SparseMerkleNode::new_empty()
-            }),
+                SubTree::new_empty()
+            },
+            None,
+        )
+    }
+
+    fn new_with_base(root: SubTree<V>, base: &Self) -> Self {
+        Self::new_impl(root, Some(base.inner.clone()))
+    }
+
+    fn new_impl(root: SubTree<V>, base: Option<Arc<Inner<V>>>) -> Self {
+        let inner = Inner {
+            root: ArcSwap::from_pointee(root),
+            base: ArcSwapOption::new(base),
+        };
+
+        Self {
+            inner: Arc::new(inner),
         }
+    }
+
+    fn root_weak(&self) -> SubTree<V> {
+        self.inner.root.load().weak()
     }
 
     /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree. Since the tree
@@ -128,11 +163,11 @@ where
         updates: Vec<(HashValue, V)>,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<Self, UpdateError> {
-        let mut root = Arc::clone(&self.root);
-        for (key, new_value) in updates {
-            root = Self::update_one(root, key, new_value, proof_reader)?;
-        }
-        Ok(SparseMerkleTree { root })
+        updates
+            .into_iter()
+            .try_fold(self.clone(), |prev, (key, value)| {
+                prev.update_one(key, value, proof_reader)
+            })
     }
 
     /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree multiple times
@@ -146,9 +181,8 @@ where
         update_batch: Vec<Vec<(HashValue, &V)>>,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<(Vec<HashValue>, Self), UpdateError> {
-        let mut current_state_tree = Self {
-            root: Arc::clone(&self.root),
-        };
+        let mut current_state_tree = self.clone();
+
         let mut result_hashes = Vec::with_capacity(update_batch.len());
         for updates in update_batch {
             current_state_tree = current_state_tree.update(
@@ -164,12 +198,12 @@ where
     }
 
     fn update_one(
-        root: Arc<SparseMerkleNode<V>>,
+        &self,
         key: HashValue,
         new_value: V,
         proof_reader: &impl ProofRead<V>,
-    ) -> Result<Arc<SparseMerkleNode<V>>, UpdateError> {
-        let mut current_node = root;
+    ) -> Result<Self, UpdateError> {
+        let mut current_subtree = self.root_weak();
         let mut bits = key.iter_bits();
 
         // Starting from root, traverse the tree according to key until we find a non-internal
@@ -177,36 +211,49 @@ where
         let mut bits_on_path = vec![];
         let mut siblings_on_path = vec![];
         loop {
-            let next_node = if let Node::Internal(node) = &*current_node.read_lock() {
-                let bit = bits.next().unwrap_or_else(|| {
-                    // invariant of HashValueBitIterator
-                    unreachable!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS)
-                });
-                bits_on_path.push(bit);
-                if bit {
-                    siblings_on_path.push(node.clone_left_child());
-                    node.clone_right_child()
-                } else {
-                    siblings_on_path.push(node.clone_right_child());
-                    node.clone_left_child()
+            if let SubTree::NonEmpty { root, .. } = &current_subtree {
+                if let Some(node) = root.get_node_if_in_mem() {
+                    if let Node::Internal(internal_node) = node.borrow() {
+                        let bit = bits.next().unwrap_or_else(|| {
+                            // invariant of HashValueBitIterator
+                            unreachable!(
+                                "Tree is deeper than {} levels.",
+                                HashValue::LENGTH_IN_BITS
+                            )
+                        });
+                        bits_on_path.push(bit);
+                        current_subtree = if bit {
+                            siblings_on_path.push(internal_node.left.weak());
+                            internal_node.right.weak()
+                        } else {
+                            siblings_on_path.push(internal_node.right.weak());
+                            internal_node.left.weak()
+                        };
+                        continue;
+                    }
                 }
-            } else {
-                break;
-            };
-            current_node = next_node;
+            }
+            break;
         }
 
         // Now we are at the bottom of the tree and current_node can be either a leaf, a subtree or
         // empty. We construct a new subtree like we are inserting the key here.
-        let new_node =
-            Self::construct_subtree_at_bottom(current_node, key, new_value, bits, proof_reader)?;
+        let new_node = Self::construct_subtree_at_bottom(
+            &current_subtree,
+            key,
+            new_value,
+            bits,
+            proof_reader,
+        )?;
 
         // Use the new node and all previous siblings on the path to construct the final tree.
-        Ok(Self::construct_subtree(
+        let root = Self::construct_subtree(
             bits_on_path.into_iter().rev(),
             siblings_on_path.into_iter().rev(),
             new_node,
-        ))
+        );
+
+        Ok(Self::new_with_base(root, self))
     }
 
     /// This function is called when we are trying to write (key, new_value) to the tree and have
@@ -215,69 +262,87 @@ where
     /// construct a subtree using current_node, the new key-value pair and potentially the
     /// key-value pair in the proof.
     fn construct_subtree_at_bottom(
-        current_node: Arc<SparseMerkleNode<V>>,
+        current_subtree: &SubTree<V>,
         key: HashValue,
         new_value: V,
         remaining_bits: HashValueBitIterator,
         proof_reader: &impl ProofRead<V>,
-    ) -> Result<Arc<SparseMerkleNode<V>>, UpdateError> {
-        match &*current_node.read_lock() {
-            Node::Internal(_) => {
-                unreachable!("Reached an internal node at the bottom of the tree.")
-            }
-            Node::Leaf(node) => Ok(Self::construct_subtree_with_new_leaf(
-                key,
-                new_value,
-                node,
-                HashValue::LENGTH_IN_BITS - remaining_bits.len(),
-            )),
-            Node::Subtree(_) => {
-                // When the search reaches an Subtree node, we need proof to give us more
-                // information about this part of the tree.
-                let proof = proof_reader
-                    .get_proof(key)
-                    .ok_or(UpdateError::MissingProof)?;
-
-                // Here the in-memory tree is identical to the tree in storage (we have only the
-                // root hash of this subtree in memory). So we need to take into account the leaf
-                // in the proof.
-                let new_subtree = match proof.leaf() {
-                    Some(existing_leaf) => Self::construct_subtree_with_new_leaf(
-                        key,
-                        new_value,
-                        &existing_leaf.into(),
-                        proof.siblings().len(),
-                    ),
-                    None => Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Value(new_value))),
-                };
-
-                let num_remaining_bits = remaining_bits.len();
-                let proof_length = proof.siblings().len();
-                Ok(Self::construct_subtree(
-                    remaining_bits
-                        .rev()
-                        .skip(HashValue::LENGTH_IN_BITS - proof_length),
-                    proof
-                        .siblings()
-                        .iter()
-                        .take(num_remaining_bits + proof_length - HashValue::LENGTH_IN_BITS)
-                        .map(|sibling_hash| {
-                            Arc::new(if *sibling_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
-                                SparseMerkleNode::new_subtree(*sibling_hash)
-                            } else {
-                                SparseMerkleNode::new_empty()
-                            })
-                        }),
-                    new_subtree,
-                ))
-            }
-            Node::Empty => {
+    ) -> Result<SubTree<V>, UpdateError> {
+        match current_subtree {
+            SubTree::Empty => {
                 // When we reach an empty node, we just place the leaf node at the same position to
                 // replace the empty node.
-                Ok(Arc::new(SparseMerkleNode::new_leaf(
-                    key,
-                    LeafValue::Value(new_value),
-                )))
+                Ok(SubTree::new_leaf_with_value(key, new_value))
+            }
+            SubTree::NonEmpty { root, .. } => {
+                match root.get_node_if_in_mem() {
+                    Some(node) => match node.borrow() {
+                        Node::Internal(_) => {
+                            unreachable!("Reached an internal node at the bottom of the tree.");
+                        }
+                        Node::Leaf(leaf_node) => Ok(Self::construct_subtree_with_new_leaf(
+                            key,
+                            new_value,
+                            current_subtree.weak(),
+                            leaf_node.key,
+                            HashValue::LENGTH_IN_BITS
+                                .checked_sub(remaining_bits.len())
+                                .expect("shouldn't overflow"),
+                        )),
+                    },
+                    None => {
+                        // When the search reaches a Subtree node, we need proof to give us more
+                        // information about this part of the tree.
+                        let proof = proof_reader
+                            .get_proof(key)
+                            .ok_or(UpdateError::MissingProof)?;
+
+                        // Here the in-memory tree is identical to the tree in storage (we have only the
+                        // root hash of this subtree in memory). So we need to take into account the leaf
+                        // in the proof.
+                        let new_subtree = match proof.leaf() {
+                            Some(existing_leaf) => Self::construct_subtree_with_new_leaf(
+                                key,
+                                new_value,
+                                SubTree::new_leaf_with_value_hash(
+                                    existing_leaf.key(),
+                                    existing_leaf.value_hash(),
+                                ),
+                                existing_leaf.key(),
+                                proof.siblings().len(),
+                            ),
+                            None => SubTree::new_leaf_with_value(key, new_value),
+                        };
+
+                        let num_remaining_bits = remaining_bits.len();
+                        let proof_length = proof.siblings().len();
+                        Ok(Self::construct_subtree(
+                            remaining_bits.rev().skip(
+                                HashValue::LENGTH_IN_BITS
+                                    .checked_sub(proof_length)
+                                    .expect("shouldn't overflow"),
+                            ),
+                            proof
+                                .siblings()
+                                .iter()
+                                .take(
+                                    num_remaining_bits
+                                        .checked_add(proof_length)
+                                        .expect("shouldn't overflow")
+                                        .checked_sub(HashValue::LENGTH_IN_BITS)
+                                        .expect("shouldn't overflow"),
+                                )
+                                .map(|sibling_hash| {
+                                    if *sibling_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                                        SubTree::new_unknown(*sibling_hash)
+                                    } else {
+                                        SubTree::new_empty()
+                                    }
+                                }),
+                            new_subtree,
+                        ))
+                    }
+                }
             }
         }
     }
@@ -319,19 +384,19 @@ where
     fn construct_subtree_with_new_leaf(
         key: HashValue,
         new_value: V,
-        existing_leaf: &LeafNode<V>,
+        existing_leaf: SubTree<V>,
+        existing_leaf_key: HashValue,
         distance_from_root_to_existing_leaf: usize,
-    ) -> Arc<SparseMerkleNode<V>> {
-        let new_leaf = Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Value(new_value)));
-
-        if key == existing_leaf.key() {
+    ) -> SubTree<V> {
+        let new_leaf = SubTree::new_leaf_with_value(key, new_value);
+        if key == existing_leaf_key {
             // This implies that `key` already existed and the proof is an inclusion proof.
             return new_leaf;
         }
 
         // This implies that `key` did not exist and was just created. The proof is a non-inclusion
         // proof. See above example for how extension_len is computed.
-        let common_prefix_len = key.common_prefix_bits_len(existing_leaf.key());
+        let common_prefix_len = key.common_prefix_bits_len(existing_leaf_key);
         assert!(
             common_prefix_len >= distance_from_root_to_existing_leaf,
             "common_prefix_len: {}, distance_from_root_to_existing_leaf: {}",
@@ -344,11 +409,8 @@ where
                 .rev()
                 .skip(HashValue::LENGTH_IN_BITS - common_prefix_len - 1)
                 .take(extension_len + 1),
-            std::iter::once(Arc::new(SparseMerkleNode::new_leaf(
-                existing_leaf.key(),
-                existing_leaf.value().clone(),
-            )))
-            .chain(std::iter::repeat(Arc::new(SparseMerkleNode::new_empty())).take(extension_len)),
+            std::iter::once(existing_leaf)
+                .chain(std::iter::repeat(SubTree::new_empty()).take(extension_len)),
             new_leaf,
         )
     }
@@ -367,102 +429,75 @@ where
     /// and this function will return `x`. Both `bits` and `siblings` start from the bottom.
     fn construct_subtree(
         bits: impl Iterator<Item = bool>,
-        siblings: impl Iterator<Item = Arc<SparseMerkleNode<V>>>,
-        leaf: Arc<SparseMerkleNode<V>>,
-    ) -> Arc<SparseMerkleNode<V>> {
+        siblings: impl Iterator<Item = SubTree<V>>,
+        leaf: SubTree<V>,
+    ) -> SubTree<V> {
         itertools::zip_eq(bits, siblings).fold(leaf, |previous_node, (bit, sibling)| {
-            Arc::new(if bit {
-                SparseMerkleNode::new_internal(sibling, previous_node)
+            if bit {
+                SubTree::new_internal(sibling, previous_node)
             } else {
-                SparseMerkleNode::new_internal(previous_node, sibling)
-            })
+                SubTree::new_internal(previous_node, sibling)
+            }
         })
     }
 
     /// Queries a `key` in this `SparseMerkleTree`.
     pub fn get(&self, key: HashValue) -> AccountStatus<V> {
-        let mut current_node = Arc::clone(&self.root);
+        let mut cur = self.root_weak();
         let mut bits = key.iter_bits();
 
         loop {
-            let next_node = if let Node::Internal(node) = &*current_node.read_lock() {
-                match bits.next() {
-                    Some(bit) => {
-                        if bit {
-                            node.clone_right_child()
-                        } else {
-                            node.clone_left_child()
+            if let Some(node) = cur.get_node_if_in_mem() {
+                if let Node::Internal(internal_node) = node.borrow() {
+                    match bits.next() {
+                        Some(bit) => {
+                            cur = if bit {
+                                internal_node.right.weak()
+                            } else {
+                                internal_node.left.weak()
+                            };
+                            continue;
                         }
+                        None => panic!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS),
                     }
-                    None => panic!("Tree is deeper than {} levels.", HashValue::LENGTH_IN_BITS),
                 }
-            } else {
-                break;
-            };
-            current_node = next_node;
+            }
+            break;
         }
 
-        let ret = match &*current_node.read_lock() {
-            Node::Leaf(node) => {
-                if key == node.key() {
-                    match node.value() {
-                        LeafValue::Value(value) => AccountStatus::ExistsInScratchPad(value.clone()),
-                        LeafValue::ValueHash(_) => AccountStatus::ExistsInDB,
+        let ret = match cur {
+            SubTree::Empty => AccountStatus::DoesNotExist,
+            SubTree::NonEmpty { root, .. } => match root.get_node_if_in_mem() {
+                None => AccountStatus::Unknown,
+                Some(node) => match node.borrow() {
+                    Node::Internal(_) => {
+                        unreachable!("There is an internal node at the bottom of the tree.")
                     }
-                } else {
-                    AccountStatus::DoesNotExist
-                }
-            }
-            Node::Subtree(_) => AccountStatus::Unknown,
-            Node::Empty => AccountStatus::DoesNotExist,
-            Node::Internal(_) => {
-                unreachable!("There is an internal node at the bottom of the tree.")
-            }
+                    Node::Leaf(leaf_node) => {
+                        if leaf_node.key == key {
+                            match &leaf_node.value {
+                                LeafValue::Value(value) => {
+                                    AccountStatus::ExistsInScratchPad(value.clone())
+                                }
+                                LeafValue::ValueHash(_) => AccountStatus::ExistsInDB,
+                            }
+                        } else {
+                            AccountStatus::DoesNotExist
+                        }
+                    }
+                },
+            },
         };
         ret
     }
 
     /// Returns the root hash of this tree.
     pub fn root_hash(&self) -> HashValue {
-        self.root.read_lock().hash()
+        self.inner.root.load().hash()
     }
 
-    /// Prunes a tree by replacing every node reachable from root with a subtree node that has the
-    /// same hash. If a node is empty or a subtree, we don't need to do anything. For example in
-    /// the following case, if we drop `S_i`, we will replace o with a subtree node, then `o` no
-    /// longer has pointers to its children `x` and `A`, so they will be dropped automatically.
-    /// ```text
-    ///            S_i        S_{i+1}                               S_{i+1}
-    ///           /   \      /       \                             /       \
-    ///          /     y   /          \          drop(S_i)        o         y'
-    ///         / _______/             \         ========>                 / \
-    ///        //                       \                                 z   B
-    ///       o                          y'
-    ///      / \                        / \
-    ///     x   A                      z   B
-    /// ```
     pub fn prune(&self) {
-        let root = Arc::clone(&self.root);
-        Self::prune_node(root);
-    }
-
-    fn prune_node(node: Arc<SparseMerkleNode<V>>) {
-        let mut writable_node = node.write_lock();
-        let node_hash = writable_node.hash();
-
-        match &*writable_node {
-            Node::Empty => return,
-            Node::Subtree(_) => return,
-            Node::Internal(node) => {
-                let left_child = node.clone_left_child();
-                let right_child = node.clone_right_child();
-                Self::prune_node(left_child);
-                Self::prune_node(right_child);
-            }
-            Node::Leaf(_) => (),
-        }
-
-        *writable_node = Node::new_subtree(node_hash);
+        self.inner.prune()
     }
 }
 
