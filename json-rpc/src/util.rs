@@ -114,7 +114,7 @@ pub fn transaction_data_view_from_transaction(tx: Transaction) -> TransactionDat
             };
 
             TransactionDataView::UserTransaction {
-                sender: t.sender().into(),
+                sender: t.sender(),
                 signature_scheme: t.authenticator().scheme().to_string(),
                 signature: t.authenticator().signature_bytes().into(),
                 public_key: t.authenticator().public_key_bytes().into(),
@@ -162,7 +162,7 @@ pub fn script_view_from_script(script: &Script) -> ScriptView {
         if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
             &script.args()[..]
         {
-            view.receiver = Some(receiver.into());
+            view.receiver = Some(*receiver);
             view.amount = Some(*amount);
             view.currency = Some(
                 ty_args

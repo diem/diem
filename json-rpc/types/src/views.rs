@@ -48,7 +48,7 @@ pub enum AccountRoleView {
     #[serde(rename = "unknown")]
     Unknown,
     #[serde(rename = "child_vasp")]
-    ChildVASP { parent_vasp_address: BytesView },
+    ChildVASP { parent_vasp_address: AccountAddress },
     #[serde(rename = "parent_vasp")]
     ParentVASP {
         human_name: String,
@@ -128,7 +128,7 @@ impl AccountRoleView {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
-    pub address: BytesView,
+    pub address: AccountAddress,
     pub balances: Vec<AmountView>,
     pub sequence_number: u64,
     pub authentication_key: BytesView,
@@ -142,14 +142,14 @@ pub struct AccountView {
 
 impl AccountView {
     pub fn new(
-        address: &AccountAddress,
+        address: AccountAddress,
         account: &AccountResource,
         balances: BTreeMap<Identifier, BalanceResource>,
         account_role: AccountRole,
         freezing_bit: FreezingBit,
     ) -> Self {
         Self {
-            address: BytesView::from(address.to_vec()),
+            address,
             balances: balances
                 .iter()
                 .map(|(currency_code, balance)| {
@@ -199,12 +199,12 @@ pub enum EventDataView {
     #[serde(rename = "burn")]
     Burn {
         amount: AmountView,
-        preburn_address: BytesView,
+        preburn_address: AccountAddress,
     },
     #[serde(rename = "cancelburn")]
     CancelBurn {
         amount: AmountView,
-        preburn_address: BytesView,
+        preburn_address: AccountAddress,
     },
     #[serde(rename = "mint")]
     Mint { amount: AmountView },
@@ -216,20 +216,20 @@ pub enum EventDataView {
     #[serde(rename = "preburn")]
     Preburn {
         amount: AmountView,
-        preburn_address: BytesView,
+        preburn_address: AccountAddress,
     },
     #[serde(rename = "receivedpayment")]
     ReceivedPayment {
         amount: AmountView,
-        sender: BytesView,
-        receiver: BytesView,
+        sender: AccountAddress,
+        receiver: AccountAddress,
         metadata: BytesView,
     },
     #[serde(rename = "sentpayment")]
     SentPayment {
         amount: AmountView,
-        receiver: BytesView,
-        sender: BytesView,
+        receiver: AccountAddress,
+        sender: AccountAddress,
         metadata: BytesView,
     },
     #[serde(rename = "admintransaction")]
@@ -239,13 +239,13 @@ pub enum EventDataView {
     #[serde(rename = "newblock")]
     NewBlock {
         round: u64,
-        proposer: BytesView,
+        proposer: AccountAddress,
         proposed_time: u64,
     },
     #[serde(rename = "receivedmint")]
     ReceivedMint {
         amount: AmountView,
-        destination_address: BytesView,
+        destination_address: AccountAddress,
     },
     #[serde(rename = "compliancekeyrotation")]
     ComplianceKeyRotation {
@@ -259,7 +259,7 @@ pub enum EventDataView {
     },
     #[serde(rename = "createaccount")]
     CreateAccount {
-        created_address: BytesView,
+        created_address: AccountAddress,
         role_id: u64,
     },
     #[serde(rename = "unknown")]
@@ -278,8 +278,8 @@ impl TryFrom<ContractEvent> for EventDataView {
             );
             EventDataView::ReceivedPayment {
                 amount: amount_view,
-                sender: BytesView::from(received_event.sender().as_ref()),
-                receiver: BytesView::from(&event.key().get_creator_address().to_vec()),
+                sender: received_event.sender(),
+                receiver: event.key().get_creator_address(),
                 metadata: BytesView::from(received_event.metadata()),
             }
         } else if event.type_tag() == &TypeTag::Struct(SentPaymentEvent::struct_tag()) {
@@ -288,8 +288,8 @@ impl TryFrom<ContractEvent> for EventDataView {
                 AmountView::new(sent_event.amount(), sent_event.currency_code().as_str());
             EventDataView::SentPayment {
                 amount: amount_view,
-                receiver: BytesView::from(sent_event.receiver().as_ref()),
-                sender: BytesView::from(&event.key().get_creator_address().to_vec()),
+                receiver: sent_event.receiver(),
+                sender: event.key().get_creator_address(),
                 metadata: BytesView::from(sent_event.metadata()),
             }
         } else if event.type_tag() == &TypeTag::Struct(PreburnEvent::struct_tag()) {
@@ -298,19 +298,17 @@ impl TryFrom<ContractEvent> for EventDataView {
                 preburn_event.amount(),
                 preburn_event.currency_code().as_str(),
             );
-            let preburn_address = BytesView::from(preburn_event.preburn_address().as_ref());
             EventDataView::Preburn {
                 amount: amount_view,
-                preburn_address,
+                preburn_address: preburn_event.preburn_address(),
             }
         } else if event.type_tag() == &TypeTag::Struct(BurnEvent::struct_tag()) {
             let burn_event = BurnEvent::try_from(&event)?;
             let amount_view =
                 AmountView::new(burn_event.amount(), burn_event.currency_code().as_str());
-            let preburn_address = BytesView::from(burn_event.preburn_address().as_ref());
             EventDataView::Burn {
                 amount: amount_view,
-                preburn_address,
+                preburn_address: burn_event.preburn_address(),
             }
         } else if event.type_tag() == &TypeTag::Struct(CancelBurnEvent::struct_tag()) {
             let cancel_burn_event = CancelBurnEvent::try_from(&event)?;
@@ -318,10 +316,9 @@ impl TryFrom<ContractEvent> for EventDataView {
                 cancel_burn_event.amount(),
                 cancel_burn_event.currency_code().as_str(),
             );
-            let preburn_address = BytesView::from(cancel_burn_event.preburn_address().as_ref());
             EventDataView::CancelBurn {
                 amount: amount_view,
-                preburn_address,
+                preburn_address: cancel_burn_event.preburn_address(),
             }
         } else if event.type_tag() == &TypeTag::Struct(ToXDXExchangeRateUpdateEvent::struct_tag()) {
             let update_event = ToXDXExchangeRateUpdateEvent::try_from(&event)?;
@@ -342,11 +339,9 @@ impl TryFrom<ContractEvent> for EventDataView {
                 received_mint_event.amount(),
                 received_mint_event.currency_code().as_str(),
             );
-            let destination_address =
-                BytesView::from(received_mint_event.destination_address().as_ref());
             EventDataView::ReceivedMint {
                 amount: amount_view,
-                destination_address,
+                destination_address: received_mint_event.destination_address(),
             }
         } else if event.type_tag() == &TypeTag::Struct(ComplianceKeyRotationEvent::struct_tag()) {
             let rotation_event = ComplianceKeyRotationEvent::try_from(&event)?;
@@ -365,7 +360,7 @@ impl TryFrom<ContractEvent> for EventDataView {
         } else if event.type_tag() == &TypeTag::Struct(NewBlockEvent::struct_tag()) {
             let new_block_event = NewBlockEvent::try_from(&event)?;
             EventDataView::NewBlock {
-                proposer: BytesView::from(new_block_event.proposer().as_ref()),
+                proposer: new_block_event.proposer(),
                 round: new_block_event.round(),
                 proposed_time: new_block_event.proposed_time(),
             }
@@ -376,7 +371,7 @@ impl TryFrom<ContractEvent> for EventDataView {
             }
         } else if event.type_tag() == &TypeTag::Struct(CreateAccountEvent::struct_tag()) {
             let create_account_event = CreateAccountEvent::try_from(&event)?;
-            let created_address = BytesView::from(create_account_event.created().as_ref());
+            let created_address = create_account_event.created();
             let role_id = create_account_event.role_id();
             EventDataView::CreateAccount {
                 created_address,
@@ -450,18 +445,6 @@ impl From<&Vec<u8>> for BytesView {
 impl From<Vec<u8>> for BytesView {
     fn from(bytes: Vec<u8>) -> Self {
         Self(hex::encode(bytes))
-    }
-}
-
-impl From<AccountAddress> for BytesView {
-    fn from(address: AccountAddress) -> Self {
-        address.to_vec().into()
-    }
-}
-
-impl From<&AccountAddress> for BytesView {
-    fn from(address: &AccountAddress) -> Self {
-        address.to_vec().into()
     }
 }
 
@@ -575,7 +558,7 @@ pub enum TransactionDataView {
     WriteSet {},
     #[serde(rename = "user")]
     UserTransaction {
-        sender: BytesView,
+        sender: AccountAddress,
         signature_scheme: String,
         signature: BytesView,
         public_key: BytesView,
@@ -617,7 +600,7 @@ pub struct ScriptView {
 
     // peer_to_peer_transaction
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub receiver: Option<BytesView>,
+    pub receiver: Option<AccountAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub amount: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -642,7 +625,7 @@ impl From<AccountRole> for AccountRoleView {
         match role {
             AccountRole::Unknown => AccountRoleView::Unknown,
             AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
-                parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),
+                parent_vasp_address: child_vasp.parent_vasp_addr(),
             },
             AccountRole::ParentVASP { vasp, credential } => AccountRoleView::ParentVASP {
                 human_name: credential.human_name().to_string(),

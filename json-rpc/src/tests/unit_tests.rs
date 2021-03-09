@@ -1139,10 +1139,7 @@ fn test_get_account() {
         .iter()
         .map(|(_, bal_resource)| bal_resource.coin())
         .collect();
-    assert_eq!(
-        account.address.into_bytes().unwrap(),
-        first_account.to_vec()
-    );
+    assert_eq!(account.address, *first_account);
     assert_eq!(account_balances, expected_resource_balances);
     assert_eq!(
         account.sequence_number,
@@ -1343,10 +1340,7 @@ fn test_get_transactions() {
                         chain_id,
                         ..
                     } => {
-                        assert_eq!(
-                            t.sender().to_string().to_lowercase(),
-                            sender.clone().to_string()
-                        );
+                        assert_eq!(t.sender(), *sender);
                         assert_eq!(&t.chain_id().id(), chain_id);
                         // TODO: verify every field
                         if let TransactionPayload::Script(s) = t.payload() {
@@ -1427,7 +1421,7 @@ fn test_get_account_transaction() {
                     script_hash,
                     ..
                 } => {
-                    assert_eq!(acc.to_string().to_lowercase(), sender.to_string());
+                    assert_eq!(*acc, sender);
                     assert_eq!(seq, sequence_number);
 
                     if let TransactionPayload::Script(s) = expected_tx.payload() {

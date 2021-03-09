@@ -289,7 +289,7 @@ async fn get_account(
     let balances = account_state.get_balance_resources(&currencies)?;
 
     Ok(Some(AccountView::new(
-        &account_address,
+        account_address,
         &account_resource,
         balances,
         account_role,
