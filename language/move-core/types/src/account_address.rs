@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, Error, Result};
+use hex::FromHex;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
@@ -69,6 +70,12 @@ impl AccountAddress {
         };
 
         AccountAddress::try_from(padded_result)
+    }
+
+    pub fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, AccountAddressParseError> {
+        <[u8; Self::LENGTH]>::from_hex(hex)
+            .map_err(|_| AccountAddressParseError)
+            .map(Self)
     }
 }
 
@@ -186,11 +193,10 @@ impl TryFrom<String> for AccountAddress {
 }
 
 impl FromStr for AccountAddress {
-    type Err = Error;
+    type Err = AccountAddressParseError;
 
-    fn from_str(s: &str) -> Result<Self> {
-        let bytes_out = ::hex::decode(s)?;
-        AccountAddress::try_from(bytes_out.as_slice())
+    fn from_str(s: &str) -> Result<Self, AccountAddressParseError> {
+        Self::from_hex(s)
     }
 }
 
@@ -230,45 +236,35 @@ impl Serialize for AccountAddress {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct AccountAddressParseError;
+
+impl fmt::Display for AccountAddressParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        write!(f, "unable to parse AccoutAddress")
+    }
+}
+
+impl std::error::Error for AccountAddressParseError {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex::FromHex;
 
     #[test]
     fn test_short_str_lossless() {
-        let hex = Vec::from_hex("00c0f1f95c5b1c5f0eda533eff269000")
-            .expect("You must provide a valid Hex format");
-
-        let address: AccountAddress = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
-            panic!(
-                "The address {:?} is of invalid length. Addresses must be 16-bytes long",
-                &hex
-            )
-        });
-
-        let string_lossless = address.short_str_lossless();
+        let address = AccountAddress::from_hex("00c0f1f95c5b1c5f0eda533eff269000").unwrap();
 
         assert_eq!(
-            "c0f1f95c5b1c5f0eda533eff269000".to_string(),
-            string_lossless
+            address.short_str_lossless(),
+            "c0f1f95c5b1c5f0eda533eff269000",
         );
     }
 
     #[test]
     fn test_short_str_lossless_zero() {
-        let hex = Vec::from_hex("00000000000000000000000000000000")
-            .expect("You must provide a valid Hex format");
+        let address = AccountAddress::from_hex("00000000000000000000000000000000").unwrap();
 
-        let address: AccountAddress = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
-            panic!(
-                "The address {:?} is of invalid length. Addresses must be 16-bytes long",
-                &hex
-            )
-        });
-
-        let string_lossless = address.short_str_lossless();
-
-        assert_eq!("0".to_string(), string_lossless);
+        assert_eq!(address.short_str_lossless(), "0");
     }
 }
