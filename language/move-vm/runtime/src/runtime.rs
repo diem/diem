@@ -348,8 +348,8 @@ impl VMRuntime {
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         log_context: &impl LogContext,
-    ) -> VMResult<Vec<Vec<u8>>> {
-        self.execute_function_impl(
+    ) -> VMResult<()> {
+        let return_vals = self.execute_function_impl(
             module,
             function_name,
             ty_args,
@@ -358,7 +358,24 @@ impl VMRuntime {
             data_store,
             cost_strategy,
             log_context,
-        )
+        )?;
+
+        // A script function that serves as the entry point of execution cannot have return values,
+        // this is checked dynamically when the function is loaded. Hence, if the execution ever
+        // reaches here, it is an invariant violation
+        if !return_vals.is_empty() {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(
+                        "script functions that serve as execution entry points cannot have \
+                        return values -- this should not happen"
+                            .to_string(),
+                    )
+                    .finish(Location::Undefined),
+            );
+        }
+
+        Ok(())
     }
 
     // See Session::execute_function for what contracts to follow.
