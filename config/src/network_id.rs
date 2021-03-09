@@ -320,7 +320,7 @@ mod test {
         let peer_id = PeerId::random();
         let context = NetworkContext::new(RoleType::Validator, NetworkId::vfn_network(), peer_id);
         let expected = format!(
-            "---\nrole: {}\nnetwork_id: {}\npeer_id: {}\n",
+            "---\nrole: {}\nnetwork_id: {}\npeer_id: {:x}\n",
             RoleType::Validator,
             VFN_NETWORK,
             peer_id

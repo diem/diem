@@ -95,27 +95,41 @@ impl std::ops::Deref for AccountAddress {
 
 impl fmt::Display for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        // Forward to the UpperHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#X}", self)
+        write!(f, "{:X}", self)
     }
 }
 
 impl fmt::Debug for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Forward to the UpperHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#X}", self)
+        write!(f, "{:X}", self)
     }
 }
 
 impl fmt::LowerHex for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+
+        for byte in &self.0 {
+            write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
     }
 }
 
 impl fmt::UpperHex for AccountAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode_upper(&self.0))
+        if f.alternate() {
+            write!(f, "0x")?;
+        }
+
+        for byte in &self.0 {
+            write!(f, "{:02X}", byte)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -256,6 +270,22 @@ mod tests {
         convert::{AsRef, TryFrom},
         str::FromStr,
     };
+
+    #[test]
+    fn test_display_impls() {
+        let hex = "ca843279e3427144cead5e4d5999a3d0";
+        let upper_hex = "CA843279E3427144CEAD5E4D5999A3D0";
+
+        let address = AccountAddress::from_hex(hex).unwrap();
+
+        assert_eq!(format!("{}", address), upper_hex);
+        assert_eq!(format!("{:?}", address), upper_hex);
+        assert_eq!(format!("{:X}", address), upper_hex);
+        assert_eq!(format!("{:x}", address), hex);
+
+        assert_eq!(format!("{:#x}", address), format!("0x{}", hex));
+        assert_eq!(format!("{:#X}", address), format!("0x{}", upper_hex));
+    }
 
     #[test]
     fn test_short_str_lossless() {

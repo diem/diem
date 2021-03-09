@@ -145,7 +145,7 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "unknown role type account",
             run: |env: &mut testing::Env| {
-                let address = format!("{:#x}", diem_types::account_config::diem_root_address());
+                let address = format!("{:x}", diem_types::account_config::diem_root_address());
                 let resp = env.send("get_account", json!([address]));
                 let mut result = resp.result.unwrap();
                 // as we generate account auth key, ignore it in assertion
@@ -172,7 +172,7 @@ fn create_test_cases() -> Vec<Test> {
             name: "designated_dealer role type account no preburns",
             run: |env: &mut testing::Env| {
                 let address = format!(
-                    "{:#x}",
+                    "{:x}",
                     diem_types::account_config::testnet_dd_account_address()
                 );
                 let resp = env.send("get_account", json!([address]));
@@ -230,10 +230,8 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "designated_dealer role type account with preburns",
             run: |env: &mut testing::Env| {
-                let address = format!(
-                    "{:#x}",
-                    diem_types::account_config::testnet_dd_account_address()
-                );
+                let address =
+                    diem_types::account_config::testnet_dd_account_address().to_hex();
                 env.submit_and_wait(
                     env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100))
                 );
@@ -312,7 +310,7 @@ fn create_test_cases() -> Vec<Test> {
             name: "parent vasp role type account",
             run: |env: &mut testing::Env| {
                 let account = &env.vasps[0];
-                let address = format!("{:#x}", &account.address);
+                let address = format!("{:x}", &account.address);
                 let resp = env.send("get_account", json!([address]));
                 let result = resp.result.unwrap();
                 assert_eq!(
@@ -346,7 +344,7 @@ fn create_test_cases() -> Vec<Test> {
             run: |env: &mut testing::Env| {
                 let parent = &env.vasps[0];
                 let account = &env.vasps[0].children[0];
-                let address = format!("{:#x}", &account.address);
+                let address = format!("{:x}", &account.address);
                 let resp = env.send("get_account", json!([address]));
                 let result = resp.result.unwrap();
                 assert_eq!(
@@ -361,7 +359,7 @@ fn create_test_cases() -> Vec<Test> {
                         "received_events_key": format!("0000000000000000{}", address),
                         "role": {
                             "type": "child_vasp",
-                            "parent_vasp_address": format!("{:#x}", &parent.address),
+                            "parent_vasp_address": format!("{:x}", &parent.address),
                         },
                         "sent_events_key": format!("0100000000000000{}", address),
                         "sequence_number": 0
@@ -411,11 +409,11 @@ fn create_test_cases() -> Vec<Test> {
                                 "data": {
                                     "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
-                                    "receiver": format!("{:#x}", &receiver.address),
-                                    "sender": format!("{:#x}", &sender.address),
+                                    "receiver": format!("{:x}", &receiver.address),
+                                    "sender": format!("{:x}", &sender.address),
                                     "type": "sentpayment"
                                 },
-                                "key": format!("0100000000000000{:#x}", &sender.address),
+                                "key": format!("0100000000000000{:x}", &sender.address),
                                 "sequence_number": 0,
                                 "transaction_version": version,
                             },
@@ -423,11 +421,11 @@ fn create_test_cases() -> Vec<Test> {
                                 "data": {
                                     "amount": {"amount": 200000_u64, "currency": "XUS"},
                                     "metadata": "",
-                                    "receiver": format!("{:#x}", &receiver.address),
-                                    "sender": format!("{:#x}", &sender.address),
+                                    "receiver": format!("{:x}", &receiver.address),
+                                    "sender": format!("{:x}", &sender.address),
                                     "type": "receivedpayment"
                                 },
-                                "key": format!("0000000000000000{:#x}", &receiver.address),
+                                "key": format!("0000000000000000{:x}", &receiver.address),
                                 "sequence_number": 1,
                                 "transaction_version": version
                             }
@@ -457,11 +455,11 @@ fn create_test_cases() -> Vec<Test> {
                                 "currency": "XUS",
                                 "metadata": "",
                                 "metadata_signature": "",
-                                "receiver": format!("{:#x}", &receiver.address),
+                                "receiver": format!("{:x}", &receiver.address),
                             },
                             "script_bytes": script_bytes,
                             "script_hash": script_hash,
-                            "sender": format!("{:#x}", &sender.address),
+                            "sender": format!("{:x}", &sender.address),
                             "sequence_number": 0,
                             "signature": hex::encode(txn.authenticator().signature_bytes()),
                             "signature_scheme": "Scheme::Ed25519",
@@ -860,7 +858,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "time_rotated_seconds": rotated_seconds,
                                 "type":"baseurlrotation"
                             },
-                            "key": format!("0100000000000000{:#x}", &env.vasps[0].address),
+                            "key": format!("0100000000000000{:x}", &env.vasps[0].address),
                             "sequence_number":0,
                             "transaction_version":version
                         },
@@ -870,7 +868,7 @@ fn create_test_cases() -> Vec<Test> {
                                 "time_rotated_seconds": rotated_seconds,
                                 "type":"compliancekeyrotation"
                             },
-                            "key": format!("0000000000000000{:#x}", &env.vasps[0].address),
+                            "key": format!("0000000000000000{:x}", &env.vasps[0].address),
                             "sequence_number":0,
                             "transaction_version":version
                         }
