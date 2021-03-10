@@ -150,7 +150,7 @@ print(account)
 
 ```java
 //connect to testnet
-LibraClient client = Testnet.createClient();
+DiemClient client = Testnet.createClient();
 
 //generate private key for new account
 PrivateKey privateKey = new Ed25519PrivateKey(new Ed25519PrivateKeyParameters(new SecureRandom()));
@@ -219,10 +219,10 @@ script = stdlib.encode_peer_to_peer_with_metadata_script(
     )
 
 # create transaction
-raw_transaction = libra_types.RawTransaction(
+raw_transaction = diem_types.RawTransaction(
     sender=sender_auth_key.account_address(),
     sequence_number=sender_account.sequence_number,
-    payload=libra_types.TransactionPayload__Script(script),
+    payload=diem_types.TransactionPayload__Script(script),
     max_gas_amount=1_000_000,
     gas_unit_price=0,
     gas_currency_code=CURRENCY,
@@ -247,7 +247,7 @@ client.wait_for_transaction(signed_txn)
 
 ```java
 //connect to testnet
-LibraClient client = Testnet.createClient();
+DiemClient client = Testnet.createClient();
 
 //generate private key for sender account
 PrivateKey senderPrivateKey = new Ed25519PrivateKey(new Ed25519PrivateKeyParameters(new SecureRandom()));
@@ -358,7 +358,7 @@ encoded_intent_identifier = identifier.encode_intent(account_identifier, "XUS", 
 print(f"Encoded IntentIdentifier: {encoded_intent_identifier}")
 
 # deserialize IntentIdentifier
-intent_identifier = libra.identifier.decode_intent(encoded_intent_identifier, identifier.TLB)
+intent_identifier = diem.identifier.decode_intent(encoded_intent_identifier, identifier.TLB)
 print(f"Account (HEX) from intent: {utils.account_address_hex(intent_identifier.account_address)}")
 print(f"Amount from intent: {intent_identifier.amount}")
 print(f"Currency from intent: {intent_identifier.currency_code}")
@@ -376,12 +376,12 @@ In the example below, we will setup a wallet with 100 XUS and then call the mint
 <Tabs groupId="syntax" defaultValue="python" values={syntax}>
 <TabItem value="python">
 
-```python title="https://github.com/libra/my-first-client/blob/master/python/src/get_events_example.py"
+```python title="https://github.com/diem/my-first-client/blob/master/python/src/get_events_example.py"
 import time
 from random import randrange
 from threading import Thread
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from libra import testnet, AuthKey, utils
+from diem import testnet, AuthKey, utils
 
 CURRENCY = "XUS"
 
@@ -444,13 +444,13 @@ if __name__ == "__main__":
 </TabItem>
 <TabItem value="java">
 
-```java title="https://github.com/libra/my-first-client/blob/master/java/src/main/java/example/GetEventsExample.java"
+```java title="https://github.com/diem/my-first-client/blob/master/java/src/main/java/example/GetEventsExample.java"
 
 package example;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
-import org.libra.*;
-import org.libra.jsonrpctypes.JsonRpc.Account;
-import org.libra.jsonrpctypes.JsonRpc.Event;
+import org.diem.*;
+import org.diem.jsonrpctypes.JsonRpc.Account;
+import org.diem.jsonrpctypes.JsonRpc.Event;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -461,9 +461,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class GetEventsExample {
    public static final String CURRENCY_CODE = "XUS";
-   public static void main(String[] args) throws LibraException {
+   public static void main(String[] args) throws DiemException {
        //connect to testnet
-       LibraClient client = Testnet.createClient();
+       DiemClient client = Testnet.createClient();
        //create new account
        SecureRandom random = new SecureRandom();
        Ed25519PrivateKeyParameters privateKeyParams = new Ed25519PrivateKeyParameters(random);
@@ -478,14 +478,14 @@ public class GetEventsExample {
        //demonstrates events subscription
        subscribe(client, eventsKey);
    }
-   public static void subscribe(LibraClient client, String eventsKey) {
+   public static void subscribe(DiemClient client, String eventsKey) {
        Runnable listener = () -> {
            long start = 0;
            for (int i = 0; i &lt; 15; i++) {
                List&lt;Event> events;
                try {
                    events = client.getEvents(eventsKey, start, 10);
-               } catch (LibraException e) {
+               } catch (DiemException e) {
                    throw new RuntimeException(e);
                }
                start += events.size();
@@ -504,7 +504,7 @@ public class GetEventsExample {
        Thread listenerThread = new Thread(listener);
        listenerThread.start();
    }
-   private static void startMinter(LibraClient client, AuthKey authKey) {
+   private static void startMinter(DiemClient client, AuthKey authKey) {
        Runnable minter = () -> {
            for (int i = 0; i &lt; 10; i++) {
                int amount =  1000000;
