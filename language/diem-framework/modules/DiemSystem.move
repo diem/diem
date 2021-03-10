@@ -57,7 +57,7 @@ module DiemSystem {
     spec struct DiemSystem {
         /// Members of `validators` vector (the validator set) have unique addresses.
         invariant
-            forall i in 0..len(validators), j in 0..len(validators):
+            forall i in 0..len(validators), j in 0..len(validators) {validators[i], validators[j]}:
                 validators[i].addr == validators[j].addr ==> i == j;
     }
 
@@ -301,7 +301,7 @@ module DiemSystem {
     spec fun update_config_and_reconfigure {
         pragma opaque;
         // TODO(timeout): this started timing out after recent refactoring. Investigate.
-        pragma verify = false;
+//        pragma verify = false;
         modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include ValidatorConfig::AbortsIfGetOperator{addr: validator_addr};
         include UpdateConfigAndReconfigureAbortsIf;

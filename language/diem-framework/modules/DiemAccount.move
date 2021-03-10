@@ -639,10 +639,11 @@ module DiemAccount {
         Diem::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
     }
     spec fun preburn {
-        // TODO(timeout): started timing out after recent refactoring, investigate. (Likely due to
-        //   underspecified opaque functions).
-        pragma verify = false;
         pragma opaque;
+        // The prover used to time out on this. The event specs seem incomplete because withdraw_from
+        // events are missing, so maybe that explained it.  Adding the pragma below fixed the timeout.
+        // adding WithdrawFromEmits causes time outs with or without the pragma
+        pragma emits_is_partial;
         let dd_addr = Signer::spec_address_of(dd);
         let payer = cap.account_address;
         modifies global<DiemAccount>(payer);
@@ -652,6 +653,8 @@ module DiemAccount {
         include PreburnAbortsIf<Token>;
         include PreburnEnsures<Token>{dd, payer};
         include PreburnEmits<Token>{dd_addr};
+        // TODO: Next thing causes a timeout, even with emits_is_partial. Reason unknown.
+        // include WithdrawFromEmits<Token>{payee: Signer::address_of(dd), metadata: x""};
     }
     spec schema PreburnAbortsIf<Token> {
         dd: signer;
@@ -1997,7 +2000,7 @@ module DiemAccount {
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
         /// or the withdraw capability for addr itself [[H18]][PERMISSION].
         invariant [global] forall addr: address where exists_at(addr):
-            spec_holds_delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
+             spec_holds_delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
     }
 
     spec schema EnsuresWithdrawCap {
@@ -2014,29 +2017,29 @@ module DiemAccount {
 
     /// ## Authentication Key
 
-    spec module {
-        /// only `Self::rotate_authentication_key` can rotate authentication_key [[H17]][PERMISSION].
-        apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
-    }
+     spec module {
+         /// only `Self::rotate_authentication_key` can rotate authentication_key [[H17]][PERMISSION].
+         apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
+     }
 
-    spec schema AuthenticationKeyRemainsSame {
-        ensures forall addr: address where old(exists_at(addr)):
-            global<DiemAccount>(addr).authentication_key == old(global<DiemAccount>(addr).authentication_key);
-    }
+     spec schema AuthenticationKeyRemainsSame {
+         ensures forall addr: address where old(exists_at(addr)):
+             global<DiemAccount>(addr).authentication_key == old(global<DiemAccount>(addr).authentication_key);
+     }
 
     /// ## Balance
 
-    spec module {
-        /// only `Self::withdraw_from` and its helper and clients can withdraw [[H18]][PERMISSION].
-        apply BalanceNotDecrease<Token> to *<Token>
-            except withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
-                preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
-    }
+     spec module {
+         /// only `Self::withdraw_from` and its helper and clients can withdraw [[H18]][PERMISSION].
+         apply BalanceNotDecrease<Token> to *<Token>
+             except withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
+                 preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
+     }
 
-    spec schema BalanceNotDecrease<Token> {
-        ensures forall addr: address where old(exists<Balance<Token>>(addr)):
-            global<Balance<Token>>(addr).coin.value >= old(global<Balance<Token>>(addr).coin.value);
-    }
+     spec schema BalanceNotDecrease<Token> {
+         ensures forall addr: address where old(exists<Balance<Token>>(addr)):
+             global<Balance<Token>>(addr).coin.value >= old(global<Balance<Token>>(addr).coin.value);
+     }
 
     /// # Persistence of Resources
 
@@ -2049,22 +2052,23 @@ module DiemAccount {
             DiemTimestamp::is_operating() ==> exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// After genesis, the `DiemWriteSetManager` exists.
-        invariant [global]
-            DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
+         invariant [global]
+             DiemTimestamp::is_operating() ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()
+         );
 
         /// resource struct `Balance<CoinType>` is persistent
-        invariant update [global] forall coin_type: type, addr: address
-            where old(exists<Balance<coin_type>>(addr)):
-                exists<Balance<coin_type>>(addr);
+         invariant update [global] forall coin_type: type, addr: address
+             where old(exists<Balance<coin_type>>(addr)):
+                 exists<Balance<coin_type>>(addr);
 
         /// resource struct `AccountOperationsCapability` is persistent
         invariant update [global] old(exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS()))
                 ==> exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
 
         /// resource struct `AccountOperationsCapability` is persistent
-        invariant update [global]
-            old(exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()))
-                ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
+         invariant update [global]
+             old(exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS()))
+                 ==> exists<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
     }
 
     /// # Other invariants
@@ -2077,6 +2081,7 @@ module DiemAccount {
         invariant [global] forall token: type: forall addr: address where exists<Balance<token>>(addr):
             Roles::spec_can_hold_balance_addr(addr);
 
+
         /// If there is a `DesignatedDealer::Dealer` resource published at `addr`, the `addr` has a
         /// `Roles::DesignatedDealer` role.
         // Verified with additional target DesignatedDealer.move
@@ -2086,8 +2091,8 @@ module DiemAccount {
         /// If there is a DualAttestation credential, account has designated dealer role
         // Verified with additional target "VASP.move"
         invariant [global] forall addr: address where exists<DualAttestation::Credential>(addr):
-            Roles::spec_has_designated_dealer_role_addr(addr)
-            || Roles::spec_has_parent_VASP_role_addr(addr);
+             Roles::spec_has_designated_dealer_role_addr(addr)
+             || Roles::spec_has_parent_VASP_role_addr(addr);
 
         /// Every address that has a published account has a published FreezingBit
         invariant [global] forall addr: address where exists_at(addr): exists<AccountFreezing::FreezingBit>(addr);

@@ -592,14 +592,10 @@ module Diem {
     spec schema PublishPreburnQueueEnsures<CoinType> {
         account: signer;
         let account_addr = Signer::spec_address_of(account);
-        let exists_preburn_queue = exists<PreburnQueue<CoinType>>(account_addr);
         // The preburn queue is published at the end of this function,
-        ensures exists_preburn_queue;
-        // there cannot be a preburn resource for the same currency as the account,
-        ensures !exists<Preburn<CoinType>>(account_addr);
+        ensures exists<PreburnQueue<CoinType>>(account_addr);
         // and the preburn queue is empty
         ensures Vector::length(global<PreburnQueue<CoinType>>(account_addr).preburns) == 0;
-        ensures old(exists_preburn_queue) ==> exists_preburn_queue;
     }
 
     /// Publish a `Preburn` resource under `account`. This function is
@@ -622,13 +618,11 @@ module Diem {
         /// The premission "PreburnCurrency" is granted to DesignatedDealer [[H4]][PERMISSION].
         /// Must abort if the account does not have the DesignatedDealer role.
         include Roles::AbortsIfNotDesignatedDealer;
-        /// PreburnQueue is published under the DesignatedDealer account.
         include PublishPreburnQueueAbortsIf<CoinType>;
+        /// Next includes that PreburnQueue is published under the DesignatedDealer account.
         include PublishPreburnQueueEnsures<CoinType>;
-        ensures exists<PreburnQueue<CoinType>>(account_addr);
 
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        include AbortsIfNoCurrency<CoinType>;
         aborts_if is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
         aborts_if exists<PreburnQueue<CoinType>>(account_addr) with Errors::ALREADY_PUBLISHED;
         aborts_if exists<Preburn<CoinType>>(account_addr) with Errors::INVALID_STATE;
@@ -679,7 +673,13 @@ module Diem {
         let account_addr = Signer::spec_address_of(account);
         let preburn_exists = exists<Preburn<CoinType>>(account_addr);
         let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
+        /// TODO: I believe this holds trivially because the antecedant is false.
+        /// preburn_exists becomes false because of the move_from in upgrade_preburn, and
+        /// preburn_queue_exists will be false after publish_preburn_queue runs!
+        /// These should be "old", but I can't figure out how to say that.        
         include (preburn_exists && !preburn_queue_exists) ==> PublishPreburnQueueEnsures<CoinType>;
+        // To see that antecedant is always false, the following verifies:
+        ensures !(preburn_exists && !preburn_queue_exists);
     }
 
     /// Add the `preburn` request to the preburn queue of `account`, and check that the
@@ -745,6 +745,8 @@ module Diem {
         pragma opaque;
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
         include PreburnToEnsures<CoinType>{amount: coin.value};
+        let account_addr = Signer::spec_address_of(account);        
+        include PreburnWithResourceEmits<CoinType>{preburn_address: account_addr, amount: coin.value};
     }
     spec schema PreburnToAbortsIf<CoinType> {
         account: signer;
@@ -770,7 +772,6 @@ module Diem {
         // The preburn amount in the currency info can be updated.
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include PreburnEnsures<CoinType>{preburn: spec_make_preburn(amount)};
-        include PreburnWithResourceEmits<CoinType>{preburn_address: account_addr};
     }
 
     /// Remove the oldest preburn request in the `PreburnQueue<CoinType>`
