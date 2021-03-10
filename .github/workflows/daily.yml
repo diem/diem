@@ -11,7 +11,7 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:main
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +42,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest-xl
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:main
     env:
       CODECOV_OUTPUT: codecov
       MESSAGE_PAYLOAD_FILE: /tmp/message
@@ -83,7 +83,7 @@ jobs:
   transaction-replay:
     runs-on: ubuntu-latest-xl
     container:
-      image: libra/build_environment:github-1
+      image: diem/build_environment:main
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
       ACCOUNT: ${{ secrets.TRANSACTION_REPLAY_ACCOUNT }}
@@ -110,8 +110,6 @@ jobs:
 
   prune-docker-images:
     runs-on: ubuntu-latest
-    env:
-      TAG: github-1
     steps:
       - uses: actions/checkout@v2
       - name: sign in to DockerHub; install image signing cert
