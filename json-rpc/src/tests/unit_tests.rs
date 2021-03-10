@@ -10,10 +10,7 @@ use crate::{
     },
     util::vm_status_view_from_kept_vm_status,
 };
-use diem_client::{
-    views::{BytesView, TransactionDataView},
-    BlockingClient, MethodRequest,
-};
+use diem_client::{views::TransactionDataView, BlockingClient, MethodRequest};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
 use diem_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use diem_mempool::SubmissionStatus;
@@ -1315,10 +1312,7 @@ fn test_get_transactions() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
                 assert_eq!(event_view.sequence_number, expected_event.sequence_number());
                 assert_eq!(event_view.transaction_version, version);
-                assert_eq!(
-                    event_view.key.0,
-                    BytesView::from(expected_event.key().as_bytes()).0
-                );
+                assert_eq!(event_view.key, *expected_event.key());
                 // TODO: check event_data
             }
 
@@ -1404,10 +1398,7 @@ fn test_get_account_transaction() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
                 assert_eq!(event_view.sequence_number, expected_event.sequence_number());
                 assert_eq!(event_view.transaction_version, tx_view.version);
-                assert_eq!(
-                    event_view.key.0,
-                    BytesView::from(expected_event.key().as_bytes()).0
-                );
+                assert_eq!(event_view.key, *expected_event.key());
                 // TODO: check event_data
             }
 

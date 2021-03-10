@@ -244,7 +244,7 @@ impl DiemClient {
                 };
 
                 // get_events
-                let events = self.get_events(&event_key.0, start_event_seq_num, limit)?;
+                let events = self.get_events(&event_key.to_string(), start_event_seq_num, limit)?;
                 Ok((events, account_view))
             }
         }

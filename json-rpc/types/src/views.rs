@@ -14,6 +14,7 @@ use diem_types::{
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
+    event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
 };
@@ -56,8 +57,8 @@ pub enum AccountRoleView {
         expiration_time: u64,
         compliance_key: BytesView,
         num_children: u64,
-        compliance_key_rotation_events_key: BytesView,
-        base_url_rotation_events_key: BytesView,
+        compliance_key_rotation_events_key: EventKey,
+        base_url_rotation_events_key: EventKey,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {
@@ -66,9 +67,9 @@ pub enum AccountRoleView {
         expiration_time: u64,
         compliance_key: BytesView,
         preburn_balances: Vec<AmountView>,
-        received_mint_events_key: BytesView,
-        compliance_key_rotation_events_key: BytesView,
-        base_url_rotation_events_key: BytesView,
+        received_mint_events_key: EventKey,
+        compliance_key_rotation_events_key: EventKey,
+        base_url_rotation_events_key: EventKey,
         preburn_queues: Option<Vec<PreburnQueueView>>,
     },
 }
@@ -132,8 +133,8 @@ pub struct AccountView {
     pub balances: Vec<AmountView>,
     pub sequence_number: u64,
     pub authentication_key: BytesView,
-    pub sent_events_key: BytesView,
-    pub received_events_key: BytesView,
+    pub sent_events_key: EventKey,
+    pub received_events_key: EventKey,
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
     pub is_frozen: bool,
@@ -158,8 +159,8 @@ impl AccountView {
                 .collect(),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),
-            sent_events_key: BytesView::from(account.sent_events().key().as_bytes()),
-            received_events_key: BytesView::from(account.received_events().key().as_bytes()),
+            sent_events_key: *account.sent_events().key(),
+            received_events_key: *account.received_events().key(),
             delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
             is_frozen: freezing_bit.is_frozen(),
@@ -182,7 +183,7 @@ impl PreburnQueueView {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct EventView {
-    pub key: BytesView,
+    pub key: EventKey,
     pub sequence_number: u64,
     pub transaction_version: u64,
     pub data: EventDataView,
@@ -395,7 +396,7 @@ impl TryFrom<(u64, ContractEvent)> for EventView {
 
     fn try_from((txn_version, event): (u64, ContractEvent)) -> Result<Self> {
         Ok(EventView {
-            key: BytesView::from(event.key().as_bytes()),
+            key: *event.key(),
             sequence_number: event.sequence_number(),
             transaction_version: txn_version,
             data: event.try_into()?,
@@ -633,12 +634,10 @@ impl From<AccountRole> for AccountRoleView {
                 expiration_time: credential.expiration_date(),
                 compliance_key: BytesView::from(credential.compliance_public_key()),
                 num_children: vasp.num_children(),
-                compliance_key_rotation_events_key: BytesView::from(
-                    credential.compliance_key_rotation_events().key().as_bytes(),
-                ),
-                base_url_rotation_events_key: BytesView::from(
-                    credential.base_url_rotation_events().key().as_bytes(),
-                ),
+                compliance_key_rotation_events_key: *credential
+                    .compliance_key_rotation_events()
+                    .key(),
+                base_url_rotation_events_key: *credential.base_url_rotation_events().key(),
             },
             AccountRole::DesignatedDealer {
                 dd_credential,
@@ -653,18 +652,11 @@ impl From<AccountRole> for AccountRoleView {
                     expiration_time: dd_credential.expiration_date(),
                     compliance_key: BytesView::from(dd_credential.compliance_public_key()),
                     preburn_balances,
-                    received_mint_events_key: BytesView::from(
-                        designated_dealer.received_mint_events().key().as_bytes(),
-                    ),
-                    compliance_key_rotation_events_key: BytesView::from(
-                        dd_credential
-                            .compliance_key_rotation_events()
-                            .key()
-                            .as_bytes(),
-                    ),
-                    base_url_rotation_events_key: BytesView::from(
-                        dd_credential.base_url_rotation_events().key().as_bytes(),
-                    ),
+                    received_mint_events_key: *designated_dealer.received_mint_events().key(),
+                    compliance_key_rotation_events_key: *dd_credential
+                        .compliance_key_rotation_events()
+                        .key(),
+                    base_url_rotation_events_key: *dd_credential.base_url_rotation_events().key(),
                     preburn_queues,
                 }
             }
@@ -678,11 +670,11 @@ pub struct CurrencyInfoView {
     pub scaling_factor: u64,
     pub fractional_part: u64,
     pub to_xdx_exchange_rate: f32,
-    pub mint_events_key: BytesView,
-    pub burn_events_key: BytesView,
-    pub preburn_events_key: BytesView,
-    pub cancel_burn_events_key: BytesView,
-    pub exchange_rate_update_events_key: BytesView,
+    pub mint_events_key: EventKey,
+    pub burn_events_key: EventKey,
+    pub preburn_events_key: EventKey,
+    pub cancel_burn_events_key: EventKey,
+    pub exchange_rate_update_events_key: EventKey,
 }
 
 impl From<&CurrencyInfoResource> for CurrencyInfoView {
@@ -692,13 +684,11 @@ impl From<&CurrencyInfoResource> for CurrencyInfoView {
             scaling_factor: info.scaling_factor(),
             fractional_part: info.fractional_part(),
             to_xdx_exchange_rate: info.exchange_rate(),
-            mint_events_key: BytesView::from(info.mint_events().key().as_bytes()),
-            burn_events_key: BytesView::from(info.burn_events().key().as_bytes()),
-            preburn_events_key: BytesView::from(info.preburn_events().key().as_bytes()),
-            cancel_burn_events_key: BytesView::from(info.cancel_burn_events().key().as_bytes()),
-            exchange_rate_update_events_key: BytesView::from(
-                info.exchange_rate_update_events().key().as_bytes(),
-            ),
+            mint_events_key: *info.mint_events().key(),
+            burn_events_key: *info.burn_events().key(),
+            preburn_events_key: *info.preburn_events().key(),
+            cancel_burn_events_key: *info.cancel_burn_events().key(),
+            exchange_rate_update_events_key: *info.exchange_rate_update_events().key(),
         }
     }
 }
