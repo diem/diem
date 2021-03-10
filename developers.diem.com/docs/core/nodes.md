@@ -89,7 +89,7 @@ The upstream peers that are used for synchronizing to the latest state of the bl
 * Public FullNodes can either use the initial set of peers or the validators that are open for public access.
 
 ### Synchronization API
-The State Synchronizer of a Diem node communicates with the State Synchronizer of upstream nodes to get chunks of transactions to synchronize with the current state of the Diem Blockchain. Learn more about how this works in the specifications [here](https://github.com/diem/diem/tree/master/specifications/state_sync).
+The State Synchronizer of a Diem node communicates with the State Synchronizer of upstream nodes to get chunks of transactions to synchronize with the current state of the Diem Blockchain. Learn more about how this works in the specifications [here](https://github.com/diem/diem/tree/main/specifications/state_sync).
 
 
 ###### tags: `core`, `node`

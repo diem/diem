@@ -147,7 +147,7 @@ Note that while the serialization name coincides with the name of the structure
 in Rust for many such types, it is overridable, and we expect such overrides to
 occur over time, at least for the purpose of versioning. Our serialization
 library includes tooling to [extract the latest serialization
-specification](https://github.com/diem/diem/tree/master/testsuite/generate-format/tests/staged),
+specification](https://github.com/diem/diem/tree/main/testsuite/generate-format/tests/staged),
 including the trace name, from code, and developers are advised to look for
 changes therein across Diem releases.
 

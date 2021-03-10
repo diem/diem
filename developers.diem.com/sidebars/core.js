@@ -18,7 +18,7 @@ const Sidebar = [
   category('Reference', [
     {
       type: 'link',
-      href: 'https://github.com/libra/libra/blob/master/json-rpc/json-rpc-spec.md',
+      href: 'https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md',
       label: 'JSON-RPC API',
     },
     {

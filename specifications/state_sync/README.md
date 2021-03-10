@@ -280,7 +280,7 @@ fn send_to(recipient: PeerId, message: StateSyncMessage)
 
 ### Consensus
 
-State synchronizer processes consensus's  [`StateComputer::sync_to` calls](https://github.com/diem/diem/tree/master/specifications/consensus#statecomputer)
+State synchronizer processes consensus's  [`StateComputer::sync_to` calls](https://github.com/diem/diem/tree/main/specifications/consensus#statecomputer)
 by going through the [validator sync protocol](#validator-sync), and notifies
 consensus once the ledger state has reached the version in the ledger info
 in consensus' request.
@@ -295,7 +295,7 @@ Implementing and coordinating this interaction is an implementation detail.
 
 ### Execution
 
-State synchronizer uses execution's [`ChunkExecutor` interface](https://github.com/diem/diem/tree/master/specifications/trusted_computing_base/execution_correctness#executor-interface)
+State synchronizer uses execution's [`ChunkExecutor` interface](https://github.com/diem/diem/tree/main/specifications/trusted_computing_base/execution_correctness#executor-interface)
 to execute and store transactions to storage
 
 ### Storage

@@ -173,7 +173,7 @@ The [Move virtual machine](/docs/move/move-introduction) (VM) verifies and execu
 
 #### 1. Virtual Machine → Storage
 
-When mempool requests the VM to validate a transaction via `VM::ValidateTransaction()`, the VM loads the transaction sender's account from storage and performs verifications, some of which have been described in the list below. View the entire list of verifications [here](https://github.com/diem/diem/tree/master/specifications/move_adapter#validation).
+When mempool requests the VM to validate a transaction via `VM::ValidateTransaction()`, the VM loads the transaction sender's account from storage and performs verifications, some of which have been described in the list below. View the entire list of verifications [here](https://github.com/diem/diem/tree/main/specifications/move_adapter#validation).
 
 * Checks that the input signature on the signed transaction is correct (to reject incorrectly signed transactions).
 * Checks that the sender's account authentication key is the same as the hash of the public key (corresponding to the private key used to sign the transaction).
@@ -191,7 +191,7 @@ It is important to understand that executing a transaction is different from upd
 
 When mempool receives a transaction from other validators via shared mempool or from the JSON-RPC service, mempool invokes <code>[VM::ValidateTransaction()](https://developers.diem.com/docs/life-of-a-transaction#action-b-1)</code> on the VM to validate the transaction.
 
-For implementation details refer to the [Virtual Machine README](https://github.com/diem/diem/tree/master/language/vm).
+For implementation details refer to the [Virtual Machine README](https://github.com/diem/diem/tree/main/language/vm).
 
 ### Mempool
 
@@ -221,7 +221,7 @@ Mempool is a shared buffer that holds the transactions that are “waiting” to
 When mempool receives a transaction from other validators, mempool invokes <code>[VM::ValidateTransaction()](https://developers.diem.com/docs/life-of-a-transaction#action-b-1)</code> on the VM to validate the transaction.
 
 
-For implementation details refer to the [Mempool README](https://github.com/diem/diem/tree/master/mempool).
+For implementation details refer to the [Mempool README](https://github.com/diem/diem/tree/main/mempool).
 
 ### Consensus
 
@@ -251,7 +251,7 @@ If V<sub>X</sub> is a proposer/leader, its consensus component replicates the pr
 If enough validators vote for the same execution result, the consensus component of V<sub>X</sub> informs execution via `Execution::CommitBlock()` that this block is ready to be committed.
 
 
-For implementation details refer to the [Consensus README](https://github.com/diem/diem/tree/master/consensus).
+For implementation details refer to the [Consensus README](https://github.com/diem/diem/tree/main/consensus).
 
 ### Execution
 
@@ -280,7 +280,7 @@ If a quorum of validators agrees on the block execution results, the consensus c
 Execution takes the values from its “scratchpad” and sends them to storage for persistence via `Storage::SaveTransactions()`. Execution then prunes the old values from the “scratchpad” that are no longer needed (for example, parallel blocks that cannot be committed).
 
 
-For implementation details refer to the [Execution README](https://github.com/diem/diem/tree/master/execution).
+For implementation details refer to the [Execution README](https://github.com/diem/diem/tree/main/execution).
 
 ### Storage
 
@@ -319,7 +319,7 @@ When the consensus component calls `Execution::ExecuteBlock()`, execution reads 
 For client queries that read information from the blockchain, the JSON-RPC service directly interacts with storage to read the requested information.
 
 
-For implementation details refer to the [Storage README](https://github.com/diem/diem/tree/master/storage).
+For implementation details refer to the [Storage README](https://github.com/diem/diem/tree/main/storage).
 
 
 

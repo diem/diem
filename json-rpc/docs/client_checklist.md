@@ -115,7 +115,7 @@ See [doc][5] for above concepts.
 [1]: https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md "Diem JSON-RPC SPEC"
 [2]: https://github.com/diem/dip/blob/master/dips/dip-5.md "DIP-5"
 [3]: https://github.com/diem/diem/blob/main/language/diem-framework/transaction_scripts/doc/peer_to_peer_with_metadata.md "P2P Transafer"
-[4]: https://github.com/diem/diem/tree/master/language/diem-framework/transaction_scripts/doc "Move Stdlib scripts"
+[4]: https://github.com/diem/diem/tree/main/language/diem-framework/transaction_scripts/doc "Move Stdlib scripts"
 [5]: https://github.com/diem/diem/blob/main/client/diem-dev/README.md "Diem Client Dev Doc"
 [6]: https://github.com/diem/diem/blob/main/json-rpc/docs/service_testnet_faucet.md "Faucet service"
 [7]: https://github.com/diem/dip/blob/master/dips/dip-4.md "Transaction Metadata Specification"

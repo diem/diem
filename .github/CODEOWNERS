@@ -1,6 +1,6 @@
 # Substribe to CI changes
-/.circleci/ @libra/libra-oss-admin-team
-/.github/ @libra/libra-oss-admin-team
+/.circleci/ @diem/diem-oss-admin-team
+/.github/ @diem/diem-oss-admin-team
 
 # Subscribe to crypto crate changing PRs
 /crypto @kchalkias @huitseeker @valerini

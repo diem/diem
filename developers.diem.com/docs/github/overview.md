@@ -12,7 +12,7 @@ hide_right_sidebar: true
     iconDark="img/github-dark.svg"
     overlay="The primary source code for the Diem project"
     title="Diem Core"
-    to="https://github.com/libra/libra"
+    to="https://github.com/diem/diem"
   />
   <SimpleTextCard
     icon="img/github.svg"

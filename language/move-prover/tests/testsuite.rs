@@ -54,7 +54,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         {
             warn!(
                 "Prover tools are not configured, verification tests will be skipped. \
-        See https://github.com/diem/diem/tree/master/language/move-prover/doc/user/install.md \
+        See https://github.com/diem/diem/tree/main/language/move-prover/doc/user/install.md \
         for instructions."
             );
         }

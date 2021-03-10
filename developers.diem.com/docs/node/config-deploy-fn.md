@@ -68,7 +68,7 @@ You can also use Docker to configure and run your PublicFullNode.
 
 1. Install Docker and Docker-Compose.
 2. Create a directory for your public FullNode composition.
-3. Download the public FullNode [docker compose](https://github.com/libra/libra/tree/master/docker/compose/public_full_node/docker-compose.yaml) and [libra](https://github.com/libra/libra/tree/master/docker/compose/public_full_node/public_full_node.yaml) configuration files into the directory created in step 2.
+3. Download the public FullNode [docker compose](https://github.com/diem/diem/tree/main/docker/compose/public_full_node/docker-compose.yaml) and [libra](https://github.com/diem/diem/tree/main/docker/compose/public_full_node/public_full_node.yaml) configuration files into the directory created in step 2.
 4. Download [genesis](https://testnet.libra.org/genesis.blob) and [waypoint](https://testnet.libra.org/waypoint.txt) files for testnet into that directory.
 5. Run docker-compose: `docker-compose up`.
 

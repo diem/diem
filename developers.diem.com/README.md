@@ -4,7 +4,7 @@
 
 <hr/>
 
-[![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/diem/diem)
+[![CircleCI](https://circleci.com/gh/diem/diem.svg?style=shield)](https://circleci.com/gh/diem/diem)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE.md)
 
 Diem Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.

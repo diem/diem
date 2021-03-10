@@ -179,7 +179,7 @@ raised will have a human readable explanation attached to it (if possible) in th
 from a
 [JSON-RPC query for a committed transaction](https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md).
 These explanations are based off of the human-understandable explanations provided by the
-[Move Explain](https://github.com/diem/diem/tree/master/language/tools/move-explain)
+[Move Explain](https://github.com/diem/diem/tree/main/language/tools/move-explain)
 tool which can also be called on the command-line.
 
 
