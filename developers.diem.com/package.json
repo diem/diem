@@ -23,7 +23,8 @@
     "object-assign-deep": "^0.4.0",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
-    "valid-url": "^1.0.9"
+    "valid-url": "^1.0.9",
+    "yarn": "^1.22.10"
   },
   "resolutions": {
     "terser": "4.8.0"
