@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 async-trait = "0.1.42"
-byteorder = { version = "1.4.2", default-features = false }
+byteorder = { version = "1.4.3", default-features = false }
 bytes = "1.0.1"
 fail = "0.4.0"
 futures = "0.3.12"

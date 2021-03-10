@@ -37,7 +37,7 @@ bcs = "0.1.2"
 
 [dev-dependencies]
 bitvec = "0.19.4"
-byteorder = "1.4.2"
+byteorder = "1.4.3"
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
 ripemd160 = "0.9.1"

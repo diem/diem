@@ -11,7 +11,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 async-trait = "0.1.42"
-byteorder = "1.4.2"
+byteorder = "1.4.3"
 bytes = "1.0.1"
 futures = "0.3.12"
 hex = "0.4.3"
