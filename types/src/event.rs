@@ -226,3 +226,48 @@ impl fmt::Display for EventKey {
         write!(f, "{:x}", self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::EventKey;
+
+    #[test]
+    fn test_display_impls() {
+        let hex = "1000000000000000ca843279e3427144cead5e4d5999a3d0";
+
+        let key = EventKey::from_hex(hex).unwrap();
+
+        assert_eq!(format!("{}", key), hex);
+        assert_eq!(format!("{:x}", key), hex);
+
+        assert_eq!(format!("{:#x}", key), format!("0x{}", hex));
+    }
+
+    #[test]
+    fn test_invalid_length() {
+        let bytes = vec![1; 123];
+        EventKey::from_bytes(bytes).unwrap_err();
+    }
+
+    #[test]
+    fn test_deserialize_from_json_value() {
+        let key = EventKey::random();
+        let json_value = serde_json::to_value(key).unwrap();
+        let key2: EventKey = serde_json::from_value(json_value).unwrap();
+        assert_eq!(key, key2);
+    }
+
+    #[test]
+    fn test_serde_json() {
+        let hex = "1000000000000000ca843279e3427144cead5e4d5999a3d0";
+        let json_hex = "\"1000000000000000ca843279e3427144cead5e4d5999a3d0\"";
+
+        let key = EventKey::from_hex(hex).unwrap();
+
+        let json = serde_json::to_string(&key).unwrap();
+        let json_key: EventKey = serde_json::from_str(json_hex).unwrap();
+
+        assert_eq!(json, json_hex);
+        assert_eq!(key, json_key);
+    }
+}
