@@ -315,13 +315,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     if version == request.version() {
         if let Some(account) = service.get_account_state(diem_root_address(), version)? {
             if let Some(vm_publishing_option) = account.get_vm_publishing_option()? {
-                script_hash_allow_list = Some(
-                    vm_publishing_option
-                        .script_allow_list
-                        .into_iter()
-                        .map(HashValue::new)
-                        .collect(),
-                );
+                script_hash_allow_list = Some(vm_publishing_option.script_allow_list);
 
                 module_publishing_allowed = Some(vm_publishing_option.is_open_module);
             }

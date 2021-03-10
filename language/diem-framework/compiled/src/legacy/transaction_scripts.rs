@@ -9,7 +9,7 @@
 
 use anyhow::{anyhow, Error, Result};
 use diem_crypto::HashValue;
-use diem_types::transaction::{ScriptABI, TransactionScriptABI, SCRIPT_HASH_LENGTH};
+use diem_types::transaction::{ScriptABI, TransactionScriptABI};
 use include_dir::{include_dir, Dir};
 use std::{convert::TryFrom, fmt, path::PathBuf};
 
@@ -104,10 +104,10 @@ impl LegacyStdlibScript {
 
     /// Construct the allowlist of script hashes used to determine whether a transaction script can
     /// be executed on the Diem blockchain
-    pub fn allowlist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
+    pub fn allowlist() -> Vec<HashValue> {
         LegacyStdlibScript::all()
             .iter()
-            .map(|script| *script.compiled_bytes().hash().as_ref())
+            .map(|script| script.compiled_bytes().hash())
             .collect()
     }
 

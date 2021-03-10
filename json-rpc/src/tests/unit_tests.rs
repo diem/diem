@@ -1413,10 +1413,7 @@ fn test_get_account_transaction() {
                     assert_eq!(seq, sequence_number);
 
                     if let TransactionPayload::Script(s) = expected_tx.payload() {
-                        assert_eq!(
-                            script_hash.to_string(),
-                            HashValue::sha3_256_of(s.code()).to_hex()
-                        );
+                        assert_eq!(script_hash, HashValue::sha3_256_of(s.code()));
                     }
                 }
                 _ => panic!("wrong type"),

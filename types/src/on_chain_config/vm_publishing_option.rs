@@ -1,8 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{on_chain_config::OnChainConfig, transaction::SCRIPT_HASH_LENGTH};
+use crate::on_chain_config::OnChainConfig;
 use anyhow::{format_err, Result};
+use diem_crypto::HashValue;
 use serde::{Deserialize, Serialize};
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
@@ -13,12 +14,12 @@ use serde::{Deserialize, Serialize};
 /// publishing are mutually exclusive options.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VMPublishingOption {
-    pub script_allow_list: Vec<[u8; SCRIPT_HASH_LENGTH]>,
+    pub script_allow_list: Vec<HashValue>,
     pub is_open_module: bool,
 }
 
 impl VMPublishingOption {
-    pub fn locked(allowlist: Vec<[u8; SCRIPT_HASH_LENGTH]>) -> Self {
+    pub fn locked(allowlist: Vec<HashValue>) -> Self {
         Self {
             script_allow_list: allowlist,
             is_open_module: false,
@@ -48,34 +49,15 @@ impl VMPublishingOption {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-struct VMPublishingOptionInner {
-    pub script_allow_list: Vec<Vec<u8>>,
-    pub is_open_module: bool,
-}
-
 impl OnChainConfig for VMPublishingOption {
     const IDENTIFIER: &'static str = "DiemTransactionPublishingOption";
 
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
-        let raw_publishing_option =
-            bcs::from_bytes::<VMPublishingOptionInner>(&bytes).map_err(|e| {
-                format_err!(
-                    "Failed first round of deserialization for VMPublishingOptionInner: {}",
-                    e
-                )
-            })?;
-        Ok(VMPublishingOption {
-            script_allow_list: raw_publishing_option
-                .script_allow_list
-                .into_iter()
-                .map(|v| {
-                    let mut hash: [u8; SCRIPT_HASH_LENGTH] = [0; SCRIPT_HASH_LENGTH];
-                    hash.copy_from_slice(v.as_ref());
-                    hash
-                })
-                .collect(),
-            is_open_module: raw_publishing_option.is_open_module,
+        bcs::from_bytes(&bytes).map_err(|e| {
+            format_err!(
+                "Failed first round of deserialization for VMPublishingOptionInner: {}",
+                e
+            )
         })
     }
 }

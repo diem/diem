@@ -6,9 +6,6 @@ use move_core_types::language_storage::{ModuleId, TypeTag};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[allow(dead_code)]
-pub const SCRIPT_HASH_LENGTH: usize = 32;
-
 /// Call a Move script.
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Script {
