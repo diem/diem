@@ -31,7 +31,7 @@ jobs:
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
         with:
-          pattern: '^documentation\|^docker\|^scripts\|^.circleci'
+          pattern: '^documentation\|^docker\|^scripts'
           invert: "true"
       - uses: ./.github/actions/build-setup
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}

@@ -1,5 +1,4 @@
 # Substribe to CI changes
-/.circleci/ @diem/diem-oss-admin-team
 /.github/ @diem/diem-oss-admin-team
 
 # Subscribe to crypto crate changing PRs

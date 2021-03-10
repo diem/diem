@@ -239,7 +239,7 @@ root-members = [
 
 # CI-related files. TODO: maybe have separate rules for local and CI?
 [[determinator.path-rule]]
-globs = [".github/**/*", ".circleci/**/*", "codecov.yml"]
+globs = [".github/**/*", "codecov.yml"]
 mark-changed = "all"
 
 # Core devtools files.
