@@ -5,8 +5,7 @@
 This specification outlines the design and implementation of Diem Execution Correctness (LEC): a secured service
 dedicated for executing transactions correctly (with the MOVE VM) and used by Consensus in the Diem payment network.
 
-For those
-unfamiliar with the execution flow of TCB, we recommend reading the architecture of [Trusted Computing Base (TCB)](../TCB.md).
+For those unfamiliar with the execution flow of TCB, we recommend reading the architecture of [Trusted Computing Base (TCB)](../README.md).
 
 ## Overview and Architecture
 
