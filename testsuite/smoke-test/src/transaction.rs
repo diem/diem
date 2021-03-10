@@ -117,8 +117,8 @@ fn test_external_transaction_signer() {
             assert_eq!(script.receiver.unwrap(), receiver_address);
             assert_eq!(script.amount.unwrap(), amount);
             assert_eq!(script.currency.unwrap(), currency_code.to_string());
-            assert_eq!(script.metadata.unwrap().0, "");
-            assert_eq!(script.metadata_signature.unwrap().0, "");
+            assert!(script.metadata.unwrap().inner().is_empty());
+            assert!(script.metadata_signature.unwrap().inner().is_empty());
         }
         _ => panic!("Query should get user transaction"),
     }

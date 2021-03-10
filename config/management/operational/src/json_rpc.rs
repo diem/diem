@@ -44,13 +44,9 @@ impl JsonRpcClientWrapper {
             .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()))?
             .into_inner();
 
-        let blob = account_state
-            .blob
-            .ok_or_else(|| {
-                Error::JsonRpcReadError("account-state", "No Validator set".to_string())
-            })?
-            .into_bytes()
-            .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()))?;
+        let blob = account_state.blob.ok_or_else(|| {
+            Error::JsonRpcReadError("account-state", "No Validator set".to_string())
+        })?;
         let account_state_blob = AccountStateBlob::from(
             bcs::from_bytes::<Vec<u8>>(&blob)
                 .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()))?,

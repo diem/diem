@@ -44,8 +44,7 @@ fn get_validator_set(client_endpoint: String) -> anyhow::Result<ValidatorSet> {
 
     let blob = account_state
         .blob
-        .ok_or_else(|| Error::msg("No validator set"))?
-        .into_bytes()?;
+        .ok_or_else(|| Error::msg("No validator set"))?;
     let account_state_blob = AccountStateBlob::from(bcs::from_bytes::<Vec<u8>>(&blob)?);
     let account_state = AccountState::try_from(&account_state_blob)?;
     if let Some(val) = account_state.get_validator_set()? {

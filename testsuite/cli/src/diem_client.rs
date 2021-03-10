@@ -82,7 +82,7 @@ impl DiemClient {
             .get_account_state_with_proof(*account, None, None)
             .map(Response::into_inner)?;
         if let Some(blob) = ret.blob {
-            Ok((Some(bcs::from_bytes(&blob.into_bytes()?)?), ret.version))
+            Ok((Some(bcs::from_bytes(&blob)?), ret.version))
         } else {
             Ok((None, ret.version))
         }
@@ -140,9 +140,9 @@ impl DiemClient {
         let state = self.trusted_state();
 
         let li: LedgerInfoWithSignatures =
-            bcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
+            bcs::from_bytes(&state_proof.ledger_info_with_signatures)?;
         let epoch_change_proof: EpochChangeProof =
-            bcs::from_bytes(&state_proof.epoch_change_proof.into_bytes()?)?;
+            bcs::from_bytes(&state_proof.epoch_change_proof)?;
 
         // check ledger info version
         ensure!(

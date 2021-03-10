@@ -73,8 +73,7 @@ async fn expect_epoch(
     expected_epoch: u64,
 ) -> anyhow::Result<u64> {
     let state_proof = client.get_state_proof(known_version).await?.into_inner();
-    let li: LedgerInfoWithSignatures =
-        bcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
+    let li: LedgerInfoWithSignatures = bcs::from_bytes(&state_proof.ledger_info_with_signatures)?;
     let epoch = li.ledger_info().next_block_epoch();
     ensure!(
         epoch == expected_epoch,

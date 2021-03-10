@@ -170,8 +170,8 @@ pub fn script_view_from_script(script: &Script) -> ScriptView {
                     .unwrap_or(&"unknown_currency".to_string())
                     .to_string(),
             );
-            view.metadata = Some(BytesView::from(metadata));
-            view.metadata_signature = Some(BytesView::from(metadata_signature));
+            view.metadata = Some(BytesView::new(metadata.as_ref()));
+            view.metadata_signature = Some(BytesView::new(metadata_signature.as_ref()));
         }
     }
 

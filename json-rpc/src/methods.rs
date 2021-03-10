@@ -438,8 +438,8 @@ async fn get_transactions_with_proofs(
     Ok(Some(TransactionsWithProofsView {
         serialized_transactions: blobs,
         proofs: TransactionsProofsView {
-            ledger_info_to_transaction_infos_proof: BytesView::from(&bcs::to_bytes(&proofs)?),
-            transaction_infos: BytesView::from(&bcs::to_bytes(&tx_info)?),
+            ledger_info_to_transaction_infos_proof: BytesView::from(bcs::to_bytes(&proofs)?),
+            transaction_infos: BytesView::from(bcs::to_bytes(&tx_info)?),
         },
     }))
 }

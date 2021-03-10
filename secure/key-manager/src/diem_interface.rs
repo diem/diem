@@ -189,8 +189,7 @@ impl DiemInterface for JsonRpcDiemInterface {
 
         let blob = account_state
             .blob
-            .ok_or_else(|| Error::UnknownError("No validator set".to_string()))?
-            .into_bytes()?;
+            .ok_or_else(|| Error::UnknownError("No validator set".to_string()))?;
         let account_state_blob = AccountStateBlob::from(bcs::from_bytes::<Vec<u8>>(&blob)?);
         let account_state = AccountState::try_from(&account_state_blob)?;
         Ok(account_state)

@@ -1301,6 +1301,7 @@ impl ClientProxy {
     /// Get account using specific address.
     /// Sync with validator for account sequence number in case it is already created on chain.
     /// This assumes we have a very low probability of mnemonic word conflict.
+    #[allow(clippy::unnecessary_wraps)]
     fn get_account_data_from_address(
         client: &DiemClient,
         address: AccountAddress,
@@ -1314,7 +1315,7 @@ impl ClientProxy {
                 Ok(resp) => match resp {
                     Some(account_view) => (
                         account_view.sequence_number,
-                        Some(account_view.authentication_key.into_bytes()?),
+                        Some(account_view.authentication_key.into_inner().into()),
                         AccountStatus::Persisted,
                     ),
                     None => (0, authentication_key_opt, AccountStatus::Local),

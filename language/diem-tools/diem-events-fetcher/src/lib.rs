@@ -30,7 +30,7 @@ impl DiemEventsFetcher {
                 .into_inner()
                 .blob
                 .ok_or_else(|| anyhow::anyhow!("missing account state blob"))?;
-            bcs::from_bytes(&blob.into_bytes()?)?
+            bcs::from_bytes(&blob)?
         };
         Ok(Some(AccountState::try_from(&account_state)?))
     }

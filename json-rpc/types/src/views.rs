@@ -18,11 +18,12 @@ use diem_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
 };
+use hex::FromHex;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag,
     move_resource::MoveResource,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -416,36 +417,77 @@ pub struct MetadataView {
     pub dual_attestation_limit: Option<u64>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub struct BytesView(pub String);
+#[derive(Clone, Debug, PartialEq)]
+pub struct BytesView(Box<[u8]>);
 
 impl BytesView {
-    pub fn into_bytes(self) -> Result<Vec<u8>, Error> {
-        Ok(hex::decode(self.0)?)
+    pub fn new<T: Into<Box<[u8]>>>(bytes: T) -> Self {
+        Self(bytes.into())
+    }
+
+    pub fn into_inner(self) -> Box<[u8]> {
+        self.0
+    }
+
+    pub fn inner(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl std::ops::Deref for BytesView {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::convert::AsRef<[u8]> for BytesView {
+    fn as_ref(&self) -> &[u8] {
+        self.inner()
     }
 }
 
 impl std::fmt::Display for BytesView {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        for byte in self.inner() {
+            write!(f, "{:02x}", byte)?;
+        }
+
+        Ok(())
     }
 }
 
 impl From<&[u8]> for BytesView {
     fn from(bytes: &[u8]) -> Self {
-        Self(hex::encode(bytes))
-    }
-}
-
-impl From<&Vec<u8>> for BytesView {
-    fn from(bytes: &Vec<u8>) -> Self {
-        Self(hex::encode(bytes))
+        Self(bytes.into())
     }
 }
 
 impl From<Vec<u8>> for BytesView {
     fn from(bytes: Vec<u8>) -> Self {
-        Self(hex::encode(bytes))
+        Self(bytes.into_boxed_slice())
+    }
+}
+
+impl<'de> Deserialize<'de> for BytesView {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = <String>::deserialize(deserializer)?;
+        <Vec<u8>>::from_hex(s)
+            .map_err(D::Error::custom)
+            .map(Into::into)
+    }
+}
+
+impl Serialize for BytesView {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        hex::encode(self).serialize(serializer)
     }
 }
 
@@ -711,11 +753,11 @@ impl
         ),
     ) -> Result<StateProofView, Self::Error> {
         Ok(StateProofView {
-            ledger_info_with_signatures: BytesView::from(&bcs::to_bytes(
+            ledger_info_with_signatures: BytesView::new(bcs::to_bytes(
                 &ledger_info_with_signatures,
             )?),
-            epoch_change_proof: BytesView::from(&bcs::to_bytes(&epoch_change_proof)?),
-            ledger_consistency_proof: BytesView::from(&bcs::to_bytes(&ledger_consistency_proof)?),
+            epoch_change_proof: BytesView::new(bcs::to_bytes(&epoch_change_proof)?),
+            ledger_consistency_proof: BytesView::new(bcs::to_bytes(&ledger_consistency_proof)?),
         })
     }
 }
@@ -734,7 +776,7 @@ impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
         account_state_with_proof: AccountStateWithProof,
     ) -> Result<AccountStateWithProofView, Error> {
         let blob = if let Some(account_blob) = account_state_with_proof.blob {
-            Some(BytesView::from(&bcs::to_bytes(&account_blob)?))
+            Some(BytesView::new(bcs::to_bytes(&account_blob)?))
         } else {
             None
         };
@@ -758,17 +800,17 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
 
     fn try_from(account_state_proof: AccountStateProof) -> Result<AccountStateProofView, Error> {
         Ok(AccountStateProofView {
-            ledger_info_to_transaction_info_proof: BytesView::from(&bcs::to_bytes(
+            ledger_info_to_transaction_info_proof: BytesView::new(bcs::to_bytes(
                 account_state_proof
                     .transaction_info_with_proof()
                     .ledger_info_to_transaction_info_proof(),
             )?),
-            transaction_info: BytesView::from(&bcs::to_bytes(
+            transaction_info: BytesView::new(bcs::to_bytes(
                 account_state_proof
                     .transaction_info_with_proof()
                     .transaction_info(),
             )?),
-            transaction_info_to_account_proof: BytesView::from(&bcs::to_bytes(
+            transaction_info_to_account_proof: BytesView::new(bcs::to_bytes(
                 account_state_proof.transaction_info_to_account_proof(),
             )?),
         })

@@ -46,7 +46,7 @@ impl ReceivedPaymentEvent {
     }
 
     /// Get the metadata associated with this event
-    pub fn metadata(&self) -> &Vec<u8> {
+    pub fn metadata(&self) -> &[u8] {
         &self.metadata
     }
 

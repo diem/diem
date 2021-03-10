@@ -37,7 +37,7 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
 
         Ok(match account_state.blob {
             Some(bytes) => {
-                let account_state_blob = bcs::from_bytes::<AccountStateBlob>(&bytes.into_bytes()?)?;
+                let account_state_blob = bcs::from_bytes::<AccountStateBlob>(&bytes)?;
                 Some(AccountState::try_from(&account_state_blob)?)
             }
             None => None,
@@ -52,7 +52,7 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
 
         let mut output = vec![];
         for txn in txns.into_iter() {
-            let raw_bytes = txn.bytes.into_bytes()?;
+            let raw_bytes = txn.bytes;
             output.push(bcs::from_bytes(&raw_bytes)?);
         }
         Ok(output)

@@ -1475,30 +1475,17 @@ fn test_get_account_state_with_proof() {
     assert_eq!(received_proof.version, expected_proof.version);
 
     // blob
-    let account_blob: AccountStateBlob =
-        bcs::from_bytes(&received_proof.blob.unwrap().into_bytes().unwrap()).unwrap();
+    let account_blob: AccountStateBlob = bcs::from_bytes(&received_proof.blob.unwrap()).unwrap();
     assert_eq!(account_blob, *expected_blob);
 
     // proof
-    let sm_proof: SparseMerkleProof<AccountStateBlob> = bcs::from_bytes(
-        &received_proof
-            .proof
-            .transaction_info_to_account_proof
-            .into_bytes()
-            .unwrap(),
-    )
-    .unwrap();
+    let sm_proof: SparseMerkleProof<AccountStateBlob> =
+        bcs::from_bytes(&received_proof.proof.transaction_info_to_account_proof).unwrap();
     assert_eq!(sm_proof, *expected_sm_proof);
     let txn_info: TransactionInfo =
-        bcs::from_bytes(&received_proof.proof.transaction_info.into_bytes().unwrap()).unwrap();
-    let li_proof: TransactionAccumulatorProof = bcs::from_bytes(
-        &received_proof
-            .proof
-            .ledger_info_to_transaction_info_proof
-            .into_bytes()
-            .unwrap(),
-    )
-    .unwrap();
+        bcs::from_bytes(&received_proof.proof.transaction_info).unwrap();
+    let li_proof: TransactionAccumulatorProof =
+        bcs::from_bytes(&received_proof.proof.ledger_info_to_transaction_info_proof).unwrap();
     let txn_info_with_proof = TransactionInfoWithProof::new(li_proof, txn_info);
     assert_eq!(txn_info_with_proof, *expected_txn_info_with_proof);
 }
@@ -1509,8 +1496,7 @@ fn test_get_state_proof() {
 
     let version = mock_db.version;
     let proof = client.get_state_proof(version).unwrap().into_inner();
-    let li: LedgerInfoWithSignatures =
-        bcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes().unwrap()).unwrap();
+    let li: LedgerInfoWithSignatures = bcs::from_bytes(&proof.ledger_info_with_signatures).unwrap();
     assert_eq!(li.ledger_info().version(), version);
 }
 
