@@ -32,7 +32,7 @@ diemdb = { path = "../../diemdb", features = ["fuzzing"] }
 diem-config = { path = "../../../config" }
 diem-temppath = { path = "../../../common/temppath" }
 
-reqwest = { version = "0.11.1", features = ["blocking", "json"], default_features = false }
+reqwest = { version = "0.11.2", features = ["blocking", "json"], default_features = false }
 
 [features]
 fuzzing = ["diemdb/fuzzing"]
