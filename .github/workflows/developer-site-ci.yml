@@ -7,7 +7,7 @@ on:
     # paths: [ 'developers.diem.com/**' ]
     # but want to build rustdocs on main Diem code changes outside of the website too
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
     # would have had
     # paths: [ 'developers.diem.com/**' ]
     # but want to build rustdocs on main Diem code changes outside of the website too

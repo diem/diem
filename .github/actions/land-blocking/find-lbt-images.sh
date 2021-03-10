@@ -8,7 +8,7 @@ REPOS=(diem/validator diem/cluster_test diem/init diem/validator_tcb)
 # the number of commits backwards we want to look
 END=50
 
-BASE_REF=${BASE_REF:-master}
+BASE_REF=${BASE_REF:-main}
 
 image_tag_exists() {
     if [ -z $1 ]; then

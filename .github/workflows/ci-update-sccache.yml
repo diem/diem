@@ -2,7 +2,7 @@ name: ci-update-sccache
 
 on:
   push:
-    branches: [master, release-*, gha-test-*]
+    branches: [main, master, release-*, gha-test-*]
 
 defaults:
   run:
