@@ -46,7 +46,7 @@ impl ValueCodec<TransactionAccumulatorSchema> for HashValue {
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Self::from_slice(data)
+        Self::from_slice(data).map_err(Into::into)
     }
 }
 
