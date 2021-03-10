@@ -30,26 +30,26 @@
 #   * `du -csm /opt/diem/data``
 version: "3.8"
 services:
-    fullnode:
-        image: libra/validator:devnet
-        volumes:
-            - type: volume
-              source: db
-              target: /opt/diem/data
-            - type: bind
-              source: ./genesis.blob
-              target: /opt/diem/etc/genesis.blob
-              read_only: true
-            - type: bind
-              source: ./public_full_node.yaml
-              target: /opt/diem/etc/node.yaml
-              read_only: true
-            - type: bind
-              source: ./waypoint.txt
-              target: /opt/diem/etc/waypoint.txt
-              read_only: true
-        command: ["/opt/diem/bin/diem-node", "-f", "/opt/diem/etc/node.yaml"]
-        ports:
-            - "8080:8080"
+  fullnode:
+    image: diem/validator:devnet
+    volumes:
+      - type: volume
+        source: db
+        target: /opt/diem/data
+      - type: bind
+        source: ./genesis.blob
+        target: /opt/diem/etc/genesis.blob
+        read_only: true
+      - type: bind
+        source: ./public_full_node.yaml
+        target: /opt/diem/etc/node.yaml
+        read_only: true
+      - type: bind
+        source: ./waypoint.txt
+        target: /opt/diem/etc/waypoint.txt
+        read_only: true
+    command: ["/opt/diem/bin/diem-node", "-f", "/opt/diem/etc/node.yaml"]
+    ports:
+      - "8080:8080"
 volumes:
-    db:
+  db:

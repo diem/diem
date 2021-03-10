@@ -9,15 +9,15 @@
 # * If you use this compose for different Diem Networks, you will need remove the db volume first.
 # * If you would like to use the current Diem version within this repository, execute the
 #     `build.sh` in `docker/validator` and change the image tag below to diem_e2e:latest
-# * Validator images can be found at https://hub.docker.com/r/libra/faucet/tags
-# * Faucet images can be found at https://hub.docker.com/r/libra/validator/tags
+# * Validator images can be found at https://hub.docker.com/r/devnet/validator/tags
+# * Faucet images can be found at https://hub.docker.com/r/devnet/faucet/tags
 
 version: "3.8"
 services:
   validator:
     # Note this image currently does not support this, will update to the appropriate minimum
     # version shortly
-    image: "libra/validator:${IMAGE_TAG:-devnet}"
+    image: "diem/validator:${IMAGE_TAG:-devnet}"
     networks:
       shared:
     volumes:
@@ -32,7 +32,7 @@ services:
       - "8080:8080"
 
   faucet:
-    image: "libra/faucet:${IMAGE_TAG:-devnet}"
+    image: "diem/faucet:${IMAGE_TAG:-devnet}"
     depends_on:
       - validator
     networks:
@@ -72,5 +72,5 @@ networks:
         - subnet: 172.16.1.0/24
 
 volumes:
-    diem-shared:
-        name: diem-shared
+  diem-shared:
+    name: diem-shared

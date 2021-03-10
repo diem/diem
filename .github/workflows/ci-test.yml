@@ -26,6 +26,7 @@ jobs:
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
       test-website-build: ${{ steps.website-changes.outputs.changes-found }}
       test-non-rust-lint: ${{ steps.non-rust-lint-changes.outputs.changes-found }}
+      test-docker-compose: ${{ steps.docker-compose-changes.outputs.changes-found }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -61,6 +62,12 @@ jobs:
         uses: ./.github/actions/matches
         with:
           pattern: '^.github\|docker/ci\|scripts/dev_setup.sh'
+      - id: docker-compose-changes
+        name: find changes that should trigger docker compose testing.
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^documentation\|^.circleci'
+          invert: "true"
       - id: website-changes
         name: find website changes.
         uses: ./.github/actions/matches
@@ -330,7 +337,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 30
     needs: prepare
-    #if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ needs.prepare.outputs.test-docker-compose == 'true' }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -343,14 +350,15 @@ jobs:
           sudo apt --assume-yes update
           sudo apt --assume-yes install expect
       - name: build validator docker image
-        run: docker/diem-build.sh docker/validator/Dockerfile libra/validator:test
+        run: docker/diem-build.sh docker/validator/Dockerfile diem/validator:test
       - name: build faucet image
-        run: docker/diem-build.sh docker/faucet/Dockerfile libra/faucet:test
+        run: docker/diem-build.sh docker/faucet/Dockerfile diem/faucet:test
       - name: build client image
-        run: docker/diem-build.sh docker/client/Dockerfile libra/client:test
+        run: docker/diem-build.sh docker/client/Dockerfile diem/client:test
       - name: run validator-client test
         run: docker/compose/test_docker_compose.sh
         env:
+          # this overrides the default docker tag of "testnet"
           IMAGE_TAG: "test"
 
   crypto-unit-test:
