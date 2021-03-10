@@ -10,7 +10,7 @@ use crate::{
         types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
 };
-use diem_config::config::{MempoolConfig, PeerNetworkId, PeerRole};
+use diem_config::config::{MempoolConfig, PeerNetworkId, PeerRole, RoleType};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
@@ -28,6 +28,7 @@ use std::{
 use vm_validator::vm_validator::TransactionValidation;
 
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
+const NUM_FULLNODE_SECONDARIES: usize = 3;
 
 /// Peers that receive txns from this node.
 pub(crate) type PeerSyncStates = HashMap<PeerNetworkId, PeerSyncState>;
@@ -55,6 +56,8 @@ impl PeerSyncState {
 }
 
 pub(crate) struct PeerManager {
+    /// Role of the current node
+    role: RoleType,
     mempool_config: MempoolConfig,
     peer_states: Mutex<PeerSyncStates>,
     prioritized_peers: Mutex<Vec<PeerNetworkId>>,
@@ -99,11 +102,12 @@ impl BroadcastInfo {
 }
 
 impl PeerManager {
-    pub fn new(mempool_config: MempoolConfig) -> Self {
+    pub fn new(role: RoleType, mempool_config: MempoolConfig) -> Self {
         // Primary network is always chosen at initialization.
         counters::upstream_network(PRIMARY_NETWORK_PREFERENCE);
         info!(LogSchema::new(LogEntry::UpstreamNetwork).network_level(PRIMARY_NETWORK_PREFERENCE));
         Self {
+            role,
             mempool_config,
             peer_states: Mutex::new(PeerSyncStates::new()),
             prioritized_peers: Mutex::new(Vec::new()),
@@ -183,7 +187,19 @@ impl PeerManager {
             return;
         }
 
-        // TODO: Use `prioritized_peers` to determine which to send to.  Currently, always sends to all
+        // When not a validator, only broadcast to `NUM_FULLNODE_SECONDARIES`
+        // TODO: Make configurable for number of secondaries
+        if !self.role.is_validator() {
+            let priority = self
+                .prioritized_peers
+                .lock()
+                .iter()
+                .find_position(|peer_network_id| *peer_network_id == &peer)
+                .map_or(usize::MAX, |(pos, _)| pos);
+            if priority > NUM_FULLNODE_SECONDARIES {
+                return;
+            }
+        }
 
         // If backoff mode is on for this peer, only execute broadcasts that were scheduled as a backoff broadcast.
         // This is to ensure the backoff mode is actually honored (there is a chance a broadcast was scheduled
@@ -346,13 +362,17 @@ impl PeerManager {
 
         // Order peers by network and by type
         // Origin doesn't matter at this point, only inserted ones into peer_states are upstream
+        // Validators will always have the full set
         let mut prioritized_peers = self.prioritized_peers.lock();
-        let peers: Vec<_> = peers
-            .iter()
-            .sorted_by(|peer_a, peer_b| compare_prioritized_peers(peer_a, peer_b))
-            .map(|(peer, _)| peer.clone())
-            .collect();
-
+        let peers: Vec<_> = if self.role.is_validator() {
+            peers.iter().map(|(peer, _)| peer.clone()).collect()
+        } else {
+            peers
+                .iter()
+                .sorted_by(|peer_a, peer_b| compare_prioritized_peers(peer_a, peer_b))
+                .map(|(peer, _)| peer.clone())
+                .collect()
+        };
         let _ = std::mem::replace(&mut *prioritized_peers, peers);
     }
 

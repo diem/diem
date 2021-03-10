@@ -41,7 +41,7 @@ pub fn test_mempool_process_incoming_transactions_impl(
         network_senders: HashMap::new(),
         db: Arc::new(mock_db),
         validator: vm_validator,
-        peer_manager: Arc::new(PeerManager::new(config.mempool)),
+        peer_manager: Arc::new(PeerManager::new(config.base.role, config.mempool)),
         subscribers: vec![],
     };
 
