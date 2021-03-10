@@ -28,7 +28,6 @@ use std::{
 use vm_validator::vm_validator::TransactionValidation;
 
 const PRIMARY_NETWORK_PREFERENCE: usize = 0;
-const NUM_FULLNODE_SECONDARIES: usize = 3;
 
 /// Peers that receive txns from this node.
 pub(crate) type PeerSyncStates = HashMap<PeerNetworkId, PeerSyncState>;
@@ -187,8 +186,7 @@ impl PeerManager {
             return;
         }
 
-        // When not a validator, only broadcast to `NUM_FULLNODE_SECONDARIES`
-        // TODO: Make configurable for number of secondaries
+        // When not a validator, only broadcast to `default_failovers`
         if !self.role.is_validator() {
             let priority = self
                 .prioritized_peers
@@ -196,7 +194,7 @@ impl PeerManager {
                 .iter()
                 .find_position(|peer_network_id| *peer_network_id == &peer)
                 .map_or(usize::MAX, |(pos, _)| pos);
-            if priority > NUM_FULLNODE_SECONDARIES {
+            if priority > self.mempool_config.default_failovers {
                 return;
             }
         }
@@ -350,6 +348,11 @@ impl PeerManager {
     }
 
     fn update_prioritized_peers(&self) {
+        // Only do this if it's not a validator
+        if self.role.is_validator() {
+            return;
+        }
+
         // Retrieve just what's needed for the peer ordering
         let peers: Vec<_> = {
             let peer_states = self.peer_states.lock();
@@ -364,15 +367,11 @@ impl PeerManager {
         // Origin doesn't matter at this point, only inserted ones into peer_states are upstream
         // Validators will always have the full set
         let mut prioritized_peers = self.prioritized_peers.lock();
-        let peers: Vec<_> = if self.role.is_validator() {
-            peers.iter().map(|(peer, _)| peer.clone()).collect()
-        } else {
-            peers
-                .iter()
-                .sorted_by(|peer_a, peer_b| compare_prioritized_peers(peer_a, peer_b))
-                .map(|(peer, _)| peer.clone())
-                .collect()
-        };
+        let peers: Vec<_> = peers
+            .iter()
+            .sorted_by(|peer_a, peer_b| compare_prioritized_peers(peer_a, peer_b))
+            .map(|(peer, _)| peer.clone())
+            .collect();
         let _ = std::mem::replace(&mut *prioritized_peers, peers);
     }
 
