@@ -407,10 +407,10 @@ impl TryFrom<(u64, ContractEvent)> for EventView {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct MetadataView {
     pub version: u64,
-    pub accumulator_root_hash: BytesView,
+    pub accumulator_root_hash: HashValue,
     pub timestamp: u64,
     pub chain_id: u8,
-    pub script_hash_allow_list: Option<Vec<BytesView>>,
+    pub script_hash_allow_list: Option<Vec<HashValue>>,
     pub module_publishing_allowed: Option<bool>,
     pub diem_version: Option<u64>,
     pub dual_attestation_limit: Option<u64>,
@@ -446,12 +446,6 @@ impl From<&Vec<u8>> for BytesView {
 impl From<Vec<u8>> for BytesView {
     fn from(bytes: Vec<u8>) -> Self {
         Self(hex::encode(bytes))
-    }
-}
-
-impl From<HashValue> for BytesView {
-    fn from(hash: HashValue) -> Self {
-        hash.to_vec().into()
     }
 }
 
@@ -531,7 +525,7 @@ impl std::fmt::Display for VMStatusView {
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
-    pub hash: BytesView,
+    pub hash: HashValue,
     pub bytes: BytesView,
     pub events: Vec<EventView>,
     pub vm_status: VMStatusView,
@@ -569,7 +563,7 @@ pub enum TransactionDataView {
         gas_unit_price: u64,
         gas_currency: String,
         expiration_timestamp_secs: u64,
-        script_hash: BytesView,
+        script_hash: HashValue,
         script_bytes: BytesView,
         script: ScriptView,
     },

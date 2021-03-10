@@ -1295,7 +1295,7 @@ fn test_get_transactions() {
             let version = base_version + i as u64;
             assert_eq!(view.version, version);
             let (tx, status) = &mock_db.all_txns[version as usize];
-            assert_eq!(view.hash.0, tx.hash().to_hex());
+            assert_eq!(view.hash, tx.hash());
 
             // Check we returned correct events
             let expected_events = mock_db
@@ -1338,10 +1338,7 @@ fn test_get_transactions() {
                         assert_eq!(&t.chain_id().id(), chain_id);
                         // TODO: verify every field
                         if let TransactionPayload::Script(s) = t.payload() {
-                            assert_eq!(
-                                script_hash.clone().to_string(),
-                                HashValue::sha3_256_of(s.code()).to_hex()
-                            );
+                            assert_eq!(*script_hash, HashValue::sha3_256_of(s.code()));
                         }
                     }
                     _ => panic!("Returned value doesn't match!"),
@@ -1370,7 +1367,7 @@ fn test_get_account_transaction() {
                 .find_map(|(t, status)| {
                     if let Ok(x) = t.as_signed_user_txn() {
                         if x.sender() == *acc && x.sequence_number() == seq {
-                            assert_eq!(tx_view.hash.clone().to_string(), t.hash().to_hex());
+                            assert_eq!(tx_view.hash, t.hash());
                             return Some((x, status));
                         }
                     }

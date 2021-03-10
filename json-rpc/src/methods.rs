@@ -14,7 +14,7 @@ use crate::{
 use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
 use diem_config::config::RoleType;
-use diem_crypto::hash::CryptoHash;
+use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_mempool::MempoolClientSender;
 use diem_trace::prelude::*;
 use diem_types::{
@@ -308,7 +308,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
         request.version()
     };
 
-    let mut script_hash_allow_list: Option<Vec<BytesView>> = None;
+    let mut script_hash_allow_list: Option<Vec<HashValue>> = None;
     let mut module_publishing_allowed: Option<bool> = None;
     let mut diem_version: Option<u64> = None;
     let mut dual_attestation_limit: Option<u64> = None;
@@ -318,8 +318,8 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
                 script_hash_allow_list = Some(
                     vm_publishing_option
                         .script_allow_list
-                        .iter()
-                        .map(|v| BytesView::from(v.to_vec()))
+                        .into_iter()
+                        .map(HashValue::new)
                         .collect(),
                 );
 
@@ -335,7 +335,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     }
     Ok(MetadataView {
         version,
-        accumulator_root_hash: service.db.get_accumulator_root_hash(version)?.into(),
+        accumulator_root_hash: service.db.get_accumulator_root_hash(version)?,
         timestamp: service.db.get_block_timestamp(version)?,
         chain_id,
         script_hash_allow_list,
@@ -394,7 +394,7 @@ async fn get_transactions(
 
         result.push(TransactionView {
             version: start_version + v as u64,
-            hash: tx.hash().into(),
+            hash: tx.hash(),
             bytes: bcs::to_bytes(&tx)?.into(),
             transaction: transaction_data_view_from_transaction(tx),
             events,
@@ -475,7 +475,7 @@ async fn get_account_transaction(
 
         Ok(Some(TransactionView {
             version: tx_version,
-            hash: tx.transaction.hash().into(),
+            hash: tx.transaction.hash(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
             transaction: transaction_data_view_from_transaction(tx.transaction),
             events,
@@ -621,7 +621,7 @@ async fn get_account_transactions(
 
         all_txs.push(TransactionView {
             version: tx.version,
-            hash: tx.transaction.hash().into(),
+            hash: tx.transaction.hash(),
             bytes: bcs::to_bytes(&tx.transaction)?.into(),
             transaction: transaction_data_view_from_transaction(tx.transaction),
             events,

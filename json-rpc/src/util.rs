@@ -124,7 +124,7 @@ pub fn transaction_data_view_from_transaction(tx: Transaction) -> TransactionDat
                 gas_unit_price: t.gas_unit_price(),
                 gas_currency: t.gas_currency_code().to_string(),
                 expiration_timestamp_secs: t.expiration_timestamp_secs(),
-                script_hash: script_hash.into(),
+                script_hash,
                 script_bytes,
                 script,
             }

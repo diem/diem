@@ -85,7 +85,7 @@ impl BlockingClient {
                 .get_account_transaction(address, seq, true)
                 .map_err(WaitForTransactionError::GetTransactionError)?;
             if let (Some(txn), state) = txn_resp.into_parts() {
-                if txn.hash.0 != txn_hash {
+                if txn.hash.to_hex() != txn_hash {
                     return Err(WaitForTransactionError::TransactionHashMismatchError(txn));
                 }
                 match txn.vm_status {
