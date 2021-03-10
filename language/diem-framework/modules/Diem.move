@@ -745,6 +745,8 @@ module Diem {
         pragma opaque;
         include PreburnToAbortsIf<CoinType>{amount: coin.value};
         include PreburnToEnsures<CoinType>{amount: coin.value};
+        let account_addr = Signer::spec_address_of(account);
+        include PreburnWithResourceEmits<CoinType>{amount: coin.value, preburn_address: account_addr};
     }
     spec schema PreburnToAbortsIf<CoinType> {
         account: signer;
@@ -770,7 +772,6 @@ module Diem {
         // The preburn amount in the currency info can be updated.
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include PreburnEnsures<CoinType>{preburn: spec_make_preburn(amount)};
-        include PreburnWithResourceEmits<CoinType>{preburn_address: account_addr};
     }
 
     /// Remove the oldest preburn request in the `PreburnQueue<CoinType>`

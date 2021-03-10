@@ -1881,6 +1881,9 @@ Calls to this function will fail if:
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnToEnsures">PreburnToEnsures</a>&lt;CoinType&gt;{amount: coin.value};
+<a name="0x1_Diem_account_addr$99"></a>
+<b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{amount: coin.value, preburn_address: account_addr};
 </code></pre>
 
 
@@ -1943,7 +1946,6 @@ Publishes if it doesn't exists. Updates its state either way.
     <b>ensures</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr);
     <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>include</b> <a href="Diem.md#0x1_Diem_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount)};
-    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{preburn_address: account_addr};
 }
 </code></pre>
 
@@ -2448,7 +2450,7 @@ used for administrative burns, like unpacking an XDX coin or charging fees.
 
 
 <pre><code><b>include</b> <a href="Diem.md#0x1_Diem_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
-<a name="0x1_Diem_info$99"></a>
+<a name="0x1_Diem_info$100"></a>
 <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
 <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">PreburnWithResourceEmits</a>&lt;CoinType&gt;{amount: coin.value, preburn_address: preburn_address};
 <b>include</b> <a href="Diem.md#0x1_Diem_BurnWithResourceCapEmits">BurnWithResourceCapEmits</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;{to_burn: coin}};
@@ -3565,7 +3567,7 @@ Returns the (rough) exchange rate between <code>CoinType</code> and <code><a hre
 
 <pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Diem.md#0x1_Diem_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-<a name="0x1_Diem_info$100"></a>
+<a name="0x1_Diem_info$101"></a>
 <b>let</b> info = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>ensures</b> result == info.to_xdx_exchange_rate;
 </code></pre>

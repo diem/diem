@@ -639,9 +639,6 @@ module DiemAccount {
         Diem::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
     }
     spec fun preburn {
-        // TODO(timeout): started timing out after recent refactoring, investigate. (Likely due to
-        //   underspecified opaque functions).
-        pragma verify = false;
         pragma opaque;
         let dd_addr = Signer::spec_address_of(dd);
         let payer = cap.account_address;
@@ -651,7 +648,6 @@ module DiemAccount {
                 == old(global<DiemAccount>(payer).withdraw_capability);
         include PreburnAbortsIf<Token>;
         include PreburnEnsures<Token>{dd, payer};
-        include PreburnEmits<Token>{dd_addr};
     }
     spec schema PreburnAbortsIf<Token> {
         dd: signer;
@@ -670,12 +666,6 @@ module DiemAccount {
         ensures payer_balance == old(payer_balance) - amount;
         /// The value of preburn at `dd_addr` increases by `amount`;
         include Diem::PreburnToEnsures<Token>{amount, account: dd};
-    }
-    spec schema PreburnEmits<Token> {
-        dd_addr: address;
-        amount: u64;
-        let preburn = global<Diem::Preburn<Token>>(dd_addr);
-        include Diem::PreburnWithResourceEmits<Token>{preburn_address: dd_addr};
     }
 
     /// Return a unique capability granting permission to withdraw from the sender's account balance.

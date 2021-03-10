@@ -73,11 +73,19 @@ module TestEmits {
 
     public fun multiple_different_handle(handle: &mut EventHandle<DummyEvent>, handle2: &mut EventHandle<DummyEvent>) {
         Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 0});
+        Event::emit_event(handle, DummyEvent{msg: 1});
         Event::emit_event(handle2, DummyEvent{msg: 0});
+        Event::emit_event(handle2, DummyEvent{msg: 0});
+        Event::emit_event(handle2, DummyEvent{msg: 1});
     }
     spec fun multiple_different_handle {
         emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 1} to handle;
         emits DummyEvent{msg: 0} to handle2;
+        emits DummyEvent{msg: 0} to handle2;
+        emits DummyEvent{msg: 1} to handle2;
     }
 
 
@@ -286,6 +294,16 @@ module TestEmits {
         emits DummyEvent{msg: 77} to handle;
         emits DummyEvent{msg: 1} to handle;
         emits DummyEvent{msg: 2} to handle;
+    }
+
+    public fun opaque_in_call_chain(handle: &mut EventHandle<DummyEvent>) {
+        opaque(handle);
+    }
+    spec fun opaque_in_call_chain {
+        emits DummyEvent{msg: 0} to handle;
+        emits DummyEvent{msg: 7} to handle;
+        emits DummyEvent{msg: 77} to handle;
+        emits DummyEvent{msg: 1} to handle;
     }
 
     public fun opaque_completeness_incorrect(handle: &mut EventHandle<DummyEvent>) {
