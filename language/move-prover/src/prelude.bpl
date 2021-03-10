@@ -960,7 +960,7 @@ procedure {:inline 1} $WritebackToValueStrong(src: $Mutation, idx: int, vdst: $V
     }
 }
 
-procedure {:inline 1} $WritebackToReferenceStrongEmp(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
+procedure {:inline 1} $WritebackToReferenceStrongDirect(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
 {
     var srcPath, dstPath: $Path;
 
@@ -970,13 +970,13 @@ procedure {:inline 1} $WritebackToReferenceStrongEmp(src: $Mutation, dst: $Mutat
         dst' := $Mutation(
                     l#$Mutation(dst),
                     dstPath,
-                    v#$Mutation(dst));
+                    v#$Mutation(src));
     } else {
         dst' := dst;
     }
 }
 
-procedure {:inline 1} $WritebackToReferenceStrongOff(src: $Mutation, dst: $Mutation, edge: $FieldName)
+procedure {:inline 1} $WritebackToReferenceStrongField(src: $Mutation, dst: $Mutation, edge: $FieldName)
 returns (dst': $Mutation)
 {
     var srcPath, dstPath: $Path;
@@ -988,6 +988,26 @@ returns (dst': $Mutation)
                     l#$Mutation(dst),
                     dstPath,
                     $Vector($UpdateValueArray(v#$Vector(v#$Mutation(dst)), edge, v#$Mutation(src)))
+                    );
+    } else {
+        dst' := dst;
+    }
+}
+
+
+procedure {:inline 1} $WritebackToVec(src: $Mutation, dst: $Mutation)
+returns (dst': $Mutation)
+{
+    var srcPath, dstPath: $Path;
+
+    srcPath := p#$Mutation(src);
+    dstPath := p#$Mutation(dst);
+    if (l#$Mutation(dst) == l#$Mutation(src)) {
+        dst' := $Mutation(
+                    l#$Mutation(dst),
+                    dstPath,
+                    $Vector($UpdateValueArray(v#$Vector(v#$Mutation(dst)),
+                    $path_index_at(srcPath, size#$Path(srcPath) - 1), v#$Mutation(src)))
                     );
     } else {
         dst' := dst;

@@ -643,11 +643,11 @@ impl<'env> ModuleTranslator<'env> {
                                 );
                                 let func = match edge {
                                     BorrowEdge::Weak => "WritebackToGlobalWeak",
-                                    BorrowEdge::Strong(StrongEdge::Empty) => {
+                                    BorrowEdge::Strong(StrongEdge::Direct) => {
                                         "WritebackToGlobalStrong"
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Offset(_)) => {
-                                        panic!("Strong global writeback has offset")
+                                    _ => {
+                                        panic!("Strong global writeback cannot have field")
                                     }
                                 };
                                 emitln!(
@@ -662,11 +662,11 @@ impl<'env> ModuleTranslator<'env> {
                             LocalRoot(idx) => {
                                 let func = match edge {
                                     BorrowEdge::Weak => "WritebackToValueWeak",
-                                    BorrowEdge::Strong(StrongEdge::Empty) => {
+                                    BorrowEdge::Strong(StrongEdge::Direct) => {
                                         "WritebackToValueStrong"
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Offset(_)) => {
-                                        panic!("Strong local writeback has offset")
+                                    _ => {
+                                        panic!("Strong local writeback cannot have field")
                                     }
                                 };
                                 emitln!(
@@ -684,11 +684,14 @@ impl<'env> ModuleTranslator<'env> {
                                     BorrowEdge::Weak => {
                                         ("WritebackToReferenceWeak", "".to_string())
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Empty) => {
-                                        ("WritebackToReferenceStrongEmp", "".to_string())
+                                    BorrowEdge::Strong(StrongEdge::Direct) => {
+                                        ("WritebackToReferenceStrongDirect", "".to_string())
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Offset(offset)) => {
-                                        ("WritebackToReferenceStrongOff", format!(", {}", offset))
+                                    BorrowEdge::Strong(StrongEdge::Field(field)) => {
+                                        ("WritebackToReferenceStrongField", format!(", {}", field))
+                                    }
+                                    BorrowEdge::Strong(StrongEdge::FieldUnknown) => {
+                                        ("WritebackToVec", "".to_string())
                                     }
                                 };
                                 emitln!(

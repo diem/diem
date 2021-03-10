@@ -16,7 +16,7 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast::TempIndex,
-    model::{FunctionEnv, QualifiedId},
+    model::{FunctionEnv, GlobalEnv, QualifiedId},
 };
 use std::{
     borrow::BorrowMut,
@@ -25,6 +25,7 @@ use std::{
 use vm::file_format::CodeOffset;
 
 /// Borrow graph edge abstract domain.
+/// `Top` corresponds to a weak edge existing.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum EdgeDomain {
     Top,
@@ -290,6 +291,10 @@ impl BorrowInfo {
     }
 }
 
+/// Used to store the module and function id of Vector:borrow_mut
+#[derive(Debug, Clone, Copy)]
+pub struct VecBorMutInfo(Option<(move_model::model::ModuleId, move_model::model::FunId)>);
+
 #[derive(Clone)]
 pub struct BorrowInfoAtCodeOffset {
     pub before: BorrowInfo,
@@ -340,6 +345,27 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             .set::<BorrowAnnotation>(borrow_annotation);
         data.annotations.borrow_mut().remove::<LiveVarAnnotation>();
         data
+    }
+
+    fn initialize(&self, env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
+        match env
+            .get_modules()
+            .into_iter()
+            .find(|module| module.get_full_name_str() == "0x1::Vector")
+        {
+            None => env.set_extension(VecBorMutInfo(None)),
+            Some(module) => {
+                let mid = module.get_id();
+                let fid = env
+                    .get_module(mid)
+                    .get_functions()
+                    .into_iter()
+                    .find(|fun| fun.get_full_name_str() == "Vector::borrow_mut")
+                    .unwrap()
+                    .get_id();
+                env.set_extension(VecBorMutInfo(Some((mid, fid))))
+            }
+        }
     }
 
     fn name(&self) -> String {
@@ -454,7 +480,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Empty),
+                                BorrowEdge::Strong(StrongEdge::Direct),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
@@ -477,7 +503,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Empty),
+                                BorrowEdge::Strong(StrongEdge::Direct),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
@@ -496,13 +522,13 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Empty),
+                                BorrowEdge::Strong(StrongEdge::Direct),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
                         }
                     }
-                    BorrowField(_, _, _, offset)
+                    BorrowField(_, _, _, field)
                         if livevar_annotation_at.after.contains(&dests[0]) =>
                     {
                         let dest_node = self.borrow_node(dests[0]);
@@ -512,7 +538,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Offset(*offset)),
+                                BorrowEdge::Strong(StrongEdge::Field(*field)),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
@@ -559,11 +585,30 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                     if livevar_annotation_at.after.contains(&dest) {
                                         state.add_node(dest_node.clone());
                                     }
-                                    state.add_edge(
-                                        src_node.clone(),
-                                        dest_node.clone(),
-                                        BorrowEdge::Weak,
-                                    );
+                                    // Logic to create strong edges for the function
+                                    // vector::borrow_mut
+                                    let vec_bor_mut_info = *self
+                                        .func_target
+                                        .global_env()
+                                        .get_extension::<VecBorMutInfo>()
+                                        .unwrap();
+                                    if self.strong_edges
+                                        && vec_bor_mut_info.0.is_some()
+                                        && mid == &vec_bor_mut_info.0.unwrap().0
+                                        && fid == &vec_bor_mut_info.0.unwrap().1
+                                    {
+                                        state.add_edge(
+                                            src_node.clone(),
+                                            dest_node.clone(),
+                                            BorrowEdge::Strong(StrongEdge::FieldUnknown),
+                                        );
+                                    } else {
+                                        state.add_edge(
+                                            src_node.clone(),
+                                            dest_node.clone(),
+                                            BorrowEdge::Weak,
+                                        );
+                                    }
                                 }
                             }
                         }

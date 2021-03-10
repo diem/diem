@@ -232,11 +232,15 @@ impl BorrowNode {
     }
 }
 
-/// A borrow edge with a known offset -- used in memory operations
+/// A borrow with a path length of 0 or 1 -- used in memory operations
+/// A `Direct` edge is a borrow edge with length 0
+/// A `Field(usize)` edge has length 1 and the path in known
+/// A FieldUnknown has length 1 but the path is unknown
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum StrongEdge {
-    Empty,
-    Offset(usize),
+    Direct,
+    Field(usize),
+    FieldUnknown,
 }
 
 /// A borrow edge -- used in memory operations
@@ -551,8 +555,9 @@ impl std::fmt::Display for BorrowEdge {
 impl std::fmt::Display for StrongEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StrongEdge::Empty => write!(f, "E"),
-            StrongEdge::Offset(offset) => write!(f, "{}", offset),
+            StrongEdge::Field(field) => write!(f, "{}", field),
+            StrongEdge::FieldUnknown => write!(f, "U"),
+            StrongEdge::Direct => write!(f, "D"),
         }
     }
 }
