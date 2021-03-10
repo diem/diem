@@ -44,7 +44,7 @@ they rely only on the state synchronizer to discover and sync to a more recent
 ledger state.
 
 3. [Waypoint sync](#waypoint-sync): When a node starts up, it can specify a waypoint
-to sync its local state to - see section 3.4 in [this paper](https://github.com/diem/diem/blob/master/documentation/tech-papers/lbft-verification/lbft-verification.pdf) for more context and
+to sync its local state to - see section 3.4 in [this paper](https://github.com/diem/diem/blob/main/documentation/tech-papers/lbft-verification/lbft-verification.pdf) for more context and
 motivation for waypoint sync, as this specification primarily focuses on
 the technical requirements for the waypoint sync protocol. Waypoint sync
 happens at node initialization and must be completed before the node participates

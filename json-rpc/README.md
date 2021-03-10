@@ -9,7 +9,7 @@ There are two types of clients, and thus two types of APIs:
 
 ## Usage and versioning
 
-Refer to the [specification](https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md).
+Refer to the [specification](https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md).
 
 ## Security Concerns
 

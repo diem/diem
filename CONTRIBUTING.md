@@ -32,7 +32,7 @@ cargo xtest
 #### Code Style, Hints, and Testing
 
 Refer to our [Coding
-Guidelines](https://github.com/diem/diem/blob/master/documentation/coding_guidelines.md) for
+Guidelines](https://github.com/diem/diem/blob/main/documentation/coding_guidelines.md) for
 detailed guidance about how to contribute to the project.
 
 #### Documentation
@@ -170,10 +170,10 @@ able to be built and passes all checks performed by CI.
 For pull request to be accepted by any Diem projects, a CLA must be signed.
 You will only need to do this once to work on any of Diem's open source
 projects. Individuals contributing on their own behalf can sign the [Individual
-CLA](https://github.com/diem/diem/blob/master/documentation/contributing/individual-cla.pdf).
+CLA](https://github.com/diem/diem/blob/main/documentation/contributing/individual-cla.pdf).
 If you are contributing on behalf of your employer, please ask them to sign the
 [Corporate
-CLA](https://github.com/diem/diem/blob/master/documentation/contributing/corporate-cla.pdf).
+CLA](https://github.com/diem/diem/blob/main/documentation/contributing/corporate-cla.pdf).
 
 ## Issues
 

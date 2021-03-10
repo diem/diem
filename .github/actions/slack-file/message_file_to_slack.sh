@@ -79,7 +79,7 @@ if [ -e "${PAYLOAD_FILE}" ]; then
         curl -X POST -H 'Content-type: application/json' -d @/tmp/payload1234567890 "${WEBHOOK}"
     else
         echo "Not sending messages as no webhook url is set."
-        echo "Chances are you are not building on master, or gha is misconfigured."
+        echo "Chances are you are not building on main, or gha is misconfigured."
         echo "webhook is empty"
         exit 0
     fi

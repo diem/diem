@@ -15,7 +15,7 @@ This tutorial details how to configure a public FullNode to connect to *testnet*
 #### Prerequisites
 Before you get started with this tutorial, we recommend you familiarize yourself with the following:
 * [Diem node concepts](/core/nodes.md)
-* [JSON-RPC specifications](https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md)
+* [JSON-RPC specifications](https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md)
 * [CLI reference](/core/diem-cli.md)
 
 

@@ -19,9 +19,9 @@ If you have already completed the My First Transaction tutorial, you can use the
 * [Account address: Hex-coded account address](my-first-transaction.md#step-4-optional-list-accounts)
 
 ## Get account information
-To get information about Alice’s account, use [get_account](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account.md). To run this method, you will need the hex-coded account address (see step 4 of My First Transaction).
+To get information about Alice’s account, use [get_account](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account.md). To run this method, you will need the hex-coded account address (see step 4 of My First Transaction).
 
-In the example below, we have a request sent using [get_account](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account.md) to learn information about Alice’s account and the response received.
+In the example below, we have a request sent using [get_account](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account.md) to learn information about Alice’s account and the response received.
 
 ```
 // Request: fetches account for account address "5261f913eab22cfc448a815a0e672143"curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account","params":["5261f913eab22cfc448a815a0e672143"],"id":1}' https://testnet.libra.org/v1
@@ -30,12 +30,12 @@ In the example below, we have a request sent using [get_account](https://github.
 
 
 ## Get transactions for an account
-To see all the transactions sent by Alice’s account, you can use [get_account_transactions](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account_transactions.md). You will need:
+To see all the transactions sent by Alice’s account, you can use [get_account_transactions](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account_transactions.md). You will need:
 * Alice’s hex-code account address
 * the starting sequence number
 * the maximum number of transactions you want returned for this method
 
-In the example below, we have a request sent using [get_account_transactions](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account_transactions.md) to learn transaction information about Alice’s account and the response received.
+In the example below, we have a request sent using [get_account_transactions](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account_transactions.md) to learn transaction information about Alice’s account and the response received.
 
 ```
 // Request: fetches account for account address "5261f913eab22cfc448a815a0e672143"curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_transactions","params":["5261f913eab22cfc448a815a0e672143", 0, 100, false],"id":1}' https://testnet.libra.org/v1
@@ -44,7 +44,7 @@ In the example below, we have a request sent using [get_account_transactions](ht
 
 
 ## Get the latest ledger state
-You can check the current state of the testnet using [get_metadata](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_metadata.md).
+You can check the current state of the testnet using [get_metadata](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_metadata.md).
 
 The example below has the request and response received.
 
@@ -55,7 +55,7 @@ The example below has the request and response received.
 
 
 ## Get currencies available
-Use [get_currencies](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_currencies.md) to query the types of currencies supported by the Diem Blockchain.
+Use [get_currencies](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_currencies.md) to query the types of currencies supported by the Diem Blockchain.
 
 ```
 // Request: fetches currencies supported by the systemcurl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_currencies","params":[],"id":1}' https://testnet.libra.org/v1
@@ -68,12 +68,12 @@ You can use different methods to query the blockchain and get the information yo
 
 | Method                                                       | Description                                                  |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| [get_transactions](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_transactions.md) | Get transactions on the Diem Blockchain.                    |
-| [get_account](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account.md) | Get the latest account information for a given account address. |
-| [get_account_transactions](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account_transactions.md) | Get transactions sent by a particular account.               |
-| [get_metadata](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_metadata.md) | Get the blockchain metadata (for example, state as known to the current full node). |
-| [get_events](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_events.md) | Get the events for a given event stream key.                 |
-| [get_currencies](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_currencies.md) | Get information about all currencies supported by the Diem Blockchain. |
+| [get_transactions](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_transactions.md) | Get transactions on the Diem Blockchain.                    |
+| [get_account](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account.md) | Get the latest account information for a given account address. |
+| [get_account_transactions](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account_transactions.md) | Get transactions sent by a particular account.               |
+| [get_metadata](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_metadata.md) | Get the blockchain metadata (for example, state as known to the current full node). |
+| [get_events](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_events.md) | Get the events for a given event stream key.                 |
+| [get_currencies](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_currencies.md) | Get information about all currencies supported by the Diem Blockchain. |
 
 
 ###### tags: `core`

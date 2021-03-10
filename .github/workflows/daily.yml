@@ -17,7 +17,7 @@ jobs:
       matrix:
         #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
         #to test in canary add in canary here.....
-        target-branch: [main, master, release-1.1]
+        target-branch: [main, release-1.1]
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:

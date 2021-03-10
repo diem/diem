@@ -3,10 +3,10 @@
 
 //! Defines constants for enum type values
 //! See the following Diem JSON-RPC response type documents for more details:
-//! * https://github.com/diem/diem/blob/master/json-rpc/docs/type_account.md#type-account
-//! * https://github.com/diem/diem/blob/master/json-rpc/docs/type_event.md#event-data
-//! * https://github.com/diem/diem/blob/master/json-rpc/docs/type_transaction.md#type-vmstatus
-//! * https://github.com/diem/diem/blob/master/json-rpc/docs/type_transaction.md#type-transactiondata
+//! * https://github.com/diem/diem/blob/main/json-rpc/docs/type_account.md#type-account
+//! * https://github.com/diem/diem/blob/main/json-rpc/docs/type_event.md#event-data
+//! * https://github.com/diem/diem/blob/main/json-rpc/docs/type_transaction.md#type-vmstatus
+//! * https://github.com/diem/diem/blob/main/json-rpc/docs/type_transaction.md#type-transactiondata
 
 // AccountRole#type field values
 pub const ACCOUNT_ROLE_UNKNOWN: &str = "unknown";
@@ -45,5 +45,5 @@ pub const TRANSACTION_DATA_USER: &str = "user";
 pub const TRANSACTION_DATA_UNKNOWN: &str = "unknown";
 
 // Script#type field values, only set unknown type here,
-// other types, plese see https://github.com/diem/diem/blob/master/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
+// other types, plese see https://github.com/diem/diem/blob/main/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
 pub const SCRIPT_UNKNOWN: &str = "unknown";

@@ -131,7 +131,7 @@ pub const HKDF_SALT: [u8; 32] = [
 /// identifies the specific `shared_val_netaddr_key` used to encrypt/decrypt the
 /// `EncNetworkAddress`.
 ///
-/// [`ValidatorConfig`]: https://github.com/diem/diem/blob/master/language/diem-framework/modules/doc/ValidatorConfig.md
+/// [`ValidatorConfig`]: https://github.com/diem/diem/blob/main/language/diem-framework/modules/doc/ValidatorConfig.md
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct EncNetworkAddress {
     key_version: KeyVersion,

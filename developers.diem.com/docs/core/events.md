@@ -22,7 +22,7 @@ The details of the event implementation in Move are specified by the Event modul
 
 ## Events available in the system
 
-The Diem Framework uses a number of different kinds of events such as for payments, minting/burning, and system operations. A detailed list of the event types accessible from JSON-RPC is available in the [JSON-RPC documentation](https://github.com/diem/diem/blob/master/json-rpc/docs/type_event.md).
+The Diem Framework uses a number of different kinds of events such as for payments, minting/burning, and system operations. A detailed list of the event types accessible from JSON-RPC is available in the [JSON-RPC documentation](https://github.com/diem/diem/blob/main/json-rpc/docs/type_event.md).
 
 There are two types of events related to payment transactions. Whenever a payment transaction is committed, it emits the following events:
 
@@ -33,7 +33,7 @@ Both `SentPaymentEvent` and `ReceivedPaymentEvent` have the same structure:
 
 | Field Name | Type                                                         | Description                                                  |
 | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| amount     | [Amount](https://github.com/diem/diem/blob/master/json-rpc/docs/type_amount.md) | Amount received from the sender of the transaction           |
+| amount     | [Amount](https://github.com/diem/diem/blob/main/json-rpc/docs/type_amount.md) | Amount received from the sender of the transaction           |
 | sender     | string                                                       | Hex-encoded address of the account whose balance was debited to perform this deposit. If the deposited funds came from a mint transaction, the sender address will be 0x0...0. |
 | receiver   | string                                                       | Hex-encoded address of the account whose balance was credited by this deposit.<br /> |
 | metadata   | string                                                       | An optional field that can contain extra metadata for the event. This information can be used by an off-chain API to implement a sub-addressing scheme for a wallet. |
@@ -62,7 +62,7 @@ There are several JSON-RPC APIs associated with events:
 
 This example demonstrates how to query a `SentPaymentEvent` for an account. In this example, account 0x996b67d has two event streams, with three sent payments and two received payments:![Figure 1.1 Example event streams for a Diem Account](/img/docs/events-fig2.svg)
 
-1. The first step is to find the event key for the account’s `SentPaymentEvent` stream. We can send a [get_account](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_account.md) query to the JSON-RPC endpoint to get the state of that [account](https://github.com/diem/diem/blob/master/json-rpc/docs/type_account.md), including two event keys: one for the `SentPaymentEvent` stream (the sent_events_key field) and one for the `ReceivedPaymentEvent` stream (the received_events_key field). The response will look like the following:
+1. The first step is to find the event key for the account’s `SentPaymentEvent` stream. We can send a [get_account](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_account.md) query to the JSON-RPC endpoint to get the state of that [account](https://github.com/diem/diem/blob/main/json-rpc/docs/type_account.md), including two event keys: one for the `SentPaymentEvent` stream (the sent_events_key field) and one for the `ReceivedPaymentEvent` stream (the received_events_key field). The response will look like the following:
 
     ```
     {
@@ -83,7 +83,7 @@ This example demonstrates how to query a `SentPaymentEvent` for an account. In t
 
     This query is only needed once per account because the event     keys for the account’s event streams will never be modified.
 
-2. The next step is to use the [get_events](https://github.com/diem/diem/blob/master/json-rpc/docs/method_get_events.md) API to fetch the event details. We can specify in the JSON-RPC query to fetch one event beginning with sequence number two from the sent_events_key event stream. The response will look like the following:
+2. The next step is to use the [get_events](https://github.com/diem/diem/blob/main/json-rpc/docs/method_get_events.md) API to fetch the event details. We can specify in the JSON-RPC query to fetch one event beginning with sequence number two from the sent_events_key event stream. The response will look like the following:
 
     ```
     {

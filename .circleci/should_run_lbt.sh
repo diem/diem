@@ -4,7 +4,7 @@
 
 set -eo pipefail
 
-oldrev="origin/master"
+oldrev="origin/main"
 newrev="HEAD"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

@@ -3,8 +3,8 @@
 [FORM_VER]: https://en.wikipedia.org/wiki/Formal_verification
 [SMT]: https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
 [DESIGN_BY_CONTRACT]: https://en.wikipedia.org/wiki/Design_by_contract
-[MSL]: https://github.com/diem/diem/blob/master/language/move-prover/doc/user/move-model.md
-[PROVER]: https://github.com/diem/diem/blob/master/language/move-prover/doc/user/prover-guide.md
+[MSL]: https://github.com/diem/diem/blob/main/language/move-prover/doc/user/move-model.md
+[PROVER]: https://github.com/diem/diem/blob/main/language/move-prover/doc/user/prover-guide.md
 [BOOGIE]: https://github.com/boogie-org/boogie
 [Z3]: https://github.com/Z3Prover/z3
 [ACCESS_CONTROL]: https://github.com/diem/dip/blob/master/dips/dip-2.md

@@ -4,7 +4,7 @@ on:
   push:
     branches: [auto, canary]
   pull_request:
-    branches: [main, master, release-*, gha-test-*]
+    branches: [main, release-*, gha-test-*]
 
 defaults:
   run:

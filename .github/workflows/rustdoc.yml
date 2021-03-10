@@ -2,7 +2,7 @@ name: rustdoc
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
 
 env:
   CARGO_INCREMENTAL: 0

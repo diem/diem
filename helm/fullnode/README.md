@@ -45,6 +45,6 @@ Deployment
        $ helm install fullnode --set storage.class=gp2 .
 
 
-[json-rpc interface]: https://github.com/diem/diem/blob/master/json-rpc/json-rpc-spec.md
+[json-rpc interface]: https://github.com/diem/diem/blob/main/json-rpc/json-rpc-spec.md
 [values.yaml]: values.yaml
 [Diem dockerhub]: https://hub.docker.com/r/diem/validator/tags?page=1&ordering=last_updated

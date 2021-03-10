@@ -10,7 +10,7 @@
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
 //!
-//! [DiemNet Handshake v1 Specification]: https://github.com/diem/diem/blob/master/specifications/network/handshake-v1.md
+//! [DiemNet Handshake v1 Specification]: https://github.com/diem/diem/blob/main/specifications/network/handshake-v1.md
 
 use diem_config::network_id::NetworkId;
 use diem_types::chain_id::ChainId;

@@ -6,7 +6,7 @@
 
 ---
 
-[![Diem Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://diem.github.io/diem/)
+[![Diem Rust Crate Documentation (main)](https://img.shields.io/badge/docs-main-59f)](https://diem.github.io/diem/)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.diem.com/coverage/unit-coverage/latest/index.html)
 
@@ -49,4 +49,4 @@ To begin contributing, [sign the CLA](https://diem.com/en-US/cla-sign/). You can
 
 ## License
 
-Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/master/LICENSE).
+Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/main/LICENSE).

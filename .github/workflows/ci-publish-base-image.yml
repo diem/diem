@@ -2,7 +2,7 @@ name: Publish Base CI Image To Dockerhub
 
 on:
   push:
-    branches: [main, master, release-*, gha-test-*]
+    branches: [main, release-*, gha-test-*]
     paths:
       [
         .github/workflows/ci-publish-base-image.yml,

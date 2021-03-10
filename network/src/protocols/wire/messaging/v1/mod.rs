@@ -5,7 +5,7 @@
 //! serialized/deserialized, and provides a `Sink` and `Stream` implementation
 //! for sending `NetworkMessage`s over an abstract IO object (presumably a socket).
 //!
-//! The [DiemNet specification](https://github.com/diem/diem/blob/master/specifications/network/messaging-v1.md)
+//! The [DiemNet specification](https://github.com/diem/diem/blob/main/specifications/network/messaging-v1.md)
 //! describes in greater detail how these messages are sent and received
 //! over-the-wire.
 

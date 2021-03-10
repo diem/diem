@@ -47,7 +47,7 @@ Get the latest updates to our project by signing up to our [newsletter](https://
 
 ## License
 
-Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/master/LICENSE)
+Diem Core is licensed as [Apache 2.0](https://github.com/diem/diem/blob/main/LICENSE)
 
 ## Docs Directory
 

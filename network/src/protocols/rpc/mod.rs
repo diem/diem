@@ -40,7 +40,7 @@
 //! We limit the number of pending inbound and outbound RPC tasks to ensure that
 //! resource usage is bounded.
 //!
-//! [DiemNet wire protocol v1]: https://github.com/diem/diem/blob/master/specifications/network/messaging-v1.md
+//! [DiemNet wire protocol v1]: https://github.com/diem/diem/blob/main/specifications/network/messaging-v1.md
 //! [`Peer`]: crate::peer::Peer
 
 use crate::{

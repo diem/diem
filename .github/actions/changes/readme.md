@@ -16,7 +16,7 @@ This actions handles three different case.
 Calculates all file changes since the base git revision shared between this pr (which may have many commits)
 and the target branch (which may have moved on)
 
-### Case 2:  A Push to a long lived branch (main, master, etc...) ###
+### Case 2:  A Push to a long lived branch (main, etc...) ###
 
 Uses the branch name as supplied by **GITHUB_REF** to find the **BRANCH** name, and then calls the github api to find
 the last successfully completed build of this branch, for the supplied **workflow-file**.  This is used find a base githash.
