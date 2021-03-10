@@ -1,7 +1,7 @@
 ---
 id: key_manager
 title: Key Manager
-custom_edit_url: https://github.com/diem/diem/edit/master/secure/key-manager/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/secure/key-manager/README.md
 ---
 # Key Manager
 

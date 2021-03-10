@@ -53,13 +53,13 @@ module.exports = objectAssignDeep(universalConfig, {
         docs: {
           sidebarPath: require.resolve('./sidebars'),
           // Please change this to your repo.
-          editUrl: 'https://github.com/diem/diem/edit/master/developers.diem.com/',
+          editUrl: 'https://github.com/diem/diem/edit/main/developers.diem.com/',
         },
         blog: {
           showReadingTime: true,
           // Please change this to your repo.
           editUrl:
-            'https://github.com/diem/diem/edit/master/developers.diem.com/blog/',
+            'https://github.com/diem/diem/edit/main/developers.diem.com/blog/',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

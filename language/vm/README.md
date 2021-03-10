@@ -1,7 +1,7 @@
 ---
 id: vm
 title: Virtual Machine
-custom_edit_url: https://github.com/diem/diem/edit/master/language/vm/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/vm/README.md
 ---
 
 

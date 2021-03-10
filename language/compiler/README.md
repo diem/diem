@@ -1,7 +1,7 @@
 ---
 id: ir-to-bytecode
 title: Move IR Compiler
-custom_edit_url: https://github.com/diem/diem/edit/master/language/compiler/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/compiler/README.md
 ---
 
 

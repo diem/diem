@@ -1,7 +1,7 @@
 ---
 id: diem-framework
 title: Diem Framework
-custom_edit_url: https://github.com/diem/diem/edit/master/language/diem-framework/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/diem-framework/README.md
 ---
 
 ## The Diem Framework

@@ -7,7 +7,7 @@
 [PROVER]: https://github.com/diem/diem/blob/main/language/move-prover/doc/user/prover-guide.md
 [BOOGIE]: https://github.com/boogie-org/boogie
 [Z3]: https://github.com/Z3Prover/z3
-[ACCESS_CONTROL]: https://github.com/diem/dip/blob/master/dips/dip-2.md
+[ACCESS_CONTROL]: https://github.com/diem/dip/blob/main/dips/dip-2.md
 
 The Diem framework comes with an exhaustive formal specification of modules and transaction scripts.
 The specifications are formally verified against the Move implementation, with the verification enabled in

@@ -1,7 +1,7 @@
 ---
 id: storage
 title: Storage
-custom_edit_url: https://github.com/diem/diem/edit/master/storage/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/storage/README.md
 ---
 
 

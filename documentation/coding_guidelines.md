@@ -84,8 +84,8 @@ This file should contain:
 
  * The *conceptual* *documentation* of the component.
  * A link to the external API documentation for the component.
- * A link to the master license of the project.
- * A link to the master contributing guide for the project.
+ * A link to the main license of the project.
+ * A link to the main contributing guide for the project.
 
 A template for readmes:
 

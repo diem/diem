@@ -1,7 +1,7 @@
 ---
 id: move-language
 title: Move Language
-custom_edit_url: https://github.com/diem/diem/edit/master/language/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/README.md
 ---
 
 

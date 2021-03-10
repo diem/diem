@@ -1,7 +1,7 @@
 ---
 id: move-lang
 title: Move Source Language
-custom_edit_url: https://github.com/diem/diem/edit/master/language/move-lang/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/move-lang/README.md
 ---
 
 ## Code under this subtree is experimental. It is out of scope for the Diem Bug Bounty until it is no longer marked experimental.
