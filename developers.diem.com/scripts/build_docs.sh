@@ -66,7 +66,7 @@ while getopts 'hbrp' flag; do
       BUILD_STATIC=true
       ;;
     r)
-      BUILD_RUSTDOCS=true
+  /core/nodes.md    BUILD_RUSTDOCS=true
       ;;
     p)
       BUILD_PYTHON_SDK_DOCS=true

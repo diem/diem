@@ -23,6 +23,7 @@ jobs:
       - uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           use-quiet-mode: 'yes'
+          base-branch: 'main'
           use-verbose-mode: 'yes'
           folder-path: 'developers.diem.com/docs/'
       - uses: actions/checkout@master
@@ -30,4 +31,5 @@ jobs:
         with:
           use-quiet-mode: 'yes'
           use-verbose-mode: 'yes'
+          base-branch: 'main'
           folder-path: 'developers.diem.com/blog/'
