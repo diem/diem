@@ -39,6 +39,7 @@ impl FunctionVariant {
 
 /// The variant for regular verification.
 pub const REGULAR_VERIFICATION_VARIANT: &str = "";
+pub const INCONSISTENCY_CHECK_VARIANT: &str = "inconsistency";
 
 impl std::fmt::Display for FunctionVariant {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

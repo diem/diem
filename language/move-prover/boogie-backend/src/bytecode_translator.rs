@@ -233,18 +233,27 @@ impl<'env> ModuleTranslator<'env> {
                 let timeout = fun_target
                     .func_env
                     .get_num_pragma(TIMEOUT_PRAGMA, || self.options.vc_timeout);
-                let attribs = if fun_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
+
+                let mut attribs = vec![format!("{{:timeLimit {}}} ", timeout)];
+
+                if fun_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
                     let seed = fun_target
                         .func_env
                         .get_num_pragma(SEED_PRAGMA, || self.options.random_seed);
-                    format!("{{:timeLimit {}}} {{:random_seed {}}} ", timeout, seed)
-                } else {
-                    format!("{{:timeLimit {}}} ", timeout)
+                    attribs.push(format!("{{:random_seed {}}} ", seed));
                 };
+
+                if flavor == "inconsistency" {
+                    attribs.push(format!(
+                        "{{:msg_if_verifies \"inconsistency_detected{}\"}} ",
+                        self.loc_str(&fun_target.get_loc())
+                    ));
+                }
+
                 if flavor.is_empty() {
-                    ("$verify".to_string(), attribs)
+                    ("$verify".to_string(), attribs.join(""))
                 } else {
-                    (format!("$verify_{}", flavor), attribs)
+                    (format!("$verify_{}", flavor), attribs.join(""))
                 }
             }
         };

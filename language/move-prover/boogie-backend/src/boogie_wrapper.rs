@@ -64,6 +64,7 @@ pub struct BoogieOutput {
 pub enum BoogieErrorKind {
     Assertion,
     Inconclusive,
+    Inconsistency,
 }
 
 impl BoogieErrorKind {
@@ -145,6 +146,7 @@ impl<'env> BoogieWrapper<'env> {
                 }
                 let mut errors = self.extract_verification_errors(&out);
                 errors.extend(self.extract_inconclusive_errors(&out));
+                errors.extend(self.extract_inconsistency_errors(&out));
                 return Ok(BoogieOutput {
                     errors,
                     all_output: out,
@@ -302,6 +304,11 @@ impl<'env> BoogieWrapper<'env> {
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
             at = usize::saturating_add(at, cap.get(0).unwrap().end());
             let msg = cap.name("msg").unwrap().as_str();
+            if msg == "expected to fail" {
+                // Masks the failure from the negative test for the inconsistency checking
+                // which is expected to fail, and skips the error report of this instance.
+                continue;
+            }
             let args = cap.name("args").unwrap().as_str();
             let loc = self.report_error(self.extract_loc(args), self.env.unknown_loc());
             let execution_trace = self.extract_augmented_trace(out, &mut at);
@@ -476,29 +483,55 @@ impl<'env> BoogieWrapper<'env> {
     /// Extracts inconclusive (timeout) errors.
     fn extract_inconclusive_errors(&self, out: &str) -> Vec<BoogieError> {
         let diag_re =
-            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\).*Verification.*(inconclusive|out of resource|timed out).*$")
+            Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\).*Verification(?P<str>.*)(inconclusive|out of resource|timed out).*$")
                 .unwrap();
         diag_re
             .captures_iter(&out)
+            .filter_map(|cap| {
+                let str = cap.name("str").unwrap().as_str();
+                if str.contains("$verify_inconsistency") {
+                    // Masks the timeout from the negative test for the inconsistency checking, and
+                    // skips the error report of this instance.
+                    None
+                } else {
+                    let line = cap.name("line").unwrap().as_str();
+                    let col = cap.name("col").unwrap().as_str();
+                    let msg = cap.get(0).unwrap().as_str();
+                    let loc = self
+                        .get_loc_from_pos(make_position(line, col))
+                        .unwrap_or_else(|| self.env.unknown_loc());
+                    Some(BoogieError {
+                        kind: BoogieErrorKind::Inconclusive,
+                        loc,
+                        message: if msg.contains("out of resource") || msg.contains("timed out") {
+                            let timeout = self.options.adjust_timeout(self.options.vc_timeout);
+                            format!(
+                                "verification out of resources/timeout (global timeout set to {}s)",
+                                timeout
+                            )
+                        } else {
+                            "verification inconclusive".to_string()
+                        },
+                        execution_trace: vec![],
+                        model: None,
+                    })
+                }
+            })
+            .collect_vec()
+    }
+
+    /// Extracts inconsistency errors.
+    fn extract_inconsistency_errors(&self, out: &str) -> Vec<BoogieError> {
+        let diag_re = Regex::new(r"(?m)^inconsistency_detected\((?P<args>[^)]*)\)").unwrap();
+        diag_re
+            .captures_iter(&out)
             .map(|cap| {
-                let line = cap.name("line").unwrap().as_str();
-                let col = cap.name("col").unwrap().as_str();
-                let msg = cap.get(0).unwrap().as_str();
-                let loc = self
-                    .get_loc_from_pos(make_position(line, col))
-                    .unwrap_or_else(|| self.env.unknown_loc());
+                let args = cap.name("args").unwrap().as_str();
+                let loc = self.report_error(self.extract_loc(args), self.env.unknown_loc());
                 BoogieError {
-                    kind: BoogieErrorKind::Inconclusive,
+                    kind: BoogieErrorKind::Inconsistency,
                     loc,
-                    message: if msg.contains("out of resource") || msg.contains("timed out") {
-                        let timeout = self.options.adjust_timeout(self.options.vc_timeout);
-                        format!(
-                            "verification out of resources/timeout (global timeout set to {}s)",
-                            timeout
-                        )
-                    } else {
-                        "verification inconclusive".to_string()
-                    },
+                    message: "there is an inconsistent assumption in the function, which may allow any post-condition (including false) to be proved".to_string(),
                     execution_trace: vec![],
                     model: None,
                 }

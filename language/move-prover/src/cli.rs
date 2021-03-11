@@ -75,7 +75,7 @@ pub struct Options {
     pub errmapgen: ErrmapOptions,
     /// Whether to run experimental pipeline
     pub experimental_pipeline: bool,
-    /// Whether to use strong edges in borrow analtsis
+    /// Whether to use strong edges in borrow analysis
     pub strong_edges: bool,
 }
 
@@ -150,7 +150,7 @@ impl Options {
                     .multiple(true)
                     .number_of_values(1)
                     .value_name("TOML_STRING")
-                    .help("inline configuration string in toml syntax. Can be repeated. \
+                    .help("inlines configuration string in toml syntax. Can be repeated. \
                      Use as in `-C=prover.opt=value -C=backend.opt=value`"),
             )
             .arg(
@@ -178,7 +178,7 @@ impl Options {
                 Arg::with_name("generate-only")
                     .long("generate-only")
                     .short("g")
-                    .help("only generate boogie file but do not call boogie"),
+                    .help("only generates boogie file but does not call boogie"),
             )
             .arg(
                 Arg::with_name("warn")
@@ -196,7 +196,7 @@ impl Options {
                 Arg::with_name("keep")
                     .long("keep")
                     .short("k")
-                    .help("keep intermediate artifacts of the backend around")
+                    .help("keeps intermediate artifacts of the backend around")
             )
             .arg(
                 Arg::with_name("trans_v1")
@@ -211,7 +211,7 @@ impl Options {
             .arg(
                 Arg::with_name("negative")
                     .long("negative")
-                    .help("run negative verification checks")
+                    .help("runs negative verification checks")
             ).arg(
                 Arg::with_name("seed")
                     .long("seed")
@@ -244,7 +244,7 @@ impl Options {
             .arg(
                 Arg::with_name("docgen")
                     .long("docgen")
-                    .help("run the documentation generator instead of the prover. \
+                    .help("runs the documentation generator instead of the prover. \
                     Generated docs will be written into the directory `./doc` unless configured otherwise via toml"),
             )
             .arg(
@@ -257,24 +257,24 @@ impl Options {
             .arg(
                 Arg::with_name("abigen")
                     .long("abigen")
-                    .help("run the ABI generator instead of the prover. \
+                    .help("runs the ABI generator instead of the prover. \
                     Generated ABIs will be written into the directory `./abi` unless configured otherwise via toml"),
             )
             .arg(
                 Arg::with_name("errmapgen")
                     .long("errmapgen")
-                    .help("run the error map generator instead of the prover. \
+                    .help("runs the error map generator instead of the prover. \
                     The generated error map will be written to `errmap` unless configured otherwise"),
             )
             .arg(
                 Arg::with_name("packedtypesgen")
                     .long("packedtypesgen")
-                    .help("run the packed types generator instead of the prover.")
+                    .help("runs the packed types generator instead of the prover.")
             )
             .arg(
                 Arg::with_name("read-write-set")
                     .long("read-write-set")
-                    .help("run the read/write set analysis instead of the prover.")
+                    .help("runs the read/write set analysis instead of the prover.")
             )
             .arg(
                 Arg::with_name("verify")
@@ -363,22 +363,29 @@ impl Options {
             .arg(
                 Arg::with_name("use-cvc4")
                     .long("use-cvc4")
-                    .help("use cvc4 solver instead of z3")
-            ).arg(
-            Arg::with_name("experimental_pipeline")
-                .long("experimental_pipeline")
-                .short("e")
-                .help("whether to run experimental pipeline")
-            ).arg(
-            Arg::with_name("strong_edges")
-            .long("strong_edges")
-            .help("whether to use strong edges in borrow analysis")
+                    .help("uses cvc4 solver instead of z3")
+            )
+            .arg(
+                Arg::with_name("experimental_pipeline")
+                    .long("experimental_pipeline")
+                    .short("e")
+                    .help("whether to run experimental pipeline")
+            )
+            .arg(
+                Arg::with_name("strong_edges")
+                    .long("strong_edges")
+                    .help("whether to use strong edges in borrow analysis")
             )
             .arg(
                 Arg::with_name("exp_mut_param")
                     .long("exp-mut-param")
                     .help("exp_mut_param experiment")
-        )
+            )
+            .arg(
+                Arg::with_name("check-inconsistency")
+                    .long("check-inconsistency")
+                    .help("checks whether there is any inconsistency")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -525,6 +532,9 @@ impl Options {
         }
         if matches.is_present("use-cvc4") {
             options.backend.use_cvc4 = true;
+        }
+        if matches.is_present("check-inconsistency") {
+            options.prover.check_inconsistency = true;
         }
         if matches.is_present("print-config") {
             println!("{}", toml::to_string(&options).unwrap());

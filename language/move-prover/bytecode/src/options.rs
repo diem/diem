@@ -45,6 +45,8 @@ pub struct ProverOptions {
     pub num_instances: usize,
     /// Whether to run Boogie instances sequentially.
     pub sequential_task: bool,
+    /// Whether to check the inconsistency
+    pub check_inconsistency: bool,
 }
 
 impl Default for ProverOptions {
@@ -66,6 +68,7 @@ impl Default for ProverOptions {
             dump_cfg: false,
             num_instances: 1,
             sequential_task: false,
+            check_inconsistency: false,
         }
     }
 }
