@@ -7,6 +7,9 @@ error:
    ·
  7 │         (0, S{}, R<u64> {});
    │         ------------------- The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' does not have the ability 'drop'
+   ·
+ 7 │         (0, S{}, R<u64> {});
+   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
    │
 
 error: 
@@ -18,6 +21,9 @@ error:
    ·
  8 │         (0, S{}, Box<R<u64>> {});
    │         ------------------------ The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' does not have the ability 'drop'
+   ·
+ 8 │         (0, S{}, Box<R<u64>> {});
+   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
    │
 
 error: 
@@ -29,6 +35,9 @@ error:
    ·
  9 │         (0, S{}, Box {});
    │         ---------------- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' does not have the ability 'drop'
+   ·
+ 9 │         (0, S{}, Box {});
+   │             --- The type '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)' can have the ability 'drop' but the type argument '0x8675309::M::S' does not have the required ability 'drop'
    │
 
 error: 

@@ -7,6 +7,12 @@ error:
    ·
  6 │         &R{};
    │          --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 6 │         &R{};
+   │          --- The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+ 3 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -18,5 +24,11 @@ error:
    ·
  7 │         &mut R{};
    │              --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 7 │         &mut R{};
+   │              --- The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+ 3 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 

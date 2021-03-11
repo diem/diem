@@ -7,6 +7,12 @@ error:
    ·
  5 │         let x = X {};
    │             - The local 'x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 5 │         let x = X {};
+   │                 ---- The type '0x8675309::M::X' does not have the ability 'drop'
+   ·
+ 2 │     struct X {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 

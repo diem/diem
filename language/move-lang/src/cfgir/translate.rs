@@ -8,7 +8,7 @@ use crate::{
         cfg::BlockCFG,
     },
     errors::Errors,
-    expansion::ast::{Value, Value_},
+    expansion::ast::{AbilitySet, Value, Value_},
     hlir::ast::{self as H, Label},
     parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
     shared::unique_map::UniqueMap,
@@ -27,6 +27,7 @@ use std::{
 
 struct Context {
     errors: Errors,
+    struct_declared_abilities: UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     start: Option<Label>,
     loop_begin: Option<Label>,
     loop_end: Option<Label>,
@@ -39,9 +40,13 @@ struct Context {
 }
 
 impl Context {
-    pub fn new(_prog: &H::Program, errors: Errors) -> Self {
+    pub fn new(prog: &H::Program, errors: Errors) -> Self {
+        let struct_declared_abilities = prog
+            .modules
+            .ref_map(|_m, mdef| mdef.structs.ref_map(|_s, sdef| sdef.abilities.clone()));
         Context {
             errors,
+            struct_declared_abilities,
             next_label: None,
             loop_begin: None,
             loop_end: None,
@@ -246,6 +251,7 @@ fn constant_(
     let fake_infinite_loop_starts = BTreeSet::new();
     cfgir::refine_inference_and_verify(
         &mut fake_errors,
+        &context.struct_declared_abilities,
         &fake_signature,
         &fake_acquires,
         &locals,
@@ -356,6 +362,7 @@ fn function_body(
 
             cfgir::refine_inference_and_verify(
                 &mut context.errors,
+                &context.struct_declared_abilities,
                 signature,
                 acquires,
                 &locals,

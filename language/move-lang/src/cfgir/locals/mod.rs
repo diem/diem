@@ -6,11 +6,13 @@ pub mod state;
 use super::absint::*;
 use crate::{
     errors::*,
+    expansion::ast::AbilitySet,
     hlir::{
         ast::*,
         translate::{display_var, DisplayVar},
     },
-    parser::ast::{Ability_, StructName, Var},
+    naming::ast::{self as N, TParam},
+    parser::ast::{Ability_, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -22,13 +24,19 @@ use std::collections::BTreeMap;
 //**************************************************************************************************
 
 struct LocalsSafety<'a> {
+    struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     local_types: &'a UniqueMap<Var, SingleType>,
     signature: &'a FunctionSignature,
 }
 
 impl<'a> LocalsSafety<'a> {
-    fn new(local_types: &'a UniqueMap<Var, SingleType>, signature: &'a FunctionSignature) -> Self {
+    fn new(
+        struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
+        local_types: &'a UniqueMap<Var, SingleType>,
+        signature: &'a FunctionSignature,
+    ) -> Self {
         Self {
+            struct_declared_abilities,
             local_types,
             signature,
         }
@@ -36,6 +44,7 @@ impl<'a> LocalsSafety<'a> {
 }
 
 struct Context<'a, 'b> {
+    struct_declared_abilities: &'a UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     local_types: &'a UniqueMap<Var, SingleType>,
     local_states: &'b mut LocalStates,
     signature: &'a FunctionSignature,
@@ -44,9 +53,11 @@ struct Context<'a, 'b> {
 
 impl<'a, 'b> Context<'a, 'b> {
     fn new(locals_safety: &'a LocalsSafety, local_states: &'b mut LocalStates) -> Self {
+        let struct_declared_abilities = &locals_safety.struct_declared_abilities;
         let local_types = &locals_safety.local_types;
         let signature = &locals_safety.signature;
         Self {
+            struct_declared_abilities,
             local_types,
             local_states,
             signature,
@@ -96,13 +107,14 @@ impl<'a> AbstractInterpreter for LocalsSafety<'a> {}
 
 pub fn verify(
     errors: &mut Errors,
+    struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     signature: &FunctionSignature,
     _acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
-    let mut locals_safety = LocalsSafety::new(locals, signature);
+    let mut locals_safety = LocalsSafety::new(struct_declared_abilities, locals, signature);
     let (final_state, mut es) = locals_safety.analyze_function(cfg, initial_state);
     errors.append(&mut es);
     final_state
@@ -158,7 +170,9 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                 stmt,
                                 Ability_::Drop,
                             );
-                            errors.push(vec![(*loc, "Invalid return".into()), (available, msg)])
+                            let mut error = vec![(*loc, "Invalid return".into()), (available, msg)];
+                            add_drop_ability_tip(context, &mut error, ty.clone());
+                            errors.push(error);
                         }
                     }
                 }
@@ -204,10 +218,12 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
                             verb,
                             Ability_::Drop,
                         );
-                        context.error(vec![
+                        let mut error = vec![
                             (*loc, format!("Invalid assignment to local '{}'", vstr)),
                             (available, msg),
-                        ])
+                        ];
+                        add_drop_ability_tip(context, &mut error, ty.clone());
+                        context.error(error)
                     }
                 }
             }
@@ -283,5 +299,111 @@ fn use_local(context: &mut Context, loc: &Loc, local: &Var) {
                 (unavailable, msg),
             ])
         }
+    }
+}
+
+//**************************************************************************************************
+// Error helper
+//**************************************************************************************************
+
+fn add_drop_ability_tip(context: &Context, error: &mut Error, st: SingleType) {
+    use N::{TypeName_ as TN, Type_ as T};
+    let ty = single_type_to_naming_type(st);
+    let owned_abilities;
+    let (declared_loc_opt, declared_abilities, ty_args) = match &ty.value {
+        T::Param(TParam {
+            user_specified_name,
+            abilities,
+            ..
+        }) => (Some(user_specified_name.loc), abilities, vec![]),
+        T::Apply(_, sp!(_, TN::Builtin(b)), ty_args) => {
+            owned_abilities = b.value.declared_abilities(b.loc);
+            (None, &owned_abilities, ty_args.clone())
+        }
+        T::Apply(_, sp!(_, TN::ModuleType(m, s)), ty_args) => {
+            let decl_loc = *context
+                .struct_declared_abilities
+                .get(m)
+                .unwrap()
+                .get_loc(s)
+                .unwrap();
+            let declared_abilities = context
+                .struct_declared_abilities
+                .get(m)
+                .unwrap()
+                .get(s)
+                .unwrap();
+            (Some(decl_loc), declared_abilities, ty_args.clone())
+        }
+        t => panic!(
+            "ICE either the type did not have 'drop' when it should have or it was converted \
+             incorrectly {:?}",
+            t
+        ),
+    };
+    crate::typing::core::ability_not_satisified_tips(
+        &crate::typing::core::Subst::empty(),
+        error,
+        Ability_::Drop,
+        &ty,
+        declared_loc_opt,
+        declared_abilities,
+        ty_args.iter().map(|ty_arg| {
+            let abilities = match &ty_arg.value {
+                T::Unit => AbilitySet::collection(ty_arg.loc),
+                T::Ref(_, _) => AbilitySet::references(ty_arg.loc),
+                T::UnresolvedError | T::Anything => AbilitySet::all(ty_arg.loc),
+                T::Param(TParam { abilities, .. }) | T::Apply(Some(abilities), _, _) => {
+                    abilities.clone()
+                }
+                T::Var(_) | T::Apply(None, _, _) => panic!("ICE expansion failed"),
+            };
+            (ty_arg, abilities)
+        }),
+    )
+}
+
+fn single_type_to_naming_type(sp!(loc, st_): SingleType) -> N::Type {
+    sp(loc, single_type_to_naming_type_(st_))
+}
+
+fn single_type_to_naming_type_(st_: SingleType_) -> N::Type_ {
+    use SingleType_ as S;
+    use N::Type_ as T;
+    match st_ {
+        S::Ref(mut_, b) => T::Ref(mut_, Box::new(base_type_to_naming_type(b))),
+        S::Base(sp!(_, b_)) => base_type_to_naming_type_(b_),
+    }
+}
+
+fn base_type_to_naming_type(sp!(loc, bt_): BaseType) -> N::Type {
+    sp(loc, base_type_to_naming_type_(bt_))
+}
+
+fn base_type_to_naming_type_(bt_: BaseType_) -> N::Type_ {
+    use BaseType_ as B;
+    use N::Type_ as T;
+    match bt_ {
+        B::Unreachable => T::Anything,
+        B::UnresolvedError => T::UnresolvedError,
+        B::Param(tp) => T::Param(tp),
+        B::Apply(abilities, tn, ty_args) => T::Apply(
+            Some(abilities),
+            type_name_to_naming_type_name(tn),
+            ty_args.into_iter().map(base_type_to_naming_type).collect(),
+        ),
+    }
+}
+
+fn type_name_to_naming_type_name(sp!(loc, tn_): TypeName) -> N::TypeName {
+    sp(loc, type_name_to_naming_type_name_(tn_))
+}
+
+fn type_name_to_naming_type_name_(tn_: TypeName_) -> N::TypeName_ {
+    use TypeName_ as TN;
+    use N::TypeName_ as NTN;
+    match tn_ {
+        TN::Builtin(b) => NTN::Builtin(b),
+        TN::ModuleType(m, n) => NTN::ModuleType(m, n),
     }
 }

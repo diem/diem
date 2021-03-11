@@ -35,6 +35,9 @@ error:
     ·
  14 │         (0, false, R{});
     │         --------------- The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
+    ·
+ 14 │         (0, false, R{});
+    │                    --- The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
     │
 
 error: 
@@ -46,5 +49,8 @@ error:
     ·
  19 │         if (true) (0, false, R{}) else (0, false, r);
     │                                        ------------- The type '(u64, bool, 0x8675309::M::R)' does not have the ability 'drop'
+    ·
+ 18 │         let r = R{};
+    │                 --- The type '(u64, bool, 0x8675309::M::R)' can have the ability 'drop' but the type argument '0x8675309::M::R' does not have the required ability 'drop'
     │
 

@@ -254,7 +254,7 @@ where
     use TypeName_ as TN;
     use Type_ as T;
     let tloc = &global_type.loc;
-    let (abilities, declared_module, sn) = match &global_type.value {
+    let (declared_module, sn) = match &global_type.value {
         T::Var(_) | T::Apply(None, _, _) => panic!("ICE type expansion failed"),
         T::Anything | T::UnresolvedError => {
             return None;
@@ -283,7 +283,7 @@ where
             return None;
         }
 
-        T::Apply(Some(abilities), sp!(_, TN::ModuleType(m, s)), _args) => (abilities, m.clone(), s),
+        T::Apply(Some(_), sp!(_, TN::ModuleType(m, s)), _args) => (m.clone(), s),
     };
 
     match &context.current_module {
@@ -305,12 +305,6 @@ where
             return None;
         }
         _ => (),
-    }
-
-    // Key ability is checked by constraints
-    if abilities.has_ability_(Ability_::Key).is_none() {
-        assert!(context.has_errors());
-        return None;
     }
 
     Some(sn)

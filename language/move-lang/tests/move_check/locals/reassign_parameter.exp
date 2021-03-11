@@ -9,5 +9,11 @@ error:
    ·
  6 │         r = R {};
    │         - The parameter 'r' might still contain a value. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 4 │     public fun reassign_parameter(r: R) {
+   │                                      - The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+ 2 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 

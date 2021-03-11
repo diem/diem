@@ -1332,8 +1332,8 @@ fn parse_ability(tokens: &mut Lexer) -> Result<Ability, Error> {
         None => Err(vec![(
             loc,
             format!(
-                "Unexpected '{}'. Expected a type ability, one of: 'copy', 'drop', \
-                 'store', or 'key'",
+                "Unexpected '{}'. Expected a type ability, one of: 'copy', 'drop', 'store', or \
+                 'key'",
                 tokens.content()
             ),
         )]),

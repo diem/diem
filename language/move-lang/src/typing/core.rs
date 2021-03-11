@@ -540,7 +540,8 @@ pub fn infer_abilities(context: &Context, subst: &Subst, ty: Type) -> AbilitySet
     use Type_ as T;
     let loc = ty.loc;
     match unfold_type(subst, ty).value {
-        T::Unit | T::Ref(_, _) => AbilitySet::references(loc),
+        T::Unit => AbilitySet::collection(loc),
+        T::Ref(_, _) => AbilitySet::references(loc),
         T::Var(_) => unreachable!("ICE unfold_type failed, which is impossible"),
         T::UnresolvedError | T::Anything => AbilitySet::all(loc),
         T::Param(TParam { abilities, .. }) | T::Apply(Some(abilities), _, _) => abilities,
@@ -913,7 +914,6 @@ fn solve_ability_constraint(
     constraints: AbilitySet,
 ) {
     let ty = unfold_type(&context.subst, ty);
-    let ty_loc = ty.loc;
     let ty_abilities = infer_abilities(context, &context.subst, ty.clone());
 
     let (declared_loc_opt, declared_abilities, ty_args) = debug_abilities_info(context, &ty);
@@ -922,55 +922,23 @@ fn solve_ability_constraint(
             continue;
         }
 
-        let ty_str = error_format(&ty, &context.subst);
         let constraint_msg = match &given_msg_opt {
             Some(s) => s.clone(),
             None => format!("'{}' constraint not satisifed", constraint),
         };
-        let ty_msg = format!(
-            "The type {} does not have the ability '{}'",
-            ty_str, constraint
-        );
-        let mut error = vec![(loc, constraint_msg), (ty_loc, ty_msg)];
-
-        match (
+        let mut error = vec![(loc, constraint_msg)];
+        ability_not_satisified_tips(
+            &context.subst,
+            &mut error,
+            constraint.value,
+            &ty,
             declared_loc_opt,
-            declared_abilities.has_ability(&constraint),
-        ) {
-            // primtive or vector or "tuple" does not have ability
-            (None, _) => (),
-
-            // Type was not given the ability
-            (Some(dloc), None) => error.push((
-                dloc,
-                format!(
-                    "To satisify the constraint, the '{}' ability would need to be added here",
-                    constraint
-                ),
-            )),
-            (Some(_dloc), Some(_decl_ab_loc)) => {
-                let requirement = constraint.value.requires();
-                let mut error_added = false;
-                for ty_arg in &ty_args {
-                    let ty_arg_abilities = infer_abilities(context, &context.subst, ty_arg.clone());
-                    if ty_arg_abilities.has_ability_(requirement).is_none() {
-                        let ty_arg_str = error_format(&ty_arg, &context.subst);
-                        let msg = format!(
-                            "The type {ty} can have the ability '{constraint}' but the type \
-                             argument {ty_arg} does not have the required ability '{requirement}'",
-                            ty = ty_str,
-                            ty_arg = ty_arg_str,
-                            constraint = constraint,
-                            requirement = requirement,
-                        );
-                        error.push((ty_arg.loc, msg));
-                        error_added = true;
-                        break;
-                    }
-                }
-                assert!(error_added)
-            }
-        }
+            &declared_abilities,
+            ty_args.iter().map(|ty_arg| {
+                let abilities = infer_abilities(context, &context.subst, ty_arg.clone());
+                (ty_arg, abilities)
+            }),
+        );
 
         // is none if it is from a user constraint and not a part of the type system
         if given_msg_opt.is_none() {
@@ -980,6 +948,60 @@ fn solve_ability_constraint(
             ));
         }
         context.error(error)
+    }
+}
+
+pub fn ability_not_satisified_tips<'a>(
+    subst: &Subst,
+    error: &mut Error,
+    constraint: Ability_,
+    ty: &Type,
+    declared_loc_opt: Option<Loc>,
+    declared_abilities: &AbilitySet,
+    ty_args: impl IntoIterator<Item = (&'a Type, AbilitySet)>,
+) {
+    let ty_str = error_format(ty, subst);
+    let ty_msg = format!(
+        "The type {} does not have the ability '{}'",
+        ty_str, constraint
+    );
+    error.push((ty.loc, ty_msg));
+    match (
+        declared_loc_opt,
+        declared_abilities.has_ability_(constraint),
+    ) {
+        // Type was not given the ability
+        (Some(dloc), None) => error.push((
+            dloc,
+            format!(
+                "To satisify the constraint, the '{}' ability would need to be added here",
+                constraint
+            ),
+        )),
+        // Type does not have the ability
+        (_, None) => (),
+        // Type has the ability but a type argument causes it to fail
+        (_, Some(_)) => {
+            let requirement = constraint.requires();
+            let mut error_added = false;
+            for (ty_arg, ty_arg_abilities) in ty_args {
+                if ty_arg_abilities.has_ability_(requirement).is_none() {
+                    let ty_arg_str = error_format(ty_arg, &subst);
+                    let msg = format!(
+                        "The type {ty} can have the ability '{constraint}' but the type argument \
+                         {ty_arg} does not have the required ability '{requirement}'",
+                        ty = ty_str,
+                        ty_arg = ty_arg_str,
+                        constraint = constraint,
+                        requirement = requirement,
+                    );
+                    error.push((ty_arg.loc, msg));
+                    error_added = true;
+                    break;
+                }
+            }
+            assert!(error_added)
+        }
     }
 }
 

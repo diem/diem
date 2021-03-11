@@ -7,5 +7,11 @@ error:
    ·
  5 │         let s = X { u: 0 };
    │             - The local 's' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 5 │         let s = X { u: 0 };
+   │                 ---------- The type '0x8675309::M::X' does not have the ability 'drop'
+   ·
+ 2 │     struct X has key { u: u64 }
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 

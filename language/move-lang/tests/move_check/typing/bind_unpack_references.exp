@@ -7,6 +7,12 @@ error:
     ·
  13 │         let R { s1: S { f }, s2 }: &R = &R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
     │                                          ------------------------------ The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 13 │         let R { s1: S { f }, s2 }: &R = &R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
+    │                                          ------------------------------ The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  3 │     struct R { s1: S, s2: S }
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -18,5 +24,11 @@ error:
     ·
  20 │         let R { s1: S { f }, s2 }: &mut R = &mut R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
     │                                                  ------------------------------ The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 20 │         let R { s1: S { f }, s2 }: &mut R = &mut R { s1: S{f: 0}, s2: S{f: 1} }; f; s2;
+    │                                                  ------------------------------ The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  3 │     struct R { s1: S, s2: S }
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 

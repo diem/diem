@@ -384,7 +384,7 @@ impl BaseType_ {
                 let declared_abilities = AbilitySet::collection(loc);
                 let ty_arg_abilities = {
                     assert!(ty_args.len() == 1);
-                    ty_args[0].value.abilities()
+                    ty_args[0].value.abilities(ty_args[0].loc)
                 };
                 AbilitySet::from_abilities(
                     declared_abilities
@@ -398,15 +398,12 @@ impl BaseType_ {
         sp(loc, BaseType_::Apply(kind, n, ty_args))
     }
 
-    pub fn abilities(&self) -> AbilitySet {
+    pub fn abilities(&self, loc: Loc) -> AbilitySet {
         match self {
             BaseType_::Apply(abilities, _, _) | BaseType_::Param(TParam { abilities, .. }) => {
                 abilities.clone()
             }
-            BaseType_::Unreachable | BaseType_::UnresolvedError => panic!(
-                "ICE unreachable/unresolved error has no kind. Should only exist in dead code \
-                 that should not be analyzed"
-            ),
+            BaseType_::Unreachable | BaseType_::UnresolvedError => AbilitySet::all(loc),
         }
     }
 
@@ -459,7 +456,7 @@ impl SingleType_ {
     pub fn abilities(&self, loc: Loc) -> AbilitySet {
         match self {
             SingleType_::Ref(_, _) => AbilitySet::references(loc),
-            SingleType_::Base(b) => b.value.abilities(),
+            SingleType_::Base(b) => b.value.abilities(loc),
         }
     }
 }

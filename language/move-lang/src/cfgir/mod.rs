@@ -16,8 +16,9 @@ pub(crate) mod translate;
 
 use crate::{
     errors::Errors,
+    expansion::ast::AbilitySet,
     hlir::ast::*,
-    parser::ast::{StructName, Var},
+    parser::ast::{ModuleIdent, StructName, Var},
     shared::unique_map::UniqueMap,
 };
 use cfg::*;
@@ -26,6 +27,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub fn refine_inference_and_verify(
     errors: &mut Errors,
+    struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     signature: &FunctionSignature,
     acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
@@ -33,7 +35,14 @@ pub fn refine_inference_and_verify(
     infinite_loop_starts: &BTreeSet<Label>,
 ) {
     liveness::last_usage(errors, locals, cfg, infinite_loop_starts);
-    let locals_states = locals::verify(errors, signature, acquires, locals, cfg);
+    let locals_states = locals::verify(
+        errors,
+        struct_declared_abilities,
+        signature,
+        acquires,
+        locals,
+        cfg,
+    );
 
     liveness::release_dead_refs(&locals_states, locals, cfg, infinite_loop_starts);
     borrows::verify(errors, signature, acquires, locals, cfg);

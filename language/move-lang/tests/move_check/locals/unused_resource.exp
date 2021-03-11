@@ -15,6 +15,12 @@ error:
    ·
  5 │         let r = R{};
    │             - The local 'r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+   ·
+ 5 │         let r = R{};
+   │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+ 2 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -26,6 +32,12 @@ error:
     ·
  10 │         let _r = R{};
     │             -- The local '_r' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 10 │         let _r = R{};
+    │                  --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -45,6 +57,12 @@ error:
     ·
  15 │         if (cond) { r = R{}; };
     │                     - The local 'r' might still contain a value. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 15 │         if (cond) { r = R{}; };
+    │                         --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -64,6 +82,12 @@ error:
     ·
  20 │         if (cond) {} else { r = R{}; };
     │                             - The local 'r' might still contain a value. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 20 │         if (cond) {} else { r = R{}; };
+    │                                 --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -83,6 +107,12 @@ error:
     ·
  25 │         while (cond) { r = R{} };
     │                        - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 25 │         while (cond) { r = R{} };
+    │                            --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -94,6 +124,12 @@ error:
     ·
  25 │         while (cond) { r = R{} };
     │                        - The local 'r' might still contain a value. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 25 │         while (cond) { r = R{} };
+    │                            --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -113,6 +149,12 @@ error:
     ·
  29 │         loop { let r = R{}; }
     │                    - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 29 │         loop { let r = R{}; }
+    │                        --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -124,6 +166,12 @@ error:
     ·
  33 │         let _ = &R{};
     │                  --- The value is created but not used. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 33 │         let _ = &R{};
+    │                  --- The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -137,5 +185,11 @@ error:
     ·
  36 │     fun t7<T>(_x: R) {
     │               -- The parameter '_x' still contains a value. The value does not have the 'drop' ability and must be consumed before the function returns
+    ·
+ 36 │     fun t7<T>(_x: R) {
+    │                   - The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 

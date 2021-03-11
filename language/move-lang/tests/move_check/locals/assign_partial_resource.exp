@@ -15,6 +15,12 @@ error:
    ·
  6 │         if (cond) { r = R{}; };
    │                     - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+   ·
+ 5 │         let r: R;
+   │                - The type '0x8675309::M::R' does not have the ability 'drop'
+   ·
+ 2 │     struct R {}
+   │            - To satisify the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -34,6 +40,12 @@ error:
     ·
  13 │         if (cond) {} else { r = R{}; };
     │                             - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 12 │         let r: R;
+    │                - The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -53,6 +65,12 @@ error:
     ·
  20 │         while (cond) { r = R{} };
     │                        - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 19 │         let r: R;
+    │                - The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -64,6 +82,12 @@ error:
     ·
  20 │         while (cond) { r = R{} };
     │                        - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 19 │         let r: R;
+    │                - The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -83,6 +107,12 @@ error:
     ·
  27 │         loop { r = R{} }
     │                - The local might contain a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 26 │         let r: R;
+    │                - The type '0x8675309::M::R' does not have the ability 'drop'
+    ·
+  2 │     struct R {}
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -94,6 +124,12 @@ error:
     ·
  30 │     fun t5<T>(cond: bool, x: T, y: T): (T, T) {
     │                           - The local contains a value due to this assignment. The value does not have the 'drop' ability and must be used before you assign to this local again
+    ·
+ 30 │     fun t5<T>(cond: bool, x: T, y: T): (T, T) {
+    │                              - The type 'T' does not have the ability 'drop'
+    ·
+ 30 │     fun t5<T>(cond: bool, x: T, y: T): (T, T) {
+    │            - To satisify the constraint, the 'drop' ability would need to be added here
     │
 
 error: 

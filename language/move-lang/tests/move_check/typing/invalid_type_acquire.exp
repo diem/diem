@@ -101,6 +101,17 @@ error:
 
 error: 
 
+    ┌── tests/move_check/typing/invalid_type_acquire.move:34:26 ───
+    │
+ 34 │         destroy(account, move_from<S>(a));
+    │                          ^^^^^^^^^^^^^^^ Invalid call to move_from.
+    ·
+ 34 │         destroy(account, move_from<S>(a));
+    │                                    - The call acquires '0x2::M::S', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
+    │
+
+error: 
+
     ┌── tests/move_check/typing/invalid_type_acquire.move:36:9 ───
     │
  36 │         borrow_global(a);
@@ -156,6 +167,17 @@ error:
 
 error: 
 
+    ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
+    │
+ 40 │         borrow_global<S>(a);
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
+    ·
+ 40 │         borrow_global<S>(a);
+    │                       - The call acquires '0x2::M::S', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
+    │
+
+error: 
+
     ┌── tests/move_check/typing/invalid_type_acquire.move:42:9 ───
     │
  42 │         borrow_global_mut(a);
@@ -207,6 +229,17 @@ error:
     ·
  10 │     struct S has store {}
     │            - To satisify the constraint, the 'key' ability would need to be added here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
+    │
+ 46 │         borrow_global_mut<S>(a);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
+    ·
+ 46 │         borrow_global_mut<S>(a);
+    │                           - The call acquires '0x2::M::S', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
     │
 
 error: 
