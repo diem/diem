@@ -3,6 +3,10 @@
 
 use byteorder::{BigEndian, WriteBytesExt};
 use diem_config::config::RocksdbConfig;
+use diem_jellyfish_merkle::metrics::{
+    DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES, DIEM_JELLYFISH_LEAF_ENCODED_BYTES,
+    DIEM_JELLYFISH_STORAGE_READS,
+};
 use diem_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -118,6 +122,9 @@ pub fn run_benchmark(
     let data_size = DIEM_STORAGE_ROCKSDB_PROPERTIES
         .with_label_values(&[JELLYFISH_MERKLE_NODE_CF_NAME, "diem_rocksdb_cf_size_bytes"])
         .get();
+    let reads = DIEM_JELLYFISH_STORAGE_READS.get();
+    let leaf_bytes = DIEM_JELLYFISH_LEAF_ENCODED_BYTES.get();
+    let internal_bytes = DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES.get();
     println!(
         "created a DiemDB til version {}, where {} accounts with avg blob size {} bytes exist.",
         total_version, num_accounts, blob_size
@@ -125,4 +132,10 @@ pub fn run_benchmark(
     println!("DB dir: {}", db_dir.as_path().display());
     println!("Jellyfish Merkle physical size: {}", db_size);
     println!("Jellyfish Merkle logical size: {}", data_size);
+    println!("Total reads from storage: {}", reads);
+    println!(
+        "Total written internal nodes value size: {} bytes",
+        internal_bytes
+    );
+    println!("Total written leaf nodes value size: {} bytes", leaf_bytes);
 }

@@ -70,6 +70,7 @@
 mod tree_cache_test;
 
 use crate::{
+    metrics::DIEM_JELLYFISH_STORAGE_READS,
     node_type::{Node, NodeKey},
     NodeStats, StaleNodeIndex, TreeReader, TreeUpdateBatch,
 };
@@ -186,6 +187,7 @@ where
         } else if let Some(node) = self.frozen_cache.node_cache.get(node_key) {
             node.clone()
         } else {
+            DIEM_JELLYFISH_STORAGE_READS.inc();
             self.reader.get_node(node_key)?
         })
     }

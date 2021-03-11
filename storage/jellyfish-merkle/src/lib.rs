@@ -71,6 +71,7 @@
 pub mod iterator;
 #[cfg(test)]
 mod jellyfish_merkle_test;
+pub mod metrics;
 #[cfg(any(test, feature = "fuzzing"))]
 mod mock_tree_store;
 mod nibble_path;

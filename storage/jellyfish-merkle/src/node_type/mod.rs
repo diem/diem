@@ -12,7 +12,11 @@
 #[cfg(test)]
 mod node_type_test;
 
-use crate::{nibble_path::NibblePath, ROOT_NIBBLE_HEIGHT};
+use crate::{
+    metrics::{DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES, DIEM_JELLYFISH_LEAF_ENCODED_BYTES},
+    nibble_path::NibblePath,
+    ROOT_NIBBLE_HEIGHT,
+};
 use anyhow::{ensure, Context, Result};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use diem_crypto::{
@@ -608,11 +612,13 @@ where
             }
             Node::Internal(internal_node) => {
                 out.push(NodeTag::Internal as u8);
-                internal_node.serialize(&mut out)?
+                internal_node.serialize(&mut out)?;
+                DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES.inc_by(out.len() as u64);
             }
             Node::Leaf(leaf_node) => {
                 out.push(NodeTag::Leaf as u8);
                 out.extend(bcs::to_bytes(&leaf_node)?);
+                DIEM_JELLYFISH_LEAF_ENCODED_BYTES.inc_by(out.len() as u64);
             }
         }
         Ok(out)
