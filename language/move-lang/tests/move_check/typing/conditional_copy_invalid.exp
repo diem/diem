@@ -1,0 +1,140 @@
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:15:16 ───
+    │
+ 15 │         ignore(copy x);
+    │                ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
+    ·
+ 14 │         let x = Box<R> {};
+    │                 --------- The type '0x42::M::Box<0x42::M::R>' does not have the ability 'copy'
+    ·
+ 14 │         let x = Box<R> {};
+    │                     - The type '0x42::M::Box<0x42::M::R>' can have the ability 'copy' but the type argument '0x42::M::R' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:17:16 ───
+    │
+ 17 │         ignore(copy x);
+    │                ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
+    ·
+ 16 │         let x = Box<Box<R>> {};
+    │                 -------------- The type '0x42::M::Box<0x42::M::Box<0x42::M::R>>' does not have the ability 'copy'
+    ·
+ 16 │         let x = Box<Box<R>> {};
+    │                     ------ The type '0x42::M::Box<0x42::M::Box<0x42::M::R>>' can have the ability 'copy' but the type argument '0x42::M::Box<0x42::M::R>' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:19:16 ───
+    │
+ 19 │         ignore(copy x);
+    │                ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
+    ·
+ 18 │         let x = Box<T> {};
+    │                 --------- The type '0x42::M::Box<T>' does not have the ability 'copy'
+    ·
+ 18 │         let x = Box<T> {};
+    │                     - The type '0x42::M::Box<T>' can have the ability 'copy' but the type argument 'T' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:21:16 ───
+    │
+ 21 │         ignore(copy x);
+    │                ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
+    ·
+ 20 │         let x = Box<Box<T>> {};
+    │                 -------------- The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'copy'
+    ·
+ 20 │         let x = Box<Box<T>> {};
+    │                     ------ The type '0x42::M::Box<0x42::M::Box<T>>' can have the ability 'copy' but the type argument '0x42::M::Box<T>' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:23:16 ───
+    │
+ 23 │         ignore(copy x);
+    │                ^^^^^^ Invalid 'copy' of owned value without the 'copy' ability
+    ·
+ 22 │         let x = Pair<S, R> {};
+    │                 ------------- The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' does not have the ability 'copy'
+    ·
+ 22 │         let x = Pair<S, R> {};
+    │                         - The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' can have the ability 'copy' but the type argument '0x42::M::R' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:27:16 ───
+    │
+ 27 │         ignore(*x);
+    │                ^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 26 │         let x = &Box<R> {};
+    │                  --------- The type '0x42::M::Box<0x42::M::R>' does not have the ability 'copy'
+    ·
+ 26 │         let x = &Box<R> {};
+    │                      - The type '0x42::M::Box<0x42::M::R>' can have the ability 'copy' but the type argument '0x42::M::R' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:29:16 ───
+    │
+ 29 │         ignore(*x);
+    │                ^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 28 │         let x = &Box<Box<R>> {};
+    │                  -------------- The type '0x42::M::Box<0x42::M::Box<0x42::M::R>>' does not have the ability 'copy'
+    ·
+ 28 │         let x = &Box<Box<R>> {};
+    │                      ------ The type '0x42::M::Box<0x42::M::Box<0x42::M::R>>' can have the ability 'copy' but the type argument '0x42::M::Box<0x42::M::R>' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:31:16 ───
+    │
+ 31 │         ignore(*x);
+    │                ^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 30 │         let x = &Box<T> {};
+    │                  --------- The type '0x42::M::Box<T>' does not have the ability 'copy'
+    ·
+ 30 │         let x = &Box<T> {};
+    │                      - The type '0x42::M::Box<T>' can have the ability 'copy' but the type argument 'T' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:33:16 ───
+    │
+ 33 │         ignore(*x);
+    │                ^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 32 │         let x = &Box<Box<T>> {};
+    │                  -------------- The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'copy'
+    ·
+ 32 │         let x = &Box<Box<T>> {};
+    │                      ------ The type '0x42::M::Box<0x42::M::Box<T>>' can have the ability 'copy' but the type argument '0x42::M::Box<T>' does not have the required ability 'copy'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_copy_invalid.move:35:16 ───
+    │
+ 35 │         ignore(*x);
+    │                ^^ Invalid dereference. Dereference requires the 'copy' ability
+    ·
+ 34 │         let x = &Pair<R, S> {};
+    │                  ------------- The type '0x42::M::Pair<0x42::M::R, 0x42::M::S>' does not have the ability 'copy'
+    ·
+ 34 │         let x = &Pair<R, S> {};
+    │                       - The type '0x42::M::Pair<0x42::M::R, 0x42::M::S>' can have the ability 'copy' but the type argument '0x42::M::R' does not have the required ability 'copy'
+    │
+

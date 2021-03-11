@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/unexpected_token_after_ability_modifier.move:4:25 ───
+   │
+ 4 │     struct Foo has copy & drop {}
+   │                         ^ Unexpected '&'
+   ·
+ 4 │     struct Foo has copy & drop {}
+   │                         - Expected one of: ',', '{', or ';'
+   │
+

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/unknown_ability_name_modifier.move:4:20 ───
+   │
+ 4 │     struct Foo has blah {}
+   │                    ^^^^ Unexpected 'blah'. Expected a type ability, one of: 'copy', 'drop', 'store', or 'key'
+   │
+

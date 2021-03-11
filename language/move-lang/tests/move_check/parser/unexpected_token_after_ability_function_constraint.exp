@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/unexpected_token_after_ability_function_constraint.move:4:21 ───
+   │
+ 4 │     fun foo<T: copy & drop>() {}
+   │                     ^ Unexpected '&'
+   ·
+ 4 │     fun foo<T: copy & drop>() {}
+   │                     - Expected one of: '+', '>', or ','
+   │
+

@@ -1,0 +1,600 @@
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:20:9 ───
+    │
+ 20 │         c<signer>();
+    │         ^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 20 │         c<signer>();
+    │           ------ The type 'signer' does not have the ability 'copy'
+    ·
+  9 │     fun c<T: copy>() {}
+    │              ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:21:9 ───
+    │
+ 21 │         c<vector<signer>>();
+    │         ^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 21 │         c<vector<signer>>();
+    │           -------------- The type 'vector<signer>' does not have the ability 'copy'
+    ·
+ 21 │         c<vector<signer>>();
+    │                  ------ The type 'vector<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
+    ·
+  9 │     fun c<T: copy>() {}
+    │              ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:22:9 ───
+    │
+ 22 │         c<vector<NoC>>();
+    │         ^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 22 │         c<vector<NoC>>();
+    │           ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 22 │         c<vector<NoC>>();
+    │                  --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+  9 │     fun c<T: copy>() {}
+    │              ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:23:9 ───
+    │
+ 23 │         k<u64>();
+    │         ^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 23 │         k<u64>();
+    │           --- The type 'u64' does not have the ability 'key'
+    ·
+ 10 │     fun k<T: key>() {}
+    │              --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:24:9 ───
+    │
+ 24 │         k<signer>();
+    │         ^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 24 │         k<signer>();
+    │           ------ The type 'signer' does not have the ability 'key'
+    ·
+ 10 │     fun k<T: key>() {}
+    │              --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:25:9 ───
+    │
+ 25 │         k<vector<NoC>>();
+    │         ^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 25 │         k<vector<NoC>>();
+    │           ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'key'
+    ·
+ 10 │     fun k<T: key>() {}
+    │              --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:26:9 ───
+    │
+ 26 │         k<vector<NoK>>();
+    │         ^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 26 │         k<vector<NoK>>();
+    │           ----------- The type 'vector<0x42::M::NoK>' does not have the ability 'key'
+    ·
+ 10 │     fun k<T: key>() {}
+    │              --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:27:9 ───
+    │
+ 27 │         cds<signer>();
+    │         ^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 27 │         cds<signer>();
+    │             ------ The type 'signer' does not have the ability 'copy'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:27:9 ───
+    │
+ 27 │         cds<signer>();
+    │         ^^^^^^^^^^^^^ 'store' constraint not satisifed
+    ·
+ 27 │         cds<signer>();
+    │             ------ The type 'signer' does not have the ability 'store'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                              ----- 'store' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:28:9 ───
+    │
+ 28 │         cds<vector<NoC>>();
+    │         ^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 28 │         cds<vector<NoC>>();
+    │             ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 28 │         cds<vector<NoC>>();
+    │                    --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:29:9 ───
+    │
+ 29 │         cds<vector<Cup<u8>>>();
+    │         ^^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │             --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'copy'
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │                    ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'copy' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'copy'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:29:9 ───
+    │
+ 29 │         cds<vector<Cup<u8>>>();
+    │         ^^^^^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │             --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'drop'
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │                    ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'drop' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'drop'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                       ---- 'drop' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:29:9 ───
+    │
+ 29 │         cds<vector<Cup<u8>>>();
+    │         ^^^^^^^^^^^^^^^^^^^^^^ 'store' constraint not satisifed
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │             --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'store'
+    ·
+ 29 │         cds<vector<Cup<u8>>>();
+    │                    ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'store' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'store'
+    ·
+ 11 │     fun cds<T: copy + drop + store>() {}
+    │                              ----- 'store' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:30:13 ───
+    │
+ 30 │         let Sc {} = Sc<signer> {};
+    │             ^^^^^ 'copy' constraint not satisifed
+    ·
+ 30 │         let Sc {} = Sc<signer> {};
+    │                        ------ The type 'signer' does not have the ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:30:21 ───
+    │
+ 30 │         let Sc {} = Sc<signer> {};
+    │                     ^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 30 │         let Sc {} = Sc<signer> {};
+    │                        ------ The type 'signer' does not have the ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:31:13 ───
+    │
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │             ^^^^^ 'copy' constraint not satisifed
+    ·
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │                        -------------- The type 'vector<signer>' does not have the ability 'copy'
+    ·
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │                               ------ The type 'vector<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:31:21 ───
+    │
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │                     ^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │                        -------------- The type 'vector<signer>' does not have the ability 'copy'
+    ·
+ 31 │         let Sc {} = Sc<vector<signer>> {};
+    │                               ------ The type 'vector<signer>' can have the ability 'copy' but the type argument 'signer' does not have the required ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:32:13 ───
+    │
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │             ^^^^^ 'copy' constraint not satisifed
+    ·
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │                        ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │                               --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:32:21 ───
+    │
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │                     ^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │                        ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 32 │         let Sc {} = Sc<vector<NoC>> {};
+    │                               --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+ 13 │     struct Sc<T: copy> {}
+    │                  ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:33:13 ───
+    │
+ 33 │         let Sk {} = Sk<u64> {};
+    │             ^^^^^ 'key' constraint not satisifed
+    ·
+ 33 │         let Sk {} = Sk<u64> {};
+    │                        --- The type 'u64' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:33:21 ───
+    │
+ 33 │         let Sk {} = Sk<u64> {};
+    │                     ^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 33 │         let Sk {} = Sk<u64> {};
+    │                        --- The type 'u64' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:34:13 ───
+    │
+ 34 │         let Sk {} = Sk<signer> {};
+    │             ^^^^^ 'key' constraint not satisifed
+    ·
+ 34 │         let Sk {} = Sk<signer> {};
+    │                        ------ The type 'signer' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:34:21 ───
+    │
+ 34 │         let Sk {} = Sk<signer> {};
+    │                     ^^^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 34 │         let Sk {} = Sk<signer> {};
+    │                        ------ The type 'signer' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:35:13 ───
+    │
+ 35 │         let Sk {} = Sk<vector<NoC>> {};
+    │             ^^^^^ 'key' constraint not satisifed
+    ·
+ 35 │         let Sk {} = Sk<vector<NoC>> {};
+    │                        ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:35:21 ───
+    │
+ 35 │         let Sk {} = Sk<vector<NoC>> {};
+    │                     ^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 35 │         let Sk {} = Sk<vector<NoC>> {};
+    │                        ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:36:13 ───
+    │
+ 36 │         let Sk {} = Sk<vector<NoK>> {};
+    │             ^^^^^ 'key' constraint not satisifed
+    ·
+ 36 │         let Sk {} = Sk<vector<NoK>> {};
+    │                        ----------- The type 'vector<0x42::M::NoK>' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:36:21 ───
+    │
+ 36 │         let Sk {} = Sk<vector<NoK>> {};
+    │                     ^^^^^^^^^^^^^^^^^^ 'key' constraint not satisifed
+    ·
+ 36 │         let Sk {} = Sk<vector<NoK>> {};
+    │                        ----------- The type 'vector<0x42::M::NoK>' does not have the ability 'key'
+    ·
+ 14 │     struct Sk<T: key> {}
+    │                  --- 'key' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:37:13 ───
+    │
+ 37 │         let Scds {} = Scds<signer> {};
+    │             ^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 37 │         let Scds {} = Scds<signer> {};
+    │                            ------ The type 'signer' does not have the ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:37:13 ───
+    │
+ 37 │         let Scds {} = Scds<signer> {};
+    │             ^^^^^^^ 'store' constraint not satisifed
+    ·
+ 37 │         let Scds {} = Scds<signer> {};
+    │                            ------ The type 'signer' does not have the ability 'store'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                                  ----- 'store' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:37:23 ───
+    │
+ 37 │         let Scds {} = Scds<signer> {};
+    │                       ^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 37 │         let Scds {} = Scds<signer> {};
+    │                            ------ The type 'signer' does not have the ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:37:23 ───
+    │
+ 37 │         let Scds {} = Scds<signer> {};
+    │                       ^^^^^^^^^^^^^^^ 'store' constraint not satisifed
+    ·
+ 37 │         let Scds {} = Scds<signer> {};
+    │                            ------ The type 'signer' does not have the ability 'store'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                                  ----- 'store' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:38:13 ───
+    │
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │             ^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │                            ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │                                   --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:38:23 ───
+    │
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │                       ^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │                            ----------- The type 'vector<0x42::M::NoC>' does not have the ability 'copy'
+    ·
+ 38 │         let Scds {} = Scds<vector<NoC>> {};
+    │                                   --- The type 'vector<0x42::M::NoC>' can have the ability 'copy' but the type argument '0x42::M::NoC' does not have the required ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:13 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │             ^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'copy'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'copy' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:13 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │             ^^^^^^^ 'drop' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'drop'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'drop' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'drop'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                           ---- 'drop' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:13 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │             ^^^^^^^ 'store' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'store'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'store' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'store'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                                  ----- 'store' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:23 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                       ^^^^^^^^^^^^^^^^^^^^^^^^ 'copy' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'copy'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'copy' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'copy'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                    ---- 'copy' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:23 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                       ^^^^^^^^^^^^^^^^^^^^^^^^ 'drop' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'drop'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'drop' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'drop'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                           ---- 'drop' constraint declared here
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/ability_constraint_prims_invalid.move:39:23 ───
+    │
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                       ^^^^^^^^^^^^^^^^^^^^^^^^ 'store' constraint not satisifed
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                            --------------- The type 'vector<0x42::M::Cup<u8>>' does not have the ability 'store'
+    ·
+ 39 │         let Scds {} = Scds<vector<Cup<u8>>> {};
+    │                                   ------- The type 'vector<0x42::M::Cup<u8>>' can have the ability 'store' but the type argument '0x42::M::Cup<u8>' does not have the required ability 'store'
+    ·
+ 15 │     struct Scds<T: copy + drop + store> {}
+    │                                  ----- 'store' constraint declared here
+    │
+

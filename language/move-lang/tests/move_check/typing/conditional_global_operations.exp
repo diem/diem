@@ -1,0 +1,98 @@
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:15:9 ───
+    │
+ 15 │         move_to(s, Box<R> {});
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'
+    ·
+ 15 │         move_to(s, Box<R> {});
+    │                    --------- The type '0x42::M::Box<0x42::M::R>' does not have the ability 'key'
+    ·
+ 15 │         move_to(s, Box<R> {});
+    │                        - The type '0x42::M::Box<0x42::M::R>' can have the ability 'key' but the type argument '0x42::M::R' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:16:9 ───
+    │
+ 16 │         borrow_global<Box<T>>(a1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
+    ·
+ 16 │         borrow_global<Box<T>>(a1);
+    │                       ------ The type '0x42::M::Box<T>' does not have the ability 'key'
+    ·
+ 16 │         borrow_global<Box<T>>(a1);
+    │                           - The type '0x42::M::Box<T>' can have the ability 'key' but the type argument 'T' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:17:9 ───
+    │
+ 17 │         borrow_global_mut<Box<Box<T>>>(a1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
+    ·
+ 17 │         borrow_global_mut<Box<Box<T>>>(a1);
+    │                           ----------- The type '0x42::M::Box<0x42::M::Box<T>>' does not have the ability 'key'
+    ·
+ 17 │         borrow_global_mut<Box<Box<T>>>(a1);
+    │                               ------ The type '0x42::M::Box<0x42::M::Box<T>>' can have the ability 'key' but the type argument '0x42::M::Box<T>' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:18:19 ───
+    │
+ 18 │         Pair {} = move_from<Pair<S, R>>(a1);
+    │                   ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'
+    ·
+ 18 │         Pair {} = move_from<Pair<S, R>>(a1);
+    │                             ---------- The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' does not have the ability 'key'
+    ·
+ 18 │         Pair {} = move_from<Pair<S, R>>(a1);
+    │                                     - The type '0x42::M::Pair<0x42::M::S, 0x42::M::R>' can have the ability 'key' but the type argument '0x42::M::R' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:19:9 ───
+    │
+ 19 │         exists<Pair<Box<T>, S>>(a1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'exists'
+    ·
+ 19 │         exists<Pair<Box<T>, S>>(a1);
+    │                --------------- The type '0x42::M::Pair<0x42::M::Box<T>, 0x42::M::S>' does not have the ability 'key'
+    ·
+ 19 │         exists<Pair<Box<T>, S>>(a1);
+    │                     ------ The type '0x42::M::Pair<0x42::M::Box<T>, 0x42::M::S>' can have the ability 'key' but the type argument '0x42::M::Box<T>' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:21:9 ───
+    │
+ 21 │         borrow_global<Box<K>>(a1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'
+    ·
+ 21 │         borrow_global<Box<K>>(a1);
+    │                       ------ The type '0x42::M::Box<0x42::M::K>' does not have the ability 'key'
+    ·
+ 21 │         borrow_global<Box<K>>(a1);
+    │                           - The type '0x42::M::Box<0x42::M::K>' can have the ability 'key' but the type argument '0x42::M::K' does not have the required ability 'store'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/conditional_global_operations.move:22:9 ───
+    │
+ 22 │         borrow_global_mut<Pair<S, K>>(a1);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'
+    ·
+ 22 │         borrow_global_mut<Pair<S, K>>(a1);
+    │                           ---------- The type '0x42::M::Pair<0x42::M::S, 0x42::M::K>' does not have the ability 'key'
+    ·
+ 22 │         borrow_global_mut<Pair<S, K>>(a1);
+    │                                   - The type '0x42::M::Pair<0x42::M::S, 0x42::M::K>' can have the ability 'key' but the type argument '0x42::M::K' does not have the required ability 'store'
+    │
+
