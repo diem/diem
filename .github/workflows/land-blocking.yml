@@ -72,7 +72,7 @@ jobs:
       - name: Check kill switch
         id: check_ks
         run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .github/workflow/should_run_lbt.sh ; then
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .github/workflows/should_run_lbt.sh ; then
             echo "::set-output name=should_run::false";
           else
             echo "::set-output name=should_run::true";
