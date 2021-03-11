@@ -3,7 +3,9 @@
 
 //! Project and package linters that run queries on guppy.
 
-use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
+use crate::config::{
+    BannedDepsConfig, EnforcedAttributesConfig, MoveToDiemDepsConfig, OverlayConfig,
+};
 use anyhow::anyhow;
 use guppy::{
     graph::{feature::FeatureFilterFn, PackagePublish},
@@ -509,6 +511,85 @@ impl PackageLinter for OnlyPublishToCratesIo {
                     field in the package's Cargo.toml is 'publish = [\"crates-io\"]. \
                     Otherwise set the 'publish' field to 'publish = false'.",
             );
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
+
+// Ensure that Move crates do not depend on Diem crates.
+#[derive(Debug)]
+pub struct MoveCratesDontDependOnDiemCrates<'cfg> {
+    config: &'cfg MoveToDiemDepsConfig,
+}
+
+impl<'cfg> MoveCratesDontDependOnDiemCrates<'cfg> {
+    pub fn new(config: &'cfg MoveToDiemDepsConfig) -> Self {
+        Self { config }
+    }
+}
+
+impl<'cfg> Linter for MoveCratesDontDependOnDiemCrates<'cfg> {
+    fn name(&self) -> &'static str {
+        "move-crates-dont-depend-on-diem-crates"
+    }
+}
+
+impl<'cfg> PackageLinter for MoveCratesDontDependOnDiemCrates<'cfg> {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        let crate_name = metadata.name();
+        let crate_path = metadata.source().to_string();
+
+        // Determine if a crate is considered a Move crate or Diem crate.
+        //
+        // Current criteria:
+        //   1. All crates outside language are considered Diem crates.
+        //   2. All crates inside language are considered Move crates, unless marked otherwise.
+        let is_move_crate = |crate_path: &str, crate_name: &str| {
+            if crate_path.starts_with("language/") {
+                if self.config.diem_crates_in_language.contains(crate_name) {
+                    return false;
+                }
+                return true;
+            }
+            false
+        };
+
+        let is_existing_move_to_diem_dep = |name1: &str, name2: &str| {
+            self.config
+                .existing_deps
+                .contains(&(name1.to_string(), name2.to_string()))
+        };
+
+        if is_move_crate(&crate_path, crate_name) {
+            for direct_dep in metadata.direct_links() {
+                let dep = direct_dep.to();
+                let dep_name = dep.name();
+
+                if dep.in_workspace()
+                    && !self.config.exclude.contains(dep_name)
+                    && !is_move_crate(&dep.source().to_string(), dep_name)
+                    && !is_existing_move_to_diem_dep(crate_name, dep_name)
+                {
+                    println!("(\"{}\", \"{}\"),", crate_name, dep_name);
+                    out.write(
+                        LintLevel::Error,
+                        format!(
+                            "depending on non-move crate `{}`\n\
+                                Note: all crates in language/ are considered Move crates by default. \
+                                If you are creating a new Diem crate in language, you need to add its name to the \
+                                diem_crates_in_language list in x.toml to make the linter recognize it.",
+                            dep_name
+                        ),
+                    );
+                }
+            }
         }
 
         Ok(RunStatus::Executed)

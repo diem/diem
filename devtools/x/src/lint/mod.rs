@@ -39,6 +39,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::UnpublishedPackagesOnlyUsePathDependencies::new(),
         &guppy::PublishedPackagesDontDependOnUnpublishedPackages,
         &guppy::OnlyPublishToCratesIo,
+        &guppy::MoveCratesDontDependOnDiemCrates::new(&workspace_config.move_to_diem_deps),
         &workspace_classify::DefaultOrTestOnly::new(
             xctx.core().package_graph()?,
             &workspace_config.test_only,
