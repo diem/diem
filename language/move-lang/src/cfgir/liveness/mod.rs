@@ -218,10 +218,7 @@ mod last_usage {
 
         fn has_drop(&self, local: &Var) -> bool {
             let ty = self.locals.get(local).unwrap();
-            ty.value
-                .abilities(ty.loc)
-                .has_ability_(Ability_::Drop)
-                .is_some()
+            ty.value.abilities(ty.loc).has_ability_(Ability_::Drop)
         }
 
         fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {

@@ -360,12 +360,12 @@ impl AbilitySet {
         self.0.add(a).map_err(|(_a, loc)| loc)
     }
 
-    pub fn has_ability(&self, a: &Ability) -> Option<Loc> {
-        self.0.get_loc(&a).cloned()
+    pub fn has_ability(&self, a: &Ability) -> bool {
+        self.0.contains(&a)
     }
 
-    pub fn has_ability_(&self, a: Ability_) -> Option<Loc> {
-        self.0.get_loc_(&a).cloned()
+    pub fn has_ability_(&self, a: Ability_) -> bool {
+        self.0.contains_(&a)
     }
 
     // interesection of two sets. Keeps the loc of the first set

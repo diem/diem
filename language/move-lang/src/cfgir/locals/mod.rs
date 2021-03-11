@@ -147,7 +147,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                     | LocalState::MaybeUnavailable { available, .. } => {
                         let ty = context.local_type(&local);
                         let abilities = ty.value.abilities(ty.loc);
-                        if abilities.has_ability_(Ability_::Drop).is_none() {
+                        if !abilities.has_ability_(Ability_::Drop) {
                             let verb = match state {
                                 LocalState::Unavailable(_) => unreachable!(),
                                 LocalState::Available(_) => "still contains",
@@ -195,7 +195,7 @@ fn lvalue(context: &mut Context, sp!(loc, l_): &LValue) {
         L::Var(v, _) => {
             let ty = context.local_type(v);
             let abilities = ty.value.abilities(ty.loc);
-            if abilities.has_ability_(Ability_::Drop).is_none() {
+            if !abilities.has_ability_(Ability_::Drop) {
                 let old_state = context.get_state(v);
                 match old_state {
                     LocalState::Unavailable(_) => (),

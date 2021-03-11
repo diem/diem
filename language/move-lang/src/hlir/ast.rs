@@ -389,7 +389,7 @@ impl BaseType_ {
                 AbilitySet::from_abilities(
                     declared_abilities
                         .into_iter()
-                        .filter(|ab| ty_arg_abilities.has_ability_(ab.value.requires()).is_some()),
+                        .filter(|ab| ty_arg_abilities.has_ability_(ab.value.requires())),
                 )
                 .unwrap()
             }

@@ -532,7 +532,7 @@ fn acquires_type_struct(
 
     let mut has_errors = false;
 
-    if abilities.has_ability_(Ability_::Key).is_none() {
+    if !abilities.has_ability_(Ability_::Key) {
         let msg = format!(
             "Invalid acquires item. Expected a struct with the '{}' ability.",
             Ability_::KEY

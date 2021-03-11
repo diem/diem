@@ -267,7 +267,7 @@ where
         T::Apply(Some(abilities), sp!(_, TN::Multiple(_)), _)
         | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
             // Key ability is checked by constraints
-            assert!(abilities.has_ability_(Ability_::Key).is_none());
+            assert!(!abilities.has_ability_(Ability_::Key));
             assert!(context.has_errors());
             return None;
         }

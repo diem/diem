@@ -559,7 +559,7 @@ pub fn infer_abilities(context: &Context, subst: &Subst, ty: Type) -> AbilitySet
                 let requirement = ab.value.requires();
                 ty_args_abilities
                     .iter()
-                    .all(|ty_arg_abilities| ty_arg_abilities.has_ability_(requirement).is_some())
+                    .all(|ty_arg_abilities| ty_arg_abilities.has_ability_(requirement))
             }))
             .unwrap()
         }
@@ -918,7 +918,7 @@ fn solve_ability_constraint(
 
     let (declared_loc_opt, declared_abilities, ty_args) = debug_abilities_info(context, &ty);
     for constraint in constraints {
-        if ty_abilities.has_ability(&constraint).is_some() {
+        if ty_abilities.has_ability(&constraint) {
             continue;
         }
 
@@ -971,7 +971,7 @@ pub fn ability_not_satisified_tips<'a>(
         declared_abilities.has_ability_(constraint),
     ) {
         // Type was not given the ability
-        (Some(dloc), None) => error.push((
+        (Some(dloc), false) => error.push((
             dloc,
             format!(
                 "To satisify the constraint, the '{}' ability would need to be added here",
@@ -979,13 +979,13 @@ pub fn ability_not_satisified_tips<'a>(
             ),
         )),
         // Type does not have the ability
-        (_, None) => (),
+        (_, false) => (),
         // Type has the ability but a type argument causes it to fail
-        (_, Some(_)) => {
+        (_, true) => {
             let requirement = constraint.requires();
             let mut error_added = false;
             for (ty_arg, ty_arg_abilities) in ty_args {
-                if ty_arg_abilities.has_ability_(requirement).is_none() {
+                if !ty_arg_abilities.has_ability_(requirement) {
                     let ty_arg_str = error_format(ty_arg, &subst);
                     let msg = format!(
                         "The type {ty} can have the ability '{constraint}' but the type argument \
@@ -1089,7 +1089,7 @@ fn solve_builtin_type_constraint(
         Apply(abilities_opt, sp!(_, Builtin(sp!(_, b))), args) if builtin_set.contains(b) => {
             if let Some(abilities) = abilities_opt {
                 assert!(
-                    abilities.has_ability_(Ability_::Drop).is_some(),
+                    abilities.has_ability_(Ability_::Drop),
                     "ICE assumes this type is being consumed so should have drop"
                 );
             }

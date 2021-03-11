@@ -296,9 +296,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         let struct_id = StructId::new(qsym.symbol);
         let is_resource =
             // TODO migrate to abilities
-            def.abilities.has_ability_(PA::Ability_::Key).is_some() || (
-                def.abilities.has_ability_(PA::Ability_::Copy).is_none() &&
-                def.abilities.has_ability_(PA::Ability_::Drop).is_none()
+            def.abilities.has_ability_(PA::Ability_::Key)|| (
+                !def.abilities.has_ability_(PA::Ability_::Copy) &&
+                !def.abilities.has_ability_(PA::Ability_::Drop)
             );
         let mut et = ExpTranslator::new(self);
         let type_params = et.analyze_and_add_type_params(&def.type_parameters);
