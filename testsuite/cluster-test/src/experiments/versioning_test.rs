@@ -163,15 +163,32 @@ impl Experiment for ValidatorVersioning {
 
         info!("3. Send the transaction using the new feature to an updated validator node");
         let txn3 = txn_gen(&account)?;
+        account.sequence_number += 1;
+        info!(
+            "3-a: local account sequence number before execution: {}",
+            account.sequence_number
+        );
         if execute_and_wait_transactions(&mut new_client, &mut account, vec![txn3])
             .await
             .is_ok()
         {
             return Err(format_err!(
-                "The transaction should be rejected as the feature is under gating",
+                "The transaction should timeout as half of validator nodes have not been updated"
             ));
         }
-        info!("-- The transaction is rejected as expected");
+        info!(
+            "3-b: local account sequence number after execution: {}",
+            account.sequence_number
+        );
+        assert_eq!(
+            new_client
+                .get_account(account.address)
+                .await?
+                .into_inner()
+                .unwrap()
+                .sequence_number,
+            0
+        );
 
         info!("4. Update the rest of the validator nodes");
         update_batch_instance(
@@ -184,15 +201,48 @@ impl Experiment for ValidatorVersioning {
 
         info!("5. Send the transaction using the new feature to an updated validator node again");
         let txn4 = txn_gen(&account)?;
+        account.sequence_number += 1;
+        info!(
+            "5-x: local account sequence number before execution: {}",
+            account.sequence_number
+        );
         if execute_and_wait_transactions(&mut new_client, &mut account, vec![txn4])
             .await
             .is_ok()
         {
+            info!(
+                "5-a: sequence number confirmed to be {}",
+                new_client
+                    .get_account(account.address)
+                    .await?
+                    .into_inner()
+                    .unwrap()
+                    .sequence_number
+            );
+            info!(
+                "5-b: transaction at seq number 0 confirmed to be {:?}",
+                new_client
+                    .get_account_transaction(account.address, 0, false)
+                    .await?
+                    .into_inner()
+            );
             return Err(format_err!(
-                "The transaction should be rejected as the feature is still gated",
+                "The transaction should timeout as the new feature is not enabled yet"
             ));
         }
-        info!("-- The transaction is still rejected as expected, because the new feature is gated");
+        info!(
+            "5-x: local account sequence number after execution: {}",
+            account.sequence_number
+        );
+        assert_eq!(
+            new_client
+                .get_account(account.address)
+                .await?
+                .into_inner()
+                .unwrap()
+                .sequence_number,
+            0
+        );
 
         info!("6. Activate the new feature");
         let mut diem_root_account = context
@@ -217,16 +267,40 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("7. Send the transaction using the new feature after Diem version update");
+        info!(
+            "7-a: sequence number confirmed to be {}",
+            new_client
+                .get_account(account.address)
+                .await?
+                .into_inner()
+                .unwrap()
+                .sequence_number
+        );
+        info!(
+            "7-b: transaction at seq number 0 confirmed to be {:?}",
+            new_client
+                .get_account_transaction(account.address, 0, false)
+                .await?
+                .into_inner()
+        );
         let txn5 = txn_gen(&account)?;
         account.sequence_number += 1;
+        info!(
+            "7-x: local account sequence number before execution: {}",
+            account.sequence_number
+        );
         execute_and_wait_transactions(&mut new_client, &mut account, vec![txn5]).await?;
+        info!(
+            "7-y: local account sequence number after execution: {}",
+            account.sequence_number
+        );
         info!("-- [Expected] The transaction goes through");
 
         Ok(())
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(15 * 60)
+        Duration::from_secs(30 * 60)
     }
 }
 
