@@ -1895,12 +1895,18 @@ fn check_valid_module_member_name_impl(
     }
 
     // TODO move these names to a more central place?
-    for restricted in crate::naming::ast::BuiltinFunction_::all_names() {
-        check_restricted_name(context, "module member", n, restricted)?;
-    }
-    for restricted in crate::naming::ast::BuiltinTypeName_::all_names() {
-        check_restricted_name(context, "module member", n, restricted)?;
-    }
+    check_restricted_names(
+        context,
+        "module member",
+        n,
+        crate::naming::ast::BuiltinFunction_::all_names(),
+    )?;
+    check_restricted_names(
+        context,
+        "module member",
+        n,
+        crate::naming::ast::BuiltinTypeName_::all_names(),
+    )?;
 
     // Restricting Self for now in the case where we ever have impls
     // Otherwise, we could allow it
@@ -1914,24 +1920,34 @@ pub fn is_valid_struct_constant_or_schema_name(s: &str) -> bool {
 }
 
 fn check_restricted_self_name(context: &mut Context, case: &str, n: &Name) -> Result<(), ()> {
-    check_restricted_name(context, case, n, ModuleName::SELF_NAME)
+    if n.value == ModuleName::SELF_NAME {
+        context.error(restricted_name_error(case, n.loc, ModuleName::SELF_NAME));
+        Err(())
+    } else {
+        Ok(())
+    }
 }
 
-fn check_restricted_name(
+fn check_restricted_names(
     context: &mut Context,
     case: &str,
     sp!(loc, n_): &Name,
-    restricted: &str,
+    all_names: &BTreeSet<&str>,
 ) -> Result<(), ()> {
-    if n_ != restricted {
-        return Ok(());
+    if all_names.contains(n_.as_str()) {
+        context.error(restricted_name_error(case, *loc, n_));
+        Err(())
+    } else {
+        Ok(())
     }
+}
+
+fn restricted_name_error(case: &str, loc: Loc, restricted: &str) -> Error {
     let msg = format!(
         "Invalid {case} name '{restricted}'. '{restricted}' is restricted and cannot be used to \
          name a {case}",
         case = case,
         restricted = restricted,
     );
-    context.error(vec![(*loc, msg)]);
-    Err(())
+    vec![(loc, msg)]
 }

@@ -13,6 +13,7 @@ use crate::{
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
+use once_cell::sync::Lazy;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
@@ -268,6 +269,38 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 // impls
 //**************************************************************************************************
 
+static BUILTIN_TYPE_ALL_NAMES: Lazy<BTreeSet<&'static str>> = Lazy::new(|| {
+    [
+        BuiltinTypeName_::ADDRESS,
+        BuiltinTypeName_::SIGNER,
+        BuiltinTypeName_::U_8,
+        BuiltinTypeName_::U_64,
+        BuiltinTypeName_::U_128,
+        BuiltinTypeName_::BOOL,
+        BuiltinTypeName_::VECTOR,
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
+
+static BUILTIN_TYPE_NUMERIC: Lazy<BTreeSet<BuiltinTypeName_>> = Lazy::new(|| {
+    [
+        BuiltinTypeName_::U8,
+        BuiltinTypeName_::U64,
+        BuiltinTypeName_::U128,
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
+
+static BUILTIN_TYPE_BITS: Lazy<BTreeSet<BuiltinTypeName_>> =
+    Lazy::new(|| BUILTIN_TYPE_NUMERIC.clone());
+
+static BUILTIN_TYPE_ORDERED: Lazy<BTreeSet<BuiltinTypeName_>> =
+    Lazy::new(|| BUILTIN_TYPE_BITS.clone());
+
 impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
     pub const SIGNER: &'static str = "signer";
@@ -277,34 +310,20 @@ impl BuiltinTypeName_ {
     pub const BOOL: &'static str = "bool";
     pub const VECTOR: &'static str = "vector";
 
-    pub fn all_names() -> BTreeSet<&'static str> {
-        let mut s = BTreeSet::new();
-        s.insert(Self::ADDRESS);
-        s.insert(Self::SIGNER);
-        s.insert(Self::U_8);
-        s.insert(Self::U_64);
-        s.insert(Self::U_128);
-        s.insert(Self::BOOL);
-        s.insert(Self::VECTOR);
-        s
+    pub fn all_names() -> &'static BTreeSet<&'static str> {
+        &*BUILTIN_TYPE_ALL_NAMES
     }
 
-    pub fn numeric() -> BTreeSet<BuiltinTypeName_> {
-        use BuiltinTypeName_ as BT;
-        let mut s = BTreeSet::new();
-        s.insert(BT::U8);
-        s.insert(BT::U64);
-        s.insert(BT::U128);
-        s
+    pub fn numeric() -> &'static BTreeSet<BuiltinTypeName_> {
+        &*BUILTIN_TYPE_NUMERIC
     }
 
-    pub fn bits() -> BTreeSet<BuiltinTypeName_> {
-        use BuiltinTypeName_ as BT;
-        BT::numeric()
+    pub fn bits() -> &'static BTreeSet<BuiltinTypeName_> {
+        &*BUILTIN_TYPE_BITS
     }
 
-    pub fn ordered() -> BTreeSet<BuiltinTypeName_> {
-        Self::bits()
+    pub fn ordered() -> &'static BTreeSet<BuiltinTypeName_> {
+        &*BUILTIN_TYPE_ORDERED
     }
 
     pub fn is_numeric(&self) -> bool {
@@ -357,6 +376,18 @@ impl TVar {
     }
 }
 
+static BUILTIN_FUNCTION_ALL_NAMES: Lazy<BTreeSet<&'static str>> = Lazy::new(|| {
+    let mut s = BTreeSet::new();
+    s.insert(BuiltinFunction_::MOVE_TO);
+    s.insert(BuiltinFunction_::MOVE_FROM);
+    s.insert(BuiltinFunction_::BORROW_GLOBAL);
+    s.insert(BuiltinFunction_::BORROW_GLOBAL_MUT);
+    s.insert(BuiltinFunction_::EXISTS);
+    s.insert(BuiltinFunction_::FREEZE);
+    s.insert(BuiltinFunction_::ASSERT);
+    s
+});
+
 impl BuiltinFunction_ {
     pub const MOVE_TO: &'static str = "move_to";
     pub const MOVE_FROM: &'static str = "move_from";
@@ -366,16 +397,8 @@ impl BuiltinFunction_ {
     pub const FREEZE: &'static str = "freeze";
     pub const ASSERT: &'static str = "assert";
 
-    pub fn all_names() -> BTreeSet<&'static str> {
-        let mut s = BTreeSet::new();
-        s.insert(Self::MOVE_TO);
-        s.insert(Self::MOVE_FROM);
-        s.insert(Self::BORROW_GLOBAL);
-        s.insert(Self::BORROW_GLOBAL_MUT);
-        s.insert(Self::EXISTS);
-        s.insert(Self::FREEZE);
-        s.insert(Self::ASSERT);
-        s
+    pub fn all_names() -> &'static BTreeSet<&'static str> {
+        &*BUILTIN_FUNCTION_ALL_NAMES
     }
 
     pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {

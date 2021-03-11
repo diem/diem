@@ -1061,7 +1061,7 @@ fn solve_implicitly_copyable_constraint(
 
 fn solve_builtin_type_constraint(
     context: &mut Context,
-    builtin_set: BTreeSet<BuiltinTypeName_>,
+    builtin_set: &BTreeSet<BuiltinTypeName_>,
     loc: Loc,
     op: &'static str,
     ty: Type,

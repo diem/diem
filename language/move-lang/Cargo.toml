@@ -17,6 +17,7 @@ difference = "2.0.0"
 petgraph = "0.5.1"
 walkdir = "2.3.1"
 tempfile = "3.2.0"
+once_cell = "1.7.2"
 
 fallible = { path = "../../common/fallible" }
 move-vm = { path = "../vm", package = "vm" }

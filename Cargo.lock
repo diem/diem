@@ -4288,6 +4288,7 @@ dependencies = [
  "move-core-types",
  "move-ir-types",
  "move-lang-test-utils",
+ "once_cell",
  "petgraph",
  "regex",
  "structopt 0.3.21",

@@ -91,7 +91,7 @@ impl Context {
             })
             .collect();
         let unscoped_types = N::BuiltinTypeName_::all_names()
-            .into_iter()
+            .iter()
             .map(|s| (s.to_string(), RT::BuiltinType))
             .collect();
         Self {
