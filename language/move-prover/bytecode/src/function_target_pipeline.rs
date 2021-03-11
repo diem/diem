@@ -5,6 +5,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     print_targets_for_test,
     stackless_bytecode_generator::StacklessBytecodeGenerator,
+    stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
 use itertools::Itertools;
 use log::debug;
@@ -237,6 +238,7 @@ impl FunctionTargetPipeline {
         env: &GlobalEnv,
         targets: &mut FunctionTargetsHolder,
         dump_to_file: Option<String>,
+        dump_cfg: bool,
     ) {
         let mut worklist = vec![];
         for fun in targets.get_funs() {
@@ -289,7 +291,6 @@ impl FunctionTargetPipeline {
             topological_order.push(func_env);
         }
 
-        // Now that we determined the topological order, run each processor on it, breadth-first.
         let dump_to_file = |step_count: usize, name: &str, targets: &FunctionTargetsHolder| {
             // Dump result to file if requested
             if let Some(base_name) = &dump_to_file {
@@ -299,9 +300,33 @@ impl FunctionTargetPipeline {
                 let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, name);
                 debug!("dumping bytecode to `{}`", file_name);
                 fs::write(&file_name, &trimmed).expect("dumping bytecode");
+
+                if dump_cfg {
+                    // generate dot files for control-flow graphs
+                    for (fun_id, variants) in &targets.targets {
+                        let func_env = env.get_function(*fun_id);
+                        let func_name = func_env.get_full_name_str();
+                        let func_name = func_name.replace("::", "__");
+                        for (variant, data) in variants {
+                            if !data.code.is_empty() {
+                                let dot_file = format!(
+                                    "{}_{}_{}_{}_{}_cfg.dot",
+                                    base_name, step_count, name, func_name, variant
+                                );
+                                debug!("generating dot graph for cfg in `{}`", dot_file);
+                                let func_target = FunctionTarget::new(&func_env, data);
+                                let dot_graph = generate_cfg_in_dot_format(&func_target);
+                                fs::write(&dot_file, &dot_graph)
+                                    .expect("generating dot file for CFG");
+                            }
+                        }
+                    }
+                }
             }
         };
         dump_to_file(0, "stackless", targets);
+
+        // Now that we determined the topological order, run each processor on it, breadth-first.
         for (step_count, processor) in self.processors.iter().enumerate() {
             processor.initialize(env, targets);
             for func_env in &topological_order {

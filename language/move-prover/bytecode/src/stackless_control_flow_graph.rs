@@ -4,7 +4,11 @@
 //! Adapted from control_flow_graph for Bytecode, this module defines the control-flow graph on
 //! Stackless Bytecode used in analysis as part of Move prover.
 
-use crate::stackless_bytecode::{Bytecode, Label};
+use crate::{
+    function_target::FunctionTarget,
+    stackless_bytecode::{Bytecode, Label},
+};
+use petgraph::{dot::Dot, graph::Graph};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
@@ -226,4 +230,88 @@ impl StacklessControlFlowGraph {
         println!("is_backward = {}", self.backward);
         println!("+=======================+");
     }
+}
+
+// CFG dot graph generation
+struct DotCFGBlock<'env> {
+    block_id: BlockId,
+    content: BlockContent,
+    func_target: &'env FunctionTarget<'env>,
+    label_offsets: BTreeMap<Label, CodeOffset>,
+}
+
+impl<'env> std::fmt::Display for DotCFGBlock<'env> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let code_range = match self.content {
+            BlockContent::Basic { lower, upper } => format!("offset {}..={}", lower, upper),
+            BlockContent::Dummy => "X".to_owned(),
+        };
+        writeln!(f, "[Block {} - {}]", self.block_id, code_range)?;
+        match self.content {
+            BlockContent::Basic { lower, upper } => {
+                let code = &self.func_target.data.code;
+                for (offset, instruction) in
+                    (lower..=upper).zip(&code[(lower as usize)..=(upper as usize)])
+                {
+                    let text = self.func_target.pretty_print_bytecode(
+                        &self.label_offsets,
+                        offset as usize,
+                        instruction,
+                    );
+                    writeln!(f, "{}", text)?;
+                }
+            }
+            BlockContent::Dummy => {}
+        }
+        Ok(())
+    }
+}
+
+// A dummy struct to implement fmt required by petgraph::Dot
+struct DotCFGEdge {}
+
+impl std::fmt::Display for DotCFGEdge {
+    fn fmt(&self, _f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        Ok(())
+    }
+}
+
+/// Generate the dot representation of the CFG (which can be rendered by the Dot program)
+pub fn generate_cfg_in_dot_format<'env>(func_target: &'env FunctionTarget<'env>) -> String {
+    let code = &func_target.data.code;
+    let cfg = StacklessControlFlowGraph::new_forward(code);
+    let label_offsets = Bytecode::label_offsets(code);
+    let mut graph = Graph::new();
+
+    // add nodes
+    let mut node_map = Map::new();
+    for (block_id, block) in &cfg.blocks {
+        let dot_block = DotCFGBlock {
+            block_id: *block_id,
+            content: block.content,
+            func_target,
+            label_offsets: label_offsets.clone(),
+        };
+        let node_index = graph.add_node(dot_block);
+        node_map.insert(block_id, node_index);
+    }
+
+    // add edges
+    for (block_id, block) in &cfg.blocks {
+        for successor in &block.successors {
+            graph.add_edge(
+                *node_map.get(block_id).unwrap(),
+                *node_map.get(successor).unwrap(),
+                DotCFGEdge {},
+            );
+        }
+    }
+
+    // generate dot string
+    format!(
+        "{}",
+        Dot::with_attr_getters(&graph, &[], &|_, _| "".to_string(), &|_, _| {
+            "shape=box".to_string()
+        })
+    )
 }

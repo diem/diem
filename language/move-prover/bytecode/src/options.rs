@@ -39,6 +39,8 @@ pub struct ProverOptions {
     pub report_warnings: bool,
     /// Whether to dump the transformed stackless bytecode to a file
     pub dump_bytecode: bool,
+    /// Whether to dump the control-flow graphs (in dot format) to files, one per each function
+    pub dump_cfg: bool,
     /// Number of Boogie instances to be run concurrently.
     pub num_instances: usize,
     /// Whether to run Boogie instances sequentially.
@@ -61,6 +63,7 @@ impl Default for ProverOptions {
             report_warnings: false,
             assume_invariant_on_access: false,
             dump_bytecode: false,
+            dump_cfg: false,
             num_instances: 1,
             sequential_task: false,
         }

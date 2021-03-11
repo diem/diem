@@ -586,6 +586,7 @@ dependencies = [
  "move-prover-test-utils",
  "num 0.4.0",
  "once_cell",
+ "petgraph",
  "serde",
  "serde_json",
  "vm",

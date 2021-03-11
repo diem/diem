@@ -335,6 +335,12 @@ impl Options {
                     .help("whether to dump the transformed bytecode to a file")
             )
             .arg(
+                Arg::with_name("dump-cfg")
+                    .long("dump-cfg")
+                    .requires("dump-bytecode")
+                    .help("whether to dump the per-function control-flow graphs (in dot format) to files")
+            )
+            .arg(
                 Arg::with_name("num-instances")
                     .long("num-instances")
                     .takes_value(true)
@@ -465,6 +471,9 @@ impl Options {
         }
         if matches.is_present("dump-bytecode") {
             options.prover.dump_bytecode = true;
+        }
+        if matches.is_present("dump-cfg") {
+            options.prover.dump_cfg = true;
         }
         if matches.is_present("num-instances") {
             let num_instances = matches

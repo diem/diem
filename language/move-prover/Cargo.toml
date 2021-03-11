@@ -14,7 +14,7 @@ move-model = { path = "../move-model" }
 docgen = { path = "docgen" }
 abigen = { path = "abigen" }
 errmapgen = { path = "errmapgen" }
-bytecode = { path = "bytecode"}
+bytecode = { path = "bytecode" }
 vm = { path = "../vm" }
 diem-types = { path = "../../types" }
 diem-temppath = { path = "../../common/temppath" }

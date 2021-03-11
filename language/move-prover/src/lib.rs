@@ -238,7 +238,7 @@ fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
 
     let start = now.elapsed();
     info!("generating read/write set");
-    pipeline.run(env, &mut targets, None);
+    pipeline.run(env, &mut targets, None, /* dump_cfg */ false);
     read_write_set_analysis::get_read_write_set(env, &targets);
     println!("generated for {:?}", options.move_sources);
 
@@ -293,7 +293,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
     } else {
         None
     };
-    pipeline.run(env, &mut targets, dump_file);
+    pipeline.run(env, &mut targets, dump_file, options.prover.dump_cfg);
 
     targets
 }

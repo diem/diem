@@ -180,7 +180,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 
         // Run pipeline if any
         if let Some(pipeline) = pipeline_opt {
-            pipeline.run(&env, &mut targets, None);
+            pipeline.run(&env, &mut targets, None, /* dump_cfg */ false);
             text +=
                 &print_targets_for_test(&env, &format!("after pipeline `{}`", dir_name), &targets);
         }

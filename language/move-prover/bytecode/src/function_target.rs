@@ -4,7 +4,7 @@
 use crate::{
     annotations::Annotations,
     borrow_analysis, livevar_analysis, reaching_def_analysis, read_write_set_analysis,
-    stackless_bytecode::{AttrId, Bytecode},
+    stackless_bytecode::{AttrId, Bytecode, Label},
 };
 use itertools::Itertools;
 use move_model::{
@@ -317,6 +317,58 @@ impl<'env> FunctionTarget<'env> {
     pub fn get_modify_targets(&self) -> &BTreeMap<QualifiedId<StructId>, Vec<Exp>> {
         &self.data.modify_targets
     }
+
+    /// Pretty print a bytecode instruction with offset, comments, annotations, and VC information.
+    pub fn pretty_print_bytecode(
+        &self,
+        label_offsets: &BTreeMap<Label, CodeOffset>,
+        offset: usize,
+        code: &Bytecode,
+    ) -> String {
+        let mut texts = vec![];
+
+        // add debug comment
+        let attr_id = code.get_attr_id();
+        if let Some(comment) = self.get_debug_comment(attr_id) {
+            texts.push(format!("     # {}", comment));
+        }
+
+        // add annotations
+        let annotations = self
+            .annotation_formatters
+            .borrow()
+            .iter()
+            .filter_map(|fmt_fun| fmt_fun(self, offset as CodeOffset))
+            .map(|s| format!("     # {}", s.replace("\n", "\n     # ").trim()))
+            .join("\n");
+        if !annotations.is_empty() {
+            texts.push(annotations);
+        }
+
+        // add vc info
+        if let Some(msg) = self.data.vc_infos.get(&attr_id) {
+            let loc = self
+                .data
+                .locations
+                .get(&attr_id)
+                .cloned()
+                .unwrap_or_else(|| self.global_env().unknown_loc());
+            texts.push(format!(
+                "     # VC: {} {}",
+                msg,
+                loc.display(self.global_env())
+            ));
+        }
+
+        // add the instruction itself with offset
+        texts.push(format!(
+            "{:>3}: {}",
+            offset,
+            code.display(self, &label_offsets)
+        ));
+
+        texts.join("\n")
+    }
 }
 
 impl FunctionData {
@@ -497,30 +549,11 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         }
         let label_offsets = Bytecode::label_offsets(self.get_bytecode());
         for (offset, code) in self.get_bytecode().iter().enumerate() {
-            let attr_id = code.get_attr_id();
-            if let Some(comment) = self.get_debug_comment(attr_id) {
-                writeln!(f, "     # {}", comment)?;
-            }
-            let annotations = self
-                .annotation_formatters
-                .borrow()
-                .iter()
-                .filter_map(|fmt_fun| fmt_fun(self, offset as CodeOffset))
-                .map(|s| format!("     # {}", s.replace("\n", "\n     # ").trim()))
-                .join("\n");
-            if !annotations.is_empty() {
-                writeln!(f, "{}", annotations)?;
-            }
-            if let Some(msg) = self.data.vc_infos.get(&attr_id) {
-                let loc = self
-                    .data
-                    .locations
-                    .get(&attr_id)
-                    .cloned()
-                    .unwrap_or_else(|| self.global_env().unknown_loc());
-                writeln!(f, "     # VC: {} {}", msg, loc.display(self.global_env()))?;
-            }
-            writeln!(f, "{:>3}: {}", offset, code.display(self, &label_offsets))?;
+            writeln!(
+                f,
+                "{}",
+                self.pretty_print_bytecode(&label_offsets, offset, code)
+            )?;
         }
         writeln!(f, "}}")?;
         Ok(())
