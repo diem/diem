@@ -7,12 +7,7 @@ use clap::{App, Arg};
 use diem_framework::*;
 use move_stdlib::utils::time_it;
 use rayon::prelude::*;
-use std::{
-    collections::BTreeMap,
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fs::File, io::Read, path::PathBuf};
 use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -143,24 +138,7 @@ fn main() {
         );
     }
 
-    let txn_source_files = move_stdlib::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
-    let transaction_files = move_stdlib::filter_move_files(txn_source_files)
-        .flat_map(|path| path.into_os_string().into_string().ok())
-        .collect::<Vec<_>>();
-    if !no_compiler {
-        time_it("Compiling transaction scripts", || {
-            std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap_or(());
-            std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap();
-
-            transaction_files.par_iter().for_each(|txn_file| {
-                let compiled_script = compile_script(txn_file.clone());
-                let mut txn_path = PathBuf::from(COMPILED_OUTPUT_PATH);
-                txn_path.push(txn_file.clone());
-                txn_path.set_extension(COMPILED_EXTENSION);
-                save_binary(&txn_path, &compiled_script);
-            })
-        });
-    }
+    let script_files = diem_stdlib_files();
 
     // Generate documentation
     if !no_doc {
@@ -169,11 +147,12 @@ fn main() {
             std::fs::create_dir_all(&STD_LIB_DOC_DIR).unwrap();
             build_stdlib_doc(with_diagram);
         });
-        time_it("Generating script documentation", || {
-            std::fs::remove_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap_or(());
-            std::fs::create_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap();
-            build_transaction_script_doc(&transaction_files, with_diagram);
-        });
+        // TODO(#7883) Re-enable this in the final phase of the migration to script functions
+        //time_it("Generating script documentation", || {
+        //std::fs::remove_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap_or(());
+        //std::fs::create_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap();
+        //build_transaction_script_doc(&script_files, with_diagram);
+        //});
     }
 
     // Generate script ABIs
@@ -182,9 +161,9 @@ fn main() {
             std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap_or(());
             std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap();
 
-            transaction_files
+            script_files
                 .par_iter()
-                .for_each(|txn_file| build_transaction_script_abi(txn_file.clone()));
+                .for_each(|file| build_script_abis(file.clone()));
         });
     }
 

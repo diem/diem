@@ -8,7 +8,7 @@ import serde_types as st
 import diem_framework as stdlib
 
 
-def main() -> None:
+def demo_p2p_script() -> None:
     token = diem.TypeTag__Struct(
         value=diem.StructTag(
             address=diem.AccountAddress.from_bytes(b"\x00" * 15 + b"\x01"),
@@ -30,6 +30,28 @@ def main() -> None:
         print("%d " % b, end='')
     print()
 
+def demo_p2p_script_function() -> None:
+    token = diem.TypeTag__Struct(
+        value=diem.StructTag(
+            address=diem.AccountAddress.from_bytes(b"\x00" * 15 + b"\x01"),
+            module=diem.Identifier("XDX"),
+            name=diem.Identifier("XDX"),
+            type_params=[],
+        )
+    )
+    payee = diem.AccountAddress.from_bytes(b"\x22" * 16)
+    amount = st.uint64(1_234_567)
+    payload = stdlib.encode_peer_to_peer_with_metadata_script_function(token, payee, amount, b"", b"")
+
+    call = stdlib.decode_script_function_payload(payload)
+    assert isinstance(call, stdlib.ScriptFunctionCall__PeerToPeerWithMetadata)
+    assert call.amount == amount;
+    assert call.payee == payee;
+
+    for b in payload.bcs_serialize():
+        print("%d " % b, end='')
+    print()
 
 if __name__ == "__main__":
-    main()
+    demo_p2p_script()
+    demo_p2p_script_function()

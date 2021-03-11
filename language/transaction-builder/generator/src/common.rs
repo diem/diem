@@ -1,7 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_types::transaction::{ArgumentABI, TransactionScriptABI, TypeArgumentABI};
+use diem_types::transaction::{
+    ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+};
 use heck::CamelCase;
 use move_core_types::language_storage::TypeTag;
 use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
@@ -51,8 +53,7 @@ fn quote_parameter_as_field(arg: &ArgumentABI) -> Named<Format> {
     }
 }
 
-// TODO(#7876): Update to handle script function ABIs
-pub(crate) fn make_abi_enum_container(abis: &[TransactionScriptABI]) -> ContainerFormat {
+pub(crate) fn make_abi_enum_container(abis: &[ScriptABI]) -> ContainerFormat {
     let mut variants = BTreeMap::new();
     for (index, abi) in abis.iter().enumerate() {
         let mut fields = Vec::new();
@@ -107,10 +108,7 @@ pub(crate) fn get_external_definitions(diem_types: &str) -> serde_generate::Exte
         .collect()
 }
 
-// TODO(#7876): Update to handle script function ABIs
-pub(crate) fn get_required_decoding_helper_types(
-    abis: &[TransactionScriptABI],
-) -> BTreeSet<&TypeTag> {
+pub(crate) fn get_required_decoding_helper_types(abis: &[ScriptABI]) -> BTreeSet<&TypeTag> {
     let mut required_types = BTreeSet::new();
     for abi in abis {
         for arg in abi.args() {
@@ -119,4 +117,24 @@ pub(crate) fn get_required_decoding_helper_types(
         }
     }
     required_types
+}
+
+pub(crate) fn transaction_script_abis(abis: &[ScriptABI]) -> Vec<TransactionScriptABI> {
+    abis.iter()
+        .cloned()
+        .filter_map(|abi| match abi {
+            ScriptABI::TransactionScript(abi) => Some(abi),
+            ScriptABI::ScriptFunction(_) => None,
+        })
+        .collect::<Vec<_>>()
+}
+
+pub(crate) fn script_function_abis(abis: &[ScriptABI]) -> Vec<ScriptFunctionABI> {
+    abis.iter()
+        .cloned()
+        .filter_map(|abi| match abi {
+            ScriptABI::ScriptFunction(abi) => Some(abi),
+            ScriptABI::TransactionScript(_) => None,
+        })
+        .collect::<Vec<_>>()
 }

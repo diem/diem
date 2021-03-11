@@ -16,9 +16,11 @@ use std::{
     path::PathBuf,
 };
 /// Output transaction builders and decoders in TypeScript for the given ABIs.
-pub fn output(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Result<()> {
-    write_script_calls(out, abis)?;
-    write_helpers(out, abis)
+pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
+    // TODO(#7876): implement typescript support for script functions
+    let abis = common::transaction_script_abis(abis);
+    write_script_calls(out, &abis)?;
+    write_helpers(out, &abis)
 }
 
 fn write_stdlib_helper_interfaces(emitter: &mut TypeScriptEmitter<&mut dyn Write>) -> Result<()> {
@@ -121,7 +123,13 @@ fn write_script_calls(out: &mut dyn Write, abis: &[TransactionScriptABI]) -> Res
     let external_definitions = crate::common::get_external_definitions("diemTypes");
     let script_registry: BTreeMap<_, _> = vec![(
         "ScriptCall".to_string(),
-        common::make_abi_enum_container(abis),
+        common::make_abi_enum_container(
+            abis.iter()
+                .cloned()
+                .map(ScriptABI::TransactionScript)
+                .collect::<Vec<_>>()
+                .as_slice(),
+        ),
     )]
     .into_iter()
     .collect();
@@ -458,15 +466,6 @@ impl crate::SourceInstaller for Installer {
         let dir_path = self.install_dir.join(name);
         std::fs::create_dir_all(&dir_path)?;
         let mut file = std::fs::File::create(dir_path.join("index.ts"))?;
-        // TODO(#7876): Update to handle script function ABIs
-        let abis = abis
-            .iter()
-            .cloned()
-            .filter_map(|abi| match abi {
-                ScriptABI::TransactionScript(abi) => Some(abi),
-                ScriptABI::ScriptFunction(_) => None,
-            })
-            .collect::<Vec<_>>();
         output(&mut file, &abis)?;
         Ok(())
     }

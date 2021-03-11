@@ -5,7 +5,7 @@ use diem_types::transaction::ScriptABI;
 use serde_generate as serdegen;
 use serde_generate::SourceInstaller as _;
 use serde_reflection::Registry;
-use std::{io::Write, process::Command};
+use std::{io::Write, path::Path, process::Command};
 use tempfile::tempdir;
 use transaction_builder_generator as buildgen;
 use transaction_builder_generator::SourceInstaller as _;
@@ -18,11 +18,19 @@ fn get_diem_registry() -> Registry {
 
 fn get_stdlib_script_abis() -> Vec<ScriptABI> {
     // This is also a custom rule in diem/x.toml.
-    let path = "../../diem-framework/compiled/legacy/transaction_scripts/abi";
-    buildgen::read_abis(path).expect("reading ABI files should not fail")
+    let legacy_path = Path::new("../../diem-framework/compiled/legacy/transaction_scripts/abi");
+    let new_abis = Path::new("../../diem-framework/compiled/transaction_scripts/abi");
+    let mut abis =
+        buildgen::read_abis(&legacy_path).expect("reading legacy ABI files should not fail");
+    abis.extend(
+        buildgen::read_abis(&new_abis)
+            .expect("reading new ABI files should not fail")
+            .into_iter(),
+    );
+    abis
 }
 
-const EXPECTED_OUTPUT: &str = "224 1 161 28 235 11 1 0 0 0 7 1 0 2 2 2 4 3 6 16 4 22 2 5 24 29 7 53 96 8 149 1 16 0 0 0 1 1 0 0 2 0 1 0 0 3 2 3 1 1 0 4 1 3 0 1 5 1 6 12 1 8 0 5 6 8 0 5 3 10 2 10 2 0 5 6 12 5 3 10 2 10 2 1 9 0 11 68 105 101 109 65 99 99 111 117 110 116 18 87 105 116 104 100 114 97 119 67 97 112 97 98 105 108 105 116 121 27 101 120 116 114 97 99 116 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 8 112 97 121 95 102 114 111 109 27 114 101 115 116 111 114 101 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 4 1 12 11 0 17 0 12 5 14 5 10 1 10 2 11 3 11 4 56 0 11 5 17 2 2 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 3 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 1 135 214 18 0 0 0 0 0 4 0 4 0 \n";
+const EXPECTED_OUTPUT: &str = "224 1 161 28 235 11 1 0 0 0 7 1 0 2 2 2 4 3 6 16 4 22 2 5 24 29 7 53 96 8 149 1 16 0 0 0 1 1 0 0 2 0 1 0 0 3 2 3 1 1 0 4 1 3 0 1 5 1 6 12 1 8 0 5 6 8 0 5 3 10 2 10 2 0 5 6 12 5 3 10 2 10 2 1 9 0 11 68 105 101 109 65 99 99 111 117 110 116 18 87 105 116 104 100 114 97 119 67 97 112 97 98 105 108 105 116 121 27 101 120 116 114 97 99 116 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 8 112 97 121 95 102 114 111 109 27 114 101 115 116 111 114 101 95 119 105 116 104 100 114 97 119 95 99 97 112 97 98 105 108 105 116 121 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 4 1 12 11 0 17 0 12 5 14 5 10 1 10 2 11 3 11 4 56 0 11 5 17 2 2 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 3 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 1 135 214 18 0 0 0 0 0 4 0 4 0 \n3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 14 80 97 121 109 101 110 116 83 99 114 105 112 116 115 26 112 101 101 114 95 116 111 95 112 101 101 114 95 119 105 116 104 95 109 101 116 97 100 97 116 97 1 7 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 3 88 68 88 3 88 68 88 0 4 3 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 34 1 135 214 18 0 0 0 0 0 4 0 4 0 \n";
 
 // Cannot run this test in the CI of Diem.
 #[test]
@@ -53,15 +61,6 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let source_path = stdlib_dir_path.join("__init__.py");
 
     let mut source = std::fs::File::create(&source_path).unwrap();
-    // TODO(#7876): Update to handle script function ABIs
-    let abis = abis
-        .iter()
-        .cloned()
-        .filter_map(|abi| match abi {
-            ScriptABI::TransactionScript(abi) => Some(abi),
-            ScriptABI::ScriptFunction(_) => None,
-        })
-        .collect::<Vec<_>>();
     buildgen::python3::output(&mut source, None, None, &abis).unwrap();
 
     std::fs::copy(
@@ -155,15 +154,6 @@ test = false
     std::fs::create_dir(stdlib_dir_path.join("src")).unwrap();
     let source_path = stdlib_dir_path.join("src/lib.rs");
     let mut source = std::fs::File::create(&source_path).unwrap();
-    // TODO: Update to handle script function ABIs
-    let abis = abis
-        .iter()
-        .cloned()
-        .filter_map(|abi| match abi {
-            ScriptABI::TransactionScript(abi) => Some(abi),
-            ScriptABI::ScriptFunction(_) => None,
-        })
-        .collect::<Vec<_>>();
     buildgen::rust::output(&mut source, &abis, /* local types */ false).unwrap();
 
     std::fs::copy(

@@ -112,10 +112,13 @@ The transaction script and arguments of the script call.
 
 | Name           | Type         | Description                                   |
 |----------------|--------------|-----------------------------------------------|
-| type           | string       | Name of the script code, see [transaction script doc](../../language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md) for all available script names. |
+| type           | string       | Name of the script code, see [transaction script doc](../../language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md) for all available script names. If a script function, this field is set to the string `"script_function"`. |
 | code           | string       | Hex-encoded compiled move script bytes        |
 | arguments      | List<string> | List of string value of the script arguments. Contains type information. |
 | type_arguments | List<string> | List of type arguments, converted into string |
+| module_address | string       | Null if not a script function. Module address where the function being called is defined. |
+| module_name    | string       | Null if not a script function. Module name where the function being called is defined. |
+| function_name  | string       | Null if not a script function. Name of the function being called by a script function transaction. |
 
 * Argument value to string formatting:
   * u8 value `12` => "{U8: 12}"

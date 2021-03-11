@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
-use diem_types::transaction::ScriptABI;
 use errmapgen::ErrmapOptions;
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
@@ -52,11 +51,13 @@ pub const PACKED_TYPES_DIR: &str = "packed_types";
 pub const PACKED_TYPES_FILENAME: &str = "packed_types";
 pub const PACKED_TYPES_EXTENSION: &str = "txt";
 
-/// TODO: These paths are temporary only
 /// The output path under which compiled script files can be found
-pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
+pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/legacy/transaction_scripts";
 /// The output path for transaction script ABIs.
 pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
+/// Location of legacy transaction script ABIs
+pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str =
+    "compiled/legacy/transaction_scripts/abi";
 /// Where to write generated transaction builders.
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
     "compiled/src/shim/tmp_new_transaction_script_builders.rs";
@@ -257,7 +258,7 @@ pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool)
     )
 }
 
-pub fn build_transaction_script_abi(script_file_str: String) {
+pub fn build_script_abis(script_file_str: String) {
     build_abi(
         COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
         &[script_file_str],
@@ -265,7 +266,8 @@ pub fn build_transaction_script_abi(script_file_str: String) {
             move_stdlib::move_stdlib_modules_full_path(),
             diem_stdlib_modules_full_path(),
         ],
-        COMPILED_TRANSACTION_SCRIPTS_DIR,
+        // The only code that we should be using for transaction scripts is the legacy bytes
+        LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR,
     )
 }
 
@@ -328,17 +330,16 @@ fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
 }
 
 pub fn generate_rust_transaction_builders() {
-    let abis = transaction_builder_generator::read_abis(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR)
-        .expect("Failed to read generated ABIs")
-        .into_iter()
-        .filter_map(|abi| {
-            match abi {
-                // TODO remove this when updated to support script functions
-                ScriptABI::TransactionScript(abi) => Some(abi),
-                ScriptABI::ScriptFunction(_) => None,
-            }
-        })
-        .collect::<Vec<_>>();
+    let mut abis =
+        transaction_builder_generator::read_abis(&Path::new(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR))
+            .expect("Failed to read generated ABIs");
+    abis.extend(
+        transaction_builder_generator::read_abis(&Path::new(
+            LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
+        ))
+        .expect("Failed to read legacy ABIs")
+        .into_iter(),
+    );
     {
         let mut file = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
             .expect("Failed to open file for Rust script build generation");

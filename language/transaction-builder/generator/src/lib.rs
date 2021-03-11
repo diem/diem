@@ -3,10 +3,12 @@
 
 use diem_types::transaction::ScriptABI;
 use serde_generate::CustomCode;
-use std::io::Read;
+use std::{ffi::OsStr, fs, io::Read, path::Path};
 
 /// Support for code-generation in C++17.
 pub mod cpp;
+/// Support for code-generation in C#
+pub mod csharp;
 /// Support for code-generation in Go >= 1.13.
 pub mod golang;
 /// Support for code-generation in Java 8.
@@ -17,21 +19,30 @@ pub mod python3;
 pub mod rust;
 /// Support for code-generation in TypeScript.
 pub mod typescript;
-// Support for code-generation in C#
-pub mod csharp;
 
 /// Internals shared between languages.
 mod common;
 
-/// Read all ABI files in a directory. This supports both new and old `ScriptABI`s.
-pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<ScriptABI>> {
-    let mut abis = Vec::<ScriptABI>::new();
-    for entry in std::fs::read_dir(dir_path)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            continue;
+fn get_abi_paths(dir: &Path) -> std::io::Result<Vec<String>> {
+    let mut abi_paths = Vec::new();
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                abi_paths.append(&mut get_abi_paths(&path)?);
+            } else if let Some("abi") = path.extension().and_then(OsStr::to_str) {
+                abi_paths.push(path.to_str().unwrap().to_string());
+            }
         }
+    }
+    Ok(abi_paths)
+}
+
+/// Read all ABI files in a directory. This supports both new and old `ScriptABI`s.
+pub fn read_abis(dir_path: &Path) -> anyhow::Result<Vec<ScriptABI>> {
+    let mut abis = Vec::<ScriptABI>::new();
+    for path in get_abi_paths(dir_path)? {
         let mut buffer = Vec::new();
         let mut f = std::fs::File::open(path)?;
         f.read_to_end(&mut buffer)?;

@@ -13,6 +13,20 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-03-16 Add support for script functions in `TransactionDataView` and `ScriptView`
+
+Update `ScriptView` to support script functions. This adds three new nullable
+fields to the `ScriptView` data type; `module_address`, `module_name`, and
+`function_name`. These fields are set to non-null values for script functions,
+and when the `ScriptView` `type` field is set to `"script_function"`.  These
+three new fields for script functions together represent a fully-qualified call
+into a Move module of the form `<module_address>::<module_name>::<function_name>`.
+
+Additionally, within the `UserTransaction` variant of the `TransactionDataView`
+for script functions, the `code` field is empty as no code is sent with the
+transaction, and the script bytes remain the BCS serialized bytes of the script
+being sent.
+
 ## 2021-03-09 Add `preburn_queues` to `AccountRoleView` for designated dealers
 
 Designated dealers will now be able to have multiple preburn requests in-flight

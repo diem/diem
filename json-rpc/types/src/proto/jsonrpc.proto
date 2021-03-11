@@ -265,7 +265,7 @@ message TransactionData {
 message Script {
   /**
    * Name of the script code, see https://github.com/diem/diem/blob/main/language/diem-framework/transaction_scripts/doc/transaction_script_documentation.md for all available script names.
-   * Type is set as "unknown" if script code can't be recognized, or transaction payload is not a script.
+   * Type is set as "unknown" if script code can't be recognized, "script_function" if it was a script function, or the transaction payload is not a script.
    * It is possible server side does not know the code and the code is valid.
    */
   string type = 1;
@@ -318,6 +318,21 @@ message Script {
    * See [DIP-4](https://dip.diem.com/dip-4/) for more details.
    */
   string metadata_signature = 9 [json_name="metadata_signature"];
+
+  /**
+  * Hex encoded account address as a string
+  */
+  string module_address = 10;
+  /**
+  * The module name published under `module_address` where the script function
+  * being called is defined.
+  */
+  string module_name = 11;
+  /**
+  * The name of the function being called, and that is defined in the module
+  * with name `module_name` published under the `module_address` account address.
+  */
+  string function_name = 12;
 }
 
 message CurrencyInfo {

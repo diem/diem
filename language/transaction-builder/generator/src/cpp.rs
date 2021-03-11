@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
-use move_core_types::language_storage::TypeTag;
+use diem_types::transaction::{
+    ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+};
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{ModuleId, TypeTag},
+};
 use serde_generate::indent::{IndentConfig, IndentedWriter};
 
 use std::{
@@ -12,11 +17,7 @@ use std::{
 };
 
 /// Output a header-only library providing C++ transaction builders for the given ABIs.
-pub fn output(
-    out: &mut dyn Write,
-    abis: &[TransactionScriptABI],
-    namespace: Option<&str>,
-) -> Result<()> {
+pub fn output(out: &mut dyn Write, abis: &[ScriptABI], namespace: Option<&str>) -> Result<()> {
     let mut emitter = CppEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
         namespace,
@@ -26,7 +27,12 @@ pub fn output(
     emitter.output_open_namespace()?;
     emitter.output_using_namespaces()?;
     for abi in abis {
-        emitter.output_builder_definition(abi)?;
+        match abi {
+            ScriptABI::TransactionScript(abi) => {
+                emitter.output_transaction_script_builder_definition(abi)?
+            }
+            ScriptABI::ScriptFunction(abi) => emitter.output_script_fun_builder_definition(abi)?,
+        };
     }
     emitter.output_close_namespace()
 }
@@ -34,7 +40,7 @@ pub fn output(
 /// Output the headers of a library providing C++ transaction builders for the given ABIs.
 pub fn output_library_header(
     out: &mut dyn Write,
-    abis: &[TransactionScriptABI],
+    abis: &[ScriptABI],
     namespace: Option<&str>,
 ) -> Result<()> {
     let mut emitter = CppEmitter {
@@ -54,7 +60,7 @@ pub fn output_library_header(
 /// Output the function definitions of a library providing C++ transaction builders for the given ABIs.
 pub fn output_library_body(
     out: &mut dyn Write,
-    abis: &[TransactionScriptABI],
+    abis: &[ScriptABI],
     library_name: &str,
     namespace: Option<&str>,
 ) -> Result<()> {
@@ -67,7 +73,12 @@ pub fn output_library_body(
     emitter.output_open_namespace()?;
     emitter.output_using_namespaces()?;
     for abi in abis {
-        emitter.output_builder_definition(abi)?;
+        match abi {
+            ScriptABI::TransactionScript(abi) => {
+                emitter.output_transaction_script_builder_definition(abi)?
+            }
+            ScriptABI::ScriptFunction(abi) => emitter.output_script_fun_builder_definition(abi)?,
+        };
     }
     emitter.output_close_namespace()
 }
@@ -120,23 +131,35 @@ using namespace diem_types;
         Ok(())
     }
 
-    fn output_builder_declaration(&mut self, abi: &TransactionScriptABI) -> Result<()> {
+    fn output_builder_declaration(&mut self, abi: &ScriptABI) -> Result<()> {
         self.output_doc(abi.doc())?;
-        writeln!(
-            self.out,
-            "Script encode_{}_script({});",
-            abi.name(),
-            [
-                Self::quote_type_parameters(abi.ty_args()),
-                Self::quote_parameters(abi.args()),
-            ]
-            .concat()
-            .join(", ")
-        )?;
+        let parameters = [
+            Self::quote_type_parameters(abi.ty_args()),
+            Self::quote_parameters(abi.args()),
+        ]
+        .concat()
+        .join(", ");
+        match abi {
+            ScriptABI::TransactionScript(abi) => writeln!(
+                self.out,
+                "Script encode_{}_script({});",
+                abi.name(),
+                parameters,
+            )?,
+            ScriptABI::ScriptFunction(abi) => writeln!(
+                self.out,
+                "TransactionPayload encode_{}_script_function({});",
+                abi.name(),
+                parameters,
+            )?,
+        };
         Ok(())
     }
 
-    fn output_builder_definition(&mut self, abi: &TransactionScriptABI) -> Result<()> {
+    fn output_transaction_script_builder_definition(
+        &mut self,
+        abi: &TransactionScriptABI,
+    ) -> Result<()> {
         if self.inlined_definitions {
             self.output_doc(abi.doc())?;
         }
@@ -159,11 +182,50 @@ using namespace diem_types;
         writeln!(
             self.out,
             r#"    return Script {{
-        {},
-        std::vector<TypeTag> {{{}}},
-        std::vector<TransactionArgument> {{{}}},
-    }};"#,
+                {},
+                std::vector<TypeTag> {{{}}},
+                std::vector<TransactionArgument> {{{}}},
+            }};"#,
             Self::quote_code(abi.code()),
+            Self::quote_type_arguments(abi.ty_args()),
+            Self::quote_arguments(abi.args()),
+        )?;
+        writeln!(self.out, "}}")?;
+        Ok(())
+    }
+
+    fn output_script_fun_builder_definition(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
+        if self.inlined_definitions {
+            self.output_doc(abi.doc())?;
+        }
+        writeln!(
+            self.out,
+            "{}TransactionPayload encode_{}_script_function({}) {{",
+            if self.inlined_definitions {
+                "inline "
+            } else {
+                ""
+            },
+            abi.name(),
+            [
+                Self::quote_type_parameters(abi.ty_args()),
+                Self::quote_parameters(abi.args()),
+            ]
+            .concat()
+            .join(", ")
+        )?;
+        writeln!(
+            self.out,
+            r#"    return TransactionPayload {{
+                TransactionPayload::ScriptFunction {{
+                    {},
+                    {},
+                    std::vector<TypeTag> {{{}}},
+                    std::vector<TransactionArgument> {{{}}},
+                }}
+            }};"#,
+            Self::quote_module_id(abi.module_name()),
+            Self::quote_identifier(abi.name()),
             Self::quote_type_arguments(abi.ty_args()),
             Self::quote_arguments(abi.args()),
         )?;
@@ -197,6 +259,30 @@ using namespace diem_types;
                 .map(|x| format!("{}", x))
                 .collect::<Vec<_>>()
                 .join(", ")
+        )
+    }
+
+    fn quote_identifier(ident: &str) -> String {
+        format!("Identifier {{ \"{}\" }}", ident)
+    }
+
+    fn quote_address(address: &AccountAddress) -> String {
+        format!(
+            "std::array<uint8_t, 16>{{ {} }}",
+            address
+                .to_vec()
+                .iter()
+                .map(|x| format!("{}", x))
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
+    }
+
+    fn quote_module_id(module_id: &ModuleId) -> String {
+        format!(
+            "ModuleId {{ {}, {} }}",
+            Self::quote_address(module_id.address()),
+            Self::quote_identifier(module_id.name().as_str())
         )
     }
 
@@ -272,19 +358,10 @@ impl crate::SourceInstaller for Installer {
         std::fs::create_dir_all(dir_path)?;
         let header_path = dir_path.join(name.to_string() + ".hpp");
         let mut header = std::fs::File::create(&header_path)?;
-        // TODO(#7876): Update to handle script function ABIs
-        let abis = abis
-            .iter()
-            .cloned()
-            .filter_map(|abi| match abi {
-                ScriptABI::TransactionScript(abi) => Some(abi),
-                ScriptABI::ScriptFunction(_) => None,
-            })
-            .collect::<Vec<_>>();
-        output_library_header(&mut header, &abis, Some(name))?;
+        output_library_header(&mut header, abis, Some(name))?;
         let body_path = dir_path.join(name.to_string() + ".cpp");
         let mut body = std::fs::File::create(&body_path)?;
-        output_library_body(&mut body, &abis, name, Some(name))?;
+        output_library_body(&mut body, abis, name, Some(name))?;
         Ok(())
     }
 }

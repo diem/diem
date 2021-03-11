@@ -646,6 +646,17 @@ pub struct ScriptView {
     pub metadata: Option<BytesView>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata_signature: Option<BytesView>,
+
+    // Script functions
+    // The address that the module is published under
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub module_address: Option<AccountAddress>,
+    // The name of the module that the called function is defined in
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub module_name: Option<String>,
+    // The (unqualified) name of the function being called.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function_name: Option<String>,
 }
 
 impl ScriptView {

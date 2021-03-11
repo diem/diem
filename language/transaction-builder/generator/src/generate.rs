@@ -7,7 +7,6 @@
 //! cargo run -p transaction-builder-generator -- --help
 //! '''
 
-use diem_types::transaction::ScriptABI;
 use serde_generate as serdegen;
 use serde_reflection::Registry;
 use std::path::PathBuf;
@@ -77,17 +76,8 @@ struct Options {
 
 fn main() {
     let options = Options::from_args();
-    let script_abis =
-        buildgen::read_abis(options.abi_directory).expect("Failed to read ABI in directory");
-    // TODO(#7876): Update to handle script function ABIs
-    let abis = script_abis
-        .iter()
-        .cloned()
-        .filter_map(|abi| match abi {
-            ScriptABI::TransactionScript(abi) => Some(abi),
-            ScriptABI::ScriptFunction(_) => None,
-        })
-        .collect::<Vec<_>>();
+    let abis =
+        buildgen::read_abis(&options.abi_directory).expect("Failed to read ABI in directory");
 
     let install_dir = match options.target_source_dir {
         None => {
@@ -215,7 +205,7 @@ fn main() {
 
     if let Some(name) = options.module_name {
         installer
-            .install_transaction_builders(&name, &script_abis[..])
+            .install_transaction_builders(&name, abis.as_slice())
             .unwrap();
     }
 }

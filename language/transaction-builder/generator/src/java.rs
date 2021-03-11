@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common;
-use diem_types::transaction::{ArgumentABI, ScriptABI, TransactionScriptABI, TypeArgumentABI};
-use move_core_types::language_storage::TypeTag;
+use diem_types::transaction::{
+    ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI,
+};
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{ModuleId, TypeTag},
+};
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
     java, CodeGeneratorConfig,
@@ -22,7 +27,7 @@ use std::{
 pub fn write_source_files(
     install_dir: std::path::PathBuf,
     package_name: &str,
-    abis: &[TransactionScriptABI],
+    abis: &[ScriptABI],
 ) -> Result<()> {
     write_script_call_files(install_dir.clone(), package_name, abis)?;
     write_helper_file(install_dir, package_name, abis)
@@ -32,7 +37,7 @@ pub fn write_source_files(
 fn write_helper_file(
     install_dir: std::path::PathBuf,
     package_name: &str,
-    abis: &[TransactionScriptABI],
+    abis: &[ScriptABI],
 ) -> Result<()> {
     let mut dir_path = install_dir;
     let parts = package_name.split('.').collect::<Vec<_>>();
@@ -56,16 +61,21 @@ fn write_helper_file(
     for abi in abis {
         emitter.output_script_encoder_function(abi)?;
     }
-    for abi in abis {
-        emitter.output_script_decoder_function(abi)?;
+    for abi in common::transaction_script_abis(abis).iter() {
+        emitter.output_transaction_script_decoder_function(abi)?;
+    }
+    for abi in common::script_function_abis(abis).iter() {
+        emitter.output_script_function_decoder_function(abi)?;
     }
 
-    emitter.output_encoder_map(abis)?;
-    for abi in abis {
-        emitter.output_code_constant(abi)?;
+    emitter.output_transaction_script_encoder_map(&common::transaction_script_abis(abis))?;
+    emitter.output_script_function_encoder_map(&common::script_function_abis(abis))?;
+    for abi in common::transaction_script_abis(abis) {
+        emitter.output_code_constant(&abi)?;
     }
     // Must be defined after the constants.
-    emitter.output_decoder_map(abis)?;
+    emitter.output_transaction_script_decoder_map(&common::transaction_script_abis(abis))?;
+    emitter.output_script_function_decoder_map(&common::script_function_abis(abis))?;
 
     emitter.output_decoding_helpers(abis)?;
 
@@ -76,15 +86,29 @@ fn write_helper_file(
 fn write_script_call_files(
     install_dir: std::path::PathBuf,
     package_name: &str,
-    abis: &[TransactionScriptABI],
+    abis: &[ScriptABI],
 ) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("com.diem.types");
-    let script_registry: BTreeMap<_, _> = vec![(
+    let (transaction_script_abis, script_fun_abis): (Vec<_>, Vec<_>) = abis
+        .iter()
+        .cloned()
+        .partition(|abi| abi.is_transaction_script_abi());
+
+    let mut script_registry: BTreeMap<_, _> = vec![(
         "ScriptCall".to_string(),
-        common::make_abi_enum_container(abis),
+        common::make_abi_enum_container(transaction_script_abis.as_slice()),
     )]
     .into_iter()
     .collect();
+
+    let mut script_function_registry: BTreeMap<_, _> = vec![(
+        "ScriptFunctionCall".to_string(),
+        common::make_abi_enum_container(script_fun_abis.as_slice()),
+    )]
+    .into_iter()
+    .collect();
+
+    script_registry.append(&mut script_function_registry);
     let mut comments: BTreeMap<_, _> = abis
         .iter()
         .map(|abi| {
@@ -92,7 +116,14 @@ fn write_script_call_files(
                 .split('.')
                 .map(String::from)
                 .collect::<Vec<_>>();
-            paths.push("ScriptCall".to_string());
+            paths.push(
+                if abi.is_transaction_script_abi() {
+                    "ScriptCall"
+                } else {
+                    "ScriptFunctionCall"
+                }
+                .to_string(),
+            );
             paths.push(abi.name().to_camel_case());
             (paths, prepare_doc_string(abi.doc()))
         })
@@ -100,6 +131,10 @@ fn write_script_call_files(
     comments.insert(
         vec!["ScriptCall".to_string()],
         "Structured representation of a call into a known Move script.".into(),
+    );
+    comments.insert(
+        vec!["ScriptFunctionCall".to_string()],
+        "Structured representation of a call into a known Move script function.".into(),
     );
 
     let config = CodeGeneratorConfig::new(package_name.to_string())
@@ -152,6 +187,10 @@ import java.lang.IllegalArgumentException;
 import java.lang.IndexOutOfBoundsException;
 import com.diem.types.AccountAddress;
 import com.diem.types.Script;
+import com.diem.types.ScriptFunction;
+import com.diem.types.TransactionPayload;
+import com.diem.types.Identifier;
+import com.diem.types.ModuleId;
 import com.diem.types.TransactionArgument;
 import com.diem.types.TypeTag;
 import com.novi.serde.Int128;
@@ -173,7 +212,21 @@ import com.novi.serde.Bytes;
  * @return Encoded script.
  */
 public static Script encode_script(ScriptCall call) {{
-    EncodingHelper helper = SCRIPT_ENCODER_MAP.get(call.getClass());
+    ScriptEncodingHelper helper = TRANSACTION_SCRIPT_ENCODER_MAP.get(call.getClass());
+    return helper.encode(call);
+}}"#
+        )?;
+        writeln!(
+            self.out,
+            r#"
+/**
+ * Build a Diem {{@link com.diem.types.TransactionPayload}} from a structured value {{@link ScriptFunctionCall}}.
+ *
+ * @param call {{@link ScriptFunctionCall}} value to encode.
+ * @return Encoded TransactionPayload.
+ */
+public static TransactionPayload encode_script_function(ScriptFunctionCall call) {{
+    ScriptFunctionEncodingHelper helper = SCRIPT_FUNCTION_ENCODER_MAP.get(call.getClass());
     return helper.encode(call);
 }}"#
         )
@@ -190,44 +243,48 @@ public static Script encode_script(ScriptCall call) {{
  * @return Decoded {{@link ScriptCall}} value.
  */
 public static ScriptCall decode_script(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
-    DecodingHelper helper = SCRIPT_DECODER_MAP.get(script.code);
+    TransactionScriptDecodingHelper helper = TRANSACTION_SCRIPT_DECODER_MAP.get(script.code);
     if (helper == null) {{
         throw new IllegalArgumentException("Unknown script bytecode");
     }}
     return helper.decode(script);
 }}
 "#
+        )?;
+
+        writeln!(
+            self.out,
+            r#"
+/**
+ * Try to recognize a Diem {{@link com.diem.types.TransactionPayload}} and convert it into a structured value {{@code ScriptFunctionCall}}.
+ *
+ * @param payload {{@link com.diem.types.TransactionPayload}} values to decode.
+ * @return Decoded {{@link ScriptFunctionCall}} value.
+ */
+public static ScriptFunctionCall decode_script_function_payload(TransactionPayload payload) throws IllegalArgumentException, IndexOutOfBoundsException {{
+    if (payload instanceof TransactionPayload.ScriptFunction) {{
+        ScriptFunction script = ((TransactionPayload.ScriptFunction)payload).value;
+        ScriptFunctionDecodingHelper helper = SCRIPT_FUNCTION_DECODER_MAP.get(script.module.name.value + script.function.value);
+        if (helper == null) {{
+            throw new IllegalArgumentException("Unknown script function");
+        }}
+        return helper.decode(payload);
+    }} else {{
+        throw new IllegalArgumentException("Unknown transaction payload");
+    }}
+}}
+"#
         )
     }
 
-    fn output_script_encoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
-        let quoted_type_params: Vec<_> = abi
-            .ty_args()
-            .iter()
-            .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
-            .collect();
-        let quoted_type_params_doc: Vec<_> = abi
-            .ty_args()
-            .iter()
-            .map(|ty_arg| format!("{} {{@code TypeTag}} value", ty_arg.name()))
-            .collect();
-        let quoted_params: Vec<_> = abi
-            .args()
-            .iter()
-            .map(|arg| format!("{} {}", Self::quote_type(arg.type_tag()), arg.name()))
-            .collect();
-        let quoted_params_doc: Vec<_> = abi
-            .args()
-            .iter()
-            .map(|arg| {
-                format!(
-                    "{} {{@code {}}} value",
-                    arg.name(),
-                    Self::quote_type(arg.type_tag())
-                )
-            })
-            .collect();
-
+    fn emit_transaction_script_encoder(
+        &mut self,
+        abi: &TransactionScriptABI,
+        quoted_type_params: Vec<String>,
+        quoted_type_params_doc: Vec<String>,
+        quoted_params: Vec<String>,
+        quoted_params_doc: Vec<String>,
+    ) -> Result<()> {
         writeln!(
             self.out,
             "\n{}public static Script encode_{}_script({}) {{",
@@ -255,7 +312,95 @@ return builder.build();"#,
         writeln!(self.out, "}}")
     }
 
-    fn output_script_decoder_function(&mut self, abi: &TransactionScriptABI) -> Result<()> {
+    fn emit_script_function_encoder(
+        &mut self,
+        abi: &ScriptFunctionABI,
+        quoted_type_params: Vec<String>,
+        quoted_type_params_doc: Vec<String>,
+        quoted_params: Vec<String>,
+        quoted_params_doc: Vec<String>,
+    ) -> Result<()> {
+        writeln!(
+            self.out,
+            "\n{}public static TransactionPayload encode_{}_script_function({}) {{",
+            Self::quote_doc(
+                abi.doc(),
+                [quoted_type_params_doc, quoted_params_doc].concat(),
+                "Encoded {@link com.diem.types.TransactionPayload} value.",
+            ),
+            abi.name(),
+            [quoted_type_params, quoted_params].concat().join(", ")
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            r#"ScriptFunction.Builder script_function_builder = new ScriptFunction.Builder();
+script_function_builder.ty_args = java.util.Arrays.asList({});
+script_function_builder.args = java.util.Arrays.asList({});
+script_function_builder.function = {};
+script_function_builder.module = {};
+
+TransactionPayload.ScriptFunction.Builder builder = new TransactionPayload.ScriptFunction.Builder();
+builder.value = script_function_builder.build();
+return builder.build();"#,
+            Self::quote_type_arguments(abi.ty_args()),
+            Self::quote_arguments(abi.args()),
+            Self::quote_identifier(abi.name()),
+            Self::quote_module_id(abi.module_name()),
+        )?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
+    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+        let quoted_type_params: Vec<_> = abi
+            .ty_args()
+            .iter()
+            .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
+            .collect();
+        let quoted_type_params_doc: Vec<_> = abi
+            .ty_args()
+            .iter()
+            .map(|ty_arg| format!("{} {{@code TypeTag}} value", ty_arg.name()))
+            .collect();
+        let quoted_params: Vec<_> = abi
+            .args()
+            .iter()
+            .map(|arg| format!("{} {}", Self::quote_type(arg.type_tag()), arg.name()))
+            .collect();
+        let quoted_params_doc: Vec<_> = abi
+            .args()
+            .iter()
+            .map(|arg| {
+                format!(
+                    "{} {{@code {}}} value",
+                    arg.name(),
+                    Self::quote_type(arg.type_tag())
+                )
+            })
+            .collect();
+        match abi {
+            ScriptABI::TransactionScript(abi) => self.emit_transaction_script_encoder(
+                abi,
+                quoted_type_params,
+                quoted_type_params_doc,
+                quoted_params,
+                quoted_params_doc,
+            ),
+            ScriptABI::ScriptFunction(abi) => self.emit_script_function_encoder(
+                abi,
+                quoted_type_params,
+                quoted_type_params_doc,
+                quoted_params,
+                quoted_params_doc,
+            ),
+        }
+    }
+
+    fn output_transaction_script_decoder_function(
+        &mut self,
+        abi: &TransactionScriptABI,
+    ) -> Result<()> {
         writeln!(
             self.out,
             "\nprivate static ScriptCall decode_{}_script(Script {}script) throws IllegalArgumentException, IndexOutOfBoundsException {{",
@@ -296,22 +441,76 @@ return builder.build();"#,
         Ok(())
     }
 
-    fn output_encoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+    fn output_script_function_decoder_function(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
         writeln!(
             self.out,
-            r#"
-interface EncodingHelper {{
-    public Script encode(ScriptCall call);
-}}
-
-private static final java.util.Map<Class<?>, EncodingHelper> SCRIPT_ENCODER_MAP = initEncoderMap();
-
-private static java.util.Map<Class<?>, EncodingHelper> initEncoderMap() {{"#
+            "\nprivate static ScriptFunctionCall decode_{}_script_function(TransactionPayload {}payload) throws IllegalArgumentException, IndexOutOfBoundsException {{",
+            abi.name(),
+            // prevent warning "unused variable"
+            if abi.ty_args().is_empty() && abi.args().is_empty() {
+            "_"
+            } else {
+                ""
+            }
         )?;
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<Class<?>, EncodingHelper> map = new java.util.HashMap<>();"
+            "if(!(payload instanceof TransactionPayload.ScriptFunction)) {{
+                throw new IllegalArgumentException(\"Transaction payload not a Script Function\");
+        }}"
+        )?;
+        writeln!(
+            self.out,
+            "ScriptFunction script = ((TransactionPayload.ScriptFunction)payload).value;"
+        )?;
+        writeln!(
+            self.out,
+            "ScriptFunctionCall.{0}.Builder builder = new ScriptFunctionCall.{0}.Builder();",
+            abi.name().to_camel_case(),
+        )?;
+        for (index, ty_arg) in abi.ty_args().iter().enumerate() {
+            writeln!(
+                self.out,
+                "builder.{} = script.ty_args.get({});",
+                ty_arg.name(),
+                index,
+            )?;
+        }
+        for (index, arg) in abi.args().iter().enumerate() {
+            writeln!(
+                self.out,
+                "builder.{} = Helpers.decode_{}_argument(script.args.get({}));",
+                arg.name(),
+                common::mangle_type(arg.type_tag()),
+                index,
+            )?;
+        }
+        writeln!(self.out, "return builder.build();")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")?;
+        Ok(())
+    }
+
+    fn output_transaction_script_encoder_map(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+interface ScriptEncodingHelper {{
+    public Script encode(ScriptCall call);
+}}
+
+private static final java.util.Map<Class<?>, ScriptEncodingHelper> TRANSACTION_SCRIPT_ENCODER_MAP = initTransactionScriptEncoderMap();
+
+private static java.util.Map<Class<?>, ScriptEncodingHelper> initTransactionScriptEncoderMap() {{"#
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "java.util.HashMap<Class<?>, ScriptEncodingHelper> map = new java.util.HashMap<>();"
         )?;
         for abi in abis {
             let params = std::iter::empty()
@@ -322,7 +521,7 @@ private static java.util.Map<Class<?>, EncodingHelper> initEncoderMap() {{"#
                 .join(", ");
             writeln!(
                 self.out,
-                "map.put(ScriptCall.{0}.class, (EncodingHelper)((call) -> {{
+                "map.put(ScriptCall.{0}.class, (ScriptEncodingHelper)((call) -> {{
     ScriptCall.{0} obj = (ScriptCall.{0})call;
     return Helpers.encode_{1}_script({2});
 }}));",
@@ -336,27 +535,70 @@ private static java.util.Map<Class<?>, EncodingHelper> initEncoderMap() {{"#
         writeln!(self.out, "}}")
     }
 
-    fn output_decoder_map(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+    fn output_script_function_encoder_map(&mut self, abis: &[ScriptFunctionABI]) -> Result<()> {
         writeln!(
             self.out,
             r#"
-interface DecodingHelper {{
-    public ScriptCall decode(Script script);
+interface ScriptFunctionEncodingHelper {{
+    public TransactionPayload encode(ScriptFunctionCall call);
 }}
 
-private static final java.util.Map<Bytes, DecodingHelper> SCRIPT_DECODER_MAP = initDecoderMap();
+private static final java.util.Map<Class<?>, ScriptFunctionEncodingHelper> SCRIPT_FUNCTION_ENCODER_MAP = initScriptFunctionEncoderMap();
 
-private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
+private static java.util.Map<Class<?>, ScriptFunctionEncodingHelper> initScriptFunctionEncoderMap() {{"#
         )?;
         self.out.indent();
         writeln!(
             self.out,
-            "java.util.HashMap<Bytes, DecodingHelper> map = new java.util.HashMap<>();"
+            "java.util.HashMap<Class<?>, ScriptFunctionEncodingHelper> map = new java.util.HashMap<>();"
+        )?;
+        for abi in abis {
+            let params = std::iter::empty()
+                .chain(abi.ty_args().iter().map(TypeArgumentABI::name))
+                .chain(abi.args().iter().map(ArgumentABI::name))
+                .map(|name| format!("obj.{}", name))
+                .collect::<Vec<_>>()
+                .join(", ");
+            writeln!(
+                self.out,
+                "map.put(ScriptFunctionCall.{0}.class, (ScriptFunctionEncodingHelper)((call) -> {{
+    ScriptFunctionCall.{0} obj = (ScriptFunctionCall.{0})call;
+    return Helpers.encode_{1}_script_function({2});
+}}));",
+                abi.name().to_camel_case(),
+                abi.name(),
+                params,
+            )?;
+        }
+        writeln!(self.out, "return map;")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
+    fn output_transaction_script_decoder_map(
+        &mut self,
+        abis: &[TransactionScriptABI],
+    ) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+interface TransactionScriptDecodingHelper {{
+    public ScriptCall decode(Script script);
+}}
+
+private static final java.util.Map<Bytes, TransactionScriptDecodingHelper> TRANSACTION_SCRIPT_DECODER_MAP = initTransactionScriptDecoderMap();
+
+private static java.util.Map<Bytes, TransactionScriptDecodingHelper> initTransactionScriptDecoderMap() {{"#
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "java.util.HashMap<Bytes, TransactionScriptDecodingHelper> map = new java.util.HashMap<>();"
         )?;
         for abi in abis {
             writeln!(
                 self.out,
-                "map.put(new Bytes({}_CODE), (DecodingHelper)((script) -> Helpers.decode_{}_script(script)));",
+                "map.put(new Bytes({}_CODE), (TransactionScriptDecodingHelper)((script) -> Helpers.decode_{}_script(script)));",
                 abi.name().to_shouty_snake_case(),
                 abi.name()
             )?;
@@ -366,7 +608,37 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
         writeln!(self.out, "}}")
     }
 
-    fn output_decoding_helpers(&mut self, abis: &[TransactionScriptABI]) -> Result<()> {
+    fn output_script_function_decoder_map(&mut self, abis: &[ScriptFunctionABI]) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+interface ScriptFunctionDecodingHelper {{
+    public ScriptFunctionCall decode(TransactionPayload payload);
+}}
+
+private static final java.util.Map<String, ScriptFunctionDecodingHelper> SCRIPT_FUNCTION_DECODER_MAP = initDecoderMap();
+
+private static java.util.Map<String, ScriptFunctionDecodingHelper> initDecoderMap() {{"#
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "java.util.HashMap<String, ScriptFunctionDecodingHelper> map = new java.util.HashMap<>();"
+        )?;
+        for abi in abis {
+            writeln!(
+                self.out,
+                "map.put(\"{0}{1}\", (ScriptFunctionDecodingHelper)((payload) -> Helpers.decode_{1}_script_function(payload)));",
+                abi.module_name().name(),
+                abi.name()
+            )?;
+        }
+        writeln!(self.out, "return map;")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
+    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
         let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
@@ -419,6 +691,30 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
                 .join(", ")
         )?;
         Ok(())
+    }
+
+    fn quote_identifier(ident: &str) -> String {
+        format!("new Identifier(\"{}\")", ident)
+    }
+
+    fn quote_address(address: &AccountAddress) -> String {
+        format!(
+            "AccountAddress.valueOf(new byte[] {{ {} }})",
+            address
+                .to_vec()
+                .iter()
+                .map(|x| format!("{}", x))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    fn quote_module_id(module_id: &ModuleId) -> String {
+        format!(
+            "new ModuleId({}, {})",
+            Self::quote_address(module_id.address()),
+            Self::quote_identifier(module_id.name().as_str())
+        )
     }
 
     fn quote_doc<I>(doc: &str, params_doc: I, return_doc: &str) -> String
@@ -502,16 +798,7 @@ impl crate::SourceInstaller for Installer {
         package_name: &str,
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
-        // TODO(#7876): Update to handle script function ABIs
-        let abis = abis
-            .iter()
-            .cloned()
-            .filter_map(|abi| match abi {
-                ScriptABI::TransactionScript(abi) => Some(abi),
-                ScriptABI::ScriptFunction(_) => None,
-            })
-            .collect::<Vec<_>>();
-        write_source_files(self.install_dir.clone(), package_name, &abis)?;
+        write_source_files(self.install_dir.clone(), package_name, abis)?;
         Ok(())
     }
 }

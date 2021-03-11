@@ -1,16 +1,17 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::shim::tmp_new_transaction_scripts;
+use compiled_stdlib::legacy::transaction_scripts;
 use diem_crypto::HashValue;
 use diem_json_rpc_types::views::{
     BytesView, MoveAbortExplanationView, ScriptView, TransactionDataView, VMStatusView,
 };
 use diem_types::{
-    transaction::{Script, Transaction, TransactionArgument, TransactionPayload},
+    transaction::{Script, ScriptFunction, Transaction, TransactionArgument, TransactionPayload},
     vm_status::{AbortLocation, KeptVMStatus},
 };
 use move_core_types::language_storage::{StructTag, TypeTag};
+use std::convert::TryFrom;
 
 /// Helper macros. Used to simplify adding new RpcHandler to Registry
 /// `registry` - name of local registry variable
@@ -104,12 +105,14 @@ pub fn transaction_data_view_from_transaction(tx: Transaction) -> TransactionDat
 
             let script_bytes: BytesView = match t.payload() {
                 TransactionPayload::Script(s) => bcs::to_bytes(s).unwrap_or_default(),
+                TransactionPayload::ScriptFunction(s) => bcs::to_bytes(s).unwrap_or_default(),
                 _ => vec![],
             }
             .into();
 
             let script: ScriptView = match t.payload() {
                 TransactionPayload::Script(s) => script_view_from_script(s),
+                TransactionPayload::ScriptFunction(s) => script_view_from_script_function(s),
                 _ => ScriptView::unknown(),
             };
 
@@ -133,7 +136,8 @@ pub fn transaction_data_view_from_transaction(tx: Transaction) -> TransactionDat
 }
 
 pub fn script_view_from_script(script: &Script) -> ScriptView {
-    let name = tmp_new_transaction_scripts::name_for_script(script.code())
+    let name = transaction_scripts::LegacyStdlibScript::try_from(script.code())
+        .map(|x| format!("{}", x))
         .unwrap_or_else(|_| "unknown".to_string());
     let ty_args: Vec<String> = script
         .ty_args()
@@ -176,4 +180,30 @@ pub fn script_view_from_script(script: &Script) -> ScriptView {
     }
 
     view
+}
+
+pub fn script_view_from_script_function(script: &ScriptFunction) -> ScriptView {
+    let ty_args: Vec<String> = script
+        .ty_args()
+        .iter()
+        .map(|type_tag| match type_tag {
+            TypeTag::Struct(StructTag { module, .. }) => module.to_string(),
+            tag => format!("{}", tag),
+        })
+        .collect();
+    ScriptView {
+        r#type: "script_function".to_string(),
+        module_address: Some(*script.module().address()),
+        module_name: Some(script.module().name().to_string()),
+        function_name: Some(script.function().to_string()),
+        arguments: Some(
+            script
+                .args()
+                .iter()
+                .map(|arg| format!("{:?}", &arg))
+                .collect(),
+        ),
+        type_arguments: Some(ty_args),
+        ..Default::default()
+    }
 }

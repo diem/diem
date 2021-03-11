@@ -14,9 +14,12 @@
 #![allow(unused_imports)]
 use diem_types::{
     account_address::AccountAddress,
-    transaction::{Script, TransactionArgument},
+    transaction::{Script, ScriptFunction, TransactionArgument, TransactionPayload},
 };
-use move_core_types::language_storage::TypeTag;
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{ModuleId, TypeTag},
+};
 use std::collections::BTreeMap as Map;
 
 type Bytes = Vec<u8>;
@@ -106,6 +109,41 @@ pub enum ScriptCall {
     AddRecoveryRotationCapability { recovery_address: AccountAddress },
 
     /// # Summary
+    /// Adds a script hash to the transaction allowlist. This transaction
+    /// can only be sent by the Diem Root account. Scripts with this hash can be
+    /// sent afterward the successful execution of this script.
+    ///
+    /// # Technical Description
+    ///
+    /// The sending account (`dr_account`) must be the Diem Root account. The script allow
+    /// list must not already hold the script `hash` being added. The `sliding_nonce` must be
+    /// a valid nonce for the Diem Root account. After this transaction has executed
+    /// successfully a reconfiguration will be initiated, and the on-chain config
+    /// `DiemTransactionPublishingOption::DiemTransactionPublishingOption`'s
+    /// `script_allow_list` field will contain the new script `hash` and transactions
+    /// with this `hash` can be successfully sent to the network.
+    ///
+    /// # Parameters
+    /// | Name            | Type         | Description                                                                                     |
+    /// | ------          | ------       | -------------                                                                                   |
+    /// | `dr_account`    | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
+    /// | `hash`          | `vector<u8>` | The hash of the script to be added to the script allowlist.                                     |
+    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                                           | Description                                                                                |
+    /// | ----------------           | --------------                                                         | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                                         | A `SlidingNonce` resource is not published under `dr_account`.                             |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                                         | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                                         | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                                | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                                           | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                                                   | The sending account is not the Diem Root account.                                         |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EINVALID_SCRIPT_HASH`               | The script `hash` is an invalid length.                                                    |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT` | The on-chain allowlist already contains the script `hash`.                                 |
+    AddToScriptAllowList { hash: Bytes, sliding_nonce: u64 },
+
+    /// # Summary
     /// Adds a validator account to the validator set, and triggers a
     /// reconfiguration of the system to admit the account to the validator set for the system. This
     /// transaction can only be successfully called by the Diem Root account.
@@ -123,25 +161,24 @@ pub enum ScriptCall {
     /// # Parameters
     /// | Name                | Type         | Description                                                                                                                        |
     /// | ------              | ------       | -------------                                                                                                                      |
-    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
     /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
     /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
     /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                                                               |
-    /// | ----------------           | --------------                               | -------------                                                                                                                             |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
-    /// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
+    /// | Error Category             | Error Reason                                  | Description                                                                                                                               |
+    /// | ----------------           | --------------                                | -------------                                                                                                                             |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                                                                             |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                                                                         |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                        |
+    /// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                        |
+    /// | 0                          | 0                                             | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
     /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
     /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
     /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
     ///
     /// # Related Scripts
     /// * `Script::create_validator_account`
@@ -155,6 +192,62 @@ pub enum ScriptCall {
         sliding_nonce: u64,
         validator_name: Bytes,
         validator_address: AccountAddress,
+    },
+
+    /// # Summary
+    /// Burns all coins held in the preburn resource at the specified
+    /// preburn address and removes them from the system. The sending account must
+    /// be the Treasury Compliance account.
+    /// The account that holds the preburn resource will normally be a Designated
+    /// Dealer, but there are no enforced requirements that it be one.
+    ///
+    /// # Technical Description
+    /// This transaction permanently destroys all the coins of `Token` type
+    /// stored in the `Diem::Preburn<Token>` resource published under the
+    /// `preburn_address` account address.
+    ///
+    /// This transaction will only succeed if the sending `account` has a
+    /// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+    /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+    /// of this transaction the `total_value` field in the
+    /// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+    /// decremented by the value of the `to_burn` field of the preburn resource
+    /// under `preburn_address` immediately before this transaction, and the
+    /// `to_burn` field of the preburn resource will have a zero value.
+    ///
+    /// ## Events
+    /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+    /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+    /// `0xA550C18`.
+    ///
+    /// # Parameters
+    /// | Name              | Type      | Description                                                                                                                  |
+    /// | ------            | ------    | -------------                                                                                                                |
+    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category                | Error Reason                            | Description                                                                                           |
+    /// | ----------------              | --------------                          | -------------                                                                                         |
+    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                           |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
+    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
+    ///
+    /// # Related Scripts
+    /// * `Script::burn_txn_fees`
+    /// * `Script::cancel_burn`
+    /// * `Script::preburn`
+    Burn {
+        token: TypeTag,
+        sliding_nonce: u64,
+        preburn_address: AccountAddress,
     },
 
     /// # Summary
@@ -195,69 +288,8 @@ pub enum ScriptCall {
     BurnTxnFees { coin_type: TypeTag },
 
     /// # Summary
-    /// Burns the coins held in a preburn resource in the preburn queue at the
-    /// specified preburn address, which are equal to the `amount` specified in the
-    /// transaction. Finds the first relevant outstanding preburn request with
-    /// matching amount and removes the contained coins from the system. The sending
-    /// account must be the Treasury Compliance account.
-    /// The account that holds the preburn queue resource will normally be a Designated
-    /// Dealer, but there are no enforced requirements that it be one.
-    ///
-    /// # Technical Description
-    /// This transaction permanently destroys all the coins of `Token` type
-    /// stored in the `Diem::Preburn<Token>` resource published under the
-    /// `preburn_address` account address.
-    ///
-    /// This transaction will only succeed if the sending `account` has a
-    /// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
-    /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
-    /// of this transaction the `total_value` field in the
-    /// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
-    /// decremented by the value of the `to_burn` field of the preburn resource
-    /// under `preburn_address` immediately before this transaction, and the
-    /// `to_burn` field of the preburn resource will have a zero value.
-    ///
-    /// ## Events
-    /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
-    /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
-    /// `0xA550C18`.
-    ///
-    /// # Parameters
-    /// | Name              | Type      | Description                                                                                                                  |
-    /// | ------            | ------    | -------------                                                                                                                |
-    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-    /// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
-    ///
-    /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                            | Description                                                                                                                         |
-    /// | ----------------              | --------------                          | -------------                                                                                                                       |
-    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
-    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
-    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
-    ///
-    /// # Related Scripts
-    /// * `Script::burn_txn_fees`
-    /// * `Script::cancel_burn`
-    /// * `Script::preburn`
-    BurnWithAmount {
-        token: TypeTag,
-        sliding_nonce: u64,
-        preburn_address: AccountAddress,
-        amount: u64,
-    },
-
-    /// # Summary
-    /// Cancels and returns the coins held in the preburn area under
-    /// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
-    /// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
+    /// Cancels and returns all coins held in the preburn area under
+    /// `preburn_address` and returns the funds to the `preburn_address`'s balance.
     /// Can only be successfully sent by an account with Treasury Compliance role.
     ///
     /// # Technical Description
@@ -285,27 +317,25 @@ pub enum ScriptCall {
     /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
     /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
     /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
-    /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
     ///
     /// # Common Abort Conditions
-    /// | Error Category                | Error Reason                                     | Description                                                                                                                         |
-    /// | ----------------              | --------------                                   | -------------                                                                                                                       |
-    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
-    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
-    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
-    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
-    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
-    /// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
+    /// | Error Category                | Error Reason                                     | Description                                                                                           |
+    /// | ----------------              | --------------                                   | -------------                                                                                         |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                        | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                                | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                          | The specified `Token` is not a registered currency on-chain.                                          |
+    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | The value held in the preburn resource was zero.                                                      |
+    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | The account at `preburn_address` doesn't have a balance resource for `Token`.                         |
+    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.      |
+    /// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.     |
     ///
     /// # Related Scripts
     /// * `Script::burn_txn_fees`
     /// * `Script::burn`
     /// * `Script::preburn`
-    CancelBurnWithAmount {
+    CancelBurn {
         token: TypeTag,
         preburn_address: AccountAddress,
-        amount: u64,
     },
 
     /// # Summary
@@ -758,10 +788,10 @@ pub enum ScriptCall {
     /// `account` under `account`.
     ///
     /// # Parameters
-    /// | Name         | Type         | Description                                                                                        |
-    /// | ------       | ------       | -------------                                                                                      |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
-    /// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
+    /// | Name         | Type         | Description                                                                               |
+    /// | ------       | ------       | -------------                                                                             |
+    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
+    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                                               | Description                                                                                         |
@@ -870,22 +900,21 @@ pub enum ScriptCall {
     /// be sent by any account.
     ///
     /// # Technical Description
-    /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
-    /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
+    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+    /// its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name      | Type         | Description                                                 |
     /// | ------    | ------       | -------------                                               |
     /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
+    /// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                              | Description                                                                         |
-    /// | ----------------           | --------------                                            | -------------                                                                       |
-    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
+    /// | Error Category             | Error Reason                                               | Description                                                                              |
+    /// | ----------------           | --------------                                             | -------------                                                                            |
+    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.     |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
     ///
     /// # Related Scripts
     /// * `Script::rotate_authentication_key_with_nonce`
@@ -899,17 +928,16 @@ pub enum ScriptCall {
     /// Compliance or Diem Root accounts).
     ///
     /// # Technical Description
-    /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
-    /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
+    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+    /// its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name            | Type         | Description                                                                |
     /// | ------          | ------       | -------------                                                              |
     /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
+    /// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                               | Description                                                                                |
@@ -933,26 +961,25 @@ pub enum ScriptCall {
     ///
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-    /// `new_key` must be a valid authentication key that corresponds to an ed25519
-    /// public key, and `account` must not have previously delegated its
-    /// `DiemAccount::KeyRotationCapability`.
+    /// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+    /// its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name            | Type         | Description                                                                                                 |
-    /// | ------          | ------       | -------------                                                                                               |
+    /// | Name            | Type         | Description                                                                                                  |
+    /// | ------          | ------       | -------------                                                                                                |
     /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
+    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
+    /// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                              | Description                                                                                                |
-    /// | ----------------           | --------------                                            | -------------                                                                                              |
-    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                            | A `SlidingNonce` resource is not published under `dr_account`.                                             |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                            | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                            | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
-    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                   | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
-    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                        |
+    /// | Error Category             | Error Reason                                               | Description                                                                                                |
+    /// | ----------------           | --------------                                             | -------------                                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                             | A `SlidingNonce` resource is not published under `dr_account`.                                             |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
+    /// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                       |
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
     ///
     /// # Related Scripts
@@ -974,20 +1001,20 @@ pub enum ScriptCall {
     /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name               | Type         | Description                                                                                                                   |
-    /// | ------             | ------       | -------------                                                                                                                 |
-    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
+    /// | Name               | Type         | Description                                                                                                                    |
+    /// | ------             | ------       | -------------                                                                                                                  |
+    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
     /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
-    /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
-    /// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
+    /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
+    /// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
     ///
     /// # Common Abort Conditions
-    /// | Error Category             | Error Reason                                 | Description                                                                                                                                         |
-    /// | ----------------           | --------------                               | -------------                                                                                                                                       |
-    /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`         | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                  |
-    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`        | The address of `account` is not `recovery_address` or `to_recover`.                                                                                 |
-    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`  | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
+    /// | Error Category             | Error Reason                                  | Description                                                                                                                                          |
+    /// | ----------------           | --------------                                | -------------                                                                                                                                        |
+    /// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
+    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
+    /// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
     ///
     /// # Related Scripts
     /// * `Script::rotate_authentication_key`
@@ -1233,7 +1260,7 @@ pub enum ScriptCall {
     /// | `sliding_nonce`             | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                 |
     /// | `designated_dealer_address` | `address` | The address of the Designated Dealer account being minted to.                                              |
     /// | `mint_amount`               | `u64`     | The number of coins to be minted.                                                                          |
-    /// | `tier_index`                | `u64`     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
+    /// | `tier_index`                | `u64`     | The mint tier index to use for the Designated Dealer account.                                              |
     ///
     /// # Common Abort Conditions
     /// | Error Category                | Error Reason                                 | Description                                                                                                                  |
@@ -1246,6 +1273,8 @@ pub enum ScriptCall {
     /// | `Errors::REQUIRES_ROLE`       | `Roles::ETREASURY_COMPLIANCE`                | `tc_account` is not the Treasury Compliance account.                                                                         |
     /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT`     | `mint_amount` is zero.                                                                                                       |
     /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
+    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_TIER_INDEX`      | The `tier_index` is out of bounds.                                                                                           |
+    /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_AMOUNT_FOR_TIER` | `mint_amount` exceeds the maximum allowed amount for `tier_index`.                                                           |
     /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
     /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
     /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
@@ -1436,6 +1465,191 @@ pub enum ScriptCall {
     },
 }
 
+/// Structured representation of a call into a known Move script function.
+/// ```ignore
+/// impl ScriptFunctionCall {
+///     pub fn encode(self) -> TransactionPayload { .. }
+///     pub fn decode(&TransactionPayload) -> Option<ScriptFunctionCall> { .. }
+/// }
+/// ```
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "fuzzing", derive(proptest_derive::Arbitrary))]
+#[cfg_attr(feature = "fuzzing", proptest(no_params))]
+pub enum ScriptFunctionCall {
+    /// # Summary
+    /// Burns the coins held in a preburn resource in the preburn queue at the
+    /// specified preburn address, which are equal to the `amount` specified in the
+    /// transaction. Finds the first relevant outstanding preburn request with
+    /// matching amount and removes the contained coins from the system. The sending
+    /// account must be the Treasury Compliance account.
+    /// The account that holds the preburn queue resource will normally be a Designated
+    /// Dealer, but there are no enforced requirements that it be one.
+    ///
+    /// # Technical Description
+    /// This transaction permanently destroys all the coins of `Token` type
+    /// stored in the `Diem::Preburn<Token>` resource published under the
+    /// `preburn_address` account address.
+    ///
+    /// This transaction will only succeed if the sending `account` has a
+    /// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+    /// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+    /// of this transaction the `total_value` field in the
+    /// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+    /// decremented by the value of the `to_burn` field of the preburn resource
+    /// under `preburn_address` immediately before this transaction, and the
+    /// `to_burn` field of the preburn resource will have a zero value.
+    ///
+    /// ## Events
+    /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+    /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+    /// `0xA550C18`.
+    ///
+    /// # Parameters
+    /// | Name              | Type      | Description                                                                                                                  |
+    /// | ------            | ------    | -------------                                                                                                                |
+    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+    /// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category                | Error Reason                            | Description                                                                                                                         |
+    /// | ----------------              | --------------                          | -------------                                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
+    /// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
+    ///
+    /// # Related Scripts
+    /// * `Script::burn_txn_fees`
+    /// * `Script::cancel_burn`
+    /// * `Script::preburn`
+    BurnWithAmount {
+        token: TypeTag,
+        sliding_nonce: u64,
+        preburn_address: AccountAddress,
+        amount: u64,
+    },
+
+    /// # Summary
+    /// Cancels and returns the coins held in the preburn area under
+    /// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
+    /// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
+    /// Can only be successfully sent by an account with Treasury Compliance role.
+    ///
+    /// # Technical Description
+    /// Cancels and returns all coins held in the `Diem::Preburn<Token>` resource under the `preburn_address` and
+    /// return the funds to the `preburn_address` account's `DiemAccount::Balance<Token>`.
+    /// The transaction must be sent by an `account` with a `Diem::BurnCapability<Token>`
+    /// resource published under it. The account at `preburn_address` must have a
+    /// `Diem::Preburn<Token>` resource published under it, and its value must be nonzero. The transaction removes
+    /// the entire balance held in the `Diem::Preburn<Token>` resource, and returns it back to the account's
+    /// `DiemAccount::Balance<Token>` under `preburn_address`. Due to this, the account at
+    /// `preburn_address` must already have a balance in the `Token` currency published
+    /// before this script is called otherwise the transaction will fail.
+    ///
+    /// ## Events
+    /// The successful execution of this transaction will emit:
+    /// * A `Diem::CancelBurnEvent` on the event handle held in the `Diem::CurrencyInfo<Token>`
+    /// resource's `burn_events` published under `0xA550C18`.
+    /// * A `DiemAccount::ReceivedPaymentEvent` on the `preburn_address`'s
+    /// `DiemAccount::DiemAccount` `received_events` event handle with both the `payer` and `payee`
+    /// being `preburn_address`.
+    ///
+    /// # Parameters
+    /// | Name              | Type      | Description                                                                                                                          |
+    /// | ------            | ------    | -------------                                                                                                                        |
+    /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
+    /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
+    /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category                | Error Reason                                     | Description                                                                                                                         |
+    /// | ----------------              | --------------                                   | -------------                                                                                                                       |
+    /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+    /// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+    /// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
+    /// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
+    /// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
+    ///
+    /// # Related Scripts
+    /// * `Script::burn_txn_fees`
+    /// * `Script::burn`
+    /// * `Script::preburn`
+    CancelBurnWithAmount {
+        token: TypeTag,
+        preburn_address: AccountAddress,
+        amount: u64,
+    },
+
+    /// # Summary
+    /// Transfers a given number of coins in a specified currency from one account to another.
+    /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
+    /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
+    /// agreed to receive the coins.  This transaction can be sent by any account that can hold a
+    /// balance, and to any account that can hold a balance. Both accounts must hold balances in the
+    /// currency being transacted.
+    ///
+    /// # Technical Description
+    ///
+    /// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
+    /// `metadata` and an (optional) `metadata_signature` on the message
+    /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
+    /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
+    /// `DualAttestation::get_cur_microdiem_limit` XDX and `payer` and `payee` are distinct VASPs.
+    /// However, a transaction sender can opt in to dual attestation even when it is not required
+    /// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
+    /// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
+    ///
+    /// ## Events
+    /// Successful execution of this script emits two events:
+    /// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
+    /// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
+    ///
+    /// # Parameters
+    /// | Name                 | Type         | Description                                                                                                                  |
+    /// | ------               | ------       | -------------                                                                                                                |
+    /// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
+    /// | `payer`              | `&signer`    | The signer reference of the sending account that coins are being transferred from.                                           |
+    /// | `payee`              | `address`    | The address of the account the coins are being transferred to.                                                               |
+    /// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
+    /// | `metadata_signature` | `vector<u8>` | Optional signature over `metadata` and payment information. See                                                              |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                     | Description                                                                                                                         |
+    /// | ----------------           | --------------                                   | -------------                                                                                                                       |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+    /// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
+    /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
+    /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+    ///
+    /// # Related Scripts
+    /// * `Script::create_child_vasp_account`
+    /// * `Script::create_parent_vasp_account`
+    /// * `Script::add_currency_to_account`
+    PeerToPeerWithMetadata {
+        currency: TypeTag,
+        payee: AccountAddress,
+        amount: u64,
+        metadata: Bytes,
+        metadata_signature: Bytes,
+    },
+}
+
 impl ScriptCall {
     /// Build a Diem `Script` from a structured object `ScriptCall`.
     pub fn encode(self) -> Script {
@@ -1445,6 +1659,10 @@ impl ScriptCall {
             AddRecoveryRotationCapability { recovery_address } => {
                 encode_add_recovery_rotation_capability_script(recovery_address)
             }
+            AddToScriptAllowList {
+                hash,
+                sliding_nonce,
+            } => encode_add_to_script_allow_list_script(hash, sliding_nonce),
             AddValidatorAndReconfigure {
                 sliding_nonce,
                 validator_name,
@@ -1454,18 +1672,16 @@ impl ScriptCall {
                 validator_name,
                 validator_address,
             ),
-            BurnTxnFees { coin_type } => encode_burn_txn_fees_script(coin_type),
-            BurnWithAmount {
+            Burn {
                 token,
                 sliding_nonce,
                 preburn_address,
-                amount,
-            } => encode_burn_with_amount_script(token, sliding_nonce, preburn_address, amount),
-            CancelBurnWithAmount {
+            } => encode_burn_script(token, sliding_nonce, preburn_address),
+            BurnTxnFees { coin_type } => encode_burn_txn_fees_script(coin_type),
+            CancelBurn {
                 token,
                 preburn_address,
-                amount,
-            } => encode_cancel_burn_with_amount_script(token, preburn_address, amount),
+            } => encode_cancel_burn_script(token, preburn_address),
             CreateChildVaspAccount {
                 coin_type,
                 child_address,
@@ -1666,11 +1882,280 @@ impl ScriptCall {
 
     /// Try to recognize a Diem `Script` and convert it into a structured object `ScriptCall`.
     pub fn decode(script: &Script) -> Option<ScriptCall> {
-        match SCRIPT_DECODER_MAP.get(script.code()) {
+        match TRANSACTION_SCRIPT_DECODER_MAP.get(script.code()) {
             Some(decoder) => decoder(script),
             None => None,
         }
     }
+}
+
+impl ScriptFunctionCall {
+    /// Build a Diem `TransactionPayload` from a structured object `ScriptFunctionCall`.
+    pub fn encode(self) -> TransactionPayload {
+        use ScriptFunctionCall::*;
+        match self {
+            BurnWithAmount {
+                token,
+                sliding_nonce,
+                preburn_address,
+                amount,
+            } => encode_burn_with_amount_script_function(
+                token,
+                sliding_nonce,
+                preburn_address,
+                amount,
+            ),
+            CancelBurnWithAmount {
+                token,
+                preburn_address,
+                amount,
+            } => encode_cancel_burn_with_amount_script_function(token, preburn_address, amount),
+            PeerToPeerWithMetadata {
+                currency,
+                payee,
+                amount,
+                metadata,
+                metadata_signature,
+            } => encode_peer_to_peer_with_metadata_script_function(
+                currency,
+                payee,
+                amount,
+                metadata,
+                metadata_signature,
+            ),
+        }
+    }
+
+    /// Try to recognize a Diem `TransactionPayload` and convert it into a structured object `ScriptFunctionCall`.
+    pub fn decode(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {
+        if let TransactionPayload::ScriptFunction(script) = payload {
+            match SCRIPT_FUNCTION_DECODER_MAP.get(&format!(
+                "{}{}",
+                script.module().name(),
+                script.function()
+            )) {
+                Some(decoder) => decoder(payload),
+                None => None,
+            }
+        } else {
+            None
+        }
+    }
+}
+
+/// # Summary
+/// Burns the coins held in a preburn resource in the preburn queue at the
+/// specified preburn address, which are equal to the `amount` specified in the
+/// transaction. Finds the first relevant outstanding preburn request with
+/// matching amount and removes the contained coins from the system. The sending
+/// account must be the Treasury Compliance account.
+/// The account that holds the preburn queue resource will normally be a Designated
+/// Dealer, but there are no enforced requirements that it be one.
+///
+/// # Technical Description
+/// This transaction permanently destroys all the coins of `Token` type
+/// stored in the `Diem::Preburn<Token>` resource published under the
+/// `preburn_address` account address.
+///
+/// This transaction will only succeed if the sending `account` has a
+/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+/// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+/// of this transaction the `total_value` field in the
+/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+/// decremented by the value of the `to_burn` field of the preburn resource
+/// under `preburn_address` immediately before this transaction, and the
+/// `to_burn` field of the preburn resource will have a zero value.
+///
+/// ## Events
+/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+/// `0xA550C18`.
+///
+/// # Parameters
+/// | Name              | Type      | Description                                                                                                                  |
+/// | ------            | ------    | -------------                                                                                                                |
+/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+/// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+///
+/// # Common Abort Conditions
+/// | Error Category                | Error Reason                            | Description                                                                                                                         |
+/// | ----------------              | --------------                          | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
+///
+/// # Related Scripts
+/// * `Script::burn_txn_fees`
+/// * `Script::cancel_burn`
+/// * `Script::preburn`
+pub fn encode_burn_with_amount_script_function(
+    token: TypeTag,
+    sliding_nonce: u64,
+    preburn_address: AccountAddress,
+    amount: u64,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("TreasuryComplianceScripts").unwrap(),
+        ),
+        Identifier::new("burn_with_amount").unwrap(),
+        vec![token],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::Address(preburn_address),
+            TransactionArgument::U64(amount),
+        ],
+    ))
+}
+
+/// # Summary
+/// Cancels and returns the coins held in the preburn area under
+/// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
+/// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
+/// Can only be successfully sent by an account with Treasury Compliance role.
+///
+/// # Technical Description
+/// Cancels and returns all coins held in the `Diem::Preburn<Token>` resource under the `preburn_address` and
+/// return the funds to the `preburn_address` account's `DiemAccount::Balance<Token>`.
+/// The transaction must be sent by an `account` with a `Diem::BurnCapability<Token>`
+/// resource published under it. The account at `preburn_address` must have a
+/// `Diem::Preburn<Token>` resource published under it, and its value must be nonzero. The transaction removes
+/// the entire balance held in the `Diem::Preburn<Token>` resource, and returns it back to the account's
+/// `DiemAccount::Balance<Token>` under `preburn_address`. Due to this, the account at
+/// `preburn_address` must already have a balance in the `Token` currency published
+/// before this script is called otherwise the transaction will fail.
+///
+/// ## Events
+/// The successful execution of this transaction will emit:
+/// * A `Diem::CancelBurnEvent` on the event handle held in the `Diem::CurrencyInfo<Token>`
+/// resource's `burn_events` published under `0xA550C18`.
+/// * A `DiemAccount::ReceivedPaymentEvent` on the `preburn_address`'s
+/// `DiemAccount::DiemAccount` `received_events` event handle with both the `payer` and `payee`
+/// being `preburn_address`.
+///
+/// # Parameters
+/// | Name              | Type      | Description                                                                                                                          |
+/// | ------            | ------    | -------------                                                                                                                        |
+/// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
+/// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
+/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
+/// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
+///
+/// # Common Abort Conditions
+/// | Error Category                | Error Reason                                     | Description                                                                                                                         |
+/// | ----------------              | --------------                                   | -------------                                                                                                                       |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
+/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
+/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
+/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
+///
+/// # Related Scripts
+/// * `Script::burn_txn_fees`
+/// * `Script::burn`
+/// * `Script::preburn`
+pub fn encode_cancel_burn_with_amount_script_function(
+    token: TypeTag,
+    preburn_address: AccountAddress,
+    amount: u64,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("TreasuryComplianceScripts").unwrap(),
+        ),
+        Identifier::new("cancel_burn_with_amount").unwrap(),
+        vec![token],
+        vec![
+            TransactionArgument::Address(preburn_address),
+            TransactionArgument::U64(amount),
+        ],
+    ))
+}
+
+/// # Summary
+/// Transfers a given number of coins in a specified currency from one account to another.
+/// Transfers over a specified amount defined on-chain that are between two different VASPs, or
+/// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
+/// agreed to receive the coins.  This transaction can be sent by any account that can hold a
+/// balance, and to any account that can hold a balance. Both accounts must hold balances in the
+/// currency being transacted.
+///
+/// # Technical Description
+///
+/// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
+/// `metadata` and an (optional) `metadata_signature` on the message
+/// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
+/// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
+/// `DualAttestation::get_cur_microdiem_limit` XDX and `payer` and `payee` are distinct VASPs.
+/// However, a transaction sender can opt in to dual attestation even when it is not required
+/// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
+/// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
+///
+/// ## Events
+/// Successful execution of this script emits two events:
+/// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
+/// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
+///
+/// # Parameters
+/// | Name                 | Type         | Description                                                                                                                  |
+/// | ------               | ------       | -------------                                                                                                                |
+/// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
+/// | `payer`              | `&signer`    | The signer reference of the sending account that coins are being transferred from.                                           |
+/// | `payee`              | `address`    | The address of the account the coins are being transferred to.                                                               |
+/// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
+/// | `metadata_signature` | `vector<u8>` | Optional signature over `metadata` and payment information. See                                                              |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                     | Description                                                                                                                         |
+/// | ----------------           | --------------                                   | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+/// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
+/// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
+/// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+///
+/// # Related Scripts
+/// * `Script::create_child_vasp_account`
+/// * `Script::create_parent_vasp_account`
+/// * `Script::add_currency_to_account`
+pub fn encode_peer_to_peer_with_metadata_script_function(
+    currency: TypeTag,
+    payee: AccountAddress,
+    amount: u64,
+    metadata: Vec<u8>,
+    metadata_signature: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("PaymentScripts").unwrap(),
+        ),
+        Identifier::new("peer_to_peer_with_metadata").unwrap(),
+        vec![currency],
+        vec![
+            TransactionArgument::Address(payee),
+            TransactionArgument::U64(amount),
+            TransactionArgument::U8Vector(metadata),
+            TransactionArgument::U8Vector(metadata_signature),
+        ],
+    ))
 }
 
 /// # Summary
@@ -1759,6 +2244,50 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
 }
 
 /// # Summary
+/// Adds a script hash to the transaction allowlist. This transaction
+/// can only be sent by the Diem Root account. Scripts with this hash can be
+/// sent afterward the successful execution of this script.
+///
+/// # Technical Description
+///
+/// The sending account (`dr_account`) must be the Diem Root account. The script allow
+/// list must not already hold the script `hash` being added. The `sliding_nonce` must be
+/// a valid nonce for the Diem Root account. After this transaction has executed
+/// successfully a reconfiguration will be initiated, and the on-chain config
+/// `DiemTransactionPublishingOption::DiemTransactionPublishingOption`'s
+/// `script_allow_list` field will contain the new script `hash` and transactions
+/// with this `hash` can be successfully sent to the network.
+///
+/// # Parameters
+/// | Name            | Type         | Description                                                                                     |
+/// | ------          | ------       | -------------                                                                                   |
+/// | `dr_account`    | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
+/// | `hash`          | `vector<u8>` | The hash of the script to be added to the script allowlist.                                     |
+/// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                                           | Description                                                                                |
+/// | ----------------           | --------------                                                         | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                                         | A `SlidingNonce` resource is not published under `dr_account`.                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                                         | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                                         | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                                | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                                           | The sending account is not the Diem Root account.                                         |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                                                   | The sending account is not the Diem Root account.                                         |
+/// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EINVALID_SCRIPT_HASH`               | The script `hash` is an invalid length.                                                    |
+/// | `Errors::INVALID_ARGUMENT` | `DiemTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT` | The on-chain allowlist already contains the script `hash`.                                 |
+pub fn encode_add_to_script_allow_list_script(hash: Vec<u8>, sliding_nonce: u64) -> Script {
+    Script::new(
+        ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
+        vec![],
+        vec![
+            TransactionArgument::U8Vector(hash),
+            TransactionArgument::U64(sliding_nonce),
+        ],
+    )
+}
+
+/// # Summary
 /// Adds a validator account to the validator set, and triggers a
 /// reconfiguration of the system to admit the account to the validator set for the system. This
 /// transaction can only be successfully called by the Diem Root account.
@@ -1776,25 +2305,24 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
 /// # Parameters
 /// | Name                | Type         | Description                                                                                                                        |
 /// | ------              | ------       | -------------                                                                                                                      |
-/// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+/// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
 /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
 /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
 /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                 | Description                                                                                                                               |
-/// | ----------------           | --------------                               | -------------                                                                                                                             |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`               | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`               | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`               | The `sliding_nonce` is too far in the future.                                                                                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`      | The `sliding_nonce` has been previously recorded.                                                                                         |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                         |
-/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                         |
-/// | 0                          | 0                                            | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
+/// | Error Category             | Error Reason                                  | Description                                                                                                                               |
+/// | ----------------           | --------------                                | -------------                                                                                                                             |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `dr_account`.                                                                            |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                                |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                                                                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                                                                         |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | The sending account is not the Diem Root account.                                                                                        |
+/// | `Errors::REQUIRES_ROLE`    | `Roles::EDIEM_ROOT`                          | The sending account is not the Diem Root account.                                                                                        |
+/// | 0                          | 0                                             | The provided `validator_name` does not match the already-recorded human name for the validator.                                           |
 /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EINVALID_PROSPECTIVE_VALIDATOR` | The validator to be added does not have a `ValidatorConfig::ValidatorConfig` resource published under it, or its `config` field is empty. |
 /// | `Errors::INVALID_ARGUMENT` | `DiemSystem::EALREADY_A_VALIDATOR`           | The `validator_address` account is already a registered validator.                                                                        |
 /// | `Errors::INVALID_STATE`    | `DiemConfig::EINVALID_BLOCK_TIME`            | An invalid time value was encountered in reconfiguration. Unlikely to occur.                                                              |
-/// | `Errors::LIMIT_EXCEEDED`   | `DiemSystem::EMAX_VALIDATORS`                | The validator set is already at its maximum size. The validator could not be added.                                                       |
 ///
 /// # Related Scripts
 /// * `Script::create_validator_account`
@@ -1816,6 +2344,71 @@ pub fn encode_add_validator_and_reconfigure_script(
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::U8Vector(validator_name),
             TransactionArgument::Address(validator_address),
+        ],
+    )
+}
+
+/// # Summary
+/// Burns all coins held in the preburn resource at the specified
+/// preburn address and removes them from the system. The sending account must
+/// be the Treasury Compliance account.
+/// The account that holds the preburn resource will normally be a Designated
+/// Dealer, but there are no enforced requirements that it be one.
+///
+/// # Technical Description
+/// This transaction permanently destroys all the coins of `Token` type
+/// stored in the `Diem::Preburn<Token>` resource published under the
+/// `preburn_address` account address.
+///
+/// This transaction will only succeed if the sending `account` has a
+/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
+/// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
+/// of this transaction the `total_value` field in the
+/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
+/// decremented by the value of the `to_burn` field of the preburn resource
+/// under `preburn_address` immediately before this transaction, and the
+/// `to_burn` field of the preburn resource will have a zero value.
+///
+/// ## Events
+/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
+/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
+/// `0xA550C18`.
+///
+/// # Parameters
+/// | Name              | Type      | Description                                                                                                                  |
+/// | ------            | ------    | -------------                                                                                                                |
+/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
+/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
+/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
+///
+/// # Common Abort Conditions
+/// | Error Category                | Error Reason                            | Description                                                                                           |
+/// | ----------------              | --------------                          | -------------                                                                                         |
+/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                           |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.            |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                         |
+/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                     |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`               | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                       | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
+/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_EMPTY`                 | The `Diem::Preburn<Token>` resource is empty (has a value of 0).                                     |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                 | The specified `Token` is not a registered currency on-chain.                                          |
+///
+/// # Related Scripts
+/// * `Script::burn_txn_fees`
+/// * `Script::cancel_burn`
+/// * `Script::preburn`
+pub fn encode_burn_script(
+    token: TypeTag,
+    sliding_nonce: u64,
+    preburn_address: AccountAddress,
+) -> Script {
+    Script::new(
+        BURN_CODE.to_vec(),
+        vec![token],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::Address(preburn_address),
         ],
     )
 }
@@ -1860,79 +2453,8 @@ pub fn encode_burn_txn_fees_script(coin_type: TypeTag) -> Script {
 }
 
 /// # Summary
-/// Burns the coins held in a preburn resource in the preburn queue at the
-/// specified preburn address, which are equal to the `amount` specified in the
-/// transaction. Finds the first relevant outstanding preburn request with
-/// matching amount and removes the contained coins from the system. The sending
-/// account must be the Treasury Compliance account.
-/// The account that holds the preburn queue resource will normally be a Designated
-/// Dealer, but there are no enforced requirements that it be one.
-///
-/// # Technical Description
-/// This transaction permanently destroys all the coins of `Token` type
-/// stored in the `Diem::Preburn<Token>` resource published under the
-/// `preburn_address` account address.
-///
-/// This transaction will only succeed if the sending `account` has a
-/// `Diem::BurnCapability<Token>`, and a `Diem::Preburn<Token>` resource
-/// exists under `preburn_address`, with a non-zero `to_burn` field. After the successful execution
-/// of this transaction the `total_value` field in the
-/// `Diem::CurrencyInfo<Token>` resource published under `0xA550C18` will be
-/// decremented by the value of the `to_burn` field of the preburn resource
-/// under `preburn_address` immediately before this transaction, and the
-/// `to_burn` field of the preburn resource will have a zero value.
-///
-/// ## Events
-/// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
-/// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
-/// `0xA550C18`.
-///
-/// # Parameters
-/// | Name              | Type      | Description                                                                                                                  |
-/// | ------            | ------    | -------------                                                                                                                |
-/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-/// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
-///
-/// # Common Abort Conditions
-/// | Error Category                | Error Reason                            | Description                                                                                                                         |
-/// | ----------------              | --------------                          | -------------                                                                                                                       |
-/// | `Errors::NOT_PUBLISHED`       | `SlidingNonce::ESLIDING_NONCE`          | A `SlidingNonce` resource is not published under `account`.                                                                         |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_OLD`          | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not.                                          |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_TOO_NEW`          | The `sliding_nonce` is too far in the future.                                                                                       |
-/// | `Errors::INVALID_ARGUMENT`    | `SlidingNonce::ENONCE_ALREADY_RECORDED` | The `sliding_nonce` has been previously recorded.                                                                                   |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
-/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`              | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                  | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                  | The specified `Token` is not a registered currency on-chain.                                                                        |
-///
-/// # Related Scripts
-/// * `Script::burn_txn_fees`
-/// * `Script::cancel_burn`
-/// * `Script::preburn`
-pub fn encode_burn_with_amount_script(
-    token: TypeTag,
-    sliding_nonce: u64,
-    preburn_address: AccountAddress,
-    amount: u64,
-) -> Script {
-    Script::new(
-        BURN_WITH_AMOUNT_CODE.to_vec(),
-        vec![token],
-        vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(preburn_address),
-            TransactionArgument::U64(amount),
-        ],
-    )
-}
-
-/// # Summary
-/// Cancels and returns the coins held in the preburn area under
-/// `preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
-/// resource with the matching amount and returns the funds to the `preburn_address`'s balance.
+/// Cancels and returns all coins held in the preburn area under
+/// `preburn_address` and returns the funds to the `preburn_address`'s balance.
 /// Can only be successfully sent by an account with Treasury Compliance role.
 ///
 /// # Technical Description
@@ -1960,35 +2482,27 @@ pub fn encode_burn_with_amount_script(
 /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
 /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
 /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
-/// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
 ///
 /// # Common Abort Conditions
-/// | Error Category                | Error Reason                                     | Description                                                                                                                         |
-/// | ----------------              | --------------                                   | -------------                                                                                                                       |
-/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                         | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.                                             |
-/// | `Errors::INVALID_STATE`       | `Diem::EPREBURN_NOT_FOUND`                       | The `Diem::PreburnQueue<Token>` resource under `preburn_address` does not contain a preburn request with a value matching `amount`. |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN_QUEUE`                           | The account at `preburn_address` does not have a `Diem::PreburnQueue<Token>` resource published under it.                           |
-/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                           | The specified `Token` is not a registered currency on-chain.                                                                        |
-/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | The account at `preburn_address` doesn't have a balance resource for `Token`.                                                       |
-/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.                                    |
-/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.                                   |
+/// | Error Category                | Error Reason                                     | Description                                                                                           |
+/// | ----------------              | --------------                                   | -------------                                                                                         |
+/// | `Errors::REQUIRES_CAPABILITY` | `Diem::EBURN_CAPABILITY`                        | The sending `account` does not have a `Diem::BurnCapability<Token>` published under it.              |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::EPREBURN`                                | The account at `preburn_address` does not have a `Diem::Preburn<Token>` resource published under it. |
+/// | `Errors::NOT_PUBLISHED`       | `Diem::ECURRENCY_INFO`                          | The specified `Token` is not a registered currency on-chain.                                          |
+/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | The value held in the preburn resource was zero.                                                      |
+/// | `Errors::INVALID_ARGUMENT`    | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | The account at `preburn_address` doesn't have a balance resource for `Token`.                         |
+/// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | The depositing of the funds held in the prebun area would exceed the `account`'s account limits.      |
+/// | `Errors::INVALID_STATE`       | `DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET` | The `account` does not have a compliance key set on it but dual attestion checking was performed.     |
 ///
 /// # Related Scripts
 /// * `Script::burn_txn_fees`
 /// * `Script::burn`
 /// * `Script::preburn`
-pub fn encode_cancel_burn_with_amount_script(
-    token: TypeTag,
-    preburn_address: AccountAddress,
-    amount: u64,
-) -> Script {
+pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress) -> Script {
     Script::new(
-        CANCEL_BURN_WITH_AMOUNT_CODE.to_vec(),
+        CANCEL_BURN_CODE.to_vec(),
         vec![token],
-        vec![
-            TransactionArgument::Address(preburn_address),
-            TransactionArgument::U64(amount),
-        ],
+        vec![TransactionArgument::Address(preburn_address)],
     )
 }
 
@@ -2527,10 +3041,10 @@ pub fn encode_preburn_script(token: TypeTag, amount: u64) -> Script {
 /// `account` under `account`.
 ///
 /// # Parameters
-/// | Name         | Type         | Description                                                                                        |
-/// | ------       | ------       | -------------                                                                                      |
-/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
-/// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
+/// | Name         | Type         | Description                                                                               |
+/// | ------       | ------       | -------------                                                                             |
+/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
+/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                                               | Description                                                                                         |
@@ -2666,22 +3180,21 @@ pub fn encode_remove_validator_and_reconfigure_script(
 /// be sent by any account.
 ///
 /// # Technical Description
-/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
-/// field to `new_key`. `new_key` must be a valid authentication key that
-/// corresponds to an ed25519 public key, and `account` must not have previously
-/// delegated its `DiemAccount::KeyRotationCapability`.
+/// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
+/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+/// its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name      | Type         | Description                                                 |
 /// | ------    | ------       | -------------                                               |
 /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-/// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
+/// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                              | Description                                                                         |
-/// | ----------------           | --------------                                            | -------------                                                                       |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
+/// | Error Category             | Error Reason                                               | Description                                                                              |
+/// | ----------------           | --------------                                             | -------------                                                                            |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.     |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key_with_nonce`
@@ -2701,17 +3214,16 @@ pub fn encode_rotate_authentication_key_script(new_key: Vec<u8>) -> Script {
 /// Compliance or Diem Root accounts).
 ///
 /// # Technical Description
-/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
-/// field to `new_key`. `new_key` must be a valid authentication key that
-/// corresponds to an ed25519 public key, and `account` must not have previously
-/// delegated its `DiemAccount::KeyRotationCapability`.
+/// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
+/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+/// its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name            | Type         | Description                                                                |
 /// | ------          | ------       | -------------                                                              |
 /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
+/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                               | Description                                                                                |
@@ -2747,26 +3259,25 @@ pub fn encode_rotate_authentication_key_with_nonce_script(
 ///
 /// # Technical Description
 /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
-/// `new_key` must be a valid authentication key that corresponds to an ed25519
-/// public key, and `account` must not have previously delegated its
-/// `DiemAccount::KeyRotationCapability`.
+/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+/// its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name            | Type         | Description                                                                                                 |
-/// | ------          | ------       | -------------                                                                                               |
+/// | Name            | Type         | Description                                                                                                  |
+/// | ------          | ------       | -------------                                                                                                |
 /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
+/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
+/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                              | Description                                                                                                |
-/// | ----------------           | --------------                                            | -------------                                                                                              |
-/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                            | A `SlidingNonce` resource is not published under `dr_account`.                                             |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                            | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                            | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
-/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                   | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
-/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                        |
+/// | Error Category             | Error Reason                                               | Description                                                                                                |
+/// | ----------------           | --------------                                             | -------------                                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                             | A `SlidingNonce` resource is not published under `dr_account`.                                             |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `dr_account` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `dr_account` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` dr_account` has been previously recorded.                                          |
+/// | `Errors::INVALID_STATE`    | `DiemAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `DiemAccount::KeyRotationCapability`.                       |
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
 ///
 /// # Related Scripts
@@ -2800,20 +3311,20 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script(
 /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name               | Type         | Description                                                                                                                   |
-/// | ------             | ------       | -------------                                                                                                                 |
-/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
+/// | Name               | Type         | Description                                                                                                                    |
+/// | ------             | ------       | -------------                                                                                                                  |
+/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                    |
 /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
-/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
-/// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
+/// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                           |
+/// | `new_key`          | `vector<u8>` | New ed25519 public key to be used for the account at the `to_recover` address.                                                 |
 ///
 /// # Common Abort Conditions
-/// | Error Category             | Error Reason                                 | Description                                                                                                                                         |
-/// | ----------------           | --------------                               | -------------                                                                                                                                       |
-/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`         | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                  |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`        | The address of `account` is not `recovery_address` or `to_recover`.                                                                                 |
-/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`  | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
+/// | Error Category             | Error Reason                                  | Description                                                                                                                                          |
+/// | ----------------           | --------------                                | -------------                                                                                                                                        |
+/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`          | `recovery_address` does not have a `RecoveryAddress::RecoveryAddress` resource published under it.                                                   |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::ECANNOT_ROTATE_KEY`         | The address of `account` is not `recovery_address` or `to_recover`.                                                                                  |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EACCOUNT_NOT_RECOVERABLE`   | `to_recover`'s `DiemAccount::KeyRotationCapability`  is not in the `RecoveryAddress::RecoveryAddress`  resource published under `recovery_address`. |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                     |
 ///
 /// # Related Scripts
 /// * `Script::rotate_authentication_key`
@@ -3114,7 +3625,7 @@ pub fn encode_set_validator_operator_with_nonce_admin_script(
 /// | `sliding_nonce`             | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                 |
 /// | `designated_dealer_address` | `address` | The address of the Designated Dealer account being minted to.                                              |
 /// | `mint_amount`               | `u64`     | The number of coins to be minted.                                                                          |
-/// | `tier_index`                | `u64`     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
+/// | `tier_index`                | `u64`     | The mint tier index to use for the Designated Dealer account.                                              |
 ///
 /// # Common Abort Conditions
 /// | Error Category                | Error Reason                                 | Description                                                                                                                  |
@@ -3127,6 +3638,8 @@ pub fn encode_set_validator_operator_with_nonce_admin_script(
 /// | `Errors::REQUIRES_ROLE`       | `Roles::ETREASURY_COMPLIANCE`                | `tc_account` is not the Treasury Compliance account.                                                                         |
 /// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_MINT_AMOUNT`     | `mint_amount` is zero.                                                                                                       |
 /// | `Errors::NOT_PUBLISHED`       | `DesignatedDealer::EDEALER`                  | `DesignatedDealer::Dealer` or `DesignatedDealer::TierInfo<CoinType>` resource does not exist at `designated_dealer_address`. |
+/// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_TIER_INDEX`      | The `tier_index` is out of bounds.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT`    | `DesignatedDealer::EINVALID_AMOUNT_FOR_TIER` | `mint_amount` exceeds the maximum allowed amount for `tier_index`.                                                           |
 /// | `Errors::REQUIRES_CAPABILITY` | `Diem::EMINT_CAPABILITY`                    | `tc_account` does not have a `Diem::MintCapability<CoinType>` resource published under it.                                  |
 /// | `Errors::INVALID_STATE`       | `Diem::EMINTING_NOT_ALLOWED`                | Minting is not currently allowed for `CoinType` coins.                                                                       |
 /// | `Errors::LIMIT_EXCEEDED`      | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`      | The depositing of the funds would exceed the `account`'s account limits.                                                     |
@@ -3367,6 +3880,51 @@ pub fn encode_update_minting_ability_script(currency: TypeTag, allow_minting: bo
     )
 }
 
+fn decode_burn_with_amount_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::BurnWithAmount {
+            token: script.ty_args().get(0)?.clone(),
+            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+            preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
+            amount: decode_u64_argument(script.args().get(2)?.clone())?,
+        })
+    } else {
+        None
+    }
+}
+
+fn decode_cancel_burn_with_amount_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::CancelBurnWithAmount {
+            token: script.ty_args().get(0)?.clone(),
+            preburn_address: decode_address_argument(script.args().get(0)?.clone())?,
+            amount: decode_u64_argument(script.args().get(1)?.clone())?,
+        })
+    } else {
+        None
+    }
+}
+
+fn decode_peer_to_peer_with_metadata_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::PeerToPeerWithMetadata {
+            currency: script.ty_args().get(0)?.clone(),
+            payee: decode_address_argument(script.args().get(0)?.clone())?,
+            amount: decode_u64_argument(script.args().get(1)?.clone())?,
+            metadata: decode_u8vector_argument(script.args().get(2)?.clone())?,
+            metadata_signature: decode_u8vector_argument(script.args().get(3)?.clone())?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_add_currency_to_account_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::AddCurrencyToAccount {
         currency: script.ty_args().get(0)?.clone(),
@@ -3379,11 +3937,26 @@ fn decode_add_recovery_rotation_capability_script(script: &Script) -> Option<Scr
     })
 }
 
+fn decode_add_to_script_allow_list_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::AddToScriptAllowList {
+        hash: decode_u8vector_argument(script.args().get(0)?.clone())?,
+        sliding_nonce: decode_u64_argument(script.args().get(1)?.clone())?,
+    })
+}
+
 fn decode_add_validator_and_reconfigure_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::AddValidatorAndReconfigure {
         sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
         validator_name: decode_u8vector_argument(script.args().get(1)?.clone())?,
         validator_address: decode_address_argument(script.args().get(2)?.clone())?,
+    })
+}
+
+fn decode_burn_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::Burn {
+        token: script.ty_args().get(0)?.clone(),
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
     })
 }
 
@@ -3393,20 +3966,10 @@ fn decode_burn_txn_fees_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_burn_with_amount_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::BurnWithAmount {
-        token: script.ty_args().get(0)?.clone(),
-        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-        preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
-        amount: decode_u64_argument(script.args().get(2)?.clone())?,
-    })
-}
-
-fn decode_cancel_burn_with_amount_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::CancelBurnWithAmount {
+fn decode_cancel_burn_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::CancelBurn {
         token: script.ty_args().get(0)?.clone(),
         preburn_address: decode_address_argument(script.args().get(0)?.clone())?,
-        amount: decode_u64_argument(script.args().get(1)?.clone())?,
     })
 }
 
@@ -3625,144 +4188,173 @@ fn decode_update_minting_ability_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-type DecoderMap = std::collections::HashMap<
+type TransactionScriptDecoderMap = std::collections::HashMap<
     Vec<u8>,
     Box<dyn Fn(&Script) -> Option<ScriptCall> + std::marker::Sync + std::marker::Send>,
 >;
 
-static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::Lazy::new(|| {
-    let mut map: DecoderMap = std::collections::HashMap::new();
-    map.insert(
-        ADD_CURRENCY_TO_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_add_currency_to_account_script),
-    );
-    map.insert(
-        ADD_RECOVERY_ROTATION_CAPABILITY_CODE.to_vec(),
-        Box::new(decode_add_recovery_rotation_capability_script),
-    );
-    map.insert(
-        ADD_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
-        Box::new(decode_add_validator_and_reconfigure_script),
-    );
-    map.insert(
-        BURN_TXN_FEES_CODE.to_vec(),
-        Box::new(decode_burn_txn_fees_script),
-    );
-    map.insert(
-        BURN_WITH_AMOUNT_CODE.to_vec(),
-        Box::new(decode_burn_with_amount_script),
-    );
-    map.insert(
-        CANCEL_BURN_WITH_AMOUNT_CODE.to_vec(),
-        Box::new(decode_cancel_burn_with_amount_script),
-    );
-    map.insert(
-        CREATE_CHILD_VASP_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_create_child_vasp_account_script),
-    );
-    map.insert(
-        CREATE_DESIGNATED_DEALER_CODE.to_vec(),
-        Box::new(decode_create_designated_dealer_script),
-    );
-    map.insert(
-        CREATE_PARENT_VASP_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_create_parent_vasp_account_script),
-    );
-    map.insert(
-        CREATE_RECOVERY_ADDRESS_CODE.to_vec(),
-        Box::new(decode_create_recovery_address_script),
-    );
-    map.insert(
-        CREATE_VALIDATOR_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_create_validator_account_script),
-    );
-    map.insert(
-        CREATE_VALIDATOR_OPERATOR_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_create_validator_operator_account_script),
-    );
-    map.insert(
-        FREEZE_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_freeze_account_script),
-    );
-    map.insert(
-        PEER_TO_PEER_WITH_METADATA_CODE.to_vec(),
-        Box::new(decode_peer_to_peer_with_metadata_script),
-    );
-    map.insert(PREBURN_CODE.to_vec(), Box::new(decode_preburn_script));
-    map.insert(
-        PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE.to_vec(),
-        Box::new(decode_publish_shared_ed25519_public_key_script),
-    );
-    map.insert(
-        REGISTER_VALIDATOR_CONFIG_CODE.to_vec(),
-        Box::new(decode_register_validator_config_script),
-    );
-    map.insert(
-        REMOVE_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
-        Box::new(decode_remove_validator_and_reconfigure_script),
-    );
-    map.insert(
-        ROTATE_AUTHENTICATION_KEY_CODE.to_vec(),
-        Box::new(decode_rotate_authentication_key_script),
-    );
-    map.insert(
-        ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE.to_vec(),
-        Box::new(decode_rotate_authentication_key_with_nonce_script),
-    );
-    map.insert(
-        ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE.to_vec(),
-        Box::new(decode_rotate_authentication_key_with_nonce_admin_script),
-    );
-    map.insert(
-        ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE.to_vec(),
-        Box::new(decode_rotate_authentication_key_with_recovery_address_script),
-    );
-    map.insert(
-        ROTATE_DUAL_ATTESTATION_INFO_CODE.to_vec(),
-        Box::new(decode_rotate_dual_attestation_info_script),
-    );
-    map.insert(
-        ROTATE_SHARED_ED25519_PUBLIC_KEY_CODE.to_vec(),
-        Box::new(decode_rotate_shared_ed25519_public_key_script),
-    );
-    map.insert(
-        SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE.to_vec(),
-        Box::new(decode_set_validator_config_and_reconfigure_script),
-    );
-    map.insert(
-        SET_VALIDATOR_OPERATOR_CODE.to_vec(),
-        Box::new(decode_set_validator_operator_script),
-    );
-    map.insert(
-        SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE.to_vec(),
-        Box::new(decode_set_validator_operator_with_nonce_admin_script),
-    );
-    map.insert(
-        TIERED_MINT_CODE.to_vec(),
-        Box::new(decode_tiered_mint_script),
-    );
-    map.insert(
-        UNFREEZE_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_unfreeze_account_script),
-    );
-    map.insert(
-        UPDATE_DIEM_VERSION_CODE.to_vec(),
-        Box::new(decode_update_diem_version_script),
-    );
-    map.insert(
-        UPDATE_DUAL_ATTESTATION_LIMIT_CODE.to_vec(),
-        Box::new(decode_update_dual_attestation_limit_script),
-    );
-    map.insert(
-        UPDATE_EXCHANGE_RATE_CODE.to_vec(),
-        Box::new(decode_update_exchange_rate_script),
-    );
-    map.insert(
-        UPDATE_MINTING_ABILITY_CODE.to_vec(),
-        Box::new(decode_update_minting_ability_script),
-    );
-    map
-});
+static TRANSACTION_SCRIPT_DECODER_MAP: once_cell::sync::Lazy<TransactionScriptDecoderMap> =
+    once_cell::sync::Lazy::new(|| {
+        let mut map: TransactionScriptDecoderMap = std::collections::HashMap::new();
+        map.insert(
+            ADD_CURRENCY_TO_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_add_currency_to_account_script),
+        );
+        map.insert(
+            ADD_RECOVERY_ROTATION_CAPABILITY_CODE.to_vec(),
+            Box::new(decode_add_recovery_rotation_capability_script),
+        );
+        map.insert(
+            ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
+            Box::new(decode_add_to_script_allow_list_script),
+        );
+        map.insert(
+            ADD_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
+            Box::new(decode_add_validator_and_reconfigure_script),
+        );
+        map.insert(BURN_CODE.to_vec(), Box::new(decode_burn_script));
+        map.insert(
+            BURN_TXN_FEES_CODE.to_vec(),
+            Box::new(decode_burn_txn_fees_script),
+        );
+        map.insert(
+            CANCEL_BURN_CODE.to_vec(),
+            Box::new(decode_cancel_burn_script),
+        );
+        map.insert(
+            CREATE_CHILD_VASP_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_create_child_vasp_account_script),
+        );
+        map.insert(
+            CREATE_DESIGNATED_DEALER_CODE.to_vec(),
+            Box::new(decode_create_designated_dealer_script),
+        );
+        map.insert(
+            CREATE_PARENT_VASP_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_create_parent_vasp_account_script),
+        );
+        map.insert(
+            CREATE_RECOVERY_ADDRESS_CODE.to_vec(),
+            Box::new(decode_create_recovery_address_script),
+        );
+        map.insert(
+            CREATE_VALIDATOR_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_create_validator_account_script),
+        );
+        map.insert(
+            CREATE_VALIDATOR_OPERATOR_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_create_validator_operator_account_script),
+        );
+        map.insert(
+            FREEZE_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_freeze_account_script),
+        );
+        map.insert(
+            PEER_TO_PEER_WITH_METADATA_CODE.to_vec(),
+            Box::new(decode_peer_to_peer_with_metadata_script),
+        );
+        map.insert(PREBURN_CODE.to_vec(), Box::new(decode_preburn_script));
+        map.insert(
+            PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE.to_vec(),
+            Box::new(decode_publish_shared_ed25519_public_key_script),
+        );
+        map.insert(
+            REGISTER_VALIDATOR_CONFIG_CODE.to_vec(),
+            Box::new(decode_register_validator_config_script),
+        );
+        map.insert(
+            REMOVE_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
+            Box::new(decode_remove_validator_and_reconfigure_script),
+        );
+        map.insert(
+            ROTATE_AUTHENTICATION_KEY_CODE.to_vec(),
+            Box::new(decode_rotate_authentication_key_script),
+        );
+        map.insert(
+            ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE.to_vec(),
+            Box::new(decode_rotate_authentication_key_with_nonce_script),
+        );
+        map.insert(
+            ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE.to_vec(),
+            Box::new(decode_rotate_authentication_key_with_nonce_admin_script),
+        );
+        map.insert(
+            ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE.to_vec(),
+            Box::new(decode_rotate_authentication_key_with_recovery_address_script),
+        );
+        map.insert(
+            ROTATE_DUAL_ATTESTATION_INFO_CODE.to_vec(),
+            Box::new(decode_rotate_dual_attestation_info_script),
+        );
+        map.insert(
+            ROTATE_SHARED_ED25519_PUBLIC_KEY_CODE.to_vec(),
+            Box::new(decode_rotate_shared_ed25519_public_key_script),
+        );
+        map.insert(
+            SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE.to_vec(),
+            Box::new(decode_set_validator_config_and_reconfigure_script),
+        );
+        map.insert(
+            SET_VALIDATOR_OPERATOR_CODE.to_vec(),
+            Box::new(decode_set_validator_operator_script),
+        );
+        map.insert(
+            SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE.to_vec(),
+            Box::new(decode_set_validator_operator_with_nonce_admin_script),
+        );
+        map.insert(
+            TIERED_MINT_CODE.to_vec(),
+            Box::new(decode_tiered_mint_script),
+        );
+        map.insert(
+            UNFREEZE_ACCOUNT_CODE.to_vec(),
+            Box::new(decode_unfreeze_account_script),
+        );
+        map.insert(
+            UPDATE_DIEM_VERSION_CODE.to_vec(),
+            Box::new(decode_update_diem_version_script),
+        );
+        map.insert(
+            UPDATE_DUAL_ATTESTATION_LIMIT_CODE.to_vec(),
+            Box::new(decode_update_dual_attestation_limit_script),
+        );
+        map.insert(
+            UPDATE_EXCHANGE_RATE_CODE.to_vec(),
+            Box::new(decode_update_exchange_rate_script),
+        );
+        map.insert(
+            UPDATE_MINTING_ABILITY_CODE.to_vec(),
+            Box::new(decode_update_minting_ability_script),
+        );
+        map
+    });
+
+type ScriptFunctionDecoderMap = std::collections::HashMap<
+    String,
+    Box<
+        dyn Fn(&TransactionPayload) -> Option<ScriptFunctionCall>
+            + std::marker::Sync
+            + std::marker::Send,
+    >,
+>;
+
+static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderMap> =
+    once_cell::sync::Lazy::new(|| {
+        let mut map: ScriptFunctionDecoderMap = std::collections::HashMap::new();
+        map.insert(
+            "TreasuryComplianceScriptsburn_with_amount".to_string(),
+            Box::new(decode_burn_with_amount_script_function),
+        );
+        map.insert(
+            "TreasuryComplianceScriptscancel_burn_with_amount".to_string(),
+            Box::new(decode_cancel_burn_with_amount_script_function),
+        );
+        map.insert(
+            "PaymentScriptspeer_to_peer_with_metadata".to_string(),
+            Box::new(decode_peer_to_peer_with_metadata_script_function),
+        );
+        map
+    });
 
 fn decode_bool_argument(arg: TransactionArgument) -> Option<bool> {
     match arg {
@@ -3793,238 +4385,249 @@ fn decode_u8vector_argument(arg: TransactionArgument) -> Option<Vec<u8>> {
 }
 
 const ADD_CURRENCY_TO_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 25, 8, 42, 16, 0,
-    0, 0, 1, 0, 1, 1, 4, 0, 2, 1, 6, 12, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 25, 8, 42, 16, 0,
+    0, 0, 1, 0, 1, 1, 1, 0, 2, 1, 6, 12, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117,
     110, 116, 12, 97, 100, 100, 95, 99, 117, 114, 114, 101, 110, 99, 121, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 3, 11, 0, 56, 0, 2,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 3, 11, 0, 56, 0, 2,
 ];
 
 const ADD_RECOVERY_ROTATION_CAPABILITY_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 15, 7, 33, 106, 8, 139, 1,
-    16, 0, 0, 0, 1, 0, 2, 12, 0, 0, 3, 2, 3, 0, 1, 4, 4, 1, 0, 2, 6, 12, 5, 0, 1, 6, 12, 1, 8, 0,
-    2, 8, 0, 5, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 15, 82, 101, 99, 111, 118,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 15, 7, 33, 106, 8, 139, 1,
+    16, 0, 0, 0, 1, 0, 2, 1, 0, 0, 3, 0, 1, 0, 1, 4, 2, 3, 0, 1, 6, 12, 1, 8, 0, 2, 8, 0, 5, 0, 2,
+    6, 12, 5, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 15, 82, 101, 99, 111, 118,
     101, 114, 121, 65, 100, 100, 114, 101, 115, 115, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105,
     111, 110, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116,
     95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105,
     108, 105, 116, 121, 23, 97, 100, 100, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97,
-    112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+    112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 3,
     5, 11, 0, 17, 0, 10, 1, 17, 1, 2,
 ];
 
+const ADD_TO_SCRIPT_ALLOW_LIST_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 16, 7, 30, 92, 8, 122, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 2, 1, 0, 2, 6, 12, 10, 2, 0, 2, 6, 12, 3, 3, 6, 12, 10, 2, 3, 31, 68,
+    105, 101, 109, 84, 114, 97, 110, 115, 97, 99, 116, 105, 111, 110, 80, 117, 98, 108, 105, 115,
+    104, 105, 110, 103, 79, 112, 116, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111,
+    110, 99, 101, 24, 97, 100, 100, 95, 116, 111, 95, 115, 99, 114, 105, 112, 116, 95, 97, 108,
+    108, 111, 119, 95, 108, 105, 115, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99,
+    101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    0, 3, 1, 7, 10, 0, 10, 2, 17, 1, 11, 0, 11, 1, 17, 0, 2,
+];
+
 const ADD_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 91, 8, 136, 1, 16, 0, 0,
-    0, 1, 0, 2, 1, 3, 3, 2, 0, 2, 4, 4, 5, 0, 0, 5, 6, 2, 0, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 0, 2,
-    6, 12, 3, 1, 5, 1, 10, 2, 2, 6, 12, 5, 10, 68, 105, 101, 109, 83, 121, 115, 116, 101, 109, 12,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 91, 8, 136, 1, 16, 0, 0,
+    0, 1, 0, 2, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1, 5, 1, 10, 2, 2, 6,
+    12, 5, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 10, 68, 105, 101, 109, 83, 121, 115, 116, 101, 109, 12,
     83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 15, 86, 97, 108, 105, 100, 97, 116,
     111, 114, 67, 111, 110, 102, 105, 103, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99,
     101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110,
     95, 110, 97, 109, 101, 13, 97, 100, 100, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 18, 10, 0, 10, 1, 17, 0, 10, 3, 17, 1, 11,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 6, 18, 10, 0, 10, 1, 17, 0, 10, 3, 17, 1, 11,
     2, 33, 12, 4, 11, 4, 3, 14, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10, 3, 17, 2, 2,
 ];
 
+const BURN_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 17, 7, 34, 45, 8, 79, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 2, 6, 12, 5, 3, 6, 12, 3, 5,
+    1, 9, 0, 4, 68, 105, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21,
+    114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114,
+    116, 4, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 7, 10,
+    0, 10, 1, 17, 0, 11, 0, 10, 2, 56, 0, 2,
+];
+
 const BURN_TXN_FEES_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 25, 8, 42, 16, 0,
-    0, 0, 1, 0, 1, 1, 4, 0, 2, 1, 6, 12, 0, 1, 9, 0, 14, 84, 114, 97, 110, 115, 97, 99, 116, 105,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 25, 8, 42, 16, 0,
+    0, 0, 1, 0, 1, 1, 1, 0, 2, 1, 6, 12, 0, 1, 9, 0, 14, 84, 114, 97, 110, 115, 97, 99, 116, 105,
     111, 110, 70, 101, 101, 9, 98, 117, 114, 110, 95, 102, 101, 101, 115, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 3, 11, 0, 56, 0, 2,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 3, 11, 0, 56, 0, 2,
 ];
 
-const BURN_WITH_AMOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 19, 7, 36, 45, 8, 81, 16,
-    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 4, 6, 12, 3, 5, 3, 0, 2, 6, 12, 3, 1, 9, 0,
-    3, 6, 12, 5, 3, 4, 68, 105, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
-    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
-    111, 114, 116, 4, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0,
-    1, 8, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 10, 3, 56, 0, 2,
-];
-
-const CANCEL_BURN_WITH_AMOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 9, 7, 19, 24, 8, 43, 16, 0,
-    0, 0, 1, 0, 1, 1, 4, 0, 2, 3, 6, 12, 5, 3, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111,
+const CANCEL_BURN_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 8, 7, 18, 24, 8, 42, 16, 0,
+    0, 0, 1, 0, 1, 1, 1, 0, 2, 2, 6, 12, 5, 0, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111,
     117, 110, 116, 11, 99, 97, 110, 99, 101, 108, 95, 98, 117, 114, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 5, 11, 0, 10, 1, 10, 2, 56, 0, 2,
+    0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 4, 11, 0, 10, 1, 56, 0, 2,
 ];
 
 const CREATE_CHILD_VASP_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 8, 1, 0, 2, 2, 2, 4, 3, 6, 22, 4, 28, 4, 5, 32, 35, 7, 67, 122,
-    8, 189, 1, 16, 6, 205, 1, 4, 0, 0, 0, 1, 12, 0, 0, 2, 3, 4, 1, 4, 0, 3, 5, 1, 0, 0, 4, 6, 4, 1,
-    4, 0, 5, 1, 4, 0, 0, 2, 2, 2, 5, 6, 12, 5, 10, 2, 1, 3, 1, 8, 0, 1, 9, 0, 4, 6, 12, 5, 10, 2,
-    1, 0, 1, 6, 12, 5, 6, 8, 0, 5, 3, 10, 2, 10, 2, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117,
+    161, 28, 235, 11, 1, 0, 0, 0, 8, 1, 0, 2, 2, 2, 4, 3, 6, 22, 4, 28, 4, 5, 32, 35, 7, 67, 122,
+    8, 189, 1, 16, 6, 205, 1, 4, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 1, 1, 0, 3, 2, 3, 0, 0, 4, 4, 1, 1,
+    1, 0, 5, 3, 1, 0, 0, 6, 2, 6, 4, 6, 12, 5, 10, 2, 1, 0, 1, 6, 12, 1, 8, 0, 5, 6, 8, 0, 5, 3,
+    10, 2, 10, 2, 5, 6, 12, 5, 10, 2, 1, 3, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117,
     110, 116, 18, 87, 105, 116, 104, 100, 114, 97, 119, 67, 97, 112, 97, 98, 105, 108, 105, 116,
     121, 25, 99, 114, 101, 97, 116, 101, 95, 99, 104, 105, 108, 100, 95, 118, 97, 115, 112, 95, 97,
     99, 99, 111, 117, 110, 116, 27, 101, 120, 116, 114, 97, 99, 116, 95, 119, 105, 116, 104, 100,
     114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 8, 112, 97, 121, 95, 102, 114,
     111, 109, 27, 114, 101, 115, 116, 111, 114, 101, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95,
     99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    10, 2, 1, 0, 1, 4, 0, 1, 25, 10, 0, 10, 1, 11, 2, 10, 3, 56, 0, 10, 4, 6, 0, 0, 0, 0, 0, 0, 0,
+    10, 2, 1, 0, 1, 1, 5, 3, 25, 10, 0, 10, 1, 11, 2, 10, 3, 56, 0, 10, 4, 6, 0, 0, 0, 0, 0, 0, 0,
     0, 36, 3, 10, 5, 22, 11, 0, 17, 1, 12, 5, 14, 5, 10, 1, 10, 4, 7, 0, 7, 0, 56, 1, 11, 5, 17, 3,
     5, 24, 11, 0, 1, 2,
 ];
 
 const CREATE_DESIGNATED_DEALER_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 72, 8, 116, 16,
-    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 0, 2, 6,
-    12, 3, 1, 9, 0, 5, 6, 12, 5, 10, 2, 10, 2, 1, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 72, 8, 116, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 5, 6, 12, 5, 10, 2, 10, 2,
+    1, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110,
     116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114,
     100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 24, 99, 114, 101, 97,
     116, 101, 95, 100, 101, 115, 105, 103, 110, 97, 116, 101, 100, 95, 100, 101, 97, 108, 101, 114,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 10, 10, 0, 10, 1, 17, 0, 11, 0, 10,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 10, 10, 0, 10, 1, 17, 0, 11, 0, 10,
     2, 11, 3, 11, 4, 10, 5, 56, 0, 2,
 ];
 
 const CREATE_PARENT_VASP_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 74, 8, 118, 16,
-    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 0, 2, 6,
-    12, 3, 1, 9, 0, 5, 6, 12, 5, 10, 2, 10, 2, 1, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 74, 8, 118, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 5, 6, 12, 5, 10, 2, 10, 2,
+    1, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110,
     116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114,
     100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 26, 99, 114, 101, 97,
     116, 101, 95, 112, 97, 114, 101, 110, 116, 95, 118, 97, 115, 112, 95, 97, 99, 99, 111, 117,
-    110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 10, 10, 0, 10, 1, 17, 0,
+    110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 10, 10, 0, 10, 1, 17, 0,
     11, 0, 10, 2, 11, 3, 11, 4, 10, 5, 56, 0, 2,
 ];
 
 const CREATE_RECOVERY_ADDRESS_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 12, 7, 30, 90, 8, 120, 16,
-    0, 0, 0, 1, 0, 2, 12, 0, 0, 3, 0, 2, 0, 1, 4, 3, 1, 0, 1, 6, 12, 0, 1, 8, 0, 2, 6, 12, 8, 0,
-    11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 15, 82, 101, 99, 111, 118, 101, 114,
-    121, 65, 100, 100, 114, 101, 115, 115, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110,
-    67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107,
-    101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105,
-    116, 121, 7, 112, 117, 98, 108, 105, 115, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    0, 0, 1, 5, 10, 0, 11, 0, 17, 0, 17, 1, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 12, 7, 30, 90, 8, 120, 16,
+    0, 0, 0, 1, 0, 2, 1, 0, 0, 3, 0, 1, 0, 1, 4, 2, 3, 0, 1, 6, 12, 1, 8, 0, 2, 6, 12, 8, 0, 0, 11,
+    68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 15, 82, 101, 99, 111, 118, 101, 114, 121,
+    65, 100, 100, 114, 101, 115, 115, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67,
+    97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101,
+    121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116,
+    121, 7, 112, 117, 98, 108, 105, 115, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+    3, 5, 10, 0, 11, 0, 17, 0, 17, 1, 2,
 ];
 
 const CREATE_VALIDATOR_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 72, 8, 108, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 3, 1, 0, 5, 6, 12, 3, 5, 10, 2, 10, 2, 0, 2, 6, 12, 3, 4, 6, 12, 5, 10,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 72, 8, 108, 16, 0, 0, 0,
+    1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 2, 6, 12, 3, 0, 4, 6, 12, 5, 10, 2, 10, 2, 5, 6, 12, 3, 5, 10,
     2, 10, 2, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105,
     110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101,
     95, 111, 114, 95, 97, 98, 111, 114, 116, 24, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105,
     100, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 0, 0, 1, 9, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 17, 1, 2,
+    0, 0, 0, 1, 0, 3, 1, 9, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 17, 1, 2,
 ];
 
 const CREATE_VALIDATOR_OPERATOR_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 81, 8, 117, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 3, 1, 0, 5, 6, 12, 3, 5, 10, 2, 10, 2, 0, 2, 6, 12, 3, 4, 6, 12, 5, 10,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 81, 8, 117, 16, 0, 0, 0,
+    1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 2, 6, 12, 3, 0, 4, 6, 12, 5, 10, 2, 10, 2, 5, 6, 12, 3, 5, 10,
     2, 10, 2, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105,
     110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101,
     95, 111, 114, 95, 97, 98, 111, 114, 116, 33, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105,
     100, 97, 116, 111, 114, 95, 111, 112, 101, 114, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117,
-    110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 9, 10, 0, 10, 1, 17, 0, 11,
+    110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 9, 10, 0, 10, 1, 17, 0, 11,
     0, 10, 2, 11, 3, 11, 4, 17, 1, 2,
 ];
 
 const FREEZE_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 14, 7, 28, 66, 8, 94, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 3, 1, 0, 3, 6, 12, 3, 5, 0, 2, 6, 12, 3, 2, 6, 12, 5, 15, 65, 99, 99,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 14, 7, 28, 66, 8, 94, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 2, 1, 0, 2, 6, 12, 5, 0, 2, 6, 12, 3, 3, 6, 12, 3, 5, 15, 65, 99, 99,
     111, 117, 110, 116, 70, 114, 101, 101, 122, 105, 110, 103, 12, 83, 108, 105, 100, 105, 110,
-    103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95,
-    111, 114, 95, 97, 98, 111, 114, 116, 14, 102, 114, 101, 101, 122, 101, 95, 97, 99, 99, 111,
-    117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 10, 0, 10, 1, 17, 0,
-    11, 0, 10, 2, 17, 1, 2,
+    103, 78, 111, 110, 99, 101, 14, 102, 114, 101, 101, 122, 101, 95, 97, 99, 99, 111, 117, 110,
+    116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
+    111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 7, 10, 0, 10, 1, 17, 1,
+    11, 0, 10, 2, 17, 0, 2,
 ];
 
 const PEER_TO_PEER_WITH_METADATA_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 7, 1, 0, 2, 2, 2, 4, 3, 6, 16, 4, 22, 2, 5, 24, 29, 7, 53, 96, 8,
-    149, 1, 16, 0, 0, 0, 1, 12, 0, 0, 2, 3, 1, 0, 0, 3, 5, 2, 1, 4, 0, 4, 1, 2, 0, 1, 4, 5, 6, 12,
-    5, 3, 10, 2, 10, 2, 1, 8, 0, 0, 1, 6, 12, 1, 9, 0, 5, 6, 8, 0, 5, 3, 10, 2, 10, 2, 11, 68, 105,
+    161, 28, 235, 11, 1, 0, 0, 0, 7, 1, 0, 2, 2, 2, 4, 3, 6, 16, 4, 22, 2, 5, 24, 29, 7, 53, 96, 8,
+    149, 1, 16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 2, 3, 1, 1, 0, 4, 1, 3, 0, 1, 5, 1, 6, 12,
+    1, 8, 0, 5, 6, 8, 0, 5, 3, 10, 2, 10, 2, 0, 5, 6, 12, 5, 3, 10, 2, 10, 2, 1, 9, 0, 11, 68, 105,
     101, 109, 65, 99, 99, 111, 117, 110, 116, 18, 87, 105, 116, 104, 100, 114, 97, 119, 67, 97,
     112, 97, 98, 105, 108, 105, 116, 121, 27, 101, 120, 116, 114, 97, 99, 116, 95, 119, 105, 116,
     104, 100, 114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 8, 112, 97, 121, 95,
     102, 114, 111, 109, 27, 114, 101, 115, 116, 111, 114, 101, 95, 119, 105, 116, 104, 100, 114,
     97, 119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 1, 1, 4, 0, 1, 12, 11, 0, 17, 0, 12, 5, 14, 5, 10, 1, 10, 2, 11, 3, 11, 4, 56, 0, 11,
+    0, 0, 0, 1, 1, 1, 4, 1, 12, 11, 0, 17, 0, 12, 5, 14, 5, 10, 1, 10, 2, 11, 3, 11, 4, 56, 0, 11,
     5, 17, 2, 2,
 ];
 
 const PREBURN_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 7, 1, 0, 2, 2, 2, 4, 3, 6, 16, 4, 22, 2, 5, 24, 21, 7, 45, 95, 8,
-    140, 1, 16, 0, 0, 0, 1, 12, 0, 0, 2, 3, 1, 0, 0, 3, 5, 2, 1, 4, 0, 4, 1, 2, 0, 1, 4, 2, 6, 12,
-    3, 1, 8, 0, 0, 1, 6, 12, 1, 9, 0, 3, 6, 12, 6, 8, 0, 3, 11, 68, 105, 101, 109, 65, 99, 99, 111,
+    161, 28, 235, 11, 1, 0, 0, 0, 7, 1, 0, 2, 2, 2, 4, 3, 6, 16, 4, 22, 2, 5, 24, 21, 7, 45, 95, 8,
+    140, 1, 16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 2, 3, 1, 1, 0, 4, 1, 3, 0, 1, 5, 1, 6, 12,
+    1, 8, 0, 3, 6, 12, 6, 8, 0, 3, 0, 2, 6, 12, 3, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111,
     117, 110, 116, 18, 87, 105, 116, 104, 100, 114, 97, 119, 67, 97, 112, 97, 98, 105, 108, 105,
     116, 121, 27, 101, 120, 116, 114, 97, 99, 116, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95,
     99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 7, 112, 114, 101, 98, 117, 114, 110, 27, 114,
     101, 115, 116, 111, 114, 101, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95, 99, 97, 112, 97,
-    98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 10,
+    98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 4, 1, 10,
     10, 0, 17, 0, 12, 2, 11, 0, 14, 2, 10, 1, 56, 0, 11, 2, 17, 2, 2,
 ];
 
 const PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 31, 8, 44, 16, 0, 0, 0, 1,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 31, 8, 44, 16, 0, 0, 0, 1,
     0, 1, 0, 2, 6, 12, 10, 2, 0, 22, 83, 104, 97, 114, 101, 100, 69, 100, 50, 53, 53, 49, 57, 80,
     117, 98, 108, 105, 99, 75, 101, 121, 7, 112, 117, 98, 108, 105, 115, 104, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 11, 1, 17, 0, 2,
 ];
 
 const REGISTER_VALIDATOR_CONFIG_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 11, 7, 18, 27, 8, 45, 16, 0, 0, 0, 1,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 11, 7, 18, 27, 8, 45, 16, 0, 0, 0, 1,
     0, 1, 0, 5, 6, 12, 5, 10, 2, 10, 2, 10, 2, 0, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67,
     111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 17, 0, 2,
 ];
 
 const REMOVE_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 94, 8, 139, 1, 16, 0, 0,
-    0, 1, 0, 2, 1, 3, 3, 2, 0, 2, 4, 4, 5, 0, 0, 5, 6, 2, 0, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 0, 2,
-    6, 12, 3, 1, 5, 1, 10, 2, 2, 6, 12, 5, 10, 68, 105, 101, 109, 83, 121, 115, 116, 101, 109, 12,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 94, 8, 139, 1, 16, 0, 0,
+    0, 1, 0, 2, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1, 5, 1, 10, 2, 2, 6,
+    12, 5, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 10, 68, 105, 101, 109, 83, 121, 115, 116, 101, 109, 12,
     83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 15, 86, 97, 108, 105, 100, 97, 116,
     111, 114, 67, 111, 110, 102, 105, 103, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99,
     101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110,
     95, 110, 97, 109, 101, 16, 114, 101, 109, 111, 118, 101, 95, 118, 97, 108, 105, 100, 97, 116,
-    111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 18, 10, 0, 10, 1, 17, 0, 10,
+    111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 6, 18, 10, 0, 10, 1, 17, 0, 10,
     3, 17, 1, 11, 2, 33, 12, 4, 11, 4, 3, 14, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10,
     3, 17, 2, 2,
 ];
 
 const ROTATE_AUTHENTICATION_KEY_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 2, 2, 4, 3, 6, 15, 5, 21, 18, 7, 39, 124, 8, 163, 1,
-    16, 0, 0, 0, 1, 12, 0, 0, 2, 3, 1, 0, 0, 3, 4, 2, 0, 0, 4, 1, 2, 0, 2, 6, 12, 10, 2, 1, 8, 0,
-    0, 1, 6, 12, 2, 6, 8, 0, 10, 2, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 21, 75,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 2, 2, 4, 3, 6, 15, 5, 21, 18, 7, 39, 124, 8, 163, 1,
+    16, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 0, 0, 3, 1, 2, 0, 0, 4, 3, 2, 0, 1, 6, 12, 1, 8, 0, 0, 2, 6,
+    8, 0, 10, 2, 2, 6, 12, 10, 2, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 21, 75,
     101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121,
     31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111,
-    110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111, 116, 97, 116, 101, 95, 97,
-    117, 116, 104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 31, 114, 101,
-    115, 116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99,
-    97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    1, 9, 11, 0, 17, 0, 12, 2, 14, 2, 11, 1, 17, 1, 11, 2, 17, 2, 2,
+    110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 114, 101, 115, 116, 111, 114, 101,
+    95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105,
+    108, 105, 116, 121, 25, 114, 111, 116, 97, 116, 101, 95, 97, 117, 116, 104, 101, 110, 116, 105,
+    99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    0, 4, 1, 9, 11, 0, 17, 0, 12, 2, 14, 2, 11, 1, 17, 2, 11, 2, 17, 1, 2,
 ];
 
 const ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 20, 5, 28, 23, 7, 51, 159, 1, 8, 210,
-    1, 16, 0, 0, 0, 1, 0, 2, 12, 0, 1, 3, 3, 2, 0, 0, 4, 4, 1, 0, 0, 5, 5, 2, 0, 0, 6, 1, 2, 0, 3,
-    6, 12, 3, 10, 2, 1, 8, 0, 0, 2, 6, 12, 3, 1, 6, 12, 2, 6, 8, 0, 10, 2, 11, 68, 105, 101, 109,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 20, 5, 28, 23, 7, 51, 159, 1, 8, 210,
+    1, 16, 0, 0, 0, 1, 0, 3, 1, 0, 1, 2, 0, 1, 0, 0, 4, 2, 3, 0, 0, 5, 3, 1, 0, 0, 6, 4, 1, 0, 2,
+    6, 12, 3, 0, 1, 6, 12, 1, 8, 0, 2, 6, 8, 0, 10, 2, 3, 6, 12, 3, 10, 2, 11, 68, 105, 101, 109,
     65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101,
-    21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105, 108, 105,
-    116, 121, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97,
-    98, 111, 114, 116, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111, 116,
-    97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111, 116,
-    97, 116, 101, 95, 97, 117, 116, 104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107,
-    101, 121, 31, 114, 101, 115, 116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116,
-    105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 1, 0, 0, 1, 12, 10, 0, 10, 1, 17, 0, 11, 0, 17, 1, 12, 3, 14, 3, 11, 2, 17, 2,
-    11, 3, 17, 3, 2,
+    21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111,
+    114, 116, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105,
+    108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111, 116,
+    97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 114, 101, 115,
+    116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97,
+    112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111, 116, 97, 116, 101, 95, 97, 117, 116, 104,
+    101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 0, 5, 3, 12, 10, 0, 10, 1, 17, 0, 11, 0, 17, 1, 12, 3, 14, 3, 11, 2, 17,
+    3, 11, 3, 17, 2, 2,
 ];
 
 const ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 20, 5, 28, 25, 7, 53, 159, 1, 8, 212,
-    1, 16, 0, 0, 0, 1, 0, 2, 12, 0, 1, 3, 3, 2, 0, 0, 4, 4, 1, 0, 0, 5, 5, 2, 0, 0, 6, 1, 2, 0, 4,
-    6, 12, 6, 12, 3, 10, 2, 1, 8, 0, 0, 2, 6, 12, 3, 1, 6, 12, 2, 6, 8, 0, 10, 2, 11, 68, 105, 101,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 20, 5, 28, 25, 7, 53, 159, 1, 8, 212,
+    1, 16, 0, 0, 0, 1, 0, 3, 1, 0, 1, 2, 0, 1, 0, 0, 4, 2, 3, 0, 0, 5, 3, 1, 0, 0, 6, 4, 1, 0, 2,
+    6, 12, 3, 0, 1, 6, 12, 1, 8, 0, 2, 6, 8, 0, 10, 2, 4, 6, 12, 6, 12, 3, 10, 2, 11, 68, 105, 101,
     109, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
-    101, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105, 108,
-    105, 116, 121, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
-    97, 98, 111, 114, 116, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111,
-    116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111,
-    116, 97, 116, 101, 95, 97, 117, 116, 104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95,
-    107, 101, 121, 31, 114, 101, 115, 116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97,
-    116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 12, 11, 0, 10, 2, 17, 0, 11, 1, 17, 1, 12, 4, 14, 4, 11, 3,
-    17, 2, 11, 4, 17, 3, 2,
+    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
+    111, 114, 116, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98,
+    105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111,
+    116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 114, 101,
+    115, 116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99,
+    97, 112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111, 116, 97, 116, 101, 95, 97, 117, 116,
+    104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 3, 12, 11, 0, 10, 2, 17, 0, 11, 1, 17, 1, 12, 4, 14, 4, 11, 3,
+    17, 3, 11, 4, 17, 2, 2,
 ];
 
 const ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 8, 7, 15, 42, 8, 57, 16, 0, 0, 0, 1,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 8, 7, 15, 42, 8, 57, 16, 0, 0, 0, 1,
     0, 1, 0, 4, 6, 12, 5, 5, 10, 2, 0, 15, 82, 101, 99, 111, 118, 101, 114, 121, 65, 100, 100, 114,
     101, 115, 115, 25, 114, 111, 116, 97, 116, 101, 95, 97, 117, 116, 104, 101, 110, 116, 105, 99,
     97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
@@ -4032,23 +4635,23 @@ const ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE: &[u8] = &[
 ];
 
 const ROTATE_DUAL_ATTESTATION_INFO_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 2, 3, 2, 10, 5, 12, 13, 7, 25, 61, 8, 86, 16, 0, 0, 0,
-    1, 2, 1, 0, 0, 2, 2, 1, 0, 3, 6, 12, 10, 2, 10, 2, 0, 2, 6, 12, 10, 2, 15, 68, 117, 97, 108,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 10, 5, 12, 13, 7, 25, 61, 8, 86, 16, 0, 0, 0,
+    1, 0, 1, 0, 0, 2, 0, 1, 0, 2, 6, 12, 10, 2, 0, 3, 6, 12, 10, 2, 10, 2, 15, 68, 117, 97, 108,
     65, 116, 116, 101, 115, 116, 97, 116, 105, 111, 110, 15, 114, 111, 116, 97, 116, 101, 95, 98,
     97, 115, 101, 95, 117, 114, 108, 28, 114, 111, 116, 97, 116, 101, 95, 99, 111, 109, 112, 108,
     105, 97, 110, 99, 101, 95, 112, 117, 98, 108, 105, 99, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 10, 0, 11, 1, 17, 0, 11, 0, 11, 2, 17, 1, 2,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 7, 10, 0, 11, 1, 17, 0, 11, 0, 11, 2, 17, 1, 2,
 ];
 
 const ROTATE_SHARED_ED25519_PUBLIC_KEY_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 34, 8, 47, 16, 0, 0, 0, 1,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 34, 8, 47, 16, 0, 0, 0, 1,
     0, 1, 0, 2, 6, 12, 10, 2, 0, 22, 83, 104, 97, 114, 101, 100, 69, 100, 50, 53, 53, 49, 57, 80,
     117, 98, 108, 105, 99, 75, 101, 121, 10, 114, 111, 116, 97, 116, 101, 95, 107, 101, 121, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 11, 1, 17, 0, 2,
 ];
 
 const SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 15, 7, 29, 68, 8, 97, 16, 0, 0, 0,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 15, 7, 29, 68, 8, 97, 16, 0, 0, 0,
     1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 5, 6, 12, 5, 10, 2, 10, 2, 10, 2, 0, 2, 6, 12, 5, 10, 68, 105,
     101, 109, 83, 121, 115, 116, 101, 109, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111,
     110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 29, 117, 112, 100, 97,
@@ -4058,84 +4661,84 @@ const SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE: &[u8] = &[
 ];
 
 const SET_VALIDATOR_OPERATOR_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 19, 7, 33, 68, 8, 101, 16, 0, 0, 0,
-    1, 1, 2, 3, 4, 0, 0, 3, 5, 2, 0, 3, 6, 12, 10, 2, 5, 2, 1, 3, 0, 1, 5, 1, 10, 2, 2, 6, 12, 5,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 19, 7, 33, 68, 8, 101, 16, 0, 0, 0,
+    1, 1, 2, 0, 1, 0, 0, 3, 2, 3, 0, 1, 5, 1, 10, 2, 2, 6, 12, 5, 0, 3, 6, 12, 10, 2, 5, 2, 1, 3,
     15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 23, 86, 97, 108,
     105, 100, 97, 116, 111, 114, 79, 112, 101, 114, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103,
     14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95, 110, 97, 109, 101, 12, 115, 101, 116, 95,
-    111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+    111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 5,
     15, 10, 2, 17, 0, 11, 1, 33, 12, 3, 11, 3, 3, 11, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11,
     0, 10, 2, 17, 1, 2,
 ];
 
 const SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 26, 7, 47, 103, 8, 150, 1, 16, 0, 0,
-    0, 1, 0, 2, 0, 3, 3, 2, 0, 2, 4, 4, 5, 0, 1, 5, 6, 2, 0, 5, 6, 12, 6, 12, 3, 10, 2, 5, 2, 1, 3,
-    0, 2, 6, 12, 3, 1, 5, 1, 10, 2, 2, 6, 12, 5, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 26, 7, 47, 103, 8, 150, 1, 16, 0, 0,
+    0, 1, 0, 2, 0, 3, 0, 1, 0, 2, 4, 2, 3, 0, 1, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1, 5, 1, 10, 2, 2, 6,
+    12, 5, 5, 6, 12, 6, 12, 3, 10, 2, 5, 2, 1, 3, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111,
     110, 99, 101, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 23,
     86, 97, 108, 105, 100, 97, 116, 111, 114, 79, 112, 101, 114, 97, 116, 111, 114, 67, 111, 110,
     102, 105, 103, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
     97, 98, 111, 114, 116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95, 110, 97, 109, 101,
     12, 115, 101, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 0, 0, 1, 18, 11, 0, 10, 2, 17, 0, 10, 4, 17, 1, 11, 3, 33, 12, 5, 11, 5, 3, 14,
+    0, 0, 0, 0, 1, 0, 5, 6, 18, 11, 0, 10, 2, 17, 0, 10, 4, 17, 1, 11, 3, 33, 12, 5, 11, 5, 3, 14,
     11, 1, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 1, 10, 4, 17, 2, 2,
 ];
 
 const TIERED_MINT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 21, 7, 38, 59, 8, 97, 16,
-    0, 0, 0, 1, 1, 2, 2, 1, 0, 0, 3, 4, 1, 1, 4, 1, 3, 5, 6, 12, 3, 5, 3, 3, 0, 2, 6, 12, 3, 1, 9,
-    0, 4, 6, 12, 5, 3, 3, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 21, 7, 38, 59, 8, 97, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 4, 6, 12, 5, 3, 3, 5, 6, 12,
+    3, 5, 3, 3, 1, 9, 0, 11, 68, 105, 101, 109, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105,
     100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110,
     99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 11, 116, 105, 101, 114, 101, 100, 95, 109,
-    105, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 9, 10, 0, 10, 1, 17,
+    105, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 9, 10, 0, 10, 1, 17,
     0, 11, 0, 10, 2, 10, 3, 10, 4, 56, 0, 2,
 ];
 
 const UNFREEZE_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 14, 7, 28, 68, 8, 96, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 3, 1, 0, 3, 6, 12, 3, 5, 0, 2, 6, 12, 3, 2, 6, 12, 5, 15, 65, 99, 99,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 14, 7, 28, 68, 8, 96, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 2, 1, 0, 2, 6, 12, 5, 0, 2, 6, 12, 3, 3, 6, 12, 3, 5, 15, 65, 99, 99,
     111, 117, 110, 116, 70, 114, 101, 101, 122, 105, 110, 103, 12, 83, 108, 105, 100, 105, 110,
-    103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95,
-    111, 114, 95, 97, 98, 111, 114, 116, 16, 117, 110, 102, 114, 101, 101, 122, 101, 95, 97, 99,
-    99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 10, 0, 10,
-    1, 17, 0, 11, 0, 10, 2, 17, 1, 2,
+    103, 78, 111, 110, 99, 101, 16, 117, 110, 102, 114, 101, 101, 122, 101, 95, 97, 99, 99, 111,
+    117, 110, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
+    97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 7, 10, 0, 10,
+    1, 17, 1, 11, 0, 10, 2, 17, 0, 2,
 ];
 
 const UPDATE_DIEM_VERSION_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 10, 7, 24, 51, 8, 75, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 2, 1, 0, 3, 6, 12, 3, 3, 0, 2, 6, 12, 3, 11, 68, 105, 101, 109, 86,
-    101, 114, 115, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21,
-    114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114,
-    116, 3, 115, 101, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 10, 0, 10,
-    1, 17, 0, 11, 0, 10, 2, 17, 1, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 10, 7, 24, 51, 8, 75, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 0, 1, 0, 2, 6, 12, 3, 0, 3, 6, 12, 3, 3, 11, 68, 105, 101, 109, 86,
+    101, 114, 115, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 3,
+    115, 101, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
+    97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 7, 10, 0, 10,
+    1, 17, 1, 11, 0, 10, 2, 17, 0, 2,
 ];
 
 const UPDATE_DUAL_ATTESTATION_LIMIT_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 10, 7, 24, 71, 8, 95, 16, 0, 0, 0,
-    1, 1, 2, 2, 1, 0, 0, 3, 2, 1, 0, 3, 6, 12, 3, 3, 0, 2, 6, 12, 3, 15, 68, 117, 97, 108, 65, 116,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 10, 7, 24, 71, 8, 95, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 0, 1, 0, 2, 6, 12, 3, 0, 3, 6, 12, 3, 3, 15, 68, 117, 97, 108, 65, 116,
     116, 101, 115, 116, 97, 116, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110,
-    99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
-    111, 114, 116, 19, 115, 101, 116, 95, 109, 105, 99, 114, 111, 100, 105, 101, 109, 95, 108, 105,
-    109, 105, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 10, 0, 10, 1, 17, 0,
-    11, 0, 10, 2, 17, 1, 2,
+    99, 101, 19, 115, 101, 116, 95, 109, 105, 99, 114, 111, 100, 105, 101, 109, 95, 108, 105, 109,
+    105, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97,
+    98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 7, 10, 0, 10, 1,
+    17, 1, 11, 0, 10, 2, 17, 0, 2,
 ];
 
 const UPDATE_EXCHANGE_RATE_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 7, 1, 0, 6, 2, 6, 4, 3, 10, 16, 4, 26, 2, 5, 28, 25, 7, 53, 99,
-    8, 152, 1, 16, 0, 0, 0, 1, 0, 2, 1, 1, 7, 0, 2, 3, 3, 2, 0, 1, 4, 4, 1, 0, 0, 5, 6, 2, 1, 4, 2,
-    5, 4, 6, 12, 3, 3, 3, 1, 8, 0, 0, 2, 6, 12, 3, 2, 3, 3, 1, 9, 0, 2, 6, 12, 8, 0, 4, 68, 105,
+    161, 28, 235, 11, 1, 0, 0, 0, 7, 1, 0, 6, 2, 6, 4, 3, 10, 16, 4, 26, 2, 5, 28, 25, 7, 53, 99,
+    8, 152, 1, 16, 0, 0, 0, 1, 0, 2, 1, 1, 2, 0, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 3, 1, 1, 2,
+    6, 2, 3, 3, 1, 8, 0, 2, 6, 12, 3, 0, 2, 6, 12, 8, 0, 4, 6, 12, 3, 3, 3, 1, 9, 0, 4, 68, 105,
     101, 109, 12, 70, 105, 120, 101, 100, 80, 111, 105, 110, 116, 51, 50, 12, 83, 108, 105, 100,
-    105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99,
-    101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 20, 99, 114, 101, 97, 116, 101, 95, 102, 114,
-    111, 109, 95, 114, 97, 116, 105, 111, 110, 97, 108, 24, 117, 112, 100, 97, 116, 101, 95, 120,
+    105, 110, 103, 78, 111, 110, 99, 101, 20, 99, 114, 101, 97, 116, 101, 95, 102, 114, 111, 109,
+    95, 114, 97, 116, 105, 111, 110, 97, 108, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110,
+    99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 24, 117, 112, 100, 97, 116, 101, 95, 120,
     100, 120, 95, 101, 120, 99, 104, 97, 110, 103, 101, 95, 114, 97, 116, 101, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 11, 10, 0, 10, 1, 17, 0, 10, 2, 10, 3, 17, 1, 12, 4, 11,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 5, 1, 11, 10, 0, 10, 1, 17, 1, 10, 2, 10, 3, 17, 0, 12, 4, 11,
     0, 11, 4, 56, 0, 2,
 ];
 
 const UPDATE_MINTING_ABILITY_CODE: &[u8] = &[
-    161, 28, 235, 11, 2, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 8, 7, 18, 28, 8, 46, 16, 0,
-    0, 0, 1, 0, 1, 1, 4, 0, 2, 2, 6, 12, 1, 0, 1, 9, 0, 4, 68, 105, 101, 109, 22, 117, 112, 100,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 8, 7, 18, 28, 8, 46, 16, 0,
+    0, 0, 1, 0, 1, 1, 1, 0, 2, 2, 6, 12, 1, 0, 1, 9, 0, 4, 68, 105, 101, 109, 22, 117, 112, 100,
     97, 116, 101, 95, 109, 105, 110, 116, 105, 110, 103, 95, 97, 98, 105, 108, 105, 116, 121, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 4, 0, 1, 4, 11, 0, 10, 1, 56, 0, 2,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 4, 11, 0, 10, 1, 56, 0, 2,
 ];

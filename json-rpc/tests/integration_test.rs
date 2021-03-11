@@ -570,6 +570,14 @@ fn create_test_cases() -> Vec<Test> {
             },
         },
         Test {
+            name: "Upgrade diem version",
+            run: |env: &mut testing::Env| {
+                let script = tmp_new_transaction_script_builders::encode_update_diem_version_script(0, 2);
+                let txn = env.create_txn(&env.root, script);
+                env.submit_and_wait(txn);
+            },
+        },
+        Test {
             name: "preburn & burn events",
             run: |env: &mut testing::Env| {
                 let script = stdlib::encode_preburn_script(xus_tag(), 100);
@@ -622,10 +630,10 @@ fn create_test_cases() -> Vec<Test> {
                     result["transaction"]
                 );
 
-                let script = tmp_new_transaction_script_builders::encode_burn_with_amount_script(
+                let script = tmp_new_transaction_script_builders::encode_burn_with_amount_script_function(
                     xus_tag(), 0, env.dd.address, 100
                 );
-                let burn_txn = env.create_txn(&env.tc, script.clone());
+                let burn_txn = env.create_txn_by_payload(&env.tc, script);
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -654,8 +662,10 @@ fn create_test_cases() -> Vec<Test> {
                             "{ADDRESS: 000000000000000000000000000000DD}",
                             "{U64: 100}",
                         ],
-                        "code": hex::encode(script.code()),
-                        "type": "burn_with_amount"
+                        "type": "script_function",
+                        "module_address":"00000000000000000000000000000001",
+                        "module_name":"TreasuryComplianceScripts",
+                        "function_name":"burn_with_amount",
                     }),
                     "{}",
                     result["transaction"]
@@ -669,8 +679,8 @@ fn create_test_cases() -> Vec<Test> {
                     env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100));
                 env.submit_and_wait(txn);
 
-                let script = tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script(xus_tag(), env.dd.address, 100);
-                let cancel_burn_txn = env.create_txn(&env.tc, script.clone());
+                let script = tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script_function(xus_tag(), env.dd.address, 100);
+                let cancel_burn_txn = env.create_txn_by_payload(&env.tc, script);
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -712,8 +722,10 @@ fn create_test_cases() -> Vec<Test> {
                             "{ADDRESS: 000000000000000000000000000000DD}",
                             "{U64: 100}",
                         ],
-                        "code": hex::encode(script.code()),
-                        "type": "cancel_burn_with_amount"
+                        "type": "script_function",
+                        "module_address":"00000000000000000000000000000001",
+                        "module_name":"TreasuryComplianceScripts",
+                        "function_name":"cancel_burn_with_amount",
                     }),
                     "{}",
                     result["transaction"]
@@ -906,11 +918,11 @@ fn create_test_cases() -> Vec<Test> {
                         },
                         {
                             "data":{
-                                "epoch": 2,
+                                "epoch": 3,
                                 "type": "newepoch"
                             },
                             "key": "04000000000000000000000000000000000000000a550c18",
-                            "sequence_number": 1,
+                            "sequence_number": 2,
                             "transaction_version": version
                         }
                     ]),

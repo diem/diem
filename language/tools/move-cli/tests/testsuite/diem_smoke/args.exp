@@ -109,7 +109,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::Diem::CurrencyInfo<0x1::XUS::XUS>: [232, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 64, 66, 15, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 1, 1, 0, 0, 0, 0, 0, 0, 0, 24, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24, 0, 0, 0, 0, 0, 0, 0, 0, 24, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 281 bytes)
   Wrote 611 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
+Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [188, 2, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0] as the 0th event to stream [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -122,7 +122,7 @@ Changed resource(s) under 3 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [44, 1, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Changed type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 1, 0, 0, 0, 0, 0, 0, 0, 24, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
   Wrote 510 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
+Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [244, 1, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0] as the 0th event to stream [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10]
@@ -173,7 +173,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 7, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 593 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v`:
+Command `run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v`:
 Compiling transaction script...
 Emitted 2 events:
 Emitted [100, 0, 0, 0, 0, 0, 0, 0, 3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 0] as the 0th event to stream [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 170]
