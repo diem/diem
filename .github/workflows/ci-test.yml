@@ -103,7 +103,7 @@ jobs:
             let pr_data = await github.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: needs.prepare.outputs.changes-pull-request-number
+              pull_number: ${{ needs.prepare.outputs.changes-pull-request-number }}
             });
             try {
               let base_ref = pr_data.data.base.ref;
