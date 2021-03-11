@@ -19,8 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      changes-base-git-rev: ${{ steps.changes.outputs.changes-base-git-rev }}
       changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
+      build-images: ${{ steps.need-build-images.outputs.changes-found }}
+      need-base-images: ${{ steps.need-base-images.outputs.need-extra }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
       test-helm: ${{ steps.helm-changes.outputs.changes-found }}
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
@@ -41,27 +44,45 @@ jobs:
         uses: ./.github/actions/changes
         with:
           workflow-file: ci-test.yml
+      - id: need-build-images
+        name: find changes need image build.
+        uses: ./.github/actions/matches
+        with:
+          pattern: '^documentation\|^developers.diem.com'
+          invert: "true"
+      - id: need-base-images
+        name: build extra images if it is needed by LBT
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          res=true
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
+            echo "Compat killswitch activated! Will run land_blocking suite";
+            res=false
+          else
+            echo "Will run land_blocking_compat suite"
+          fi
+          echo "::set-output name=need-extra::$(echo $res)";
       - id: rust-changes
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
         with:
-          pattern: '^documentation\|^docker\|^scripts'
+          pattern: '^documentation\|^docker\|^scripts\|^developers.diem.com'
           invert: "true"
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes
         uses: ./.github/actions/matches
         with:
-          pattern: 'Dockerfile$\|.*.sh$'
+          pattern: 'Dockerfile$\|.*.sh$|^developers.diem.com'
       - id: helm-changes
         name: find helm changes
         uses: ./.github/actions/matches
         with:
-          pattern: '^.github\|^helm'
+          pattern: '^.github\|^helm|^developers.diem.com'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
         with:
-          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh'
+          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh|^developers.diem.com'
       - id: docker-compose-changes
         name: find changes that should trigger docker compose testing.
         uses: ./.github/actions/matches
@@ -72,7 +93,7 @@ jobs:
         name: find website changes.
         uses: ./.github/actions/matches
         with:
-          pattern: "^documentation"
+          pattern: "^documentation|^developers.diem.com"
 
   dev-setup-sh-test:
     runs-on: ubuntu-latest-xl
@@ -95,7 +116,9 @@ jobs:
   build-images:
     runs-on: ubuntu-latest-xl
     needs: prepare
-    if: ${{ github.event_name == 'push' && needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' }}
+    outputs:
+      head-tag: ${{ steps.push-to-novi-ecr.outputs.head-tag }}
     steps:
       - uses: actions/checkout@v2
         with:
@@ -105,6 +128,18 @@ jobs:
         uses: ./.github/actions/changes
         with:
           workflow-file: docker-publish.yml
+      - name: setup_aws_ecr_login
+        run: |
+          echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.AWS_ECR_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       - name: Sign in to dockerhub, install image signing cert.
         uses: ./.github/actions/dockerhub_login
         with:
@@ -132,6 +167,286 @@ jobs:
           exit $success
         env:
           DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+      - name: push to novi ecr
+        id: push-to-novi-ecr
+        run: |
+          #push to novi ecr with standard names
+          BRANCH="$CHANGES_TARGET_BRANCH"
+          GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "::set-output name=head-tag::land_$GIT_REV";
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
+          docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
+
+  need-base-images:
+    runs-on: self-hosted
+    needs: prepare
+    if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' && needs.prepare.outputs.need-base-images == 'true' }}
+    outputs:
+      prev-tag: ${{ steps.build-extra-images.outputs.prev-tag }}
+    steps:
+      - name: Setup env
+        run: |
+          echo "BASE_GIT_REV=${{ needs.prepare.outputs.changes-base-git-rev }}" >> $GITHUB_ENV
+      - name: find images
+        run: |
+          set +e
+          echo "Will run land_blocking_compat suite"
+          echo "Finding a previous image tag to test against"
+          .github/actions/land-blocking/find-lbt-images.sh > lbt_images_output.txt
+          if [ $? -ne 0 ]; then
+            echo "BUILD_PREV=1" >> $GITHUB_ENV
+            cat lbt_images_output.txt
+            jq -n \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. Could not find a recent image tag for Compat Test" \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+              {
+                "text": $msg,
+                "actions": [
+                {
+                  "type": "button",
+                  "text": "Visit Job",
+                  "url": $url
+                }
+                ]
+              }
+              ]
+            }' > /tmp/payload
+            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
+          else
+            compat_prev_tag=$(tail -1 lbt_images_output.txt)
+            echo "Using previous image tag $compat_prev_tag"
+            echo "PREV_TAG=$compat_prev_tag" >> $GITHUB_ENV
+            echo "BUILD_PREV=0" >> $GITHUB_ENV
+          fi
+      - name: build extra images
+        id: build-extra-images
+        run: |
+          res=land_$BASE_GIT_REV
+          if [ $BUILD_PREV -eq 1 ]; then
+            compat_prev_tag=$res
+            echo "Starting codebuild for $compat_prev_tag"
+            VERSION=$BASE_GIT_REV ADDL_TAG=$compat_prev_tag .github/actions/land-blocking/cti-codebuild.sh &> codebuild-prev.log &
+            prev_build_pid=$!
+            wait $prev_build_pid
+            echo "====== codebuild-prev.log start ======"
+            cat codebuild-prev.log
+          else
+            res=$PREV_TAG;
+          fi
+          echo "::set-output name=prev-tag::$(echo $res)";
+
+  land-blocking-switch:
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - build-images
+      - need-base-images
+    outputs:
+      lbt-switch: ${{ steps.set-switch.outputs.lbt-switch }}
+      head-tag: ${{ steps.set-switch.outputs.head-tag }}
+      prev-tag: ${{ steps.set-switch.outputs.prev-tag }}
+    steps:
+      - name: set lbt switch value
+        id: set-switch
+        run: |
+          lbt=true
+          head=''
+          prev=''
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST || needs.build-images.result!='success' }}; then
+            lbt=false
+          elif ${{ needs.need-base-images.result=='skipped' }}; then
+            head=${{ needs.build-images.outputs.head-tag }}
+          elif ${{ needs.need-base-images.result=='success' }}; then
+            head=${{ needs.build-images.outputs.head-tag }}
+            prev=${{ needs.need-base-images.outputs.prev-tag }}
+          else
+            lbt=false
+          fi
+          echo "::set-output name=lbt-switch::$(echo $lbt)";
+          echo "::set-output name=head-tag::$(echo $head)";
+          echo "::set-output name=prev-tag::$(echo $prev)";
+
+  land-blocking-test:
+    name: Run land blocking test
+    runs-on: self-hosted
+    needs: [prepare, land-blocking-switch]
+    if: ${{ always() }}
+    timeout-minutes: 30
+    steps:
+      - name: Launch cluster test
+        if: ${{ needs.land-blocking-switch.outputs.lbt-switch == 'true' }}
+        # NOTE Remember to update PR comment payload if cti cmd is updated.
+        run: |
+          set +e
+          date
+          export CTI_OUTPUT_LOG=$(mktemp)
+          echo "CTI_OUTPUT_LOG=$CTI_OUTPUT_LOG" >> $GITHUB_ENV
+          cmd=""
+          if [ "${{ needs.land-blocking-switch.outputs.prev-tag }} == ''" ]; then
+            echo here
+            cmd="./scripts/cti --tag ${{ needs.land-blocking-switch.outputs.head-tag }} -E RUST_LOG=debug --report report.json --suite land_blocking"
+          else
+            echo there
+            cmd="./scripts/cti --tag ${{ needs.land-blocking-switch.outputs.prev-tag }} --cluster-test-tag ${{ needs.land-blocking-switch.outputs.head-tag }} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${{ needs.land-blocking-switch.outputs.head-tag }} --report report.json --suite land_blocking_compat"
+          fi
+          eval $cmd
+          ret=$?
+          echo "cti exit code: $ret"
+          echo "CTI_REPRO_CMD=$cmd" >> $GITHUB_ENV
+          echo "CTI_EXIT_CODE=$ret" >> $GITHUB_ENV
+          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed for PR ${{ needs.prepare.outputs.changes-pull-request-number }}."
+          if [ -s "report.json" ]; then
+            echo "report.json start"
+            cat report.json
+            echo "report.json end"
+            msg_text="$msg_text Report:\n$(cat report.json)"
+          else
+            echo "report.json is empty or not found."
+            msg_text="$msg_text Report:\nEmpty"
+            ret=1
+          fi
+          if [ $ret -ne 0 ]; then
+            jq -n \
+              --arg msg "$msg_text" \
+              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+              --arg pr_url "https://github.com/${{ github.repository }}/pull/${{ needs.prepare.outputs.changes-pull-request-number }}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    },
+                    {
+                      "type": "button",
+                      "text": "Visit PR",
+                      "url": $pr_url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
+          fi
+      - name: Post test results on PR
+        uses: actions/github-script@v3
+        if: ${{ needs.land-blocking-switch.outputs.lbt-switch == 'true' }}
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            // Find the number of the pull request that trigggers this push
+            let pr_num = ${{ needs.prepare.outputs.changes-pull-request-number }};
+            if (!pr_num) {
+              console.warn("Did not find pull request num in previous step");
+              console.log("GH event payload\n", context.payload);
+              return;
+            }
+            // Read and check cluster test results
+            let should_fail = false;
+            let env_vars = process.env;
+            let body = '';
+            const fsp = require('fs').promises;
+            try {
+              data = await fsp.readFile('report.json', 'utf-8');
+              var result = JSON.parse(data);
+              // TODO - set P/F based on metrics TPS, latency
+              body = `Cluster Test Result
+            \`\`\`
+            ${result.text}
+            ${result.links}
+            \`\`\`
+            `;
+              // Check CTI exit code for errors
+              if (parseInt(env_vars.CTI_EXIT_CODE) != 0) {
+                body += "\n :exclamation: Cluster Test failed - non-zero exit code for `cti` \n"
+                should_fail = true;
+              } else {
+                let tps = result.metrics.find(m => m.experiment == "all up" && m.metric == "avg_tps").value;
+                let min_tps = 750;
+                if (tps < min_tps) {
+                  body += "\n :exclamation: Performance regression is detected on this PR";
+                  body += "\n TPS with PR: " + tps + ", this is lower then minimum allowed " + min_tps + " TPS.";
+                  console.log(body);
+                  should_fail = true;
+                }
+              }
+            } catch (err) {
+              if (err.code === 'ENOENT') {
+                body = "Cluster Test failed - no test report found.\n";
+                // Check Cluster Test output log for infra error
+                try {
+                  cti_log = await fsp.readFile(env_vars.CTI_OUTPUT_LOG, 'utf-8');
+                  let re = /.*(^Failed\sto\s.*\"Service\sUnavailable.\sPlease\stry\sagain\slater\.\".*)/;
+                  if (re.test(cti_log)) {
+                    let match = re.exec(cti_log);
+                    body += " There was service infra error:\n";
+                    body += `
+                    ${match[1]}
+                    `
+                    + "\n"
+                    ;
+                    body += "To retry, comment your PR with `/land`.";
+                    body += " If that doesn't trigger re-run, amend and push again.";
+                  }
+                } catch (err) {
+                  console.error("Failed to check infra error in CT output log.\n", err);
+                }
+              } else {
+                body = "Cluster Test runner failed.";
+                console.error(err);
+              }
+              body += " See https://github.com/diem/diem/actions/runs/${{github.run_id}}";
+              // Post comment on PR then fail this workflow
+              should_fail = true;
+            }
+            // Add repro cmd to message
+            try {
+              body += "\nRepro cmd:\n";
+              body += `
+              \`\`\`
+              ${env_vars.CTI_REPRO_CMD}
+              \`\`\`
+              `
+            } catch (err) {
+              if (err.code === 'ReferenceError') {
+                console.error("One of the following env vars is not set");
+              } else {
+                body += "[GHA DEBUG]\nFound error in actions/github-script\n";
+                body += err;
+              }
+            }
+            // Post test result on original pull request
+            try {
+              if (!should_fail) {
+                body += "\n :tada: Land-blocking cluster test passed! :ok_hand:"
+              }
+              await github.issues.createComment(
+                  {
+                    issue_number: pr_num,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: body,
+                  }
+              );
+            } catch (err) {
+              if (err.status === 401) {
+                // Fail silently for auth but log to console.
+                console.warn("GH token has expired when trying to POST\n", err);
+              } else {
+                console.error("HttpError other than 401 is not bypassed");
+                throw err;
+              }
+            }
+            // Fail the workflow if test fails or perf regresses
+            if (should_fail) {
+              throw "Land-blocking test failed";
+            }
 
   non-rust-lint:
     runs-on: ubuntu-latest-xl
@@ -556,6 +871,9 @@ jobs:
     needs:
       - prepare
       - dev-setup-sh-test
+      - build-images
+      - need-base-images
+      - land-blocking-test
       - non-rust-lint
       - lint
       - unit-test
@@ -569,6 +887,9 @@ jobs:
       - run: |
           echo prepare: ${{ needs.prepare.result }}
           echo dev-setup-sh-test: ${{ needs.dev-setup-sh-test.result }}
+          echo build-images: ${{ needs.build-images.result }}
+          echo need-base-images: ${{ needs.need-base-images.result }}
+          echo land-blocking-test: ${{ needs.land-blocking-test.result }}
           echo non-rust-lint: ${{ needs.non-rust-lint.result }}
           echo lint: ${{ needs.lint.result }}
           echo unit-test: ${{ needs.unit-test.result }}
@@ -581,6 +902,9 @@ jobs:
           success="${{
             needs.prepare.result=='success'
             && (needs.dev-setup-sh-test.result=='success' || needs.dev-setup-sh-test.result=='skipped')
+            && (needs.build-images.result=='success' || needs.build-images.result=='skipped')
+            && (needs.need-base-images.result=='success' || needs.need-base-images.result=='skipped')
+            && (needs.land-blocking-test.result=='success' || needs.land-blocking-test.result=='skipped')
             && (needs.non-rust-lint.result=='success' || needs.non-rust-lint.result=='skipped')
             && (needs.lint.result=='success' || needs.lint.result=='skipped')
             && (needs.unit-test.result=='success' || needs.unit-test.result=='skipped')

@@ -25,7 +25,7 @@ while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
     BUILD_PROJECTS=(diem-validator diem-cluster-test diem-init diem-faucet diem-safety-rules diem-tools)
     ;;
-    # NOTE: This is used in land-blocking workflow `.github/workflows/land-blocking.yml`
+    # NOTE: This is used in land-blocking job `.github/workflows/ci-test.yml`
     #       If you change the list of projects to be built for `--build-all-cti`, please
     #       change the list in `.github/actions/land-blocking/find-lbt-images.sh` as well
   --build-all-cti )
