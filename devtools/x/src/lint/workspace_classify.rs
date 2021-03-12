@@ -121,7 +121,7 @@ impl<'cfg> PackageLinter for DefaultOrTestOnly<'cfg> {
                 out.write(LintLevel::Error, msg);
             }
             (None, WorkspaceStatus::RootMember, false) => {
-                if matches!(package.publish(), Some(&[])) {
+                if package.publish().is_never() {
                     // Library, listed in default members. It shouldn't be.
                     // unless it is a published library
                     let msg = indoc!(

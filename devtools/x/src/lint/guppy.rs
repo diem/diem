@@ -5,11 +5,13 @@
 
 use crate::config::{BannedDepsConfig, EnforcedAttributesConfig, OverlayConfig};
 use anyhow::anyhow;
-use guppy::{graph::feature::FeatureFilterFn, Version, VersionReq};
+use guppy::{
+    graph::{feature::FeatureFilterFn, PackagePublish},
+    Version, VersionReq,
+};
 use hakari::summaries::HakariBuilderSummary;
 use std::{
     collections::{BTreeMap, HashMap},
-    ffi::OsStr,
     iter,
 };
 use x_core::WorkspaceStatus;
@@ -170,7 +172,7 @@ impl PackageLinter for CrateNamesPaths {
             if target_name.contains('_') {
                 // If the path is implicitly specified by the name, don't warn about it.
                 let file_stem = build_target.path().file_stem();
-                if file_stem != Some(OsStr::new(target_name)) {
+                if file_stem != Some(target_name) {
                     out.write(
                         LintLevel::Error,
                         format!(
@@ -410,7 +412,7 @@ impl PackageLinter for UnpublishedPackagesOnlyUsePathDependencies {
         let metadata = ctx.metadata();
 
         // Skip all packages which aren't 'publish = false'
-        if !matches!(metadata.publish(), Some(&[])) {
+        if !metadata.publish().is_never() {
             return Ok(RunStatus::Executed);
         }
 
@@ -448,7 +450,7 @@ impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
         let metadata = ctx.metadata();
 
         // Skip all packages which aren't publishable
-        if matches!(metadata.publish(), Some(&[])) {
+        if metadata.publish().is_never() {
             return Ok(RunStatus::Executed);
         }
 
@@ -457,7 +459,7 @@ impl PackageLinter for PublishedPackagesDontDependOnUnpublishedPackages {
             .filter(|p| !p.dev_only() && p.to().in_workspace())
         {
             // If the direct dependency isn't publishable
-            if matches!(direct_dep.to().publish(), Some(&[])) {
+            if direct_dep.to().publish().is_never() {
                 out.write(
                     LintLevel::Error,
                     format!(
@@ -490,18 +492,23 @@ impl PackageLinter for OnlyPublishToCratesIo {
     ) -> Result<RunStatus<'l>> {
         let metadata = ctx.metadata();
 
-        match metadata.publish() {
-            Some(&[]) => {}
-            Some(&[ref r]) if r == "crates-io" => {}
-            _ => {
-                out.write(
-                    LintLevel::Error,
-                    "published package should only be publishable to crates.io. \
-                        If you intend to publish this package, ensure the 'publish' \
-                        field in the package's Cargo.toml is 'publish = [\"crates-io\"]. \
-                        Otherwise set the 'publish' field to 'publish = false'.",
-                );
-            }
+        let is_ok = match metadata.publish() {
+            PackagePublish::Unrestricted => false,
+            PackagePublish::Registries(&[ref registry]) => registry == PackagePublish::CRATES_IO,
+            // Unpublished package.
+            PackagePublish::Registries(&[]) => true,
+            // Multiple registries or something else.
+            _ => false,
+        };
+
+        if !is_ok {
+            out.write(
+                LintLevel::Error,
+                "published package should only be publishable to crates.io. \
+                    If you intend to publish this package, ensure the 'publish' \
+                    field in the package's Cargo.toml is 'publish = [\"crates-io\"]. \
+                    Otherwise set the 'publish' field to 'publish = false'.",
+            );
         }
 
         Ok(RunStatus::Executed)
