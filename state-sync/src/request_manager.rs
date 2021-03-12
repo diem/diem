@@ -9,7 +9,7 @@ use crate::{
     network::{StateSyncMessage, StateSyncSender},
 };
 use diem_config::{
-    config::{PeerNetworkId, UpstreamConfig},
+    config::PeerNetworkId,
     network_id::{NetworkId, NodeNetworkId},
 };
 use diem_logger::prelude::*;
@@ -20,13 +20,14 @@ use rand::{
     thread_rng,
 };
 use std::{
+    cmp::Ordering,
     collections::{BTreeMap, HashMap},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+/// Scores for peer rankings based on preferences and behavior.
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
-const PRIMARY_NETWORK_PREFERENCE: usize = 0;
 
 #[derive(Clone, Debug)]
 struct PeerInfo {
@@ -46,13 +47,13 @@ pub struct ChunkRequestInfo {
     version: u64,
     first_request_time: SystemTime,
     last_request_time: SystemTime,
-    multicast_level: usize,
+    multicast_level: NetworkId,
     multicast_start_time: SystemTime,
     last_request_peers: Vec<PeerNetworkId>,
 }
 
 impl ChunkRequestInfo {
-    pub fn new(version: u64, peers: Vec<PeerNetworkId>, multicast_level: usize) -> Self {
+    pub fn new(version: u64, peers: Vec<PeerNetworkId>, multicast_level: NetworkId) -> Self {
         let now = SystemTime::now();
         Self {
             version,
@@ -78,38 +79,38 @@ enum PeerScoreUpdateType {
 }
 
 pub struct RequestManager {
-    // list of peers that are eligible for this node to send sync requests to
-    // grouped by network preference
-    eligible_peers: BTreeMap<usize, (Vec<PeerNetworkId>, Option<WeightedIndex<f64>>)>,
+    // The list of peers that are eligible for this node to send sync requests
+    // to (grouped by network).
+    eligible_peers: BTreeMap<NetworkId, (Vec<PeerNetworkId>, Option<WeightedIndex<f64>>)>,
     peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
-    upstream_config: UpstreamConfig,
     // duration with the same version before the next attempt to get the next chunk
     request_timeout: Duration,
     // duration with the same version before multicasting, i.e. sending the next chunk request to more networks
     multicast_timeout: Duration,
-    // the maximum preference level of all the networks to try to multicast the same chunk request to,
-    // where network preference is specified by the upstream config
-    multicast_level: usize,
+    // The maximum network level that chunk requests will be sent to. The greater the network level,
+    // the more networks this node will send multicast requests to. Network ordering is defined by
+    // NetworkId.
+    multicast_network_level: NetworkId,
     network_senders: HashMap<NodeNetworkId, StateSyncSender>,
 }
 
 impl RequestManager {
     pub fn new(
-        upstream_config: UpstreamConfig,
         request_timeout: Duration,
         multicast_timeout: Duration,
         network_senders: HashMap<NodeNetworkId, StateSyncSender>,
     ) -> Self {
-        counters::MULTICAST_LEVEL.set(PRIMARY_NETWORK_PREFERENCE as i64);
+        let multicast_network_level = NetworkId::Validator;
+        update_multicast_network_counter(multicast_network_level.clone());
+
         Self {
             eligible_peers: BTreeMap::new(),
             peers: HashMap::new(),
             requests: BTreeMap::new(),
-            upstream_config,
             request_timeout,
             multicast_timeout,
-            multicast_level: PRIMARY_NETWORK_PREFERENCE,
+            multicast_network_level,
             network_senders,
         }
     }
@@ -119,20 +120,20 @@ impl RequestManager {
         peer: PeerNetworkId,
         origin: ConnectionOrigin,
     ) -> Result<(), Error> {
-        let is_upstream_peer = self.is_upstream_peer(&peer, origin);
-        debug!(LogSchema::new(LogEntry::NewPeer)
-            .peer(&peer)
-            .is_upstream_peer(is_upstream_peer));
-        if !is_upstream_peer {
+        if !self.is_upstream_peer(&peer, origin) {
             return Err(Error::PeerIsNotUpstream(
                 peer.to_string(),
                 origin.to_string(),
             ));
         }
 
+        debug!(LogSchema::new(LogEntry::NewPeer)
+            .peer(&peer)
+            .is_upstream_peer(true));
         counters::ACTIVE_UPSTREAM_PEERS
             .with_label_values(&[&peer.raw_network_id().to_string()])
             .inc();
+
         if let Some(peer_info) = self.peers.get_mut(&peer) {
             peer_info.is_alive = true;
         } else {
@@ -193,28 +194,21 @@ impl RequestManager {
         }
     }
 
-    // Updates the information used to select a peer to send a chunk request to:
-    // * eligible_peers
-    // * weighted_index: the chance that a peer is selected from `eligible_peers` is weighted by its score
+    // Updates the information used to select a peer to send a chunk request to.
     fn update_peer_selection_data(&mut self) {
-        // group active peers by network
+        // Group active peers by network level
         let active_peers = self
             .peers
             .iter()
             .filter(|(_peer, peer_info)| peer_info.is_alive)
-            .map(|(peer, peer_info)| {
-                let network_pref = self
-                    .upstream_config
-                    .get_upstream_preference(peer.raw_network_id())
-                    .unwrap();
-                (network_pref, (peer, peer_info))
-            })
+            .map(|(peer, peer_info)| (peer.raw_network_id(), (peer, peer_info)))
             .into_group_map();
 
-        // for each network, compute peer selection data
+        // For each network, compute the peer selection data (i.e., the weighted index
+        // that holds the probability of the peer being chosen for the next chunk request)
         self.eligible_peers = active_peers
             .into_iter()
-            .map(|(network_pref, peers)| {
+            .map(|(network_level, peers)| {
                 let mut eligible_peers = vec![];
                 let weights: Vec<_> = peers
                     .iter()
@@ -224,53 +218,45 @@ impl RequestManager {
                     })
                     .collect();
                 let weighted_index = WeightedIndex::new(&weights)
-                    .map_err(|err| {
+                    .map_err(|error| {
                         error!(
-                            "[state sync] (pick_peer) failed to compute weighted index, {:?}",
-                            err
+                            "Failed to compute weighted index for eligible peers: {:?}",
+                            error
                         );
-                        err
+                        error
                     })
                     .ok();
-                (network_pref, (eligible_peers, weighted_index))
+                (network_level, (eligible_peers, weighted_index))
             })
             .collect();
     }
 
-    /// Picks a set of peers to send chunk requests to
-    /// Tries to pick one peer per network, in order of network preference (where the higher the preference,
-    /// the lower the value)
-    /// The set of networks selected is determined by the multicast level. The preference level of the
-    /// network is as defined in `UpstreamConfig` - 0 is the numeric value for the highest preference,
-    /// and the larger this level, the less preferred this network is.
-    /// All networks with preference level <= multicast level are first sampled. If there are no live peers in
-    /// these networks, we find the next available network with preference level greater than the current multicast
-    /// level with any live peers. If such a network is found, the multicast level is also updated to
-    /// the preference level of the chosen network.
+    /// Picks a set of peers to send chunk requests to. Here, we attempt to pick one peer
+    /// per network, in order of network level preference. The set of networks selected is
+    /// determined by the multicast network level. All networks with preference
+    /// level <= multicast level are sampled. If there are no live peers in these networks,
+    /// the multicast level is updated to the preference level of the first chosen network.
     pub fn pick_peers(&mut self) -> Vec<PeerNetworkId> {
-        // Strategy: pick peers using multicast level
-        // if no live peers exist for this multicast level, keep failing over to next level
-
         let mut chosen_peers = vec![];
-        let mut new_multicast_level = None;
-        for (level, (peers, weighted_index)) in self.eligible_peers.iter() {
+        let mut new_multicast_network_level = None;
+
+        for (network_level, (peers, weighted_index)) in &self.eligible_peers {
             if let Some(peer) = pick_peer(peers, weighted_index) {
                 chosen_peers.push(peer)
             }
-            // at the minimum go through networks with preference level <= multicast_level
-            // if no peers are found for the current multicast_level, continue doing
-            // best effort search of the first network with live peers to failover to
-            if !chosen_peers.is_empty() && *level >= self.multicast_level {
-                new_multicast_level = Some(*level);
+            // At minimum, go through networks with preference level <= multicast level.
+            // If no peers are found for the current multicast level, continue doing
+            // best effort search of the networks to failover to.
+            if !chosen_peers.is_empty() && *network_level >= self.multicast_network_level {
+                new_multicast_network_level = Some(network_level.clone());
                 break;
             }
         }
 
-        // we call `update_multicast` here instead of before the break to avoid mutable borrow conflict
-        // with the outer loop
-        if let Some(level) = new_multicast_level {
-            self.update_multicast(level, None);
+        if let Some(network_level) = new_multicast_network_level {
+            self.update_multicast_network_level(network_level, None);
         }
+
         chosen_peers
     }
 
@@ -351,16 +337,17 @@ impl RequestManager {
     pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) -> ChunkRequestInfo {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
-            if self.multicast_level != prev_request.multicast_level {
+            if self.multicast_network_level != prev_request.multicast_level {
                 // restart multicast timer for this request if multicast level changed
-                prev_request.multicast_level = self.multicast_level;
+                prev_request.multicast_level = self.multicast_network_level.clone();
                 prev_request.multicast_start_time = now;
             }
             prev_request.last_request_peers = peers;
             prev_request.last_request_time = now;
             prev_request.clone()
         } else {
-            let chunk_request_info = ChunkRequestInfo::new(version, peers, self.multicast_level);
+            let chunk_request_info =
+                ChunkRequestInfo::new(version, peers, self.multicast_network_level.clone());
             self.requests.insert(version, chunk_request_info.clone());
             chunk_request_info
         }
@@ -383,18 +370,15 @@ impl RequestManager {
     }
 
     pub fn process_success_response(&mut self, peer: &PeerNetworkId) {
-        // update multicast
-        let peer_level = self
-            .upstream_config
-            .get_upstream_preference(peer.raw_network_id())
-            .unwrap_or_else(|| self.upstream_config.upstream_count());
-        if peer_level < self.multicast_level {
-            // reduce multicast_level if we received peer from lower multicast level (= more highly
-            // prioritized network)
-            self.update_multicast(peer_level, None)
+        // Update the multicast level if appropriate
+        let peer_network_level = peer.raw_network_id();
+        if peer_network_level < self.multicast_network_level {
+            // Reduce the multicast network level as we received a chunk response from a
+            // peer in a lower (that is, higher priority) network.
+            self.update_multicast_network_level(peer_network_level, None)
         }
 
-        // update score
+        // Update the peer's score
         self.update_score(peer, PeerScoreUpdateType::Success);
     }
 
@@ -493,58 +477,56 @@ impl RequestManager {
             self.update_score(peer, PeerScoreUpdateType::TimeOut);
         }
 
-        // increment multicast level if this request is also multicast-timed-out
+        // Increase the multicast network level if this request has also hit a multicast timeout
         let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
         if is_timeout(multicast_start_time, self.multicast_timeout) {
-            let new_multicast_level = self.multicast_level.checked_add(1).ok_or_else(|| {
-                Error::IntegerOverflow("New multicast level has overflown!".into())
-            })?;
-            let max_multicast_level = self
-                .upstream_config
-                .upstream_count()
-                .checked_sub(1)
-                .ok_or_else(|| Error::IntegerOverflow("Upstream count has overflown!".into()))?; // multicast_level (=network preference) is 0-indexed
-            let new_multicast_level = std::cmp::min(new_multicast_level, max_multicast_level);
-            self.update_multicast(new_multicast_level, Some(version));
+            // Move to the next multicast network level
+            let new_multicast_network_level = match self.multicast_network_level {
+                NetworkId::Validator => NetworkId::vfn_network(),
+                _ => NetworkId::Public,
+            };
+            self.update_multicast_network_level(new_multicast_network_level, Some(version));
         }
         Ok(timeout)
     }
 
+    /// The validator network and vfn network are always considered upstream when state syncing, as
+    /// multicasting will prioritize sending chunk requests to the most important network first.
+    /// If the peer is on the public network, we only consider it upstream (i.e., a valid peer
+    /// to send chunk requests to) if we connected to it.
     fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
-        let is_network_upstream = self
-            .upstream_config
-            .get_upstream_preference(peer.raw_network_id())
-            .is_some();
-        // check for case whether the peer is a public downstream peer, even if the public network is upstream
-        if is_network_upstream && peer.raw_network_id() == NetworkId::Public {
-            origin == ConnectionOrigin::Outbound
-        } else {
-            is_network_upstream
-        }
+        peer.raw_network_id().is_validator_network()
+            || peer.raw_network_id().is_vfn_network()
+            || origin == ConnectionOrigin::Outbound
     }
 
     pub fn is_known_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
         self.peers.contains_key(peer)
     }
 
-    fn update_multicast(&mut self, new_level: usize, request_version: Option<u64>) {
-        let old_level = self.multicast_level;
-        let event = match new_level {
-            l if l > old_level => LogEvent::Failover,
-            l if l < old_level => LogEvent::Recover,
-            _ => return,
+    fn update_multicast_network_level(
+        &mut self,
+        new_level: NetworkId,
+        request_version: Option<u64>,
+    ) {
+        // Update level if the new level is different
+        let current_level = self.multicast_network_level.clone();
+        let log_event = match new_level.cmp(&current_level) {
+            Ordering::Equal => return,
+            Ordering::Greater => LogEvent::Failover,
+            Ordering::Less => LogEvent::Recover,
         };
+        self.multicast_network_level = new_level.clone();
 
-        let mut log = LogSchema::event_log(LogEntry::Multicast, event)
-            .old_multicast_level(old_level)
+        // Update the counters and logs
+        update_multicast_network_counter(self.multicast_network_level.clone());
+        let mut log_event = LogSchema::event_log(LogEntry::Multicast, log_event)
+            .old_multicast_level(current_level)
             .new_multicast_level(new_level);
         if let Some(version) = request_version {
-            log = log.request_version(version);
+            log_event = log_event.request_version(version);
         }
-
-        info!(log);
-        self.multicast_level = new_level;
-        counters::MULTICAST_LEVEL.set(self.multicast_level as i64);
+        info!(log_event);
     }
 }
 
@@ -569,6 +551,23 @@ fn pick_peer(
         }
     }
     None
+}
+
+// TODO(joshlind): Right now, the internal NetworkId state is leaking into state
+// sync (and other places in the code/other components, too). For example, this mapping between
+// NetworkId and integer for the purpose of maintaining visible counters should be done
+// by NetworkId and not here. Look into updating the NetworkId interface to expose this
+// conversion, as well as provide clearer interfaces around max, min network values as
+// well as moving between network levels.
+fn update_multicast_network_counter(multicast_network_level: NetworkId) {
+    let network_counter_value = if multicast_network_level.is_validator_network() {
+        0
+    } else if multicast_network_level.is_vfn_network() {
+        1
+    } else {
+        2
+    };
+    counters::MULTICAST_LEVEL.set(network_counter_value);
 }
 
 #[cfg(test)]
@@ -854,7 +853,6 @@ mod tests {
         num_validators: u64,
     ) -> (RequestManager, Vec<PeerNetworkId>) {
         let mut request_manager = RequestManager::new(
-            UpstreamConfig::default(),
             Duration::from_secs(request_timeout),
             Duration::from_secs(30),
             HashMap::new(),

@@ -96,7 +96,9 @@ impl Ord for NetworkId {
 }
 
 impl PartialOrd for NetworkId {
-    /// Generalized ordering for determining which network is the most important
+    /// Generalized ordering for determining which network is the most important.
+    /// The lower the ordering, the higher the importance (i.e., the validator
+    /// network is less than all other networks because it has the highest priority).
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // To simplify logic below, if it's the same it's equal
         Some(if self == other {

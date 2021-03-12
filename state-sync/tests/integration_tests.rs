@@ -774,21 +774,25 @@ fn test_multicast_failover() {
         true,
     );
 
-    // Wait for fullnode 0's chunk request to time out
+    // Wait for fullnode 0's chunk request to time out before delivering the response
     std::thread::sleep(std::time::Duration::from_millis(multicast_timeout_ms));
+    env.deliver_msg(validator_peer_id);
 
-    // Verify that fullnode 0 broadcasts to the validator peer and the fallback peer
+    // Verify that fullnode 0 broadcasts to the validator peer and both fallback peers
     let _ = execute_commit_and_verify_chunk_requests(
         &mut env,
         2,
-        &[fn_0_vfn_2_peer_id, fn_0_vfn_peer_id],
-        &[validator_peer_id, fn_1_vfn_2_peer_id],
-        &[fn_0_pfn_peer_id],
+        &[fn_0_vfn_2_peer_id, fn_0_vfn_peer_id, fn_0_pfn_peer_id],
+        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[],
         true,
     );
 
-    // Wait for fullnode 0's chunk request to time out again
+    // Wait for fullnode 0's chunk request to time out before delivering responses
     std::thread::sleep(std::time::Duration::from_millis(multicast_timeout_ms));
+    env.deliver_msg(validator_peer_id);
+    env.deliver_msg(fn_2_pfn_peer_id);
+    env.deliver_msg(fn_1_vfn_2_peer_id);
 
     // Verify that fullnode 0 broadcasts to the validator peer and both fallback peers
     let _ = execute_commit_and_verify_chunk_requests(
@@ -800,7 +804,7 @@ fn test_multicast_failover() {
         true,
     );
 
-    // Deliver chunks from the 3 nodes (VFN delivers before validator)
+    // Deliver chunks from the 3 nodes (PFN delivers before validator)
     env.deliver_msg(fn_2_pfn_peer_id);
     env.deliver_msg(fn_1_vfn_2_peer_id);
     env.deliver_msg(validator_peer_id);
@@ -856,7 +860,7 @@ fn test_multicast_failover() {
         &mut env,
         7,
         &[fn_0_vfn_peer_id],
-        &[validator_peer_id, fn_1_vfn_2_peer_id, fn_2_pfn_peer_id],
+        &[validator_peer_id],
         &[fn_0_vfn_2_peer_id, fn_0_pfn_peer_id],
         true,
     );

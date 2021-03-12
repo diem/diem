@@ -118,7 +118,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             })?,
         };
         let request_manager = RequestManager::new(
-            node_config.upstream.clone(),
             Duration::from_millis(retry_timeout_val),
             Duration::from_millis(node_config.state_sync.multicast_timeout_ms),
             network_senders,

@@ -5,7 +5,7 @@ use crate::{
     chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, error::Error,
     request_manager::ChunkRequestInfo,
 };
-use diem_config::config::PeerNetworkId;
+use diem_config::{config::PeerNetworkId, network_id::NetworkId};
 use diem_logger::Schema;
 use diem_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint,
@@ -40,8 +40,8 @@ pub struct LogSchema<'a> {
     new_epoch: Option<u64>,
     request_version: Option<u64>,
     target_version: Option<u64>,
-    old_multicast_level: Option<usize>,
-    new_multicast_level: Option<usize>,
+    old_multicast_level: Option<NetworkId>,
+    new_multicast_level: Option<NetworkId>,
     #[schema(debug)]
     chunk_req_info: Option<&'a ChunkRequestInfo>,
 }
