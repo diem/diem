@@ -72,6 +72,7 @@ module DiemConfig {
         include InitializeAbortsIf;
         include InitializeEnsures;
         modifies global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<Event::EventHandleGenerator>(Signer::spec_address_of(dr_account));
     }
     spec schema InitializeAbortsIf {
         dr_account: signer;
@@ -124,6 +125,7 @@ module DiemConfig {
         /// generic type/specific invariant issue
         pragma opaque, verify = false;
         modifies global<Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<DiemConfig<Config>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include SetAbortsIf<Config>;
         include SetEnsures<Config>;
     }

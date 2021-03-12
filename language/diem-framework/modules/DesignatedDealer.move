@@ -116,6 +116,9 @@ module DesignatedDealer {
         ensures exists<Dealer>(dd_addr);
         modifies global<TierInfo<CoinType>>(dd_addr), global<TierInfo<XUS>>(dd_addr);
         ensures if (add_all_currencies) exists<TierInfo<XUS>>(dd_addr) else exists<TierInfo<CoinType>>(dd_addr);
+        modifies global<Event::EventHandleGenerator>(dd_addr);
+        modifies global<Diem::PreburnQueue<CoinType>>(dd_addr);
+        modifies global<Diem::PreburnQueue<XUS>>(dd_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -297,6 +300,7 @@ module DesignatedDealer {
 
         include TieredMintAbortsIf<CoinType>;
 
+        modifies global<Dealer>(dd_addr);
         modifies global<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures exists<Diem::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         modifies global<TierInfo<CoinType>>(dd_addr);

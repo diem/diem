@@ -291,6 +291,7 @@ impl<'a> Instrumenter<'a> {
     fn instrument_bytecode(&mut self, bc: Bytecode) {
         use Bytecode::*;
         use Operation::*;
+
         // Prefix with modifies checks for builtin memory modifiers. Notice that we assume
         // the BorrowGlobal at this point represents a mutation and immutable references have
         // been removed.
@@ -316,6 +317,7 @@ impl<'a> Instrumenter<'a> {
             }
             _ => {}
         }
+
         // Instrument bytecode.
         match bc {
             Ret(id, results) => {
@@ -750,39 +752,78 @@ impl<'a> Instrumenter<'a> {
 /// invoked here from the initialize trait function of this processor.
 fn check_modifies(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
     for module_env in env.get_modules() {
-        for func_env in module_env.get_functions() {
-            if func_env.is_native() || func_env.is_intrinsic() {
-                continue;
+        if module_env.is_target() {
+            for fun_env in module_env.get_functions() {
+                check_caller_callee_modifies_relation(&env, targets, &fun_env);
+                check_opaque_modifies_completeness(env, targets, &fun_env);
             }
-            let caller_func_target = targets.get_target(&func_env, FunctionVariant::Baseline);
-            for callee in func_env.get_called_functions() {
-                let callee_func_env = env.get_function(callee);
-                if callee_func_env.is_native() || callee_func_env.is_intrinsic() {
-                    continue;
-                }
-                let callee_func_target =
-                    targets.get_target(&callee_func_env, FunctionVariant::Baseline);
-                let callee_modified_memory =
-                    usage_analysis::get_modified_memory(&callee_func_target);
-                for target in caller_func_target.get_modify_targets().keys() {
-                    if callee_modified_memory.contains(target)
-                        && callee_func_target
-                            .get_modify_targets_for_type(target)
-                            .is_none()
-                    {
-                        let loc = caller_func_target.get_loc();
-                        env.error(
-                            &loc,
-                            &format!(
-                                "caller `{}` specifies modify targets for `{}::{}` but callee `{}` does not",
-                                env.symbol_pool().string(caller_func_target.get_name()),
-                                env.get_module(target.module_id).get_name().display(env.symbol_pool()),
-                                env.symbol_pool().string(target.id.symbol()),
-                                env.symbol_pool().string(callee_func_target.get_name())
-                            ));
-                    }
-                }
+        }
+    }
+}
+
+fn check_caller_callee_modifies_relation(
+    env: &GlobalEnv,
+    targets: &FunctionTargetsHolder,
+    fun_env: &FunctionEnv,
+) {
+    if fun_env.is_native() || fun_env.is_intrinsic() {
+        return;
+    }
+    let caller_func_target = targets.get_target(&fun_env, FunctionVariant::Baseline);
+    for callee in fun_env.get_called_functions() {
+        let callee_fun_env = env.get_function(callee);
+        if callee_fun_env.is_native() || callee_fun_env.is_intrinsic() {
+            continue;
+        }
+        let callee_func_target = targets.get_target(&callee_fun_env, FunctionVariant::Baseline);
+        let callee_modified_memory = usage_analysis::get_modified_memory(&callee_func_target);
+        for target in caller_func_target.get_modify_targets().keys() {
+            if callee_modified_memory.contains(target)
+                && callee_func_target
+                    .get_modify_targets_for_type(target)
+                    .is_none()
+            {
+                let loc = caller_func_target.get_loc();
+                env.error(
+                    &loc,
+                    &format!(
+                        "caller `{}` specifies modify targets for `{}` but callee `{}` does not",
+                        fun_env.get_full_name_str(),
+                        env.get_module(target.module_id)
+                            .into_struct(target.id)
+                            .get_full_name_str(),
+                        callee_fun_env.get_full_name_str()
+                    ),
+                );
             }
+        }
+    }
+}
+
+fn check_opaque_modifies_completeness(
+    env: &GlobalEnv,
+    targets: &FunctionTargetsHolder,
+    fun_env: &FunctionEnv,
+) {
+    let target = targets.get_target(fun_env, FunctionVariant::Baseline);
+    if !target.is_opaque() {
+        return;
+    }
+    // All memory directly or indirectly modified by this opaque function must be captured by
+    // a modifies clause. Otherwise we could introduce unsoundness.
+    // TODO: we currently except Event::EventHandle from this, because this is treated as
+    //   an immutable reference. We should find a better way how to deal with event handles.
+    for mem in usage_analysis::get_modified_memory(&target) {
+        if env.is_wellknown_event_handle_type(&Type::Struct(mem.module_id, mem.id, vec![])) {
+            continue;
+        }
+        if !target.get_modify_targets().contains_key(mem) {
+            let loc = fun_env.get_spec_loc();
+            env.error(&loc,
+            &format!("function `{}` is opaque but its specification does not have a modifies clause for `{}`",
+                fun_env.get_full_name_str(),
+                env.get_module(mem.module_id).into_struct(mem.id).get_full_name_str())
+            )
         }
     }
 }

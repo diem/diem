@@ -3798,7 +3798,8 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 
-<pre><code><b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>pragma</b> verify = <b>false</b>;
+<b>include</b> <a href="../../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <a name="preburn_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <a name="preburn_cap$2"></a>

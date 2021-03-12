@@ -1,5 +1,15 @@
 Move prover returns: exiting with transformation errors
-error: caller `mutate_S_test1_incorrect` specifies modify targets for `A::S` but callee `mutate_at` does not
+error: function `A::mutate_at` is opaque but its specification does not have a modifies clause for `A::S`
+
+    ┌── tests/sources/functional/ModifiesTypeTest.move:21:5 ───
+    │
+ 21 │ ╭     spec fun mutate_at {
+ 22 │ │         pragma opaque = true;
+ 23 │ │     }
+    │ ╰─────^
+    │
+
+error: caller `B::mutate_S_test1_incorrect` specifies modify targets for `A::S` but callee `A::mutate_at` does not
 
     ┌── tests/sources/functional/ModifiesTypeTest.move:29:5 ───
     │

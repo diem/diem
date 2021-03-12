@@ -302,6 +302,7 @@ module DiemSystem {
         pragma opaque;
         // TODO(timeout): this started timing out after recent refactoring. Investigate.
         pragma verify = false;
+        modifies global<DiemConfig::Configuration>(CoreAddresses::DIEM_ROOT_ADDRESS());
         modifies global<DiemConfig::DiemConfig<DiemSystem>>(CoreAddresses::DIEM_ROOT_ADDRESS());
         include ValidatorConfig::AbortsIfGetOperator{addr: validator_addr};
         include UpdateConfigAndReconfigureAbortsIf;

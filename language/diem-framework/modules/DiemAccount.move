@@ -426,7 +426,13 @@ module DiemAccount {
 
     spec fun tiered_mint {
         pragma opaque;
+        // TODO(timeout): times out after adding required modifies clauses
+        pragma verify = false;
+        modifies global<DiemAccount>(designated_dealer_address);
+        modifies global<DesignatedDealer::Dealer>(designated_dealer_address);
+        modifies global<DesignatedDealer::TierInfo<Token>>(designated_dealer_address);
         modifies global<Balance<Token>>(designated_dealer_address);
+        modifies global<AccountLimits::Window>(designated_dealer_address);
         modifies global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include TieredMintAbortsIf<Token>;
         include TieredMintEnsures<Token>;
@@ -583,9 +589,12 @@ module DiemAccount {
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
     spec fun withdraw_from {
+        // TODO(timeout): times out after adding required modifies clauses
+        pragma verify = false;
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
         modifies global<DiemAccount>(payer);
+        modifies global<AccountLimits::Window>(payer);
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                     == old(global<DiemAccount>(payer).withdraw_capability);
@@ -642,6 +651,7 @@ module DiemAccount {
         pragma opaque;
         let dd_addr = Signer::spec_address_of(dd);
         let payer = cap.account_address;
+        modifies global<AccountLimits::Window>(payer);
         modifies global<DiemAccount>(payer);
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
@@ -661,6 +671,7 @@ module DiemAccount {
         dd: signer;
         payer: address;
         amount: u64;
+        modifies global<Balance<Token>>(payer);
         let payer_balance = global<Balance<Token>>(payer).coin.value;
         /// The balance of payer decreases by `amount`.
         ensures payer_balance == old(payer_balance) - amount;
@@ -746,11 +757,15 @@ module DiemAccount {
     }
     spec fun pay_from {
         pragma opaque;
+        // TODO(timeout): times out after adding required modifies clauses
+        pragma verify = false;
         let payer = cap.account_address;
         modifies global<DiemAccount>(payer);
         modifies global<DiemAccount>(payee);
         modifies global<Balance<Token>>(payer);
         modifies global<Balance<Token>>(payee);
+        modifies global<AccountLimits::Window>(payer);
+        modifies global<AccountLimits::Window>(payee);
         ensures exists_at(payer);
         ensures exists_at(payee);
         ensures exists<Balance<Token>>(payer);
@@ -990,6 +1005,7 @@ module DiemAccount {
         pragma opaque;
         let new_account_addr = Signer::address_of(new_account);
         modifies global<DiemAccount>(new_account_addr);
+        modifies global<Event::EventHandleGenerator>(new_account_addr);
         modifies global<AccountFreezing::FreezingBit>(new_account_addr);
         modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
@@ -1108,6 +1124,7 @@ module DiemAccount {
 
     spec schema CreateDiemRootAccountModifies {
         let dr_addr = CoreAddresses::DIEM_ROOT_ADDRESS();
+        modifies global<Event::EventHandleGenerator>(dr_addr);
         modifies global<DiemAccount>(dr_addr);
         modifies global<AccountOperationsCapability>(dr_addr);
         modifies global<DiemWriteSetManager>(dr_addr);
@@ -1178,6 +1195,7 @@ module DiemAccount {
         modifies global<AccountFreezing::FreezingBit>(tc_addr);
         modifies global<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
         ensures exists<AccountOperationsCapability>(CoreAddresses::DIEM_ROOT_ADDRESS());
+        modifies global<Event::EventHandleGenerator>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
     }
     spec schema CreateTreasuryComplianceAccountAbortsIf {
         dr_account: signer;

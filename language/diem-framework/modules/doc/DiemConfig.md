@@ -296,6 +296,7 @@ Publishes <code><a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configurati
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_InitializeAbortsIf">InitializeAbortsIf</a>;
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_InitializeEnsures">InitializeEnsures</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>modifies</b> <b>global</b>&lt;<a href="Event.md#0x1_Event_EventHandleGenerator">Event::EventHandleGenerator</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dr_account));
 </code></pre>
 
 
@@ -431,6 +432,7 @@ generic type/specific invariant issue
 
 <pre><code><b>pragma</b> opaque, verify = <b>false</b>;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
+<b>modifies</b> <b>global</b>&lt;<a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetAbortsIf">SetAbortsIf</a>&lt;Config&gt;;
 <b>include</b> <a href="DiemConfig.md#0x1_DiemConfig_SetEnsures">SetEnsures</a>&lt;Config&gt;;
 </code></pre>

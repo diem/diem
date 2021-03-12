@@ -252,6 +252,7 @@ module SlidingNonce {
         pragma opaque, verify = false;
         ensures result == spec_try_record_nonce(account, seq_nonce);
         aborts_if !exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+        modifies global<SlidingNonce>(Signer::spec_address_of(account));
     }
 
     /// Specification version of `Self::try_record_nonce`.
