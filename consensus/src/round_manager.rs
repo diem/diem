@@ -33,6 +33,7 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
+use diem_infallible::checked;
 use diem_logger::prelude::*;
 use diem_trace::prelude::*;
 use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
@@ -411,9 +412,14 @@ impl RoundManager {
             "{}", sync_info
         );
         // To avoid a ping-pong cycle between two peers that move forward together.
-        self.ensure_round_and_sync_up(sync_info.highest_round() + 1, &sync_info, peer, false)
-            .await
-            .context("[RoundManager] Failed to process sync info msg")?;
+        self.ensure_round_and_sync_up(
+            checked!((sync_info.highest_round()) + 1)?,
+            &sync_info,
+            peer,
+            false,
+        )
+        .await
+        .context("[RoundManager] Failed to process sync info msg")?;
         Ok(())
     }
 
