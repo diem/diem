@@ -1,5 +1,5 @@
 //! new-transaction
-module Test {
+module {{default}}::Test {
     struct T { b: bool }
 
     public fun new_t(): T {

@@ -1,4 +1,4 @@
-module TestCrossModuleInv {
+module 0x42::TestCrossModuleInv {
     use 0x1::DiemAccount;
     use 0x1::XUS;
     use 0x1::Signer;

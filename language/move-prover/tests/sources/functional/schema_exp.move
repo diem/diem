@@ -1,4 +1,4 @@
-module TestSchemaExp {
+module 0x42::TestSchemaExp {
 
     spec module {
         pragma verify = true;

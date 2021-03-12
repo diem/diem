@@ -1,5 +1,5 @@
 // This file is created to verify the native function in the standard BCS module.
-module VerifySignature {
+module 0x42::VerifySignature {
     use 0x1::Signature;
 
 

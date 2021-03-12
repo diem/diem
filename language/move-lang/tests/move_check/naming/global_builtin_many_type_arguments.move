@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R1 has key {}
     struct R2 has key {}
     struct R3 has key {}

@@ -1,4 +1,4 @@
-module TestGlobalVars {
+module 0x42::TestGlobalVars {
 
     /*
     TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to

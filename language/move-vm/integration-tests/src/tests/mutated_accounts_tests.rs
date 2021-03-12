@@ -18,7 +18,7 @@ const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGT
 #[test]
 fn mutated_accounts() {
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             struct Foo has key { a: bool }
             public fun get(addr: address): bool acquires Foo {
                 borrow_global<Foo>(addr).a
@@ -33,7 +33,8 @@ fn mutated_accounts() {
         }
     "#;
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
     let mut blob = vec![];
     m.serialize(&mut blob).unwrap();

@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun t() {
         (0x1: address);
         (0: u64);

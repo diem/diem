@@ -8,11 +8,11 @@ use functional_tests::{
     testsuite,
 };
 use move_lang::{
-    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors, shared::Address,
+    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors,
     FullyCompiledProgram,
 };
 use once_cell::sync::Lazy;
-use std::{convert::TryFrom, fmt, io::Write, path::Path};
+use std::{fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
 
 pub const STD_LIB_DIR: &str = "../../diem-framework/modules";
@@ -36,21 +36,19 @@ impl<'a> MoveSourceCompiler<'a> {
     fn move_compile_with_stdlib(
         &self,
         targets: &[String],
-        sender: Option<Address>,
     ) -> anyhow::Result<(
         errors::FilesSourceText,
         Result<Vec<CompiledUnit>, errors::Errors>,
     )> {
-        let (files, pprog_and_comments_res) =
-            move_lang::move_parse(targets, &self.deps, sender, None)?;
-        let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+        let (files, pprog_and_comments_res) = move_lang::move_parse(targets, &self.deps, None)?;
+        let (_comments, pprog) = match pprog_and_comments_res {
             Err(errors) => return Ok((files, Err(errors))),
             Ok(res) => res,
         };
 
         let result = match move_lang::move_continue_up_to(
             Some(&self.pre_compiled_deps),
-            move_lang::PassResult::Parser(sender_opt, pprog),
+            move_lang::PassResult::Parser(pprog),
             move_lang::Pass::Compilation,
         ) {
             Ok(move_lang::PassResult::Compilation(units)) => Ok(units),
@@ -77,18 +75,16 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
     fn compile<Logger: FnMut(String)>(
         &mut self,
         _log: Logger,
-        address: DiemAddress,
+        _address: DiemAddress,
         input: &str,
     ) -> Result<ScriptOrModule> {
         let cur_file = NamedTempFile::new()?;
-        let sender_addr = Address::try_from(address.as_ref()).unwrap();
         cur_file.reopen()?.write_all(input.as_bytes())?;
         let cur_path = cur_file.path().to_str().unwrap().to_owned();
 
         let targets = &vec![cur_path.clone()];
-        let sender = Some(sender_addr);
 
-        let (files, units_or_errors) = self.move_compile_with_stdlib(targets, sender)?;
+        let (files, units_or_errors) = self.move_compile_with_stdlib(targets)?;
         let unit = match units_or_errors {
             Err(errors) => {
                 let error_buffer = if read_bool_env_var(testsuite::PRETTY) {
@@ -112,11 +108,6 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         Ok(match unit {
             CompiledUnit::Script { script, .. } => ScriptOrModule::Script(None, script),
             CompiledUnit::Module { module, .. } => {
-                let input = if input.starts_with("address") {
-                    input.to_string()
-                } else {
-                    format!("address {} {{\n{}\n}}", sender_addr, input)
-                };
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
                 self.deps.push(cur_path);
@@ -133,7 +124,6 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
 static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     let (files, program_res) = move_lang::move_construct_pre_compiled_lib(
         &diem_framework::diem_stdlib_files(),
-        None,
         None,
         false,
     )

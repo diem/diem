@@ -1,6 +1,6 @@
 //! new-transaction
 
-module X {
+module {{default}}::X {
     struct T has drop {}
     public fun new(): T {
         T {}
@@ -9,7 +9,7 @@ module X {
 
 //! new-transaction
 
-module Y {
+module {{default}}::Y {
     use {{default}}::X;
     public fun foo(): X::T {
         X::new()

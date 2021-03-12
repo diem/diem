@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     public fun foobar(cond: bool) {
         loop {
             loop {

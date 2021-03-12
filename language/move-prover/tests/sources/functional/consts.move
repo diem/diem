@@ -1,4 +1,4 @@
-module TestConst {
+module 0x42::TestConst {
 
     struct T {
         x: u64,

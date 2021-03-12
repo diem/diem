@@ -1,5 +1,5 @@
 
-module M {
+module {{default}}::M {
     use 0x1::Event::{EventHandle, emit_event, new_event_handle};
     use 0x1::Signer::address_of;
 

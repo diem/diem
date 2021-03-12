@@ -1,4 +1,4 @@
-module Swapper {
+module {{default}}::Swapper {
     use 0x1::Vector;
     public fun call(x: u64) {
         swap_it_up(x)

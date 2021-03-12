@@ -1,6 +1,6 @@
 //! new-transaction
 
-module M {
+module {{default}}::M {
     struct S has drop {
         a: u64,
         b: u64,

@@ -3,7 +3,7 @@
 //! account: carol
 
 //! sender: alice
-module SillyColdWallet {
+module {{alice}}::SillyColdWallet {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
     use 0x1::Diem;

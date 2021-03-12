@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R {}
     struct Cup<T> has copy, drop {}
 

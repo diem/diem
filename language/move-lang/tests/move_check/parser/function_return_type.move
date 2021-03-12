@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     // Test a unit return value.
     fun f1(): () { }
 

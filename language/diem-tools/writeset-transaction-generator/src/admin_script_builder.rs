@@ -20,7 +20,6 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
     let (_files, mut compiled_program) = move_lang::move_compile_and_report(
         &[source_file_str],
         &diem_framework::diem_stdlib_files(),
-        Some(move_lang::shared::Address::DIEM_CORE),
         None,
         false,
     )

@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     use 0x1::Signer;
 
     struct Data has key { v1: u64, v2: u64 }

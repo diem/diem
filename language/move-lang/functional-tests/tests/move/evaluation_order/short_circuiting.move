@@ -1,4 +1,4 @@
-module X {
+module {{default}}::X {
     public fun error(): bool {
         abort 42
     }

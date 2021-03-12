@@ -1,4 +1,4 @@
-module TestHash {
+module 0x42::TestHash {
     use 0x1::Hash;
 
 

@@ -886,8 +886,7 @@ impl ClientProxy {
             "inconsistent command '{}' for compile_program",
             space_delim_strings[0]
         );
-        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let file_path = space_delim_strings[2];
+        let file_path = space_delim_strings[1];
         let mut tmp_output_dir = TempPath::new();
         tmp_output_dir.persist();
         tmp_output_dir
@@ -897,12 +896,11 @@ impl ClientProxy {
         self.temp_files.push(tmp_output_path.to_path_buf());
 
         let mut args = format!(
-            "run -p move-lang --bin move-build -- {} -s {} -o {}",
+            "run -p move-lang --bin move-build -- {} -o {}",
             file_path,
-            address,
             tmp_output_path.display(),
         );
-        for dep in &space_delim_strings[3..] {
+        for dep in &space_delim_strings[2..] {
             args.push_str(&format!(" -d {}", dep));
         }
 

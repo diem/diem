@@ -53,9 +53,8 @@ pub fn run_move_prover<W: WriteColor>(
         options.inv_v2,
     )?;
     let other_sources = remove_sources(&target_sources, all_sources);
-    let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
-    let mut env: GlobalEnv = run_model_builder(target_sources, other_sources, address)?;
+    let mut env: GlobalEnv = run_model_builder(target_sources, other_sources)?;
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));

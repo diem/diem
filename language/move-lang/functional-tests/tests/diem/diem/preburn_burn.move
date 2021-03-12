@@ -271,7 +271,7 @@ fun main(account: signer) {
 // check: "Keep(ABORTED { code: 1543,"
 
 //! new-transaction
-module Holder {
+module {{default}}::Holder {
     struct Holder<T> has key {
         a: T,
         b: T,

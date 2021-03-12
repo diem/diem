@@ -33,7 +33,7 @@ fn test_malformed_resource() {
             }
         }
 
-        module M {
+        module {{ADDR}}::M {
             use 0x1::Signer;
 
             struct Foo has key { x: u64, y: bool }
@@ -65,7 +65,7 @@ fn test_malformed_resource() {
         }
     "#;
     let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
 
     let s2 = as_script(units.pop().unwrap());
     let s1 = as_script(units.pop().unwrap());
@@ -157,13 +157,13 @@ fn test_malformed_resource() {
 fn test_malformed_module() {
     // Compile module M.
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             public fun foo() {}
         }
     "#;
 
     let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
 
     let m = as_module(units.pop().unwrap());
 
@@ -226,12 +226,13 @@ fn test_malformed_module() {
 fn test_unverifiable_module() {
     // Compile module M.
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             public fun foo() {}
         }
     "#;
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
 
     let log_context = NoContextLog::new();
@@ -296,18 +297,18 @@ fn test_unverifiable_module() {
 fn test_missing_module_dependency() {
     // Compile two modules M, N where N depends on M.
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             public fun foo() {}
         }
 
-        module N {
+        module {{ADDR}}::N {
             use {{ADDR}}::M;
 
             public fun bar() { M::foo(); }
         }
     "#;
     let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
 
@@ -372,18 +373,18 @@ fn test_missing_module_dependency() {
 fn test_malformed_module_denpency() {
     // Compile two modules M, N where N depends on M.
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             public fun foo() {}
         }
 
-        module N {
+        module {{ADDR}}::N {
             use {{ADDR}}::M;
 
             public fun bar() { M::foo(); }
         }
     "#;
     let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
 
@@ -454,18 +455,18 @@ fn test_malformed_module_denpency() {
 fn test_unverifiable_module_dependency() {
     // Compile two modules M, N where N depends on M.
     let code = r#"
-        module M {
+        module {{ADDR}}::M {
             public fun foo() {}
         }
 
-        module N {
+        module {{ADDR}}::N {
             use {{ADDR}}::M;
 
             public fun bar() { M::foo(); }
         }
     "#;
     let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let n = as_module(units.pop().unwrap());
     let m = as_module(units.pop().unwrap());
 
@@ -609,7 +610,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             }
         }
 
-        module M {
+        module {{ADDR}}::M {
             use 0x1::Signer;
 
             struct R has key {}
@@ -621,8 +622,9 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             }
         }
     "#;
+    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
     let s = as_module(units.pop().unwrap());
     let mut m_blob = vec![];

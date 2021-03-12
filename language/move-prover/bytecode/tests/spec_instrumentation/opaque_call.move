@@ -1,5 +1,5 @@
 // Contains tests for treatment of opaque calls
-module Test {
+module 0x42::Test {
 
 	struct R has key { v: u64 }
 

@@ -131,7 +131,7 @@ module TestMutRefsAccrossModule {
 }
 
 /*
-module TestMutRefsUser {
+module 0x42::TestMutRefsUser {
     use 0x1::TestMutRefsAccrossModule;
 
     public fun valid() {

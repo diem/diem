@@ -1,4 +1,4 @@
-module TestNestedInvariants {
+module 0x42::TestNestedInvariants {
 
     spec module {
         pragma verify = true;

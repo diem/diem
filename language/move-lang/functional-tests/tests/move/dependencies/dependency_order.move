@@ -1,5 +1,5 @@
 // names used to try to force an ordering of depedencies
-module C {
+module {{default}}::C {
     struct T {}
     public fun foo(): T {
         T{}
@@ -8,14 +8,14 @@ module C {
 
 //! new-transaction
 // names used to try to force an ordering of depedencies
-module B {
+module {{default}}::B {
     public fun foo(): {{default}}::C::T {
         {{default}}::C::foo()
     }
 }
 
 //! new-transaction
-module A {
+module {{default}}::A {
     struct T {
         t_b: {{default}}::C::T,
         t_c: {{default}}::C::T,

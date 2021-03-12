@@ -1,5 +1,5 @@
 // Tests of quantification over addresses.
-module AddressQuant {
+module 0x42::AddressQuant {
     use 0x1::Signer;
 
     struct R has key {

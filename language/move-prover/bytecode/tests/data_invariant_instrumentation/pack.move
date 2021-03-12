@@ -1,4 +1,4 @@
-module Test {
+module 0x42::Test {
     struct R {
         x: u64,
         s: S,

@@ -2,10 +2,10 @@
 //! account: bob
 
 //! sender: alice
-// A module that lets the account owner rotate their auth key as they normally would, but also
+// A module {{default}}::that lets the account owner rotate their auth key as they normally would, but also
 // allows a different address `master_key_address` to rotate the auth key. This is useful for
 // implementing (e.g.) a hot wallet with a cold recovery key.
-module SharedKeyRotation {
+module {{alice}}::SharedKeyRotation {
     use 0x1::DiemAccount;
     use 0x1::Signer;
 

@@ -1,9 +1,9 @@
-module C {
+module {{default}}::C {
     struct T {}
 }
 
 //! new-transaction
-module B {
+module {{default}}::B {
     use {{default}}::C;
     public fun foo(): C::T {
         C::T {}

@@ -1,7 +1,7 @@
 // Two loops in the resulting graph.
 // One error for each loop.
 
-module M {
+module 0x8675309::M {
     struct S<T> { b: bool }
 
     fun f<T>() {

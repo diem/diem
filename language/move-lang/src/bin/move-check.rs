@@ -3,10 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::{
-    command_line::{self as cli},
-    shared::*,
-};
+use move_lang::command_line::{self as cli};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]
@@ -26,15 +23,6 @@ pub struct Options {
         long = cli::DEPENDENCY,
     )]
     pub dependencies: Vec<String>,
-
-    /// The sender address for modules and scripts
-    #[structopt(
-        name = "ADDRESS",
-        short = cli::SENDER_SHORT,
-        long = cli::SENDER,
-        parse(try_from_str = cli::parse_address)
-    )]
-    pub sender: Option<Address>,
 
     /// The output directory for saved artifacts, namely any 'move' interface files generated from
     /// 'mv' files
@@ -59,17 +47,11 @@ pub fn main() -> anyhow::Result<()> {
     let Options {
         source_files,
         dependencies,
-        sender,
         out_dir,
         no_shadow,
     } = Options::from_args();
 
-    let _files = move_lang::move_check_and_report(
-        &source_files,
-        &dependencies,
-        sender,
-        out_dir,
-        !no_shadow,
-    )?;
+    let _files =
+        move_lang::move_check_and_report(&source_files, &dependencies, out_dir, !no_shadow)?;
     Ok(())
 }

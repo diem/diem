@@ -170,7 +170,7 @@ fun main(account: signer) {
 // check: "ABORTED { code: 7,"
 
 //! new-transaction
-module Holder {
+module {{default}}::Holder {
     struct Holder<T> has key { x: T }
     public fun hold<T: store>(account: &signer, x: T) {
         move_to(account, Holder<T> { x });

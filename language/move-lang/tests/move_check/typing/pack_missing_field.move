@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S has copy, drop { f: u64 }
     struct Nat<T> has drop { f: T }
     struct R { s: S, f: u64, n1: Nat<u64>, n2: Nat<S> }

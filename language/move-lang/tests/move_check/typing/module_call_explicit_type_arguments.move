@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun foo<T, U>(_x: T, _y: U) {
     }
 

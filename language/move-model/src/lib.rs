@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -45,24 +44,19 @@ pub mod ty;
 pub fn run_model_builder(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
-    address_opt: Option<&str>,
 ) -> anyhow::Result<GlobalEnv> {
-    let address_opt = address_opt
-        .map(Address::parse_str)
-        .transpose()
-        .map_err(|s| anyhow!(s))?;
     // Construct all sources from targets and others, as we need bytecode for all of them.
     let mut all_sources = target_sources;
     all_sources.extend(other_sources.clone());
     let mut env = GlobalEnv::new();
     // Parse the program
-    let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], address_opt, None)?;
+    let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], None)?;
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
         env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));
     }
     // Add any documentation comments found by the Move compiler to the env.
-    let (comment_map, addr_opt, parsed_prog) = match pprog_and_comments_res {
+    let (comment_map, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
@@ -76,7 +70,7 @@ pub fn run_model_builder(
     // Run the compiler up to expansion and clone a copy of the expansion program ast
     let (expansion_ast, expansion_result) = match move_continue_up_to(
         None,
-        MovePassResult::Parser(addr_opt, parsed_prog),
+        MovePassResult::Parser(parsed_prog),
         MovePass::Expansion,
     ) {
         Err(errors) => {

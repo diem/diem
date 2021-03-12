@@ -1,4 +1,4 @@
-module ReachingDefTest {
+module 0x42::ReachingDefTest {
 
     struct R has key {
         x: u64,

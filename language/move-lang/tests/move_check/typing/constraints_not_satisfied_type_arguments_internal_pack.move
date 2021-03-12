@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct CupD<T: drop> has drop {}
     struct R {}
 

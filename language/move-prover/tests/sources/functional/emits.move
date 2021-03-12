@@ -1,4 +1,4 @@
-module TestEmits {
+module 0x42::TestEmits {
     use 0x1::Event::{Self, EventHandle};
 
     struct DummyEvent has copy, drop, store {

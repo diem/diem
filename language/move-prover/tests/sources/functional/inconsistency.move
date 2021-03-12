@@ -1,6 +1,6 @@
 // flag: --check-inconsistency
 
-module Inconsistency {
+module 0x42::Inconsistency {
 
     // There is no inconsistency in this function.
     fun dec(x: u64): u64 {

@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct Box<T> { x: T }
 
     fun unbox<T>(b: Box<T>): T {

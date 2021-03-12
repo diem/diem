@@ -1,4 +1,4 @@
-module Test {
+module {{default}}::Test {
     public fun t(): u64 {
         if (true) return 100;
         0

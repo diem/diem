@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     struct T has copy, drop { f: u64 }
 
     fun t() {

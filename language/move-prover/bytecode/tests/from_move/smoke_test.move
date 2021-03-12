@@ -3,7 +3,7 @@
 
 // dep: ../../move-stdlib/modules/Signer.move
 
-module SmokeTest {
+module 0x42::SmokeTest {
     use 0x1::Signer;
 
     // -----------------

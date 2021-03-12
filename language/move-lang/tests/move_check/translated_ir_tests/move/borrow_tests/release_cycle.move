@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun t0(cond: bool) {
         let v = 0;
         let x;

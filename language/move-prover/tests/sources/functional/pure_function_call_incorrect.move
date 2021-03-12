@@ -1,4 +1,4 @@
-module TestPureFun {
+module 0x42::TestPureFun {
     use 0x1::CoreAddresses;
     use 0x1::Signer;
     use 0x1::Vector;

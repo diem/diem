@@ -1,4 +1,4 @@
-module TestLet {
+module 0x42::TestLet {
 
     spec module {
         pragma verify = true;

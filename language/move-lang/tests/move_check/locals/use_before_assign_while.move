@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun tmove(cond: bool) {
         let x: u64;
         while (cond) { let y = move x + 1; x = 0; y; }

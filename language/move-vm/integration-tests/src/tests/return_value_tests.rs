@@ -28,7 +28,7 @@ fn run(
 
     let code = format!(
         r#"
-        module M {{
+        module 0x{}::M {{
             {}
 
             fun foo{} {{
@@ -36,10 +36,10 @@ fn run(
             }}
         }}
     "#,
-        structs, fun_sig, fun_body
+        TEST_ADDR, structs, fun_sig, fun_body
     );
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
     let mut blob = vec![];
     m.serialize(&mut blob).unwrap();

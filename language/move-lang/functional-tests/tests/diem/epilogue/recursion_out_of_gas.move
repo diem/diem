@@ -1,6 +1,6 @@
 //! account: default, 50000XUS
 
-module M {
+module {{default}}::M {
     public fun rec(x: u64) {
         rec(x)
     }

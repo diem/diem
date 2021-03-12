@@ -4,7 +4,7 @@
 // procedures that they inline (e.g., `verify_model_remove`).
 // This file also verifies the actual Move implementations of non-native functions (e.g., `verify_remove`).
 
-module VerifyVector {
+module 0x42::VerifyVector {
     use 0x1::Vector;
 
     spec module {

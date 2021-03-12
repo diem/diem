@@ -2,8 +2,8 @@
 //! account: vivian, 1000000, 0, validator
 
 // Changing the publishing option from Open to CustomScript
-// Step 1: Make sure we can publish module at the beginning
-module FooConfig {
+// Step 1: Make sure we can publish module {{default}}::at the beginning
+module {{default}}::FooConfig {
     struct T {
         version: u64,
     }
@@ -57,7 +57,7 @@ fun main(config: signer) {
 // check: NewEpochEvent
 
 //! new-transaction
-module FooConfig2 {
+module {{default}}::FooConfig2 {
     struct T {
         version: u64,
     }

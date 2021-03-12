@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun take_imm_mut_give_mut(_x: &u64, y: &mut u64): &mut u64 {
         y
     }

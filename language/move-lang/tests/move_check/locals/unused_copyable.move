@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S has drop {}
 
     // this produces unused parameter warnings for i and s, but not unused resource warnings

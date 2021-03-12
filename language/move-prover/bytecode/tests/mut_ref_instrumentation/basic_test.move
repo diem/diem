@@ -1,4 +1,4 @@
-module TestEliminateMutRefs {
+module 0x42::TestEliminateMutRefs {
 
     struct R has copy, drop {
         x: u64

@@ -1,4 +1,4 @@
-module TestReferences {
+module 0x42::TestReferences {
     use 0x1::Vector;
 
     spec module {

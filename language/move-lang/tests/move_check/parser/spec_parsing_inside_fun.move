@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun specs_in_fun(x: u64, n: u64) {
         // an ordinary assume
         spec {

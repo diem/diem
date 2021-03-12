@@ -45,10 +45,11 @@ fn call_non_existent_module() {
 #[test]
 fn call_non_existent_function() {
     let code = r#"
-        module M {}
+        module {{ADDR}}::M {}
     "#;
+    let code = code.replace("{{ADDR}}", &format!("0x{}", TEST_ADDR.to_string()));
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
     let mut blob = vec![];
     m.serialize(&mut blob).unwrap();

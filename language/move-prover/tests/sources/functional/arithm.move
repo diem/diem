@@ -1,5 +1,5 @@
 // Test works with v2:
-module TestArithmetic {
+module 0x42::TestArithmetic {
 
     spec module {
         pragma verify = true;

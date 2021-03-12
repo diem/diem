@@ -1,4 +1,4 @@
-module TestOpaque {
+module 0x42::TestOpaque {
 
     spec module {
         pragma verify = true;

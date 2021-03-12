@@ -1,4 +1,4 @@
-module TestMemory {
+module 0x42::TestMemory {
 
     spec module {
         pragma verify = true;

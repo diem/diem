@@ -1,5 +1,5 @@
 // This file contain various test cases for existentially quantifying vectors.
-module VectorExists {
+module 0x42::VectorExists {
     use 0x1::Vector;
 
     spec module {

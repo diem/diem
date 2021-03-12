@@ -1,4 +1,4 @@
-module Swapper {
+module {{default}}::Swapper {
     use 0x1::Vector;
     public fun swap_it_up(vec_len: u64) {
         let v = Vector::empty();

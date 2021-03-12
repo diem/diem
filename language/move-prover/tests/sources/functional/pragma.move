@@ -1,5 +1,5 @@
 // Tests pragmas.
-module TestPragma {
+module 0x42::TestPragma {
 
 
     spec module {

@@ -50,8 +50,6 @@ pub struct Options {
     pub run_errmapgen: bool,
     /// Whether to run the read write set analysis instead of the prover
     pub run_read_write_set: bool,
-    /// An account address to use if none is specified in the source.
-    pub account_address: String,
     /// The paths to the Move sources.
     pub move_sources: Vec<String>,
     /// The paths to any dependencies for the Move sources. Those will not be verified but
@@ -88,7 +86,6 @@ impl Default for Options {
             run_abigen: false,
             run_errmapgen: false,
             run_read_write_set: false,
-            account_address: "0x234567".to_string(),
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
             move_deps: vec![],

@@ -1,4 +1,4 @@
-module ApprovalGroup {
+module {{default}}::ApprovalGroup {
     use 0x1::Signature;
 
     struct ApprovalGroup has store {
@@ -58,7 +58,7 @@ module ApprovalGroup {
 }
 
 //! new-transaction
-module ColdWallet {
+module {{default}}::ColdWallet {
     use 0x1::XUS::XUS;
     use 0x1::Hash;
     use 0x1::BCS;

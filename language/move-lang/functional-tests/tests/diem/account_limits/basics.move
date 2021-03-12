@@ -2,7 +2,7 @@
 //! account: alice, 100000000XUS, 0
 
 //! new-transaction
-module Holder {
+module {{default}}::Holder {
     struct Hold<T> has key { x: T }
     public fun hold<T: store>(account: &signer, x: T) {
         move_to(account, Hold<T>{ x })

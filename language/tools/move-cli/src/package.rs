@@ -153,13 +153,8 @@ impl MovePackage {
             fs::create_dir_all(&pkg_bin_path)?;
 
             // compile the source files
-            let (_files, compiled_units) = move_compile_and_report(
-                &[path_to_string(&pkg_src_path)?],
-                &src_dirs,
-                None,
-                None,
-                false,
-            )?;
+            let (_files, compiled_units) =
+                move_compile_and_report(&[path_to_string(&pkg_src_path)?], &src_dirs, None, false)?;
 
             // save modules and ignore scripts
             for unit in compiled_units {

@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S { x: bool }
     fun f() {
         (S { x: true } as u8);

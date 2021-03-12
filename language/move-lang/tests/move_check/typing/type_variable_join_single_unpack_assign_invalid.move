@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct Box<T> has drop, copy { f1: T, f2: T }
 
     fun new<T>(): Box<T> {

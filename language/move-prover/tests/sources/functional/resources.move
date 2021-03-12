@@ -1,4 +1,4 @@
-module TestResources {
+module 0x42::TestResources {
     use 0x1::Signer;
 
     spec module {

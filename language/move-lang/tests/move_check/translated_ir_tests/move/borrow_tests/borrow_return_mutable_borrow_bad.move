@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct X { f: Y }
     struct Y { g: u64, h: u64 }
 

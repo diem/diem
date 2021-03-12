@@ -1,4 +1,4 @@
-module TestDefines {
+module 0x42::TestDefines {
 
     spec module {
         pragma verify = true;

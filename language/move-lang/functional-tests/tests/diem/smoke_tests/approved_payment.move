@@ -6,7 +6,7 @@
 // Note: approved payments are an accounting convenience/a courtesy mechansim for the payee, *not*
 // a hurdle that must be cleared for all payments to the payee. In addition, approved payments do
 // not have replay protection.
-module ApprovedPayment {
+module {{default}}::ApprovedPayment {
     use 0x1::Diem::{Self, Diem};
     use 0x1::Signature;
     use 0x1::Signer;

@@ -1,4 +1,4 @@
-module TestGlobalInvariants {
+module 0x42::TestGlobalInvariants {
     use 0x1::Signer;
 
     spec module {

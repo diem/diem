@@ -1,4 +1,4 @@
-module TestCast {
+module 0x42::TestCast {
 
     spec module {
         pragma verify = true;

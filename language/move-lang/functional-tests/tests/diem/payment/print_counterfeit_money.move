@@ -1,6 +1,6 @@
 //! account: default, 100000
 
-module M {
+module {{default}}::M {
     use 0x1::XUS::XUS;
     use 0x1::Diem;
     use 0x1::Signer;

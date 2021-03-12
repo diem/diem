@@ -26,7 +26,6 @@ use compiled_unit::CompiledUnit;
 use errors::*;
 use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
-use shared::Address;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
@@ -72,7 +71,7 @@ pub enum Pass {
 }
 
 pub enum PassResult {
-    Parser(Option<Address>, parser::ast::Program),
+    Parser(parser::ast::Program),
     Expansion(expansion::ast::Program, Errors),
     Naming(naming::ast::Program, Errors),
     Typing(typing::ast::Program),
@@ -83,7 +82,7 @@ pub enum PassResult {
 
 #[derive(Clone)]
 pub struct FullyCompiledProgram {
-    pub parser: (Option<Address>, parser::ast::Program),
+    pub parser: parser::ast::Program,
     pub expansion: expansion::ast::Program,
     pub naming: naming::ast::Program,
     pub typing: typing::ast::Program,
@@ -104,25 +103,22 @@ pub struct FullyCompiledProgram {
 pub fn move_check(
     targets: &[String],
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
-    let (files, pprog_and_comments_res) =
-        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
-    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+    let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
+    let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
 
     let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog, sender_opt)
+        shadow_lib_module_definitions(pprog)
     } else {
         pprog
     };
 
-    let result = match move_continue_up_to(None, PassResult::Parser(sender_opt, pprog), Pass::CFGIR)
-    {
+    let result = match move_continue_up_to(None, PassResult::Parser(pprog), Pass::CFGIR) {
         Ok(PassResult::CFGIR(_)) => Ok(()),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -134,17 +130,11 @@ pub fn move_check(
 pub fn move_check_and_report(
     targets: &[String],
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<FilesSourceText> {
-    let (files, errors_result) = move_check(
-        targets,
-        deps,
-        sender_opt,
-        interface_files_dir_opt,
-        sources_shadow_deps,
-    )?;
+    let (files, errors_result) =
+        move_check(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
     unwrap_or_report_errors!(files, errors_result);
     Ok(files)
 }
@@ -160,28 +150,22 @@ pub fn move_check_and_report(
 pub fn move_compile(
     targets: &[String],
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
-    let (files, pprog_and_comments_res) =
-        move_parse(targets, deps, sender_opt, interface_files_dir_opt)?;
-    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+    let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
+    let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
 
     let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog, sender_opt)
+        shadow_lib_module_definitions(pprog)
     } else {
         pprog
     };
 
-    let result = match move_continue_up_to(
-        None,
-        PassResult::Parser(sender_opt, pprog),
-        Pass::Compilation,
-    ) {
+    let result = match move_continue_up_to(None, PassResult::Parser(pprog), Pass::Compilation) {
         Ok(PassResult::Compilation(units)) => Ok(units),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -193,17 +177,11 @@ pub fn move_compile(
 pub fn move_compile_and_report(
     targets: &[String],
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, units_res) = move_compile(
-        targets,
-        deps,
-        sender_opt,
-        interface_files_dir_opt,
-        sources_shadow_deps,
-    )?;
+    let (files, units_res) =
+        move_compile(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
     let units = unwrap_or_report_errors!(files, units_res);
     Ok((files, units))
 }
@@ -213,16 +191,15 @@ pub fn move_compile_and_report(
 pub fn move_parse(
     targets: &[String],
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(
     FilesSourceText,
-    Result<(CommentMap, Option<Address>, parser::ast::Program), Errors>,
+    Result<(CommentMap, parser::ast::Program), Errors>,
 )> {
     let mut deps = deps.to_vec();
     generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
     let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
-    let result = pprog_and_comments_res.map(|(pprog, comments)| (comments, sender_opt, pprog));
+    let result = pprog_and_comments_res.map(|(pprog, comments)| (comments, pprog));
     Ok((files, result))
 }
 
@@ -230,24 +207,22 @@ pub fn move_parse(
 /// to compile against without having to recompile these dependencies
 pub fn move_construct_pre_compiled_lib(
     deps: &[String],
-    sender_opt: Option<Address>,
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<FullyCompiledProgram, Errors>)> {
-    let (files, pprog_and_comments_res) =
-        move_parse(&[], deps, sender_opt, interface_files_dir_opt)?;
-    let (_comments, sender_opt, pprog) = match pprog_and_comments_res {
+    let (files, pprog_and_comments_res) = move_parse(&[], deps, interface_files_dir_opt)?;
+    let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
     };
 
     let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog, sender_opt)
+        shadow_lib_module_definitions(pprog)
     } else {
         pprog
     };
 
-    let start = PassResult::Parser(sender_opt, pprog);
+    let start = PassResult::Parser(pprog);
     let mut parser = None;
     let mut expansion = None;
     let mut naming = None;
@@ -257,9 +232,9 @@ pub fn move_construct_pre_compiled_lib(
     let mut compiled = None;
 
     let save_result = |cur: &PassResult| match cur {
-        PassResult::Parser(sender_opt, prog) => {
+        PassResult::Parser(prog) => {
             assert!(parser.is_none());
-            parser = Some((*sender_opt, prog.clone()))
+            parser = Some(prog.clone())
         }
         PassResult::Expansion(eprog, errors) => {
             if !errors.is_empty() {
@@ -495,10 +470,7 @@ pub fn generate_interface_files(
 
 /// Given a parsed program, if a module id is found in both the source and lib definitions, filter
 /// out the lib definition and re-construct a new parsed program
-fn shadow_lib_module_definitions(
-    pprog: parser::ast::Program,
-    sender_opt: Option<Address>,
-) -> parser::ast::Program {
+fn shadow_lib_module_definitions(pprog: parser::ast::Program) -> parser::ast::Program {
     let parser::ast::Program {
         source_definitions,
         lib_definitions,
@@ -512,8 +484,10 @@ fn shadow_lib_module_definitions(
                 }
             }
             parser::ast::Definition::Module(module) => {
-                modules_defined_in_src
-                    .insert((sender_opt.unwrap_or_default(), module.name.clone()));
+                modules_defined_in_src.insert((
+                    module.address.map(|a| a.value).unwrap_or_default(),
+                    module.name.clone(),
+                ));
             }
             parser::ast::Definition::Script(_) => (),
         }
@@ -529,8 +503,10 @@ fn shadow_lib_module_definitions(
             parser::ast::Definition::Address(_, addr, modules) => !modules
                 .iter()
                 .any(|module| modules_defined_in_src.contains(&(*addr, module.name.clone()))),
-            parser::ast::Definition::Module(module) => !modules_defined_in_src
-                .contains(&(sender_opt.unwrap_or_default(), module.name.clone())),
+            parser::ast::Definition::Module(module) => !modules_defined_in_src.contains(&(
+                module.address.map(|a| a.value).unwrap_or_default(),
+                module.name.clone(),
+            )),
             parser::ast::Definition::Script(_) => false,
         })
         .collect();
@@ -576,7 +552,7 @@ pub fn extension_equals(path: &Path, target_ext: &str) -> bool {
 impl PassResult {
     pub fn equivalent_pass(&self) -> Pass {
         match self {
-            PassResult::Parser(_, _) => Pass::Parser,
+            PassResult::Parser(_) => Pass::Parser,
             PassResult::Expansion(_, _) => Pass::Expansion,
             PassResult::Naming(_, _) => Pass::Naming,
             PassResult::Typing(_) => Pass::Typing,
@@ -588,7 +564,7 @@ impl PassResult {
 
     pub fn check_for_errors(self) -> Result<Self, Errors> {
         Ok(match self {
-            result @ PassResult::Parser(_, _)
+            result @ PassResult::Parser(_)
             | result @ PassResult::Typing(_)
             | result @ PassResult::CFGIR(_)
             | result @ PassResult::Compilation(_) => result,
@@ -620,8 +596,8 @@ fn run(
     }
 
     match cur {
-        PassResult::Parser(sender_opt, prog) => {
-            let (eprog, errors) = expansion::translate::program(pre_compiled_lib, prog, sender_opt);
+        PassResult::Parser(prog) => {
+            let (eprog, errors) = expansion::translate::program(pre_compiled_lib, prog);
             run(
                 pre_compiled_lib,
                 PassResult::Expansion(eprog, errors),

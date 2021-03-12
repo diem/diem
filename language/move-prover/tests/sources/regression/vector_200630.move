@@ -1,4 +1,4 @@
-module TestVector {
+module 0x42::TestVector {
     use 0x1::Vector;
     struct T {
         x: u64,

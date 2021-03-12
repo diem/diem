@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun f(v: u64) {
         // Braces or parenthesis are not required for a control expression
         // inside an "abort" expression.

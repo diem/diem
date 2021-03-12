@@ -1,4 +1,4 @@
-module TestAbortsIf {
+module 0x42::TestAbortsIf {
 
     spec module {
         pragma verify = true;

@@ -37,17 +37,17 @@ fn run(
 
     let code = format!(
         r#"
-        module M {{
+        module 0x{}::M {{
             struct Foo has copy, drop {{ x: u64 }}
             struct Bar<T> has copy, drop {{ x: T }}
 
             fun foo<{}>({}) {{ }}
         }}
     "#,
-        ty_params, params
+        TEST_ADDR, ty_params, params
     );
 
-    let mut units = compile_units(TEST_ADDR, &code).unwrap();
+    let mut units = compile_units(&code).unwrap();
     let m = as_module(units.pop().unwrap());
     let mut blob = vec![];
     m.serialize(&mut blob).unwrap();

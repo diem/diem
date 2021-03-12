@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun f<T1, T2>() {
         g<u64, T1>()
     }

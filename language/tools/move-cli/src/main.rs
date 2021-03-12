@@ -234,13 +234,7 @@ fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: boo
     if verbose {
         println!("Checking Move files...");
     }
-    move_lang::move_check_and_report(
-        files,
-        &[state.interface_files_dir()?],
-        None,
-        None,
-        republish,
-    )?;
+    move_lang::move_check_and_report(files, &[state.interface_files_dir()?], None, republish)?;
     Ok(())
 }
 
@@ -258,7 +252,6 @@ fn publish(
     let (_, compiled_units) = move_lang::move_compile_and_report(
         files,
         &[state.interface_files_dir()?],
-        None,
         None,
         republish,
     )?;
@@ -361,7 +354,6 @@ fn run(
         let (_files, compiled_units) = move_lang::move_compile_and_report(
             &[script_file.to_string()],
             &[state.interface_files_dir()?],
-            None,
             None,
             false,
         )?;

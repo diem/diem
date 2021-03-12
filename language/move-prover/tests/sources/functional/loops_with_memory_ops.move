@@ -1,4 +1,4 @@
-module VerifyLoopsWithMemoryOps {
+module 0x42::VerifyLoopsWithMemoryOps {
     use 0x1::Vector;
 
     spec module {

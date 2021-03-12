@@ -1,4 +1,4 @@
-module TestAbortsWithCheck {
+module 0x42::TestAbortsWithCheck {
     /*
     TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to
       drop it in which case the test should be removed.

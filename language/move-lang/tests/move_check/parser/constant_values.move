@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun int8(): u8 {
         1u8
     }

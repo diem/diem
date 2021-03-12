@@ -1,4 +1,4 @@
-module TestSet {
+module 0x42::TestSet {
     use 0x1::Vector;
 
     // Issue #4872.

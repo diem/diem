@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R { f:bool }
     fun t0() {
         let r = R{ f: false };

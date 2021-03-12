@@ -131,7 +131,7 @@ impl Adapter {
 fn get_modules() -> Vec<CompiledModule> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("src/tests/loader_tests_modules.move");
-    compile_modules_in_file(AccountAddress::new([0; 16]), &path).unwrap()
+    compile_modules_in_file(&path).unwrap()
 }
 
 #[test]

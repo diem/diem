@@ -1,4 +1,4 @@
-module M {
+module 0x42::M {
 
   fun add_some(x: &mut u64): u64 { *x = *x + 1; *x }
 

@@ -1,4 +1,4 @@
-module TestSpecBlock {
+module 0x42::TestSpecBlock {
 
     fun simple1(x: u64, y: u64) {
         if (!(x > y)) abort 1;

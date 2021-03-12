@@ -1,4 +1,4 @@
-module TestFriend {
+module 0x42::TestFriend {
 
     struct R has key {
         x: u64,

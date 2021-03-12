@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun t0(cond: bool) {
         if (cond) () else 0;
         if (cond) 0 else ();

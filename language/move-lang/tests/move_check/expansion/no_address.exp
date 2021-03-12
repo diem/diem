@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/expansion/no_address.move:1:1 ───
+   │
+ 1 │ module M {}
+   │ ^^^^^^^^^^^ Invalid module declaration. The module does not have a specified address. Either declare it inside of an 'address <address> {' block or declare it with an address 'module <address>::M''
+   │
+

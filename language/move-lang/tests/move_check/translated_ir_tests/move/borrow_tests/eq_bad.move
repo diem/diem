@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     fun eqtest1() {
         let x: u64;
         let r: &mut u64;

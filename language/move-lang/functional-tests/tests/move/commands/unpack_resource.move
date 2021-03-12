@@ -1,4 +1,4 @@
-module Test {
+module {{default}}::Test {
     struct X { b: bool }
     struct T { i: u64, x: X, b: bool }
 

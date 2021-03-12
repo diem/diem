@@ -1759,7 +1759,7 @@ fn is_struct_definition(tokens: &mut Lexer<'_>) -> Result<bool, Error> {
 
 // Parse a module:
 //      Module =
-//          <DocComments> "module" <ModuleName> "{"
+//          <DocComments> "module" (<Address>::)?<ModuleName> "{"
 //              ( <UseDecl> | <FriendDecl> |
 //                <ConstantDecl> | <StructDefinition> | <FunctionDecl> |
 //                <Spec> )*
@@ -1769,6 +1769,14 @@ fn parse_module(tokens: &mut Lexer<'_>) -> Result<ModuleDefinition, Error> {
     let start_loc = tokens.start_loc();
 
     consume_token(tokens, Tok::Module)?;
+    let address = if tokens.peek() == Tok::AddressValue {
+        let loc = current_token_loc(tokens);
+        let address = parse_address(tokens)?;
+        consume_token(tokens, Tok::ColonColon)?;
+        Some(sp(loc, address))
+    } else {
+        None
+    };
     let name = parse_module_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
 
@@ -1789,7 +1797,12 @@ fn parse_module(tokens: &mut Lexer<'_>) -> Result<ModuleDefinition, Error> {
     consume_token(tokens, Tok::RBrace)?;
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
-    Ok(ModuleDefinition { loc, name, members })
+    Ok(ModuleDefinition {
+        loc,
+        address,
+        name,
+        members,
+    })
 }
 
 //**************************************************************************************************

@@ -1,4 +1,4 @@
-module VerifyLoops {
+module 0x42::VerifyLoops {
     spec module {
         pragma verify=true;
     }

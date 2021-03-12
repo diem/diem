@@ -1,5 +1,5 @@
 
-module M {
+module 0x8675309::M {
     fun foo(x: &u64) {
         (freeze<u64>(x): &mut u64);
         (freeze<vector<bool>>(&any()): &mut vector<bool>);

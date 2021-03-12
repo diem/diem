@@ -1,4 +1,4 @@
-module Nop{
+module {{default}}::Nop{
     public fun nop() { }
 }
 

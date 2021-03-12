@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     struct T has drop {v: u64}
 
     public fun new(v: u64) : T {

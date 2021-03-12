@@ -281,7 +281,6 @@ fn test_state_sync_multichunk_epoch() {
     let diem_framework_dir = diem_framework::diem_stdlib_modules_full_path();
     let script_params = &[
         "compile",
-        "0",
         unwrapped_script_path,
         move_stdlib_dir.as_str(),
         diem_framework_dir.as_str(),

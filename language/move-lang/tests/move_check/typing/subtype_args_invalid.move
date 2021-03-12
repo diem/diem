@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S {}
 
     fun mut<T>(x: &mut T) {}

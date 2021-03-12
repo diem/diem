@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     fun t() {
         let x = 0;
         let y = 0;

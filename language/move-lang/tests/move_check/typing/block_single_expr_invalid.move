@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R {}
     fun t0() {
         ({ 0 } : bool);

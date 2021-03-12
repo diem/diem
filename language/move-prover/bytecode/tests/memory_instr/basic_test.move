@@ -1,4 +1,4 @@
-module TestPackref {
+module 0x42::TestPackref {
     struct R has copy, drop {
         x: u64
     }

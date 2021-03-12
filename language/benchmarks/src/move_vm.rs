@@ -48,7 +48,6 @@ fn compile_modules() -> Vec<CompiledModule> {
             MOVE_BENCH_SRC_PATH.to_str().unwrap().to_owned(),
         ],
         &[],
-        Some(Address::DIEM_CORE),
         None,
         false,
     )

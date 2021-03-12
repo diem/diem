@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S { u: u64 }
     struct R has key {
         f: u64

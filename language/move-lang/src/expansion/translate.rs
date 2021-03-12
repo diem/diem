@@ -118,15 +118,14 @@ impl Context {
 pub fn program(
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: P::Program,
-    sender: Option<Address>,
 ) -> (E::Program, Errors) {
     let module_members = {
         let mut members = UniqueMap::new();
-        all_module_members(&mut members, sender, &prog.lib_definitions);
-        all_module_members(&mut members, sender, &prog.source_definitions);
+        all_module_members(&mut members, &prog.lib_definitions);
+        all_module_members(&mut members, &prog.source_definitions);
         if let Some(pre_compiled) = pre_compiled_lib {
-            assert!(pre_compiled.parser.1.source_definitions.is_empty());
-            for def in pre_compiled.parser.1.lib_definitions.iter() {
+            assert!(pre_compiled.parser.source_definitions.is_empty());
+            for def in pre_compiled.parser.lib_definitions.iter() {
                 match def {
                     P::Definition::Module(_) => {
                         unimplemented!("top level modules not supported in pre compiled lib")
@@ -157,10 +156,11 @@ pub fn program(
     context.is_source_module = false;
     for def in lib_definitions {
         match def {
-            P::Definition::Module(m) => module(&mut context, sender, &mut module_map, m),
-            P::Definition::Address(_, addr, ms) => {
-                for m in ms {
-                    module(&mut context, Some(addr), &mut module_map, m)
+            P::Definition::Module(m) => module(&mut context, &mut module_map, m),
+            P::Definition::Address(loc, addr, ms) => {
+                for mut m in ms {
+                    check_module_address(&mut context, loc, addr, &mut m);
+                    module(&mut context, &mut module_map, m)
                 }
             }
             P::Definition::Script(_) => (),
@@ -170,10 +170,11 @@ pub fn program(
     context.is_source_module = true;
     for def in source_definitions {
         match def {
-            P::Definition::Module(m) => module(&mut context, sender, &mut module_map, m),
-            P::Definition::Address(_, addr, ms) => {
-                for m in ms {
-                    module(&mut context, Some(addr), &mut module_map, m)
+            P::Definition::Module(m) => module(&mut context, &mut module_map, m),
+            P::Definition::Address(loc, addr, ms) => {
+                for mut m in ms {
+                    check_module_address(&mut context, loc, addr, &mut m);
+                    module(&mut context, &mut module_map, m)
                 }
             }
             P::Definition::Script(s) => script(&mut context, &mut scripts, s),
@@ -215,14 +216,31 @@ pub fn program(
     (prog, context.get_errors())
 }
 
+fn check_module_address(
+    context: &mut Context,
+    loc: Loc,
+    addr: Address,
+    m: &mut P::ModuleDefinition,
+) {
+    match m.address {
+        Some(sp!(other_loc, other_addr)) => {
+            let msg = if addr == other_addr {
+                "Redundant address specification"
+            } else {
+                "Multiple addresses specified for module"
+            };
+            context.error(vec![(other_loc, msg), (loc, "Previously specified here")]);
+        }
+        None => m.address = Some(sp(loc, addr)),
+    }
+}
+
 fn module(
     context: &mut Context,
-    address: Option<Address>,
     module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
     module_def: P::ModuleDefinition,
 ) {
     assert!(context.address == None);
-    set_sender_address(context, module_def.loc, address);
     let (mident, mod_) = module_(context, module_def);
     if let Err((mident, (old_loc, _))) = module_map.add(mident, mod_) {
         let mmsg = format!("Duplicate definition for module '{}'", mident);
@@ -234,15 +252,20 @@ fn module(
     context.address = None
 }
 
-fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) {
+fn set_sender_address(
+    context: &mut Context,
+    loc: Loc,
+    module_name: &ModuleName,
+    sender: Option<Spanned<Address>>,
+) {
     context.address = Some(match sender {
-        Some(addr) => addr,
+        Some(sp!(_, addr)) => addr,
         None => {
             let msg = format!(
-                "Invalid module declaration. No sender address was given as a command line \
-                 argument. Add one using --{}. Or set the address at the top of the file using \
-                 'address _:'",
-                crate::command_line::SENDER
+                "Invalid module declaration. The module does not have a specified address. Either \
+                 declare it inside of an 'address <address> {{' block or declare it with an \
+                 address 'module <address>::{}''",
+                module_name
             );
             context.error(vec![(loc, msg)]);
             Address::DIEM_CORE
@@ -251,7 +274,14 @@ fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) 
 }
 
 fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E::ModuleDefinition) {
-    let P::ModuleDefinition { loc, name, members } = mdef;
+    let P::ModuleDefinition {
+        loc,
+        address,
+        name,
+        members,
+    } = mdef;
+    assert!(context.address == None);
+    set_sender_address(context, loc, &name, address);
     let _ = check_restricted_self_name(context, "module", &name.0);
     if name.value().starts_with(|c| c == '_') {
         let msg = format!(
@@ -392,12 +422,13 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
 
 fn all_module_members<'a>(
     members: &mut UniqueMap<ModuleIdent, ModuleMembers>,
-    sender: Option<Address>,
     defs: impl IntoIterator<Item = &'a P::Definition>,
 ) {
     for def in defs {
         match def {
-            P::Definition::Module(m) => module_members(members, sender.unwrap_or_default(), m),
+            P::Definition::Module(m) => {
+                module_members(members, m.address.map(|a| a.value).unwrap_or_default(), m)
+            }
             P::Definition::Address(_, a, ms) => {
                 for m in ms {
                     module_members(members, *a, m)

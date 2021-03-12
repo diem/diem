@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S has copy, drop { f: u64 }
     struct X has copy, drop { s: S }
 

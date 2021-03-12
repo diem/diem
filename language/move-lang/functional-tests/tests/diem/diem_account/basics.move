@@ -3,7 +3,7 @@
 //! account: abby, 0, 0, address
 //! account: doris, 0XUS, 0
 
-module Holder {
+module {{default}}::Holder {
     use 0x1::Signer;
 
     struct Hold<T> has key {

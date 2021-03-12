@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     use 0x1::Vector;
 
     struct Foo has drop {}

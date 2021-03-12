@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R has key { f: u64 }
 
     fun t0(addr: address): bool acquires R {

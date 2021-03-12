@@ -1,4 +1,4 @@
-module TestAssertAndAssume {
+module 0x42::TestAssertAndAssume {
     // Tests that should verify
 
     spec module {

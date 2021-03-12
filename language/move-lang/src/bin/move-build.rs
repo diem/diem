@@ -3,10 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::{
-    command_line::{self as cli},
-    shared::*,
-};
+use move_lang::command_line::{self as cli};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]
@@ -23,15 +20,6 @@ pub struct Options {
         long = cli::DEPENDENCY,
     )]
     pub dependencies: Vec<String>,
-
-    /// The sender address for modules and scripts
-    #[structopt(
-        name = "ADDRESS",
-        short = cli::SENDER_SHORT,
-        long = cli::SENDER,
-        parse(try_from_str = cli::parse_address)
-    )]
-    pub sender: Option<Address>,
 
     /// The Move bytecode output directory
     #[structopt(
@@ -64,7 +52,6 @@ pub fn main() -> anyhow::Result<()> {
     let Options {
         source_files,
         dependencies,
-        sender,
         out_dir,
         no_shadow,
         emit_source_map,
@@ -74,7 +61,6 @@ pub fn main() -> anyhow::Result<()> {
     let (files, compiled_units) = move_lang::move_compile_and_report(
         &source_files,
         &dependencies,
-        sender,
         Some(interface_files_dir),
         !no_shadow,
     )?;

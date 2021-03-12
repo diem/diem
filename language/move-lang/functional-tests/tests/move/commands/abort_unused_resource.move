@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     struct T {}
     public fun new(): T {
         T{}

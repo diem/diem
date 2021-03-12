@@ -1,12 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_lang::{move_compile, shared::Address};
+use move_lang::move_compile;
 
 fn sanity_check_testsuite_impl(targets: Vec<String>, deps: Vec<String>) {
-    let sender = Some(Address::DIEM_CORE);
-
-    let (files, units_or_errors) = move_compile(&targets, &deps, sender, None, false).unwrap();
+    let (files, units_or_errors) = move_compile(&targets, &deps, None, false).unwrap();
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

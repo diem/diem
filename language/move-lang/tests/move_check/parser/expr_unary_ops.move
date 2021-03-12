@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun f(v: u64) {
         let x = *&mut *&v; // Test borrows and dereferences
         x;

@@ -1,4 +1,4 @@
-module TestTypeValues {
+module 0x42::TestTypeValues {
 
     spec module {
         pragma verify = true;

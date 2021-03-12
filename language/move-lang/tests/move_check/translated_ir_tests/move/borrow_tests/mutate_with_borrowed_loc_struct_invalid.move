@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct X has key { b: bool }
     struct S has copy, drop { z: u64 }
     fun t1() {

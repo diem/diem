@@ -1,4 +1,4 @@
-module TestAssertWithReferences {
+module 0x42::TestAssertWithReferences {
 
     spec module {
         pragma verify = true;

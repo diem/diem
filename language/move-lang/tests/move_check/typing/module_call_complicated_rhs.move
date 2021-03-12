@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun foo(): u64 { 0 }
     fun bar(x: u64): (address, u64) {
         (0x0, x)

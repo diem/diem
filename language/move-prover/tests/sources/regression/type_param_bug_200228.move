@@ -1,4 +1,4 @@
-module Test {
+module 0x42::Test {
 
   struct Balance<Token> has key {}
   struct EventHandle<Token> has key {}

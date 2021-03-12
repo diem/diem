@@ -1,4 +1,4 @@
-module TestFriendError {
+module 0x42::TestFriendError {
 
     struct R {
         x: u64,

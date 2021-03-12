@@ -1,4 +1,4 @@
-module M {
+module 0x42::M {
 
     spec schema UndeclaredVar {
         ensures x > 0;

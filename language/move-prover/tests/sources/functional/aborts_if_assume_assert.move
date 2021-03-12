@@ -1,4 +1,4 @@
-module TestAbortsIfAssumeAssert {
+module 0x42::TestAbortsIfAssumeAssert {
 
     /*
     TODO(refactoring): this test is deactivated until we have ported this (or a similar) feature, or decided to

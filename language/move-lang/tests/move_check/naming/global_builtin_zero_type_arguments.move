@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R1 {}
     fun foo(account: &signer) {
         borrow_global<>(0x1);

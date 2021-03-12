@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct R has key {}
     struct X has key {}
     fun t0() acquires R, X, R {

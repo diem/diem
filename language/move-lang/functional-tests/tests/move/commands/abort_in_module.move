@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     public fun foo() {
         abort 22
     }

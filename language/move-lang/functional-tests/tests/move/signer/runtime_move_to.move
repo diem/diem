@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     struct R1 has key { f: bool }
     struct R2<T> has key { f: T }
 

@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct X has key { u: u64 }
 
     fun t() {

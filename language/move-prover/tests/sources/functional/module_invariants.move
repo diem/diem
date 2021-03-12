@@ -80,7 +80,7 @@ module TestModuleInvariants {
 
 
 /*
-module TestModuleInvariantsExternal {
+module 0x42::TestModuleInvariantsExternal {
     use 0x1::TestModuleInvariants;
 
     public fun call_other() {

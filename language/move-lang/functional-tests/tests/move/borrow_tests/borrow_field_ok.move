@@ -1,4 +1,4 @@
-module A {
+module {{default}}::A {
 
     struct T has drop {v: u64}
 

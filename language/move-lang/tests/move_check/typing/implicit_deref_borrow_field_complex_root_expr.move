@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S has drop { f: u64 }
 
     fun t0(cond: bool, s: &S, s_mut: &mut S) {

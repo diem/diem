@@ -1,4 +1,4 @@
-module OddOrEven {
+module {{default}}::OddOrEven {
     public fun is_odd(x: u64): bool { if (x == 0) false else is_even(x - 1) }
     public fun is_even(x: u64): bool { if (x == 0) true else is_odd(x - 1) }
 }

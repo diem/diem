@@ -19,15 +19,12 @@ use move_core_types::{
     effects::ChangeSet as MoveChanges,
     gas_schedule::{GasAlgebra, GasUnits},
 };
-use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
+use move_lang::{compiled_unit::CompiledUnit, move_compile};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
-use std::{
-    convert::TryFrom,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use vm::{errors::VMResult, file_format::CompiledModule};
 
 #[cfg(test)]
@@ -303,7 +300,7 @@ impl DiemDebugger {
     ) -> Result<Option<Version>> {
         // TODO: The code here is compiled against the local move stdlib instead of the one from on
         // chain storage.
-        let predicate = compile_move_script(code_path, sender)?;
+        let predicate = compile_move_script(code_path)?;
         let gas_table = zero_cost_schedule();
         let is_version_ok = |version| {
             self.run_session_at_version(version, override_changeset.clone(), |session| {
@@ -362,18 +359,11 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
         .any(|event| *event.key() == new_epoch_event_key)
 }
 
-fn compile_move_script(file_path: &str, sender: AccountAddress) -> Result<Vec<u8>> {
-    let sender_addr = Address::try_from(sender.as_ref()).unwrap();
+fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
     let cur_path = file_path.to_owned();
     let targets = &vec![cur_path];
-    let sender_opt = Some(sender_addr);
-    let (files, units_or_errors) = move_compile(
-        targets,
-        &diem_framework::diem_stdlib_files(),
-        sender_opt,
-        None,
-        false,
-    )?;
+    let (files, units_or_errors) =
+        move_compile(targets, &diem_framework::diem_stdlib_files(), None, false)?;
     let unit = match units_or_errors {
         Err(errors) => {
             let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);

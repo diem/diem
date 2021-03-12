@@ -1,5 +1,5 @@
 // flag: --v2
-module Generics {
+module 0x42::Generics {
 
     spec module {
         pragma verify = true;

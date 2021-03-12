@@ -2,7 +2,7 @@
 // The Module must be called `Bench` and the set of public functions are callable from the bench (Rust code).
 // `benches/transaction.rs` contains the calling code.
 // The idea is that you build your scenario with a public entry point and a bunch of private functions as needed.
-module Bench {
+module 0x1::Bench {
     use 0x1::Vector;
 
     //

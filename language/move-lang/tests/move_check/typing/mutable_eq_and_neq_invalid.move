@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct B { f: bool }
     struct P { b1: B, b2: B }
 

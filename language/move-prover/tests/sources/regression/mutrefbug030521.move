@@ -1,4 +1,4 @@
-module Bug {
+module 0x42::Bug {
 
     struct Diem<CointType> {
         /// The value of this coin in the base units for `CoinType`

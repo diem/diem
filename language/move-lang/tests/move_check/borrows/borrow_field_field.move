@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct Outer has copy, drop { s1: Inner, s2: Inner }
     struct Inner has copy, drop { f1: u64, f2: u64 }
     fun id<T>(r: &T): &T {

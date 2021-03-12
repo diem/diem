@@ -1,4 +1,4 @@
-module M {
+module {{default}}::M {
     use 0x1::Event;
 
     struct MyEvent<T1, T2> has copy, drop, store { b: bool }

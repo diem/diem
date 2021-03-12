@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S { f: u64 }
 
     fun foo(_s: &S, _u: u64) {}

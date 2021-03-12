@@ -95,6 +95,7 @@ pub struct ModuleIdent {
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
     pub loc: Loc,
+    pub address: Option<Spanned<Address>>,
     pub name: ModuleName,
     pub members: Vec<ModuleMember>,
 }
@@ -943,10 +944,14 @@ impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
             loc: _loc,
+            address,
             name,
             members,
         } = self;
-        w.write(&format!("module {}", name));
+        match address {
+            None => w.write(&format!("module {}", name)),
+            Some(addr) => w.write(&format!("module {}::{}", addr, name)),
+        };
         w.block(|w| {
             for mem in members {
                 mem.ast_debug(w)

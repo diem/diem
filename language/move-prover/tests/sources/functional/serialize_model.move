@@ -1,4 +1,4 @@
-module TestBCS {
+module 0x42::TestBCS {
     use 0x1::BCS;
 
 

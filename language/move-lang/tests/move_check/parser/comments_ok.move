@@ -1,5 +1,5 @@
 /// This is a test.
-module M {
+module 0x8675309::M {
     /**
      * One can have /* nested */
      * // block comments

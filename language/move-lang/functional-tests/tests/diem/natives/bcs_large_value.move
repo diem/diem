@@ -1,5 +1,5 @@
 
-module M {
+module {{default}}::M {
     use 0x1::BCS;
 
     struct Box<T> has copy, drop, store { x: T }

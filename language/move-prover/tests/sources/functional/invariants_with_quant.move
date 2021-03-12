@@ -1,5 +1,5 @@
 // This file consists of test cases for invariants with hand-written triggers.
-module TestQuantInvariant {
+module 0x42::TestQuantInvariant {
     use 0x1::Vector;
 
     spec module {

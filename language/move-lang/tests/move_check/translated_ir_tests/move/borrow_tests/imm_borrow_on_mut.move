@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     use 0x1::Signer;
 
     struct Initializer has key { x: u64, y: u64 }

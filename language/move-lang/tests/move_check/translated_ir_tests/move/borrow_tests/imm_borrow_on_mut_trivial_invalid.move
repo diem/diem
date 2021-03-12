@@ -1,4 +1,4 @@
-module Tester {
+module 0x8675309::Tester {
     struct X { f: u64 }
 
     fun bump_and_give(x_ref: &mut X): &u64 {

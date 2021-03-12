@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S has copy, drop {}
     struct Coin has key {}
     struct Box<T> has copy, drop {}

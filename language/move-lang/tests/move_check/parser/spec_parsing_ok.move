@@ -7,7 +7,7 @@
 //
 // For parse failures, see the `spec_*_fail.move` test cases.
 
-module M {
+module 0x8675309::M {
     spec module {
         global expected_coin_sum: u64;
         global other: bool;

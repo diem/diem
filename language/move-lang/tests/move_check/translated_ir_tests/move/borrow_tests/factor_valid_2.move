@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     struct S { g: u64 }
 
     fun t1(root: &mut S, cond: bool) {

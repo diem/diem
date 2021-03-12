@@ -32,7 +32,6 @@ fn test_malformed_script() {
     let diem_framework_dir = diem_framework::diem_stdlib_modules_full_path();
     let script_params = &[
         "compile",
-        "0",
         unwrapped_script_path,
         move_stdlib_dir.as_str(),
         diem_framework_dir.as_str(),
@@ -90,7 +89,6 @@ fn test_execute_custom_module_and_script() {
     // Compile and publish that module.
     let module_params = &[
         "compile",
-        "0",
         unwrapped_module_path,
         move_stdlib_dir.as_str(),
         diem_framework_dir.as_str(),
@@ -114,7 +112,6 @@ fn test_execute_custom_module_and_script() {
     // Compile and execute the script.
     let script_params = &[
         "compile",
-        "0",
         unwrapped_script_path,
         unwrapped_module_path,
         move_stdlib_dir.as_str(),

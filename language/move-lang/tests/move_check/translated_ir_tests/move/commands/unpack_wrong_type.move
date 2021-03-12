@@ -1,4 +1,4 @@
-module Test {
+module 0x8675309::Test {
     struct X { b: bool }
     struct T { b: bool }
 

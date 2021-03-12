@@ -1,4 +1,4 @@
-module M {
+module 0x8675309::M {
     fun t0(cond: bool, u: &u64, u_mut: &mut u64) {
         let _: &u64 = if (cond) u else u_mut;
         let _: &u64 = if (cond) u_mut else u;
