@@ -690,6 +690,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo_metadata"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "081e3f0755c1f380c2d010481b6fa2e02973586d5f2b24eebb7a2a1d98b143d8"
+dependencies = [
+ "camino",
+ "cargo-platform",
+ "semver 0.11.0",
+ "semver-parser 0.10.2",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "cassowary"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1371,7 +1385,7 @@ checksum = "33ec6ed6a28572d35f1c9d512fe0381b6bd83bf45e273b60b9c1df883234645c"
 dependencies = [
  "camino",
  "globset",
- "guppy",
+ "guppy 0.8.0",
  "itertools 0.10.0",
  "once_cell",
  "petgraph",
@@ -3302,7 +3316,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec4cbddce827d660864974dc3dc62a1c810e813d17e518cc5830716b977cd110"
 dependencies = [
  "camino",
- "cargo_metadata",
+ "cargo_metadata 0.12.3",
  "fixedbitset",
  "guppy-summaries",
  "indexmap",
@@ -3312,6 +3326,29 @@ dependencies = [
  "pathdiff",
  "petgraph",
  "rayon",
+ "semver 0.11.0",
+ "serde",
+ "serde_json",
+ "supercow",
+ "target-spec",
+]
+
+[[package]]
+name = "guppy"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fa0124762cfff525d695e75a173dc65dda372227a9daf949a1e24235e1b8632"
+dependencies = [
+ "camino",
+ "cargo_metadata 0.13.1",
+ "fixedbitset",
+ "guppy-summaries",
+ "indexmap",
+ "itertools 0.10.0",
+ "nested",
+ "once_cell",
+ "pathdiff",
+ "petgraph",
  "semver 0.11.0",
  "serde",
  "serde_json",
@@ -3362,7 +3399,7 @@ dependencies = [
  "camino",
  "cfg-if 1.0.0",
  "diffy",
- "guppy",
+ "guppy 0.8.0",
  "pathdiff",
  "rayon",
  "serde",
@@ -7965,7 +8002,7 @@ dependencies = [
  "determinator",
  "env_logger 0.8.3",
  "globset",
- "guppy",
+ "guppy 0.9.0",
  "hakari",
  "indexmap",
  "indoc",
@@ -7986,7 +8023,7 @@ version = "0.1.0"
 dependencies = [
  "camino",
  "determinator",
- "guppy",
+ "guppy 0.9.0",
  "hakari",
  "hex",
  "indoc",
@@ -8002,7 +8039,7 @@ name = "x-lint"
 version = "0.1.0"
 dependencies = [
  "camino",
- "guppy",
+ "guppy 0.9.0",
  "hakari",
  "once_cell",
  "serde",
