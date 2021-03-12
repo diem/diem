@@ -158,9 +158,9 @@ impl<'env> FunctionTarget<'env> {
         self.func_env.is_opaque()
     }
 
-    /// Returns true if this function is public.
-    pub fn is_public(&self) -> bool {
-        self.func_env.is_public()
+    /// Returns true if this function has public, friend, or script visibility.
+    pub fn is_exposed(&self) -> bool {
+        self.func_env.is_exposed()
     }
 
     /// Returns the visibility of this function.

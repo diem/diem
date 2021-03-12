@@ -2402,24 +2402,6 @@ impl<'env> FunctionEnv<'env> {
         self.is_pragma_true(OPAQUE_PRAGMA, || false)
     }
 
-    /// TODO: Either remove or change the definition of this function so that it only returns true
-    /// if this function is `public`.
-    /// Returns true if this function is public.
-    pub fn is_public(&self) -> bool {
-        // The main function of a script is implicitly public
-        self.module_env.is_script_module()
-            || match self.definition_view().visibility() {
-                Visibility::Public => true,
-                Visibility::Script => unimplemented!("Script visibility not yet supported"),
-                // TODO: for simplicity, we may treat `public(friend)` the same way as `public`
-                // based on the fact that they both expose the function to external modules. We may
-                // want to change the function name from `is_public` to `is_exposed` or have
-                // iner-grained return values (instead of just a bool) to indicate visibility.
-                Visibility::Friend => unimplemented!("Friend visibility not yet supported"),
-                Visibility::Private => false,
-            }
-    }
-
     /// Return the visibility of this function
     pub fn visibility(&self) -> FunctionVisibility {
         self.definition_view().visibility()
@@ -2700,7 +2682,11 @@ impl<'env> FunctionEnv<'env> {
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value specified by default_scope.
         let default = || match default_scope {
-            VerificationScope::Public => self.is_public(),
+            // By using `is_exposed`, we essentially mark all of Public, Script, Friend to be
+            // in the verification scope because they are "exposed" functions in this module.
+            // We may want to change `VerificationScope::Public` to `VerificationScope::Exposed` as
+            // well for consistency.
+            VerificationScope::Public => self.is_exposed(),
             VerificationScope::All => true,
             VerificationScope::None => false,
         };
