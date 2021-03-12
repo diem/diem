@@ -37,6 +37,7 @@ use std::{
     convert::TryFrom,
     path::PathBuf,
     sync::{mpsc, Arc},
+    time::Instant,
 };
 use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
@@ -251,7 +252,9 @@ impl TransactionExecutor {
     }
 
     fn run(&mut self) {
+        let start_time = Instant::now();
         let mut version = 0;
+        let mut total_transactions = 0;
 
         while let Ok(transactions) = self.block_receiver.recv() {
             let num_txns = transactions.len();
@@ -292,13 +295,15 @@ impl TransactionExecutor {
 
             let commit_time = std::time::Instant::now().duration_since(commit_start);
             let total_time = execute_time + commit_time;
+            total_transactions += num_txns;
 
             info!(
-                "Version: {}. execute time: {} ms. commit time: {} ms. TPS: {}.",
+                "Version: {}. execute time: {} ms. commit time: {} ms. TPS: {:.0}. Accumulative TPS: {:.0}",
                 version,
                 execute_time.as_millis(),
                 commit_time.as_millis(),
-                num_txns as u128 * 1_000_000_000 / total_time.as_nanos(),
+                num_txns as f64 / total_time.as_secs_f64(),
+                total_transactions as f64 / start_time.elapsed().as_secs_f64(),
             );
         }
     }
