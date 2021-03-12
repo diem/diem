@@ -41,7 +41,7 @@ petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.124", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -89,7 +89,7 @@ prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.124", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -136,7 +136,7 @@ petgraph = { version = "0.5.1", features = ["default", "graphmap", "matrix_graph
 prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.124", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
@@ -184,7 +184,7 @@ prost = { version = "0.7.0", features = ["default", "prost-derive", "std"] }
 quote = { version = "0.6.13", features = ["default", "proc-macro"] }
 rand = { version = "0.8.3", features = ["alloc", "default", "getrandom", "libc", "rand_chacha", "rand_hc", "small_rng", "std", "std_rng"] }
 regex = { version = "1.4.3", features = ["aho-corasick", "default", "memchr", "perf", "perf-cache", "perf-dfa", "perf-inline", "perf-literal", "std", "thread_local", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
-regex-syntax = { version = "0.6.22", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
+regex-syntax = { version = "0.6.23", features = ["default", "unicode", "unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment"] }
 reqwest = { version = "0.11.2", features = ["__tls", "blocking", "default", "default-tls", "hyper-tls", "json", "native-tls", "native-tls-crate", "serde_json", "stream", "tokio-native-tls"] }
 rusty-fork = { version = "0.3.0", features = ["default", "timeout", "wait-timeout"] }
 serde = { version = "1.0.124", features = ["alloc", "default", "derive", "rc", "serde_derive", "std"] }
