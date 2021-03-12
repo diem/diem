@@ -17,7 +17,7 @@ use simplelog::{
 };
 
 use abigen::AbigenOptions;
-use boogie_backend::options::BoogieOptions;
+use boogie_backend_v2::options::BoogieOptions;
 use bytecode::options::ProverOptions;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
@@ -77,6 +77,8 @@ pub struct Options {
     pub experimental_pipeline: bool,
     /// Whether to use strong edges in borrow analysis
     pub strong_edges: bool,
+    /// Whether to use the next major version instead of the current one
+    pub vnext: bool,
 }
 
 impl Default for Options {
@@ -100,6 +102,7 @@ impl Default for Options {
             errmapgen: ErrmapOptions::default(),
             experimental_pipeline: false,
             strong_edges: false,
+            vnext: false,
         }
     }
 }
@@ -199,9 +202,9 @@ impl Options {
                     .help("keeps intermediate artifacts of the backend around")
             )
             .arg(
-                Arg::with_name("trans_v1")
-                    .long("v1")
-                    .help("whether to use the old v1 translation and backend")
+                Arg::with_name("vnext")
+                    .long("vnext")
+                    .help("whether to use the next major version (if there is one)")
             )
             .arg(
                 Arg::with_name("inv_v2")
@@ -499,6 +502,9 @@ impl Options {
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
+        }
+        if matches.is_present("vnext") {
+            options.vnext = true;
         }
         if matches.is_present("inv_v2") {
             options.inv_v2 = true;

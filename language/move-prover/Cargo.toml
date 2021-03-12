@@ -9,6 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 # diem dependencies
 boogie-backend = { path = "boogie-backend" }
+boogie-backend-v2 = { path = "boogie-backend-v2" }
 move-lang = { path = "../move-lang" }
 move-model = { path = "../move-model" }
 docgen = { path = "docgen" }

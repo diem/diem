@@ -106,6 +106,11 @@ impl Type {
         Type::Primitive(p)
     }
 
+    /// Determines whether this is a type parameter.
+    pub fn is_type_parameter(&self) -> bool {
+        matches!(self, Type::TypeParameter(..))
+    }
+
     /// Determines whether this is a reference.
     pub fn is_reference(&self) -> bool {
         matches!(self, Type::Reference(_, _))

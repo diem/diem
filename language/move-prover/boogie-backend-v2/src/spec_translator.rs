@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -14,20 +14,21 @@ use move_model::{
     code_writer::CodeWriter,
     emit, emitln,
     model::{
-        FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, SpecVarId,
-        StructEnv, StructId,
+        FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId,
     },
     symbol::Symbol,
-    ty::{PrimitiveType, Type, TypeDisplayContext},
+    ty::{PrimitiveType, Type},
 };
 
-use crate::boogie_helpers::{
-    boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-    boogie_local_type, boogie_modifies_memory_name, boogie_resource_memory_name,
-    boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type_value,
-    boogie_type_value_array, boogie_type_value_array_from_strings, boogie_well_formed_expr,
+use crate::{
+    boogie_helpers::{
+        boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
+        boogie_local_type, boogie_modifies_memory_name, boogie_resource_memory_name,
+        boogie_spec_fun_name, boogie_spec_var_name, boogie_type_suffix, boogie_type_value,
+        boogie_type_value_array, boogie_type_value_array_from_strings, boogie_well_formed_expr,
+    },
+    options::BoogieOptions,
 };
-use boogie_backend_v2::options::BoogieOptions;
 use move_model::ast::{MemoryLabel, QuantKind, TempIndex};
 use std::cell::RefCell;
 
@@ -42,22 +43,6 @@ pub struct SpecTranslator<'env> {
     type_args_opt: Option<Vec<Type>>,
     /// Counter for creating new variables.
     fresh_var_count: RefCell<usize>,
-    /// Set of items which have been already traced. This is used to avoid redundant tracing
-    /// of expressions whose value has been already tracked.
-    traced_items: RefCell<BTreeSet<TraceItem>>,
-}
-
-/// A item which is traced for printing in diagnosis. The boolean indicates whether the item is
-/// traced inside old context or not.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum TraceItem {
-    // Automatically traced items when `options.prover.debug_trace_exp` is on.
-    Local(Symbol),
-    Temporary(TempIndex),
-    SpecVar(ModuleId, SpecVarId, Vec<Type>, Option<MemoryLabel>),
-    Exp,
-    // Explicitly traced item via user level trace function.
-    Explicit,
 }
 
 impl<'env> SpecTranslator<'env> {
@@ -73,7 +58,6 @@ impl<'env> SpecTranslator<'env> {
             writer,
             type_args_opt: None,
             fresh_var_count: Default::default(),
-            traced_items: Default::default(),
         }
     }
 
@@ -91,7 +75,7 @@ impl<'env> SpecTranslator<'env> {
     fn fresh_var_name(&self, prefix: &str) -> String {
         let mut fvc_ref = self.fresh_var_count.borrow_mut();
         let name_str = format!("${}_{}", prefix, *fvc_ref);
-        *fvc_ref += 1;
+        *fvc_ref = usize::saturating_add(*fvc_ref, 1);
         name_str
     }
 
@@ -227,60 +211,34 @@ impl<'env> SpecTranslator<'env> {
                             }))
                             .join(", ")
                     );
-                let type_check = boogie_well_formed_expr(self.env, &call, &fun.result_type);
+                let type_check = boogie_well_formed_expr(self.env, "$$res", &fun.result_type);
                 if !param_list.is_empty() {
                     emitln!(
                         self.writer,
-                        "axiom (forall {} :: {});",
+                        "axiom (forall {} ::\n(var $$res := {};\n{}));",
                         param_list,
+                        call,
                         type_check
                     );
                 } else {
-                    emitln!(self.writer, "axiom {};", type_check);
+                    emitln!(
+                        self.writer,
+                        "axiom (var $$res := {};\n{});",
+                        call,
+                        type_check
+                    );
                 }
+                emitln!(self.writer);
             } else {
                 emitln!(self.writer, " {");
                 self.writer.indent();
-                self.translate(fun.body.as_ref().unwrap());
+                self.translate_unboxed(fun.body.as_ref().unwrap());
                 emitln!(self.writer);
                 self.writer.unindent();
                 emitln!(self.writer, "}");
                 emitln!(self.writer);
             }
         }
-    }
-}
-
-/// Well Formedness function
-/// ========================
-
-impl<'env> SpecTranslator<'env> {
-    /// Generates a function which assumes well formedness (type correcness) of a struct.
-    pub fn translate_assume_well_formed(&self, struct_env: &StructEnv<'_>) {
-        emitln!(
-            self.writer,
-            "function {{:inline}} {}_$is_well_formed($this: $Value): bool {{",
-            boogie_struct_name(struct_env),
-        );
-        self.writer.indent();
-        emitln!(self.writer, "$Vector_$is_well_formed($this)");
-        emitln!(
-            self.writer,
-            "&& (var $this_s := v#$Vector($this); $vlen_raw($this_s) == {}",
-            struct_env.get_fields().count()
-        );
-        for field in struct_env.get_fields() {
-            let select = format!("$SelectFieldRaw($this_s, {})", boogie_field_name(&field));
-            let check =
-                boogie_well_formed_expr(struct_env.module_env.env, &select, &field.get_type());
-            if !check.is_empty() {
-                emit!(self.writer, "  && ");
-                emitln!(self.writer, "{}", check);
-            }
-        }
-        emitln!(self.writer, ")");
-        self.writer.unindent();
-        emitln!(self.writer, "}");
     }
 }
 
@@ -307,10 +265,16 @@ impl<'env> SpecTranslator<'env> {
     /// on whether the underlying Boogie implementation works with $Value or with the unboxed
     /// version. This optimizes `UnboxValue(BoxValue(e))` into `e` where possible. It is run
     /// before the actual translation which relies on that boxing has been made explicit.
+    ///
+    /// One design principle here is that we expect each expression to deliver the boxed
+    /// representation of a value. We then unbox that value as is determined by expression
+    /// context, possibly reducing it via the above rewriting rule.
     fn box_unbox(&self, exp: Exp) -> Exp {
         use Exp::*;
 
         match exp {
+            LocalVar(id, name) => self.box_value(LocalVar(id, name)),
+            Temporary(id, idx) => self.box_value(Temporary(id, idx)),
             Value(id, val) => self.box_value(Value(id, val)),
             Call(id, oper, args) => self.box_unbox_call(id, oper, args),
             Invoke(id, fun, args) => {
@@ -335,7 +299,7 @@ impl<'env> SpecTranslator<'env> {
                     .map(|d| LocalVarDecl {
                         id: d.id,
                         name: d.name,
-                        binding: d.binding.map(|e| self.box_unbox(e)),
+                        binding: d.binding.map(|e| self.unbox_value(self.box_unbox(e))),
                     })
                     .collect(),
                 Box::new(self.box_unbox(*body)),
@@ -352,7 +316,7 @@ impl<'env> SpecTranslator<'env> {
                                 name: d.name,
                                 binding: d.binding.map(|e| self.box_unbox(e)),
                             },
-                            self.box_unbox(e),
+                            self.unbox_value(self.box_unbox(e)),
                         )
                     })
                     .collect_vec(),
@@ -388,6 +352,29 @@ impl<'env> SpecTranslator<'env> {
         use Exp::*;
         use Operation::*;
         match &oper {
+            // Function `f<T>` requires boxing of parameters of type `T` and unboxing of
+            // results of type `T`.
+            Function(mid, fid, _) => {
+                let module_env = self.env.get_module(*mid);
+                let decl = module_env.get_spec_fun(*fid);
+                let new_args = args
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, exp)| {
+                        if decl.params[i].1.skip_reference().is_type_parameter() {
+                            self.box_unbox(exp)
+                        } else {
+                            self.unbox_value(self.box_unbox(exp))
+                        }
+                    })
+                    .collect_vec();
+                let new_call = Call(id, oper, new_args);
+                if decl.result_type.skip_reference().is_type_parameter() {
+                    new_call
+                } else {
+                    self.box_value(new_call)
+                }
+            }
             // Irregular operators which have some arguments boxed others none
             UpdateField(..) => {
                 let arg2 = args.pop().unwrap();
@@ -398,22 +385,29 @@ impl<'env> SpecTranslator<'env> {
                     vec![self.unbox_value(self.box_unbox(arg1)), self.box_unbox(arg2)],
                 ))
             }
-            // Operators which take unboxed arguments and deliver unboxed ones.
-            Exists(..) | CanModify | MaxU8 | MaxU64 | MaxU128 | Add | Sub | Mul | Mod | Div
-            | BitOr | BitAnd | Xor | Shl | Shr | Implies | And | Or | Lt | Gt | Le | Ge | Not
-            | Len | TypeValue | Slice => {
-                self.box_value(Call(id, oper, self.box_unbox_vec_unbox_value(args)))
+            Update => {
+                let arg3 = args.pop().unwrap();
+                let arg2 = args.pop().unwrap();
+                let arg1 = args.pop().unwrap();
+                self.box_value(Call(
+                    id,
+                    oper,
+                    vec![
+                        self.unbox_value(self.box_unbox(arg1)),
+                        self.unbox_value(self.box_unbox(arg2)),
+                        self.box_unbox(arg3),
+                    ],
+                ))
             }
 
             // Operators which take boxed arguments and deliver unboxed ones
-            Eq | Neq | Pack(..) | WellFormed | EventStoreIncludes | EventStoreIncludedIn
-            | Identical => self.box_value(Call(id, oper, self.box_unbox_vec(args))),
+            Pack(..) => self.box_value(Call(id, oper, self.box_unbox_vec(args))),
 
             // Operators which take unboxed arguments and deliver boxed ones
-            Index | Global(..) | Select(..) => Call(id, oper, self.box_unbox_vec_unbox_value(args)),
+            Index | Select(..) => Call(id, oper, self.box_unbox_vec_unbox_value(args)),
 
-            // Everything else which takes boxed arguments and delivers boxed
-            _ => Call(id, oper, self.box_unbox_vec(args)),
+            // Everything else which take unboxed arguments and delivers unboxed
+            _ => self.box_value(Call(id, oper, self.box_unbox_vec_unbox_value(args))),
         }
     }
 
@@ -422,10 +416,18 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn unbox_value(&self, e: Exp) -> Exp {
-        if let Exp::Call(_, Operation::BoxValue, args) = e {
-            args.into_iter().next().unwrap()
-        } else {
-            Exp::Call(e.node_id(), Operation::UnboxValue, vec![e])
+        use Exp::*;
+        use Operation::*;
+        match e {
+            Call(_, BoxValue, args) => args.into_iter().next().unwrap(),
+            Block(id, decls, body) => Block(id, decls, Box::new(self.unbox_value(*body))),
+            IfElse(id, cond, if_e, else_e) => IfElse(
+                id,
+                cond,
+                Box::new(self.unbox_value(*if_e)),
+                Box::new(self.unbox_value(*else_e)),
+            ),
+            _ => Exp::Call(e.node_id(), Operation::UnboxValue, vec![e]),
         }
     }
 }
@@ -436,12 +438,16 @@ impl<'env> SpecTranslator<'env> {
 impl<'env> SpecTranslator<'env> {
     // Translate the expression.
     pub(crate) fn translate(&self, exp: &Exp) {
-        self.translate_exp(&self.box_unbox(exp.clone()))
+        let exp1 = self.box_unbox(exp.clone());
+        // DEBUG: emitln!(self.writer, "// {}", exp1.display(self.env));
+        self.translate_exp(&exp1)
     }
 
     // Translate the expression and deliver an unboxed (Boogie native) result.
     pub(crate) fn translate_unboxed(&self, exp: &Exp) {
-        self.translate_exp(&self.unbox_value(self.box_unbox(exp.clone())))
+        let exp1 = self.unbox_value(self.box_unbox(exp.clone()));
+        // DEBUG: emitln!(self.writer, "// {}", exp1.display(self.env));
+        self.translate_exp(&exp1)
     }
 
     fn translate_exp(&self, exp: &Exp) {
@@ -460,31 +466,25 @@ impl<'env> SpecTranslator<'env> {
             }
             Exp::SpecVar(node_id, module_id, var_id, mem_label) => {
                 let instantiation = &self.env.get_node_instantiation(*node_id);
-                self.trace_value(
-                    *node_id,
-                    TraceItem::SpecVar(*module_id, *var_id, instantiation.clone(), *mem_label),
-                    || {
-                        self.set_writer_location(*node_id);
-                        let module_env = self.env.get_module(*module_id);
-                        let spec_var = module_env.get_spec_var(*var_id);
-                        let instantiation_str = if instantiation.is_empty() {
-                            "".to_string()
-                        } else {
-                            format!(
-                                "[{}]",
-                                instantiation
-                                    .iter()
-                                    .map(|ty| self.translate_type(ty))
-                                    .join(", ")
-                            )
-                        };
-                        emit!(
-                            self.writer,
-                            "{}{}",
-                            boogie_spec_var_name(&module_env, spec_var.name, mem_label),
-                            instantiation_str
-                        );
-                    },
+                self.set_writer_location(*node_id);
+                let module_env = self.env.get_module(*module_id);
+                let spec_var = module_env.get_spec_var(*var_id);
+                let instantiation_str = if instantiation.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(
+                        "[{}]",
+                        instantiation
+                            .iter()
+                            .map(|ty| self.translate_type(ty))
+                            .join(", ")
+                    )
+                };
+                emit!(
+                    self.writer,
+                    "{}{}",
+                    boogie_spec_var_name(&module_env, spec_var.name, mem_label),
+                    instantiation_str
                 );
             }
             Exp::Call(node_id, oper, args) => {
@@ -519,36 +519,6 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    #[allow(clippy::if_same_then_else)]
-    fn trace_value<F>(&self, node_id: NodeId, item: TraceItem, f: F)
-    where
-        F: Fn(),
-    {
-        let go = if item == TraceItem::Explicit {
-            // User called TRACE function, always do it.
-            true
-        } else if self.options.debug_trace {
-            // Option for automatic tracing has been enabled
-            if item == TraceItem::Exp {
-                // Some arbitrary exp
-                true
-            } else {
-                // Some named item, like a spec var or local. Only trace again if it has not
-                // been done yet. This avoids redundant noise.
-                self.traced_items.borrow_mut().insert(item)
-            }
-        } else {
-            false
-        };
-        if go {
-            emit!(self.writer, "$DebugTrackExp({}, ", node_id.as_usize());
-            f();
-            emit!(self.writer, ")");
-        } else {
-            f();
-        }
-    }
-
     fn translate_exp_parenthesised(&self, exp: &Exp) {
         emit!(self.writer, "(");
         self.translate_exp(exp);
@@ -564,23 +534,21 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_local_var(&self, node_id: NodeId, name: Symbol) {
-        self.trace_value(node_id, TraceItem::Local(name), || {
-            emit!(self.writer, "{}", name.display(self.env.symbol_pool()));
-        });
+    fn translate_local_var(&self, _node_id: NodeId, name: Symbol) {
+        emit!(self.writer, "{}", name.display(self.env.symbol_pool()));
     }
 
     fn translate_temporary(&self, node_id: NodeId, idx: TempIndex) {
-        self.trace_value(node_id, TraceItem::Temporary(idx), || {
-            let mut_ref = self.env.get_node_type(node_id).is_mutable_reference();
-            if mut_ref {
-                emit!(self.writer, "$Dereference(");
-            }
-            emit!(self.writer, "$t{}", idx);
-            if mut_ref {
-                emit!(self.writer, ")")
-            }
-        });
+        let ty = self.env.get_node_type(node_id);
+        let mut_ref = ty.is_mutable_reference();
+        if mut_ref {
+            let suffix = boogie_type_suffix(ty.skip_reference());
+            emit!(self.writer, "$Unbox{}($Dereference(", suffix);
+        }
+        emit!(self.writer, "$t{}", idx);
+        if mut_ref {
+            emit!(self.writer, "))")
+        }
     }
 
     fn translate_block(&self, node_id: NodeId, vars: &[LocalVarDecl], exp: &Exp) {
@@ -618,7 +586,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Function(module_id, fun_id, memory_labels) => {
                 self.translate_spec_fun_call(node_id, *module_id, *fun_id, args, memory_labels)
             }
-            Operation::Pack(..) => self.translate_pack(args),
+            Operation::Pack(mid, sid) => self.translate_pack(*mid, *sid, args),
             Operation::Tuple => self.error(&loc, "Tuple not yet supported"),
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
@@ -629,8 +597,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Result(pos) => {
                 emit!(self.writer, "$ret{}", pos);
             }
-            Operation::Index => self.translate_primitive_call("$select_vector_raw", args),
-            Operation::Slice => self.translate_primitive_call("$slice_vector_raw", args),
+            Operation::Index => self.translate_primitive_call("$ReadValueArray", args),
+            Operation::Slice => self.translate_primitive_call("$SliceValueArrayByRange", args),
             Operation::Range => self.translate_primitive_call("$Range", args),
 
             // Binary operators
@@ -642,8 +610,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::BitOr => self.translate_arith_op("|", args),
             Operation::BitAnd => self.translate_arith_op("&", args),
             Operation::Xor => self.translate_arith_op("^", args),
-            Operation::Shl => self.translate_primitive_call("$shl_raw", args),
-            Operation::Shr => self.translate_primitive_call("$shr_raw", args),
+            Operation::Shl => self.translate_primitive_call("$shl", args),
+            Operation::Shr => self.translate_primitive_call("$shr", args),
             Operation::Implies => self.translate_logical_op("==>", args),
             Operation::And => self.translate_logical_op("&&", args),
             Operation::Or => self.translate_logical_op("||", args),
@@ -666,26 +634,24 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
             Operation::CanModify => self.translate_can_modify(node_id, args),
-            Operation::Len => self.translate_primitive_call("$vlen_raw", args),
+            Operation::Len => self.translate_primitive_call("$LenValueArray", args),
             Operation::TypeValue => self.translate_type_value(node_id),
             Operation::TypeDomain | Operation::ResourceDomain => self.error(
                 &loc,
                 "domain functions can only be used as the range of a quantifier",
             ),
-            Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
-            Operation::Concat => self.translate_primitive_call("$append_vector", args),
-            Operation::Empty => self.translate_primitive_call("$mk_vector", args),
-            Operation::Single => self.translate_primitive_call("$single_vector", args),
+            Operation::Update => self.translate_primitive_call("$UpdateValueArray", args),
+            Operation::Concat => self.translate_primitive_call("$ConcatValueArray", args),
+            Operation::Empty => self.translate_primitive_call("$EmptyValueArray", args),
+            Operation::Single => self.translate_primitive_call("$SingleValueArray", args),
             Operation::Old => panic!("old(..) expression unexpected"),
-            Operation::Trace => self.trace_value(node_id, TraceItem::Explicit, || {
-                self.translate_exp(&args[0])
-            }),
+            Operation::Trace => self.translate_exp(&args[0]),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
             Operation::MaxU64 => emit!(self.writer, "$MAX_U64"),
             Operation::MaxU128 => emit!(self.writer, "$MAX_U128"),
             Operation::WellFormed => self.translate_well_formed(&args[0]),
-            Operation::AbortCode => emit!(self.writer, "$Integer($abort_code)"),
-            Operation::AbortFlag => emit!(self.writer, "$Boolean($abort_flag)"),
+            Operation::AbortCode => emit!(self.writer, "$abort_code"),
+            Operation::AbortFlag => emit!(self.writer, "$abort_flag"),
             Operation::NoOp => { /* do nothing. */ }
         }
     }
@@ -720,11 +686,14 @@ impl<'env> SpecTranslator<'env> {
         self.translate_exp(&args[0]); // event store
         emit!(self.writer, ", ");
         // Next expected argument is the guid.
-        emit!(self.writer, "$SelectField(");
+        emit!(self.writer, "$GetEventHandleGuid(");
         self.translate_exp(&args[2]);
-        emit!(self.writer, ", $Event_EventHandle_guid), ");
+        emit!(self.writer, "), ");
         // Next comes the event.
+        let suffix = boogie_type_suffix(&self.env.get_node_type(args[1].node_id()));
+        emit!(self.writer, "$Box{}(", suffix);
         self.translate_exp(&args[1]);
+        emit!(self.writer, ")");
         // Next comes the optional condition
         if with_cond {
             emit!(self.writer, ", ");
@@ -733,18 +702,15 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
-    fn translate_pack(&self, args: &[Exp]) {
-        emit!(
-            self.writer,
-            "({}$EmptyValueArray()",
-            "$ExtendValueArray(".repeat(args.len())
-        );
-        for arg in args.iter() {
-            emit!(self.writer, ", ");
-            self.translate_exp(arg);
-            emit!(self.writer, ")");
+    fn translate_pack(&self, mid: ModuleId, sid: StructId, args: &[Exp]) {
+        emit!(self.writer, "$ValueArray($MapConstValue($DefaultValue())");
+        let struct_env = self.env.get_module(mid).into_struct(sid);
+        for (i, field_env) in struct_env.get_fields().enumerate() {
+            emit!(self.writer, "[{} := ", boogie_field_name(&field_env));
+            self.translate_exp(&args[i]);
+            emit!(self.writer, "]");
         }
-        emit!(self.writer, ")"); // A closing bracket
+        emit!(self.writer, ", {})", struct_env.get_field_count());
     }
 
     fn translate_spec_fun_call(
@@ -780,7 +746,7 @@ impl<'env> SpecTranslator<'env> {
             maybe_comma();
             let memory = boogie_resource_memory_name(self.env, *memory, &label_at(i));
             emit!(self.writer, &memory);
-            i += 1;
+            i = usize::saturating_add(i, 1);
         }
         for QualifiedId {
             module_id: mid,
@@ -794,7 +760,7 @@ impl<'env> SpecTranslator<'env> {
                 self.writer,
                 &boogie_spec_var_name(&declaring_module, var_decl.name, &label_at(i))
             );
-            i += 1;
+            i = usize::saturating_add(i, 1);
         }
         for ty in instantiation.iter() {
             maybe_comma();
@@ -819,7 +785,7 @@ impl<'env> SpecTranslator<'env> {
         let struct_env = module_env.get_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
         let field_name = boogie_field_name(&field_env);
-        emit!(self.writer, "$SelectFieldRaw(");
+        emit!(self.writer, "$ReadValueArray(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ", {})", field_name);
     }
@@ -835,7 +801,7 @@ impl<'env> SpecTranslator<'env> {
         let struct_env = module_env.get_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
         let field_name = boogie_field_name(&field_env);
-        emit!(self.writer, "$UpdateFieldRaw(");
+        emit!(self.writer, "$UpdateValueArray(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ", {}, ", field_name);
         self.translate_exp(&args[1]);
@@ -854,19 +820,17 @@ impl<'env> SpecTranslator<'env> {
         args: &[Exp],
         memory_label: &Option<MemoryLabel>,
     ) {
-        self.trace_value(node_id, TraceItem::Exp, || {
-            let rty = &self.env.get_node_instantiation(node_id)[0];
-            let (mid, sid, targs) = rty.require_struct();
-            let env = self.env;
-            emit!(
-                self.writer,
-                "$ResourceValueRaw({}, {}, ",
-                boogie_resource_memory_name(self.env, mid.qualified(sid), memory_label),
-                boogie_type_value_array(env, targs)
-            );
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ")");
-        });
+        let rty = &self.env.get_node_instantiation(node_id)[0];
+        let (mid, sid, targs) = rty.require_struct();
+        let env = self.env;
+        emit!(
+            self.writer,
+            "$ResourceValue({}, {}, ",
+            boogie_resource_memory_name(self.env, mid.qualified(sid), memory_label),
+            boogie_type_value_array(env, targs)
+        );
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ")");
     }
 
     fn translate_resource_exists(
@@ -875,19 +839,17 @@ impl<'env> SpecTranslator<'env> {
         args: &[Exp],
         memory_label: &Option<MemoryLabel>,
     ) {
-        self.trace_value(node_id, TraceItem::Exp, || {
-            let rty = &self.env.get_node_instantiation(node_id)[0];
-            let (mid, sid, targs) = rty.require_struct();
-            let env = self.env;
-            emit!(
-                self.writer,
-                "$ResourceExistsRaw({}, {}, ",
-                boogie_resource_memory_name(self.env, mid.qualified(sid), memory_label),
-                boogie_type_value_array(env, targs)
-            );
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ")");
-        });
+        let rty = &self.env.get_node_instantiation(node_id)[0];
+        let (mid, sid, targs) = rty.require_struct();
+        let env = self.env;
+        emit!(
+            self.writer,
+            "$ResourceExists({}, {}, ",
+            boogie_resource_memory_name(self.env, mid.qualified(sid), memory_label),
+            boogie_type_value_array(env, targs)
+        );
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ")");
     }
 
     fn translate_can_modify(&self, node_id: NodeId, args: &[Exp]) {
@@ -916,25 +878,22 @@ impl<'env> SpecTranslator<'env> {
             let var_name = self.env.symbol_pool().string(var.name);
             let quant_ty = self.env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
-                Type::Vector(..) => {
+                Type::Vector(elem_ty) => {
                     let range_tmp = range_tmps.get(&var.name).unwrap();
                     let quant_var = quant_vars.get(&var.name).unwrap();
+                    let suffix = boogie_type_suffix(&elem_ty);
                     emit!(
                         self.writer,
-                        "(var {} := $select_vector({}, {}); ",
+                        "(var {} := $Unbox{}($ReadValueArray({}, {}));\n",
                         var_name,
+                        suffix,
                         range_tmp,
                         quant_var,
                     );
                 }
                 Type::Primitive(PrimitiveType::Range) => {
                     let quant_var = quant_vars.get(&var.name).unwrap();
-                    emit!(
-                        self.writer,
-                        "(var {} := $Integer({}); ",
-                        var_name,
-                        quant_var
-                    );
+                    emit!(self.writer, "(var {} := {};\n", var_name, quant_var);
                 }
                 Type::ResourceDomain(mid, sid) => {
                     let (addr_var, type_vars) = resource_vars.get(&var.name).unwrap();
@@ -943,7 +902,7 @@ impl<'env> SpecTranslator<'env> {
                     let type_array = boogie_type_value_array_from_strings(type_vars);
                     emit!(
                         self.writer,
-                        "(var {} := $ResourceValueRaw({}, {}, {}); ",
+                        "(var {} := $ResourceValue({}, {}, {});\n",
                         var_name,
                         resource_name,
                         type_array,
@@ -964,14 +923,13 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_quant(
         &self,
-        node_id: NodeId,
+        _node_id: NodeId,
         kind: QuantKind,
         ranges: &[(LocalVarDecl, Exp)],
         triggers: &[Vec<Exp>],
         condition: &Option<Box<Exp>>,
         body: &Exp,
     ) {
-        let loc = self.env.get_node_loc(node_id);
         // Translate range expressions.
         let mut range_tmps = HashMap::new();
         for (var, range) in ranges {
@@ -996,8 +954,14 @@ impl<'env> SpecTranslator<'env> {
             let var_name = self.env.symbol_pool().string(var.name);
             let quant_ty = self.env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
-                Type::TypeDomain(_) => {
-                    emit!(self.writer, "{}{}: $Value", comma, var_name);
+                Type::TypeDomain(ty) => {
+                    emit!(
+                        self.writer,
+                        "{}{}: {}",
+                        comma,
+                        var_name,
+                        boogie_local_type(&ty)
+                    );
                 }
                 Type::ResourceDomain(mid, sid) => {
                     let struct_env = self.env.get_module(*mid).into_struct(*sid);
@@ -1051,7 +1015,7 @@ impl<'env> SpecTranslator<'env> {
                         boogie_resource_memory_name(self.env, mid.qualified(*sid), &None);
                     let type_array = boogie_type_value_array_from_strings(type_vars);
                     let resource_value = format!(
-                        "$ResourceValueRaw({}, {}, {})",
+                        "$ResourceValue({}, {}, {})",
                         resource_name, type_array, addr_var
                     );
                     emit!(self.writer, "{{{}}}", resource_value);
@@ -1069,25 +1033,14 @@ impl<'env> SpecTranslator<'env> {
             let quant_ty = self.env.get_node_type(range.node_id());
             match quant_ty.skip_reference() {
                 Type::TypeDomain(domain_ty) => {
-                    let type_check = boogie_well_formed_expr(self.env, &var_name, &domain_ty);
+                    let mut type_check = boogie_well_formed_expr(self.env, &var_name, &domain_ty);
                     if type_check.is_empty() {
-                        let tctx = TypeDisplayContext::WithEnv {
-                            env: self.env,
-                            type_param_names: None,
-                        };
-                        self.error(
-                            &loc,
-                            &format!(
-                                "cannot quantify over `{}` because the type is not concrete",
-                                Type::TypeDomain(domain_ty.clone()).display(&tctx)
-                            ),
-                        );
-                    } else {
-                        emit!(self.writer, "{}{}", separator, type_check);
+                        type_check = "true".to_string();
                     }
+                    emit!(self.writer, "{}{}", separator, type_check);
                 }
                 Type::ResourceDomain(_, _) => {
-                    // currently does not generate a constraint.
+                    // currently does not generate a constraint
                     continue;
                 }
                 Type::Vector(..) => {
@@ -1095,7 +1048,7 @@ impl<'env> SpecTranslator<'env> {
                     let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
-                        "{}$InVectorRange({}, {})",
+                        "{}$InValueArrayRange({}, {})",
                         separator,
                         range_tmp,
                         quant_var,
@@ -1143,7 +1096,9 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
-        emit!(self.writer, "{}(", boogie_val_fun);
+        let suffix =
+            boogie_type_suffix(&self.env.get_node_type(args[0].node_id()).skip_reference());
+        emit!(self.writer, "{}{}(", boogie_val_fun, suffix);
         self.translate_exp(&args[0]);
         emit!(self.writer, ", ");
         self.translate_exp(&args[1]);
@@ -1200,57 +1155,45 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_well_formed(&self, exp: &Exp) {
         let ty = self.env.get_node_type(exp.node_id());
-        let check = boogie_well_formed_expr(self.env, "$val", ty.skip_reference());
-        if !check.is_empty() {
-            emit!(self.writer, "(var $val := ");
-            self.translate_exp(exp);
-            emit!(self.writer, "; {})", check);
-        } else {
-            emit!(self.writer, "true");
+        match exp {
+            Exp::Temporary(_, idx) => {
+                // For the special case of a temporary which can represent a
+                // &mut, skip the normal translation of `exp` which would do automatic
+                // dereferencing. Instead let boogie_well_formed_expr handle the
+                // the dereferencing as part of its logic.
+                let check = boogie_well_formed_expr(self.env, &format!("$t{}", idx), &ty);
+                if !check.is_empty() {
+                    emit!(self.writer, &check);
+                } else {
+                    emit!(self.writer, "true");
+                }
+            }
+            _ => {
+                let check = boogie_well_formed_expr(self.env, "$val", ty.skip_reference());
+                if !check.is_empty() {
+                    emit!(self.writer, "(var $val := ");
+                    self.translate_exp(exp);
+                    emit!(self.writer, "; {})", check);
+                } else {
+                    emit!(self.writer, "true");
+                }
+            }
         }
     }
 
     fn translate_unbox_value(&self, id: NodeId, exp: &Exp) {
         let ty = self.env.get_node_type(id);
-        let (_, unbox_op) = Self::get_box_unbox_ops(ty.skip_reference());
-        if !unbox_op.is_empty() {
-            emit!(self.writer, "{}(", unbox_op);
-        }
+        let suffix = boogie_type_suffix(&ty);
+        emit!(self.writer, "$Unbox{}(", suffix);
         self.translate_exp(exp);
-        if !unbox_op.is_empty() {
-            emit!(self.writer, ")");
-        }
+        emit!(self.writer, ")");
     }
 
     fn translate_box_value(&self, id: NodeId, exp: &Exp) {
         let ty = self.env.get_node_type(id);
-        let (box_op, _) = Self::get_box_unbox_ops(ty.skip_reference());
-        if !box_op.is_empty() {
-            emit!(self.writer, "{}(", box_op);
-        }
+        let suffix = boogie_type_suffix(&ty);
+        emit!(self.writer, "$Box{}(", suffix);
         self.translate_exp(exp);
-        if !box_op.is_empty() {
-            emit!(self.writer, ")");
-        }
-    }
-
-    /// Gets boogie box/unbox ops for values. Returns a pair of empty strings if the
-    /// type does not have boxing semantics.
-    fn get_box_unbox_ops(ty: &Type) -> (&'static str, &'static str) {
-        use PrimitiveType::*;
-        use Type::*;
-        match ty {
-            Primitive(p) => match p {
-                Bool => ("$Boolean", "b#$Boolean"),
-                U8 | U64 | U128 | Num => ("$Integer", "i#$Integer"),
-                Address => ("$Address", "a#$Address"),
-                Signer => ("$Address", "a#$Address"),
-                Range => ("", ""),
-                TypeValue => ("$Type", "t#$Type"),
-                EventStore => ("", ""),
-            },
-            Vector(..) | Struct(..) => ("$Vector", "v#$Vector"),
-            _ => ("", ""),
-        }
+        emit!(self.writer, ")");
     }
 }

@@ -151,6 +151,7 @@ pub enum Operation {
     TraceLocal(TempIndex),
     TraceReturn(usize),
     TraceAbort,
+    TraceExp(NodeId),
 
     // Event
     EmitEvent,
@@ -208,6 +209,7 @@ impl Operation {
             Operation::TraceLocal(..) => false,
             Operation::TraceAbort => false,
             Operation::TraceReturn(..) => false,
+            Operation::TraceExp(..) => false,
             Operation::EmitEvent => false,
             Operation::EventStoreDiverge => false,
         }
@@ -879,6 +881,14 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
             TraceAbort => write!(f, "trace_abort")?,
             TraceReturn(r) => write!(f, "trace_return[{}]", r)?,
+            TraceExp(node_id) => {
+                let loc = self.func_target.global_env().get_node_loc(*node_id);
+                write!(
+                    f,
+                    "trace_exp[{}]",
+                    loc.display(self.func_target.global_env())
+                )?
+            }
             EmitEvent => write!(f, "emit_event")?,
             EventStoreDiverge => write!(f, "event_store_diverge")?,
         }

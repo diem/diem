@@ -620,6 +620,7 @@ pub enum Operation {
     And,
     Or,
     Eq,
+    Identical,
     Neq,
     Lt,
     Gt,

@@ -84,7 +84,7 @@ impl Default for BoogieOptions {
             generate_smt: false,
             native_equality: false,
             type_requires: "free requires".to_owned(),
-            stratification_depth: 4,
+            stratification_depth: 6,
             aggressive_func_inline: "".to_owned(),
             func_inline: "{:inline}".to_owned(),
             serialize_bound: 0,

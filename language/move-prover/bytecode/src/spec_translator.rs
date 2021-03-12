@@ -53,6 +53,7 @@ pub struct TranslatedSpec {
     pub saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
     pub saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
     pub saved_params: BTreeMap<TempIndex, TempIndex>,
+    pub debug_traces: Vec<(NodeId, Exp)>,
     pub pre: Vec<(Loc, Exp)>,
     pub post: Vec<(Loc, Exp)>,
     pub aborts: Vec<(Loc, Exp, Option<Exp>)>,
@@ -375,7 +376,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                     // to save their value at function entry, and deliver this temporary here.
                     //
                     // Notice that a redundant copy of a value (i.e. one which is not mutated)
-                    // is removed in by copy propagation, so we do not need to
+                    // is removed by copy propagation, so we do not need to
                     // care about optimizing this here.
                     self.save_param(self.apply_param_substitution(*idx))
                 } else {
@@ -447,6 +448,22 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
             Call(node_id, Result(n), _) => {
                 self.builder.set_loc_from_node(*node_id);
                 self.builder.mk_temporary(self.ret_locals[*n])
+            }
+            Call(id, Trace, args) => {
+                let mut has_local_var = false;
+                args[0].visit(&mut |e| {
+                    has_local_var = has_local_var || matches!(e, Exp::LocalVar(..))
+                });
+                if has_local_var {
+                    self.builder.global_env().error(
+                        &self.builder.global_env().get_node_loc(*id),
+                        "`TRACE(..)` function cannot be used for expressions depending\
+                             on quantified variables or spec function parameters",
+                    )
+                }
+                let exp = self.translate_exp(&args[0], in_old);
+                self.result.debug_traces.push((exp.node_id(), exp.clone()));
+                exp
             }
             Call(node_id, oper, args) => Call(
                 self.instantiate(*node_id),

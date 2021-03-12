@@ -395,27 +395,33 @@ impl<'a> Instrumenter<'a> {
 
         self.builder.set_loc_from_attr(id);
 
-        let opaque_display =
-            if callee_opaque && (self.options.dump_bytecode || self.options.stable_test_output) {
-                // Add a debug comment about the original function call to easier identify
-                // the opaque call in dumped bytecode.
-                let bc = Call(
-                    id,
-                    dests.clone(),
-                    Operation::Function(mid, fid, targs.clone()),
-                    srcs.clone(),
-                    aa,
-                );
-                let bc_display = bc
-                    .display(&self.builder.get_target(), &Default::default())
-                    .to_string();
-                self.builder
-                    .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
-                self.builder.emit_with(Nop);
-                Some(bc_display)
-            } else {
-                None
-            };
+        let opaque_display = if callee_opaque {
+            // Add a debug comment about the original function call to easier identify
+            // the opaque call in dumped bytecode.
+            let bc = Call(
+                id,
+                dests.clone(),
+                Operation::Function(mid, fid, targs.clone()),
+                srcs.clone(),
+                aa,
+            );
+            let bc_display = bc
+                .display(&self.builder.get_target(), &Default::default())
+                .to_string();
+            self.builder
+                .set_next_debug_comment(format!(">> opaque call: {}", bc_display));
+            self.builder.emit_with(Nop);
+            Some(bc_display)
+        } else {
+            None
+        };
+
+        // Emit all expression debug traces.
+        for (node_id, exp) in std::mem::take(&mut callee_spec.debug_traces) {
+            let temp = self.builder.emit_let(exp).0;
+            self.builder
+                .emit_with(|id| Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None));
+        }
 
         // Emit pre conditions if this is the verification variant or if the callee
         // is opaque. For inlined callees outside of verification entry points, we skip
@@ -683,6 +689,13 @@ impl<'a> Instrumenter<'a> {
         self.builder.emit_with(|id| Label(id, ret_label));
 
         if self.is_verified() {
+            // Emit all expression debug traces.
+            for (node_id, exp) in std::mem::take(&mut self.spec.debug_traces) {
+                let temp = self.builder.emit_let(exp).0;
+                self.builder.emit_with(|id| {
+                    Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None)
+                });
+            }
             // Emit the negation of all aborts conditions.
             for (loc, abort_cond, _) in &self.spec.aborts {
                 self.builder

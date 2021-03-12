@@ -24,7 +24,7 @@ use move_model::{
 use crate::prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds};
 // DEBUG
 // use backtrace::Backtrace;
-use boogie_backend_v2::options::BoogieOptions;
+use crate::options::BoogieOptions;
 use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 use move_model::{
     ast::TempIndex,
@@ -89,6 +89,7 @@ pub enum TraceEntry {
     Temporary(QualifiedId<FunId>, TempIndex, ModelValue),
     Result(QualifiedId<FunId>, usize, ModelValue),
     Abort(QualifiedId<FunId>, ModelValue),
+    Exp(NodeId, ModelValue),
 }
 
 impl<'env> BoogieWrapper<'env> {
@@ -267,12 +268,36 @@ impl<'env> BoogieWrapper<'env> {
                         // Do not continue after first abort
                         break;
                     }
+                    Exp(node_id, value) => {
+                        let ty = self.env.get_node_type(*node_id);
+                        let exp_str = self.get_abbreviated_source(*node_id);
+                        display.extend(self.make_trace_entry(
+                            exp_str,
+                            value.pretty_or_raw(self, error.model.as_ref().unwrap(), &ty),
+                        ));
+                    }
                     _ => {}
                 }
             }
             diag = diag.with_notes(display);
         }
         self.env.add_diag(diag);
+    }
+
+    fn get_abbreviated_source(&self, node_id: NodeId) -> String {
+        let loc = self.env.get_node_loc(node_id);
+        let res = if let Ok(src) = self.env.get_source(&loc) {
+            let src = src.lines().map(|s| s.trim()).join(" ");
+            let l = src.len();
+            if l > 70 {
+                format!("{} ..", &src[0..67])
+            } else {
+                src
+            }
+        } else {
+            loc.display(self.env).to_string()
+        };
+        format!("`{}`", res)
     }
 
     fn make_trace_entry(&self, var_name: String, value: PrettyDoc) -> Vec<String> {
@@ -420,11 +445,23 @@ impl<'env> BoogieWrapper<'env> {
                 let value = self.extract_value(value)?;
                 Ok(TraceEntry::Abort(fun, value))
             }
+            "track_exp" => {
+                let node_id = self.extract_node_id(args)?;
+                let value = self.extract_value(value)?;
+                Ok(TraceEntry::Exp(node_id, value))
+            }
             _ => Err(ModelParseError::new(&format!(
                 "unrecognized augmented trace entry `{}`",
                 name
             ))),
         }
+    }
+
+    fn extract_node_id(&self, args: &str) -> Result<NodeId, ModelParseError> {
+        let index = args.parse::<usize>()?;
+        self.env
+            .index_to_node_id(index)
+            .ok_or_else(|| ModelParseError::new("undefined node id"))
     }
 
     fn extract_loc(&self, args: &str) -> Result<Loc, ModelParseError> {
@@ -686,14 +723,11 @@ impl ModelValue {
         ModelValue::List(vec![ModelValue::literal("Error")])
     }
 
-    /// Extracts a vector from `(Vector value_array)`. This follows indirections in the model
+    /// Extracts a vector. This follows indirections in the model
     /// to extract the actual values.
     fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
-        let args = self.extract_list("$Vector")?;
-        if args.len() != 1 {
-            return None;
-        }
-        args[0].extract_value_array(model)
+        // In current encoding, directly forward to value array,
+        self.extract_value_array(model)
     }
 
     /// Extracts a value array from it's representation.
@@ -796,6 +830,16 @@ impl ModelValue {
         None
     }
 
+    /// Extract a $Value box value.
+    fn extract_box(&self) -> Option<&ModelValue> {
+        if let ModelValue::List(elems) = self {
+            if elems.len() == 2 {
+                return Some(&elems[1]);
+            }
+        }
+        None
+    }
+
     /// Extract a number from a literal.
     fn extract_number(&self) -> Option<usize> {
         if let Ok(n) = self.extract_literal()?.parse::<usize>() {
@@ -820,15 +864,6 @@ impl ModelValue {
         } else {
             None
         }
-    }
-
-    /// Extract the value of a primitive.
-    fn extract_primitive(&self, ctor: &str) -> Option<&String> {
-        let args = self.extract_list(ctor)?;
-        if args.len() != 1 {
-            return None;
-        }
-        (&args[0]).extract_literal()
     }
 
     /// Extract a literal.
@@ -861,27 +896,30 @@ impl ModelValue {
         match ty {
             Type::Primitive(PrimitiveType::U8) => Some(PrettyDoc::text(format!(
                 "{}u8",
-                self.extract_primitive("$Integer")?
+                self.extract_literal().and_then(|s| s.parse::<u8>().ok())?
             ))),
             Type::Primitive(PrimitiveType::U64) => Some(PrettyDoc::text(
-                self.extract_primitive("$Integer")?.to_string(),
+                self.extract_literal()
+                    .and_then(|s| s.parse::<u64>().ok())?
+                    .to_string(),
             )),
             Type::Primitive(PrimitiveType::U128) => Some(PrettyDoc::text(format!(
                 "{}u128",
-                self.extract_primitive("$Integer")?.to_string()
+                self.extract_literal()
+                    .and_then(|s| s.parse::<u128>().ok())?
             ))),
             Type::Primitive(PrimitiveType::Num) => Some(PrettyDoc::text(format!(
-                "{}u128",
-                self.extract_primitive("$Integer")?.to_string()
+                "{}num",
+                self.extract_literal()
+                    .and_then(|s| s.parse::<i128>().ok())?
             ))),
             Type::Primitive(PrimitiveType::Bool) => Some(PrettyDoc::text(
-                self.extract_primitive("$Boolean")?.to_string(),
+                self.extract_literal()
+                    .and_then(|s| s.parse::<bool>().ok())?
+                    .to_string(),
             )),
             Type::Primitive(PrimitiveType::Address) | Type::Primitive(PrimitiveType::Signer) => {
-                let addr = BigInt::parse_bytes(
-                    &self.extract_primitive("$Address")?.clone().into_bytes(),
-                    10,
-                )?;
+                let addr = BigInt::parse_bytes(&self.extract_literal()?.clone().into_bytes(), 10)?;
                 Some(PrettyDoc::text(format!("0x{}", &addr.to_str_radix(16))))
             }
             Type::Vector(param) => self.pretty_vector(wrapper, model, param),
@@ -933,7 +971,11 @@ impl ModelValue {
                 // outside of domain, ignore.
                 continue;
             }
-            let mut p = values.values.get(idx)?.pretty_or_raw(wrapper, model, param);
+            let mut p = values
+                .values
+                .get(idx)?
+                .extract_box()?
+                .pretty_or_raw(wrapper, model, param);
             if *idx > next {
                 p = PrettyDoc::text(format!("{}: ", idx)).append(p);
                 sparse = true;
@@ -944,6 +986,7 @@ impl ModelValue {
         if next < values.size || sparse {
             let default = values
                 .default
+                .extract_box()?
                 .pretty(wrapper, model, param)
                 .unwrap_or_else(|| PrettyDoc::text("undef"));
             entries.insert(0, PrettyDoc::text(format!("(size): {}", values.size)));
@@ -969,7 +1012,12 @@ impl ModelValue {
             .enumerate()
             .map(|(i, f)| {
                 let ty = f.get_type().instantiate(params);
-                let v = values.values.get(&i).unwrap_or(&values.default);
+                let v = values
+                    .values
+                    .get(&i)
+                    .unwrap_or(&values.default)
+                    .extract_box()
+                    .unwrap_or(&values.default);
                 let vp = v.pretty_or_raw(wrapper, model, &ty);
                 PrettyDoc::text(format!(
                     "{}",

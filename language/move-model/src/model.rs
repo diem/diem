@@ -1081,6 +1081,16 @@ impl GlobalEnv {
             .unwrap_or(Type::Error)
     }
 
+    /// Converts an index into a node id.
+    pub fn index_to_node_id(&self, index: usize) -> Option<NodeId> {
+        let id = NodeId::new(index);
+        if self.loc_map.borrow().get(&id).is_some() {
+            Some(id)
+        } else {
+            None
+        }
+    }
+
     /// Gets the type of the given node, if available.
     pub fn get_node_type_opt(&self, node_id: NodeId) -> Option<Type> {
         self.type_map.borrow().get(&node_id).cloned()

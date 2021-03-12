@@ -142,7 +142,7 @@ fun Test::incr_twice() {
   3: nop
      # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+21
   4: assert Neq<address>($t0, 0)
-  5: assume Eq($t1, Or(Not(exists<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615)))
+  5: assume Identical($t1, Or(Not(exists<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615)))
   6: if ($t1) goto 7 else goto 11
   7: label L4
   8: assume Or(And(Not(exists<Test::R>($t0)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615))
@@ -162,7 +162,7 @@ fun Test::incr_twice() {
  20: nop
      # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+21
  21: assert Neq<address>($t4, 0)
- 22: assume Eq($t5, Or(Not(exists<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615)))
+ 22: assume Identical($t5, Or(Not(exists<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615)))
  23: if ($t5) goto 24 else goto 28
  24: label L6
  25: assume Or(And(Not(exists<Test::R>($t4)), Eq(33, $t2)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615))

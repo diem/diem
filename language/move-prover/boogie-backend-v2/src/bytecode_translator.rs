@@ -26,13 +26,14 @@ use move_model::{
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
-        boogie_debug_track_return, boogie_field_name, boogie_function_name, boogie_local_type,
-        boogie_modifies_memory_name, boogie_resource_memory_name, boogie_struct_name,
-        boogie_type_value, boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
+        boogie_debug_track_return, boogie_declare_temps, boogie_equality_for_type,
+        boogie_field_name, boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
+        boogie_resource_memory_name, boogie_struct_name, boogie_type_suffix, boogie_type_value,
+        boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
     },
+    options::BoogieOptions,
     spec_translator::SpecTranslator,
 };
-use boogie_backend_v2::options::BoogieOptions;
 use bytecode::{
     function_target_pipeline::FunctionVariant,
     stackless_bytecode::{AbortAction, PropKind},
@@ -183,9 +184,12 @@ impl<'env> ModuleTranslator<'env> {
             emitln!(self.writer, "var {}: $Memory;", memory_name);
         }
 
-        // Emit type assumption function.
-        self.spec_translator
-            .translate_assume_well_formed(&struct_env);
+        // Emit type tag predicate
+        emitln!(
+            self.writer,
+            "function {{:inline}} $Tag{}(x: $ValueArray): bool {{ true }}",
+            struct_name
+        );
     }
 
     /// Translates all functions in the module.
@@ -303,10 +307,12 @@ impl<'env> ModuleTranslator<'env> {
             .enumerate()
             .map(|(i, ref s)| format!("$ret{}: {}", i, boogie_local_type(s)))
             // Add implicit return parameters for &mut
-            .chain(
-                (0..mut_ref_count)
-                    .map(|i| format!("$ret{}: $Mutation", fun_target.get_return_count() + i)),
-            )
+            .chain((0..mut_ref_count).map(|i| {
+                format!(
+                    "$ret{}: $Mutation",
+                    usize::saturating_add(fun_target.get_return_count(), i)
+                )
+            }))
             .join(", ");
         (args, rets)
     }
@@ -348,8 +354,7 @@ impl<'env> ModuleTranslator<'env> {
         });
 
         // Declare temporaries for debug tracing.
-        emitln!(self.writer, "var $trace_abort_temp: int;");
-        emitln!(self.writer, "var $trace_local_temp: $Value;");
+        emitln!(self.writer, &boogie_declare_temps());
 
         // Generate memory snapshot variable declarations.
         let code = fun_target.get_bytecode();
@@ -523,7 +528,7 @@ impl<'env> ModuleTranslator<'env> {
                         .unwrap_or("unknown assertion failed");
                     emit!(
                         self.writer,
-                        "{{:msg \"assert_failed{}: {}\"}} ",
+                        "{{:msg \"assert_failed{}: {}\"}}\n  ",
                         self.loc_str(&loc),
                         info
                     );
@@ -585,27 +590,13 @@ impl<'env> ModuleTranslator<'env> {
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),
             Branch(_, then_target, else_target, idx) => emitln!(
                 self.writer,
-                "if (b#$Boolean({})) {{ goto L{}; }} else {{ goto L{}; }}",
+                "if ({}) {{ goto L{}; }} else {{ goto L{}; }}",
                 str_local(*idx),
                 then_target.as_usize(),
                 else_target.as_usize(),
             ),
             Assign(_, dest, src, _) => {
-                if fun_target.get_local_type(*dest).is_reference() {
-                    emitln!(
-                        self.writer,
-                        "call {} := $CopyOrMoveRef({});",
-                        str_local(*dest),
-                        str_local(*src)
-                    );
-                } else {
-                    emitln!(
-                        self.writer,
-                        "call {} := $CopyOrMoveValue({});",
-                        str_local(*dest),
-                        str_local(*src)
-                    );
-                }
+                emitln!(self.writer, "{} := {};", str_local(*dest), str_local(*src));
             }
             Ret(_, rets) => {
                 for (i, r) in rets.iter().enumerate() {
@@ -623,15 +614,13 @@ impl<'env> ModuleTranslator<'env> {
             }
             Load(_, idx, c) => {
                 let value = match c {
-                    Constant::Bool(true) => "$Boolean(true)".to_string(),
-                    Constant::Bool(false) => "$Boolean(false)".to_string(),
-                    Constant::U8(num) => format!("$Integer({})", num),
-                    Constant::U64(num) => format!("$Integer({})", num),
-                    Constant::U128(num) => format!("$Integer({})", num),
-                    Constant::Address(val) => format!("$Address({})", val),
-                    Constant::ByteArray(val) => {
-                        format!("$Vector({})", boogie_byte_blob(self.options, val))
-                    }
+                    Constant::Bool(true) => "true".to_string(),
+                    Constant::Bool(false) => "false".to_string(),
+                    Constant::U8(num) => num.to_string(),
+                    Constant::U64(num) => num.to_string(),
+                    Constant::U128(num) => num.to_string(),
+                    Constant::Address(val) => val.to_string(),
+                    Constant::ByteArray(val) => boogie_byte_blob(self.options, val),
                 };
                 emitln!(self.writer, "{} := {};", str_local(*idx), value);
             }
@@ -681,11 +670,13 @@ impl<'env> ModuleTranslator<'env> {
                                         panic!("Strong local writeback cannot have field")
                                     }
                                 };
+                                let suffix = boogie_type_suffix(fun_target.get_local_type(*idx));
                                 emitln!(
                                     self.writer,
-                                    "call {} := ${}({}, {}, {});",
+                                    "call {} := ${}{}({}, {}, {});",
                                     str_local(*idx),
                                     func,
+                                    suffix,
                                     str_local(src),
                                     idx,
                                     str_local(*idx)
@@ -735,54 +726,101 @@ impl<'env> ModuleTranslator<'env> {
                     BorrowLoc => {
                         let src = srcs[0];
                         let dest = dests[0];
+                        let suffix = boogie_type_suffix(fun_target.get_local_type(src));
                         emitln!(
                             self.writer,
-                            "call {} := $BorrowLoc({}, {});",
+                            "call {} := $BorrowLoc({}, $Box{}({}));",
                             str_local(dest),
                             src,
+                            suffix,
                             str_local(src)
                         );
                     }
                     ReadRef => {
                         let src = srcs[0];
                         let dest = dests[0];
+                        let suffix = boogie_type_suffix(fun_target.get_local_type(dest));
                         emitln!(
                             self.writer,
-                            "call {} := $ReadRef({});",
+                            "{} := $Unbox{}($Dereference({}));",
                             str_local(dest),
+                            suffix,
                             str_local(src)
                         );
                     }
                     WriteRef => {
                         let reference = srcs[0];
                         let value = srcs[1];
+                        let suffix = boogie_type_suffix(fun_target.get_local_type(value));
                         emitln!(
                             self.writer,
-                            "call {} := $WriteRef({}, {});",
+                            "{} := $UpdateMutation({}, $Box{}({}));",
                             str_local(reference),
                             str_local(reference),
+                            suffix,
                             str_local(value),
                         );
                     }
                     Function(mid, fid, type_actuals) => {
                         let callee_env = self.module_env.env.get_module(*mid).into_function(*fid);
+                        let callee_target = self
+                            .targets
+                            .get_target(&callee_env, FunctionVariant::Baseline);
 
                         let args_str = std::iter::once(boogie_type_values(
                             fun_target.func_env.module_env.env,
                             type_actuals,
                         ))
-                        .chain(srcs.iter().map(|arg_idx| str_local(*arg_idx)))
+                        .chain(srcs.iter().enumerate().map(|(pos, arg_idx)| {
+                            let param_type = callee_target.get_local_type(pos);
+                            let arg_type = fun_target.get_local_type(*arg_idx);
+                            if param_type.is_type_parameter() {
+                                // If the function parameter has a type parameter type, we
+                                // need to box it before passing in.
+                                format!(
+                                    "$Box{}({})",
+                                    boogie_type_suffix(&arg_type),
+                                    str_local(*arg_idx)
+                                )
+                            } else {
+                                str_local(*arg_idx)
+                            }
+                        }))
                         .filter(|s| !s.is_empty())
                         .join(", ");
 
+                        let mut unbox_assigns = vec![];
                         let dest_str = dests
                             .iter()
+                            .enumerate()
+                            .map(|(pos, idx)| {
+                                let return_type = callee_target.get_return_type(pos);
+                                let arg_type = fun_target.get_local_type(*idx);
+                                if return_type.is_type_parameter() {
+                                    // Need to unbox after call
+                                    let value_temp = self.get_value_temp(pos);
+                                    let suffix = boogie_type_suffix(arg_type);
+                                    unbox_assigns.push(format!(
+                                        "{} := $Unbox{}({});",
+                                        str_local(*idx),
+                                        suffix,
+                                        value_temp
+                                    ));
+                                    value_temp
+                                } else {
+                                    str_local(*idx)
+                                }
+                            })
                             // Add implict dest returns for &mut srcs:
                             //  f(x) --> x := f(x)  with t(x) = &mut_
-                            .chain(srcs.iter().filter(|idx| {
-                                fun_target.get_local_type(**idx).is_mutable_reference()
-                            }))
-                            .map(|idx| str_local(*idx))
+                            .chain(
+                                srcs.iter()
+                                    .filter(|idx| {
+                                        fun_target.get_local_type(**idx).is_mutable_reference()
+                                    })
+                                    .cloned()
+                                    .map(str_local),
+                            )
                             .join(",");
 
                         if dest_str.is_empty() {
@@ -800,12 +838,15 @@ impl<'env> ModuleTranslator<'env> {
                                 boogie_function_name(&callee_env),
                                 args_str
                             );
+                            for assign in unbox_assigns {
+                                emitln!(self.writer, &assign)
+                            }
                         }
                         // Clear the last track location after function call, as the call inserted
                         // location tracks before it returns.
                         *last_tracked_loc = None;
                     }
-                    Pack(mid, sid, _type_actuals) => {
+                    Pack(mid, sid, type_actuals) => {
                         let struct_env = fun_target
                             .func_env
                             .module_env
@@ -814,16 +855,19 @@ impl<'env> ModuleTranslator<'env> {
                             .into_struct(*sid);
                         let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
                         for (i, field_env) in struct_env.get_fields().enumerate() {
+                            let suffix =
+                                boogie_type_suffix(&field_env.get_type().instantiate(type_actuals));
                             ctor_expr = format!(
-                                "{}[{} := {}]",
+                                "{}[{} := $Box{}({})]",
                                 ctor_expr,
                                 boogie_field_name(&field_env),
+                                suffix,
                                 str_local(srcs[i])
                             );
                         }
                         emitln!(
                             self.writer,
-                            "{} := $Vector($ValueArray({}, {}));",
+                            "{} := $ValueArray({}, {});",
                             str_local(dests[0]),
                             ctor_expr,
                             struct_env.get_field_count()
@@ -837,10 +881,12 @@ impl<'env> ModuleTranslator<'env> {
                             .get_module(*mid)
                             .into_struct(*sid);
                         for (i, field_env) in struct_env.get_fields().enumerate() {
+                            let suffix = boogie_type_suffix(fun_target.get_local_type(dests[i]));
                             emitln!(
                                 self.writer,
-                                "{} := $SelectField({}, {});",
+                                "{} := $Unbox{}($ReadValueArray({}, {}));",
                                 str_local(dests[i]),
+                                suffix,
                                 str_local(srcs[0]),
                                 boogie_field_name(&field_env)
                             );
@@ -880,17 +926,20 @@ impl<'env> ModuleTranslator<'env> {
                             .get_module(*mid)
                             .into_struct(*sid);
                         let field_env = &struct_env.get_field_by_offset(*field_offset);
-                        let is_ref = fun_target.get_local_type(src).is_reference();
+                        let src_ty = fun_target.get_local_type(src);
+                        let dest_ty = fun_target.get_local_type(dest);
+                        let struct_arg = if src_ty.is_reference() {
+                            format!("$Unbox_vec($Dereference({}))", str_local(src))
+                        } else {
+                            str_local(src)
+                        };
+                        let suffix = boogie_type_suffix(dest_ty);
                         emitln!(
                             self.writer,
-                            "call {} := {}({}, {});",
+                            "{} := $Unbox{}($ReadValueArray({}, {}));",
                             str_local(dest),
-                            if is_ref {
-                                "$GetFieldFromReference"
-                            } else {
-                                "$GetFieldFromValue"
-                            },
-                            str_local(src),
+                            suffix,
+                            struct_arg,
                             boogie_field_name(field_env)
                         );
                     }
@@ -959,8 +1008,8 @@ impl<'env> ModuleTranslator<'env> {
                             memory_name,
                             memory_name,
                             type_args,
-                            str_local(value),
                             signer_name,
+                            str_local(value),
                         );
                     }
                     MoveFrom(mid, sid, type_actuals) => {
@@ -994,6 +1043,7 @@ impl<'env> ModuleTranslator<'env> {
                         } else {
                             emitln!(self.writer, "havoc {};", temp_str);
                         }
+                        // Insert a WellFormed check
                         let check = boogie_well_formed_check(self.module_env.env, &temp_str, ty);
                         if !check.is_empty() {
                             emitln!(self.writer, &check);
@@ -1216,26 +1266,17 @@ impl<'env> ModuleTranslator<'env> {
                             str_local(op2)
                         );
                     }
-                    Eq => {
+                    Eq | Neq => {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let oper =
+                            boogie_equality_for_type(oper == &Eq, fun_target.get_local_type(op1));
                         emitln!(
                             self.writer,
-                            "{} := $Boolean($IsEqual({}, {}));",
+                            "{} := {}({}, {});",
                             str_local(dest),
-                            str_local(op1),
-                            str_local(op2)
-                        );
-                    }
-                    Neq => {
-                        let dest = dests[0];
-                        let op1 = srcs[0];
-                        let op2 = srcs[1];
-                        emitln!(
-                            self.writer,
-                            "{} := $Boolean(!$IsEqual({}, {}));",
-                            str_local(dest),
+                            oper,
                             str_local(op1),
                             str_local(op2)
                         );
@@ -1261,7 +1302,7 @@ impl<'env> ModuleTranslator<'env> {
                         let handle = srcs[1];
                         let translate_local = |idx: usize| {
                             if fun_target.get_local_type(idx).is_mutable_reference() {
-                                format!("$Dereference({})", str_local(idx))
+                                format!("$Unbox_vec($Dereference({}))", str_local(idx))
                             } else {
                                 str_local(idx)
                             }
@@ -1271,10 +1312,12 @@ impl<'env> ModuleTranslator<'env> {
                             "$es := ${}ExtendEventStore($es, ",
                             if srcs.len() > 2 { "Cond" } else { "" }
                         );
+                        let suffix = boogie_type_suffix(fun_target.get_local_type(msg));
                         emit!(
                             self.writer,
-                            "$SelectField({}, $Event_EventHandle_guid), {}",
+                            "$GetEventHandleGuid({}), $Box{}({})",
                             translate_local(handle),
+                            suffix,
                             str_local(msg)
                         );
                         if srcs.len() > 2 {
@@ -1290,7 +1333,7 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, "if ($abort_flag) {");
                     self.writer.indent();
                     let code_str = str_local(*code);
-                    emitln!(self.writer, "{} := $Integer($abort_code);", code_str);
+                    emitln!(self.writer, "{} := $abort_code;", code_str);
                     self.track_abort(fun_target, &code_str);
                     emitln!(self.writer, "goto L{};", target.as_usize());
                     self.writer.unindent();
@@ -1298,25 +1341,21 @@ impl<'env> ModuleTranslator<'env> {
                 }
             }
             Abort(_, src) => {
-                emitln!(
-                    self.writer,
-                    "$abort_code := i#$Integer({});",
-                    str_local(*src)
-                );
+                emitln!(self.writer, "$abort_code := {};", str_local(*src));
                 emitln!(self.writer, "$abort_flag := true;");
-                for (i, ty) in fun_target.get_return_types().iter().enumerate() {
-                    let ret_str = format!("$ret{}", i);
-                    if ty.is_reference() {
-                        emitln!(self.writer, "{} := $DefaultMutation;", &ret_str);
-                    } else {
-                        emitln!(self.writer, "{} := $DefaultValue();", &ret_str);
-                    }
-                }
                 emitln!(self.writer, "return;")
             }
             Nop(..) => {}
         }
         emitln!(self.writer);
+    }
+
+    fn get_value_temp(&self, pos: usize) -> String {
+        if pos == 0 {
+            "$$t".to_string()
+        } else {
+            format!("$$t{}", pos)
+        }
     }
 
     /// Track location for execution trace, avoiding to track the same line multiple times.
@@ -1351,27 +1390,17 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Generates an update of the debug information about temporary.
     fn track_local(&self, fun_target: &FunctionTarget<'_>, origin_idx: TempIndex, idx: TempIndex) {
-        // In order to determine whether we need to dereference, use the type of the temporary
-        // which actually holds the value, not the original temp we are tracing.
-        let ty = fun_target.get_local_type(idx);
-        let mut value = format!("$t{}", idx);
-        if ty.is_reference() {
-            value = format!("$Dereference({})", value);
-        }
-        let track = boogie_debug_track_local(fun_target, origin_idx, &value);
-        emitln!(self.writer, &track);
+        emitln!(
+            self.writer,
+            &boogie_debug_track_local(fun_target, origin_idx, idx)
+        );
     }
 
     /// Generates an update of the debug information about the return value at given location.
     fn track_return(&self, fun_target: &FunctionTarget<'_>, return_idx: usize, idx: TempIndex) {
-        let ty = fun_target.get_local_type(idx);
-        let mut value = format!("$t{}", idx);
-        if ty.is_reference() {
-            value = format!("$Dereference({})", value);
-        }
         emitln!(
             self.writer,
-            &boogie_debug_track_return(fun_target, return_idx, &value)
+            &boogie_debug_track_return(fun_target, return_idx, idx)
         );
     }
 

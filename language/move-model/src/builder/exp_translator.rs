@@ -1676,14 +1676,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 return self.new_error_exp();
             }
             if let Some(field_decls) = &entry.fields {
-                let mut fields_not_convered: BTreeSet<Symbol> = BTreeSet::new();
-                fields_not_convered.extend(field_decls.keys());
+                let mut fields_not_covered: BTreeSet<Symbol> = BTreeSet::new();
+                fields_not_covered.extend(field_decls.keys());
                 let mut args = BTreeMap::new();
                 for (name_loc, name_, (_, exp)) in fields.iter() {
                     let field_name = self.symbol_pool().make(&name_);
                     if let Some((idx, field_ty)) = field_decls.get(&field_name) {
                         let exp = self.translate_exp(exp, &field_ty.instantiate(&instantiation));
-                        fields_not_convered.remove(&field_name);
+                        fields_not_covered.remove(&field_name);
                         args.insert(idx, exp);
                     } else {
                         self.error(
@@ -1696,12 +1696,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         );
                     }
                 }
-                if !fields_not_convered.is_empty() {
+                if !fields_not_covered.is_empty() {
                     self.error(
                         loc,
                         &format!(
                             "missing fields {}",
-                            fields_not_convered
+                            fields_not_covered
                                 .iter()
                                 .map(|n| format!("`{}`", n.display(self.symbol_pool())))
                                 .join(", ")

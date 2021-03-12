@@ -236,6 +236,14 @@ impl<'a> Instrumenter<'a> {
         // Emit the code which performs the update on `mem`.
         emit_update(&mut self.builder);
 
+        // Emit all expression debug traces.
+        for (node_id, exp) in std::mem::take(&mut translated.debug_traces) {
+            let temp = self.builder.emit_let(exp).0;
+            self.builder.emit_with(|id| {
+                Bytecode::Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None)
+            });
+        }
+
         // Emit assertions of translated invariants.
         for (loc, _, cond) in std::mem::take(&mut translated.invariants) {
             self.builder.set_next_debug_comment(format!(

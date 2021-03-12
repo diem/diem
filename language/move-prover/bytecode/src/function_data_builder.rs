@@ -176,6 +176,12 @@ impl<'env> FunctionDataBuilder<'env> {
         self.mk_bool_call(ast::Operation::Eq, vec![arg1, arg2])
     }
 
+    /// Make an identical equality expression. This is stronger than `make_equal` because
+    /// it requires the exact same representation, not only interpretation.
+    pub fn mk_identical(&self, arg1: Exp, arg2: Exp) -> Exp {
+        self.mk_bool_call(ast::Operation::Identical, vec![arg1, arg2])
+    }
+
     /// Make an and expression.
     pub fn mk_and(&self, arg1: Exp, arg2: Exp) -> Exp {
         self.mk_bool_call(ast::Operation::And, vec![arg1, arg2])
@@ -417,7 +423,7 @@ impl<'env> FunctionDataBuilder<'env> {
         let ty = self.global_env().get_node_type(def.node_id());
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
-        let definition = self.mk_eq(temp_exp.clone(), def);
+        let definition = self.mk_identical(temp_exp.clone(), def);
         self.emit_with(|id| Bytecode::Prop(id, PropKind::Assume, definition));
         (temp, temp_exp)
     }

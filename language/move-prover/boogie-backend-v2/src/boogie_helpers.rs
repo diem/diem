@@ -3,7 +3,7 @@
 
 //! Helpers for emitting Boogie code.
 
-use boogie_backend_v2::options::BoogieOptions;
+use crate::options::BoogieOptions;
 use bytecode::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
@@ -114,7 +114,7 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
         Type::Vector(t) => format!("$Vector_type_value({})", boogie_type_value(env, t)),
         Type::Reference(_, t) => format!("ReferenceType({})", boogie_type_value(env, t)),
         Type::TypeParameter(index) => format!("$tv{}", index),
-        Type::TypeLocal(s) => format!("t#$Type({})", s.display(env.symbol_pool())),
+        Type::TypeLocal(s) => s.display(env.symbol_pool()).to_string(),
         Type::Struct(module_id, struct_id, args) => {
             boogie_struct_type_value(env, *module_id, *struct_id, args)
         }
@@ -201,11 +201,58 @@ pub fn boogie_type_value_array_from_strings(args: &[String]) -> String {
 
 /// Return boogie type for a local with given signature token.
 pub fn boogie_local_type(ty: &Type) -> String {
-    if ty.is_reference() {
-        "$Mutation".to_string()
-    } else {
-        "$Value".to_string()
+    use PrimitiveType::*;
+    use Type::*;
+    match ty {
+        Primitive(p) => match p {
+            U8 | U64 | U128 | Num | Address | Signer => "int".to_string(),
+            Bool => "bool".to_string(),
+            TypeValue => "$TypeValue".to_string(),
+            _ => panic!("unexpected type"),
+        },
+        Vector(..) | Struct(..) => "$ValueArray".to_string(),
+        Reference(..) => "$Mutation".to_string(),
+        TypeParameter(..) => "$Value".to_string(),
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
+        | Var(..) => format!("<<unsupported: {:?}>>", ty),
     }
+}
+
+pub fn boogie_declare_temps() -> String {
+    "var $$t_bool: bool;\nvar $$t_int: int;\nvar $$t_addr: int;\nvar $$t_type: $TypeValue;\
+    \nvar $$t, $$t1, $$t2, $$t3: $Value;\nvar $$t_vec: $ValueArray;"
+        .to_string()
+}
+
+pub fn boogie_temp(ty: &Type) -> String {
+    format!("$$t{}", boogie_type_suffix(ty))
+}
+
+pub fn boogie_type_suffix(ty: &Type) -> &'static str {
+    use PrimitiveType::*;
+    use Type::*;
+    match ty {
+        Primitive(p) => match p {
+            U8 | U64 | U128 | Num | Signer => "_int",
+            Address => "_addr",
+            Bool => "_bool",
+            TypeValue => "_type",
+            EventStore => "",
+            _ => "<<unsupported>>",
+        },
+        Vector(..) | Struct(..) => "_vec",
+        TypeParameter(..) => "",
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
+        | Var(..) | Reference(..) => "<<unsupported>>",
+    }
+}
+
+pub fn boogie_equality_for_type(eq: bool, ty: &Type) -> String {
+    format!(
+        "{}{}",
+        if eq { "$IsEqual" } else { "!$IsEqual" },
+        boogie_type_suffix(ty)
+    )
 }
 
 /// Create boogie well-formed boolean expression.
@@ -215,8 +262,9 @@ pub fn boogie_well_formed_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String
 
 fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: usize) -> String {
     let mut conds = vec![];
+    let indent = " ".repeat(usize::saturating_mul(nest, 2));
     let mut add_type_check = |s: String| {
-        conds.push(s);
+        conds.push(format!("{}{}", indent, s));
     };
     match ty {
         Type::Primitive(p) => match p {
@@ -224,43 +272,93 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             PrimitiveType::U64 => add_type_check(format!("$IsValidU64({})", name)),
             PrimitiveType::U128 => add_type_check(format!("$IsValidU128({})", name)),
             PrimitiveType::Num => add_type_check(format!("$IsValidNum({})", name)),
-            PrimitiveType::Bool => add_type_check(format!("is#$Boolean({})", name)),
-            PrimitiveType::Address => add_type_check(format!("is#$Address({})", name)),
-            // TODO fix this for a real boogie check
-            PrimitiveType::Signer => add_type_check(format!("is#$Address({})", name)),
+            PrimitiveType::Bool => add_type_check(format!("$IsValidBool({})", name)),
+            PrimitiveType::Address | PrimitiveType::Signer => {
+                add_type_check(format!("$IsValidAddress({})", name))
+            }
             PrimitiveType::Range => add_type_check(format!("$IsValidRange({})", name)),
-            PrimitiveType::TypeValue => add_type_check(format!("is#$Type({})", name)),
+            PrimitiveType::TypeValue => {}
             PrimitiveType::EventStore => unimplemented!("EventStore"),
         },
         Type::Vector(elem_ty) => {
-            add_type_check(format!("$Vector_$is_well_formed({})", name));
+            let elem_ty_value = boogie_type_value(env, elem_ty);
+            add_type_check(format!(
+                "$Vector_$is_well_formed({}, {})",
+                elem_ty_value, name
+            ));
             if !matches!(**elem_ty, Type::TypeParameter(..)) {
-                let nest_value = &format!("$select_vector({},$${})", name, nest);
-                let elem_expr = boogie_well_formed_expr_impl(env, nest_value, &elem_ty, nest + 1);
-                if !elem_expr.is_empty() {
-                    conds.push(format!(
-                        "(forall $${}: int :: {{{}}} $${} >= 0 && $${} < $vlen({}) ==> {})",
-                        nest, nest_value, nest, nest, name, elem_expr,
+                let suffix = boogie_type_suffix(elem_ty);
+                let nest_value = &format!("$ReadValueArray({},$${})", name, nest);
+                let mut check = format!("$IsValidBox{}({})", suffix, nest_value);
+                let nest_value_unboxed = &format!("$Unbox{}({})", suffix, nest_value);
+                let nest_check = boogie_well_formed_expr_impl(
+                    env,
+                    nest_value_unboxed,
+                    &elem_ty,
+                    usize::saturating_add(nest, 1),
+                );
+                if !nest_check.is_empty() {
+                    check = format!("{} &&\n  {}", check, nest_check);
+                }
+                add_type_check(format!(
+                    "(forall $${}: int :: {{{}}}\n{}    $${} >= 0 && $${} < $LenValueArray({}) ==> {})",
+                    nest, nest_value, indent, nest, nest, name, check,
+                ));
+            }
+        }
+        Type::Struct(module_idx, struct_idx, targs) => {
+            let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
+            add_type_check(format!(
+                "$Tag{}({}) && $ValueArray_$is_well_formed({})",
+                boogie_struct_name(&struct_env),
+                name,
+                name
+            ));
+            add_type_check(format!(
+                "$LenValueArray({}) == {}",
+                name,
+                struct_env.get_field_count()
+            ));
+            let field_var = format!("$$f{}", nest);
+            for field_env in struct_env.get_fields() {
+                let ty = field_env.get_type().instantiate(targs);
+                let suffix = boogie_type_suffix(&ty);
+                let field_value = format!(
+                    "$ReadValueArray({}, {})",
+                    name,
+                    boogie_field_name(&field_env)
+                );
+                add_type_check(format!("$IsValidBox{}({})", suffix, field_value));
+                let nest_check = boogie_well_formed_expr_impl(
+                    env,
+                    &field_var,
+                    &ty,
+                    usize::saturating_add(nest, 1),
+                );
+                if !nest_check.is_empty() {
+                    add_type_check(format!(
+                        "(var {} := $Unbox{}({});\n{}   {})",
+                        field_var, suffix, field_value, indent, nest_check
                     ));
                 }
             }
         }
-        Type::Struct(module_idx, struct_idx, _) => {
-            let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
-            let well_formed_name = "$is_well_formed";
-            conds.push(format!(
-                "{}_{}({})",
-                boogie_struct_name(&struct_env),
-                well_formed_name,
-                name
-            ))
-        }
-        Type::Reference(_, rtype) => {
-            conds.push(boogie_well_formed_expr_impl(
+        Type::Reference(true, rtype) => {
+            let suffix = boogie_type_suffix(rtype);
+            add_type_check(format!("$IsValidBox{}($Dereference({}))", suffix, name));
+            add_type_check(boogie_well_formed_expr_impl(
                 env,
-                &format!("$Dereference({})", name),
+                &format!("$Unbox{}($Dereference({}))", suffix, name),
                 rtype,
-                nest + 1,
+                usize::saturating_add(nest, 1),
+            ));
+        }
+        Type::Reference(false, rtype) => {
+            add_type_check(boogie_well_formed_expr_impl(
+                env,
+                name,
+                rtype.skip_reference(),
+                nest,
             ));
         }
         // TODO: tuple and functions?
@@ -272,7 +370,7 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             panic!("unexpected transient type")
         }
     }
-    conds.iter().filter(|s| !s.is_empty()).join(" && ")
+    conds.iter().filter(|s| !s.is_empty()).join("\n&& ")
 }
 
 /// Create boogie well-formed check. The result will be either an empty string or a
@@ -323,12 +421,13 @@ pub fn boogie_global_declarator(
     assert!(!ty.is_reference());
     if param_count > 0 {
         format!(
-            "{} : [{}]$Value",
+            "{} : [{}]{}",
             name,
-            (0..param_count).map(|_| "$TypeValue").join(", ")
+            (0..param_count).map(|_| "$TypeValue").join(", "),
+            boogie_local_type(ty)
         )
     } else {
-        format!("{} : $Value", name)
+        format!("{} : {}", name, boogie_local_type(ty))
     }
 }
 
@@ -354,60 +453,70 @@ pub fn boogie_byte_blob(options: &BoogieOptions, val: &[u8]) -> String {
 /// Construct a statement to debug track a local based on the Boogie attribute approach.
 pub fn boogie_debug_track_local(
     fun_target: &FunctionTarget<'_>,
-    var_idx: TempIndex,
-    value: &str,
+    origin_idx: TempIndex,
+    idx: TempIndex,
+) -> String {
+    boogie_debug_track(fun_target, "$track_local", origin_idx, idx)
+}
+
+fn boogie_debug_track(
+    fun_target: &FunctionTarget<'_>,
+    track_tag: &str,
+    tracked_idx: usize,
+    idx: TempIndex,
 ) -> String {
     let fun_def_idx = fun_target.func_env.get_def_idx();
-    ensure_trace_info(format!(
-        "$trace_local_temp := {};\n\
-        assume {{:print \"$track_local({},{},{}):\", $trace_local_temp}} {} == {};",
-        value,
-        fun_target.func_env.module_env.get_id().to_usize(),
-        fun_def_idx,
-        var_idx,
-        value,
-        value,
-    ))
+    let ty = fun_target.get_local_type(idx);
+    let value = format!("$t{}", idx);
+    if ty.is_reference() {
+        let temp_name = boogie_temp(ty.skip_reference());
+        let suffix = boogie_type_suffix(ty.skip_reference());
+        format!(
+            "{} := $Unbox{}($Dereference({}));\n\
+             assume {{:print \"{}({},{},{}):\", {}}} {} == {};",
+            temp_name,
+            suffix,
+            value,
+            track_tag,
+            fun_target.func_env.module_env.get_id().to_usize(),
+            fun_def_idx,
+            tracked_idx,
+            temp_name,
+            temp_name,
+            temp_name
+        )
+    } else {
+        format!(
+            "assume {{:print \"{}({},{},{}):\", {}}} {} == {};",
+            track_tag,
+            fun_target.func_env.module_env.get_id().to_usize(),
+            fun_def_idx,
+            tracked_idx,
+            value,
+            value,
+            value
+        )
+    }
 }
 
 /// Construct a statement to debug track an abort.
 pub fn boogie_debug_track_abort(fun_target: &FunctionTarget<'_>, abort_code: &str) -> String {
     let fun_def_idx = fun_target.func_env.get_def_idx();
-    ensure_trace_info(format!(
-        "$trace_abort_temp := i#$Integer({});\n\
-        assume {{:print \"$track_abort({},{}):\", $trace_abort_temp}} {} == {};",
-        abort_code,
+    format!(
+        "assume {{:print \"$track_abort({},{}):\", {}}} {} == {};",
         fun_target.func_env.module_env.get_id().to_usize(),
         fun_def_idx,
         abort_code,
-        abort_code
-    ))
+        abort_code,
+        abort_code,
+    )
 }
 
 /// Construct a statement to debug track a return value.
 pub fn boogie_debug_track_return(
     fun_target: &FunctionTarget<'_>,
     ret_idx: usize,
-    value: &str,
+    idx: TempIndex,
 ) -> String {
-    let fun_def_idx = fun_target.func_env.get_def_idx();
-    ensure_trace_info(format!(
-        "$trace_local_temp := {};\n\
-        assume {{:print \"$track_return({},{},{}):\", $trace_local_temp}} {} == {};",
-        value,
-        fun_target.func_env.module_env.get_id().to_usize(),
-        fun_def_idx,
-        ret_idx,
-        value,
-        value,
-    ))
-}
-
-/// Wraps a statement such that Boogie does not elimiate it in execution traces. Boogie
-/// does not seem to account for `assume` statements in execution traces, so in order to
-/// let our tracking statements above not be forgotten, this trick ensures that they always
-/// appear in the trace.
-fn ensure_trace_info(s: String) -> String {
-    //format!("if (true) {{\n   {}\n}}", s.replace("\n", "\n   "))
-    s
+    boogie_debug_track(fun_target, "$track_return", ret_idx, idx)
 }

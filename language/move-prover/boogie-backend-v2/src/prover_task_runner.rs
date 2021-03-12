@@ -4,8 +4,8 @@
 //! Prover task runner that runs multiple instances of the prover task and returns
 //! as soon as the fastest instance finishes.
 
+use crate::options::BoogieOptions;
 use async_trait::async_trait;
-use boogie_backend_v2::options::BoogieOptions;
 use futures::{future::FutureExt, pin_mut, select};
 use log::debug;
 use rand::Rng;
