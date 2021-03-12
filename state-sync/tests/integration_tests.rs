@@ -476,7 +476,13 @@ fn test_fullnode_catch_up_moving_target() {
     }
 }
 
+// Unfortunately, this test contains race conditions that are inherent to the way
+// the integration tests are built. While flakes don't seem to occur locally
+// (or often), we've hit them at least once in CI, so let's ignore this for now and
+// return to fix it once this is higher priority.
+// Note: this test is still useful for verifying state sync behaviour.
 #[test]
+#[ignore]
 fn test_fn_failover() {
     let mut env = StateSyncEnvironment::new(5);
 
@@ -700,7 +706,13 @@ fn execute_commit_and_verify_chunk_requests(
     panic!("Unexpected code path in test helper! No chunk responses were sent?");
 }
 
+// Unfortunately, this test contains race conditions that are inherent to the way
+// the integration tests are built. While flakes don't seem to occur locally
+// (or often), we've hit them at least once in CI, so let's ignore this for now and
+// return to fix it once this is higher priority.
+// Note: this test is still useful for verifying state sync behaviour.
 #[test]
+#[ignore]
 fn test_multicast_failover() {
     let mut env = StateSyncEnvironment::new(5);
 
