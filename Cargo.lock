@@ -6112,7 +6112,6 @@ dependencies = [
  "once_cell",
  "proptest",
  "rocksdb",
- "tempfile",
 ]
 
 [[package]]
