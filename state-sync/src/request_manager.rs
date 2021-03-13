@@ -9,12 +9,13 @@ use crate::{
     network::{StateSyncMessage, StateSyncSender},
 };
 use diem_config::{
-    config::PeerNetworkId,
+    config::{PeerNetworkId, PeerRole},
     network_id::{NetworkId, NodeNetworkId},
 };
 use diem_logger::prelude::*;
 use itertools::Itertools;
 use netcore::transport::ConnectionOrigin;
+use network::transport::ConnectionMetadata;
 use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,
@@ -28,6 +29,8 @@ use std::{
 /// Scores for peer rankings based on preferences and behavior.
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
+const STARTING_SCORE: f64 = 50.0;
+const STARTING_SCORE_PREFERRED: f64 = 100.0;
 
 #[derive(Clone, Debug)]
 struct PeerInfo {
@@ -118,12 +121,12 @@ impl RequestManager {
     pub fn enable_peer(
         &mut self,
         peer: PeerNetworkId,
-        origin: ConnectionOrigin,
+        metadata: ConnectionMetadata,
     ) -> Result<(), Error> {
-        if !self.is_upstream_peer(&peer, origin) {
+        if !self.is_upstream_peer(&peer, metadata.origin) {
             return Err(Error::PeerIsNotUpstream(
                 peer.to_string(),
-                origin.to_string(),
+                metadata.origin.to_string(),
             ));
         }
 
@@ -137,7 +140,12 @@ impl RequestManager {
         if let Some(peer_info) = self.peers.get_mut(&peer) {
             peer_info.is_alive = true;
         } else {
-            self.peers.insert(peer, PeerInfo::new(true, MAX_SCORE));
+            let peer_score = if metadata.role == PeerRole::PreferredUpstream {
+                STARTING_SCORE_PREFERRED
+            } else {
+                STARTING_SCORE
+            };
+            self.peers.insert(peer, PeerInfo::new(true, peer_score));
         }
         self.update_peer_selection_data();
 
@@ -597,9 +605,7 @@ mod tests {
         assert!(request_manager.no_available_peers());
 
         // Add validator 0 and verify it's now enabled
-        request_manager
-            .enable_peer(validator_0, ConnectionOrigin::Outbound)
-            .unwrap();
+        add_validator_to_request_manager(&mut request_manager, &validator_0, PeerRole::Validator);
         assert!(!request_manager.no_available_peers());
     }
 
@@ -740,6 +746,29 @@ mod tests {
     }
 
     #[test]
+    fn test_score_preferred() {
+        let num_validators = 4;
+        let mut request_manager = generate_request_manager(0);
+
+        // Create the validators and add them to the request manager. Note that validator at
+        // index 0 is the only preferred validator.
+        let mut validators = Vec::new();
+        for validator_index in 0..num_validators {
+            let validator = PeerNetworkId::random_validator();
+            let peer_role = if validator_index == 0 {
+                PeerRole::PreferredUpstream
+            } else {
+                PeerRole::Validator
+            };
+            add_validator_to_request_manager(&mut request_manager, &validator, peer_role);
+            validators.push(validator);
+        }
+
+        // Verify validator 0 is chosen more often than the other validators
+        verify_validator_picked_most_often(&mut request_manager, &validators, 0);
+    }
+
+    #[test]
     fn test_remove_requests() {
         let (mut request_manager, validators) = generate_request_manager_and_validators(0, 2);
 
@@ -847,26 +876,45 @@ mod tests {
         pick_counts
     }
 
+    /// Generates a new request manager with the given request_timeout.
+    fn generate_request_manager(request_timeout: u64) -> RequestManager {
+        RequestManager::new(
+            Duration::from_secs(request_timeout),
+            Duration::from_secs(30),
+            HashMap::new(),
+        )
+    }
+
     /// Generates a new request manager with a specified number of validator peers enabled.
     fn generate_request_manager_and_validators(
         request_timeout: u64,
         num_validators: u64,
     ) -> (RequestManager, Vec<PeerNetworkId>) {
-        let mut request_manager = RequestManager::new(
-            Duration::from_secs(request_timeout),
-            Duration::from_secs(30),
-            HashMap::new(),
-        );
+        let mut request_manager = generate_request_manager(request_timeout);
 
         let mut validators = Vec::new();
         for _ in 0..num_validators {
             let validator = PeerNetworkId::random_validator();
-            request_manager
-                .enable_peer(validator.clone(), ConnectionOrigin::Outbound)
-                .unwrap();
+            add_validator_to_request_manager(&mut request_manager, &validator, PeerRole::Validator);
             validators.push(validator);
         }
 
         (request_manager, validators)
+    }
+
+    /// Adds the given validator to the specified request manager using the peer role.
+    fn add_validator_to_request_manager(
+        request_manager: &mut RequestManager,
+        validator: &PeerNetworkId,
+        peer_role: PeerRole,
+    ) {
+        let connection_metadata = ConnectionMetadata::mock_with_role_and_origin(
+            validator.peer_id(),
+            peer_role,
+            ConnectionOrigin::Inbound,
+        );
+        request_manager
+            .enable_peer(validator.clone(), connection_metadata)
+            .unwrap();
     }
 }

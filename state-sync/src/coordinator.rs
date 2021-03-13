@@ -33,7 +33,7 @@ use futures::{
     StreamExt,
 };
 use netcore::transport::ConnectionOrigin;
-use network::protocols::network::Event;
+use network::{protocols::network::Event, transport::ConnectionMetadata};
 use std::{
     cmp,
     collections::HashMap,
@@ -192,7 +192,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 (network_id, event) = network_events.select_next_some() => {
                     match event {
                         Event::NewPeer(metadata) => {
-                            if let Err(e) = self.process_new_peer(network_id, metadata.remote_peer_id, metadata.origin) {
+                            if let Err(e) = self.process_new_peer(network_id, metadata) {
                                 error!(LogSchema::new(LogEntry::NewPeer).error(&e));
                             }
                         }
@@ -226,11 +226,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     fn process_new_peer(
         &mut self,
         network_id: NodeNetworkId,
-        peer_id: PeerId,
-        origin: ConnectionOrigin,
+        metadata: ConnectionMetadata,
     ) -> Result<(), Error> {
-        let peer = PeerNetworkId(network_id, peer_id);
-        self.request_manager.enable_peer(peer, origin)?;
+        let peer = PeerNetworkId(network_id, metadata.remote_peer_id);
+        self.request_manager.enable_peer(peer, metadata)?;
         self.check_progress()
     }
 
@@ -1694,7 +1693,7 @@ mod tests {
         shared_components::{test_utils, test_utils::create_coordinator_with_config_and_waypoint},
     };
     use diem_config::{
-        config::{NodeConfig, PeerNetworkId, RoleType},
+        config::{NodeConfig, PeerNetworkId, PeerRole, RoleType},
         network_id::{NetworkId, NodeNetworkId},
     };
     use diem_crypto::{
@@ -1717,6 +1716,7 @@ mod tests {
     };
     use futures::{channel::oneshot, executor::block_on};
     use netcore::transport::ConnectionOrigin;
+    use network::transport::ConnectionMetadata;
     use std::{collections::BTreeMap, time::SystemTime};
 
     #[test]
@@ -1944,11 +1944,15 @@ mod tests {
         // Create a public peer
         let node_network_id = NodeNetworkId::new(NetworkId::Public, 0);
         let peer_id = PeerId::random();
-        let connection_origin = ConnectionOrigin::Inbound;
+        let connection_metadata = ConnectionMetadata::mock_with_role_and_origin(
+            peer_id,
+            PeerRole::Validator,
+            ConnectionOrigin::Inbound,
+        );
 
         // Verify error is returned when adding peer that is not upstream
         let new_peer_result =
-            validator_coordinator.process_new_peer(node_network_id, peer_id, connection_origin);
+            validator_coordinator.process_new_peer(node_network_id, connection_metadata.clone());
         if !matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
             panic!(
                 "Expected a peer is not upstream error but got: {:?}",
@@ -1958,11 +1962,8 @@ mod tests {
 
         // Verify the same error is not returned when adding a validator node
         let node_network_id = NodeNetworkId::new(NetworkId::Validator, 0);
-        let new_peer_result = validator_coordinator.process_new_peer(
-            node_network_id.clone(),
-            peer_id,
-            connection_origin,
-        );
+        let new_peer_result =
+            validator_coordinator.process_new_peer(node_network_id.clone(), connection_metadata);
         if matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
             panic!(
                 "Expected not to receive a peer is not upstream error but got: {:?}",
@@ -1972,7 +1973,7 @@ mod tests {
 
         // Verify no error is returned when removing the node
         validator_coordinator
-            .process_lost_peer(node_network_id, peer_id, connection_origin)
+            .process_lost_peer(node_network_id, peer_id, ConnectionOrigin::Outbound)
             .unwrap();
     }
 
@@ -2096,11 +2097,7 @@ mod tests {
         }
 
         // Add the peer to our upstreams
-        let _ = validator_coordinator.process_new_peer(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            ConnectionOrigin::Outbound,
-        );
+        process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
         // Verify we now get an empty chunk error
         for chunk_response in &empty_chunk_responses {
@@ -2135,11 +2132,7 @@ mod tests {
 
         // Create a peer for the node and add the peer as an upstream
         let peer_network_id = PeerNetworkId::random_validator();
-        let _ = full_node_coordinator.process_new_peer(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            ConnectionOrigin::Outbound,
-        );
+        process_new_peer_event(&mut full_node_coordinator, &peer_network_id);
 
         // Verify wrong chunk type for non-highest messages
         let chunk_responses = create_non_empty_chunk_responses(1);
@@ -2187,11 +2180,7 @@ mod tests {
 
         // Create a peer for the node and add the peer as an upstream
         let peer_network_id = PeerNetworkId::random_validator();
-        let _ = validator_coordinator.process_new_peer(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            ConnectionOrigin::Outbound,
-        );
+        process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
         // Make a sync request (to force consensus to yield)
         let (sync_request, _) = create_sync_request_at_version(10);
@@ -2243,11 +2232,7 @@ mod tests {
 
         // Create a peer for the node and add the peer as an upstream
         let peer_network_id = PeerNetworkId::random_validator();
-        let _ = validator_coordinator.process_new_peer(
-            peer_network_id.network_id(),
-            peer_network_id.peer_id(),
-            ConnectionOrigin::Outbound,
-        );
+        process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
         // Verify wrong chunk type for non-waypoint messages
         let chunk_responses = create_non_empty_chunk_responses(1);
@@ -2490,5 +2475,17 @@ mod tests {
                 panic!("Expected wrong type error, but got: {:?}", result);
             }
         }
+    }
+
+    fn process_new_peer_event(
+        coordinator: &mut StateSyncCoordinator<ExecutorProxy>,
+        peer: &PeerNetworkId,
+    ) {
+        let connection_metadata = ConnectionMetadata::mock_with_role_and_origin(
+            peer.peer_id(),
+            PeerRole::Validator,
+            ConnectionOrigin::Outbound,
+        );
+        let _ = coordinator.process_new_peer(peer.network_id(), connection_metadata);
     }
 }
