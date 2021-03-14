@@ -11,7 +11,6 @@ use language_e2e_tests::{
     current_function_name,
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
-    transaction_status_eq,
 };
 use transaction_builder::*;
 
@@ -82,29 +81,6 @@ fn tiered_mint_designated_dealer() {
         .read_balance_resource(&dd, account::xus_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(mint_amount_one + mint_amount_two, dd_balance.coin());
-
-    // -------------- invalid tier index
-    let tier_index = 4;
-    let output = &executor.execute_transaction(
-        blessed
-            .transaction()
-            .script(encode_tiered_mint_script(
-                account_config::xus_tag(),
-                3,
-                *dd.address(),
-                mint_amount_one,
-                tier_index,
-            ))
-            .sequence_number(3)
-            .sign(),
-    );
-    assert!(transaction_status_eq(
-        &output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
-            known_locations::designated_dealer_module_abort(),
-            775
-        )),
-    ));
 }
 
 #[test]

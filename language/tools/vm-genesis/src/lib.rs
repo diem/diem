@@ -310,19 +310,6 @@ fn create_and_initialize_testnet_minting(
         account_config::treasury_compliance_account_address(),
         &create_dd_script,
     );
-    exec_function(
-        session,
-        log_context,
-        "DesignatedDealer",
-        "update_tier",
-        vec![account_config::xus_tag()],
-        serialize_values(&vec![
-            MoveValue::Signer(account_config::treasury_compliance_account_address()),
-            MoveValue::Address(account_config::testnet_dd_account_address()),
-            MoveValue::U64(3),
-            MoveValue::U64(std::u64::MAX),
-        ]),
-    );
 
     // mint XUS.
     let treasury_compliance_account_address = account_config::treasury_compliance_account_address();

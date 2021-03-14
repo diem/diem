@@ -56,51 +56,6 @@ stdlib_script::create_designated_dealer
 // check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 
-//! new-transaction
-script {
-use 0x1::DesignatedDealer;
-use 0x1::XUS::XUS;
-fun main(account: &signer) {
-    DesignatedDealer::update_tier<XUS>(account, {{bob}}, 10, 1000000000000);
-}
-}
-// check: "Keep(ABORTED { code: 258,"
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::DesignatedDealer;
-use 0x1::XUS::XUS;
-use 0x1::Diem;
-fun main(account: &signer) {
-    DesignatedDealer::update_tier<XUS>(account, {{bob}}, 0, 500000 * Diem::scaling_factor<XUS>());
-}
-}
-// check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::DesignatedDealer;
-use 0x1::XUS::XUS;
-use 0x1::Diem;
-fun main(account: &signer) {
-    DesignatedDealer::update_tier<XUS>(account, {{bob}}, 0, 5000000 * Diem::scaling_factor<XUS>());
-}
-}
-// check: "Keep(ABORTED { code: 519,"
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::DesignatedDealer;
-use 0x1::XUS::XUS;
-use 0x1::Diem;
-fun main(account: &signer) {
-    DesignatedDealer::update_tier<XUS>(account, {{bob}}, 2, 5000000 * Diem::scaling_factor<XUS>());
-}
-}
-// check: "Keep(ABORTED { code: 519,"
 
 //! new-transaction
 //! sender: blessed
@@ -131,19 +86,6 @@ script {
 // check: ReceivedMintEvent
 // check: MintEvent
 // check: "Keep(EXECUTED)"
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::DiemAccount;
-    use 0x1::XUS::XUS;
-    fun main(tc_account: &signer) {
-        DiemAccount::tiered_mint<XUS>(
-            tc_account, {{bob}},  2, 0
-        );
-    }
-}
-// check: "Keep(ABORTED { code: 1287,"
 
 //! block-prologue
 //! proposer: validatorvivian
