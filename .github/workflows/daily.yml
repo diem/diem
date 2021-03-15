@@ -108,6 +108,40 @@ jobs:
           cargo run --release --bin db-restore -- --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
       - uses: ./.github/actions/build-teardown
 
+  json-rpc-backward-compat-test:
+    # Test old client from release (prod) and pre-release (rc) branches
+    # against new server in the main branch through cluster-test's
+    # json-rpc interface.
+    runs-on: ubuntu-latest-xl
+    container:
+      image: diem/build_environment:main
+    env:
+      DEVNET_MINT_TEST_KEY: ${{ secrets.DEVNET_MINT_TEST_KEY }}
+      DEVNET_ENDPOINT: dev.testnet.diem.com
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    strategy:
+      fail-fast: false
+      matrix:
+        release-branch: [release-1.1]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.release-branch }}
+      - uses: ./.github/actions/build-setup
+      - name: Run cluster test diag on devnet
+        run: |
+          echo ${DEVNET_MINT_TEST_KEY} | base64 -d > /tmp/mint_test.key
+          RUST_BACKTRACE=full cargo run -p cluster-test -- --diag --swarm --mint-file=/tmp/mint_test.key --peers=dev.testnet.diem.com:80:80 --chain-id=DEVNET > ${MESSAGE_PAYLOAD_FILE}
+      - name: Run cluster test to submit random txn to devnet
+        run: |
+          RUST_BACKTRACE=full cargo run -p cluster-test -- --emit-tx --swarm --mint-file=/tmp/mint_test.key --peers=dev.testnet.diem.com:80:80 --chain-id=DEVNET --accounts-per-client=2 --workers-per-ac=2 --duration=30 >> ${MESSAGE_PAYLOAD_FILE}
+      - uses: ./.github/actions/slack-file
+        with:
+          webhook: ${{ secrets.WEBHOOK_BREAKING_CHANGE }}
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+        if: ${{ failure() }}
+      - uses: ./.github/actions/build-teardown
+
   prune-docker-images:
     runs-on: ubuntu-latest
     steps:
