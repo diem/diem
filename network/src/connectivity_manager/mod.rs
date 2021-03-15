@@ -30,6 +30,7 @@ use crate::{
     counters,
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
+    transport::ConnectionMetadata,
 };
 use diem_config::{
     config::{Peer, PeerRole, PeerSet},
@@ -81,7 +82,7 @@ pub struct ConnectivityManager<TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<PeerSet>>,
     /// PeerId and address of remote peers to which this peer is connected.
-    connected: HashMap<PeerId, NetworkAddress>,
+    connected: HashMap<PeerId, ConnectionMetadata>,
     /// All information about peers from discovery sources.
     discovered_peers: DiscoveredPeerSet,
     /// Channel to send connection requests to PeerManager.
@@ -704,7 +705,7 @@ where
             peer_manager::ConnectionNotification::NewPeer(metadata, _context) => {
                 let peer_id = metadata.remote_peer_id;
                 counters::peer_connected(&self.network_context, &peer_id, 1);
-                self.connected.insert(peer_id, metadata.addr);
+                self.connected.insert(peer_id, metadata);
 
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
@@ -712,7 +713,7 @@ where
             }
             peer_manager::ConnectionNotification::LostPeer(metadata, _context, _reason) => {
                 let peer_id = metadata.remote_peer_id;
-                if let Some(stored_addr) = self.connected.get(&peer_id) {
+                if let Some(stored_metadata) = self.connected.get(&peer_id) {
                     // Remove node from connected peers list.
 
                     counters::peer_connected(&self.network_context, &peer_id, 0);
@@ -720,20 +721,20 @@ where
                     info!(
                         NetworkSchema::new(&self.network_context)
                             .remote_peer(&peer_id)
-                            .network_address(&metadata.addr),
-                        stored_addr = stored_addr,
-                        "{} Removing peer '{}' addr: {}, vs event addr: {}",
+                            .connection_metadata(&metadata),
+                        stored_metadata = stored_metadata,
+                        "{} Removing peer '{}' metadata: {}, vs event metadata: {}",
                         self.network_context,
                         peer_id.short_str(),
-                        stored_addr,
-                        metadata.addr
+                        stored_metadata,
+                        metadata
                     );
                     self.connected.remove(&peer_id);
                 } else {
                     info!(
                         NetworkSchema::new(&self.network_context)
                             .remote_peer(&peer_id)
-                            .network_address(&metadata.addr),
+                            .connection_metadata(&metadata),
                         "{} Ignoring stale lost peer event for peer: {}, addr: {}",
                         self.network_context,
                         peer_id.short_str(),
