@@ -67,6 +67,15 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(BorrowAnalysisProcessor::new(false));
             Ok(Some(pipeline))
         }
+        "borrow_strong" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(EliminateImmRefsProcessor::new());
+            pipeline.add_processor(MutRefInstrumenter::new());
+            pipeline.add_processor(ReachingDefProcessor::new());
+            pipeline.add_processor(LiveVarAnalysisProcessor::new());
+            pipeline.add_processor(BorrowAnalysisProcessor::new(true));
+            Ok(Some(pipeline))
+        }
         "memory_instr" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(EliminateImmRefsProcessor::new());
