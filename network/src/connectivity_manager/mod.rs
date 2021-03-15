@@ -111,6 +111,8 @@ pub struct ConnectivityManager<TBackoff> {
     outbound_connection_limit: Option<usize>,
     /// Random for shuffling which peers will be dialed
     rng: SmallRng,
+    /// Whether we are using mutual authentication or not
+    mutual_authentication: bool,
 }
 
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
@@ -258,6 +260,7 @@ where
         backoff_strategy: TBackoff,
         max_delay: Duration,
         outbound_connection_limit: Option<usize>,
+        mutual_authentication: bool,
     ) -> Self {
         assert!(
             eligible.read().is_empty(),
@@ -287,6 +290,7 @@ where
             event_id: 0,
             outbound_connection_limit,
             rng: SmallRng::from_entropy(),
+            mutual_authentication,
         };
 
         // set the initial config addresses and pubkeys
@@ -357,9 +361,20 @@ where
         let eligible = self.eligible.read().clone();
         let stale_connections: Vec<_> = self
             .connected
-            .keys()
-            .filter(|peer_id| !eligible.contains_key(peer_id))
-            .cloned()
+            .iter()
+            .filter(|(peer_id, _)| !eligible.contains_key(peer_id))
+            .filter_map(|(peer_id, metadata)| {
+                // If we're using server only auth, we need to not evict unknown peers
+                // TODO: We should prevent `Unknown` from discovery sources
+                if !self.mutual_authentication
+                    && metadata.origin == ConnectionOrigin::Inbound
+                    && metadata.role == PeerRole::Unknown
+                {
+                    None
+                } else {
+                    Some(*peer_id)
+                }
+            })
             .collect();
         for p in stale_connections.into_iter() {
             info!(
