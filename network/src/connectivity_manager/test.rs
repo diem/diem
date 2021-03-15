@@ -155,7 +155,11 @@ impl TestHarness {
             "Sending NewPeer notification for peer: {}",
             peer_id.short_str()
         );
-        let mut metadata = ConnectionMetadata::mock(notif_peer_id);
+        let mut metadata = ConnectionMetadata::mock_with_role_and_origin(
+            notif_peer_id,
+            PeerRole::Unknown,
+            ConnectionOrigin::Outbound,
+        );
         metadata.addr = address;
         let notif = peer_manager::ConnectionNotification::NewPeer(metadata, NetworkContext::mock());
         self.send_notification_await_delivery(peer_id, notif).await;
@@ -166,7 +170,11 @@ impl TestHarness {
             "Sending LostPeer notification for peer: {}",
             peer_id.short_str()
         );
-        let mut metadata = ConnectionMetadata::mock(peer_id);
+        let mut metadata = ConnectionMetadata::mock_with_role_and_origin(
+            peer_id,
+            PeerRole::Unknown,
+            ConnectionOrigin::Outbound,
+        );
         metadata.addr = address;
         let notif = peer_manager::ConnectionNotification::LostPeer(
             metadata,

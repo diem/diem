@@ -46,6 +46,7 @@ use futures::{
     future::{BoxFuture, FutureExt},
     stream::{FuturesUnordered, StreamExt},
 };
+use netcore::transport::ConnectionOrigin;
 use num_variants::NumVariants;
 use rand::{
     prelude::{SeedableRng, SmallRng},
@@ -435,8 +436,14 @@ where
         // It enforces that a full node cannot have more outgoing connections than `connection_limit`
         // including in flight dials.
         let to_connect_size = if let Some(conn_limit) = self.outbound_connection_limit {
+            let outbound_connections = self
+                .connected
+                .iter()
+                .filter(|(_, metadata)| metadata.origin == ConnectionOrigin::Outbound)
+                .count();
             min(
-                conn_limit.saturating_sub(self.connected.len() + self.dial_queue.len()),
+                conn_limit
+                    .saturating_sub(outbound_connections.saturating_add(self.dial_queue.len())),
                 to_connect.len(),
             )
         } else {
