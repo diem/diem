@@ -44,7 +44,7 @@ pub fn validator_swarm(
 
     // set the first validator as every validators' initial configured seed peer.
     let seed_config = &nodes[0].validator_network.as_ref().unwrap();
-    let seeds = build_seed_for_network(&seed_config);
+    let seeds = build_seed_for_network(&seed_config, PeerRole::Validator);
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();
         network.seeds = seeds.clone();
@@ -64,18 +64,7 @@ pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
 /// Convenience function that builds a `PeerSet` containing a single peer for testing
 /// with a fully formatted `NetworkAddress` containing its network identity pubkey
 /// and handshake protocol version.
-pub fn build_seed_for_network(seed_config: &NetworkConfig) -> PeerSet {
-    let seed_role = match &seed_config.network_id {
-        NetworkId::Validator => PeerRole::Validator,
-        network_id => {
-            if network_id.is_vfn_network() {
-                PeerRole::ValidatorFullNode
-            } else {
-                PeerRole::Upstream
-            }
-        }
-    };
-
+pub fn build_seed_for_network(seed_config: &NetworkConfig, seed_role: PeerRole) -> PeerSet {
     let seed_pubkey = diem_crypto::PrivateKey::public_key(&seed_config.identity_key());
     let seed_addr = seed_config
         .listen_address

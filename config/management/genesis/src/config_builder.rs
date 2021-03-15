@@ -4,7 +4,7 @@
 use crate::{layout::Layout, storage_helper::StorageHelper, swarm_config::BuildSwarm};
 use diem_config::{
     config::{
-        DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService,
+        DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, PeerRole, SafetyRulesService,
         SecureBackend, WaypointConfig,
     },
     generator::build_seed_for_network,
@@ -292,7 +292,7 @@ impl FullnodeBuilder {
 
         // Now let's prepare the full nodes internal network to communicate with the validators
         // internal network
-        let seeds = build_seed_for_network(v_vfn);
+        let seeds = build_seed_for_network(v_vfn, PeerRole::Validator);
 
         let fn_vfn = &mut full_node_config
             .full_node_networks
