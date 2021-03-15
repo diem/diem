@@ -19,10 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changes-target-branch: ${{ steps.changes.outputs.changes-target-branch }}
+      changes-base-git-rev: ${{ steps.changes.outputs.changes-base-git-rev }}
       changes-base-githash: ${{ steps.changes.outputs.changes-base-githash }}
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
       build-images: ${{ steps.need-build-images.outputs.changes-found }}
-      need-extra-images: ${{ steps.need-extra-images.outputs.need-extra }}
+      need-base-images: ${{ steps.need-base-images.outputs.need-extra }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
       test-helm: ${{ steps.helm-changes.outputs.changes-found }}
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
@@ -49,11 +50,11 @@ jobs:
         with:
           pattern: '^documentation\|^developers.diem.com'
           invert: "true"
-      - id: need-extra-images
+      - id: need-base-images
         name: build extra images if it is needed by LBT
         if: ${{ github.event_name == 'push' }}
         run: |
-          res=false
+          res=true
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
             echo "Compat killswitch activated! Will run land_blocking suite";
             res=false
@@ -177,41 +178,16 @@ jobs:
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
           docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
 
-  need-extra-images:
-    runs-on: ubuntu-latest-xl
+  need-base-images:
+    runs-on: self-hosted
     needs: prepare
-    if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' && needs.prepare.outputs.need-extra-images == 'true' }}
+    if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' && needs.prepare.outputs.need-base-images == 'true' }}
     outputs:
-      prev-tag: ${{ steps.changes.outputs.build-extra-images }}
+      prev-tag: ${{ steps.build-extra-images.outputs.prev-tag }}
     steps:
-      - name: Get PR base ref
-        id: pr-base-ref
-        uses: actions/github-script@v3
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          result-encoding: string
-          script: |
-            let pr_data = await github.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: ${{ needs.prepare.outputs.changes-pull-request-number }}
-            });
-            try {
-              let base_ref = pr_data.data.base.ref;
-              console.log("Base ref:", base_ref);
-              if (!base_ref) {
-                throw "Could not find base ref"
-              }
-              return base_ref
-            } catch (err) {
-              console.log("GH PR payload\n", pr_data);
-              throw err
-            }
       - name: Setup env
         run: |
-          BASE_REF=${{steps.pr-base-ref.outputs.result}}
-          echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
-          echo "BASE_GIT_REV=$(git rev-parse --short=8 origin/$BASE_REF)" >> $GITHUB_ENV
+          echo "BASE_GIT_REV=${{ needs.prepare.outputs.changes-base-git-rev }}" >> $GITHUB_ENV
       - name: find images
         run: |
           set +e
@@ -263,11 +239,11 @@ jobs:
           echo "::set-output name=prev-tag::$(echo $res)";
 
   land-blocking-switch:
-    runs-on: ubuntu-latest-xl
+    runs-on: ubuntu-latest
     if: ${{ always() }}
     needs:
       - build-images
-      - need-extra-images
+      - need-base-images
     outputs:
       lbt-switch: ${{ steps.set-switch.outputs.lbt-switch }}
       head-tag: ${{ steps.set-switch.outputs.head-tag }}
@@ -281,13 +257,13 @@ jobs:
           prev=''
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST || needs.build-images.result!='success' }}; then
             lbt=false
-          elif ${{ needs.need-extra-images.result=='skipped' }}; then
+          elif ${{ needs.need-base-images.result=='skipped' }}; then
             head=${{ needs.build-images.outputs.head-tag }}
-          elif ${{ needs.need-extra-images.result=='success' }}; then
+          elif ${{ needs.need-base-images.result=='success' }}; then
             head=${{ needs.build-images.outputs.head-tag }}
-            prev=${{ needs.build-images.outputs.prev-tag }}
+            prev=${{ needs.need-base-images.outputs.prev-tag }}
           else
-            lbt = false
+            lbt=false
           fi
           echo "::set-output name=lbt-switch::$(echo $lbt)";
           echo "::set-output name=head-tag::$(echo $head)";
@@ -304,8 +280,6 @@ jobs:
         if: ${{ needs.land-blocking-switch.outputs.lbt-switch == 'true' }}
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
-          echo ${{ needs.land-blocking-switch.result }}
-          echo here_${{ needs.land-blocking-switch.outputs.lbt-switch }}
           set +e
           date
           export CTI_OUTPUT_LOG=$(mktemp)
@@ -898,7 +872,7 @@ jobs:
       - prepare
       - dev-setup-sh-test
       - build-images
-      - need-extra-images
+      - need-base-images
       - land-blocking-test
       - non-rust-lint
       - lint
@@ -914,7 +888,7 @@ jobs:
           echo prepare: ${{ needs.prepare.result }}
           echo dev-setup-sh-test: ${{ needs.dev-setup-sh-test.result }}
           echo build-images: ${{ needs.build-images.result }}
-          echo need-extra-images: ${{ needs.build-images.result }}
+          echo need-base-images: ${{ needs.need-base-images.result }}
           echo land-blocking-test: ${{ needs.land-blocking-test.result }}
           echo non-rust-lint: ${{ needs.non-rust-lint.result }}
           echo lint: ${{ needs.lint.result }}
@@ -929,7 +903,7 @@ jobs:
             needs.prepare.result=='success'
             && (needs.dev-setup-sh-test.result=='success' || needs.dev-setup-sh-test.result=='skipped')
             && (needs.build-images.result=='success' || needs.build-images.result=='skipped')
-            && (needs.need-extra-images.result=='success' || needs.need-extra-images.result=='skipped')
+            && (needs.need-base-images.result=='success' || needs.need-base-images.result=='skipped')
             && (needs.land-blocking-test.result=='success' || needs.land-blocking-test.result=='skipped')
             && (needs.non-rust-lint.result=='success' || needs.non-rust-lint.result=='skipped')
             && (needs.lint.result=='success' || needs.lint.result=='skipped')

@@ -138,6 +138,7 @@ fi
 $DEBUG && echoerr TARGET_BRANCH="$TARGET_BRANCH"
 if [[ -n "$TARGET_BRANCH" ]] && [[ -z "$BASE_GITHASH" ]]; then
   BASE_GITHASH=$(git merge-base HEAD origin/"$TARGET_BRANCH")
+  BASE_GIT_REV=$(git rev-parse --short=8 origin/"$TARGET_BRANCH")
 fi
 
 if [[ -n "$BASE_GITHASH" ]]; then
@@ -149,3 +150,4 @@ echo 'export CHANGES_PULL_REQUEST='"$PR_NUMBER"
 echo 'export CHANGES_BASE_GITHASH='"$BASE_GITHASH"
 echo 'export CHANGES_CHANGED_FILE_OUTPUTFILE='"$CHANGED_FILE_OUTPUTFILE"
 echo 'export CHANGES_TARGET_BRANCH='"$TARGET_BRANCH"
+echo 'export CHANGES_BASE_GIT_REV='"$BASE_GIT_REV"
