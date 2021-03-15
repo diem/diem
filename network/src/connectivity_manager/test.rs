@@ -102,6 +102,7 @@ impl TestHarness {
             FixedInterval::new(CONNECTION_DELAY),
             MAX_CONNECTION_DELAY,
             Some(MAX_TEST_CONNECTIONS),
+            true, /* mutual_authentication */
         );
         let mock = Self {
             trusted_peers,

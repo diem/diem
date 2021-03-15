@@ -131,6 +131,8 @@ impl NetworkBuilder {
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
     ) -> NetworkBuilder {
+        let mutual_authentication = matches!(authentication_mode, AuthenticationMode::Mutual(_));
+
         let mut builder = NetworkBuilder::new(
             chain_id,
             trusted_peers.clone(),
@@ -155,6 +157,7 @@ impl NetworkBuilder {
             MAX_CONNECTION_DELAY_MS,
             CONNECTIVITY_CHECK_INTERVAL_MS,
             NETWORK_CHANNEL_SIZE,
+            mutual_authentication,
         );
 
         builder
@@ -250,6 +253,7 @@ impl NetworkBuilder {
                 config.max_connection_delay_ms,
                 config.connectivity_check_interval_ms,
                 config.network_channel_size,
+                config.mutual_authentication,
             );
         }
 
@@ -337,6 +341,7 @@ impl NetworkBuilder {
         max_connection_delay_ms: u64,
         connectivity_check_interval_ms: u64,
         channel_size: usize,
+        mutual_authentication: bool,
     ) -> &mut Self {
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let outbound_connection_limit = if !self.network_context.network_id().is_validator_network()
@@ -373,6 +378,7 @@ impl NetworkBuilder {
             ConnectionRequestSender::new(self.peer_manager_builder.connection_reqs_tx()),
             pm_conn_mgr_notifs_rx,
             outbound_connection_limit,
+            mutual_authentication,
         ));
         self
     }

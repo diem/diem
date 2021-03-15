@@ -28,6 +28,7 @@ struct ConnectivityManagerBuilderConfig {
     connection_notifs_rx: conn_notifs_channel::Receiver,
     requests_rx: channel::Receiver<ConnectivityRequest>,
     outbound_connection_limit: Option<usize>,
+    mutual_authentication: bool,
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -57,6 +58,7 @@ impl ConnectivityManagerBuilder {
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_notifs_channel::Receiver,
         outbound_connection_limit: Option<usize>,
+        mutual_authentication: bool,
     ) -> Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
             channel_size,
@@ -75,6 +77,7 @@ impl ConnectivityManagerBuilder {
                 connection_notifs_rx,
                 requests_rx: conn_mgr_reqs_rx,
                 outbound_connection_limit,
+                mutual_authentication,
             }),
             connectivity_manager: None,
             conn_mgr_reqs_tx,
@@ -108,6 +111,7 @@ impl ConnectivityManagerBuilder {
                 ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
                 Duration::from_millis(config.max_connection_delay_ms),
                 config.outbound_connection_limit,
+                config.mutual_authentication,
             )
         });
     }
