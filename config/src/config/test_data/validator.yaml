@@ -20,6 +20,7 @@ execution:
 
 full_node_networks:
     - listen_address: "/ip4/0.0.0.0/tcp/7180"
+      max_outbound_connections: 0
       identity:
           type: "from_storage"
           key_name: "fullnode_network"
