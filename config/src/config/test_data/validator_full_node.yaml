@@ -14,6 +14,7 @@ execution:
 
 full_node_networks:
     - listen_address: "/ip4/0.0.0.0/tcp/6180"
+      discovery_method: "onchain"
       identity:
           type: "from_storage"
           key_name: "fullnode_network"
@@ -26,6 +27,7 @@ full_node_networks:
                   from_disk: "/full/path/to/token"
       network_id: "public"
     - listen_address: "/ip4/0.0.0.0/tcp/7180"
+      max_outbound_connections: 1
       network_id:
           private: "vfn"
       seeds:
@@ -34,9 +36,6 @@ full_node_networks:
             - "/ip4/127.0.0.1/tcp/58259/ln-noise-ik/c998dcd54c3daf48e0ad516d94b7be0b0b7a27caa00541f2b2c14b13500df10b/ln-handshake/0"
           keys: ["c998dcd54c3daf48e0ad516d94b7be0b0b7a27caa00541f2b2c14b13500df10b"]
           role: "Validator"
-    - discovery_method: "onchain"
-      listen_address: "/ip4/0.0.0.0/tcp/8180"
-      network_id: "public"
 
 upstream:
     networks:
