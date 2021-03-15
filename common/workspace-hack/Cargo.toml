@@ -31,7 +31,7 @@ hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "ht
 indexmap = { version = "1.6.2", default-features = false, features = ["std"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.89", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -77,7 +77,7 @@ hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "ht
 indexmap = { version = "1.6.2", default-features = false, features = ["std"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.89", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -126,7 +126,7 @@ hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "ht
 indexmap = { version = "1.6.2", default-features = false, features = ["std"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.89", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
@@ -172,7 +172,7 @@ hyper = { version = "0.14.4", features = ["client", "default", "full", "h2", "ht
 indexmap = { version = "1.6.2", default-features = false, features = ["std"] }
 itertools = { version = "0.10.0", features = ["default", "use_alloc", "use_std"] }
 itoa = { version = "0.4.7", features = ["default", "std"] }
-libc = { version = "0.2.88", features = ["align", "default", "extra_traits", "std"] }
+libc = { version = "0.2.89", features = ["align", "default", "extra_traits", "std"] }
 log = { version = "0.4.14", default-features = false, features = ["serde", "std"] }
 memchr = { version = "2.3.4", features = ["default", "std", "use_std"] }
 num-integer = { version = "0.1.44", default-features = false, features = ["i128", "std"] }
