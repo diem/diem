@@ -426,13 +426,11 @@ module DiemAccount {
 
     spec fun tiered_mint {
         pragma opaque;
-        // TODO(timeout): times out after adding required modifies clauses
-        pragma verify = false;
         modifies global<DiemAccount>(designated_dealer_address);
         modifies global<DesignatedDealer::Dealer>(designated_dealer_address);
         modifies global<DesignatedDealer::TierInfo<Token>>(designated_dealer_address);
         modifies global<Balance<Token>>(designated_dealer_address);
-        modifies global<AccountLimits::Window>(designated_dealer_address);
+        modifies global<AccountLimits::Window>(VASP::spec_parent_address(designated_dealer_address));
         modifies global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include TieredMintAbortsIf<Token>;
         include TieredMintEnsures<Token>;
@@ -589,12 +587,10 @@ module DiemAccount {
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
     spec fun withdraw_from {
-        // TODO(timeout): times out after adding required modifies clauses
-        pragma verify = false;
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
         modifies global<DiemAccount>(payer);
-        modifies global<AccountLimits::Window>(payer);
+        modifies global<AccountLimits::Window>(VASP::spec_parent_address(payer));
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                     == old(global<DiemAccount>(payer).withdraw_capability);
@@ -651,7 +647,7 @@ module DiemAccount {
         pragma opaque;
         let dd_addr = Signer::spec_address_of(dd);
         let payer = cap.account_address;
-        modifies global<AccountLimits::Window>(payer);
+        modifies global<AccountLimits::Window>(VASP::spec_parent_address(payer));
         modifies global<DiemAccount>(payer);
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
@@ -757,15 +753,13 @@ module DiemAccount {
     }
     spec fun pay_from {
         pragma opaque;
-        // TODO(timeout): times out after adding required modifies clauses
-        pragma verify = false;
         let payer = cap.account_address;
         modifies global<DiemAccount>(payer);
         modifies global<DiemAccount>(payee);
         modifies global<Balance<Token>>(payer);
         modifies global<Balance<Token>>(payee);
-        modifies global<AccountLimits::Window>(payer);
-        modifies global<AccountLimits::Window>(payee);
+        modifies global<AccountLimits::Window>(VASP::spec_parent_address(payer));
+        modifies global<AccountLimits::Window>(VASP::spec_parent_address(payee));
         ensures exists_at(payer);
         ensures exists_at(payee);
         ensures exists<Balance<Token>>(payer);

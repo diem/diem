@@ -56,9 +56,6 @@ spec fun preburn {
     use 0x1::Signer;
     use 0x1::Diem;
 
-    // TODO(timeout): times out after adding required modifies clauses
-    pragma verify = false;
-
     include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
     let account_addr = Signer::spec_address_of(account);
     let cap = DiemAccount::spec_get_withdraw_cap(account_addr);
@@ -73,7 +70,7 @@ spec fun preburn {
         Errors::LIMIT_EXCEEDED;
 
     /// **Access Control:**
-    /// Only the account with a preburn area can preburn [[H4]][PERMISSION].
-    include Diem::AbortsIfNoPreburnQueue<Token>{preburn_address: account_addr};
+    /// Only the account with a Preburn resource or PreburnQueue resource can preburn [[H4]][PERMISSION].
+    aborts_if !(exists<Diem::Preburn<Token>>(account_addr) || exists<Diem::PreburnQueue<Token>>(account_addr));
 }
 }
