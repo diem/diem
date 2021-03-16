@@ -13,7 +13,7 @@ module XDX {
     use 0x1::DiemTimestamp;
 
     /// The type tag representing the `XDX` currency on-chain.
-    struct XDX has copy, drop, store { }
+    struct XDX has store { }
 
     /// Note: Currently only holds the mint, burn, and preburn capabilities for
     /// XDX. Once the makeup of the XDX has been determined this resource will
@@ -22,7 +22,7 @@ module XDX {
     /// The on-chain reserve for the `XDX` holds both the capability for minting `XDX`
     /// coins, and also each reserve component that holds the backing for these coins on-chain.
     /// Currently this holds no coins since XDX is not able to be minted/created.
-    struct Reserve has key, store {
+    struct Reserve has key {
         /// The mint capability allowing minting of `XDX` coins.
         mint_cap: Diem::MintCapability<XDX>,
         /// The burn capability for `XDX` coins. This is used for the unpacking

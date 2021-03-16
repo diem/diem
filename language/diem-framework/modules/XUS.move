@@ -8,7 +8,7 @@ module XUS {
     use 0x1::FixedPoint32;
 
     /// The type tag representing the `XUS` currency on-chain.
-    struct XUS has copy, drop, store { }
+    struct XUS has store { }
 
     /// Registers the `XUS` cointype. This can only be called from genesis.
     public fun initialize(

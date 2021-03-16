@@ -14,13 +14,13 @@ module VASP {
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
     /// off-chain protocols with this one.
-    struct ParentVASP has key, store {
+    struct ParentVASP has key {
         /// Number of child accounts this parent has created.
         num_children: u64
     }
 
     /// A resource that represents a child account of the parent VASP account at `parent_vasp_addr`
-    struct ChildVASP has key, store { parent_vasp_addr: address }
+    struct ChildVASP has key { parent_vasp_addr: address }
 
     /// The `ParentVASP` or `ChildVASP` resources are not in the required state
     const EPARENT_OR_CHILD_VASP: u64 = 0;

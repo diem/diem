@@ -21,7 +21,7 @@ module ValidatorConfig {
         fullnode_network_addresses: vector<u8>,
     }
 
-    struct ValidatorConfig has key, store {
+    struct ValidatorConfig has key {
         /// set and rotated by the operator_account
         config: Option<Config>,
         operator_account: Option<address>,

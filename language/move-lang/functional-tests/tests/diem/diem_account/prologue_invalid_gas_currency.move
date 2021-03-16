@@ -4,7 +4,7 @@
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice", false
-stdlib_script::create_parent_vasp_account
+stdlib_script::AccountCreationScripts::create_parent_vasp_account
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
@@ -31,7 +31,7 @@ fun main(dr_account: signer, vasp: signer) {
 //! sender: testnetdd
 //! type-args: 0x1::XUS::XUS
 //! args: {{alice}}, 1000000, b"", b""
-stdlib_script::peer_to_peer_with_metadata
+stdlib_script::PaymentScripts::peer_to_peer_with_metadata
 // check: "Keep(EXECUTED)"
 
 // XXX/FIXME: invalid gas currency for account if it doesn't hold it is bad

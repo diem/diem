@@ -56,7 +56,7 @@ fun main(account: signer) {
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{bob}}, {{bob::auth_key}}, x"", false
 
-stdlib_script::create_designated_dealer
+stdlib_script::AccountCreationScripts::create_designated_dealer
 // check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 

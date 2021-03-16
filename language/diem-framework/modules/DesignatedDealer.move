@@ -12,7 +12,7 @@ module DesignatedDealer {
     /// A `DesignatedDealer` always holds this `Dealer` resource regardless of the
     /// currencies it can hold. All `ReceivedMintEvent` events for all
     /// currencies will be emitted on `mint_event_handle`.
-    struct Dealer has key, store {
+    struct Dealer has key {
         /// Handle for mint events
         mint_event_handle: Event::EventHandle<ReceivedMintEvent>,
     }
@@ -26,7 +26,7 @@ module DesignatedDealer {
     /// tier a mint to a DD needs to be in.
     /// DEPRECATED: This resource is no longer used and will be removed from the system
     // PreburnQueue published at top level in Diem.move
-    struct TierInfo<CoinType> has key, store {
+    struct TierInfo<CoinType> has key {
         /// Time window start in microseconds
         window_start: u64,
         /// The minted inflow during this time window
@@ -36,7 +36,7 @@ module DesignatedDealer {
     }
 
     /// Message for mint events
-    struct ReceivedMintEvent has copy, drop, store {
+    struct ReceivedMintEvent has drop, store {
         /// The currency minted
         currency_code: vector<u8>,
         /// The address that receives the mint
