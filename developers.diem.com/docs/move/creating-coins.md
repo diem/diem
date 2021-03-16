@@ -85,7 +85,7 @@ In order to publish our module, we use the Move CLI:
 $ move publish src/modules
 ```
 
-To test our `Coin` module we'll createa small script that creates a value of our `Coin` type. The following code should go into `src/scripts/test-coin.move`:
+To test our `Coin` module we'll create a small script that creates a value of our `Coin` type. The following code should go into `src/scripts/test-coin.move`:
 
 ```=
 script {
