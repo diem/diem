@@ -10,8 +10,8 @@ before and after every transaction.
 
 -  [Resource `DiemAccount`](#0x1_DiemAccount_DiemAccount)
 -  [Resource `Balance`](#0x1_DiemAccount_Balance)
--  [Resource `WithdrawCapability`](#0x1_DiemAccount_WithdrawCapability)
--  [Resource `KeyRotationCapability`](#0x1_DiemAccount_KeyRotationCapability)
+-  [Struct `WithdrawCapability`](#0x1_DiemAccount_WithdrawCapability)
+-  [Struct `KeyRotationCapability`](#0x1_DiemAccount_KeyRotationCapability)
 -  [Resource `AccountOperationsCapability`](#0x1_DiemAccount_AccountOperationsCapability)
 -  [Resource `DiemWriteSetManager`](#0x1_DiemAccount_DiemWriteSetManager)
 -  [Struct `SentPaymentEvent`](#0x1_DiemAccount_SentPaymentEvent)
@@ -214,14 +214,14 @@ currently held by the account.
 
 <a name="0x1_DiemAccount_WithdrawCapability"></a>
 
-## Resource `WithdrawCapability`
+## Struct `WithdrawCapability`
 
 The holder of WithdrawCapability for account_address can withdraw Diem from
 account_address/DiemAccount/balance.
 There is at most one WithdrawCapability in existence for a given address.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>
 </code></pre>
 
 
@@ -245,14 +245,14 @@ There is at most one WithdrawCapability in existence for a given address.
 
 <a name="0x1_DiemAccount_KeyRotationCapability"></a>
 
-## Resource `KeyRotationCapability`
+## Struct `KeyRotationCapability`
 
 The holder of KeyRotationCapability for account_address can rotate the authentication key for
 account_address (i.e., write to account_address/DiemAccount/authentication_key).
 There is at most one KeyRotationCapability in existence for a given address.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">KeyRotationCapability</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">KeyRotationCapability</a>
 </code></pre>
 
 

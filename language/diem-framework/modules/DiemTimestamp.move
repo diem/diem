@@ -18,7 +18,7 @@ module DiemTimestamp {
     use 0x1::Errors;
 
     /// A singleton resource holding the current Unix time in microseconds
-    struct CurrentTimeMicroseconds has key, store {
+    struct CurrentTimeMicroseconds has key {
         microseconds: u64,
     }
 

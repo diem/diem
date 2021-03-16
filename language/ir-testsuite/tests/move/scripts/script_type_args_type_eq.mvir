@@ -1,6 +1,8 @@
 module M {
     import 0x1.Signer;
 
+    struct Item has store { _dummy: bool }
+    struct Cup<T> has store { _dummy: bool }
     struct Box<T> has key { _dummy: bool }
 
     public type_eq<T1: store, T2: store>(account: &signer): bool acquires Box {
@@ -29,12 +31,11 @@ main<T: store>(account: signer) {
 
 
 //! new-transaction
-//! type-args: 0x1::DiemAccount::DiemAccount
+//! type-args: {{default}}::M::Item
 import {{default}}.M;
-import 0x1.DiemAccount;
 
 main<T: store>(account: signer) {
-    assert(M.type_eq<T, DiemAccount.DiemAccount>(&account), 100);
+    assert(M.type_eq<T, M.Item>(&account), 100);
     assert(!M.type_eq<T, u8>(&account), 101);
     return;
 }
@@ -42,13 +43,12 @@ main<T: store>(account: signer) {
 
 
 //! new-transaction
-//! type-args: 0x1::DiemAccount::Balance<0x1::DiemAccount::Balance<vector<u64>>>
+//! type-args: {{default}}::M::Cup<{{default}}::M::Cup<vector<u64>>>
 import {{default}}.M;
-import 0x1.DiemAccount;
 
 main<T: store>(account: signer) {
-    assert(M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u64>>>>(&account), 100);
-    assert(!M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u8>>>>(&account), 101);
+    assert(M.type_eq<T, M.Cup<M.Cup<vector<u64>>>>(&account), 100);
+    assert(!M.type_eq<T,  M.Cup<M.Cup<vector<u8>>>>(&account), 101);
     return;
 }
 // check: "Keep(EXECUTED)"

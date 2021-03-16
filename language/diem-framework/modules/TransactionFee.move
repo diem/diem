@@ -14,7 +14,7 @@ module TransactionFee {
 
     /// The `TransactionFee` resource holds a preburn resource for each
     /// fiat `CoinType` that can be collected as a transaction fee.
-    struct TransactionFee<CoinType> has key, store {
+    struct TransactionFee<CoinType> has key {
         balance: Diem<CoinType>,
         preburn: Preburn<CoinType>,
     }

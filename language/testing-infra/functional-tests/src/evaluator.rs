@@ -7,21 +7,19 @@ use crate::{
     errors::*,
 };
 use bytecode_verifier::{cyclic_dependencies, dependencies};
-use compiled_stdlib::{
-    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
-};
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::XUS_NAME,
+    account_config::{CORE_CODE_ADDRESS, XUS_NAME},
     block_metadata::BlockMetadata,
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     transaction::{
-        Module as TransactionModule, RawTransaction, Script as TransactionScript,
+        Module as TransactionModule, RawTransaction, Script as TransactionScript, ScriptFunction,
         SignedTransaction, Transaction as DiemTransaction, TransactionOutput, TransactionStatus,
     },
     vm_status::{KeptVMStatus, StatusCode},
@@ -30,12 +28,13 @@ use language_e2e_tests::{data_store::FakeDataStore, executor::FakeExecutor};
 use mirai_annotations::checked_verify;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants},
+    identifier::Identifier,
     language_storage::ModuleId,
+    transaction_argument,
 };
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 use std::{
-    collections::HashMap,
     fmt::{self, Debug},
     str::FromStr,
 };
@@ -45,19 +44,6 @@ use vm::{
     file_format::{CompiledModule, CompiledScript},
     views::ModuleView,
 };
-
-static PRECOMPILED_TXN_SCRIPTS: Lazy<HashMap<String, (Vec<u8>, CompiledScript)>> =
-    Lazy::new(|| {
-        LegacyStdlibScript::all()
-            .into_iter()
-            .map(|script| {
-                let name = script.name();
-                let bytes = script.compiled_bytes().into_vec();
-                let compiled_script = CompiledScript::deserialize(&bytes).unwrap();
-                (name, (bytes, compiled_script))
-            })
-            .collect::<HashMap<_, _>>()
-    });
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -409,6 +395,35 @@ fn make_script_transaction(
     .into_inner())
 }
 
+/// Creates and signs a script transaction.
+fn make_script_function_transaction(
+    exec: &FakeExecutor,
+    config: &TransactionConfig,
+    module: ModuleId,
+    function: Identifier,
+) -> Result<SignedTransaction> {
+    let script_function = ScriptFunction::new(
+        module,
+        function,
+        config.ty_args.clone(),
+        transaction_argument::convert_txn_args(&config.args),
+    );
+
+    let params = get_transaction_parameters(exec, config);
+    Ok(RawTransaction::new_script_function(
+        params.sender_addr,
+        params.sequence_number,
+        script_function,
+        params.max_gas_amount,
+        params.gas_unit_price,
+        params.gas_currency_code,
+        params.expiration_timestamp_secs,
+        ChainId::test(),
+    )
+    .sign(params.privkey, params.pubkey.clone())?
+    .into_inner())
+}
+
 /// Creates and signs a module transaction.
 fn make_module_transaction(
     exec: &FakeExecutor,
@@ -548,11 +563,16 @@ fn serialize_and_deserialize_module(module: &CompiledModule) -> Result<()> {
     Ok(())
 }
 
-fn is_precompiled_script(input_str: &str) -> Option<(Vec<u8>, CompiledScript)> {
-    if let Some(script_name) = input_str.strip_prefix("stdlib_script::") {
-        return PRECOMPILED_TXN_SCRIPTS.get(script_name).cloned();
-    }
-    None
+fn is_script_function(input_str: &str) -> Option<(ModuleId, Identifier)> {
+    let stdlib_script_regex = Regex::new(r"stdlib_script::(\w+)::(\w+)\s*").unwrap();
+    let captures_opt = stdlib_script_regex.captures(input_str);
+    captures_opt.and_then(|captures| {
+        let module = captures.get(1)?.as_str();
+        let function = captures.get(2)?.as_str();
+        let module_id = ModuleId::new(CORE_CODE_ADDRESS, Identifier::new(module).ok()?);
+        let function_ident = Identifier::new(function).ok()?;
+        Some((module_id, function_ident))
+    })
 }
 
 fn eval_transaction<TComp: Compiler>(
@@ -586,33 +606,53 @@ fn eval_transaction<TComp: Compiler>(
         log.append(EvaluationOutput::Stage(Stage::Compiler));
     }
 
-    let parsed_script_or_module =
-        if let Some((bytes, compiled_script)) = is_precompiled_script(&transaction.input) {
-            ScriptOrModule::Script(Some(bytes), compiled_script)
+    if let Some((module, function)) = is_script_function(&transaction.input) {
+        // execute the script
+        if transaction.config.is_stage_disabled(Stage::Runtime) {
+            return Ok(Status::Success);
+        }
+        if !global_config.exp_mode {
+            log.append(EvaluationOutput::Stage(Stage::Runtime));
+        }
+        let script_function_transaction =
+            make_script_function_transaction(&exec, &transaction.config, module, function)?;
+
+        if global_config.exp_mode {
+            run_transaction_exp_mode(exec, script_function_transaction, log, &transaction.config);
         } else {
-            let compiler_log = |s| {
-                if !global_config.exp_mode {
-                    log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
-                }
-            };
+            let txn_output = unwrap_or_abort!(run_transaction(exec, script_function_transaction));
+            log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
+                Box::new(txn_output),
+            )));
+        }
 
-            // Compiler error messages may contain temporary file names, causing tests to be non-deterministic.
-            // The following code get them filtered out using regex.
-            static FILENAME_PAT: Lazy<Regex> =
-                Lazy::new(|| Regex::new(r"[A-Za-z0-9_/.]+:([0-9]+):([0-9]+)").unwrap());
+        return Ok(Status::Success);
+    }
 
-            let compiler_res = compiler.compile(compiler_log, sender_addr, &transaction.input);
-            let filtered_compiler_res = compiler_res.map_err(|err| {
-                let msg = err.to_string();
-                let filtered = FILENAME_PAT
-                    .replace_all(&msg, |caps: &Captures| {
-                        format!("(file):{}:{}", &caps[1], &caps[2])
-                    })
-                    .to_string();
-                format_err!("{}", filtered)
-            });
-            unwrap_or_abort!(filtered_compiler_res)
+    let parsed_script_or_module = {
+        let compiler_log = |s| {
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
+            }
         };
+
+        // Compiler error messages may contain temporary file names, causing tests to be non-deterministic.
+        // The following code get them filtered out using regex.
+        static FILENAME_PAT: Lazy<Regex> =
+            Lazy::new(|| Regex::new(r"[A-Za-z0-9_/.]+:([0-9]+):([0-9]+)").unwrap());
+
+        let compiler_res = compiler.compile(compiler_log, sender_addr, &transaction.input);
+        let filtered_compiler_res = compiler_res.map_err(|err| {
+            let msg = err.to_string();
+            let filtered = FILENAME_PAT
+                .replace_all(&msg, |caps: &Captures| {
+                    format!("(file):{}:{}", &caps[1], &caps[2])
+                })
+                .to_string();
+            format_err!("{}", filtered)
+        });
+        unwrap_or_abort!(filtered_compiler_res)
+    };
 
     match parsed_script_or_module {
         ScriptOrModule::Script(bytes_opt, compiled_script) => {

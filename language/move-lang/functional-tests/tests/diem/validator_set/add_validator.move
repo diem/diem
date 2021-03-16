@@ -34,7 +34,7 @@ fun main(creator: signer) {
 //! new-transaction
 //! sender: diemroot
 //! args: 0, {{alex}}, {{alex::auth_key}}, b"alex"
-stdlib_script::create_validator_account
+stdlib_script::AccountCreationScripts::create_validator_account
 // check: "Keep(EXECUTED)"
 
 //! new-transaction

@@ -12,7 +12,7 @@
 //! new-transaction
 //! sender: diemroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
-stdlib_script::create_validator_operator_account
+stdlib_script::AccountCreationScripts::create_validator_operator_account
 // check: "Keep(EXECUTED)"
 
 //! new-transaction

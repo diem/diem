@@ -16,7 +16,7 @@ module RecoveryAddress {
     /// rotation capabilities to a single `RecoveryAddress` resource stored under address A.
     /// The authentication key for A can be "buried in the mountain" and dug up only if the need to
     /// recover one of accounts in `rotation_caps` arises.
-    struct RecoveryAddress has key, store {
+    struct RecoveryAddress has key {
         rotation_caps: vector<KeyRotationCapability>
     }
 

@@ -72,7 +72,7 @@ fun main(dr_account: signer, tc_account: signer) {
 //! sender: blessed
 //! type-args: 0x1::COIN::COIN
 //! args: 0, {{sally}}, {{sally::auth_key}}, b"bob", false
-stdlib_script::create_designated_dealer
+stdlib_script::AccountCreationScripts::create_designated_dealer
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
