@@ -129,7 +129,7 @@ impl ConditionKind {
     /// Returns true if this condition is allowed in a function body.
     pub fn allowed_on_fun_impl(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Assert | Assume | Decreases)
+        matches!(self, Assert | Assume | Decreases | Invariant)
     }
 
     /// Returns true if this condition is allowed on a struct.

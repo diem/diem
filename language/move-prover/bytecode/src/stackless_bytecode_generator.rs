@@ -151,6 +151,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let kind = match cond.kind {
                     ConditionKind::Assert => PropKind::Assert,
                     ConditionKind::Assume => PropKind::Assume,
+                    ConditionKind::Invariant => PropKind::Invariant,
                     _ => panic!("unsupported spec condition in code"),
                 };
                 self.code

@@ -257,6 +257,7 @@ pub enum BorrowEdge {
 pub enum PropKind {
     Assert,
     Assume,
+    Invariant,
     Modifies,
 }
 
@@ -663,6 +664,7 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
                 match kind {
                     PropKind::Assume => write!(f, "assume {}", exp_display)?,
                     PropKind::Assert => write!(f, "assert {}", exp_display)?,
+                    PropKind::Invariant => write!(f, "invariant {}", exp_display)?,
                     PropKind::Modifies => write!(f, "modifies {}", exp_display)?,
                 }
             }
