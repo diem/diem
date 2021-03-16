@@ -43,7 +43,7 @@ Changed resource(s) under 2 address(es):
     Added type 0x1::SlidingNonce::SlidingNonce: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 68 bytes)
     Added type 0x1::TransactionFee::TransactionFee<0x1::XUS::XUS>: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 90 bytes)
 Wrote 3530 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
+Command `run scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 2, 0, 0, 0, 0, 0, 0, 0] as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -61,7 +61,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 3, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
   Wrote 836 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
+Command `run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 5, 0, 0, 0, 0, 0, 0, 0] as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -78,7 +78,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 4, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
   Wrote 744 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
+Command `run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 5, 0, 0, 0, 0, 0, 0, 0] as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -95,7 +95,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 5, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
   Wrote 744 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
+Command `run scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v`:
 Compiling transaction script...
 Emitted 3 events:
 Emitted [3, 88, 85, 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221, 232, 3, 0, 0, 0, 0, 0, 0] as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
@@ -135,7 +135,7 @@ Changed resource(s) under 3 address(es):
     Changed type 0x1::DiemAccount::Balance<0x1::XUS::XUS>: [244, 1, 0, 0, 0, 0, 0, 0] (wrote 72 bytes)
     Changed type 0x1::DiemAccount::DiemAccount: [32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 1, 0, 0, 0, 0, 0, 0, 0, 24, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 24, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0] (wrote 183 bytes)
   Wrote 510 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v`:
+Command `run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v`:
 Compiling transaction script...
 Emitted 3 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 170, 6, 0, 0, 0, 0, 0, 0, 0] as the 5th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
@@ -156,7 +156,7 @@ Changed resource(s) under 3 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000A550C18:
     Changed type 0x1::DiemAccount::AccountOperationsCapability: [0, 6, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24] (wrote 92 bytes)
 Wrote 848 bytes of resource ID's and data
-Command `run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v`:
+Command `run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v`:
 Compiling transaction script...
 Emitted 1 events:
 Emitted [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 187, 6, 0, 0, 0, 0, 0, 0, 0] as the 6th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]

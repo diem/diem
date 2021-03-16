@@ -3,11 +3,11 @@
 This is the root document for the Diem framework module documentation. The Diem framework provides a set of Move
 modules which define the resources and functions available for the Diem blockchain. Each module is individually
 documented here, together with its implementation and
-[formal specification](../../transaction_scripts/doc/spec_documentation.md).
+[formal specification](../../script_documentation/spec_documentation.md).
 
 Move modules are not directly called by clients, but instead are used to implement *transaction scripts*.
 For documentation of transaction scripts which constitute the client API, see
-[../../transaction_scripts/doc/transaction_script_documentation.md](../../transaction_scripts/doc/transaction_script_documentation.md).
+[../../script_documentation/script_documentation.md](../../script_documentation/script_documentation.md).
 
 The Move modules in the Diem Framework can be bucketed in to a couple categories:
 

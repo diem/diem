@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_lang::{move_compile, shared::Address};
-use move_lang_test_utils::*;
 
 fn sanity_check_testsuite_impl(targets: Vec<String>, deps: Vec<String>) {
     let sender = Some(Address::DIEM_CORE);
@@ -23,12 +22,5 @@ fn sanity_check_testsuite_impl(targets: Vec<String>, deps: Vec<String>) {
 
 #[test]
 fn test_stdlib_sanity_check() {
-    sanity_check_testsuite_impl(
-        diem_framework::script_files(),
-        diem_framework::diem_stdlib_files(),
-    );
-    sanity_check_testsuite_impl(
-        diem_framework::script_files(),
-        vec![STD_LIB_COMPILED_DIR.to_string()],
-    )
+    sanity_check_testsuite_impl(diem_framework::diem_stdlib_files(), vec![])
 }

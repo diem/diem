@@ -7,11 +7,11 @@
 This is the root document for the Diem framework module documentation. The Diem framework provides a set of Move
 modules which define the resources and functions available for the Diem blockchain. Each module is individually
 documented here, together with its implementation and
-[formal specification](../../transaction_scripts/doc/spec_documentation.md).
+[formal specification](../../script_documentation/spec_documentation.md).
 
 Move modules are not directly called by clients, but instead are used to implement *transaction scripts*.
 For documentation of transaction scripts which constitute the client API, see
-[../../transaction_scripts/doc/transaction_script_documentation.md](../../transaction_scripts/doc/transaction_script_documentation.md).
+[../../script_documentation/script_documentation.md](../../script_documentation/script_documentation.md).
 
 The Move modules in the Diem Framework can be bucketed in to a couple categories:
 
@@ -89,6 +89,8 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 ## Index
 
 
+-  [`0x1::AccountAdministrationScripts`](AccountAdministrationScripts.md#0x1_AccountAdministrationScripts)
+-  [`0x1::AccountCreationScripts`](AccountCreationScripts.md#0x1_AccountCreationScripts)
 -  [`0x1::AccountFreezing`](AccountFreezing.md#0x1_AccountFreezing)
 -  [`0x1::AccountLimits`](AccountLimits.md#0x1_AccountLimits)
 -  [`0x1::Authenticator`](Authenticator.md#0x1_Authenticator)
@@ -120,9 +122,11 @@ The Move modules in the Diem Framework can be bucketed in to a couple categories
 -  [`0x1::Signature`](Signature.md#0x1_Signature)
 -  [`0x1::Signer`](../../../move-stdlib/docs/Signer.md#0x1_Signer)
 -  [`0x1::SlidingNonce`](SlidingNonce.md#0x1_SlidingNonce)
+-  [`0x1::SystemAdministrationScripts`](SystemAdministrationScripts.md#0x1_SystemAdministrationScripts)
 -  [`0x1::TransactionFee`](TransactionFee.md#0x1_TransactionFee)
 -  [`0x1::TreasuryComplianceScripts`](TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts)
 -  [`0x1::VASP`](VASP.md#0x1_VASP)
+-  [`0x1::ValidatorAdministrationScripts`](ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts)
 -  [`0x1::ValidatorConfig`](ValidatorConfig.md#0x1_ValidatorConfig)
 -  [`0x1::ValidatorOperatorConfig`](ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig)
 -  [`0x1::Vector`](../../../move-stdlib/docs/Vector.md#0x1_Vector)

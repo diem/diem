@@ -322,16 +322,11 @@ def decode_script_function_payload(payload: TransactionPayload) -> ScriptFunctio
     }
 
     fn emit_script_function_decoder_function(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
+        // `script` is always used
         writeln!(
             self.out,
-            "\ndef decode_{}_script_function({}script: TransactionPayload) -> ScriptFunctionCall:",
+            "\ndef decode_{}_script_function(script: TransactionPayload) -> ScriptFunctionCall:",
             abi.name(),
-            // prevent warning "unused variable"
-            if abi.ty_args().is_empty() && abi.args().is_empty() {
-                "_"
-            } else {
-                ""
-            }
         )?;
 
         self.out.indent();

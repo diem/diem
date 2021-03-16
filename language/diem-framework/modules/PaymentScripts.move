@@ -52,9 +52,9 @@ module PaymentScripts {
     /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
     ///
     /// # Related Scripts
-    /// * `Script::create_child_vasp_account`
-    /// * `Script::create_parent_vasp_account`
-    /// * `Script::add_currency_to_account`
+    /// * `AccountCreationScripts::create_child_vasp_account`
+    /// * `AccountCreationScripts::create_parent_vasp_account`
+    /// * `AccountAdministrationScripts::add_currency_to_account`
     public(script) fun peer_to_peer_with_metadata<Currency: store>(
         payer: &signer,
         payee: address,

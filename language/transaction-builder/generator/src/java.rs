@@ -442,16 +442,11 @@ return builder.build();"#,
     }
 
     fn output_script_function_decoder_function(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
+        // `payload` is always used, so don't need to add `"_"` prefix
         writeln!(
             self.out,
-            "\nprivate static ScriptFunctionCall decode_{}_script_function(TransactionPayload {}payload) throws IllegalArgumentException, IndexOutOfBoundsException {{",
+            "\nprivate static ScriptFunctionCall decode_{}_script_function(TransactionPayload payload) throws IllegalArgumentException, IndexOutOfBoundsException {{",
             abi.name(),
-            // prevent warning "unused variable"
-            if abi.ty_args().is_empty() && abi.args().is_empty() {
-            "_"
-            } else {
-                ""
-            }
         )?;
         self.out.indent();
         writeln!(
@@ -462,7 +457,13 @@ return builder.build();"#,
         )?;
         writeln!(
             self.out,
-            "ScriptFunction script = ((TransactionPayload.ScriptFunction)payload).value;"
+            "ScriptFunction {}script = ((TransactionPayload.ScriptFunction)payload).value;",
+            // prevent warning "unused variable"
+            if abi.ty_args().is_empty() && abi.args().is_empty() {
+                "_"
+            } else {
+                ""
+            }
         )?;
         writeln!(
             self.out,

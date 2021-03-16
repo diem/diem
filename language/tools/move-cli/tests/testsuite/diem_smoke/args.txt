@@ -4,16 +4,16 @@
 run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED -v
 
 # Create DD account at 0xDD with a balance in each currency
-run ../../../../../diem-framework/transaction_scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v
+run scripts/create_designated_dealer.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -v
 
 # create parent VASP account at 0xA with a balance in each currency
-run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v
+run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -v
 
 # create parent VASP account at 0xB with a balance in each currency
-run ../../../../../diem-framework/transaction_scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v
+run scripts/create_parent_vasp_account.move --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -v
 
 # mint 1000 XUS to 0xDD
-run ../../../../../diem-framework/transaction_scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v
+run scripts/tiered_mint.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0 -v
 
 # transfer 700 XUS from 0xDD to 0xA
 run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x"" -v
@@ -22,10 +22,10 @@ run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XU
 run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v
 
 # create a child VASP account for 0xA
-run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v
+run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xA --args 0xAA x"00000000000000000000000000000000" false 100 -v
 
 # create a child VASP account for 0xB
-run ../../../../../diem-framework/transaction_scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v
+run scripts/create_child_vasp_account.move --mode diem --type-args 0x1::XUS::XUS --signers 0xB --args 0xBB x"00000000000000000000000000000000" false 0 -v
 
 # transfer 100 from child 0xAA to child 0xBB
 run scripts/peer_to_peer_with_metadata.move --mode diem --type-args 0x1::XUS::XUS --signers 0xAA --args 0xBB 100 x"" x"" -v

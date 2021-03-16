@@ -467,21 +467,22 @@ TransactionPayload::ScriptFunction(ScriptFunction {{
     }
 
     fn emit_script_function_decoder_function(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
+        // `payload` is always used, so don't need to fix warning "unused variable" by prefixing with "_"
         writeln!(
             self.out,
-            "\nfn decode_{}_script_function({}payload: &TransactionPayload) -> Option<ScriptFunctionCall> {{",
+            "\nfn decode_{}_script_function(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {{",
             abi.name(),
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "if let TransactionPayload::ScriptFunction({}script) = payload {{",
             // fix warning "unused variable"
             if abi.ty_args().is_empty() && abi.args().is_empty() {
                 "_"
             } else {
                 ""
             }
-        )?;
-        self.out.indent();
-        writeln!(
-            self.out,
-            "if let TransactionPayload::ScriptFunction(script) = payload {{"
         )?;
         self.out.indent();
         writeln!(

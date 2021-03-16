@@ -22,7 +22,6 @@ const MODULES_DIR: &str = "modules";
 
 /// The extension for compiled files
 
-pub const TRANSACTION_SCRIPTS: &str = "transaction_scripts";
 /// The output path under which compiled files will be put
 pub const COMPILED_OUTPUT_PATH: &str = "compiled";
 /// The file name for the compiled stdlib
@@ -33,14 +32,13 @@ pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 /// The output path for stdlib documentation.
 pub const STD_LIB_DOC_DIR: &str = "modules/doc";
 /// The output path for transaction script documentation.
-pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
+pub const SCRIPTS_DOC_DIR: &str = "script_documentation";
 /// The documentation root template for stdlib.
 pub const STD_LIB_DOC_TEMPLATE: &str = "modules/overview_template.md";
 /// The documentation root template for scripts.
-pub const TRANSACTION_SCRIPT_DOC_TEMPLATE: &str =
-    "transaction_scripts/transaction_script_documentation_template.md";
+pub const SCRIPT_DOC_TEMPLATE: &str = "script_documentation/script_documentation_template.md";
 /// The specification root template for scripts and stdlib.
-pub const SPEC_DOC_TEMPLATE: &str = "transaction_scripts/spec_documentation_template.md";
+pub const SPEC_DOC_TEMPLATE: &str = "script_documentation/spec_documentation_template.md";
 /// Path to the references template.
 pub const REFERENCES_DOC_TEMPLATE: &str = "modules/references_template.md";
 
@@ -54,7 +52,7 @@ pub const PACKED_TYPES_EXTENSION: &str = "txt";
 /// The output path under which compiled script files can be found
 pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/legacy/transaction_scripts";
 /// The output path for transaction script ABIs.
-pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
+pub const COMPILED_SCRIPTS_ABI_DIR: &str = "compiled/script_abis";
 /// Location of legacy transaction script ABIs
 pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str =
     "compiled/legacy/transaction_scripts/abi";
@@ -121,14 +119,6 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
         "Unexpected: no stdlib bytecode files found"
     );
     res
-}
-
-pub fn script_files() -> Vec<String> {
-    let path = path_in_crate(TRANSACTION_SCRIPTS);
-    let dirfiles = move_stdlib::utils::iterate_directory(&path);
-    move_stdlib::filter_move_files(dirfiles)
-        .flat_map(|path| path.into_os_string().into_string())
-        .collect()
 }
 
 pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
@@ -230,14 +220,14 @@ pub fn build_stdlib_doc(with_diagram: bool) {
     )
 }
 
-pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool) {
+pub fn build_script_doc(with_diagram: bool) {
     move_stdlib::build_doc(
-        TRANSACTION_SCRIPTS_DOC_DIR,
+        SCRIPTS_DOC_DIR,
         // FIXME: links to move stdlib modules are broken since the tool does not currently
         // support multiple paths.
         STD_LIB_DOC_DIR,
         vec![
-            path_in_crate(TRANSACTION_SCRIPT_DOC_TEMPLATE)
+            path_in_crate(SCRIPT_DOC_TEMPLATE)
                 .to_string_lossy()
                 .to_string(),
             path_in_crate(SPEC_DOC_TEMPLATE)
@@ -249,7 +239,32 @@ pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool)
                 .to_string_lossy()
                 .to_string(),
         ),
-        script_files,
+        &[
+            path_in_crate("modules/AccountAdministrationScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            path_in_crate("modules/AccountCreationScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            path_in_crate("modules/PaymentScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            path_in_crate("modules/SystemAdministrationScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            path_in_crate("modules/TreasuryComplianceScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+            path_in_crate("modules/ValidatorAdministrationScripts.move")
+                .to_str()
+                .unwrap()
+                .to_string(),
+        ],
         vec![
             move_stdlib::move_stdlib_modules_full_path(),
             diem_stdlib_modules_full_path(),
@@ -260,7 +275,7 @@ pub fn build_transaction_script_doc(script_files: &[String], with_diagram: bool)
 
 pub fn build_script_abis(script_file_str: String) {
     build_abi(
-        COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
+        COMPILED_SCRIPTS_ABI_DIR,
         &[script_file_str],
         vec![
             move_stdlib::move_stdlib_modules_full_path(),
@@ -330,9 +345,8 @@ fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
 }
 
 pub fn generate_rust_transaction_builders() {
-    let mut abis =
-        transaction_builder_generator::read_abis(&Path::new(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR))
-            .expect("Failed to read generated ABIs");
+    let mut abis = transaction_builder_generator::read_abis(&Path::new(COMPILED_SCRIPTS_ABI_DIR))
+        .expect("Failed to read generated ABIs");
     abis.extend(
         transaction_builder_generator::read_abis(&Path::new(
             LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,

@@ -66,37 +66,4 @@ fun peer_to_peer_with_metadata<Currency: store>(
     );
     DiemAccount::restore_withdraw_capability(payer_withdrawal_cap);
 }
-spec fun peer_to_peer_with_metadata {
-    use 0x1::Signer;
-    use 0x1::Errors;
-
-    include DiemAccount::TransactionChecks{sender: payer}; // properties checked by the prologue.
-    let payer_addr = Signer::spec_address_of(payer);
-    let cap = DiemAccount::spec_get_withdraw_cap(payer_addr);
-    include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};
-    include DiemAccount::PayFromAbortsIf<Currency>{cap: cap};
-
-    /// The balances of payer and payee change by the correct amount.
-    ensures payer_addr != payee
-        ==> DiemAccount::balance<Currency>(payer_addr)
-        == old(DiemAccount::balance<Currency>(payer_addr)) - amount;
-    ensures payer_addr != payee
-        ==> DiemAccount::balance<Currency>(payee)
-        == old(DiemAccount::balance<Currency>(payee)) + amount;
-    ensures payer_addr == payee
-        ==> DiemAccount::balance<Currency>(payee)
-        == old(DiemAccount::balance<Currency>(payee));
-
-    aborts_with [check]
-        Errors::NOT_PUBLISHED,
-        Errors::INVALID_STATE,
-        Errors::INVALID_ARGUMENT,
-        Errors::LIMIT_EXCEEDED;
-
-    /// **Access Control:**
-    /// Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
-    /// Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].
-    aborts_if !exists<DiemAccount::Balance<Currency>>(payer_addr) with Errors::NOT_PUBLISHED;
-    aborts_if !exists<DiemAccount::Balance<Currency>>(payee) with Errors::INVALID_ARGUMENT;
-}
 }

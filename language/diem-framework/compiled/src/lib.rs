@@ -9,11 +9,14 @@ pub mod legacy;
 // fully support script functions.
 pub mod shim;
 
+use crate::legacy::transaction_scripts::LegacyStdlibScript;
+use anyhow::Result;
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use diem_framework::build_stdlib;
+use diem_types::transaction::ScriptFunction;
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, convert::TryFrom};
 use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";
@@ -160,4 +163,21 @@ pub fn env_stdlib_modules() -> StdLibModules {
 /// used.
 pub fn use_compiled() -> bool {
     std::env::var(NO_USE_COMPILED).is_err()
+}
+
+pub fn name_for_script(bytes: &[u8]) -> Result<String> {
+    if let Ok(script) = LegacyStdlibScript::try_from(bytes) {
+        Ok(format!("{}", script))
+    } else {
+        bcs::from_bytes::<ScriptFunction>(bytes)
+            .map(|script| {
+                format!(
+                    "{}::{}::{}",
+                    script.module().address().short_str_lossless(),
+                    script.module().name(),
+                    script.function()
+                )
+            })
+            .map_err(|err| err.into())
+    }
 }

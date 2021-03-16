@@ -138,8 +138,6 @@ fn main() {
         );
     }
 
-    let script_files = diem_stdlib_files();
-
     // Generate documentation
     if !no_doc {
         time_it("Generating stdlib documentation", || {
@@ -147,21 +145,18 @@ fn main() {
             std::fs::create_dir_all(&STD_LIB_DOC_DIR).unwrap();
             build_stdlib_doc(with_diagram);
         });
-        // TODO(#7883) Re-enable this in the final phase of the migration to script functions
-        //time_it("Generating script documentation", || {
-        //std::fs::remove_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap_or(());
-        //std::fs::create_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap();
-        //build_transaction_script_doc(&script_files, with_diagram);
-        //});
+        time_it("Generating script documentation", || {
+            build_script_doc(with_diagram);
+        });
     }
 
     // Generate script ABIs
     if !no_script_abi {
         time_it("Generating script ABIs", || {
-            std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap_or(());
-            std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap();
+            std::fs::remove_dir_all(&COMPILED_SCRIPTS_ABI_DIR).unwrap_or(());
+            std::fs::create_dir_all(&COMPILED_SCRIPTS_ABI_DIR).unwrap();
 
-            script_files
+            diem_stdlib_files()
                 .par_iter()
                 .for_each(|file| build_script_abis(file.clone()));
         });

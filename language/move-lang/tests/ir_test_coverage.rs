@@ -31,13 +31,13 @@ fn test_ir_test_coverage() {
         }
         msg.push_str("\nA corresponding test needs to be added:\n");
         msg.push_str(&format!(
-            "    {}/{}/<dir name>/<test name>.{}\n",
-            MOVE_CHECK_DIR, STD_LIB_TRANSACTION_SCRIPTS_DIR, MOVE_EXTENSION
+            "    {}/<dir name>/<test name>.{}\n",
+            MOVE_CHECK_DIR, MOVE_EXTENSION
         ));
         msg.push_str("  or\n");
         msg.push_str(&format!(
-            "    {}/{}/<dir name>/<test name>.{}\n",
-            FUNCTIONAL_TEST_DIR, STD_LIB_TRANSACTION_SCRIPTS_DIR, MOVE_EXTENSION
+            "    {}/<dir name>/<test name>.{}\n",
+            FUNCTIONAL_TEST_DIR, MOVE_EXTENSION
         ));
         msg.push_str(&format!(
             "Replace the extension '.{}' with '.{}' to mark the test as present, but it will not \

@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use compiled_stdlib::shim::tmp_new_transaction_scripts::name_for_script;
+use compiled_stdlib::name_for_script;
 use diem_config::config::RocksdbConfig;
 use diem_logger::info;
 use diemdb::DiemDB;
