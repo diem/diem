@@ -261,7 +261,7 @@ script {
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"bob", true
-stdlib_script::create_parent_vasp_account
+stdlib_script::AccountCreationScripts::create_parent_vasp_account
 //! check: "Keep(EXECUTED)"
 
 //! new-transaction

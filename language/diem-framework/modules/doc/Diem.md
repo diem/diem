@@ -9,7 +9,7 @@ The module defines functions operating on coins as well as functionality like
 minting and burning of coins.
 
 
--  [Resource `Diem`](#0x1_Diem_Diem)
+-  [Struct `Diem`](#0x1_Diem_Diem)
 -  [Resource `MintCapability`](#0x1_Diem_MintCapability)
 -  [Resource `BurnCapability`](#0x1_Diem_BurnCapability)
 -  [Struct `MintEvent`](#0x1_Diem_MintEvent)
@@ -90,7 +90,7 @@ minting and burning of coins.
 
 <a name="0x1_Diem_Diem"></a>
 
-## Resource `Diem`
+## Struct `Diem`
 
 The <code><a href="Diem.md#0x1_Diem">Diem</a></code> resource defines the Diem coin for each currency in
 Diem. Each "coin" is coupled with a type <code>CoinType</code> specifying the
@@ -100,7 +100,7 @@ and specified in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo<
 published under the <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> account address).
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 

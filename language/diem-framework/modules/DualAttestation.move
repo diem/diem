@@ -17,7 +17,7 @@ module DualAttestation {
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
     /// participate in off-chain protocols.
-    struct Credential has key, store {
+    struct Credential has key {
         /// The human readable name of this entity. Immutable.
         human_name: vector<u8>,
         /// The base_url holds the URL to be used for off-chain communication. This contains the
@@ -42,12 +42,12 @@ module DualAttestation {
     }
 
     /// Struct to store the limit on-chain
-    struct Limit has key, store {
+    struct Limit has key {
         micro_xdx_limit: u64,
     }
 
     /// The message sent whenever the compliance public key for a `DualAttestation` resource is rotated.
-    struct ComplianceKeyRotationEvent has copy, drop, store {
+    struct ComplianceKeyRotationEvent has drop, store {
         /// The new `compliance_public_key` that is being used for dual attestation checking.
         new_compliance_public_key: vector<u8>,
         /// The time at which the `compliance_public_key` was rotated
@@ -55,7 +55,7 @@ module DualAttestation {
     }
 
     /// The message sent whenever the base url for a `DualAttestation` resource is rotated.
-    struct BaseUrlRotationEvent has copy, drop, store {
+    struct BaseUrlRotationEvent has drop, store {
         /// The new `base_url` that is being used for dual attestation checking
         new_base_url: vector<u8>,
         /// The time at which the `base_url` was rotated

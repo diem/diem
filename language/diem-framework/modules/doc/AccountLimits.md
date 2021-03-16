@@ -7,7 +7,7 @@ Module which manages account limits, like the amount of currency which can flow 
 a given time period.
 
 
--  [Resource `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
+-  [Struct `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
 -  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
 -  [Resource `Window`](#0x1_AccountLimits_Window)
 -  [Constants](#@Constants_0)
@@ -40,13 +40,13 @@ a given time period.
 
 <a name="0x1_AccountLimits_AccountLimitMutationCapability"></a>
 
-## Resource `AccountLimitMutationCapability`
+## Struct `AccountLimitMutationCapability`
 
 An operations capability that restricts callers of this module since
 the operations can mutate account states.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>
+<pre><code><b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>
 </code></pre>
 
 

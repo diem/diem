@@ -8,14 +8,14 @@ module DiemBlock {
     use 0x1::DiemSystem;
     use 0x1::DiemTimestamp;
 
-    struct BlockMetadata has key, store {
+    struct BlockMetadata has key {
         /// Height of the current block
         height: u64,
         /// Handle where events with the time of new blocks are emitted
         new_block_events: Event::EventHandle<Self::NewBlockEvent>,
     }
 
-    struct NewBlockEvent has copy, drop, store {
+    struct NewBlockEvent has drop, store {
         round: u64,
         proposer: address,
         previous_block_votes: vector<address>,

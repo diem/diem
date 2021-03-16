@@ -33,7 +33,7 @@ module DiemTransactionPublishingOption {
     }
 
     /// If published, halts transactions from all accounts except DiemRoot
-    struct HaltAllTransactions has key, store {}
+    struct HaltAllTransactions has key {}
 
     public fun initialize(
         dr_account: &signer,

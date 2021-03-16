@@ -21,7 +21,7 @@ module Diem {
     /// of the coin (in the base units of the currency `CoinType`
     /// and specified in the `CurrencyInfo` resource for that `CoinType`
     /// published under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` account address).
-    struct Diem<CoinType> has key, store {
+    struct Diem<CoinType> has store {
         /// The value of this coin in the base units for `CoinType`
         value: u64
     }
@@ -41,7 +41,7 @@ module Diem {
     /// minted) along with the `currency_code` for the coin(s) being
     /// minted, and that is defined in the `currency_code` field of the
     /// `CurrencyInfo` resource for the currency.
-    struct MintEvent has copy, drop, store {
+    struct MintEvent has drop, store {
         /// Funds added to the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -55,7 +55,7 @@ module Diem {
     /// (and as defined in the `CurrencyInfo` resource for that currency).
     /// It also contains the `preburn_address` from which the coin is
     /// extracted for burning.
-    struct BurnEvent has copy, drop, store {
+    struct BurnEvent has drop, store {
         /// Funds removed from the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -67,7 +67,7 @@ module Diem {
     /// A `PreburnEvent` is emitted every time an `amount` of funds with
     /// a coin type `currency_code` is enqueued in the `PreburnQueue` resource under
     /// the account at the address `preburn_address`.
-    struct PreburnEvent has copy, drop, store {
+    struct PreburnEvent has drop, store {
         /// The amount of funds waiting to be removed (burned) from the system
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -80,7 +80,7 @@ module Diem {
     /// resource held in a `PreburnQueue` at `preburn_address` is canceled (removed from the
     /// preburn queue, but not burned). The currency of the funds is given by the
     /// `currency_code` as defined in the `CurrencyInfo` for that currency.
-    struct CancelBurnEvent has copy, drop, store {
+    struct CancelBurnEvent has drop, store {
         /// The amount of funds returned
         amount: u64,
         /// ASCII encoded symbol for the coin type (e.g., "XDX")
@@ -91,7 +91,7 @@ module Diem {
 
     /// An `ToXDXExchangeRateUpdateEvent` is emitted every time the to-XDX exchange
     /// rate for the currency given by `currency_code` is updated.
-    struct ToXDXExchangeRateUpdateEvent has copy, drop, store {
+    struct ToXDXExchangeRateUpdateEvent has drop, store {
         /// The currency code of the currency whose exchange rate was updated.
         currency_code: vector<u8>,
         /// The new on-chain to-XDX exchange rate between the
@@ -108,7 +108,7 @@ module Diem {
     /// the time of registration, the `MintCapability<CoinType>` and
     /// `BurnCapability<CoinType>` capabilities are returned to the caller.
     /// Unless they are specified otherwise the fields in this resource are immutable.
-    struct CurrencyInfo<CoinType> has key, store {
+    struct CurrencyInfo<CoinType> has key {
         /// The total value for the currency represented by `CoinType`. Mutable.
         total_value: u128,
         /// Value of funds that are in the process of being burned.  Mutable.
@@ -191,7 +191,7 @@ module Diem {
     /// This resource can be created by either the TreasuryCompliance
     /// account, or during the upgrade process, by a designated dealer with an
     /// existing `Preburn` resource in `CoinType`
-    struct PreburnQueue<CoinType> has key, store {
+    struct PreburnQueue<CoinType> has key {
         /// The queue of preburn requests
         preburns: vector<PreburnWithMetadata<CoinType>>,
     }

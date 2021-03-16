@@ -39,7 +39,7 @@ module DiemSystem {
     /// modify the DiemSystem config. This is only needed by `update_config_and_reconfigure`.
     /// Only Diem root can add or remove a validator from the validator set, so the
     /// capability is not needed for access control in those functions.
-    struct CapabilityHolder has key, store {
+    struct CapabilityHolder has key {
         /// Holds a capability returned by `DiemConfig::publish_new_config_and_get_capability`
         /// which is called in `initialize_validator_set`.
         cap: ModifyConfigCapability<DiemSystem>,

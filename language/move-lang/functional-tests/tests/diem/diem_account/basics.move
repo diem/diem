@@ -159,14 +159,14 @@ script {
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, 0x0, {{bob::auth_key}}, b"bob", true
-stdlib_script::create_parent_vasp_account
+stdlib_script::AccountCreationScripts::create_parent_vasp_account
 // check: "Keep(ABORTED { code: 2567,"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{abby}}, x"", b"bob", true
-stdlib_script::create_parent_vasp_account
+stdlib_script::AccountCreationScripts::create_parent_vasp_account
 // check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction

@@ -32,7 +32,7 @@ module DiemAccount {
     use 0x1::Roles;
 
     /// An `address` is a Diem Account iff it has a published DiemAccount resource.
-    struct DiemAccount has key, store {
+    struct DiemAccount has key {
         /// The current authentication key.
         /// This can be different from the key used to create the account
         authentication_key: vector<u8>,
@@ -62,7 +62,7 @@ module DiemAccount {
 
     /// A resource that holds the total value of currency of type `Token`
     /// currently held by the account.
-    struct Balance<Token> has key, store {
+    struct Balance<Token> has key {
         /// Stores the value of the balance in its balance field. A coin has
         /// a `value` field. The amount of money in the balance is changed
         /// by modifying this field.
@@ -72,7 +72,7 @@ module DiemAccount {
     /// The holder of WithdrawCapability for account_address can withdraw Diem from
     /// account_address/DiemAccount/balance.
     /// There is at most one WithdrawCapability in existence for a given address.
-    struct WithdrawCapability has key, store {
+    struct WithdrawCapability has store {
         /// Address that WithdrawCapability was associated with when it was created.
         /// This field does not change.
         account_address: address,
@@ -81,7 +81,7 @@ module DiemAccount {
     /// The holder of KeyRotationCapability for account_address can rotate the authentication key for
     /// account_address (i.e., write to account_address/DiemAccount/authentication_key).
     /// There is at most one KeyRotationCapability in existence for a given address.
-    struct KeyRotationCapability has key, store {
+    struct KeyRotationCapability has store {
         /// Address that KeyRotationCapability was associated with when it was created.
         /// This field does not change.
         account_address: address,
@@ -89,19 +89,19 @@ module DiemAccount {
 
     /// A wrapper around an `AccountLimitMutationCapability` which is used to check for account limits
     /// and to record freeze/unfreeze events.
-    struct AccountOperationsCapability has key, store {
+    struct AccountOperationsCapability has key {
         limits_cap: AccountLimitMutationCapability,
         creation_events: Event::EventHandle<CreateAccountEvent>,
     }
 
     /// A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
-    struct DiemWriteSetManager has key, store {
+    struct DiemWriteSetManager has key {
         upgrade_events: Event::EventHandle<Self::AdminTransactionEvent>,
     }
 
 
     /// Message for sent events
-    struct SentPaymentEvent has copy, drop, store {
+    struct SentPaymentEvent has drop, store {
         /// The amount of Diem<Token> sent
         amount: u64,
         /// The code symbol for the currency that was sent
@@ -113,7 +113,7 @@ module DiemAccount {
     }
 
     /// Message for received events
-    struct ReceivedPaymentEvent has copy, drop, store {
+    struct ReceivedPaymentEvent has drop, store {
         /// The amount of Diem<Token> received
         amount: u64,
         /// The code symbol for the currency that was received
@@ -125,13 +125,13 @@ module DiemAccount {
     }
 
     /// Message for committed WriteSet transaction.
-    struct AdminTransactionEvent has copy, drop, store {
+    struct AdminTransactionEvent has drop, store {
         // The block time when this WriteSet is committed.
         committed_timestamp_secs: u64,
     }
 
     /// Message for creation of a new account
-    struct CreateAccountEvent has copy, drop, store {
+    struct CreateAccountEvent has drop, store {
         /// Address of the created account
         created: address,
         /// Role of the created account

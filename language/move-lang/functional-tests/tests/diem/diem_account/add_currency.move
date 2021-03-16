@@ -140,25 +140,25 @@ fun main(account: signer) {
 //! sender: blessed
 //! type-args: 0x1::XUS::XUS
 //! args: 0, {{vasp}}, {{vasp::auth_key}}, b"bob", false
-stdlib_script::create_parent_vasp_account
+stdlib_script::AccountCreationScripts::create_parent_vasp_account
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
 //! type-args: 0x1::COIN::COIN
-stdlib_script::add_currency_to_account
+stdlib_script::AccountAdministrationScripts::add_currency_to_account
 // check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
 //! type-args: 0x1::COIN::COIN
 //! args: {{child}}, {{child::auth_key}}, false, 0
-stdlib_script::create_child_vasp_account
+stdlib_script::AccountCreationScripts::create_child_vasp_account
 // check: "Keep(EXECUTED)"
 
 // can't add a balance of XDX right now
 //! new-transaction
 //! sender: child
 //! type-args: 0x1::XDX::XDX
-stdlib_script::add_currency_to_account
+stdlib_script::AccountAdministrationScripts::add_currency_to_account
 // check: "Keep(EXECUTED)"
