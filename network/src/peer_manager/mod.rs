@@ -783,7 +783,18 @@ where
     fn add_peer(&mut self, connection: Connection<TSocket>) {
         let conn_meta = connection.metadata.clone();
         let peer_id = conn_meta.remote_peer_id;
-        assert_ne!(self.network_context.peer_id(), peer_id);
+
+        // Make a disconnect if you've connected to yourself
+        if self.network_context.peer_id() == peer_id {
+            debug_assert!(false, "Self dials shouldn't happen");
+            warn!(
+                NetworkSchema::new(&self.network_context)
+                    .connection_metadata_with_address(&conn_meta),
+                "Received self-dial, disconnecting it"
+            );
+            self.disconnect(connection);
+            return;
+        }
 
         let mut send_new_peer_notification = true;
 
