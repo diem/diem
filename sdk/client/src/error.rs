@@ -155,6 +155,7 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum WaitForTransactionError {
     // Get account transaction error

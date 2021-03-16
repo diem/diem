@@ -15,7 +15,7 @@ use crate::{
     },
     Error, Result, Retry, State,
 };
-use diem_crypto::hash::CryptoHash;
+use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Transaction},
@@ -61,15 +61,24 @@ impl Client {
         timeout: Option<Duration>,
         delay: Option<Duration>,
     ) -> Result<Response<TransactionView>, WaitForTransactionError> {
-        self.wait_for_transaction(
-            txn.sender(),
-            txn.sequence_number(),
-            txn.expiration_timestamp_secs(),
-            &Transaction::UserTransaction(txn.clone()).hash().to_hex(),
-            timeout,
-            delay,
-        )
-        .await
+        let response = self
+            .wait_for_transaction(
+                txn.sender(),
+                txn.sequence_number(),
+                txn.expiration_timestamp_secs(),
+                Transaction::UserTransaction(txn.clone()).hash(),
+                timeout,
+                delay,
+            )
+            .await?;
+
+        if !response.inner().vm_status.is_executed() {
+            return Err(WaitForTransactionError::TransactionExecutionFailed(
+                response.into_inner(),
+            ));
+        }
+
+        Ok(response)
     }
 
     pub async fn wait_for_transaction(
@@ -77,7 +86,7 @@ impl Client {
         address: AccountAddress,
         seq: u64,
         expiration_time_secs: u64,
-        txn_hash: &str,
+        txn_hash: HashValue,
         timeout: Option<Duration>,
         delay: Option<Duration>,
     ) -> Result<Response<TransactionView>, WaitForTransactionError> {
@@ -91,13 +100,10 @@ impl Client {
                 .await
                 .map_err(WaitForTransactionError::GetTransactionError)?;
             if let (Some(txn), state) = txn_resp.into_parts() {
-                if txn.hash.to_hex() != txn_hash {
+                if txn.hash != txn_hash {
                     return Err(WaitForTransactionError::TransactionHashMismatchError(txn));
                 }
-                match txn.vm_status {
-                    diem_json_rpc_types::views::VMStatusView::Executed => {}
-                    _ => return Err(WaitForTransactionError::TransactionExecutionFailed(txn)),
-                }
+
                 return Ok(Response::new(txn, state));
             }
 

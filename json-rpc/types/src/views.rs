@@ -551,6 +551,12 @@ pub enum VMStatusView {
     PublishingFailure,
 }
 
+impl VMStatusView {
+    pub fn is_executed(&self) -> bool {
+        matches!(self, Self::Executed)
+    }
+}
+
 impl std::fmt::Display for VMStatusView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

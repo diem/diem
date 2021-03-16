@@ -15,7 +15,7 @@ use crate::{
     },
     Error, Result, Retry, State,
 };
-use diem_crypto::hash::CryptoHash;
+use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
     account_address::AccountAddress,
     transaction::{SignedTransaction, Transaction},
@@ -57,14 +57,22 @@ impl BlockingClient {
         timeout: Option<Duration>,
         delay: Option<Duration>,
     ) -> Result<Response<TransactionView>, WaitForTransactionError> {
-        self.wait_for_transaction(
+        let response = self.wait_for_transaction(
             txn.sender(),
             txn.sequence_number(),
             txn.expiration_timestamp_secs(),
-            &Transaction::UserTransaction(txn.clone()).hash().to_hex(),
+            Transaction::UserTransaction(txn.clone()).hash(),
             timeout,
             delay,
-        )
+        )?;
+
+        if !response.inner().vm_status.is_executed() {
+            return Err(WaitForTransactionError::TransactionExecutionFailed(
+                response.into_inner(),
+            ));
+        }
+
+        Ok(response)
     }
 
     pub fn wait_for_transaction(
@@ -72,7 +80,7 @@ impl BlockingClient {
         address: AccountAddress,
         seq: u64,
         expiration_time_secs: u64,
-        txn_hash: &str,
+        txn_hash: HashValue,
         timeout: Option<Duration>,
         delay: Option<Duration>,
     ) -> Result<Response<TransactionView>, WaitForTransactionError> {
@@ -85,13 +93,10 @@ impl BlockingClient {
                 .get_account_transaction(address, seq, true)
                 .map_err(WaitForTransactionError::GetTransactionError)?;
             if let (Some(txn), state) = txn_resp.into_parts() {
-                if txn.hash.to_hex() != txn_hash {
+                if txn.hash != txn_hash {
                     return Err(WaitForTransactionError::TransactionHashMismatchError(txn));
                 }
-                match txn.vm_status {
-                    diem_json_rpc_types::views::VMStatusView::Executed => {}
-                    _ => return Err(WaitForTransactionError::TransactionExecutionFailed(txn)),
-                }
+
                 return Ok(Response::new(txn, state));
             }
 
