@@ -12,9 +12,10 @@ use std::{
     fmt::Debug,
 };
 
-pub struct Reducible<T: Ord + Copy + Debug> {
-    pub loop_headers: BTreeSet<T>, // set of reachable loop headers
-    pub natural_loops: BTreeMap<(T, T), BTreeSet<T>>, // map from reachable back edges to natural loops
+pub struct NaturalLoop<T: Ord + Copy + Debug> {
+    pub loop_header: T,
+    pub loop_latch: T, // latch -> header is the back edge representing this loop
+    pub loop_body: BTreeSet<T>,
 }
 
 pub struct Graph<T: Ord + Copy + Debug> {
@@ -52,7 +53,7 @@ impl<T: Ord + Copy + Debug> Graph<T> {
 
     /// This function computes the loop headers and natural loops of a reducible graph.
     /// If the graph is irreducible, None is returned.
-    pub fn compute_reducible(&self) -> Option<Reducible<T>> {
+    pub fn compute_reducible(&self) -> Option<Vec<NaturalLoop<T>>> {
         let dom_relation = DomRelation::new(self);
         let mut loop_headers = BTreeSet::new();
         let mut back_edges = vec![];
@@ -71,12 +72,9 @@ impl<T: Ord + Copy + Debug> Graph<T> {
         if Graph::new(self.entry, self.nodes.clone(), non_back_edges).is_acyclic() {
             let natural_loops = back_edges
                 .into_iter()
-                .map(|edge| (edge, self.natural_loop(edge)))
+                .map(|edge| self.natural_loop(edge))
                 .collect();
-            Some(Reducible {
-                loop_headers,
-                natural_loops,
-            })
+            Some(natural_loops)
         } else {
             None
         }
@@ -113,26 +111,30 @@ impl<T: Ord + Copy + Debug> Graph<T> {
         true
     }
 
-    fn natural_loop(&self, back_edge: (T, T)) -> BTreeSet<T> {
-        let n = back_edge.0;
-        let d = back_edge.1;
+    fn natural_loop(&self, back_edge: (T, T)) -> NaturalLoop<T> {
+        let loop_latch = back_edge.0;
+        let loop_header = back_edge.1;
         let mut stack = vec![];
-        let mut natural_loop = BTreeSet::new();
-        natural_loop.insert(d);
-        if n != d {
-            natural_loop.insert(n);
-            stack.push(n);
+        let mut loop_body = BTreeSet::new();
+        loop_body.insert(loop_header);
+        if loop_latch != loop_header {
+            loop_body.insert(loop_latch);
+            stack.push(loop_latch);
         }
         while !stack.is_empty() {
             let m = stack.pop().unwrap();
             for p in &self.predecessors[&m] {
-                if !natural_loop.contains(p) {
-                    natural_loop.insert(*p);
+                if !loop_body.contains(p) {
+                    loop_body.insert(*p);
                     stack.push(*p);
                 }
             }
         }
-        natural_loop
+        NaturalLoop {
+            loop_header,
+            loop_latch,
+            loop_body,
+        }
     }
 }
 
@@ -301,15 +303,14 @@ mod tests {
         let edges = vec![(1, 2), (2, 3), (2, 4), (2, 6), (3, 5), (4, 5), (5, 2)];
         let source = 1;
         let graph = Graph::new(source, nodes, edges);
-        let Reducible {
-            loop_headers,
-            natural_loops,
-        } = graph.compute_reducible().unwrap();
-        assert!(loop_headers == vec![2].into_iter().collect());
-        assert!(
-            natural_loops.len() == 1
-                && natural_loops.contains_key(&(5, 2))
-                && natural_loops[&(5, 2)] == vec![2, 3, 4, 5].into_iter().collect()
+        let natural_loops = graph.compute_reducible().unwrap();
+        assert_eq!(natural_loops.len(), 1);
+        let single_loop = &natural_loops[0];
+        assert_eq!(single_loop.loop_header, 2);
+        assert_eq!(single_loop.loop_latch, 5);
+        assert_eq!(
+            single_loop.loop_body,
+            vec![2, 3, 4, 5].into_iter().collect()
         );
     }
 
@@ -320,5 +321,40 @@ mod tests {
         let source = 6;
         let graph = Graph::new(source, nodes, edges);
         assert!(graph.compute_reducible().is_some());
+    }
+
+    #[test]
+    fn test5() {
+        // nested natural loops
+        let nodes = vec![1, 2, 3, 4, 5, 6];
+        let edges = vec![
+            (1, 2),
+            (2, 3),
+            (2, 4),
+            (2, 6),
+            (3, 5),
+            (4, 5),
+            (5, 2),
+            (3, 2),
+        ];
+        let source = 1;
+        let graph = Graph::new(source, nodes, edges);
+        let natural_loops = graph.compute_reducible().unwrap();
+
+        assert_eq!(natural_loops.len(), 2);
+        let (inner_loop, outer_loop) = if natural_loops[0].loop_latch == 3 {
+            assert_eq!(natural_loops[1].loop_latch, 5);
+            (&natural_loops[0], &natural_loops[1])
+        } else {
+            assert_eq!(natural_loops[0].loop_latch, 5);
+            assert_eq!(natural_loops[1].loop_latch, 3);
+            (&natural_loops[1], &natural_loops[0])
+        };
+
+        assert_eq!(inner_loop.loop_header, 2);
+        assert_eq!(inner_loop.loop_body, vec![2, 3].into_iter().collect());
+
+        assert_eq!(outer_loop.loop_header, 2);
+        assert_eq!(outer_loop.loop_body, vec![2, 3, 4, 5].into_iter().collect());
     }
 }
