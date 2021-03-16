@@ -5,15 +5,14 @@ use crate::{
     function_data_builder::FunctionDataBuilder,
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    graph::{Graph, Reducible},
-    stackless_bytecode::{
-        BorrowNode,
-        Bytecode::{self, *},
-        Label, Operation, PropKind,
-    },
+    graph::Graph,
+    stackless_bytecode::{BorrowNode, Bytecode, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
-use move_model::{ast, model::FunctionEnv};
+use move_model::{
+    ast::{self, TempIndex},
+    model::FunctionEnv,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Default, Clone)]
@@ -61,7 +60,7 @@ impl LoopAnalysisProcessor {
         let mut builder = FunctionDataBuilder::new(func_env, data);
         for bytecode in code {
             match bytecode {
-                Label(attr_id, label) => {
+                Bytecode::Label(attr_id, label) => {
                     builder.emit(bytecode);
                     builder.set_loc_from_attr(attr_id);
                     if loop_targets.contains_key(&label) {
@@ -91,6 +90,7 @@ impl LoopAnalysisProcessor {
         func_env: &FunctionEnv<'_>,
         data: &FunctionData,
     ) -> BTreeMap<Label, BTreeSet<usize>> {
+        // build for natural loops
         let func_target = FunctionTarget::new(func_env, data);
         let code = func_target.get_bytecode();
         let cfg = StacklessControlFlowGraph::new_forward(code);
@@ -107,62 +107,58 @@ impl LoopAnalysisProcessor {
             .flatten()
             .collect();
         let graph = Graph::new(entry, nodes, edges);
-        let mut loop_targets = BTreeMap::new();
-        if let Some(Reducible {
-            loop_headers,
-            natural_loops,
-        }) = graph.compute_reducible()
-        {
-            let block_id_to_label: BTreeMap<BlockId, Label> = loop_headers
-                .iter()
-                .map(|x| match cfg.content(*x) {
-                    BlockContent::Dummy => None,
-                    BlockContent::Basic { lower, upper: _ } => {
-                        if let Label(_, label) = code[*lower as usize] {
-                            Some((*x, label))
-                        } else {
-                            None
-                        }
+        let natural_loops = graph.compute_reducible().expect(
+            "A well-formed Move function is expected to have a reducible control-flow graph",
+        );
+
+        // collect labels where loop invariant instrumentations are expected to be placed at
+        let loop_header_to_label: BTreeMap<BlockId, Label> = natural_loops
+            .iter()
+            .filter_map(|l| match cfg.content(l.loop_header) {
+                BlockContent::Dummy => None,
+                BlockContent::Basic { lower, upper: _ } => {
+                    if let Bytecode::Label(_, label) = code[*lower as usize] {
+                        Some((l.loop_header, label))
+                    } else {
+                        None
                     }
+                }
+            })
+            .collect();
+        if loop_header_to_label.len() != natural_loops.len() {
+            panic!(
+                "Natural loops in a well-formed Move function are expected to have unique headers \
+                and each loop header is expected to start with a Label bytecode"
+            );
+        }
+
+        // find loop targets per loop (also means, per label)
+        let mut loop_targets = BTreeMap::new();
+        for single_loop in natural_loops {
+            let targets: BTreeSet<TempIndex> = single_loop
+                .loop_body
+                .into_iter()
+                .map(|block_id| {
+                    cfg.instr_indexes(block_id)
+                        .expect("A loop body should never contain a dummy block")
                 })
                 .flatten()
+                .map(|code_offset| Self::targets(&code[code_offset as usize]))
+                .flatten()
                 .collect();
-            for (back_edge, natural_loop) in natural_loops {
-                let loop_header_label = block_id_to_label[&back_edge.1];
-                loop_targets
-                    .entry(loop_header_label)
-                    .or_insert_with(BTreeSet::new);
-                let natural_loop_targets = natural_loop
-                    .iter()
-                    .map(|block_id| match cfg.is_dummmy(*block_id) {
-                        true => BTreeSet::new(),
-                        false => cfg
-                            .instr_indexes(*block_id)
-                            .unwrap()
-                            .map(|x| Self::targets(&code[x as usize]))
-                            .flatten()
-                            .collect::<BTreeSet<usize>>(),
-                    })
-                    .flatten()
-                    .collect::<BTreeSet<usize>>();
-                for target in natural_loop_targets {
-                    loop_targets.entry(loop_header_label).and_modify(|x| {
-                        x.insert(target);
-                    });
-                }
-            }
+            loop_targets.insert(loop_header_to_label[&single_loop.loop_header], targets);
         }
         loop_targets
     }
 
-    fn targets(bytecode: &Bytecode) -> Vec<usize> {
+    fn targets(bytecode: &Bytecode) -> Vec<TempIndex> {
         use BorrowNode::*;
         match bytecode {
-            Assign(_, dest, _, _) => vec![*dest],
-            Load(_, dest, _) => vec![*dest],
-            Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), ..) => vec![*dest],
-            Call(_, _, Operation::WriteBack(Reference(dest), ..), ..) => vec![*dest],
-            Call(_, dests, ..) => dests.clone(),
+            Bytecode::Assign(_, dest, _, _) => vec![*dest],
+            Bytecode::Load(_, dest, _) => vec![*dest],
+            Bytecode::Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), ..) => vec![*dest],
+            Bytecode::Call(_, _, Operation::WriteBack(Reference(dest), ..), ..) => vec![*dest],
+            Bytecode::Call(_, dests, ..) => dests.clone(),
             _ => vec![],
         }
     }
