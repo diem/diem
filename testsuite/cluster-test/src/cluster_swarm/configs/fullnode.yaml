@@ -41,7 +41,7 @@ upstream:
   - public
 
 mempool:
-  default_failovers: 1
+  default_failovers: 2
 
 metrics:
   enabled: false
