@@ -110,7 +110,10 @@ module Option {
 
     /// Return the value inside `t` if it holds one
     /// Return `default` if `t` does not hold a value
-    public fun get_with_default<Element: copy + drop + store>(t: &Option<Element>, default: Element): Element {
+    public fun get_with_default<Element: copy + drop>(
+        t: &Option<Element>,
+        default: Element,
+    ): Element {
         let vec_ref = &t.vec;
         if (Vector::is_empty(vec_ref)) default
         else *Vector::borrow(vec_ref, 0)
@@ -178,7 +181,7 @@ module Option {
     }
 
     /// Destroys `t.` If `t` holds a value, return it. Returns `default` otherwise
-    public fun destroy_with_default<Element: copy + drop + store>(t: Option<Element>, default: Element): Element {
+    public fun destroy_with_default<Element: drop>(t: Option<Element>, default: Element): Element {
         let Option { vec } = t;
         if (Vector::is_empty(&mut vec)) default
         else Vector::pop_back(&mut vec)
