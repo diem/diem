@@ -10,7 +10,9 @@ use crate::{
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use diem_logger::prelude::*;
+use diem_temppath::TempPath;
 use futures::stream::poll_fn;
+use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -23,6 +25,13 @@ use tokio::{
     io::{AsyncRead, AsyncReadExt},
 };
 use tokio_stream::StreamExt;
+
+static TEMP_METADATA_CACHE_DIR: Lazy<TempPath> = Lazy::new(|| {
+    let dir = TempPath::new();
+    dir.create_as_dir()
+        .expect("Temp metadata dir should create.");
+    dir
+});
 
 #[derive(StructOpt)]
 pub struct MetadataCacheOpt {
@@ -41,12 +50,7 @@ impl MetadataCacheOpt {
     fn cache_dir(&self) -> PathBuf {
         self.dir
             .clone()
-            .unwrap_or_else(|| {
-                let home_path: PathBuf = std::env::var_os("HOME")
-                    .expect("Can't find home dir. Specify metadata cache path explicitly.")
-                    .into();
-                home_path.join("diem_backup_metadata")
-            })
+            .unwrap_or_else(|| TEMP_METADATA_CACHE_DIR.path().to_path_buf())
             .join(Self::SUB_DIR)
     }
 }

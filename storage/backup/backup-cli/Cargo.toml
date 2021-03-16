@@ -40,6 +40,7 @@ diem-crypto = { path = "../../../crypto/crypto" }
 diem-infallible = { path = "../../../common/infallible" }
 diem-logger = { path = "../../../common/logger" }
 diem-secure-push-metrics = { path = "../../../secure/push-metrics" }
+diem-temppath = { path = "../../../common/temppath" }
 diem-types = { path = "../../../types" }
 diem-vm = { path = "../../../language/diem-vm" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
@@ -55,7 +56,6 @@ executor-test-helpers = { path = "../../../execution/executor-test-helpers" }
 diemdb = { path = "../../diemdb", features = ["fuzzing"] }
 diem-config = { path = "../../../config" }
 diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
-diem-temppath = { path = "../../../common/temppath" }
 storage-interface = { path = "../../storage-interface" }
 
 [features]
