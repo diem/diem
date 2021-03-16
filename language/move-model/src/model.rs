@@ -2169,11 +2169,12 @@ pub enum TypeConstraint {
 impl TypeConstraint {
     // TODO(tmn) migrate to abilities
     fn from(abs: AbilitySet) -> Self {
-        match (abs.has_copy(), abs.has_drop(), abs.has_key()) {
-            (true, true, false) => TypeConstraint::Copyable,
-            (false, false, true) => TypeConstraint::Resource,
-            (false, false, false) => TypeConstraint::None,
-            _ => panic!("Unsupported ability set"),
+        if abs.has_key() {
+            TypeConstraint::Resource
+        } else if abs.has_copy() | abs.has_drop() {
+            TypeConstraint::Copyable
+        } else {
+            TypeConstraint::None
         }
     }
 }
