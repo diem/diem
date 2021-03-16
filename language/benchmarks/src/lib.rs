@@ -3,5 +3,6 @@
 
 #![forbid(unsafe_code)]
 
+pub mod measurement;
 pub mod move_vm;
 pub mod transactions;

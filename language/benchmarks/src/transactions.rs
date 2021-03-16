@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use criterion::{BatchSize, Bencher};
+use criterion::{measurement::Measurement, BatchSize, Bencher};
 use diem_proptest_helpers::ValueGenerator;
 use diem_types::transaction::SignedTransaction;
 use language_e2e_tests::{
@@ -52,7 +52,7 @@ where
     }
 
     /// Runs the bencher.
-    pub fn bench(&self, b: &mut Bencher) {
+    pub fn bench<M: Measurement>(&self, b: &mut Bencher<M>) {
         b.iter_batched(
             || {
                 TransactionBenchState::with_size(

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use criterion::Criterion;
+use criterion::{measurement::Measurement, Criterion};
 use diem_state_view::StateView;
 use diem_types::{access_path::AccessPath, account_address::AccountAddress};
 use diem_vm::data_cache::StateViewCache;
@@ -34,7 +34,7 @@ static STDLIB_VECTOR_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
 });
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
-pub fn bench(c: &mut Criterion, fun: &str) {
+pub fn bench<M: Measurement + 'static>(c: &mut Criterion<M>, fun: &str) {
     let modules = compile_modules();
     let move_vm = MoveVM::new();
     execute(c, &move_vm, modules, fun);
@@ -63,7 +63,12 @@ fn compile_modules() -> Vec<CompiledModule> {
 }
 
 // execute a given function in the Bench module
-fn execute(c: &mut Criterion, move_vm: &MoveVM, modules: Vec<CompiledModule>, fun: &str) {
+fn execute<M: Measurement + 'static>(
+    c: &mut Criterion<M>,
+    move_vm: &MoveVM,
+    modules: Vec<CompiledModule>,
+    fun: &str,
+) {
     // establish running context
     let sender = AccountAddress::new(Address::DIEM_CORE.to_u8());
     let state = EmptyStateView;

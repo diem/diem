@@ -1201,6 +1201,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "criterion-cpu-time"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63aaaf47e457badbcb376c65a49d0f182c317ebd97dc6d1ced94c8e1d09c0f3a"
+dependencies = [
+ "criterion",
+ "libc",
+]
+
+[[package]]
 name = "criterion-plot"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3938,6 +3948,7 @@ dependencies = [
  "anyhow",
  "bytecode-verifier",
  "criterion",
+ "criterion-cpu-time",
  "diem-proptest-helpers",
  "diem-state-view",
  "diem-types",
