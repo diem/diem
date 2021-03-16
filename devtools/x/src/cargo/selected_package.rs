@@ -4,6 +4,7 @@
 use crate::{changed_since::changed_since_impl, context::XContext, Result};
 use anyhow::anyhow;
 use guppy::graph::DependencyDirection;
+use log::warn;
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 use x_core::WorkspaceStatus;
@@ -17,6 +18,9 @@ pub struct SelectedPackageArgs {
     #[structopt(long, short, number_of_values = 1)]
     /// Run on the specified members (package subsets)
     pub(crate) members: Vec<String>,
+    #[structopt(long, number_of_values = 1)]
+    /// Exclude packages
+    pub(crate) exclude: Vec<String>,
     #[structopt(long, short)]
     /// Run on packages changed since the merge base of this commit
     changed_since: Option<String>,
@@ -70,7 +74,26 @@ impl SelectedPackageArgs {
             );
         }
 
-        Ok(SelectedPackages::new(includes))
+        let mut ret = SelectedPackages::new(includes);
+
+        if !self.exclude.is_empty() {
+            let workspace = xctx.core().package_graph()?.workspace();
+            // Check that all the excluded package names are valid.
+            let (known, unknown): (Vec<_>, Vec<_>) = xctx
+                .core()
+                .partition_workspace_names(self.exclude.iter().map(|package| package.as_str()))?;
+            if !unknown.is_empty() {
+                warn!(
+                    "excluded package(s) `{}` not found in workspace `{}`",
+                    unknown.join(", "),
+                    workspace.root()
+                )
+            }
+
+            ret.add_excludes(known);
+        }
+
+        Ok(ret)
     }
 }
 

@@ -13,9 +13,6 @@ use structopt::StructOpt;
 pub struct Args {
     #[structopt(flatten)]
     package_args: SelectedPackageArgs,
-    #[structopt(long, number_of_values = 1)]
-    /// Package to exclude (see `cargo help pkgid`)
-    exclude: Vec<String>,
     #[structopt(flatten)]
     build_args: BuildArgs,
     #[structopt(long, parse(from_os_str))]

@@ -148,9 +148,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.38"
+version = "1.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afddf7f520a80dbf76e6f50a35bca42a2331ef227a28b3b6dc5c2e2338d114b1"
+checksum = "81cddc5f91628367664cc7c69714ff08deee8a3efc54623011c772544d7b2767"
 
 [[package]]
 name = "arbitrary"
@@ -688,9 +688,9 @@ checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
 name = "camino"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fb25ad5c4211e3c7abded8f00b480e6d1608845dcf14157e9e81d5432e9ac16"
+checksum = "d4648c6d00a709aa069a236adcaae4f605a6241c72bf5bee79331a4b625921a9"
 dependencies = [
  "serde",
 ]
@@ -2703,6 +2703,18 @@ name = "dtoa"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88d7ed2934d741c6b37e33e3832298e8850b53fd2d2bea03873375596c7cea4e"
+
+[[package]]
+name = "duct"
+version = "0.13.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0fc6a0a59ed0888e0041cf708e66357b7ae1a82f1c67247e1f93b5e0818f7d8d"
+dependencies = [
+ "libc",
+ "once_cell",
+ "os_pipe",
+ "shared_child",
+]
 
 [[package]]
 name = "ed25519"
@@ -4993,6 +5005,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "os_pipe"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb233f06c2307e1f5ce2ecad9f8121cffbbee2c95428f44ea85222e460d0d213"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6512,6 +6534,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared_child"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6be9f7d5565b1483af3e72975e2dee33879b3b86bd48c0929fccf6585d79e65a"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "shell-words"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6534,6 +6566,16 @@ dependencies = [
  "serde",
  "static_assertions",
  "thiserror",
+]
+
+[[package]]
+name = "signal-hook"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6aa894ef3fade0ee7243422f4fbbd6c2b48e6de767e621d37ef65f2310f53cea"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
 ]
 
 [[package]]
@@ -7089,6 +7131,27 @@ dependencies = [
  "rand 0.8.3",
  "structopt 0.3.21",
  "vm",
+]
+
+[[package]]
+name = "testrunner"
+version = "0.1.0"
+source = "git+https://github.com/diem/diem-devtools?branch=main#3cc8015b05cf591a5a96801aee394f7df92d946c"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "atty",
+ "camino",
+ "crossbeam-channel",
+ "duct",
+ "num_cpus",
+ "once_cell",
+ "rayon",
+ "serde",
+ "serde_json",
+ "signal-hook",
+ "structopt 0.3.21",
+ "termcolor",
 ]
 
 [[package]]
@@ -7983,6 +8046,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "camino",
+ "cargo_metadata",
  "chrono",
  "colored-diff",
  "determinator",
@@ -7998,6 +8062,7 @@ dependencies = [
  "serde",
  "serde_json",
  "structopt 0.3.21",
+ "testrunner",
  "toml",
  "x-core",
  "x-lint",

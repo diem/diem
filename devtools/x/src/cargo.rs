@@ -7,12 +7,14 @@ use crate::{
     utils::{apply_sccache_if_possible, project_root},
     Result,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
+use cargo_metadata::Message;
 use indexmap::map::IndexMap;
 use log::{info, warn};
 use std::{
     env,
     ffi::{OsStr, OsString},
+    io::Cursor,
     path::Path,
     process::{Command, Output, Stdio},
     time::Instant,
@@ -207,12 +209,10 @@ impl Cargo {
     }
 
     /// Runs this command, capturing the standard output into a `Vec<u8>`.
-    /// No logging/timing will be displayed as the result of this call from x.
-    #[allow(dead_code)]
+    /// Standard error is forwarded.
     pub fn run_with_output(&mut self) -> Result<Vec<u8>> {
         self.inner.stderr(Stdio::inherit());
-        // Since system out hijacked don't log for this command
-        self.do_run(false).map(|o| o.stdout)
+        self.do_run(true).map(|o| o.stdout)
     }
 
     /// Internal run command, where the magic happens.
@@ -332,14 +332,39 @@ impl<'a> CargoCommand<'a> {
             return Ok(());
         }
 
+        let mut cargo = self.prepare_cargo(packages);
+        cargo.run()
+    }
+
+    /// Runs this command on the selected packages, returning the standard output as a bytestring.
+    pub fn run_capture_messages(
+        &self,
+        packages: &SelectedPackages<'_>,
+    ) -> Result<impl Iterator<Item = Result<Message>>> {
+        // Early return if we have no packages to run.
+        let output = if !packages.should_invoke() {
+            info!("no packages to {}: exiting early", self.as_str());
+            vec![]
+        } else {
+            let mut cargo = self.prepare_cargo(packages);
+            cargo.args(&["--message-format", "json"]);
+            cargo.run_with_output()?
+        };
+
+        Ok(Message::parse_stream(Cursor::new(output))
+            .map(|message| message.context("error while parsing message from Cargo")))
+    }
+
+    fn prepare_cargo(&self, packages: &SelectedPackages<'_>) -> Cargo {
         let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
         cargo
             .current_dir(project_root())
             .args(self.direct_args())
             .packages(packages)
             .pass_through(self.pass_through_args())
-            .envs(self.get_extra_env().to_owned())
-            .run()
+            .envs(self.get_extra_env().to_owned());
+
+        cargo
     }
 
     pub fn as_str(&self) -> &'static str {
