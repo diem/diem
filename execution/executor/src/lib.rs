@@ -8,7 +8,7 @@ mod executor_test;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 mod logging;
-mod metrics;
+pub mod metrics;
 #[cfg(test)]
 mod mock_vm;
 mod speculation_cache;

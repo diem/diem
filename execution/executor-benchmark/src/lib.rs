@@ -22,12 +22,17 @@ use diem_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction, Transaction,
+        Version,
     },
 };
 use diem_vm::DiemVM;
 use diemdb::DiemDB;
 use executor::{
     db_bootstrapper::{generate_waypoint, maybe_bootstrap},
+    metrics::{
+        DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS, DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS,
+        DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
+    },
     Executor,
 };
 use executor_types::BlockExecutor;
@@ -254,7 +259,6 @@ impl TransactionExecutor {
     fn run(&mut self) {
         let start_time = Instant::now();
         let mut version = 0;
-        let mut total_transactions = 0;
 
         while let Ok(transactions) = self.block_receiver.recv() {
             let num_txns = transactions.len();
@@ -268,9 +272,7 @@ impl TransactionExecutor {
                 .execute_block((block_id, transactions.clone()), self.parent_block_id)
                 .unwrap();
 
-            let execute_time = std::time::Instant::now().duration_since(execute_start);
             let commit_start = std::time::Instant::now();
-
             let block_info = BlockInfo::new(
                 1,        /* epoch */
                 0,        /* round, doesn't matter */
@@ -293,19 +295,41 @@ impl TransactionExecutor {
 
             self.parent_block_id = block_id;
 
-            let commit_time = std::time::Instant::now().duration_since(commit_start);
-            let total_time = execute_time + commit_time;
-            total_transactions += num_txns;
-
-            info!(
-                "Version: {}. execute time: {} ms. commit time: {} ms. TPS: {:.0}. Accumulative TPS: {:.0}",
-                version,
-                execute_time.as_millis(),
-                commit_time.as_millis(),
-                num_txns as f64 / total_time.as_secs_f64(),
-                total_transactions as f64 / start_time.elapsed().as_secs_f64(),
-            );
+            Self::report_block(version, start_time, execute_start, commit_start, num_txns);
         }
+    }
+
+    fn report_block(
+        version: Version,
+        global_start_time: Instant,
+        execute_start: Instant,
+        commit_start: Instant,
+        block_size: usize,
+    ) {
+        info!(
+            "Version: {}. execute time: {} ms. commit time: {} ms. TPS: {:.0}. Accumulative TPS: {:.0}",
+            version,
+            commit_start.duration_since(execute_start).as_millis(),
+            commit_start.elapsed().as_millis(),
+            block_size as f64 / execute_start.elapsed().as_secs_f64(),
+            version as f64 / global_start_time.elapsed().as_secs_f64(),
+        );
+        info!(
+            "Accumulative total: VM time: {:.0} secs, executor time: {:.0} secs, commit time: {:.0} secs",
+            DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum(),
+            DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.get_sample_sum() - DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum(),
+            DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.get_sample_sum(),
+        );
+        const NANOS_PER_SEC: f64 = 1_000_000_000.0;
+        info!(
+            "Accumulative per transaction: VM time: {:.0} ns, executor time: {:.0} ns, commit time: {:.0} ns",
+            DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum() * NANOS_PER_SEC
+                / version as f64,
+            (DIEM_EXECUTOR_EXECUTE_BLOCK_SECONDS.get_sample_sum() - DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.get_sample_sum()) * NANOS_PER_SEC
+                / version as f64,
+            DIEM_EXECUTOR_COMMIT_BLOCKS_SECONDS.get_sample_sum() * NANOS_PER_SEC
+                / version as f64,
+        );
     }
 }
 
