@@ -238,46 +238,23 @@ jobs:
           fi
           echo "::set-output name=prev-tag::$(echo $res)";
 
-  land-blocking-switch:
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    needs:
-      - build-images
-      - need-base-images
-    outputs:
-      lbt-switch: ${{ steps.set-switch.outputs.lbt-switch }}
-      head-tag: ${{ steps.set-switch.outputs.head-tag }}
-      prev-tag: ${{ steps.set-switch.outputs.prev-tag }}
-    steps:
-      - name: set lbt switch value
-        id: set-switch
-        run: |
-          lbt=true
-          head=''
-          prev=''
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST || needs.build-images.result!='success' }}; then
-            lbt=false
-          elif ${{ needs.need-base-images.result=='skipped' }}; then
-            head=${{ needs.build-images.outputs.head-tag }}
-          elif ${{ needs.need-base-images.result=='success' }}; then
-            head=${{ needs.build-images.outputs.head-tag }}
-            prev=${{ needs.need-base-images.outputs.prev-tag }}
-          else
-            lbt=false
-          fi
-          echo "::set-output name=lbt-switch::$(echo $lbt)";
-          echo "::set-output name=head-tag::$(echo $head)";
-          echo "::set-output name=prev-tag::$(echo $prev)";
-
   land-blocking-test:
     name: Run land blocking test
     runs-on: self-hosted
-    needs: [prepare, land-blocking-switch]
-    if: ${{ always() }}
+    needs: [prepare, build-images, need-base-images]
+    if: ${{ always() && needs.build-images.result=='success' }}
     timeout-minutes: 30
     steps:
+      - name: Set env
+        run: |
+          prev=''
+          echo "PR_NUM=${{ needs.prepare.outputs.changes-pull-request-number }}" >> $GITHUB_ENV
+          echo "HEAD_TAG=${{ needs.build-images.outputs.head-tag }}" >> $GITHUB_ENV
+          if ${{ needs.need-base-images.result=='success' }}; then
+            prev=${{ needs.need-base-images.outputs.prev-tag }}
+          fi
+          echo "PREV_TAG=$prev" >> $GITHUB_ENV
       - name: Launch cluster test
-        if: ${{ needs.land-blocking-switch.outputs.lbt-switch == 'true' }}
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           set +e
@@ -285,19 +262,17 @@ jobs:
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "CTI_OUTPUT_LOG=$CTI_OUTPUT_LOG" >> $GITHUB_ENV
           cmd=""
-          if [ "${{ needs.land-blocking-switch.outputs.prev-tag }} == ''" ]; then
-            echo here
-            cmd="./scripts/cti --tag ${{ needs.land-blocking-switch.outputs.head-tag }} -E RUST_LOG=debug --report report.json --suite land_blocking"
+          if [ "$PREV_TAG == ''" ]; then
+            cmd="./scripts/cti --tag $HEAD_TAG -E RUST_LOG=debug --report report.json --suite land_blocking"
           else
-            echo there
-            cmd="./scripts/cti --tag ${{ needs.land-blocking-switch.outputs.prev-tag }} --cluster-test-tag ${{ needs.land-blocking-switch.outputs.head-tag }} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${{ needs.land-blocking-switch.outputs.head-tag }} --report report.json --suite land_blocking_compat"
+            cmd="./scripts/cti --tag $PREV_TAG --cluster-test-tag $HEAD_TAG -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=$HEAD_TAG --report report.json --suite land_blocking_compat"
           fi
           eval $cmd
           ret=$?
           echo "cti exit code: $ret"
           echo "CTI_REPRO_CMD=$cmd" >> $GITHUB_ENV
           echo "CTI_EXIT_CODE=$ret" >> $GITHUB_ENV
-          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed for PR ${{ needs.prepare.outputs.changes-pull-request-number }}."
+          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed for PR $PR_NUM."
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
@@ -312,7 +287,7 @@ jobs:
             jq -n \
               --arg msg "$msg_text" \
               --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-              --arg pr_url "https://github.com/${{ github.repository }}/pull/${{ needs.prepare.outputs.changes-pull-request-number }}" \
+              --arg pr_url "https://github.com/${{ github.repository }}/pull/$PR_NUM" \
             '{
               "attachments": [
                 {
@@ -336,12 +311,11 @@ jobs:
           fi
       - name: Post test results on PR
         uses: actions/github-script@v3
-        if: ${{ needs.land-blocking-switch.outputs.lbt-switch == 'true' }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Find the number of the pull request that trigggers this push
-            let pr_num = ${{ needs.prepare.outputs.changes-pull-request-number }};
+            let pr_num = $PR_NUM;
             if (!pr_num) {
               console.warn("Did not find pull request num in previous step");
               console.log("GH event payload\n", context.payload);
