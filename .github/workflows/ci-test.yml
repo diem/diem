@@ -54,7 +54,7 @@ jobs:
         name: build extra images if it is needed by LBT
         if: ${{ github.event_name == 'push' }}
         run: |
-          res=true
+          res=false
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
             echo "Compat killswitch activated! Will run land_blocking suite";
             res=false
