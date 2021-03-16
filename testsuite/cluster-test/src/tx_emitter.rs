@@ -271,7 +271,7 @@ impl TxEmitter {
             "Will create {} accounts_per_client with total {} accounts",
             req.accounts_per_client, num_accounts
         );
-        self.mint_accounts(&req, num_accounts).await?;
+        // self.mint_accounts(&req, num_accounts).await?;
         let all_accounts = self.accounts.split_off(self.accounts.len() - num_accounts);
         let mut workers = vec![];
         let all_addresses: Vec<_> = all_accounts.iter().map(|d| d.address).collect();

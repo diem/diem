@@ -103,9 +103,9 @@ impl HealthCheckRunner {
         Self::new(
             cluster,
             vec![
-                Box::new(CommitHistoryHealthCheck::new()),
-                Box::new(liveness_health_check),
-                Box::new(fullnode_check),
+                // Box::new(CommitHistoryHealthCheck::new()),
+                // Box::new(liveness_health_check),
+                // Box::new(fullnode_check),
             ],
         )
     }

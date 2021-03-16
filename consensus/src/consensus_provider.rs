@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::state_computer::EmptyStateComputer;
 use crate::{
     counters,
     epoch_manager::EpochManager,
@@ -46,10 +47,11 @@ pub fn start_consensus(
         node_config.consensus.mempool_executed_txn_timeout_ms,
     ));
     let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
-    let state_computer = Arc::new(ExecutionProxy::new(
-        execution_correctness_manager.client(),
-        state_sync_client,
-    ));
+    // let state_computer = Arc::new(ExecutionProxy::new(
+    //     execution_correctness_manager.client(),
+    //     state_sync_client,
+    // ));
+    let state_computer = Arc::new(EmptyStateComputer::new());
     let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
 
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);

@@ -4,6 +4,7 @@
 use crate::{error::StateSyncError, state_replication::StateComputer};
 use anyhow::Result;
 use consensus_types::block::Block;
+use diem_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
@@ -14,6 +15,7 @@ use executor_types::{Error as ExecutionError, StateComputeResult};
 use fail::fail_point;
 use state_sync::client::StateSyncClient;
 use std::boxed::Box;
+use std::collections::HashMap;
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
@@ -105,5 +107,48 @@ impl StateComputer for ExecutionProxy {
             let anyhow_error: anyhow::Error = error.into();
             anyhow_error.into()
         })
+    }
+}
+pub struct EmptyStateComputer {
+    version: Mutex<HashMap<HashValue, u64>>,
+}
+
+impl EmptyStateComputer {
+    pub fn new() -> Self {
+        Self {
+            version: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl StateComputer for EmptyStateComputer {
+    fn compute(
+        &self,
+        _block: &Block,
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult, ExecutionError> {
+        Ok(StateComputeResult::new(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
+            vec![],
+            0,
+            vec![],
+            0,
+            None,
+            vec![],
+            vec![],
+        ))
+    }
+
+    async fn commit(
+        &self,
+        block_ids: Vec<HashValue>,
+        _commit: LedgerInfoWithSignatures,
+    ) -> Result<(), ExecutionError> {
+        Ok(())
+    }
+
+    async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<(), StateSyncError> {
+        Ok(())
     }
 }

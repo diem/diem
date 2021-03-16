@@ -101,19 +101,32 @@ impl StateComputer for MockStateComputer {
     }
 }
 
-pub struct EmptyStateComputer;
+pub struct EmptyStateComputer {
+    version: Mutex<HashMap<HashValue, u64>>,
+}
+
+impl EmptyStateComputer {
+    pub fn new() -> Self {
+        Self {
+            version: Mutex::new(HashMap::new()),
+        }
+    }
+}
 
 #[async_trait::async_trait]
 impl StateComputer for EmptyStateComputer {
     fn compute(
         &self,
-        _block: &Block,
-        _parent_block_id: HashValue,
+        block: &Block,
+        parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
+        let new_version = *self.version.lock().get(&parent_block_id).unwrap_or(&0)
+            + block.payload().unwrap_or(&vec![]).len() as u64;
+        self.version.lock().insert(block.id(), new_version);
         Ok(StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],
-            0,
+            new_version,
             vec![],
             0,
             None,
@@ -124,9 +137,13 @@ impl StateComputer for EmptyStateComputer {
 
     async fn commit(
         &self,
-        _block_ids: Vec<HashValue>,
+        block_ids: Vec<HashValue>,
         _commit: LedgerInfoWithSignatures,
     ) -> Result<(), Error> {
+        let mut l = self.version.lock();
+        for id in block_ids {
+            l.remove(&id);
+        }
         Ok(())
     }
 

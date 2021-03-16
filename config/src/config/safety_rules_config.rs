@@ -35,7 +35,7 @@ impl Default for SafetyRulesConfig {
             logger: LoggerConfig::default(),
             service: SafetyRulesService::Thread,
             test: None,
-            verify_vote_proposal_signature: true,
+            verify_vote_proposal_signature: false,
             export_consensus_key: false,
             // Default value of 30 seconds for a timeout
             network_timeout_ms: 30_000,
