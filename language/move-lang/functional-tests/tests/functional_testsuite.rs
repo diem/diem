@@ -11,29 +11,21 @@ use move_lang::{
     self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors, shared::Address,
     FullyCompiledProgram,
 };
+use once_cell::sync::Lazy;
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
 
 pub const STD_LIB_DIR: &str = "../../diem-framework/modules";
 pub const FUNCTIONAL_TEST_DIR: &str = "tests";
 
-struct MoveSourceCompiler {
-    pre_compiled_deps: FullyCompiledProgram,
+struct MoveSourceCompiler<'a> {
+    pre_compiled_deps: &'a FullyCompiledProgram,
     deps: Vec<String>,
     temp_files: Vec<NamedTempFile>,
 }
 
-impl MoveSourceCompiler {
-    fn new(deps: Vec<String>) -> Self {
-        let (files, program_res) =
-            move_lang::move_construct_pre_compiled_lib(&deps, None, None, false).unwrap();
-        let pre_compiled_deps = match program_res {
-            Ok(stdlib) => stdlib,
-            Err(errors) => {
-                eprintln!("!!!Standard library failed to compile!!!");
-                errors::report_errors(files, errors)
-            }
-        };
+impl<'a> MoveSourceCompiler<'a> {
+    fn new(pre_compiled_deps: &'a FullyCompiledProgram) -> Self {
         MoveSourceCompiler {
             pre_compiled_deps,
             deps: vec![],
@@ -80,7 +72,7 @@ impl fmt::Display for MoveSourceCompilerError {
 
 impl std::error::Error for MoveSourceCompilerError {}
 
-impl Compiler for MoveSourceCompiler {
+impl<'a> Compiler for MoveSourceCompiler<'a> {
     /// Compile a transaction script or module.
     fn compile<Logger: FnMut(String)>(
         &mut self,
@@ -138,11 +130,25 @@ impl Compiler for MoveSourceCompiler {
     }
 }
 
-fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
-    testsuite::functional_tests(
-        MoveSourceCompiler::new(diem_framework::diem_stdlib_files()),
-        path,
+static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
+    let (files, program_res) = move_lang::move_construct_pre_compiled_lib(
+        &diem_framework::diem_stdlib_files(),
+        None,
+        None,
+        false,
     )
+    .unwrap();
+    match program_res {
+        Ok(stdlib) => stdlib,
+        Err(errors) => {
+            eprintln!("!!!Standard library failed to compile!!!");
+            errors::report_errors(files, errors)
+        }
+    }
+});
+
+fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
+    testsuite::functional_tests(MoveSourceCompiler::new(&*DIEM_PRECOMPILED_STDLIB), path)
 }
 
 datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move$");

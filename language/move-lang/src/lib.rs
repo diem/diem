@@ -81,6 +81,7 @@ pub enum PassResult {
     Compilation(Vec<CompiledUnit>),
 }
 
+#[derive(Clone)]
 pub struct FullyCompiledProgram {
     pub parser: (Option<Address>, parser::ast::Program),
     pub expansion: expansion::ast::Program,
