@@ -13,7 +13,7 @@ use std::{
     sync::mpsc::{channel, Sender},
     thread,
 };
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 #[derive(Debug, StructOpt)]
@@ -68,14 +68,33 @@ struct TestOpts {
     /// NO-OP: unsupported option, exists for compatibility with the default test harness
     color: Option<String>,
     #[structopt(long)]
-    /// NO-OP: unsupported option, exists for compatibility with the default test harness
-    format: Option<String>,
+    /// Configure formatting of output:
+    ///   pretty = Print verbose output;
+    ///   terse = Display one character per test;
+    ///   (json is unsupported, exists for compatibility with the default test harness)
+    #[structopt(possible_values = &Format::variants(), default_value, case_insensitive = true)]
+    format: Format,
     #[structopt(long)]
     /// NO-OP: unsupported option, exists for compatibility with the default test harness
     report_time: Option<String>,
     #[structopt(long)]
     /// NO-OP: unsupported option, exists for compatibility with the default test harness
     ensure_time: bool,
+}
+
+arg_enum! {
+    #[derive(Debug, Eq, PartialEq)]
+    enum Format {
+        Pretty,
+        Terse,
+        Json,
+    }
+}
+
+impl Default for Format {
+    fn default() -> Self {
+        Format::Pretty
+    }
 }
 
 pub fn runner(reqs: &[Requirements]) {
@@ -88,8 +107,10 @@ pub fn runner(reqs: &[Requirements]) {
             println!("{}: test", test.name);
         }
 
-        println!();
-        println!("{} tests, 0 benchmarks", tests.len());
+        if options.format == Format::Pretty {
+            println!();
+            println!("{} tests, 0 benchmarks", tests.len());
+        }
         return;
     }
 
