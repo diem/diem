@@ -66,7 +66,7 @@ jobs:
         name: find changes that should trigger docker compose testing.
         uses: ./.github/actions/matches
         with:
-          pattern: '^documentation'
+          pattern: "^documentation"
           invert: "true"
       - id: website-changes
         name: find website changes.
@@ -277,6 +277,11 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
       - name: split tests
         run: |
           cd /opt/git/diem/
