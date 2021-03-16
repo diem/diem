@@ -6,7 +6,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::Graph,
-    stackless_bytecode::{BorrowNode, Bytecode, Label, Operation, PropKind},
+    stackless_bytecode::{AttrId, BorrowNode, Bytecode, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
 use move_model::{
@@ -16,8 +16,14 @@ use move_model::{
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, Default, Clone)]
+pub struct LoopInfo {
+    pub invariants: Vec<(AttrId, ast::Exp)>,
+    pub targets: BTreeSet<TempIndex>,
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct LoopAnnotation {
-    pub loop_targets: BTreeMap<Label, BTreeSet<usize>>,
+    pub loops: BTreeMap<Label, LoopInfo>,
 }
 
 pub struct LoopAnalysisProcessor {}
@@ -38,11 +44,8 @@ impl FunctionTargetProcessor for LoopAnalysisProcessor {
         if func_env.is_native() {
             return data;
         }
-        let loop_targets = Self::collect_loop_targets(func_env, &data);
-        let mut data = Self::transform(func_env, data, &loop_targets);
-        let loop_annotation = LoopAnnotation { loop_targets };
-        data.annotations.set::<LoopAnnotation>(loop_annotation);
-        data
+        let loop_annotation = Self::build_loop_annotation(func_env, &data);
+        Self::transform(func_env, data, &loop_annotation)
     }
 
     fn name(&self) -> String {
@@ -54,7 +57,7 @@ impl LoopAnalysisProcessor {
     fn transform(
         func_env: &FunctionEnv<'_>,
         mut data: FunctionData,
-        loop_targets: &BTreeMap<Label, BTreeSet<usize>>,
+        loop_annotation: &LoopAnnotation,
     ) -> FunctionData {
         let code = std::mem::take(&mut data.code);
         let mut builder = FunctionDataBuilder::new(func_env, data);
@@ -63,11 +66,12 @@ impl LoopAnalysisProcessor {
                 Bytecode::Label(attr_id, label) => {
                     builder.emit(bytecode);
                     builder.set_loc_from_attr(attr_id);
-                    if loop_targets.contains_key(&label) {
+                    if let Some(loop_info) = loop_annotation.loops.get(&label) {
+                        // add additional assumptions
                         let exp =
                             builder.mk_not(builder.mk_bool_call(ast::Operation::AbortFlag, vec![]));
                         builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assume, exp));
-                        for idx in &loop_targets[&label] {
+                        for idx in &loop_info.targets {
                             let exp = builder.mk_bool_call(
                                 ast::Operation::WellFormed,
                                 vec![builder.mk_temporary(*idx)],
@@ -76,7 +80,18 @@ impl LoopAnalysisProcessor {
                                 Bytecode::Prop(attr_id, PropKind::Assume, exp)
                             });
                         }
+
+                        // add instrumentations to assert loop invariants
+                        for (attr_id, exp) in &loop_info.invariants {
+                            builder.emit(Bytecode::Prop(*attr_id, PropKind::Assert, exp.clone()));
+                        }
                     }
+                }
+                Bytecode::Prop(_, PropKind::Invariant, _) => {
+                    // do nothing, as the invariants should have been translated to asserts
+                    //
+                    // TODO (mengxu): we might want to print out warnings for invariants not
+                    // specified at the loop header block?
                 }
                 _ => {
                     builder.emit(bytecode);
@@ -86,10 +101,7 @@ impl LoopAnalysisProcessor {
         builder.data
     }
 
-    fn collect_loop_targets(
-        func_env: &FunctionEnv<'_>,
-        data: &FunctionData,
-    ) -> BTreeMap<Label, BTreeSet<usize>> {
+    fn build_loop_annotation(func_env: &FunctionEnv<'_>, data: &FunctionData) -> LoopAnnotation {
         // build for natural loops
         let func_target = FunctionTarget::new(func_env, data);
         let code = func_target.get_bytecode();
@@ -132,23 +144,45 @@ impl LoopAnalysisProcessor {
             );
         }
 
-        // find loop targets per loop (also means, per label)
-        let mut loop_targets = BTreeMap::new();
-        for single_loop in natural_loops {
-            let targets: BTreeSet<TempIndex> = single_loop
+        // find loop targets and invariants per loop (also means, per label)
+        let mut loops = BTreeMap::new();
+        for single_loop in &natural_loops {
+            let targets = single_loop
                 .loop_body
-                .into_iter()
+                .iter()
                 .map(|block_id| {
-                    cfg.instr_indexes(block_id)
+                    cfg.instr_indexes(*block_id)
                         .expect("A loop body should never contain a dummy block")
                 })
                 .flatten()
                 .map(|code_offset| Self::targets(&code[code_offset as usize]))
                 .flatten()
                 .collect();
-            loop_targets.insert(loop_header_to_label[&single_loop.loop_header], targets);
+
+            let invariants = cfg
+                .instr_indexes(single_loop.loop_header)
+                .unwrap()
+                .filter_map(|code_offset| {
+                    let instruction = &code[code_offset as usize];
+                    match instruction {
+                        Bytecode::Prop(attr_id, PropKind::Invariant, exp) => {
+                            Some((*attr_id, exp.clone()))
+                        }
+                        _ => None,
+                    }
+                })
+                .collect();
+
+            loops.insert(
+                loop_header_to_label[&single_loop.loop_header],
+                LoopInfo {
+                    invariants,
+                    targets,
+                },
+            );
         }
-        loop_targets
+
+        LoopAnnotation { loops }
     }
 
     fn targets(bytecode: &Bytecode) -> Vec<TempIndex> {
