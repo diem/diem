@@ -129,7 +129,7 @@ pub fn bootstrap(
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint)
         .with(warp::log::custom(|info| {
-            debug!(HttpRequestLog {
+            info!(HttpRequestLog {
                 remote_addr: info.remote_addr(),
                 method: info.method().to_string(),
                 path: info.path().to_string(),
