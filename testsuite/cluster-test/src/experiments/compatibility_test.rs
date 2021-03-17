@@ -16,7 +16,7 @@ use futures::future::try_join_all;
 use std::{
     collections::HashSet,
     env, fmt,
-    iter::once,
+    iter::{once, Iterator},
     time::{Duration, Instant},
 };
 use structopt::StructOpt;
@@ -77,6 +77,21 @@ pub async fn update_batch_instance(
     Ok(())
 }
 
+pub fn get_corresponding_full_nodes<'a>(
+    validators: impl Iterator<Item = &'a Instance>,
+    cluster: &Cluster,
+) -> Vec<Instance> {
+    let validator_groups = validators
+        .map(|instance| instance.validator_group())
+        .collect::<Vec<_>>();
+    cluster
+        .fullnode_instances()
+        .iter()
+        .filter(|full_node| validator_groups.contains(&full_node.validator_group()))
+        .cloned()
+        .collect()
+}
+
 pub fn get_instance_list_str(batch: &[Instance]) -> String {
     let mut nodes_list = String::from("");
     for instance in batch.iter() {
@@ -101,11 +116,13 @@ pub struct CompatiblityTestParams {
 pub struct CompatibilityTest {
     first_node: Instance,
     first_lsr: Vec<Instance>,
+    first_full_node: Vec<Instance>,
     first_batch: Vec<Instance>,
     first_batch_lsr: Vec<Instance>,
+    first_full_nodes_batch: Vec<Instance>,
     second_batch: Vec<Instance>,
     second_batch_lsr: Vec<Instance>,
-    full_nodes: Vec<Instance>,
+    second_full_nodes_batch: Vec<Instance>,
     updated_image_tag: String,
 }
 
@@ -125,6 +142,8 @@ impl ExperimentParam for CompatiblityTestParams {
         let first_node = first_batch
             .pop()
             .expect("Requires at least one validator in the first batch");
+        let first_full_node = get_corresponding_full_nodes([first_node.clone()].iter(), cluster);
+
         let mut first_lsr = vec![];
         let mut first_batch_lsr = vec![];
         let mut second_batch_lsr = vec![];
@@ -134,14 +153,19 @@ impl ExperimentParam for CompatiblityTestParams {
             first_lsr = cluster.lsr_instances_for_validators(&[first_node.clone()]);
         }
 
+        let first_full_nodes_batch = get_corresponding_full_nodes(first_batch.iter(), cluster);
+        let second_full_nodes_batch = get_corresponding_full_nodes(second_batch.iter(), cluster);
+
         Self::E {
             first_node,
             first_lsr,
+            first_full_node,
             first_batch,
             first_batch_lsr,
+            first_full_nodes_batch,
             second_batch,
             second_batch_lsr,
-            full_nodes: cluster.fullnode_instances().to_vec(),
+            second_full_nodes_batch,
             updated_image_tag: self.updated_image_tag,
         }
     }
@@ -158,18 +182,6 @@ impl Experiment for CompatibilityTest {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let validator_txn_job = EmitJobRequest::for_instances(
-            context.cluster.validator_instances().to_vec(),
-            context.global_emit_job_request,
-            0,
-            0,
-        );
-        let fullnode_txn_job = EmitJobRequest::for_instances(
-            context.cluster.fullnode_instances().to_vec(),
-            context.global_emit_job_request,
-            0,
-            0,
-        );
         let job_duration = Duration::from_secs(3);
         context.report.report_text(format!(
             "Compatibility test results for {} ==> {} (PR)",
@@ -183,19 +195,58 @@ impl Experiment for CompatibilityTest {
         );
         info!("{}", msg);
         context.report.report_text(msg);
+        let all_full_nodes_request = EmitJobRequest::for_instances(
+            context.cluster.validator_instances().to_vec(),
+            context.global_emit_job_request,
+            0,
+            0,
+        );
         context
             .tx_emitter
-            .emit_txn_for(job_duration, fullnode_txn_job.clone())
+            .emit_txn_for(job_duration, all_full_nodes_request)
             .await
             .map_err(|e| anyhow::format_err!("Failed to generate traffic: {}", e))?;
 
         let msg = format!(
-            "2. First validator {} ==> {}, to validate storage",
+            "2. First full node {} ==> {}, to validate new full node to old validator node traffic",
             context.current_tag, self.updated_image_tag
         );
         info!("{}", msg);
-        info!("Upgrading validator: {}", self.first_node);
         context.report.report_text(msg);
+        info!(
+            "Upgrade Full Node: {}",
+            get_instance_list_str(&self.first_full_node)
+        );
+        update_batch_instance(
+            context,
+            &self.first_full_node,
+            &[],
+            self.updated_image_tag.clone(),
+        )
+        .await?;
+
+        // Full node running at n+1, validator running n
+        context
+            .tx_emitter
+            .emit_txn_for(
+                job_duration,
+                EmitJobRequest::for_instances(
+                    self.first_full_node.clone(),
+                    context.global_emit_job_request,
+                    0,
+                    0,
+                ),
+            )
+            .await
+            .map_err(|e| anyhow::format_err!("Storage backwards compat broken: {}", e))?;
+
+        let msg = format!(
+            "3. First Validator node {} ==> {}, to validate storage compatibility",
+            context.current_tag, self.updated_image_tag
+        );
+        info!("{}", msg);
+        context.report.report_text(msg);
+        info!("Upgrading validator: {}", self.first_node);
         let first_node = vec![self.first_node.clone()];
         update_batch_instance(
             context,
@@ -208,13 +259,18 @@ impl Experiment for CompatibilityTest {
             .tx_emitter
             .emit_txn_for(
                 job_duration,
-                EmitJobRequest::for_instances(first_node, context.global_emit_job_request, 0, 0),
+                EmitJobRequest::for_instances(
+                    self.first_full_node.clone(),
+                    context.global_emit_job_request,
+                    0,
+                    0,
+                ),
             )
             .await
             .map_err(|e| anyhow::format_err!("Storage backwards compat broken: {}", e))?;
 
         let msg = format!(
-            "3. First batch validators ({}) {} ==> {}, to test consensus",
+            "4. First batch validators ({}) {} ==> {}, to test consensus and traffic between old full nodes and new validator node",
             self.first_batch.len(),
             context.current_tag,
             self.updated_image_tag
@@ -232,24 +288,54 @@ impl Experiment for CompatibilityTest {
             self.updated_image_tag.clone(),
         )
         .await?;
+
+        // Full node running at n, validator running n+1
         context
             .tx_emitter
-            .emit_txn_for(job_duration, validator_txn_job.clone())
+            .emit_txn_for(
+                job_duration,
+                EmitJobRequest::for_instances(
+                    self.first_full_nodes_batch.clone(),
+                    context.global_emit_job_request,
+                    0,
+                    0,
+                ),
+            )
             .await
             .map_err(|e| anyhow::format_err!("Consensus backwards compat broken: {}", e))?;
 
         let msg = format!(
-            "4. Second batch validators ({}) {} ==> {}, to upgrade rest of the validators",
+            "5. First batch full nodes ({}) {} ==> {}",
+            self.first_full_nodes_batch.len(),
+            context.current_tag,
+            self.updated_image_tag
+        );
+        info!("{}", msg);
+        context.report.report_text(msg);
+        info!(
+            "Upgrading full nodes: {}",
+            get_instance_list_str(&self.first_full_nodes_batch)
+        );
+        update_batch_instance(
+            context,
+            &self.first_full_nodes_batch,
+            &[],
+            self.updated_image_tag.clone(),
+        )
+        .await?;
+
+        let msg = format!(
+            "6. Second batch validators ({}) {} ==> {}, to upgrade rest of the validators",
             self.second_batch.len(),
             context.current_tag,
             self.updated_image_tag
         );
         info!("{}", msg);
+        context.report.report_text(msg);
         info!(
             "Upgrading validators: {}",
             get_instance_list_str(&self.second_batch)
         );
-        context.report.report_text(msg);
         update_batch_instance(
             context,
             &self.second_batch,
@@ -259,53 +345,52 @@ impl Experiment for CompatibilityTest {
         .await?;
         context
             .tx_emitter
-            .emit_txn_for(job_duration, validator_txn_job)
+            .emit_txn_for(
+                job_duration,
+                EmitJobRequest::for_instances(
+                    self.second_batch.clone(),
+                    context.global_emit_job_request,
+                    0,
+                    0,
+                ),
+            )
             .await
             .map_err(|e| {
                 anyhow::format_err!("Failed to upgrade rest of validator images: {}", e)
             })?;
 
-        // TODO(rustielin): fullnode reboot in cluster-test breaks with current version of config-builder
-        //                  skipping for now, so cluster is not restored to same version across all instances
-        let disable_fn_upgrade = env::var("DISABLE_FN_UPGRADE").is_ok();
-        if disable_fn_upgrade {
-            let msg = format!(
-                "5. Reset all nodes ==> {}, to finish the network upgrade",
-                self.updated_image_tag
-            );
-            info!("{}", msg);
-            context.report.report_text(msg);
-            context.cluster_builder.current_tag = self.updated_image_tag.clone();
-            context
-                .cluster_builder
-                .setup_cluster(context.cluster_builder_params, false)
-                .await?;
-        } else {
-            let msg = format!(
-                "5. All full nodes ({}) {} ==> {}, to finish the network upgrade",
-                self.full_nodes.len(),
-                context.current_tag,
-                self.updated_image_tag
-            );
-            info!("{}", msg);
-            info!(
-                "Upgrading full nodes: {}",
-                get_instance_list_str(&self.full_nodes)
-            );
-            context.report.report_text(msg);
-            update_batch_instance(
-                context,
-                &self.full_nodes,
-                &[],
-                self.updated_image_tag.clone(),
+        let msg = format!(
+            "7. Second batch of full nodes ({}) {} ==> {}, to finish the network upgrade",
+            self.second_full_nodes_batch.len(),
+            context.current_tag,
+            self.updated_image_tag
+        );
+        info!("{}", msg);
+        info!(
+            "Upgrading full nodes: {}",
+            get_instance_list_str(&self.second_full_nodes_batch)
+        );
+        context.report.report_text(msg);
+        update_batch_instance(
+            context,
+            &self.second_full_nodes_batch,
+            &[],
+            self.updated_image_tag.clone(),
+        )
+        .await?;
+        context
+            .tx_emitter
+            .emit_txn_for(
+                job_duration,
+                EmitJobRequest::for_instances(
+                    self.second_full_nodes_batch.clone(),
+                    context.global_emit_job_request,
+                    0,
+                    0,
+                ),
             )
-            .await?;
-            context
-                .tx_emitter
-                .emit_txn_for(job_duration, fullnode_txn_job)
-                .await
-                .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
-        }
+            .await
+            .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
 
         Ok(())
     }
