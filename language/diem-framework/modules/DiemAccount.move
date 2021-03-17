@@ -1243,7 +1243,6 @@ module DiemAccount {
         new_account_address: address;
         auth_key_prefix: vector<u8>;
         add_all_currencies: bool;
-        include DiemTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotTreasuryCompliance{account: creator_account};
         aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
         aborts_if exists<DesignatedDealer::Dealer>(new_account_address) with Errors::ALREADY_PUBLISHED;

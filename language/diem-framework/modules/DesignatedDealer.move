@@ -4,7 +4,6 @@ address 0x1 {
 module DesignatedDealer {
     use 0x1::Errors;
     use 0x1::Diem;
-    use 0x1::DiemTimestamp;
     use 0x1::Event;
     use 0x1::Roles;
     use 0x1::Signer;
@@ -126,7 +125,6 @@ module DesignatedDealer {
         aborts_if Diem::is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
         aborts_if exists<Diem::PreburnQueue<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
         aborts_if exists<Diem::Preburn<CoinType>>(dd_addr) with Errors::INVALID_STATE;
-        include DiemTimestamp::AbortsIfNotOperating;
     }
 
     public fun tiered_mint<CoinType: store>(
@@ -180,7 +178,6 @@ module DesignatedDealer {
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
         include AbortsIfNoDealer;
-        include DiemTimestamp::AbortsIfNotOperating;
         aborts_if !exists<Diem::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
         include Diem::MintAbortsIf<CoinType>{value: amount};
     }
