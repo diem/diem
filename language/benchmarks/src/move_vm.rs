@@ -12,7 +12,7 @@ use move_core_types::{
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 use vm::CompiledModule;
@@ -73,7 +73,7 @@ fn execute<M: Measurement + 'static>(
     let data_cache = StateViewCache::new(&state);
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&data_cache);
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     for module in modules {
         let mut mod_blob = vec![];
@@ -81,7 +81,7 @@ fn execute<M: Measurement + 'static>(
             .serialize(&mut mod_blob)
             .expect("Module serialization error");
         session
-            .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
+            .publish_module(mod_blob, sender, &mut gas_status, &log_context)
             .expect("Module must load");
     }
 
@@ -98,7 +98,7 @@ fn execute<M: Measurement + 'static>(
                     &fun_name,
                     vec![],
                     vec![],
-                    &mut cost_strategy,
+                    &mut gas_status,
                     &log_context,
                 )
                 .unwrap_or_else(|err| {

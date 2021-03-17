@@ -19,7 +19,7 @@ use move_core_types::effects::ChangeSet as MoveChanges;
 use move_lang::{compiled_unit::CompiledUnit, move_compile};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::path::{Path, PathBuf};
 use vm::{errors::VMResult, file_format::CompiledModule};
@@ -300,14 +300,14 @@ impl DiemDebugger {
         let predicate = compile_move_script(code_path)?;
         let is_version_ok = |version| {
             self.run_session_at_version(version, override_changeset.clone(), |session| {
-                let mut cost_strategy = CostStrategy::system();
+                let mut gas_status = GasStatus::new_unmetered();
                 let log_context = NoContextLog::new();
                 session.execute_script(
                     predicate.clone(),
                     vec![],
                     vec![],
                     vec![diem_root_address(), sender],
-                    &mut cost_strategy,
+                    &mut gas_status,
                     &log_context,
                 )
             })

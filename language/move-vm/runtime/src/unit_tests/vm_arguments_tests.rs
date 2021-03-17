@@ -11,7 +11,7 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::{StatusCode, StatusType},
 };
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use vm::{
     errors::{PartialVMResult, VMResult},
     file_format::{
@@ -261,13 +261,13 @@ fn call_script_with_args_ty_args_signers(
     let remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     session.execute_script(
         script,
         ty_args,
         args,
         signers,
-        &mut cost_strategy,
+        &mut gas_status,
         &log_context,
     )
 }
@@ -289,14 +289,14 @@ fn call_script_function_with_args_ty_args_signers(
     remote_view.add_module(module);
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     session.execute_script_function(
         &id,
         function_name.as_ident_str(),
         ty_args,
         args,
         signers,
-        &mut cost_strategy,
+        &mut gas_status,
         &log_context,
     )?;
     Ok(())
@@ -763,7 +763,7 @@ fn call_missing_item() {
     let mut remote_view = RemoteStore::new();
     let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let error = session
         .execute_script_function(
             id,
@@ -771,7 +771,7 @@ fn call_missing_item() {
             vec![],
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .err()
@@ -789,7 +789,7 @@ fn call_missing_item() {
             vec![],
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .err()

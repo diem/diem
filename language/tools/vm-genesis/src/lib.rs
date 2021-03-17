@@ -40,7 +40,7 @@ use move_vm_runtime::{
     move_vm::MoveVM,
     session::Session,
 };
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use transaction_builder::encode_create_designated_dealer_script_function;
@@ -178,7 +178,7 @@ fn exec_function(
             &Identifier::new(function_name).unwrap(),
             ty_args,
             args,
-            &mut CostStrategy::system(),
+            &mut GasStatus::new_unmetered(),
             log_context,
         )
         .unwrap_or_else(|e| {
@@ -204,7 +204,7 @@ fn exec_script_function(
             script_function.ty_args().to_vec(),
             script_function.args().to_vec(),
             vec![sender],
-            &mut CostStrategy::system(),
+            &mut GasStatus::new_unmetered(),
             log_context,
         )
         .unwrap()
@@ -464,7 +464,7 @@ fn publish_stdlib(
             .publish_module(
                 (*bytes).clone(),
                 *module_id.address(),
-                &mut CostStrategy::system(),
+                &mut GasStatus::new_unmetered(),
                 log_context,
             )
             .unwrap_or_else(|e| panic!("Failure publishing module {:?}, {:?}", module_id, e));

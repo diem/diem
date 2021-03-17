@@ -12,7 +12,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{DeltaStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
@@ -85,7 +85,7 @@ fn test_malformed_resource() {
     let vm = MoveVM::new();
 
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     // Execute the first script to publish a resource Foo.
     let mut script_blob = vec![];
@@ -96,7 +96,7 @@ fn test_malformed_resource() {
         vec![],
         vec![],
         vec![TEST_ADDR],
-        &mut cost_strategy,
+        &mut gas_status,
         &log_context,
     )
     .unwrap();
@@ -115,7 +115,7 @@ fn test_malformed_resource() {
             vec![],
             vec![],
             vec![TEST_ADDR],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -143,7 +143,7 @@ fn test_malformed_resource() {
                 vec![],
                 vec![],
                 vec![TEST_ADDR],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -171,7 +171,7 @@ fn test_malformed_module() {
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     // Publish M and call M::foo. No errors should be thrown.
     {
@@ -184,7 +184,7 @@ fn test_malformed_module() {
             &fun_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -211,7 +211,7 @@ fn test_malformed_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -233,7 +233,7 @@ fn test_unverifiable_module() {
     let m = as_module(units.pop().unwrap());
 
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
 
@@ -253,7 +253,7 @@ fn test_unverifiable_module() {
             &fun_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -280,7 +280,7 @@ fn test_unverifiable_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -314,7 +314,7 @@ fn test_missing_module_dependency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -334,7 +334,7 @@ fn test_missing_module_dependency() {
             &fun_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -355,7 +355,7 @@ fn test_missing_module_dependency() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -389,7 +389,7 @@ fn test_malformed_module_denpency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -409,7 +409,7 @@ fn test_malformed_module_denpency() {
             &fun_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -436,7 +436,7 @@ fn test_malformed_module_denpency() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -468,7 +468,7 @@ fn test_unverifiable_module_dependency() {
     n.serialize(&mut blob_n).unwrap();
 
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
@@ -491,7 +491,7 @@ fn test_unverifiable_module_dependency() {
             &fun_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -519,7 +519,7 @@ fn test_unverifiable_module_dependency() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -559,7 +559,7 @@ const LIST_OF_ERROR_CODES: &[StatusCode] = &[
 #[test]
 fn test_storage_returns_bogus_error_when_loading_module() {
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("N").unwrap());
     let fun_name = Identifier::new("bar").unwrap();
 
@@ -576,7 +576,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
                 &fun_name,
                 vec![],
                 vec![],
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();
@@ -588,7 +588,7 @@ fn test_storage_returns_bogus_error_when_loading_module() {
 #[test]
 fn test_storage_returns_bogus_error_when_loading_resource() {
     let log_context = NoContextLog::new();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
 
     let code = r#"
         address 0x1 {
@@ -644,7 +644,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
             &foo_name,
             vec![],
             vec![],
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         )
         .unwrap();
@@ -655,7 +655,7 @@ fn test_storage_returns_bogus_error_when_loading_resource() {
                 &bar_name,
                 vec![],
                 serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .unwrap_err();

@@ -11,7 +11,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use vm::errors::VMResult;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
@@ -51,7 +51,7 @@ fn run(
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let context = NoContextLog::new();
 
     let args: Vec<_> = args
@@ -64,7 +64,7 @@ fn run(
         &fun_name,
         ty_args,
         args,
-        &mut cost_strategy,
+        &mut gas_status,
         &context,
     )?;
 

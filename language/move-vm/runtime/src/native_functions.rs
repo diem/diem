@@ -9,7 +9,7 @@ use move_core_types::{
 use move_vm_natives::{account, bcs, debug, event, hash, signature, signer, vector};
 use move_vm_types::{
     data_store::DataStore,
-    gas_schedule::CostStrategy,
+    gas_schedule::GasStatus,
     loaded_data::runtime_types::Type,
     natives::function::{NativeContext, NativeResult},
     values::Value,
@@ -119,7 +119,7 @@ impl NativeFunction {
 pub(crate) struct FunctionContext<'a, L: LogContext> {
     interpreter: &'a mut Interpreter<L>,
     data_store: &'a mut dyn DataStore,
-    cost_strategy: &'a CostStrategy<'a>,
+    gas_status: &'a GasStatus<'a>,
     resolver: &'a Resolver<'a>,
 }
 
@@ -127,13 +127,13 @@ impl<'a, L: LogContext> FunctionContext<'a, L> {
     pub(crate) fn new(
         interpreter: &'a mut Interpreter<L>,
         data_store: &'a mut dyn DataStore,
-        cost_strategy: &'a mut CostStrategy,
+        gas_status: &'a mut GasStatus,
         resolver: &'a Resolver<'a>,
     ) -> FunctionContext<'a, L> {
         FunctionContext {
             interpreter,
             data_store,
-            cost_strategy,
+            gas_status,
             resolver,
         }
     }
@@ -146,7 +146,7 @@ impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
     }
 
     fn cost_table(&self) -> &CostTable {
-        self.cost_strategy.cost_table()
+        self.gas_status.cost_table()
     }
 
     fn save_event(

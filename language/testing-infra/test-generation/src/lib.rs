@@ -28,7 +28,7 @@ use language_e2e_tests::executor::FakeExecutor;
 use module_generation::generate_module;
 use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
 use move_vm_runtime::logging::NoContextLog;
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use vm::{
@@ -112,9 +112,9 @@ fn execute_function_in_module<S: StateView>(
             module
                 .serialize(&mut mod_blob)
                 .expect("Module serialization error");
-            let mut cost_strategy = CostStrategy::system();
+            let mut gas_status = GasStatus::new_unmetered();
             txn_context
-                .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
+                .publish_module(mod_blob, sender, &mut gas_status, &log_context)
                 .map_err(|e| e.into_vm_status())?;
             txn_context
                 .execute_function(
@@ -122,7 +122,7 @@ fn execute_function_in_module<S: StateView>(
                     &entry_name,
                     ty_args,
                     args,
-                    &mut cost_strategy,
+                    &mut gas_status,
                     &log_context,
                 )
                 .map_err(|e| e.into_vm_status())?;

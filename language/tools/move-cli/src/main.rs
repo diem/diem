@@ -19,7 +19,7 @@ use move_core_types::{
 };
 use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_EXTENSION};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 use vm::{
     access::ModuleAccess,
     compatibility::Compatibility,
@@ -283,7 +283,7 @@ fn publish(
     // use the the publish_module API frm the VM if we do not allow breaking changes
     if !ignore_breaking_changes {
         let vm = MoveVM::new();
-        let mut cost_strategy = get_cost_strategy(None)?;
+        let mut gas_status = get_gas_status(None)?;
         let log_context = NoContextLog::new();
         let mut session = vm.new_session(&state);
 
@@ -295,8 +295,7 @@ fn publish(
             let id = module.self_id();
             let sender = *id.address();
 
-            let res =
-                session.publish_module(module_bytes, sender, &mut cost_strategy, &log_context);
+            let res = session.publish_module(module_bytes, sender, &mut gas_status, &log_context);
             if let Err(err) = res {
                 explain_publish_error(err, &state, module)?;
                 has_error = true;
@@ -416,7 +415,7 @@ move run` must be applied to a module inside `storage/`",
     let vm_args: Vec<Vec<u8>> = convert_txn_args(&txn_args);
 
     let vm = MoveVM::new();
-    let mut cost_strategy = get_cost_strategy(gas_budget)?;
+    let mut gas_status = get_gas_status(gas_budget)?;
     let log_context = NoContextLog::new();
     let mut session = vm.new_session(&state);
 
@@ -434,7 +433,7 @@ move run` must be applied to a module inside `storage/`",
                     vm_type_args.clone(),
                     vm_args,
                     signer_addresses.clone(),
-                    &mut cost_strategy,
+                    &mut gas_status,
                     &log_context,
                 )
                 .map(|_| ())
@@ -444,7 +443,7 @@ move run` must be applied to a module inside `storage/`",
             vm_type_args.clone(),
             vm_args,
             signer_addresses.clone(),
-            &mut cost_strategy,
+            &mut gas_status,
             &log_context,
         ),
     };
@@ -468,8 +467,8 @@ move run` must be applied to a module inside `storage/`",
     }
 }
 
-fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
-    let cost_strategy = if let Some(gas_budget) = gas_budget {
+fn get_gas_status(gas_budget: Option<u64>) -> Result<GasStatus<'static>> {
+    let gas_status = if let Some(gas_budget) = gas_budget {
         let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
         let max_gas_budget = u64::MAX
             .checked_div(gas_schedule.gas_constants.gas_unit_scaling_factor)
@@ -477,12 +476,12 @@ fn get_cost_strategy(gas_budget: Option<u64>) -> Result<CostStrategy<'static>> {
         if gas_budget >= max_gas_budget {
             bail!("Gas budget set too high; maximum is {}", max_gas_budget)
         }
-        CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
+        GasStatus::new(gas_schedule, GasUnits::new(gas_budget))
     } else {
-        // no budget specified. use CostStrategy::system, which disables gas metering
-        CostStrategy::system()
+        // no budget specified. Disable gas metering
+        GasStatus::new_unmetered()
     };
-    Ok(cost_strategy)
+    Ok(gas_status)
 }
 
 fn explain_publish_changeset(changeset: &ChangeSet, state: &OnDiskStateView) {

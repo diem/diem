@@ -35,7 +35,7 @@ use move_core_types::{
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
 
@@ -352,7 +352,7 @@ impl FakeExecutor {
         args: Vec<Vec<u8>>,
     ) {
         let write_set = {
-            let mut cost_strategy = CostStrategy::system();
+            let mut gas_status = GasStatus::new_unmetered();
             let vm = MoveVM::new();
             let remote_view = RemoteStorage::new(&self.data_store);
             let mut session = vm.new_session(&remote_view);
@@ -363,7 +363,7 @@ impl FakeExecutor {
                     &Self::name(function_name),
                     type_params,
                     args,
-                    &mut cost_strategy,
+                    &mut gas_status,
                     &log_context,
                 )
                 .unwrap_or_else(|e| {
@@ -389,7 +389,7 @@ impl FakeExecutor {
         type_params: Vec<TypeTag>,
         args: Vec<Vec<u8>>,
     ) -> Result<WriteSet, VMStatus> {
-        let mut cost_strategy = CostStrategy::system();
+        let mut gas_status = GasStatus::new_unmetered();
         let vm = MoveVM::new();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
@@ -400,7 +400,7 @@ impl FakeExecutor {
                 &Self::name(function_name),
                 type_params,
                 args,
-                &mut cost_strategy,
+                &mut gas_status,
                 &log_context,
             )
             .map_err(|e| e.into_vm_status())?;

@@ -11,7 +11,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{BlankStorage, InMemoryStorage};
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -23,7 +23,7 @@ fn call_non_existent_module() {
     let mut sess = vm.new_session(&storage);
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let context = NoContextLog::new();
 
     let err = sess
@@ -32,7 +32,7 @@ fn call_non_existent_module() {
             &fun_name,
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-            &mut cost_strategy,
+            &mut gas_status,
             &context,
         )
         .unwrap_err();
@@ -60,7 +60,7 @@ fn call_non_existent_function() {
     let mut sess = vm.new_session(&storage);
 
     let fun_name = Identifier::new("foo").unwrap();
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let context = NoContextLog::new();
 
     let err = sess
@@ -69,7 +69,7 @@ fn call_non_existent_function() {
             &fun_name,
             vec![],
             serialize_values(&vec![MoveValue::Signer(TEST_ADDR)]),
-            &mut cost_strategy,
+            &mut gas_status,
             &context,
         )
         .unwrap_err();

@@ -27,24 +27,24 @@ use vm::{
 
 static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 
-/// The Move VM implementation for gas charging.
+/// The Move VM implementation of state for gas metering.
 ///
 /// Initialize with a `CostTable` and the gas provided to the transaction.
-/// Provide all the proper guarantees about gas charging in the Move VM.
+/// Provide all the proper guarantees about gas metering in the Move VM.
 ///
 /// Every client must use an instance of this type to interact with the Move VM.
-pub struct CostStrategy<'a> {
+pub struct GasStatus<'a> {
     cost_table: &'a CostTable,
     gas_left: InternalGasUnits<GasCarrier>,
     charge: bool,
 }
 
-impl<'a> CostStrategy<'a> {
-    /// A transaction `CostStrategy`. Charge for every operation and fail when there
-    /// is no more gas to pay for operations.
+impl<'a> GasStatus<'a> {
+    /// Initialize the gas state with metering enabled.
     ///
+    /// Charge for every operation and fail when there is no more gas to pay for operations.
     /// This is the instantiation that must be used when executing a user script.
-    pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
+    pub fn new(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
             gas_left: cost_table.gas_constants.to_internal_units(gas_left),
             cost_table,
@@ -52,11 +52,11 @@ impl<'a> CostStrategy<'a> {
         }
     }
 
-    /// A system `CostStrategy` does not charge for operations.
+    /// Initialize the gas state with metering disabled.
     ///
     /// It should be used by clients in very specific cases and when executing system
     /// code that does not have to charge the user.
-    pub fn system() -> Self {
+    pub fn new_unmetered() -> Self {
         Self {
             gas_left: InternalGasUnits::new(0),
             cost_table: &ZERO_COST_SCHEDULE,
@@ -64,7 +64,7 @@ impl<'a> CostStrategy<'a> {
         }
     }
 
-    /// Return the `CostTable` behind this `CostStrategy`.
+    /// Return the `CostTable` behind this `GasStatus`.
     pub fn cost_table(&self) -> &CostTable {
         self.cost_table
     }
@@ -127,8 +127,8 @@ impl<'a> CostStrategy<'a> {
             .map_err(|e| e.finish(Location::Undefined))
     }
 
-    pub fn disable_metering(&mut self) {
-        self.charge = false
+    pub fn set_metering(&mut self, enabled: bool) {
+        self.charge = enabled
     }
 }
 

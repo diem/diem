@@ -10,7 +10,7 @@ use move_core_types::{
 };
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 
 const TEST_ADDR: AccountAddress = AccountAddress::new([42; AccountAddress::LENGTH]);
 
@@ -45,7 +45,7 @@ fn mutated_accounts() {
     let vm = MoveVM::new();
     let mut sess = vm.new_session(&storage);
 
-    let mut cost_strategy = CostStrategy::system();
+    let mut gas_status = GasStatus::new_unmetered();
     let context = NoContextLog::new();
 
     let publish = Identifier::new("publish").unwrap();
@@ -59,7 +59,7 @@ fn mutated_accounts() {
         &publish,
         vec![],
         serialize_values(&vec![MoveValue::Signer(account1)]),
-        &mut cost_strategy,
+        &mut gas_status,
         &context,
     )
     .unwrap();
@@ -74,7 +74,7 @@ fn mutated_accounts() {
         &get,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut cost_strategy,
+        &mut gas_status,
         &context,
     )
     .unwrap();
@@ -86,7 +86,7 @@ fn mutated_accounts() {
         &flip,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut cost_strategy,
+        &mut gas_status,
         &context,
     )
     .unwrap();
@@ -101,7 +101,7 @@ fn mutated_accounts() {
         &get,
         vec![],
         serialize_values(&vec![MoveValue::Address(account1)]),
-        &mut cost_strategy,
+        &mut gas_status,
         &context,
     )
     .unwrap();

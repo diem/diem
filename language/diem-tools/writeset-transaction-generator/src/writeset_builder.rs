@@ -18,7 +18,7 @@ use move_core_types::{
 use move_vm_runtime::{
     data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM, session::Session,
 };
-use move_vm_types::gas_schedule::CostStrategy;
+use move_vm_types::gas_schedule::GasStatus;
 
 pub struct GenesisSession<'r, 'l, R>(Session<'r, 'l, R>);
 
@@ -39,7 +39,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
                 &Identifier::new(function_name).unwrap(),
                 ty_args,
                 args,
-                &mut CostStrategy::system(),
+                &mut GasStatus::new_unmetered(),
                 &NoContextLog::new(),
             )
             .unwrap_or_else(|e| {
@@ -59,7 +59,7 @@ impl<'r, 'l, R: RemoteCache> GenesisSession<'r, 'l, R> {
                 script.ty_args().to_vec(),
                 convert_txn_args(script.args()),
                 vec![sender],
-                &mut CostStrategy::system(),
+                &mut GasStatus::new_unmetered(),
                 &NoContextLog::new(),
             )
             .unwrap()

@@ -844,7 +844,7 @@ pub fn publish_module(
     &mut self,
     module: Vec<u8>,
     sender: AccountAddress,
-    cost_strategy: &mut CostStrategy,
+    gas_status: &mut GasStatus,
     log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
@@ -890,7 +890,7 @@ pub fn execute_script(
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
     senders: Vec<AccountAddress>,
-    cost_strategy: &mut CostStrategy,
+    gas_status: &mut GasStatus,
     log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
@@ -941,7 +941,7 @@ pub fn execute_script_function(
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
     senders: Vec<AccountAddress>,
-    cost_strategy: &mut CostStrategy,
+    gas_status: &mut GasStatus,
     log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
@@ -973,7 +973,7 @@ pub fn execute_function(
     function_name: &IdentStr,
     ty_args: Vec<TypeTag>,
     args: Vec<Vec<u8>>,
-    cost_strategy: &mut CostStrategy,
+    gas_status: &mut GasStatus,
     log_context: &impl LogContext,
 ) -> VMResult<()>;
 ```
