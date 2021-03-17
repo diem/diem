@@ -6,9 +6,35 @@
 use clap::{App, Arg};
 use diem_framework::*;
 use move_stdlib::utils::time_it;
-use rayon::prelude::*;
-use std::{collections::BTreeMap, fs::File, io::Read, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
+
+/// The file name for the compiled stdlib
+const COMPILED_STDLIB_DIR: &str = "stdlib";
+
+/// The output path for stdlib documentation.
+const MODULES_DOC_DIR: &str = "modules/doc";
+
+/// The output path for transaction script documentation.
+const SCRIPTS_DOC_DIR: &str = "script_documentation";
+
+const ERROR_DESC_DIR: &str = "error_descriptions";
+const ERROR_DESC_FILENAME: &str = "error_descriptions";
+
+/// The output path under which compiled script files can be found
+const LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/legacy/transaction_scripts";
+/// The output path for transaction script ABIs.
+const COMPILED_SCRIPTS_ABI_DIR: &str = "compiled/script_abis";
+/// Location of legacy transaction script ABIs
+const LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/legacy/transaction_scripts/abi";
+/// Where to write generated transaction builders.
+const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
+    "compiled/src/shim/tmp_new_transaction_script_builders.rs";
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
 // modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for
@@ -95,10 +121,9 @@ fn main() {
         time_it(
             "Compiling modules and checking linking/layout compatibility",
             || {
-                std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
                 let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
                 module_path.push(COMPILED_STDLIB_DIR);
-                let new_modules = build_stdlib();
+                let new_modules = release::build_modules(&module_path);
 
                 let mut is_linking_layout_compatible = true;
                 if !no_check_linking_layout_compatibility {
@@ -122,18 +147,6 @@ fn main() {
                         }
                     }
                 }
-
-                // write module bytecodes to disk. start by clearing out all of the old ones
-                std::fs::remove_dir_all(&module_path).unwrap();
-                std::fs::create_dir_all(&module_path).unwrap();
-                for (name, module) in new_modules {
-                    let mut bytes = Vec::new();
-                    module.serialize(&mut bytes).unwrap();
-                    module_path.push(name);
-                    module_path.set_extension(COMPILED_EXTENSION);
-                    save_binary(&module_path, &bytes);
-                    module_path.pop();
-                }
             },
         );
     }
@@ -141,35 +154,45 @@ fn main() {
     // Generate documentation
     if !no_doc {
         time_it("Generating stdlib documentation", || {
-            std::fs::remove_dir_all(&STD_LIB_DOC_DIR).unwrap_or(());
-            std::fs::create_dir_all(&STD_LIB_DOC_DIR).unwrap();
-            build_stdlib_doc(with_diagram);
+            release::generate_module_docs(&Path::new(MODULES_DOC_DIR), with_diagram);
         });
         time_it("Generating script documentation", || {
-            build_script_doc(with_diagram);
+            release::generate_script_docs(
+                &Path::new(SCRIPTS_DOC_DIR),
+                &Path::new(MODULES_DOC_DIR),
+                with_diagram,
+            );
         });
     }
 
     // Generate script ABIs
     if !no_script_abi {
         time_it("Generating script ABIs", || {
-            std::fs::remove_dir_all(&COMPILED_SCRIPTS_ABI_DIR).unwrap_or(());
-            std::fs::create_dir_all(&COMPILED_SCRIPTS_ABI_DIR).unwrap();
-
-            diem_stdlib_files()
-                .par_iter()
-                .for_each(|file| build_script_abis(file.clone()));
+            release::generate_script_abis(
+                &Path::new(COMPILED_SCRIPTS_ABI_DIR),
+                &Path::new(LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR),
+            )
         });
     }
 
     // Generate script builders in Rust
     if !no_script_builder {
         time_it("Generating Rust script builders", || {
-            generate_rust_transaction_builders();
+            release::generate_script_builder(
+                &Path::new(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH),
+                &[
+                    Path::new(COMPILED_SCRIPTS_ABI_DIR),
+                    Path::new(LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR),
+                ],
+            );
         });
     }
 
     time_it("Generating error explanations", || {
-        build_stdlib_error_code_map()
+        let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
+        path.push(ERROR_DESC_DIR);
+        path.push(ERROR_DESC_FILENAME);
+        path.set_extension(ERROR_DESC_EXTENSION);
+        release::build_error_code_map(&path)
     });
 }

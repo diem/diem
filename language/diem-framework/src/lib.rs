@@ -4,13 +4,11 @@
 #![forbid(unsafe_code)]
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
-use errmapgen::ErrmapOptions;
-use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
-    fs::{self, File},
+    fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
 };
@@ -18,47 +16,12 @@ use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub use move_stdlib::{COMPILED_EXTENSION, ERROR_DESC_EXTENSION, MOVE_EXTENSION};
 
-const MODULES_DIR: &str = "modules";
+pub mod release;
 
-/// The extension for compiled files
+const MODULES_DIR: &str = "modules";
 
 /// The output path under which compiled files will be put
 pub const COMPILED_OUTPUT_PATH: &str = "compiled";
-/// The file name for the compiled stdlib
-pub const COMPILED_STDLIB_DIR: &str = "stdlib";
-/// The file name of the debug module
-pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
-
-/// The output path for stdlib documentation.
-pub const STD_LIB_DOC_DIR: &str = "modules/doc";
-/// The output path for transaction script documentation.
-pub const SCRIPTS_DOC_DIR: &str = "script_documentation";
-/// The documentation root template for stdlib.
-pub const STD_LIB_DOC_TEMPLATE: &str = "modules/overview_template.md";
-/// The documentation root template for scripts.
-pub const SCRIPT_DOC_TEMPLATE: &str = "script_documentation/script_documentation_template.md";
-/// The specification root template for scripts and stdlib.
-pub const SPEC_DOC_TEMPLATE: &str = "script_documentation/spec_documentation_template.md";
-/// Path to the references template.
-pub const REFERENCES_DOC_TEMPLATE: &str = "modules/references_template.md";
-
-pub const ERROR_DESC_DIR: &str = "error_descriptions";
-pub const ERROR_DESC_FILENAME: &str = "error_descriptions";
-
-pub const PACKED_TYPES_DIR: &str = "packed_types";
-pub const PACKED_TYPES_FILENAME: &str = "packed_types";
-pub const PACKED_TYPES_EXTENSION: &str = "txt";
-
-/// The output path under which compiled script files can be found
-pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/legacy/transaction_scripts";
-/// The output path for transaction script ABIs.
-pub const COMPILED_SCRIPTS_ABI_DIR: &str = "compiled/script_abis";
-/// Location of legacy transaction script ABIs
-pub const LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str =
-    "compiled/legacy/transaction_scripts/abi";
-/// Where to write generated transaction builders.
-pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
-    "compiled/src/shim/tmp_new_transaction_script_builders.rs";
 
 pub fn path_in_crate<S>(relative: S) -> PathBuf
 where
@@ -170,25 +133,7 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     modules
 }
 
-pub fn compile_script(source_file_str: String) -> Vec<u8> {
-    let (_files, mut compiled_program) = move_compile_and_report(
-        &[source_file_str],
-        &diem_stdlib_files(),
-        Some(Address::DIEM_CORE),
-        None,
-        false,
-    )
-    .unwrap();
-    let mut script_bytes = vec![];
-    assert!(compiled_program.len() == 1);
-    match compiled_program.pop().unwrap() {
-        CompiledUnit::Module { .. } => panic!("Unexpected module when compiling script"),
-        CompiledUnit::Script { script, .. } => script.serialize(&mut script_bytes).unwrap(),
-    };
-    script_bytes
-}
-
-pub fn save_binary(path: &Path, binary: &[u8]) -> bool {
+fn save_binary(path: &Path, binary: &[u8]) -> bool {
     if path.exists() {
         let mut bytes = vec![];
         File::open(path).unwrap().read_to_end(&mut bytes).unwrap();
@@ -198,173 +143,4 @@ pub fn save_binary(path: &Path, binary: &[u8]) -> bool {
     }
     File::create(path).unwrap().write_all(binary).unwrap();
     true
-}
-
-pub fn build_stdlib_doc(with_diagram: bool) {
-    move_stdlib::build_doc(
-        STD_LIB_DOC_DIR,
-        // FIXME: use absolute path when the bug in docgen is fixed.
-        // &move_stdlib::move_stdlib_docs_full_path(),
-        "../move-stdlib/docs",
-        vec![path_in_crate(STD_LIB_DOC_TEMPLATE)
-            .to_string_lossy()
-            .to_string()],
-        Some(
-            path_in_crate(REFERENCES_DOC_TEMPLATE)
-                .to_string_lossy()
-                .to_string(),
-        ),
-        diem_stdlib_files_no_dependencies().as_slice(),
-        vec![move_stdlib::move_stdlib_modules_full_path()],
-        with_diagram,
-    )
-}
-
-pub fn build_script_doc(with_diagram: bool) {
-    move_stdlib::build_doc(
-        SCRIPTS_DOC_DIR,
-        // FIXME: links to move stdlib modules are broken since the tool does not currently
-        // support multiple paths.
-        STD_LIB_DOC_DIR,
-        vec![
-            path_in_crate(SCRIPT_DOC_TEMPLATE)
-                .to_string_lossy()
-                .to_string(),
-            path_in_crate(SPEC_DOC_TEMPLATE)
-                .to_string_lossy()
-                .to_string(),
-        ],
-        Some(
-            path_in_crate(REFERENCES_DOC_TEMPLATE)
-                .to_string_lossy()
-                .to_string(),
-        ),
-        &[
-            path_in_crate("modules/AccountAdministrationScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path_in_crate("modules/AccountCreationScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path_in_crate("modules/PaymentScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path_in_crate("modules/SystemAdministrationScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path_in_crate("modules/TreasuryComplianceScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-            path_in_crate("modules/ValidatorAdministrationScripts.move")
-                .to_str()
-                .unwrap()
-                .to_string(),
-        ],
-        vec![
-            move_stdlib::move_stdlib_modules_full_path(),
-            diem_stdlib_modules_full_path(),
-        ],
-        with_diagram,
-    )
-}
-
-pub fn build_script_abis(script_file_str: String) {
-    build_abi(
-        COMPILED_SCRIPTS_ABI_DIR,
-        &[script_file_str],
-        vec![
-            move_stdlib::move_stdlib_modules_full_path(),
-            diem_stdlib_modules_full_path(),
-        ],
-        // The only code that we should be using for transaction scripts is the legacy bytes
-        LEGACY_COMPILED_TRANSACTION_SCRIPTS_DIR,
-    )
-}
-
-pub fn build_stdlib_error_code_map() {
-    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
-    path.push(ERROR_DESC_DIR);
-    fs::create_dir_all(&path).unwrap();
-    path.push(ERROR_DESC_FILENAME);
-    path.set_extension(ERROR_DESC_EXTENSION);
-    build_error_code_map(path.to_str().unwrap(), diem_stdlib_files().as_slice(), "")
-}
-
-fn build_abi(
-    output_path: &str,
-    sources: &[String],
-    dep_paths: Vec<String>,
-    compiled_script_path: &str,
-) {
-    let options = move_prover::cli::Options {
-        move_sources: sources.to_vec(),
-        move_deps: dep_paths,
-        verbosity_level: LevelFilter::Warn,
-        run_abigen: true,
-        abigen: abigen::AbigenOptions {
-            output_directory: output_path.to_string(),
-            compiled_script_directory: compiled_script_path.to_string(),
-        },
-        ..Default::default()
-    };
-    options.setup_logging_for_test();
-    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
-}
-
-pub fn get_packed_types_path() -> PathBuf {
-    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
-    path.push(PACKED_TYPES_DIR);
-    path.push(PACKED_TYPES_FILENAME);
-    path.set_extension(PACKED_TYPES_EXTENSION);
-    path
-}
-
-fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
-    let options = move_prover::cli::Options {
-        move_sources: sources.to_vec(),
-        move_deps: if !dep_path.is_empty() {
-            vec![dep_path.to_string()]
-        } else {
-            vec![]
-        },
-        verbosity_level: LevelFilter::Warn,
-        run_errmapgen: true,
-        errmapgen: ErrmapOptions {
-            output_file: output_path.to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    options.setup_logging_for_test();
-    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
-}
-
-pub fn generate_rust_transaction_builders() {
-    let mut abis = transaction_builder_generator::read_abis(&Path::new(COMPILED_SCRIPTS_ABI_DIR))
-        .expect("Failed to read generated ABIs");
-    abis.extend(
-        transaction_builder_generator::read_abis(&Path::new(
-            LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
-        ))
-        .expect("Failed to read legacy ABIs")
-        .into_iter(),
-    );
-    {
-        let mut file = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
-            .expect("Failed to open file for Rust script build generation");
-        transaction_builder_generator::rust::output(&mut file, &abis, /* local types */ true)
-            .expect("Failed to generate Rust builders for Diem");
-    }
-
-    std::process::Command::new("rustfmt")
-        .arg("--config")
-        .arg("merge_imports=true")
-        .arg(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
-        .status()
-        .expect("Failed to run rustfmt on generated code");
 }
