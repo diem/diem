@@ -642,7 +642,7 @@ module Diem {
     /// resource to using a `PreburnQueue` resource so that multiple preburn
     /// requests can be outstanding in the same currency for a designated dealer.
     fun upgrade_preburn<CoinType: store>(account: &signer)
-    acquires Preburn {
+    acquires Preburn, PreburnQueue {
         Roles::assert_designated_dealer(account);
         let sender = Signer::address_of(account);
         let preburn_exists = exists<Preburn<CoinType>>(sender);
@@ -651,8 +651,14 @@ module Diem {
         // `PreburnQueue` resource already, in order to be upgraded.
         if (preburn_exists && !preburn_queue_exists) {
             let Preburn { to_burn } = move_from<Preburn<CoinType>>(sender);
-            destroy_zero(to_burn);
             publish_preburn_queue<CoinType>(account);
+            // If the DD has an old preburn balance, this is converted over
+            // into the new preburn queue when it's upgraded.
+            if (to_burn.value > 0)  {
+                add_preburn_to_queue(account, Preburn { to_burn })
+            } else {
+                destroy_zero(to_burn)
+            };
         }
     }
     spec fun upgrade_preburn {
@@ -668,7 +674,6 @@ module Diem {
         let preburn = global<Preburn<CoinType>>(account_addr);
         let preburn_exists = exists<Preburn<CoinType>>(account_addr);
         let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
-        aborts_if preburn_exists && !preburn_queue_exists && preburn.to_burn.value > 0 with Errors::INVALID_ARGUMENT;
         /// Must abort if the account doesn't have the `PreburnQueue` or
         /// `Preburn` resource to satisfy [[H4]][PERMISSION] of `preburn_to`.
         include Roles::AbortsIfNotDesignatedDealer;
@@ -679,7 +684,27 @@ module Diem {
         let account_addr = Signer::spec_address_of(account);
         let preburn_exists = exists<Preburn<CoinType>>(account_addr);
         let preburn_queue_exists = exists<PreburnQueue<CoinType>>(account_addr);
-        include (preburn_exists && !preburn_queue_exists) ==> PublishPreburnQueueEnsures<CoinType>;
+        let preburn = global<Preburn<CoinType>>(account_addr);
+        let preburn_queue = global<PreburnQueue<CoinType>>(account_addr);
+        let preburn_state_empty = preburn_exists && !preburn_queue_exists && preburn.to_burn.value == 0;
+        let preburn_state_full = preburn_exists && !preburn_queue_exists && preburn.to_burn.value > 0;
+        include preburn_state_empty ==> PublishPreburnQueueEnsures<CoinType>;
+        include preburn_state_full ==> UpgradePreburnEnsuresFullState<CoinType> {
+            preburn_queue_exists: preburn_queue_exists,
+            account_addr: account_addr,
+            preburn_queue: preburn_queue,
+            preburn: preburn,
+        };
+    }
+    spec schema UpgradePreburnEnsuresFullState<CoinType> {
+        preburn_queue_exists: bool;
+        account_addr: address;
+        preburn_queue: PreburnQueue<CoinType>;
+        preburn: Preburn<CoinType>;
+        ensures preburn_queue_exists;
+        ensures !exists<Preburn<CoinType>>(account_addr);
+        ensures Vector::length(preburn_queue.preburns) == 1;
+        ensures Vector::eq_push_back(preburn_queue.preburns, old(preburn_queue).preburns, old(preburn));
     }
 
     /// Add the `preburn` request to the preburn queue of `account`, and check that the

@@ -20,7 +20,8 @@ use diem_types::{
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
     transaction::{
-        SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
+        ChangeSet, SignedTransaction, Transaction, TransactionOutput, TransactionStatus,
+        VMValidatorResult,
     },
     vm_status::{KeptVMStatus, VMStatus},
     write_set::WriteSet,
@@ -38,6 +39,13 @@ use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 
 static RNG_SEED: [u8; 32] = [9u8; 32];
+
+pub const RELEASE_1_1_GENESIS: &[u8] =
+    include_bytes!("../genesis-release-1-1/release-1-1-genesis.blob");
+pub const RELEASE_1_1_GENESIS_PRIVKEY: &[u8] =
+    include_bytes!("../genesis-release-1-1/release-1-1-privkey.blob");
+pub const RELEASE_1_1_GENESIS_PUBKEY: &[u8] =
+    include_bytes!("../genesis-release-1-1/release-1-1-pubkey.blob");
 
 /// Provides an environment to run a VM instance.
 ///
@@ -61,6 +69,12 @@ impl FakeExecutor {
         };
         executor.apply_write_set(write_set);
         executor
+    }
+
+    /// Create an executor from a saved genesis blob
+    pub fn from_saved_genesis(saved_genesis_blob: &[u8]) -> Self {
+        let change_set = bcs::from_bytes::<ChangeSet>(saved_genesis_blob).unwrap();
+        Self::from_genesis(change_set.write_set())
     }
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION

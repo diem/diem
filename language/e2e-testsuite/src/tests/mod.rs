@@ -23,6 +23,7 @@ mod mint;
 mod module_publishing;
 mod on_chain_configs;
 mod peer_to_peer;
+mod preburn_queue;
 mod rotate_key;
 mod script_functions;
 mod scripts;

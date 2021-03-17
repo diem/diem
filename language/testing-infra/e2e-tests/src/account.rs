@@ -123,6 +123,10 @@ impl Account {
         Self::new_genesis_account(account_config::diem_root_address())
     }
 
+    pub fn new_testing_dd() -> Self {
+        Self::new_genesis_account(account_config::testnet_dd_account_address())
+    }
+
     /// Creates a new account representing treasury compliance in memory.
     /// The account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
     pub fn new_blessed_tc() -> Self {
@@ -228,6 +232,11 @@ impl TransactionBuilder {
 
     pub fn chain_id(mut self, id: ChainId) -> Self {
         self.chain_id = Some(id);
+        self
+    }
+
+    pub fn payload(mut self, payload: TransactionPayload) -> Self {
+        self.program = Some(payload);
         self
     }
 

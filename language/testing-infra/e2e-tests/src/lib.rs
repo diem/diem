@@ -22,6 +22,7 @@ mod golden_outputs;
 pub mod keygen;
 pub mod on_chain_configs;
 mod proptest_types;
+pub mod utils;
 
 pub fn assert_status_eq(s1: &KeptVMStatus, s2: &KeptVMStatus) -> bool {
     assert_eq!(s1, s2);
