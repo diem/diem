@@ -1047,6 +1047,11 @@ impl<'env> ModuleTranslator<'env> {
                             emitln!(self.writer, &check);
                         }
                     }
+                    Stop => {
+                        emitln!(self.writer, "assume false;");
+                        // a return statement terminates any execution trace that reaches it
+                        emitln!(self.writer, "return;");
+                    }
                     CastU8 => {
                         let src = srcs[0];
                         let dest = dests[0];

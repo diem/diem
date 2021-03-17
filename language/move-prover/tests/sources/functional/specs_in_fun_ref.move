@@ -65,7 +65,7 @@ module TestAssertWithReferences {
 
         loop {
             spec {
-                assert x <= n;
+                invariant x <= n;
             };
             if (!(x < n)) break;
             x = x + 1;
@@ -85,7 +85,7 @@ module TestAssertWithReferences {
 
         while ({
             spec {
-                assert x <= n;
+                invariant x <= n;
             };
             (x < n)
         }) {
@@ -103,13 +103,17 @@ module TestAssertWithReferences {
     // TODO(shaz): Boogie reports a "loop invariant not preserved" error
     // ignoring the msg attribute.  Consequently, the message is not parsed
     // appropriately and no Move-level error is reported.
+    // TODO(mengxu): Boogie now actually reports that the assertion representing
+    // the inductive case of loop invariant failed. But the logic for parsing
+    // and translating the Boogie error message is not implemented yet.
+
     // This function fails.
     fun simple7(n: u64): u64 {
         let x = 0;
 
         while ({
             spec {
-                assert x == 0;
+                invariant x == 0;
             };
             (x < n)
         }) {

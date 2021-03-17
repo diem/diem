@@ -14,16 +14,24 @@ use move_model::{
     model::FunctionEnv,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use vm::file_format::CodeOffset;
 
 #[derive(Debug, Default, Clone)]
 pub struct LoopInfo {
     pub invariants: Vec<(AttrId, ast::Exp)>,
     pub targets: BTreeSet<TempIndex>,
+    pub back_edge_location: CodeOffset,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct LoopAnnotation {
     pub loops: BTreeMap<Label, LoopInfo>,
+}
+
+impl LoopAnnotation {
+    fn back_edges_locations(&self) -> BTreeSet<CodeOffset> {
+        self.loops.values().map(|l| l.back_edge_location).collect()
+    }
 }
 
 pub struct LoopAnalysisProcessor {}
@@ -56,17 +64,33 @@ impl FunctionTargetProcessor for LoopAnalysisProcessor {
 impl LoopAnalysisProcessor {
     fn transform(
         func_env: &FunctionEnv<'_>,
-        mut data: FunctionData,
+        data: FunctionData,
         loop_annotation: &LoopAnnotation,
     ) -> FunctionData {
-        let code = std::mem::take(&mut data.code);
+        let back_edge_locs = loop_annotation.back_edges_locations();
         let mut builder = FunctionDataBuilder::new(func_env, data);
-        for bytecode in code {
+        let mut goto_fixes = vec![];
+        let code = std::mem::take(&mut builder.data.code);
+        for (offset, bytecode) in code.into_iter().enumerate() {
             match bytecode {
                 Bytecode::Label(attr_id, label) => {
                     builder.emit(bytecode);
                     builder.set_loc_from_attr(attr_id);
                     if let Some(loop_info) = loop_annotation.loops.get(&label) {
+                        // assert loop invariants -> this is the base case
+                        for (_, exp) in &loop_info.invariants {
+                            builder.emit_with(|attr_id| {
+                                Bytecode::Prop(attr_id, PropKind::Assert, exp.clone())
+                            });
+                        }
+
+                        // havoc all loop targets
+                        for idx in &loop_info.targets {
+                            builder.emit_with(|attr_id| {
+                                Bytecode::Call(attr_id, vec![], Operation::Havoc, vec![*idx], None)
+                            });
+                        }
+
                         // add additional assumptions
                         let exp =
                             builder.mk_not(builder.mk_bool_call(ast::Operation::AbortFlag, vec![]));
@@ -81,9 +105,9 @@ impl LoopAnalysisProcessor {
                             });
                         }
 
-                        // add instrumentations to assert loop invariants
+                        // re-assume loop invariants
                         for (attr_id, exp) in &loop_info.invariants {
-                            builder.emit(Bytecode::Prop(*attr_id, PropKind::Assert, exp.clone()));
+                            builder.emit(Bytecode::Prop(*attr_id, PropKind::Assume, exp.clone()));
                         }
                     }
                 }
@@ -97,7 +121,58 @@ impl LoopAnalysisProcessor {
                     builder.emit(bytecode);
                 }
             }
+            // mark that the goto labels in this bytecode needs to be updated to a new label
+            // representing the invariant-checking block for the loop.
+            if back_edge_locs.contains(&(offset as CodeOffset)) {
+                goto_fixes.push(builder.data.code.len() - 1);
+            }
         }
+
+        // create one invariant-checking block for each loop
+        let invariant_checker_labels: BTreeMap<_, _> = loop_annotation
+            .loops
+            .keys()
+            .map(|label| (*label, builder.new_label()))
+            .collect();
+
+        for (label, loop_info) in &loop_annotation.loops {
+            let checker_label = invariant_checker_labels.get(label).unwrap();
+            builder.set_next_debug_comment(format!(
+                "Loop invariant checking block for the loop started with header: L{}",
+                label.as_usize()
+            ));
+            builder.emit_with(|attr_id| Bytecode::Label(attr_id, *checker_label));
+            builder.clear_next_debug_comment();
+
+            // add instrumentations to assert loop invariants -> this is the induction case
+            for (_, exp) in &loop_info.invariants {
+                builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assert, exp.clone()));
+            }
+
+            // stop the checking
+            builder.emit_with(|attr_id| {
+                Bytecode::Call(attr_id, vec![], Operation::Stop, vec![], None)
+            });
+        }
+
+        // fix the goto statements in the loop latch blocks
+        for code_offset in goto_fixes {
+            let updated_goto = match &builder.data.code[code_offset] {
+                Bytecode::Jump(attr_id, old_label) => {
+                    Bytecode::Jump(*attr_id, *invariant_checker_labels.get(old_label).unwrap())
+                }
+                Bytecode::Branch(attr_id, if_label, else_label, idx) => {
+                    let new_if_label = *invariant_checker_labels.get(if_label).unwrap_or(if_label);
+                    let new_else_label = *invariant_checker_labels
+                        .get(else_label)
+                        .unwrap_or(else_label);
+                    Bytecode::Branch(*attr_id, new_if_label, new_else_label, *idx)
+                }
+                _ => panic!("Expect a branch statement"),
+            };
+            builder.data.code[code_offset] = updated_goto;
+        }
+
         builder.data
     }
 
@@ -147,6 +222,8 @@ impl LoopAnalysisProcessor {
         // find loop targets and invariants per loop (also means, per label)
         let mut loops = BTreeMap::new();
         for single_loop in &natural_loops {
+            let loop_label = loop_header_to_label[&single_loop.loop_header];
+
             let targets = single_loop
                 .loop_body
                 .iter()
@@ -173,11 +250,23 @@ impl LoopAnalysisProcessor {
                 })
                 .collect();
 
+            let back_edge_location = match cfg.content(single_loop.loop_latch) {
+                BlockContent::Dummy => panic!("A loop body should never contain a dummy block"),
+                BlockContent::Basic { upper, .. } => *upper,
+            };
+            match &code[back_edge_location as usize] {
+                Bytecode::Jump(_, goto_label) if *goto_label == loop_label => {}
+                Bytecode::Branch(_, if_label, else_label, _)
+                    if *if_label == loop_label || *else_label == loop_label => {}
+                _ => panic!("The latch bytecode of a loop does not branch into the header"),
+            }
+
             loops.insert(
-                loop_header_to_label[&single_loop.loop_header],
+                loop_label,
                 LoopInfo {
                     invariants,
                     targets,
+                    back_edge_location,
                 },
             );
         }

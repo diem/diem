@@ -112,6 +112,7 @@ pub enum Operation {
     WriteRef,
     FreezeRef,
     Havoc,
+    Stop,
 
     // Memory model
     WriteBack(BorrowNode, BorrowEdge),
@@ -178,6 +179,7 @@ impl Operation {
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
             Operation::Havoc => false,
+            Operation::Stop => false,
             Operation::WriteBack(_, _) => false,
             Operation::Splice(_) => false,
             Operation::UnpackRef => false,
@@ -316,7 +318,10 @@ impl Bytecode {
     }
 
     pub fn is_exit(&self) -> bool {
-        matches!(self, Bytecode::Ret(..) | Bytecode::Abort(..))
+        matches!(
+            self,
+            Bytecode::Ret(..) | Bytecode::Abort(..) | Bytecode::Call(_, _, Operation::Stop, _, _)
+        )
     }
 
     pub fn is_return(&self) -> bool {
@@ -326,7 +331,10 @@ impl Bytecode {
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
-            Bytecode::Ret(..) | Bytecode::Jump(..) | Bytecode::Abort(..)
+            Bytecode::Ret(..)
+                | Bytecode::Jump(..)
+                | Bytecode::Abort(..)
+                | Bytecode::Call(_, _, Operation::Stop, _, _)
         )
     }
 
@@ -846,6 +854,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             )?,
             Havoc => {
                 write!(f, "havoc")?;
+            }
+            Stop => {
+                write!(f, "stop")?;
             }
             // Unary
             CastU8 => write!(f, "(u8)")?,
