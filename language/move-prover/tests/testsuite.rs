@@ -227,11 +227,12 @@ fn cvc4_deny_listed(path: &Path) -> bool {
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
-    let (base_flags, baseline_path, modifier) = if path_str.contains("diem-framework/") {
-        (STDLIB_FLAGS, None, "std_")
-    } else {
-        (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")
-    };
+    let (base_flags, baseline_path, modifier) =
+        if path_str.contains("diem-framework/") || path_str.contains("move-stdlib/") {
+            (STDLIB_FLAGS, None, "std_")
+        } else {
+            (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")
+        };
     let mut flags = base_flags.iter().map(|s| (*s).to_string()).collect_vec();
     // Add any flags specified in the source.
     flags.extend(extract_test_directives(path, "// flag:")?);
@@ -264,6 +265,12 @@ fn main() {
             test_runner,
             "functional".to_string(),
             "tests/sources".to_string(),
+            r".*\.move$".to_string(),
+        ));
+        reqs.push(Requirements::new(
+            test_runner,
+            "fx".to_string(),
+            "../move-stdlib".to_string(),
             r".*\.move$".to_string(),
         ));
         reqs.push(Requirements::new(
