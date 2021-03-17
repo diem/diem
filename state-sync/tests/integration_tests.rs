@@ -53,14 +53,7 @@ fn test_flaky_peer_sync() {
             Ok(resp)
         }
     });
-    env.start_state_sync_peer(
-        1,
-        handler,
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    env.start_state_sync_peer(1, handler, RoleType::Validator, Waypoint::default(), false);
 
     let validator_0 = env.get_state_sync_peer(0);
     let validator_1 = env.get_state_sync_peer(1);
@@ -82,14 +75,7 @@ fn test_request_timeout() {
     let handler = Box::new(move |_| -> Result<TransactionListWithProof, Error> {
         Err(Error::UnexpectedError("Failed to fetch chunk!".into()))
     });
-    env.start_state_sync_peer(
-        0,
-        handler,
-        RoleType::Validator,
-        Waypoint::default(),
-        false,
-        None,
-    );
+    env.start_state_sync_peer(0, handler, RoleType::Validator, Waypoint::default(), false);
     env.setup_state_sync_peer(
         1,
         default_handler(),
@@ -98,7 +84,6 @@ fn test_request_timeout() {
         100,
         300,
         false,
-        None,
     );
 
     let validator_0 = env.get_state_sync_peer(0);
@@ -227,14 +212,7 @@ fn catch_up_with_waypoints() {
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
     drop(validator_0);
 
-    env.start_state_sync_peer(
-        1,
-        default_handler(),
-        RoleType::FullNode,
-        waypoint,
-        false,
-        None,
-    );
+    env.start_state_sync_peer(1, default_handler(), RoleType::FullNode, waypoint, false);
     let fullnode = env.get_state_sync_peer(1);
     fullnode.wait_until_initialized();
     assert!(fullnode.latest_li().ledger_info().version() >= 3500);
@@ -267,7 +245,6 @@ fn test_lagging_upstream_long_poll() {
         10_000,
         1_000_000,
         true,
-        Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
     env.start_state_sync_peer(
         3,
@@ -275,7 +252,6 @@ fn test_lagging_upstream_long_poll() {
         RoleType::FullNode,
         Waypoint::default(),
         true,
-        Some(vec![VFN_NETWORK.clone()]),
     );
 
     let validator_0 = env.get_state_sync_peer(0);
@@ -498,7 +474,6 @@ fn test_fn_failover() {
         1_000,
         60_000,
         true,
-        Some(vec![VFN_NETWORK.clone(), PFN_NETWORK.clone()]),
     );
 
     // Start up 3 PFNs
@@ -729,11 +704,6 @@ fn test_multicast_failover() {
         1_000,
         multicast_timeout_ms,
         true,
-        Some(vec![
-            VFN_NETWORK.clone(),
-            VFN_NETWORK_2.clone(),
-            PFN_NETWORK.clone(),
-        ]),
     );
 
     // Start up 3 FNs

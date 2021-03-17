@@ -412,8 +412,6 @@ pub static DB_ERROR: Lazy<IntCounter> = Lazy::new(|| {
 
 /// Gauge for the preference ranking of the current chosen upstream network
 /// to broadcast to
-/// See `UpstreamConfig::get_upstream_preference` for details on the numerical value of the preference
-/// ranking of a network
 static UPSTREAM_NETWORK: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "diem_mempool_upstream_network",

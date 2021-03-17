@@ -35,11 +35,6 @@ full_node_networks:
 - network_id: "public"
   discovery_method: "onchain"
 
-upstream:
-  networks:
-  - private: "vfn"
-  - public
-
 mempool:
   default_failovers: 0
 

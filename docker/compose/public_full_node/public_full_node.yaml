@@ -29,9 +29,3 @@ full_node_networks:
 json_rpc:
     # This specifies your JSON-RPC endpoint. Intentionally on public so that Docker can export it.
     address: 0.0.0.0:8080
-
-# Do not modify this value as it dictates upstream peers, those which receive outgoing transactions
-# and funnel downward the latest blockchain state.
-upstream:
-    networks:
-        - public

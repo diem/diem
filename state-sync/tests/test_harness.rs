@@ -234,7 +234,6 @@ impl StateSyncEnvironment {
             RoleType::Validator,
             Waypoint::default(),
             mock_network,
-            None,
         );
     }
 
@@ -246,7 +245,6 @@ impl StateSyncEnvironment {
             RoleType::FullNode,
             Waypoint::default(),
             mock_network,
-            None,
         );
     }
 
@@ -258,7 +256,6 @@ impl StateSyncEnvironment {
         role: RoleType,
         waypoint: Waypoint,
         mock_network: bool,
-        upstream_networks: Option<Vec<NetworkId>>,
     ) {
         self.setup_state_sync_peer(
             index,
@@ -268,7 +265,6 @@ impl StateSyncEnvironment {
             60_000,
             120_000,
             mock_network,
-            upstream_networks,
         );
     }
 
@@ -281,15 +277,8 @@ impl StateSyncEnvironment {
         timeout_ms: u64,
         multicast_timeout_ms: u64,
         mock_network: bool,
-        upstream_networks: Option<Vec<NetworkId>>,
     ) {
-        let (config, network_id) = setup_state_sync_config(
-            index,
-            role,
-            timeout_ms,
-            multicast_timeout_ms,
-            &upstream_networks,
-        );
+        let (config, network_id) = setup_state_sync_config(role, timeout_ms, multicast_timeout_ms);
         let network_handles = self.setup_network_handles(index, &role, mock_network, network_id);
         let validators: Vec<ValidatorInfo> = self
             .peers
@@ -559,11 +548,9 @@ pub fn create_new_validator_set(
 }
 
 fn setup_state_sync_config(
-    index: usize,
     role: RoleType,
     timeout_ms: u64,
     multicast_timeout_ms: u64,
-    upstream_networks: &Option<Vec<NetworkId>>,
 ) -> (NodeConfig, NetworkId) {
     let mut config = diem_config::config::NodeConfig::default_for_validator();
     config.base.role = role;
@@ -582,12 +569,6 @@ fn setup_state_sync_config(
     if !role.is_validator() {
         config.full_node_networks = vec![config.validator_network.unwrap()];
         config.validator_network = None;
-        // setup upstream network for FN
-        if let Some(upstream_networks) = upstream_networks {
-            config.upstream.networks = upstream_networks.clone();
-        } else if index > 0 {
-            config.upstream.networks.push(network_id.clone());
-        }
     }
 
     (config, network_id)

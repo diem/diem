@@ -12,10 +12,6 @@ full_node_networks:
   seeds:
     {{- (get .Values.diem_chains .Values.chain.name).seeds | default dict | toYaml | nindent 6 }}
 
-upstream:
-  networks:
-  - public
-
 metrics:
   enabled: false
 
