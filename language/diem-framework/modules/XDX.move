@@ -98,13 +98,14 @@ module XDX {
         Diem::is_currency<CoinType>() &&
             Diem::currency_code<CoinType>() == Diem::currency_code<XDX>()
     }
-
     spec fun is_xdx {
-        pragma opaque, verify = false;
+        pragma opaque;
         include Diem::spec_is_currency<CoinType>() ==> Diem::AbortsIfNoCurrency<XDX>;
-        /// The following is correct because currency codes are unique; however, we
-        /// can currently not prove it, therefore verify is false.
-        ensures result == Diem::spec_is_currency<CoinType>() && spec_is_xdx<CoinType>();
+        ensures result == spec_is_xdx<CoinType>();
+    }
+    spec define spec_is_xdx<CoinType>(): bool {
+        Diem::spec_is_currency<CoinType>() && Diem::spec_is_currency<XDX>() &&
+            (Diem::spec_currency_code<CoinType>() == Diem::spec_currency_code<XDX>())
     }
 
     /// Return the account address where the globally unique XDX::Reserve resource is stored
@@ -132,11 +133,6 @@ module XDX {
         /// Checks whether the Reserve resource exists.
         define reserve_exists(): bool {
            exists<Reserve>(CoreAddresses::CURRENCY_INFO_ADDRESS())
-        }
-
-        /// Returns true if CoinType is XDX.
-        define spec_is_xdx<CoinType>(): bool {
-            type<CoinType>() == type<XDX>()
         }
 
         /// After genesis, `LimitsDefinition<XDX>` is published at Diem root. It's published by

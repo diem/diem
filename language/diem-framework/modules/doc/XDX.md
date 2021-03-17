@@ -247,16 +247,21 @@ Returns true if <code>CoinType</code> is <code><a href="XDX.md#0x1_XDX_XDX">XDX:
 
 
 
-<pre><code><b>pragma</b> opaque, verify = <b>false</b>;
+<pre><code><b>pragma</b> opaque;
 <b>include</b> <a href="Diem.md#0x1_Diem_spec_is_currency">Diem::spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="Diem.md#0x1_Diem_AbortsIfNoCurrency">Diem::AbortsIfNoCurrency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;;
+<b>ensures</b> result == <a href="XDX.md#0x1_XDX_spec_is_xdx">spec_is_xdx</a>&lt;CoinType&gt;();
 </code></pre>
 
 
-The following is correct because currency codes are unique; however, we
-can currently not prove it, therefore verify is false.
 
 
-<pre><code><b>ensures</b> result == <a href="Diem.md#0x1_Diem_spec_is_currency">Diem::spec_is_currency</a>&lt;CoinType&gt;() && <a href="XDX.md#0x1_XDX_spec_is_xdx">spec_is_xdx</a>&lt;CoinType&gt;();
+<a name="0x1_XDX_spec_is_xdx"></a>
+
+
+<pre><code><b>define</b> <a href="XDX.md#0x1_XDX_spec_is_xdx">spec_is_xdx</a>&lt;CoinType&gt;(): bool {
+   <a href="Diem.md#0x1_Diem_spec_is_currency">Diem::spec_is_currency</a>&lt;CoinType&gt;() && <a href="Diem.md#0x1_Diem_spec_is_currency">Diem::spec_is_currency</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;() &&
+       (<a href="Diem.md#0x1_Diem_spec_currency_code">Diem::spec_currency_code</a>&lt;CoinType&gt;() == <a href="Diem.md#0x1_Diem_spec_currency_code">Diem::spec_currency_code</a>&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;())
+}
 </code></pre>
 
 
@@ -327,18 +332,6 @@ Checks whether the Reserve resource exists.
 
 <pre><code><b>define</b> <a href="XDX.md#0x1_XDX_reserve_exists">reserve_exists</a>(): bool {
    <b>exists</b>&lt;<a href="XDX.md#0x1_XDX_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
-}
-</code></pre>
-
-
-Returns true if CoinType is XDX.
-
-
-<a name="0x1_XDX_spec_is_xdx"></a>
-
-
-<pre><code><b>define</b> <a href="XDX.md#0x1_XDX_spec_is_xdx">spec_is_xdx</a>&lt;CoinType&gt;(): bool {
-    type&lt;CoinType&gt;() == type&lt;<a href="XDX.md#0x1_XDX">XDX</a>&gt;()
 }
 </code></pre>
 
