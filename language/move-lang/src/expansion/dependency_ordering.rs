@@ -183,6 +183,9 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition
     mdef.functions
         .iter()
         .for_each(|(_, _, fdef)| function(context, fdef));
+    mdef.specs
+        .iter()
+        .for_each(|sblock| spec_block(context, sblock));
 }
 
 fn struct_def(context: &mut Context, sdef: &E::StructDefinition) {
@@ -197,6 +200,9 @@ fn function(context: &mut Context, fdef: &E::Function) {
     if let E::FunctionBody_::Defined(seq) = &fdef.body.value {
         sequence(context, seq)
     }
+    fdef.specs
+        .values()
+        .for_each(|sblock| spec_block(context, sblock));
 }
 
 fn function_signature(context: &mut Context, sig: &E::FunctionSignature) {
@@ -375,5 +381,38 @@ fn exp_dotted(context: &mut Context, sp!(_, ed_): &E::ExpDotted) {
     match ed_ {
         D::Exp(e) => exp(context, e),
         D::Dot(edotted, _) => exp_dotted(context, edotted),
+    }
+}
+
+//**************************************************************************************************
+// Specs
+//**************************************************************************************************
+
+fn spec_block(context: &mut Context, sp!(_, sb_): &E::SpecBlock) {
+    sb_.members
+        .iter()
+        .for_each(|sbm| spec_block_member(context, sbm))
+}
+
+fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
+    use E::SpecBlockMember_ as M;
+    match sbm_ {
+        M::Condition {
+            exp: e,
+            additional_exps: es,
+            ..
+        } => {
+            exp(context, e);
+            es.iter().for_each(|e| exp(context, e))
+        }
+        M::Function { body, .. } => {
+            if let E::FunctionBody_::Defined(seq) = &body.value {
+                sequence(context, seq)
+            }
+        }
+        M::Let { def: e, .. } | M::Include { exp: e, .. } | M::Apply { exp: e, .. } => {
+            exp(context, e)
+        }
+        M::Variable { .. } | M::Pragma { .. } => {}
     }
 }
