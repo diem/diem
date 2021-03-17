@@ -356,6 +356,11 @@ globs = ["language/diem-framework/compiled/transaction_scripts/abi/**/*"]
 mark-changed = ["transaction-builder-generator"]
 post-rule = "skip-rules"
 
+[[determinator.path-rule]]
+# On changes of diem-framework or move-stdlib, rerun the tests in move-prover.
+globs = ["language/diem-framework/**/*", "language/move-stdlib/**/*"]
+mark-changed = ["move-prover"]
+
 [[determinator.package-rule]]
 # x controls the build process, so if it changes, build everything.
 on-affected = ["x"]
