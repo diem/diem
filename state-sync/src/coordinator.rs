@@ -664,11 +664,13 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         }
 
         let result = match request.target.clone() {
-            TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),
+            TargetType::TargetLedgerInfo(li) => {
+                self.process_request_highest_available(peer, request, Some(li), None)
+            }
             TargetType::HighestAvailable {
                 target_li,
                 timeout_ms,
-            } => self.process_request_highest_available(peer, request, target_li, timeout_ms),
+            } => self.process_request_highest_available(peer, request, target_li, Some(timeout_ms)),
             TargetType::Waypoint(waypoint_version) => {
                 self.process_request_waypoint(peer, request, waypoint_version)
             }
@@ -718,26 +720,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(())
     }
 
-    /// Processing requests with a specified target LedgerInfo.
-    /// Assumes that the local state is uptodate with storage.
-    fn process_request_target_li(
-        &mut self,
-        peer: PeerNetworkId,
-        request: GetChunkRequest,
-        target_li: LedgerInfoWithSignatures,
-    ) -> Result<(), Error> {
-        let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
-        let response_li = self.choose_response_li(request.current_epoch, Some(target_li))?;
-        // In case known_version is lower than the requested ledger info an empty response might be
-        // sent.
-        self.deliver_chunk(
-            peer,
-            request.known_version,
-            ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
-            limit,
-        )
-    }
-
     /// Processing requests with no target LedgerInfo (highest available) and potentially long
     /// polling.
     /// Assumes that the local state is uptodate with storage.
@@ -746,22 +728,26 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         peer: PeerNetworkId,
         request: GetChunkRequest,
         target_li: Option<LedgerInfoWithSignatures>,
-        timeout_ms: u64,
+        timeout_ms: Option<u64>,
     ) -> Result<(), Error> {
-        let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
-        let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
+        let chunk_limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
+        let timeout = if let Some(timeout_ms) = timeout_ms {
+            std::cmp::min(timeout_ms, self.config.max_timeout_ms)
+        } else {
+            self.config.max_timeout_ms
+        };
 
-        // If there is nothing a node can help with, and the request supports long polling,
-        // add it to the subscriptions.
+        // If the node cannot respond to the request now (i.e., it's not up-to-date with the
+        // requestor) add the request to the subscriptions to be handled when this node catches up.
         let local_version = self.local_state.committed_version();
-        if local_version <= request.known_version && timeout > 0 {
+        if local_version <= request.known_version {
             let expiration_time = SystemTime::now().checked_add(Duration::from_millis(timeout));
             if let Some(time) = expiration_time {
                 let request_info = PendingRequestInfo {
                     expiration_time: time,
                     known_version: request.known_version,
                     request_epoch: request.current_epoch,
-                    limit,
+                    limit: chunk_limit,
                 };
                 self.subscriptions.insert(peer, request_info);
             }
@@ -786,7 +772,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 target_li,
                 highest_li,
             },
-            limit,
+            chunk_limit,
         )
     }
 
@@ -1115,7 +1101,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 end_of_epoch_li,
             } => self.verify_ledger_info_for_waypoint(waypoint_li, end_of_epoch_li),
             ResponseLedgerInfo::VerifiableLedgerInfo(response_li) => {
-                self.verify_verifiable_ledger_info(response_li)
+                self.verify_progressive_ledger_info(response_li, &None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
@@ -1129,10 +1115,23 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         target_li: &LedgerInfoWithSignatures,
         highest_li: &Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
-        if !self.is_initialized() || self.sync_request.is_some() {
+        if !self.is_initialized() {
             return Err(Error::ReceivedWrongChunkType(
-                "Received a progressive ledger info, but we're either not initialized or have an active consensus sync request!".into(),
+                "Received a progressive ledger info, but we're not initialized!".into(),
             ));
+        }
+
+        // If we're syncing to a specific target for consensus, valid responses
+        // should not exceed the ledger info version of the sync request.
+        if let Some(sync_request) = self.sync_request.as_ref() {
+            let sync_request_version = sync_request.target.ledger_info().version();
+            let response_version = target_li.ledger_info().version();
+            if sync_request_version < response_version {
+                let error_message = format!("Verifiable ledger info version is higher than the sync target. Received: {}, requested: {}.",
+                                            response_version,
+                                            sync_request_version);
+                return Err(Error::ProcessInvalidChunk(error_message));
+            }
         }
 
         // Valid responses should not have a highest ledger info less than target
@@ -1143,31 +1142,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 let error_message = format!("Progressive ledger info has target version > highest version. Target: {}, highest: {}.",
                                             target_version,
                                             highest_version);
-                return Err(Error::ProcessInvalidChunk(error_message));
-            }
-        }
-
-        Ok(())
-    }
-
-    fn verify_verifiable_ledger_info(
-        &mut self,
-        response_li: &LedgerInfoWithSignatures,
-    ) -> Result<(), Error> {
-        if !self.is_initialized() {
-            return Err(Error::ReceivedWrongChunkType(
-                "Received a verifiable ledger info, but we're not initialized!".into(),
-            ));
-        }
-
-        // Valid responses should not exceed the ledger info version of the sync request.
-        if let Some(sync_request) = self.sync_request.as_ref() {
-            let sync_request_version = sync_request.target.ledger_info().version();
-            let response_version = response_li.ledger_info().version();
-            if sync_request_version < response_version {
-                let error_message = format!("Verifiable ledger info version is higher than the sync target. Received: {}, requested: {}.",
-                                            response_version,
-                                            sync_request_version);
                 return Err(Error::ProcessInvalidChunk(error_message));
             }
         }
@@ -1251,7 +1225,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok((new_version, new_epoch))
     }
 
-    /// Returns a chunk target for the highest available (full node synchronization).
+    /// Returns a chunk target for the highest available synchronization.
     fn create_highest_available_chunk_target(
         &self,
         target_ledger_info: Option<LedgerInfoWithSignatures>,
@@ -1269,7 +1243,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             if target_version <= known_version {
                 Err(Error::SyncedBeyondTarget(known_version, target_version))
             } else {
-                Ok(TargetType::TargetLedgerInfo(sync_request.target.clone()))
+                let chunk_target =
+                    self.create_highest_available_chunk_target(Some(sync_request.target.clone()));
+                Ok(chunk_target)
             }
         } else {
             Err(Error::NoSyncRequestFound(
