@@ -33,16 +33,23 @@
 //! Using this structure, we are able to query the global state, taking into account the output of
 //! uncommitted transactions. For example, if we want to execute another transaction T_{i+1}', we
 //! can use the tree S_i. If we look for account A, we can find its new value in the tree.
-//! Otherwise we know the account does not exist in the tree and we can fall back to storage. As
+//! Otherwise, we know the account does not exist in the tree, and we can fall back to storage. As
 //! another example, if we want to execute transaction T_{i+2}, we can use the tree S_{i+1} that
 //! has updated values for both account A and B.
 //!
-//! When we commit a transaction, for example T_i, we will first send its write set to storage.
-//! Once the writes to storage complete, any node reachable from S_i will be available in storage.
-//! Therefore we start from S_i and recursively drop its descendant. For internal or leaf nodes
-//! (for example node o in the above example), we do not know if there are other nodes (for example
-//! S_{i+1} in the above example) pointing to it, so we replace the node with a subtree node with
-//! the same hash. This allows us to clean up memory as transactions are committed.
+//! Each version of the tree holds a strong reference (an Arc<Node>) to its root as well as one to
+//! its base tree (S_i is the base tree of S_{i+1} in the above example). The root node in turn,
+//! recursively holds all descendant nodes created in the same version, and weak references
+//! (a Weak<Node>) to all descendant nodes that was created from previous versions.
+//! With this construction:
+//!     1. Even if a reference to a specific tree is dropped, the nodes belonging to it won't be
+//! dropped as long as trees depending on it still hold strong references to it via the chain of
+//! "base trees".
+//!     2. Even if a tree is not dropped, when nodes it created are persisted to DB, all of them
+//! and those created by its previous versions can be dropped, which we express by calling "prune()"
+//! on it which replaces the strong references to its root and its base tree with weak references.
+//!     3. We can hold strong references to recently accessed nodes that have already been persisted
+//! in an LRU flavor cache for less DB reads.
 //!
 //! This Sparse Merkle Tree serves a dual purpose. First, to support a leader based consensus
 //! algorithm, we need to build a tree of transactions like the following:
@@ -99,15 +106,26 @@ pub enum AccountStatus<V> {
     Unknown,
 }
 
+/// The inner content of a sparse merkle tree, we have this so that even if a tree is dropped, the
+/// INNER of it can still live if referenced by a later version.
 #[derive(Debug)]
 struct Inner<V> {
+    /// Reference to the root node, initially a strong reference, and once pruned, becomes a weak
+    /// reference, allowing nodes created by this version to go away.
     root: ArcSwap<SubTree<V>>,
+    /// Reference to the INNER base tree, needs to be a strong reference if the base is speculative
+    /// itself, so that nodes referenced in this version won't go away because the base tree is
+    /// dropped.
     base: ArcSwapOption<Inner<V>>,
 }
 
 impl<V: CryptoHash> Inner<V> {
     fn prune(&self) {
+        // Replace the link to the root node with a weak reference, so all nodes created by this
+        // version can be dropped. A weak link is still maintained so that if it's cached somehow,
+        // we still have access to it without resorting to the DB.
         self.root.store(Arc::new(self.root.load().as_ref().weak()));
+        // Disconnect the base tree, so that nodes created by previous versions can be dropped.
         self.base.store(None);
     }
 }
@@ -236,7 +254,7 @@ where
             break;
         }
 
-        // Now we are at the bottom of the tree and current_node can be either a leaf, a subtree or
+        // Now we are at the bottom of the tree and current_node can be either a leaf, unknown or
         // empty. We construct a new subtree like we are inserting the key here.
         let new_node = Self::construct_subtree_at_bottom(
             &current_subtree,
@@ -291,7 +309,7 @@ where
                         )),
                     },
                     None => {
-                        // When the search reaches a Subtree node, we need proof to give us more
+                        // When the search reaches an unknown subtree, we need proof to give us more
                         // information about this part of the tree.
                         let proof = proof_reader
                             .get_proof(key)
@@ -496,6 +514,7 @@ where
         self.inner.root.load().hash()
     }
 
+    /// Mark that all the nodes created by this tree and its ancestors are persisted in the DB.
     pub fn prune(&self) {
         self.inner.prune()
     }
