@@ -339,9 +339,8 @@ pub fn program(
         modules: emodules,
         scripts: escripts,
     } = prog;
-    let mut modules = modules(&mut context, emodules);
+    let modules = modules(&mut context, emodules);
     let scripts = scripts(&mut context, escripts);
-    super::uses::verify(&mut context.errors, &mut modules);
     (N::Program { modules, scripts }, context.get_errors())
 }
 
@@ -378,7 +377,7 @@ fn module(
     context.restore_unscoped(unscoped);
     N::ModuleDefinition {
         is_source_module,
-        dependency_order: 0,
+        dependency_order: mdef.dependency_order,
         friends,
         structs,
         functions,

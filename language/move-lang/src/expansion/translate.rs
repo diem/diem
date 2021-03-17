@@ -206,6 +206,8 @@ pub fn program(
         }
         keyed
     };
+
+    super::dependency_ordering::verify(&mut context.errors, &mut module_map);
     let prog = E::Program {
         modules: module_map,
         scripts,
@@ -303,6 +305,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     let def = E::ModuleDefinition {
         loc,
         is_source_module: context.is_source_module,
+        dependency_order: 0,
         friends,
         structs,
         constants,

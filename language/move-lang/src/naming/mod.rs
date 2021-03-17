@@ -3,4 +3,3 @@
 
 pub mod ast;
 pub(crate) mod translate;
-mod uses;

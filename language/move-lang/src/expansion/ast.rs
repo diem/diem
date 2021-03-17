@@ -46,6 +46,9 @@ pub struct Script {
 pub struct ModuleDefinition {
     pub loc: Loc,
     pub is_source_module: bool,
+    /// `dependency_order` is the topological order/rank in the dependency graph.
+    /// `dependency_order` is initialized at `0` and set in the uses pass
+    pub dependency_order: usize,
     pub friends: UniqueMap<ModuleIdent, Loc>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -563,6 +566,7 @@ impl AstDebug for ModuleDefinition {
         let ModuleDefinition {
             loc: _loc,
             is_source_module,
+            dependency_order,
             friends,
             structs,
             functions,
@@ -574,6 +578,7 @@ impl AstDebug for ModuleDefinition {
         } else {
             "library module"
         });
+        w.writeln(&format!("dependency order #{}", dependency_order));
         for (mident, _loc) in friends.key_cloned_iter() {
             w.write(&format!("friend {};", mident));
             w.new_line();

@@ -3,8 +3,8 @@
 
 use crate::{
     errors::*,
-    naming::ast as N,
-    parser::ast::{ModuleIdent, StructName},
+    expansion::ast as E,
+    parser::ast::ModuleIdent,
     shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 // Entry
 //**************************************************************************************************
 
-pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::ModuleDefinition>) {
+pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>) {
     let imm_modules = &modules;
     let mut context = Context::new(imm_modules);
     module_defs(&mut context, modules);
@@ -44,7 +44,7 @@ enum DepType {
 }
 
 struct Context<'a> {
-    modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>,
+    modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>,
     // A union of uses and friends:
     // - if A uses B,    add edge A -> B
     // - if A friends B, add edge B -> A
@@ -53,7 +53,7 @@ struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    fn new(modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>) -> Self {
+    fn new(modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>) -> Self {
         Context {
             modules,
             neighbors: BTreeMap::new(),
@@ -166,13 +166,13 @@ fn best_cycle_loc<'a>(
 // Modules
 //**************************************************************************************************
 
-fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, N::ModuleDefinition>) {
+fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, E::ModuleDefinition>) {
     modules
         .key_cloned_iter()
         .for_each(|(mident, mdef)| module(context, mident, mdef))
 }
 
-fn module(context: &mut Context, mident: ModuleIdent, mdef: &N::ModuleDefinition) {
+fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition) {
     context.current_module = Some(mident);
     mdef.friends
         .key_cloned_iter()
@@ -185,59 +185,67 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &N::ModuleDefinition
         .for_each(|(_, _, fdef)| function(context, fdef));
 }
 
-fn struct_def(context: &mut Context, sdef: &N::StructDefinition) {
-    if let N::StructFields::Defined(fields) = &sdef.fields {
+fn struct_def(context: &mut Context, sdef: &E::StructDefinition) {
+    if let E::StructFields::Defined(fields) = &sdef.fields {
         fields.iter().for_each(|(_, _, (_, bt))| type_(context, bt));
     }
 }
 
-fn function(context: &mut Context, fdef: &N::Function) {
+fn function(context: &mut Context, fdef: &E::Function) {
     function_signature(context, &fdef.signature);
     function_acquires(context, &fdef.acquires);
-    if let N::FunctionBody_::Defined(seq) = &fdef.body.value {
+    if let E::FunctionBody_::Defined(seq) = &fdef.body.value {
         sequence(context, seq)
     }
 }
 
-fn function_signature(context: &mut Context, sig: &N::FunctionSignature) {
+fn function_signature(context: &mut Context, sig: &E::FunctionSignature) {
     types(context, sig.parameters.iter().map(|(_, st)| st));
     type_(context, &sig.return_type)
 }
 
-fn function_acquires(_context: &mut Context, _acqs: &BTreeMap<StructName, Loc>) {}
+fn function_acquires(context: &mut Context, acqs: &[E::ModuleAccess]) {
+    for acq in acqs {
+        module_access(context, acq);
+    }
+}
 
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
 
-fn type_name(context: &mut Context, sp!(loc, tn_): &N::TypeName) {
-    use N::TypeName_ as TN;
-    if let TN::ModuleType(m, _) = tn_ {
+fn module_access(context: &mut Context, sp!(loc, ma_): &E::ModuleAccess) {
+    if let E::ModuleAccess_::ModuleAccess(m, _) = ma_ {
         context.add_usage(m.clone(), *loc)
     }
 }
 
-fn types<'a>(context: &mut Context, tys: impl IntoIterator<Item = &'a N::Type>) {
+fn types<'a>(context: &mut Context, tys: impl IntoIterator<Item = &'a E::Type>) {
     tys.into_iter().for_each(|ty| type_(context, ty))
 }
 
-fn types_opt(context: &mut Context, tys_opt: &Option<Vec<N::Type>>) {
+fn types_opt(context: &mut Context, tys_opt: &Option<Vec<E::Type>>) {
     tys_opt.iter().for_each(|tys| types(context, tys))
 }
 
-fn type_(context: &mut Context, sp!(_, ty_): &N::Type) {
-    use N::Type_ as T;
+fn type_(context: &mut Context, sp!(_, ty_): &E::Type) {
+    use E::Type_ as T;
     match ty_ {
-        T::Apply(_, tn, tys) => {
-            type_name(context, tn);
+        T::Apply(tn, tys) => {
+            module_access(context, tn);
             types(context, tys);
         }
+        T::Multiple(tys) => types(context, tys),
+        T::Fun(tys, ret_ty) => {
+            types(context, tys);
+            type_(context, ret_ty)
+        }
         T::Ref(_, t) => type_(context, t),
-        T::Param(_) | T::Unit | T::Anything | T::UnresolvedError | T::Var(_) => (),
+        T::Unit | T::UnresolvedError => (),
     }
 }
 
-fn type_opt(context: &mut Context, t_opt: &Option<N::Type>) {
+fn type_opt(context: &mut Context, t_opt: &Option<E::Type>) {
     t_opt.iter().for_each(|t| type_(context, t))
 }
 
@@ -245,8 +253,8 @@ fn type_opt(context: &mut Context, t_opt: &Option<N::Type>) {
 // Expressions
 //**************************************************************************************************
 
-fn sequence(context: &mut Context, sequence: &N::Sequence) {
-    use N::SequenceItem_ as SI;
+fn sequence(context: &mut Context, sequence: &E::Sequence) {
+    use E::SequenceItem_ as SI;
     for sp!(_, item_) in sequence {
         match item_ {
             SI::Seq(e) => exp(context, e),
@@ -262,21 +270,29 @@ fn sequence(context: &mut Context, sequence: &N::Sequence) {
     }
 }
 
-fn lvalues<'a>(context: &mut Context, al: impl IntoIterator<Item = &'a N::LValue>) {
+fn lvalues<'a>(context: &mut Context, al: impl IntoIterator<Item = &'a E::LValue>) {
     al.into_iter().for_each(|a| lvalue(context, a))
 }
 
-fn lvalue(context: &mut Context, sp!(loc, a_): &N::LValue) {
-    use N::LValue_ as L;
-    if let L::Unpack(m, _, bs_opt, f) = a_ {
-        context.add_usage(m.clone(), *loc);
+fn lvalues_with_range(context: &mut Context, sp!(_, ll): &E::LValueWithRangeList) {
+    ll.iter().for_each(|lrange| {
+        let sp!(_, (l, e)) = lrange;
+        lvalue(context, l);
+        exp(context, e);
+    })
+}
+
+fn lvalue(context: &mut Context, sp!(_loc, a_): &E::LValue) {
+    use E::LValue_ as L;
+    if let L::Unpack(m, bs_opt, f) = a_ {
+        module_access(context, m);
         types_opt(context, bs_opt);
         lvalues(context, f.iter().map(|(_, _, (_, b))| b));
     }
 }
 
-fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
-    use N::Exp_ as E;
+fn exp(context: &mut Context, sp!(_loc, e_): &E::Exp) {
+    use E::Exp_ as E;
     match e_ {
         E::Unit { .. }
         | E::UnresolvedError
@@ -285,21 +301,22 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         | E::Spec(_, _)
         | E::InferredNum(_)
         | E::Value(_)
-        | E::Constant(None, _)
         | E::Move(_)
-        | E::Copy(_)
-        | E::Use(_) => (),
+        | E::Copy(_) => (),
 
-        E::Constant(Some(m), _c) => context.add_usage(m.clone(), *loc),
-        E::ModuleCall(m, _, bs_opt, sp!(_, es_)) => {
-            context.add_usage(m.clone(), *loc);
-            types_opt(context, bs_opt);
-            es_.iter().for_each(|e| exp(context, e))
+        E::Name(ma, tys_opt) => {
+            module_access(context, ma);
+            types_opt(context, tys_opt)
         }
-
-        E::Builtin(bf, sp!(_, es_)) => {
-            builtin_function(context, bf);
-            es_.iter().for_each(|e| exp(context, e))
+        E::Call(ma, tys_opt, args) => {
+            module_access(context, ma);
+            types_opt(context, tys_opt);
+            args.value.iter().for_each(|e| exp(context, e))
+        }
+        E::Pack(ma, tys_opt, fields) => {
+            module_access(context, ma);
+            types_opt(context, tys_opt);
+            fields.iter().for_each(|(_, _, (_, e))| exp(context, e))
         }
 
         E::IfElse(ec, et, ef) => {
@@ -308,7 +325,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
             exp(context, ef)
         }
 
-        E::BinopExp(e1, _, e2) | E::Mutate(e1, e2) | E::While(e1, e2) => {
+        E::BinopExp(e1, _, e2) | E::Mutate(e1, e2) | E::While(e1, e2) | E::Index(e1, e2) => {
             exp(context, e1);
             exp(context, e2)
         }
@@ -322,43 +339,41 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
             exp(context, e);
         }
 
-        E::Loop(e) | E::Return(e) | E::Abort(e) | E::Dereference(e) | E::UnaryExp(_, e) => {
-            exp(context, e)
-        }
-
-        E::Pack(m, _, bs_opt, fes) => {
-            context.add_usage(m.clone(), *loc);
-            types_opt(context, bs_opt);
-            fes.iter().for_each(|(_, _, (_, e))| exp(context, e))
-        }
+        E::Loop(e)
+        | E::Return(e)
+        | E::Abort(e)
+        | E::Dereference(e)
+        | E::UnaryExp(_, e)
+        | E::Borrow(_, e) => exp(context, e),
 
         E::ExpList(es) => es.iter().for_each(|e| exp(context, e)),
 
-        E::DerefBorrow(edotted) | E::Borrow(_, edotted) => exp_dotted(context, edotted),
+        E::ExpDotted(edotted) => exp_dotted(context, edotted),
 
         E::Cast(e, ty) | E::Annotate(e, ty) => {
             exp(context, e);
             type_(context, ty)
         }
+
+        E::Lambda(ll, e) => {
+            lvalues(context, &ll.value);
+            exp(context, e)
+        }
+        E::Quant(_, binds, es_vec, eopt, e) => {
+            lvalues_with_range(context, binds);
+            es_vec
+                .iter()
+                .for_each(|es| es.iter().for_each(|e| exp(context, e)));
+            eopt.iter().for_each(|e| exp(context, e));
+            exp(context, e)
+        }
     }
 }
 
-fn exp_dotted(context: &mut Context, sp!(_, ed_): &N::ExpDotted) {
-    use N::ExpDotted_ as D;
+fn exp_dotted(context: &mut Context, sp!(_, ed_): &E::ExpDotted) {
+    use E::ExpDotted_ as D;
     match ed_ {
         D::Exp(e) => exp(context, e),
         D::Dot(edotted, _) => exp_dotted(context, edotted),
-    }
-}
-
-fn builtin_function(context: &mut Context, sp!(_, bf_): &N::BuiltinFunction) {
-    use N::BuiltinFunction_ as B;
-    match bf_ {
-        B::MoveTo(bt_opt)
-        | B::MoveFrom(bt_opt)
-        | B::BorrowGlobal(_, bt_opt)
-        | B::Exists(bt_opt)
-        | B::Freeze(bt_opt) => type_opt(context, bt_opt),
-        B::Assert => (),
     }
 }

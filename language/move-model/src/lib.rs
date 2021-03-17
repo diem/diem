@@ -237,6 +237,7 @@ fn run_spec_checker(env: &mut GlobalEnv, mut units: Vec<CompiledUnit>, mut eprog
                     functions.add(function_name, function).unwrap();
                     let expanded_module = ModuleDefinition {
                         loc,
+                        dependency_order: usize::MAX,
                         is_source_module: true,
                         friends: UniqueMap::new(),
                         structs: UniqueMap::new(),

@@ -3,9 +3,9 @@ error:
    ┌── tests/move_check/dependencies/use_cycle_2.move:5:9 ───
    │
  5 │         0x2::B::foo()
-   │         ^^^^^^^^^^^^^ Invalid use of module '0x2::B' in module '0x2::A'.
+   │         ^^^^^^^^^^^ Invalid use of module '0x2::B' in module '0x2::A'.
    ·
  5 │         0x2::B::foo()
-   │         ------------- Using this module creates a dependency cycle: '0x2::B' uses '0x2::A' uses '0x2::B'
+   │         ----------- Using this module creates a dependency cycle: '0x2::B' uses '0x2::A' uses '0x2::B'
    │
 
