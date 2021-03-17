@@ -215,7 +215,7 @@ module VASP {
     /// Spec version of `Self::num_children`.
     spec define spec_num_children(parent: address): u64 {
         global<ParentVASP>(parent).num_children
-    }
+    }p
 
     // **************** SPECIFICATIONS ****************
     spec module {} // switch documentation context back to module level
