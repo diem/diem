@@ -305,7 +305,7 @@ impl DiemVMImpl {
         let txn_sequence_number = txn_data.sequence_number();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
-        let gas_remaining = 0;
+        let gas_remaining = 12;
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
