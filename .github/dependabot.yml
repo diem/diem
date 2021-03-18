@@ -14,7 +14,7 @@ updates:
       - dependency-name: "codespan*"
       - dependency-name: "libfuzzer-sys"
       - dependency-name: "bindgen"
-    open-pull-requests-limit: 20
+    open-pull-requests-limit: 0
 
   # Dockerfiles.
 
