@@ -55,6 +55,7 @@ pub fn output(
         .output_transaction_script_decoder_map(common::transaction_script_abis(abis).as_slice())?;
     emitter.output_script_function_decoder_map(common::script_function_abis(abis).as_slice())?;
 
+    emitter.output_encoding_helpers(abis)?;
     emitter.output_decoding_helpers(abis)?;
 
     Ok(())
@@ -75,14 +76,16 @@ where
     T: Write,
 {
     fn output_additional_imports(&mut self) -> Result<()> {
+        let diem_pkg_root = match &self.diem_package_name {
+            None => "".into(),
+            Some(package) => package.clone() + ".",
+        };
         writeln!(
             self.out,
             r#"
+from {}bcs import (deserialize as bcs_deserialize, serialize as bcs_serialize)
 from {}diem_types import (Script, ScriptFunction, TransactionPayload, TransactionPayload__ScriptFunction, Identifier, ModuleId, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector)"#,
-            match &self.diem_package_name {
-                None => "".into(),
-                Some(package) => package.clone() + ".",
-            },
+            diem_pkg_root, diem_pkg_root
         )
     }
 
@@ -230,7 +233,7 @@ def decode_script_function_payload(payload: TransactionPayload) -> ScriptFunctio
 "#,
             abi.name().to_shouty_snake_case(),
             Self::quote_type_arguments(abi.ty_args()),
-            Self::quote_arguments(abi.args()),
+            Self::quote_arguments_for_script(abi.args()),
         )?;
         self.out.unindent();
         Ok(())
@@ -347,10 +350,10 @@ def decode_script_function_payload(payload: TransactionPayload) -> ScriptFunctio
         for (index, arg) in abi.args().iter().enumerate() {
             writeln!(
                 self.out,
-                "{}=decode_{}_argument(script.args[{}]),",
+                "{}=bcs_deserialize(script.args[{}], {})[0],",
                 arg.name(),
-                common::mangle_type(arg.type_tag()),
                 index,
+                Self::quote_type(arg.type_tag())
             )?;
         }
         self.out.unindent();
@@ -461,8 +464,35 @@ SCRIPT_FUNCTION_ENCODER_MAP: typing.Dict[typing.Type[ScriptFunctionCall], typing
         writeln!(self.out, "}}\n")
     }
 
+    fn output_encoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        let required_types = common::get_required_helper_types(abis);
+        for required_type in required_types {
+            self.output_encoding_helper(required_type)?;
+        }
+        Ok(())
+    }
+
+    fn output_encoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
+        let encoding = match Self::bcs_primitive_type_name(type_tag) {
+            None => "arg.bcs_serialize()".into(),
+            Some(type_name) => {
+                format!("bcs_serialize(arg, {})", type_name)
+            }
+        };
+        writeln!(
+            self.out,
+            r#"
+def encode_{}_argument(arg: {}) -> bytes:
+    return {}
+"#,
+            common::mangle_type(type_tag),
+            Self::quote_type(type_tag),
+            encoding,
+        )
+    }
+
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_decoding_helper_types(abis);
+        let required_types = common::get_required_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -559,6 +589,13 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
             .join(", ")
     }
 
+    fn quote_arguments_for_script(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::quote_transaction_argument_for_script(arg.type_tag(), arg.name()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     fn quote_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
@@ -571,12 +608,19 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
                 U8 => "bytes".into(),
                 _ => common::type_not_allowed(type_tag),
             },
-
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+        format!(
+            "encode_{}_argument({})",
+            common::mangle_type(type_tag),
+            name
+        )
+    }
+
+    fn quote_transaction_argument_for_script(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("TransactionArgument__Bool(value={})", name),
@@ -589,6 +633,26 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
                 _ => common::type_not_allowed(type_tag),
             },
 
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
+        }
+    }
+
+    // - if a `type_tag` is a primitive type in BCS, we can call
+    //   `bcs_serialize(arg, <name>)` and `bcs_deserialize(arg, <name>)`
+    //   to convert into and from `bytes`.
+    // - otherwise, we can use `<arg>.bcs_serialize()`, `<arg>.bcs_deserialize()` to do the work.
+    fn bcs_primitive_type_name(type_tag: &TypeTag) -> Option<&'static str> {
+        use TypeTag::*;
+        match type_tag {
+            Bool => Some("bool"),
+            U8 => Some("st.uint8"),
+            U64 => Some("st.uint64"),
+            U128 => Some("st.uint128"),
+            Address => None,
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => Some("bytes"),
+                _ => common::type_not_allowed(type_tag),
+            },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }

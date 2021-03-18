@@ -18,6 +18,7 @@ use std::{
 /// Output transaction builders and decoders in TypeScript for the given ABIs.
 pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     // TODO(#7876): implement typescript support for script functions
+    // TODO(#7973): encode/decode transaction args in script functions with BCS
     let abis = common::transaction_script_abis(abis);
     write_script_calls(out, &abis)?;
     write_helpers(out, &abis)

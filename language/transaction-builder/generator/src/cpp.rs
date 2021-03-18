@@ -31,7 +31,9 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], namespace: Option<&str>) 
             ScriptABI::TransactionScript(abi) => {
                 emitter.output_transaction_script_builder_definition(abi)?
             }
-            ScriptABI::ScriptFunction(abi) => emitter.output_script_fun_builder_definition(abi)?,
+            ScriptABI::ScriptFunction(abi) => {
+                emitter.output_script_function_builder_definition(abi)?
+            }
         };
     }
     emitter.output_close_namespace()
@@ -77,7 +79,9 @@ pub fn output_library_body(
             ScriptABI::TransactionScript(abi) => {
                 emitter.output_transaction_script_builder_definition(abi)?
             }
-            ScriptABI::ScriptFunction(abi) => emitter.output_script_fun_builder_definition(abi)?,
+            ScriptABI::ScriptFunction(abi) => {
+                emitter.output_script_function_builder_definition(abi)?
+            }
         };
     }
     emitter.output_close_namespace()
@@ -188,13 +192,13 @@ using namespace diem_types;
             }};"#,
             Self::quote_code(abi.code()),
             Self::quote_type_arguments(abi.ty_args()),
-            Self::quote_arguments(abi.args()),
+            Self::quote_arguments_for_script(abi.args()),
         )?;
         writeln!(self.out, "}}")?;
         Ok(())
     }
 
-    fn output_script_fun_builder_definition(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
+    fn output_script_function_builder_definition(&mut self, abi: &ScriptFunctionABI) -> Result<()> {
         if self.inlined_definitions {
             self.output_doc(abi.doc())?;
         }
@@ -221,7 +225,7 @@ using namespace diem_types;
                     {},
                     {},
                     std::vector<TypeTag> {{{}}},
-                    std::vector<TransactionArgument> {{{}}},
+                    std::vector<std::vector<uint8_t>> {{{}}},
                 }}
             }};"#,
             Self::quote_module_id(abi.module_name()),
@@ -301,6 +305,13 @@ using namespace diem_types;
             .join(", ")
     }
 
+    fn quote_arguments_for_script(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::quote_transaction_argument_for_script(arg.type_tag(), arg.name()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     fn quote_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
@@ -318,6 +329,20 @@ using namespace diem_types;
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+        match Self::bcs_primitive_type_name(type_tag) {
+            None => format!("{}.bcsSerialize()", name),
+            Some(type_name) => format!(
+                r#"({{
+            auto s = BcsSerializer();
+            Serializable<{}>::serialize({}, s);
+            std::move(s).bytes();
+            }})"#,
+                type_name, name
+            ),
+        }
+    }
+
+    fn quote_transaction_argument_for_script(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("{{TransactionArgument::Bool {{{}}} }}", name),
@@ -331,6 +356,26 @@ using namespace diem_types;
                 _ => common::type_not_allowed(type_tag),
             },
 
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
+        }
+    }
+
+    // - if a `type_tag` is a primitive type in BCS, we can call
+    //   `Serializable<name>::serialize(arg, &s)` and `Deserializable<name>::deserialize(arg, &d)`
+    //   to convert into and from `std::vector<uint8_t>`.
+    // - otherwise, we can use `<arg>.bcsSerialize()`, `<arg>.bcsDeserialize()` to do the work.
+    fn bcs_primitive_type_name(type_tag: &TypeTag) -> Option<&'static str> {
+        use TypeTag::*;
+        match type_tag {
+            Bool => Some("bool"),
+            U8 => Some("uint8_t"),
+            U64 => Some("uint64_t"),
+            U128 => Some("uint128_t"),
+            Address => None,
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => Some("std::vector<uint8_t>"),
+                _ => common::type_not_allowed(type_tag),
+            },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }

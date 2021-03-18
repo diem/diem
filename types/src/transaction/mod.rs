@@ -23,6 +23,7 @@ use diem_crypto::{
     HashValue,
 };
 use diem_crypto_derive::{BCSCryptoHash, CryptoHasher};
+use move_core_types::transaction_argument::convert_txn_args;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -285,21 +286,21 @@ impl RawTransaction {
     }
 
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
-        let empty_vec = vec![];
         let (code, args) = match &self.payload {
-            TransactionPayload::WriteSet(_) => ("genesis".to_string(), &empty_vec[..]),
-            TransactionPayload::Script(script) => {
-                (get_transaction_name(script.code()), script.args())
-            }
+            TransactionPayload::WriteSet(_) => ("genesis".to_string(), vec![]),
+            TransactionPayload::Script(script) => (
+                get_transaction_name(script.code()),
+                convert_txn_args(script.args()),
+            ),
             TransactionPayload::ScriptFunction(script_fn) => (
                 format!("{}::{}", script_fn.module(), script_fn.function()),
-                script_fn.args(),
+                script_fn.args().to_vec(),
             ),
-            TransactionPayload::Module(_) => ("module publishing".to_string(), &empty_vec[..]),
+            TransactionPayload::Module(_) => ("module publishing".to_string(), vec![]),
         };
         let mut f_args: String = "".to_string();
         for arg in args {
-            f_args = format!("{}\n\t\t\t{:#?},", f_args, arg);
+            f_args = format!("{}\n\t\t\t{:02X?},", f_args, arg);
         }
         format!(
             "RawTransaction {{ \n\

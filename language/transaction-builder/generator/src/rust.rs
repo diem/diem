@@ -381,7 +381,7 @@ Script::new(
 )"#,
                 abi.name().to_shouty_snake_case(),
                 Self::quote_type_arguments(abi.ty_args()),
-                Self::quote_arguments(abi.args()),
+                Self::quote_arguments_for_script(abi.args()),
             )?;
         } else {
             writeln!(
@@ -394,7 +394,7 @@ Script {{
 }}"#,
                 abi.name().to_shouty_snake_case(),
                 Self::quote_type_arguments(abi.ty_args()),
-                Self::quote_arguments(abi.args()),
+                Self::quote_arguments_for_script(abi.args()),
             )?;
         }
         self.out.unindent();
@@ -428,7 +428,7 @@ TransactionPayload::ScriptFunction(ScriptFunction::new(
                 self.quote_module_id(abi.module_name()),
                 self.quote_identifier(abi.name()),
                 Self::quote_type_arguments(abi.ty_args()),
-                Self::quote_arguments(abi.args()),
+                Self::quote_arguments(abi.args(), /* local_types */ true),
             )?;
         } else {
             writeln!(
@@ -443,7 +443,7 @@ TransactionPayload::ScriptFunction(ScriptFunction {{
                 self.quote_module_id(abi.module_name()),
                 self.quote_identifier(abi.name()),
                 Self::quote_type_arguments(abi.ty_args()),
-                Self::quote_arguments(abi.args()),
+                Self::quote_arguments(abi.args(), /* local_types */ false),
             )?;
         }
         self.out.unindent();
@@ -503,9 +503,8 @@ TransactionPayload::ScriptFunction(ScriptFunction {{
         for (index, arg) in abi.args().iter().enumerate() {
             writeln!(
                 self.out,
-                "{} : decode_{}_argument(script.args{}.get({})?.clone())?,",
+                "{} : bcs::from_bytes(script.args{}.get({})?).ok()?,",
                 arg.name(),
-                common::mangle_type(arg.type_tag()),
                 if self.local_types { "()" } else { "" },
                 index,
             )?;
@@ -627,7 +626,7 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
     }
 
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_decoding_helper_types(abis);
+        let required_types = common::get_required_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -753,9 +752,16 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
             .join(", ")
     }
 
-    fn quote_arguments(args: &[ArgumentABI]) -> String {
+    fn quote_arguments(args: &[ArgumentABI], local_types: bool) -> String {
         args.iter()
-            .map(|arg| Self::quote_transaction_argument(arg.type_tag(), arg.name()))
+            .map(|arg| Self::quote_transaction_argument(arg.type_tag(), arg.name(), local_types))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    fn quote_arguments_for_script(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::quote_transaction_argument_for_script(arg.type_tag(), arg.name()))
             .collect::<Vec<_>>()
             .join(", ")
     }
@@ -783,7 +789,29 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
         }
     }
 
-    fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+    fn quote_transaction_argument(type_tag: &TypeTag, name: &str, local_types: bool) -> String {
+        // NOTE: this check is not necessary as with BCS-encoding, argument of
+        // any valid Move type is possible, including Struct and Vector of types
+        // other than U8. However, to be consistent with the restrictions on
+        // transaction script arguments, we still check the TypeTag here.
+        use TypeTag::*;
+        match type_tag {
+            Bool | U8 | U64 | U128 | Address => {}
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => {}
+                _ => common::type_not_allowed(type_tag),
+            },
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
+        }
+        let conversion = format!("bcs::to_bytes(&{}).unwrap()", name);
+        if local_types {
+            conversion
+        } else {
+            format!("serde_bytes::ByteBuf::from({})", conversion)
+        }
+    }
+
+    fn quote_transaction_argument_for_script(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("TransactionArgument::Bool({})", name),

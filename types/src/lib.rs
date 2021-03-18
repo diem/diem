@@ -24,6 +24,7 @@ pub mod on_chain_config;
 pub mod proof;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptest_types;
+pub mod serde_helper;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helpers;
 pub mod transaction;

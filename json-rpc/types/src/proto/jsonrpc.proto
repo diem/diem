@@ -335,6 +335,11 @@ message Script {
   * with name `module_name` published under the `module_address` account address.
   */
   string function_name = 12;
+  /**
+   * List of hex-encoded string of BCS bytes representing script function arguments.
+   * This field does not contain type information.
+   */
+  repeated string arguments_bcs = 13 [json_name="arguments_bcs"];
 }
 
 message CurrencyInfo {

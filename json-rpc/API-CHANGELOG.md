@@ -13,6 +13,15 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-03-25 Add `arguments_bcs` in `ScriptView` for hex-encoded BCS bytes
+
+The `ScriptFunction` transaction payload accepts BCS-encoded bytes as arguments
+while the traditional `Script` payload type still accepts arguments wrapped in
+`TransactionArgument`. To differentiate them in `ScriptView` returned to users,
+a `arguments_bcs` field is added which will display HEX-encoded BCS bytes for
+the `ScriptFunction` payload while the arguments in the `Script` payload is
+still displayed through `arguments`.
+
 ## 2021-03-18 Add optional parameter `version` to `get_account` method
 
 - Get account data by version.

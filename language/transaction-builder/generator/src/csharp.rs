@@ -74,6 +74,7 @@ fn write_helper_file(
     // Must be defined after the constants.
     emitter.output_decoder_maps(abis)?;
 
+    emitter.output_encoding_helpers(abis)?;
     emitter.output_decoding_helpers(abis)?;
 
     emitter.out.unindent();
@@ -176,11 +177,12 @@ where
             self.out,
             r#"
 using System; // For ArgumentException and IndexOutOfRangeException
-using System.Numerics; // For BigInteger
-using Diem.Types; // For Script, TransactionArgument, TypeTag, TransactionPayload, ScriptFunction
-using Serde; // For ValueArray (e.g., ValueArray<byte>)
 using System.Collections;
 using System.Collections.Generic; // For List, Dictonary
+using System.Numerics; // For BigInteger
+using Bcs;
+using Diem.Types; // For Script, TransactionArgument, TypeTag, TransactionPayload, ScriptFunction
+using Serde; // For ValueArray (e.g., ValueArray<byte>)
 "#,
         )?;
         writeln!(self.out, "namespace {}\n{{", self.namespace_name)?;
@@ -344,7 +346,7 @@ return new Script(
   new ValueArray<TransactionArgument>(ta)
 );"#,
             Self::quote_type_arguments(abi.ty_args()),
-            Self::quote_arguments(abi.args()),
+            Self::quote_arguments_for_script(abi.args()),
             abi.name().to_shouty_snake_case(),
         )?;
         self.out.unindent();
@@ -374,13 +376,13 @@ return new Script(
         writeln!(
             self.out,
             "TypeTag[] tt = new TypeTag[] {{{}}};
-TransactionArgument[] ta = new TransactionArgument[] {{{}}};
+ValueArray<byte>[] ta = new ValueArray<byte>[] {{{}}};
 return new TransactionPayload.ScriptFunction(
     new ScriptFunction(
       {},
       {},
       new ValueArray<TypeTag>(tt),
-      new ValueArray<TransactionArgument>(ta)
+      new ValueArray<ValueArray<byte>>(ta)
     )
 );",
             Self::quote_type_arguments(abi.ty_args()),
@@ -473,11 +475,18 @@ return new TransactionPayload.ScriptFunction(
             ));
         }
         for (index, arg) in abi.args().iter().enumerate() {
-            params.push_str(&format!(
-                "    Helpers.decode_{}_argument(script.args[{}]),\n",
-                common::mangle_type(arg.type_tag()),
-                index,
-            ));
+            let decoding = match Self::bcs_primitive_type_name(arg.type_tag()) {
+                None => format!(
+                    "{}.BcsDeserialize(script.args[{}].ToArray())",
+                    Self::quote_type(arg.type_tag()),
+                    index
+                ),
+                Some(type_name) => format!(
+                    "new BcsDeserializer(script.args[{}].ToArray()).deserialize_{}()",
+                    index, type_name
+                ),
+            };
+            params.push_str(&format!("    {},\n", decoding,));
         }
         params.pop(); // removes last newline
         params.pop(); // removes last trailing comma
@@ -636,8 +645,51 @@ private static System.Collections.Generic.Dictionary<string, ScriptFunctionDecod
         writeln!(self.out, "}}")
     }
 
+    fn output_encoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        let required_types = common::get_required_helper_types(abis);
+        for required_type in required_types {
+            self.output_encoding_helper(required_type)?;
+        }
+        Ok(())
+    }
+
+    fn output_encoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
+        let function_body = match Self::bcs_primitive_type_name(type_tag) {
+            None => r#"
+        return new ValueArray<byte>(arg.BcsSerialize());
+    "#
+            .into(),
+            Some(type_name) => {
+                format!(
+                    r#"
+        BcsSerializer s = new BcsSerializer();
+        s.serialize_{}(arg);
+        return new ValueArray<byte>(s.get_bytes());
+    "#,
+                    type_name
+                )
+            }
+        };
+        writeln!(
+            self.out,
+            r#"
+private static ValueArray<byte> encode_{}_argument({} arg) {{
+    try {{
+{}
+    }} catch (SerializationException e) {{
+        throw new ArgumentException("Unable to serialize argument of type {}");
+    }}
+}}
+"#,
+            common::mangle_type(type_tag),
+            Self::quote_type(type_tag),
+            function_body,
+            common::mangle_type(type_tag)
+        )
+    }
+
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_decoding_helper_types(abis);
+        let required_types = common::get_required_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -719,6 +771,13 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             .join(", ")
     }
 
+    fn quote_arguments_for_script(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::quote_transaction_argument_for_script(arg.type_tag(), arg.name()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     fn quote_identifier(ident: &str) -> String {
         format!("new Identifier(\"{}\")", ident)
     }
@@ -761,6 +820,14 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+        format!(
+            "Helpers.encode_{}_argument({})",
+            common::mangle_type(type_tag),
+            name
+        )
+    }
+
+    fn quote_transaction_argument_for_script(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("new TransactionArgument.Bool({})", name),
@@ -772,7 +839,26 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
                 U8 => format!("new TransactionArgument.U8Vector({})", name),
                 _ => common::type_not_allowed(type_tag),
             },
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
+        }
+    }
 
+    // - if a `type_tag` is a primitive type in BCS, we can call
+    //   `<A-BcsSerializer>.serialize_<name>(arg)` and `<A-BcsDeserializer>.deserialize_<name>(arg)`
+    //   to convert into and from `byte[]`.
+    // - otherwise, we can use `<arg>.BcsSerialize()`, `<arg>.BcsDeserialize()` to do the work.
+    fn bcs_primitive_type_name(type_tag: &TypeTag) -> Option<&'static str> {
+        use TypeTag::*;
+        match type_tag {
+            Bool => Some("bool"),
+            U8 => Some("u8"),
+            U64 => Some("u64"),
+            U128 => Some("u128"),
+            Address => None,
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => Some("bytes"),
+                _ => common::type_not_allowed(type_tag),
+            },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }

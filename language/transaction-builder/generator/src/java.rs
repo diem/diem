@@ -77,6 +77,7 @@ fn write_helper_file(
     emitter.output_transaction_script_decoder_map(&common::transaction_script_abis(abis))?;
     emitter.output_script_function_decoder_map(&common::script_function_abis(abis))?;
 
+    emitter.output_encoding_helpers(abis)?;
     emitter.output_decoding_helpers(abis)?;
 
     emitter.out.unindent();
@@ -193,9 +194,13 @@ import com.diem.types.Identifier;
 import com.diem.types.ModuleId;
 import com.diem.types.TransactionArgument;
 import com.diem.types.TypeTag;
+import com.novi.bcs.BcsDeserializer;
+import com.novi.bcs.BcsSerializer;
+import com.novi.serde.Bytes;
 import com.novi.serde.Int128;
 import com.novi.serde.Unsigned;
-import com.novi.serde.Bytes;
+import com.novi.serde.DeserializationError;
+import com.novi.serde.SerializationError;
 "#,
         )?;
         Ok(())
@@ -261,7 +266,7 @@ public static ScriptCall decode_script(Script script) throws IllegalArgumentExce
  * @param payload {{@link com.diem.types.TransactionPayload}} values to decode.
  * @return Decoded {{@link ScriptFunctionCall}} value.
  */
-public static ScriptFunctionCall decode_script_function_payload(TransactionPayload payload) throws IllegalArgumentException, IndexOutOfBoundsException {{
+public static ScriptFunctionCall decode_script_function_payload(TransactionPayload payload) throws DeserializationError, IllegalArgumentException, IndexOutOfBoundsException {{
     if (payload instanceof TransactionPayload.ScriptFunction) {{
         ScriptFunction script = ((TransactionPayload.ScriptFunction)payload).value;
         ScriptFunctionDecodingHelper helper = SCRIPT_FUNCTION_DECODER_MAP.get(script.module.name.value + script.function.value);
@@ -306,7 +311,7 @@ builder.args = java.util.Arrays.asList({});
 return builder.build();"#,
             abi.name().to_shouty_snake_case(),
             Self::quote_type_arguments(abi.ty_args()),
-            Self::quote_arguments(abi.args()),
+            Self::quote_arguments_for_script(abi.args()),
         )?;
         self.out.unindent();
         writeln!(self.out, "}}")
@@ -445,7 +450,7 @@ return builder.build();"#,
         // `payload` is always used, so don't need to add `"_"` prefix
         writeln!(
             self.out,
-            "\nprivate static ScriptFunctionCall decode_{}_script_function(TransactionPayload payload) throws IllegalArgumentException, IndexOutOfBoundsException {{",
+            "\nprivate static ScriptFunctionCall decode_{}_script_function(TransactionPayload payload) throws DeserializationError, IllegalArgumentException, IndexOutOfBoundsException {{",
             abi.name(),
         )?;
         self.out.indent();
@@ -479,13 +484,18 @@ return builder.build();"#,
             )?;
         }
         for (index, arg) in abi.args().iter().enumerate() {
-            writeln!(
-                self.out,
-                "builder.{} = Helpers.decode_{}_argument(script.args.get({}));",
-                arg.name(),
-                common::mangle_type(arg.type_tag()),
-                index,
-            )?;
+            let decoding = match Self::bcs_primitive_type_name(arg.type_tag()) {
+                None => format!(
+                    "{}.bcsDeserialize(script.args.get({}).content())",
+                    Self::quote_type(arg.type_tag()),
+                    index
+                ),
+                Some(type_name) => format!(
+                    "new BcsDeserializer(script.args.get({}).content()).deserialize_{}()",
+                    index, type_name
+                ),
+            };
+            writeln!(self.out, "builder.{} = {};", arg.name(), decoding)?;
         }
         writeln!(self.out, "return builder.build();")?;
         self.out.unindent();
@@ -614,7 +624,7 @@ private static java.util.Map<Bytes, TransactionScriptDecodingHelper> initTransac
             self.out,
             r#"
 interface ScriptFunctionDecodingHelper {{
-    public ScriptFunctionCall decode(TransactionPayload payload);
+    public ScriptFunctionCall decode(TransactionPayload payload) throws DeserializationError;
 }}
 
 private static final java.util.Map<String, ScriptFunctionDecodingHelper> SCRIPT_FUNCTION_DECODER_MAP = initDecoderMap();
@@ -639,8 +649,51 @@ private static java.util.Map<String, ScriptFunctionDecodingHelper> initDecoderMa
         writeln!(self.out, "}}")
     }
 
+    fn output_encoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        let required_types = common::get_required_helper_types(abis);
+        for required_type in required_types {
+            self.output_encoding_helper(required_type)?;
+        }
+        Ok(())
+    }
+
+    fn output_encoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
+        let function_body = match Self::bcs_primitive_type_name(type_tag) {
+            None => r#"
+        return Bytes.valueOf(arg.bcsSerialize());
+    "#
+            .into(),
+            Some(type_name) => {
+                format!(
+                    r#"
+        BcsSerializer s = new BcsSerializer();
+        s.serialize_{}(arg);
+        return Bytes.valueOf(s.get_bytes());
+    "#,
+                    type_name
+                )
+            }
+        };
+        writeln!(
+            self.out,
+            r#"
+private static Bytes encode_{}_argument({} arg) {{
+    try {{
+{}
+    }} catch (SerializationError e) {{
+        throw new IllegalArgumentException("Unable to serialize argument of type {}");
+    }}
+}}
+"#,
+            common::mangle_type(type_tag),
+            Self::quote_type(type_tag),
+            function_body,
+            common::mangle_type(type_tag)
+        )
+    }
+
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let required_types = common::get_required_decoding_helper_types(abis);
+        let required_types = common::get_required_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -746,6 +799,13 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             .join(", ")
     }
 
+    fn quote_arguments_for_script(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::quote_transaction_argument_for_script(arg.type_tag(), arg.name()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
     fn quote_type(type_tag: &TypeTag) -> String {
         use TypeTag::*;
         match type_tag {
@@ -758,12 +818,19 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
                 U8 => "Bytes".into(),
                 _ => common::type_not_allowed(type_tag),
             },
-
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+        format!(
+            "Helpers.encode_{}_argument({})",
+            common::mangle_type(type_tag),
+            name
+        )
+    }
+
+    fn quote_transaction_argument_for_script(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("new TransactionArgument.Bool({})", name),
@@ -776,6 +843,26 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
                 _ => common::type_not_allowed(type_tag),
             },
 
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
+        }
+    }
+
+    // - if a `type_tag` is a primitive type in BCS, we can call
+    //   `<A-BcsSerializer>.serialize_<name>(arg)` and `<A-BcsDeserializer>.deserialize_<name>(arg)`
+    //   to convert into and from `byte[]`.
+    // - otherwise, we can use `<arg>.bcsSerialize()`, `<arg>.bcsDeserialize()` to do the work.
+    fn bcs_primitive_type_name(type_tag: &TypeTag) -> Option<&'static str> {
+        use TypeTag::*;
+        match type_tag {
+            Bool => Some("bool"),
+            U8 => Some("u8"),
+            U64 => Some("u64"),
+            U128 => Some("u128"),
+            Address => None,
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => Some("bytes"),
+                _ => common::type_not_allowed(type_tag),
+            },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }

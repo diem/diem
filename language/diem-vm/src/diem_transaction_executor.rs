@@ -209,7 +209,7 @@ impl DiemVM {
                     script_fn.module(),
                     script_fn.function(),
                     script_fn.ty_args().to_vec(),
-                    convert_txn_args(script_fn.args()),
+                    script_fn.args().to_vec(),
                     vec![txn_data.sender()],
                     cost_strategy,
                     log_context,

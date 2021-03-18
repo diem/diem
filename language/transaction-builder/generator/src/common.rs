@@ -34,7 +34,6 @@ fn quote_type_as_format(type_tag: &TypeTag) -> Format {
             U8 => Format::Bytes,
             _ => type_not_allowed(type_tag),
         },
-
         Struct(_) | Signer => type_not_allowed(type_tag),
     }
 }
@@ -87,7 +86,6 @@ pub(crate) fn mangle_type(type_tag: &TypeTag) -> String {
             U8 => "u8vector".into(),
             _ => type_not_allowed(type_tag),
         },
-
         Struct(_) | Signer => type_not_allowed(type_tag),
     }
 }
@@ -108,7 +106,7 @@ pub(crate) fn get_external_definitions(diem_types: &str) -> serde_generate::Exte
         .collect()
 }
 
-pub(crate) fn get_required_decoding_helper_types(abis: &[ScriptABI]) -> BTreeSet<&TypeTag> {
+pub(crate) fn get_required_helper_types(abis: &[ScriptABI]) -> BTreeSet<&TypeTag> {
     let mut required_types = BTreeSet::new();
     for abi in abis {
         for arg in abi.args() {

@@ -303,11 +303,11 @@ pub fn script_view_from_script_function(script: &ScriptFunction) -> ScriptView {
         module_address: Some(*script.module().address()),
         module_name: Some(script.module().name().to_string()),
         function_name: Some(script.function().to_string()),
-        arguments: Some(
+        arguments_bcs: Some(
             script
                 .args()
                 .iter()
-                .map(|arg| format!("{:?}", &arg))
+                .map(|arg| BytesView::from(arg.as_ref()))
                 .collect(),
         ),
         type_arguments: Some(ty_args),

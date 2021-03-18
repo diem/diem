@@ -701,10 +701,10 @@ fn create_test_cases() -> Vec<Test> {
                         "type_arguments": [
                             "XUS"
                         ],
-                        "arguments": [
-                            "{U64: 0}",
-                            "{ADDRESS: 000000000000000000000000000000DD}",
-                            "{U64: 100}",
+                        "arguments_bcs": [
+                            "0000000000000000",
+                            "000000000000000000000000000000dd",
+                            "6400000000000000",
                         ],
                         "type": "script_function",
                         "module_address":"00000000000000000000000000000001",
@@ -762,9 +762,9 @@ fn create_test_cases() -> Vec<Test> {
                         "type_arguments": [
                             "XUS"
                         ],
-                        "arguments": [
-                            "{ADDRESS: 000000000000000000000000000000DD}",
-                            "{U64: 100}",
+                        "arguments_bcs": [
+                            "000000000000000000000000000000dd",
+                            "6400000000000000",
                         ],
                         "type": "script_function",
                         "module_address":"00000000000000000000000000000001",

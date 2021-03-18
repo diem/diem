@@ -114,7 +114,8 @@ The transaction script and arguments of the script call.
 |----------------|--------------|-----------------------------------------------|
 | type           | string       | Name of the script code, see [transaction script doc](../../language/diem-framework/script_documentation/script_documentation.md) for all available script names. If a script function, this field is set to the string `"script_function"`. |
 | code           | string       | Hex-encoded compiled move script bytes        |
-| arguments      | List<string> | List of string value of the script arguments. Contains type information. |
+| arguments      | List<string> | List of string value of the script arguments. Contains type information. This field will not be rendered if the `type` is `"script_function"`, instead, `arguments_bcs` will be rendered. |
+| arguments_bcs  | List<string> | List of hex-encoded string of BCS bytes representing script function arguments. Does not contain type information. Note that `arguments_bcs` is only set when the `type` is `"script_function"`. |
 | type_arguments | List<string> | List of type arguments, converted into string |
 | module_address | string       | Null if not a script function. Module address where the function being called is defined. |
 | module_name    | string       | Null if not a script function. Module name where the function being called is defined. |

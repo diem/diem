@@ -626,9 +626,12 @@ pub struct ScriptView {
     // script code bytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<BytesView>,
-    // script arguments, converted into string with type information.
+    // script arguments, converted into string with type information
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arguments: Option<Vec<String>>,
+    // script function arguments, converted into hex encoded BCS bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments_bcs: Option<Vec<BytesView>>,
     // script type arguments, converted into string
     #[serde(skip_serializing_if = "Option::is_none")]
     pub type_arguments: Option<Vec<String>>,

@@ -3433,7 +3433,7 @@ pub fn encode_add_recovery_rotation_capability_script_function(
         ),
         Identifier::new("add_recovery_rotation_capability").unwrap(),
         vec![],
-        vec![TransactionArgument::Address(recovery_address)],
+        vec![bcs::to_bytes(&recovery_address).unwrap()],
     ))
 }
 
@@ -3496,9 +3496,9 @@ pub fn encode_add_validator_and_reconfigure_script_function(
         Identifier::new("add_validator_and_reconfigure").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U8Vector(validator_name),
-            TransactionArgument::Address(validator_address),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&validator_name).unwrap(),
+            bcs::to_bytes(&validator_address).unwrap(),
         ],
     ))
 }
@@ -3617,9 +3617,9 @@ pub fn encode_burn_with_amount_script_function(
         Identifier::new("burn_with_amount").unwrap(),
         vec![token],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(preburn_address),
-            TransactionArgument::U64(amount),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&preburn_address).unwrap(),
+            bcs::to_bytes(&amount).unwrap(),
         ],
     ))
 }
@@ -3685,8 +3685,8 @@ pub fn encode_cancel_burn_with_amount_script_function(
         Identifier::new("cancel_burn_with_amount").unwrap(),
         vec![token],
         vec![
-            TransactionArgument::Address(preburn_address),
-            TransactionArgument::U64(amount),
+            bcs::to_bytes(&preburn_address).unwrap(),
+            bcs::to_bytes(&amount).unwrap(),
         ],
     ))
 }
@@ -3760,10 +3760,10 @@ pub fn encode_create_child_vasp_account_script_function(
         Identifier::new("create_child_vasp_account").unwrap(),
         vec![coin_type],
         vec![
-            TransactionArgument::Address(child_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::Bool(add_all_currencies),
-            TransactionArgument::U64(child_initial_balance),
+            bcs::to_bytes(&child_address).unwrap(),
+            bcs::to_bytes(&auth_key_prefix).unwrap(),
+            bcs::to_bytes(&add_all_currencies).unwrap(),
+            bcs::to_bytes(&child_initial_balance).unwrap(),
         ],
     ))
 }
@@ -3826,11 +3826,11 @@ pub fn encode_create_designated_dealer_script_function(
         Identifier::new("create_designated_dealer").unwrap(),
         vec![currency],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(addr),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U8Vector(human_name),
-            TransactionArgument::Bool(add_all_currencies),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&addr).unwrap(),
+            bcs::to_bytes(&auth_key_prefix).unwrap(),
+            bcs::to_bytes(&human_name).unwrap(),
+            bcs::to_bytes(&add_all_currencies).unwrap(),
         ],
     ))
 }
@@ -3891,11 +3891,11 @@ pub fn encode_create_parent_vasp_account_script_function(
         Identifier::new("create_parent_vasp_account").unwrap(),
         vec![coin_type],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(new_account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U8Vector(human_name),
-            TransactionArgument::Bool(add_all_currencies),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_account_address).unwrap(),
+            bcs::to_bytes(&auth_key_prefix).unwrap(),
+            bcs::to_bytes(&human_name).unwrap(),
+            bcs::to_bytes(&add_all_currencies).unwrap(),
         ],
     ))
 }
@@ -3996,10 +3996,10 @@ pub fn encode_create_validator_account_script_function(
         Identifier::new("create_validator_account").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(new_account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U8Vector(human_name),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_account_address).unwrap(),
+            bcs::to_bytes(&auth_key_prefix).unwrap(),
+            bcs::to_bytes(&human_name).unwrap(),
         ],
     ))
 }
@@ -4056,10 +4056,10 @@ pub fn encode_create_validator_operator_account_script_function(
         Identifier::new("create_validator_operator_account").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(new_account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U8Vector(human_name),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_account_address).unwrap(),
+            bcs::to_bytes(&auth_key_prefix).unwrap(),
+            bcs::to_bytes(&human_name).unwrap(),
         ],
     ))
 }
@@ -4119,8 +4119,8 @@ pub fn encode_freeze_account_script_function(
         Identifier::new("freeze_account").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(to_freeze_account),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&to_freeze_account).unwrap(),
         ],
     ))
 }
@@ -4191,10 +4191,10 @@ pub fn encode_peer_to_peer_with_metadata_script_function(
         Identifier::new("peer_to_peer_with_metadata").unwrap(),
         vec![currency],
         vec![
-            TransactionArgument::Address(payee),
-            TransactionArgument::U64(amount),
-            TransactionArgument::U8Vector(metadata),
-            TransactionArgument::U8Vector(metadata_signature),
+            bcs::to_bytes(&payee).unwrap(),
+            bcs::to_bytes(&amount).unwrap(),
+            bcs::to_bytes(&metadata).unwrap(),
+            bcs::to_bytes(&metadata_signature).unwrap(),
         ],
     ))
 }
@@ -4250,7 +4250,7 @@ pub fn encode_preburn_script_function(token: TypeTag, amount: u64) -> Transactio
         ),
         Identifier::new("preburn").unwrap(),
         vec![token],
-        vec![TransactionArgument::U64(amount)],
+        vec![bcs::to_bytes(&amount).unwrap()],
     ))
 }
 
@@ -4290,7 +4290,7 @@ pub fn encode_publish_shared_ed25519_public_key_script_function(
         ),
         Identifier::new("publish_shared_ed25519_public_key").unwrap(),
         vec![],
-        vec![TransactionArgument::U8Vector(public_key)],
+        vec![bcs::to_bytes(&public_key).unwrap()],
     ))
 }
 
@@ -4344,10 +4344,10 @@ pub fn encode_register_validator_config_script_function(
         Identifier::new("register_validator_config").unwrap(),
         vec![],
         vec![
-            TransactionArgument::Address(validator_account),
-            TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_addresses),
-            TransactionArgument::U8Vector(fullnode_network_addresses),
+            bcs::to_bytes(&validator_account).unwrap(),
+            bcs::to_bytes(&consensus_pubkey).unwrap(),
+            bcs::to_bytes(&validator_network_addresses).unwrap(),
+            bcs::to_bytes(&fullnode_network_addresses).unwrap(),
         ],
     ))
 }
@@ -4407,9 +4407,9 @@ pub fn encode_remove_validator_and_reconfigure_script_function(
         Identifier::new("remove_validator_and_reconfigure").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U8Vector(validator_name),
-            TransactionArgument::Address(validator_address),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&validator_name).unwrap(),
+            bcs::to_bytes(&validator_address).unwrap(),
         ],
     ))
 }
@@ -4448,7 +4448,7 @@ pub fn encode_rotate_authentication_key_script_function(new_key: Vec<u8>) -> Tra
         ),
         Identifier::new("rotate_authentication_key").unwrap(),
         vec![],
-        vec![TransactionArgument::U8Vector(new_key)],
+        vec![bcs::to_bytes(&new_key).unwrap()],
     ))
 }
 
@@ -4496,8 +4496,8 @@ pub fn encode_rotate_authentication_key_with_nonce_script_function(
         Identifier::new("rotate_authentication_key_with_nonce").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U8Vector(new_key),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_key).unwrap(),
         ],
     ))
 }
@@ -4546,8 +4546,8 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script_function(
         Identifier::new("rotate_authentication_key_with_nonce_admin").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U8Vector(new_key),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_key).unwrap(),
         ],
     ))
 }
@@ -4597,9 +4597,9 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script_function(
         Identifier::new("rotate_authentication_key_with_recovery_address").unwrap(),
         vec![],
         vec![
-            TransactionArgument::Address(recovery_address),
-            TransactionArgument::Address(to_recover),
-            TransactionArgument::U8Vector(new_key),
+            bcs::to_bytes(&recovery_address).unwrap(),
+            bcs::to_bytes(&to_recover).unwrap(),
+            bcs::to_bytes(&new_key).unwrap(),
         ],
     ))
 }
@@ -4652,8 +4652,8 @@ pub fn encode_rotate_dual_attestation_info_script_function(
         Identifier::new("rotate_dual_attestation_info").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U8Vector(new_url),
-            TransactionArgument::U8Vector(new_key),
+            bcs::to_bytes(&new_url).unwrap(),
+            bcs::to_bytes(&new_key).unwrap(),
         ],
     ))
 }
@@ -4693,7 +4693,7 @@ pub fn encode_rotate_shared_ed25519_public_key_script_function(
         ),
         Identifier::new("rotate_shared_ed25519_public_key").unwrap(),
         vec![],
-        vec![TransactionArgument::U8Vector(public_key)],
+        vec![bcs::to_bytes(&public_key).unwrap()],
     ))
 }
 
@@ -4748,10 +4748,10 @@ pub fn encode_set_validator_config_and_reconfigure_script_function(
         Identifier::new("set_validator_config_and_reconfigure").unwrap(),
         vec![],
         vec![
-            TransactionArgument::Address(validator_account),
-            TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_addresses),
-            TransactionArgument::U8Vector(fullnode_network_addresses),
+            bcs::to_bytes(&validator_account).unwrap(),
+            bcs::to_bytes(&consensus_pubkey).unwrap(),
+            bcs::to_bytes(&validator_network_addresses).unwrap(),
+            bcs::to_bytes(&fullnode_network_addresses).unwrap(),
         ],
     ))
 }
@@ -4806,8 +4806,8 @@ pub fn encode_set_validator_operator_script_function(
         Identifier::new("set_validator_operator").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U8Vector(operator_name),
-            TransactionArgument::Address(operator_account),
+            bcs::to_bytes(&operator_name).unwrap(),
+            bcs::to_bytes(&operator_account).unwrap(),
         ],
     ))
 }
@@ -4870,9 +4870,9 @@ pub fn encode_set_validator_operator_with_nonce_admin_script_function(
         Identifier::new("set_validator_operator_with_nonce_admin").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U8Vector(operator_name),
-            TransactionArgument::Address(operator_account),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&operator_name).unwrap(),
+            bcs::to_bytes(&operator_account).unwrap(),
         ],
     ))
 }
@@ -4944,10 +4944,10 @@ pub fn encode_tiered_mint_script_function(
         Identifier::new("tiered_mint").unwrap(),
         vec![coin_type],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(designated_dealer_address),
-            TransactionArgument::U64(mint_amount),
-            TransactionArgument::U64(tier_index),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&designated_dealer_address).unwrap(),
+            bcs::to_bytes(&mint_amount).unwrap(),
+            bcs::to_bytes(&tier_index).unwrap(),
         ],
     ))
 }
@@ -4997,8 +4997,8 @@ pub fn encode_unfreeze_account_script_function(
         Identifier::new("unfreeze_account").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(to_unfreeze_account),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&to_unfreeze_account).unwrap(),
         ],
     ))
 }
@@ -5041,8 +5041,8 @@ pub fn encode_update_diem_version_script_function(
         Identifier::new("update_diem_version").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U64(major),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&major).unwrap(),
         ],
     ))
 }
@@ -5087,8 +5087,8 @@ pub fn encode_update_dual_attestation_limit_script_function(
         Identifier::new("update_dual_attestation_limit").unwrap(),
         vec![],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U64(new_micro_xdx_limit),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_micro_xdx_limit).unwrap(),
         ],
     ))
 }
@@ -5142,9 +5142,9 @@ pub fn encode_update_exchange_rate_script_function(
         Identifier::new("update_exchange_rate").unwrap(),
         vec![currency],
         vec![
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U64(new_exchange_rate_numerator),
-            TransactionArgument::U64(new_exchange_rate_denominator),
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&new_exchange_rate_numerator).unwrap(),
+            bcs::to_bytes(&new_exchange_rate_denominator).unwrap(),
         ],
     ))
 }
@@ -5187,7 +5187,7 @@ pub fn encode_update_minting_ability_script_function(
         ),
         Identifier::new("update_minting_ability").unwrap(),
         vec![currency],
-        vec![TransactionArgument::Bool(allow_minting)],
+        vec![bcs::to_bytes(&allow_minting).unwrap()],
     ))
 }
 
@@ -6886,7 +6886,7 @@ fn decode_add_recovery_rotation_capability_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::AddRecoveryRotationCapability {
-            recovery_address: decode_address_argument(script.args().get(0)?.clone())?,
+            recovery_address: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -6898,9 +6898,9 @@ fn decode_add_validator_and_reconfigure_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::AddValidatorAndReconfigure {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            validator_name: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            validator_address: decode_address_argument(script.args().get(2)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            validator_name: bcs::from_bytes(script.args().get(1)?).ok()?,
+            validator_address: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -6925,9 +6925,9 @@ fn decode_burn_with_amount_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::BurnWithAmount {
             token: script.ty_args().get(0)?.clone(),
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            preburn_address: decode_address_argument(script.args().get(1)?.clone())?,
-            amount: decode_u64_argument(script.args().get(2)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            preburn_address: bcs::from_bytes(script.args().get(1)?).ok()?,
+            amount: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -6940,8 +6940,8 @@ fn decode_cancel_burn_with_amount_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CancelBurnWithAmount {
             token: script.ty_args().get(0)?.clone(),
-            preburn_address: decode_address_argument(script.args().get(0)?.clone())?,
-            amount: decode_u64_argument(script.args().get(1)?.clone())?,
+            preburn_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            amount: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -6954,10 +6954,10 @@ fn decode_create_child_vasp_account_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CreateChildVaspAccount {
             coin_type: script.ty_args().get(0)?.clone(),
-            child_address: decode_address_argument(script.args().get(0)?.clone())?,
-            auth_key_prefix: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            add_all_currencies: decode_bool_argument(script.args().get(2)?.clone())?,
-            child_initial_balance: decode_u64_argument(script.args().get(3)?.clone())?,
+            child_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            auth_key_prefix: bcs::from_bytes(script.args().get(1)?).ok()?,
+            add_all_currencies: bcs::from_bytes(script.args().get(2)?).ok()?,
+            child_initial_balance: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -6970,11 +6970,11 @@ fn decode_create_designated_dealer_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CreateDesignatedDealer {
             currency: script.ty_args().get(0)?.clone(),
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            addr: decode_address_argument(script.args().get(1)?.clone())?,
-            auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
-            add_all_currencies: decode_bool_argument(script.args().get(4)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            addr: bcs::from_bytes(script.args().get(1)?).ok()?,
+            auth_key_prefix: bcs::from_bytes(script.args().get(2)?).ok()?,
+            human_name: bcs::from_bytes(script.args().get(3)?).ok()?,
+            add_all_currencies: bcs::from_bytes(script.args().get(4)?).ok()?,
         })
     } else {
         None
@@ -6987,11 +6987,11 @@ fn decode_create_parent_vasp_account_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CreateParentVaspAccount {
             coin_type: script.ty_args().get(0)?.clone(),
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_account_address: decode_address_argument(script.args().get(1)?.clone())?,
-            auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
-            add_all_currencies: decode_bool_argument(script.args().get(4)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_account_address: bcs::from_bytes(script.args().get(1)?).ok()?,
+            auth_key_prefix: bcs::from_bytes(script.args().get(2)?).ok()?,
+            human_name: bcs::from_bytes(script.args().get(3)?).ok()?,
+            add_all_currencies: bcs::from_bytes(script.args().get(4)?).ok()?,
         })
     } else {
         None
@@ -7013,10 +7013,10 @@ fn decode_create_validator_account_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CreateValidatorAccount {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_account_address: decode_address_argument(script.args().get(1)?.clone())?,
-            auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_account_address: bcs::from_bytes(script.args().get(1)?).ok()?,
+            auth_key_prefix: bcs::from_bytes(script.args().get(2)?).ok()?,
+            human_name: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7028,10 +7028,10 @@ fn decode_create_validator_operator_account_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::CreateValidatorOperatorAccount {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_account_address: decode_address_argument(script.args().get(1)?.clone())?,
-            auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_account_address: bcs::from_bytes(script.args().get(1)?).ok()?,
+            auth_key_prefix: bcs::from_bytes(script.args().get(2)?).ok()?,
+            human_name: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7043,8 +7043,8 @@ fn decode_freeze_account_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::FreezeAccount {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            to_freeze_account: decode_address_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            to_freeze_account: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7057,10 +7057,10 @@ fn decode_peer_to_peer_with_metadata_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::PeerToPeerWithMetadata {
             currency: script.ty_args().get(0)?.clone(),
-            payee: decode_address_argument(script.args().get(0)?.clone())?,
-            amount: decode_u64_argument(script.args().get(1)?.clone())?,
-            metadata: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            metadata_signature: decode_u8vector_argument(script.args().get(3)?.clone())?,
+            payee: bcs::from_bytes(script.args().get(0)?).ok()?,
+            amount: bcs::from_bytes(script.args().get(1)?).ok()?,
+            metadata: bcs::from_bytes(script.args().get(2)?).ok()?,
+            metadata_signature: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7071,7 +7071,7 @@ fn decode_preburn_script_function(payload: &TransactionPayload) -> Option<Script
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::Preburn {
             token: script.ty_args().get(0)?.clone(),
-            amount: decode_u64_argument(script.args().get(0)?.clone())?,
+            amount: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -7083,7 +7083,7 @@ fn decode_publish_shared_ed25519_public_key_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::PublishSharedEd25519PublicKey {
-            public_key: decode_u8vector_argument(script.args().get(0)?.clone())?,
+            public_key: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -7095,10 +7095,10 @@ fn decode_register_validator_config_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RegisterValidatorConfig {
-            validator_account: decode_address_argument(script.args().get(0)?.clone())?,
-            consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            validator_network_addresses: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            fullnode_network_addresses: decode_u8vector_argument(script.args().get(3)?.clone())?,
+            validator_account: bcs::from_bytes(script.args().get(0)?).ok()?,
+            consensus_pubkey: bcs::from_bytes(script.args().get(1)?).ok()?,
+            validator_network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
+            fullnode_network_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7110,9 +7110,9 @@ fn decode_remove_validator_and_reconfigure_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RemoveValidatorAndReconfigure {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            validator_name: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            validator_address: decode_address_argument(script.args().get(2)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            validator_name: bcs::from_bytes(script.args().get(1)?).ok()?,
+            validator_address: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -7124,7 +7124,7 @@ fn decode_rotate_authentication_key_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RotateAuthenticationKey {
-            new_key: decode_u8vector_argument(script.args().get(0)?.clone())?,
+            new_key: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -7136,8 +7136,8 @@ fn decode_rotate_authentication_key_with_nonce_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RotateAuthenticationKeyWithNonce {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_key: decode_u8vector_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_key: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7149,8 +7149,8 @@ fn decode_rotate_authentication_key_with_nonce_admin_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RotateAuthenticationKeyWithNonceAdmin {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_key: decode_u8vector_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_key: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7163,9 +7163,9 @@ fn decode_rotate_authentication_key_with_recovery_address_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(
             ScriptFunctionCall::RotateAuthenticationKeyWithRecoveryAddress {
-                recovery_address: decode_address_argument(script.args().get(0)?.clone())?,
-                to_recover: decode_address_argument(script.args().get(1)?.clone())?,
-                new_key: decode_u8vector_argument(script.args().get(2)?.clone())?,
+                recovery_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+                to_recover: bcs::from_bytes(script.args().get(1)?).ok()?,
+                new_key: bcs::from_bytes(script.args().get(2)?).ok()?,
             },
         )
     } else {
@@ -7178,8 +7178,8 @@ fn decode_rotate_dual_attestation_info_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RotateDualAttestationInfo {
-            new_url: decode_u8vector_argument(script.args().get(0)?.clone())?,
-            new_key: decode_u8vector_argument(script.args().get(1)?.clone())?,
+            new_url: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_key: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7191,7 +7191,7 @@ fn decode_rotate_shared_ed25519_public_key_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::RotateSharedEd25519PublicKey {
-            public_key: decode_u8vector_argument(script.args().get(0)?.clone())?,
+            public_key: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
@@ -7203,10 +7203,10 @@ fn decode_set_validator_config_and_reconfigure_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::SetValidatorConfigAndReconfigure {
-            validator_account: decode_address_argument(script.args().get(0)?.clone())?,
-            consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            validator_network_addresses: decode_u8vector_argument(script.args().get(2)?.clone())?,
-            fullnode_network_addresses: decode_u8vector_argument(script.args().get(3)?.clone())?,
+            validator_account: bcs::from_bytes(script.args().get(0)?).ok()?,
+            consensus_pubkey: bcs::from_bytes(script.args().get(1)?).ok()?,
+            validator_network_addresses: bcs::from_bytes(script.args().get(2)?).ok()?,
+            fullnode_network_addresses: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7218,8 +7218,8 @@ fn decode_set_validator_operator_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::SetValidatorOperator {
-            operator_name: decode_u8vector_argument(script.args().get(0)?.clone())?,
-            operator_account: decode_address_argument(script.args().get(1)?.clone())?,
+            operator_name: bcs::from_bytes(script.args().get(0)?).ok()?,
+            operator_account: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7231,9 +7231,9 @@ fn decode_set_validator_operator_with_nonce_admin_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::SetValidatorOperatorWithNonceAdmin {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            operator_name: decode_u8vector_argument(script.args().get(1)?.clone())?,
-            operator_account: decode_address_argument(script.args().get(2)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            operator_name: bcs::from_bytes(script.args().get(1)?).ok()?,
+            operator_account: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -7244,10 +7244,10 @@ fn decode_tiered_mint_script_function(payload: &TransactionPayload) -> Option<Sc
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::TieredMint {
             coin_type: script.ty_args().get(0)?.clone(),
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            designated_dealer_address: decode_address_argument(script.args().get(1)?.clone())?,
-            mint_amount: decode_u64_argument(script.args().get(2)?.clone())?,
-            tier_index: decode_u64_argument(script.args().get(3)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            designated_dealer_address: bcs::from_bytes(script.args().get(1)?).ok()?,
+            mint_amount: bcs::from_bytes(script.args().get(2)?).ok()?,
+            tier_index: bcs::from_bytes(script.args().get(3)?).ok()?,
         })
     } else {
         None
@@ -7259,8 +7259,8 @@ fn decode_unfreeze_account_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::UnfreezeAccount {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            to_unfreeze_account: decode_address_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            to_unfreeze_account: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7272,8 +7272,8 @@ fn decode_update_diem_version_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::UpdateDiemVersion {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            major: decode_u64_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            major: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7285,8 +7285,8 @@ fn decode_update_dual_attestation_limit_script_function(
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::UpdateDualAttestationLimit {
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_micro_xdx_limit: decode_u64_argument(script.args().get(1)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_micro_xdx_limit: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7299,9 +7299,9 @@ fn decode_update_exchange_rate_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::UpdateExchangeRate {
             currency: script.ty_args().get(0)?.clone(),
-            sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
-            new_exchange_rate_numerator: decode_u64_argument(script.args().get(1)?.clone())?,
-            new_exchange_rate_denominator: decode_u64_argument(script.args().get(2)?.clone())?,
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            new_exchange_rate_numerator: bcs::from_bytes(script.args().get(1)?).ok()?,
+            new_exchange_rate_denominator: bcs::from_bytes(script.args().get(2)?).ok()?,
         })
     } else {
         None
@@ -7314,7 +7314,7 @@ fn decode_update_minting_ability_script_function(
     if let TransactionPayload::ScriptFunction(script) = payload {
         Some(ScriptFunctionCall::UpdateMintingAbility {
             currency: script.ty_args().get(0)?.clone(),
-            allow_minting: decode_bool_argument(script.args().get(0)?.clone())?,
+            allow_minting: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
         None
