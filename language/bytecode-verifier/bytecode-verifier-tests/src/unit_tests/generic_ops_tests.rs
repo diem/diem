@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::InstructionConsistency;
-use diem_types::vm_status::StatusCode;
-use move_core_types::{account_address::AccountAddress, identifier::Identifier};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
+};
 use vm::file_format::*;
 
 // Make a Module with 2 structs and 2 resources with one field each, and 2 functions.

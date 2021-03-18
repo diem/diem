@@ -14,7 +14,6 @@ petgraph = "0.5.1"
 proptest = "1.0.0"
 
 bytecode-verifier = { path = "../" }
-diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 invalid-mutations = { path = "../invalid-mutations" }
 move-core-types = { path = "../../move-core/types" }
@@ -22,4 +21,4 @@ compiled-stdlib = { path = "../../diem-framework/compiled" }
 vm = { path = "../../vm", features = ["fuzzing"] }
 
 [features]
-fuzzing = ["diem-types/fuzzing", "vm/fuzzing"]
+fuzzing = ["vm/fuzzing"]

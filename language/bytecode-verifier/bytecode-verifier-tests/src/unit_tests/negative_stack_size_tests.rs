@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::CodeUnitVerifier;
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::file_format::{self, Bytecode};
 
 #[test]

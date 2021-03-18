@@ -10,12 +10,11 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
+move-core-types = { path = "../../move-core/types" }
 vm = { path = "../../vm" }
-diem-types = { path = "../../../types" }
 proptest = "1.0.0"
 diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 
 [features]
 default = []
-fuzzing = ["diem-types/fuzzing"]

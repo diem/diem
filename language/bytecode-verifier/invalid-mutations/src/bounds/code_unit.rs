@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_proptest_helpers::pick_slice_idxs;
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use proptest::{prelude::*, sample::Index as PropIndex};
 use std::collections::BTreeMap;
 use vm::{

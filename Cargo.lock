@@ -628,7 +628,6 @@ version = "0.1.0"
 dependencies = [
  "bytecode-verifier",
  "compiled-stdlib",
- "diem-types",
  "diem-workspace-hack",
  "invalid-mutations",
  "move-core-types",
@@ -3674,8 +3673,8 @@ name = "invalid-mutations"
 version = "0.1.0"
 dependencies = [
  "diem-proptest-helpers",
- "diem-types",
  "diem-workspace-hack",
+ "move-core-types",
  "proptest",
  "vm",
 ]

@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::{verify_module, SignatureChecker};
-use diem_types::account_address::AccountAddress;
 use invalid_mutations::signature::{FieldRefMutation, SignatureRefMutation};
-use move_core_types::identifier::Identifier;
+use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use proptest::{collection::vec, prelude::*, sample::Index as PropIndex};
 use vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
 
