@@ -47,7 +47,8 @@ struct PendingRequestInfo {
     expiration_time: SystemTime,
     known_version: u64,
     request_epoch: u64,
-    limit: u64,
+    target_li: Option<LedgerInfoWithSignatures>,
+    chunk_limit: u64,
 }
 
 /// Coordination of the state sync process is driven by StateSyncCoordinator. The `start()`
@@ -747,23 +748,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                     expiration_time: time,
                     known_version: request.known_version,
                     request_epoch: request.current_epoch,
-                    limit: chunk_limit,
+                    target_li,
+                    chunk_limit,
                 };
                 self.subscriptions.insert(peer, request_info);
             }
             return Ok(());
         }
 
-        // If the request's epoch is in the past, `target_li` will be set to the end-of-epoch LI for that epoch
-        let target_li = self.choose_response_li(request.current_epoch, target_li)?;
-        // Only populate highest_li field if it is different from target_li
-        let highest_li = if target_li.ledger_info().version() < local_version
-            && target_li.ledger_info().epoch() == self.local_state.trusted_epoch()
-        {
-            Some(self.local_state.committed_ledger_info())
-        } else {
-            None
-        };
+        let (target_li, highest_li) =
+            self.calculate_target_and_highest_li(request.current_epoch, target_li, local_version)?;
 
         self.deliver_chunk(
             peer,
@@ -774,6 +768,28 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             },
             chunk_limit,
         )
+    }
+
+    fn calculate_target_and_highest_li(
+        &mut self,
+        request_epoch: u64,
+        request_target_li: Option<LedgerInfoWithSignatures>,
+        local_version: u64,
+    ) -> Result<(LedgerInfoWithSignatures, Option<LedgerInfoWithSignatures>), Error> {
+        // If the request's epoch is in the past, `target_li` will be set to the end-of-epoch LI for that epoch
+        let target_li = self.choose_response_li(request_epoch, request_target_li)?;
+
+        let highest_li = if target_li.ledger_info().version() < local_version
+            && target_li.ledger_info().epoch() == self.local_state.trusted_epoch()
+        {
+            // Only populate highest_li field if it's in the past, and the same epoch.
+            // Recipient won't be able to verify ledger info if it's in a different epoch.
+            Some(self.local_state.committed_ledger_info())
+        } else {
+            None
+        };
+
+        Ok((target_li, highest_li))
     }
 
     fn process_request_waypoint(
@@ -1560,22 +1576,26 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(self.request_manager.send_chunk_request(req)?)
     }
 
-    // TODO(joshlind): update state sync to also return the highest version it knows about.
-    // This will require storing the target requested by the peer in the PendingRequestInfo.
     fn deliver_subscription(
         &mut self,
         peer: PeerNetworkId,
         request_info: PendingRequestInfo,
+        local_version: u64,
     ) -> Result<(), Error> {
-        let response_li = self.choose_response_li(request_info.request_epoch, None)?;
+        let (target_li, highest_li) = self.calculate_target_and_highest_li(
+            request_info.request_epoch,
+            request_info.target_li,
+            local_version,
+        )?;
+
         self.deliver_chunk(
             peer,
             request_info.known_version,
             ResponseLedgerInfo::ProgressiveLedgerInfo {
-                target_li: response_li,
-                highest_li: None,
+                target_li,
+                highest_li,
             },
-            request_info.limit,
+            request_info.chunk_limit,
         )
     }
 
@@ -1607,15 +1627,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         });
 
         ready.into_iter().for_each(|(peer, request_info)| {
-            let result_label =
-                if let Err(err) = self.deliver_subscription(peer.clone(), request_info) {
-                    error!(LogSchema::new(LogEntry::SubscriptionDeliveryFail)
-                        .peer(&peer)
-                        .error(&err));
-                    counters::FAIL_LABEL
-                } else {
-                    counters::SUCCESS_LABEL
-                };
+            let result_label = if let Err(err) =
+                self.deliver_subscription(peer.clone(), request_info, highest_li_version)
+            {
+                error!(LogSchema::new(LogEntry::SubscriptionDeliveryFail)
+                    .peer(&peer)
+                    .error(&err));
+                counters::FAIL_LABEL
+            } else {
+                counters::SUCCESS_LABEL
+            };
             counters::SUBSCRIPTION_DELIVERY_COUNT
                 .with_label_values(&[
                     &peer.raw_network_id().to_string(),
