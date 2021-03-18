@@ -303,9 +303,9 @@ impl DiemVMImpl {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
-        let txn_gas_price = txn_data.gas_unit_price().get();
+        let txn_gas_price = 1;
         let txn_max_gas_units = txn_data.max_gas_amount().get();
-        let gas_remaining = 12;
+        let gas_remaining = cost_strategy.remaining_gas().get();
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
