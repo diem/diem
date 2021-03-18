@@ -237,7 +237,6 @@ existing_deps = [
     ["compiled-stdlib", "diem-proptest-helpers"],
     ["compiled-stdlib", "diem-framework"],
     ["compiled-stdlib", "diem-crypto"],
-    ["move-ir-types", "diem-types"],
     ["move-lang", "fallible"],
     ["move-lang", "diem-framework"],
     ["move-lang", "diem-types"],
