@@ -34,9 +34,17 @@ fn test_consensus_state() {
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit());
-    command.spawn().unwrap();
+    let mut child = command.spawn().unwrap();
 
     let safety_rules_manager = SafetyRulesManager::new(&config);
     let mut safety_rules = safety_rules_manager.client();
-    safety_rules.consensus_state().unwrap();
+    let consensus_state = safety_rules.consensus_state();
+
+    // Ensure the safety-rules subprocess is killed whether the test passes or fails.
+    // Not doing this would result in a zombie process.
+    child.kill().expect("could not kill safety-rules process");
+    child
+        .wait()
+        .expect("could not wait on safety-rules process");
+    consensus_state.unwrap();
 }

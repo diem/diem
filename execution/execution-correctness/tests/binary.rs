@@ -27,11 +27,18 @@ fn test_rest() {
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit());
-    command.spawn().unwrap();
+    let mut child = command.spawn().unwrap();
 
     // Run a command as a client to verify the service is running
-    ExecutionCorrectnessManager::new(&config)
-        .client()
-        .reset()
-        .unwrap();
+    let res = ExecutionCorrectnessManager::new(&config).client().reset();
+
+    // Ensure the safety-rules subprocess is killed whether the test passes or fails.
+    // Not doing this would result in a zombie process.
+    child
+        .kill()
+        .expect("could not kill execution-correctness process");
+    child
+        .wait()
+        .expect("could not wait on execution-correctness process");
+    res.unwrap();
 }
