@@ -557,10 +557,6 @@ impl<'env> ModuleTranslator<'env> {
                     self.spec_translator.translate_unboxed(&exp.call_args()[0]);
                     emitln!(self.writer, ");");
                 }
-                PropKind::Invariant => panic!(
-                    "propositions of the invariant kind should have been eliminated by the \
-                    loop analysis pass"
-                ),
             },
             Label(_, label) => {
                 self.writer.unindent();

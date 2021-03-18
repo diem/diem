@@ -108,8 +108,8 @@ module RecoveryAddress {
         let len = Vector::length(caps);
         while ({
             spec {
-                invariant i <= len;
-                invariant forall j in 0..i: caps[j].account_address != to_recover;
+                assert i <= len;
+                assert forall j in 0..i: caps[j].account_address != to_recover;
             };
             (i < len)
         })

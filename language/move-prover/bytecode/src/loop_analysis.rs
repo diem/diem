@@ -18,7 +18,7 @@ use vm::file_format::CodeOffset;
 
 #[derive(Debug, Default, Clone)]
 pub struct LoopInfo {
-    pub invariants: Vec<(AttrId, ast::Exp)>,
+    pub invariants: BTreeMap<CodeOffset, (AttrId, ast::Exp)>,
     pub targets: BTreeSet<TempIndex>,
     pub back_edge_location: CodeOffset,
 }
@@ -31,6 +31,15 @@ pub struct LoopAnnotation {
 impl LoopAnnotation {
     fn back_edges_locations(&self) -> BTreeSet<CodeOffset> {
         self.loops.values().map(|l| l.back_edge_location).collect()
+    }
+
+    fn invariants_locations(&self) -> BTreeSet<CodeOffset> {
+        self.loops
+            .values()
+            .map(|l| l.invariants.keys())
+            .flatten()
+            .copied()
+            .collect()
     }
 }
 
@@ -68,6 +77,7 @@ impl LoopAnalysisProcessor {
         loop_annotation: &LoopAnnotation,
     ) -> FunctionData {
         let back_edge_locs = loop_annotation.back_edges_locations();
+        let invariant_locs = loop_annotation.invariants_locations();
         let mut builder = FunctionDataBuilder::new(func_env, data);
         let mut goto_fixes = vec![];
         let code = std::mem::take(&mut builder.data.code);
@@ -78,7 +88,7 @@ impl LoopAnalysisProcessor {
                     builder.set_loc_from_attr(attr_id);
                     if let Some(loop_info) = loop_annotation.loops.get(&label) {
                         // assert loop invariants -> this is the base case
-                        for (_, exp) in &loop_info.invariants {
+                        for (_, exp) in loop_info.invariants.values() {
                             builder.emit_with(|attr_id| {
                                 Bytecode::Prop(attr_id, PropKind::Assert, exp.clone())
                             });
@@ -106,16 +116,15 @@ impl LoopAnalysisProcessor {
                         }
 
                         // re-assume loop invariants
-                        for (attr_id, exp) in &loop_info.invariants {
+                        for (attr_id, exp) in loop_info.invariants.values() {
                             builder.emit(Bytecode::Prop(*attr_id, PropKind::Assume, exp.clone()));
                         }
                     }
                 }
-                Bytecode::Prop(_, PropKind::Invariant, _) => {
-                    // do nothing, as the invariants should have been translated to asserts
-                    //
-                    // TODO (mengxu): we might want to print out warnings for invariants not
-                    // specified at the loop header block?
+                Bytecode::Prop(_, PropKind::Assert, _)
+                    if invariant_locs.contains(&(offset as CodeOffset)) =>
+                {
+                    // skip it, as the invariant should have been added as an assert after the label
                 }
                 _ => {
                     builder.emit(bytecode);
@@ -145,7 +154,7 @@ impl LoopAnalysisProcessor {
             builder.clear_next_debug_comment();
 
             // add instrumentations to assert loop invariants -> this is the induction case
-            for (_, exp) in &loop_info.invariants {
+            for (_, exp) in loop_info.invariants.values() {
                 builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assert, exp.clone()));
             }
 
@@ -236,19 +245,31 @@ impl LoopAnalysisProcessor {
                 .flatten()
                 .collect();
 
-            let invariants = cfg
+            // Loop invariants are defined as the longest sequence of consecutive 'assert'
+            // statements in the loop header block, immediately after the Label statement.
+            //
+            // In other words, for the loop header block:
+            // - the first statement must be a 'label',
+            // - followed by N 'assert' statements, N >= 0
+            // - and N + 1 must not be an 'assert' statement.
+            let mut invariants = BTreeMap::new();
+            for (index, code_offset) in cfg
                 .instr_indexes(single_loop.loop_header)
                 .unwrap()
-                .filter_map(|code_offset| {
-                    let instruction = &code[code_offset as usize];
-                    match instruction {
-                        Bytecode::Prop(attr_id, PropKind::Invariant, exp) => {
-                            Some((*attr_id, exp.clone()))
+                .enumerate()
+            {
+                let bytecode = &code[code_offset as usize];
+                if index == 0 {
+                    assert!(matches!(bytecode, Bytecode::Label(_, _)));
+                } else {
+                    match bytecode {
+                        Bytecode::Prop(attr_id, PropKind::Assert, exp) => {
+                            invariants.insert(code_offset, (*attr_id, exp.clone()));
                         }
-                        _ => None,
+                        _ => break,
                     }
-                })
-                .collect();
+                }
+            }
 
             let back_edge_location = match cfg.content(single_loop.loop_latch) {
                 BlockContent::Dummy => panic!("A loop body should never contain a dummy block"),

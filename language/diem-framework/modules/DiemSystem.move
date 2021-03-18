@@ -440,8 +440,8 @@ module DiemSystem {
         let i = 0;
         while ({
             spec {
-                invariant i <= size;
-                invariant forall j in 0..i: validators[j].addr != addr;
+                assert i <= size;
+                assert forall j in 0..i: validators[j].addr != addr;
             };
             (i < size)
         })

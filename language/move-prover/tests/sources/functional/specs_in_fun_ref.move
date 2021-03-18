@@ -65,7 +65,7 @@ module TestAssertWithReferences {
 
         loop {
             spec {
-                invariant x <= n;
+                assert x <= n;
             };
             if (!(x < n)) break;
             x = x + 1;
@@ -85,7 +85,7 @@ module TestAssertWithReferences {
 
         while ({
             spec {
-                invariant x <= n;
+                assert x <= n;
             };
             (x < n)
         }) {
@@ -113,7 +113,7 @@ module TestAssertWithReferences {
 
         while ({
             spec {
-                invariant x == 0;
+                assert x == 0;
             };
             (x < n)
         }) {
