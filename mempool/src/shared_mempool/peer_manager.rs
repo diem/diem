@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    core_mempool::TransmissionState,
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
     network::MempoolSyncMsg,
@@ -187,6 +188,8 @@ impl PeerManager {
         }
 
         // When not a validator, only broadcast to `default_failovers`
+        let mut transmission_filter = None;
+
         if !self.role.is_validator() {
             let priority = self
                 .prioritized_peers
@@ -196,6 +199,11 @@ impl PeerManager {
                 .map_or(usize::MAX, |(pos, _)| pos);
             if priority > self.mempool_config.default_failovers {
                 return;
+            }
+
+            // Optimization, filter messages that have come from a VFN to everything but the primary upstream
+            if priority > 0 {
+                transmission_filter = Some(TransmissionState::new(false))
             }
         }
 
@@ -220,7 +228,11 @@ impl PeerManager {
                 .sent_batches
                 .clone()
                 .into_iter()
-                .filter(|(id, _batch)| !mempool.timeline_range(id.0, id.1).is_empty())
+                .filter(|(id, _batch)| {
+                    !mempool
+                        .timeline_range(id.0, id.1, transmission_filter.clone())
+                        .is_empty()
+                })
                 .collect::<BTreeMap<BatchId, SystemTime>>();
 
             // Check for batch to rebroadcast:
@@ -260,7 +272,7 @@ impl PeerManager {
                         Some(counters::RETRY_BROADCAST_LABEL)
                     };
 
-                    let txns = mempool.timeline_range(id.0, id.1);
+                    let txns = mempool.timeline_range(id.0, id.1, transmission_filter);
                     (*id, txns)
                 }
                 None => {

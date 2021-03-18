@@ -9,6 +9,7 @@ use crate::{
         },
         transaction::{MempoolTransaction, TimelineState},
         ttl_cache::TtlCache,
+        TransmissionState,
     },
     counters,
     logging::{LogEntry, LogEvent, LogSchema, TxnsLog},
@@ -364,7 +365,12 @@ impl TransactionStore {
         (batch, last_timeline_id)
     }
 
-    pub(crate) fn timeline_range(&mut self, start_id: u64, end_id: u64) -> Vec<SignedTransaction> {
+    pub(crate) fn timeline_range(
+        &mut self,
+        start_id: u64,
+        end_id: u64,
+        transmission_filter: Option<TransmissionState>,
+    ) -> Vec<SignedTransaction> {
         self.timeline_index
             .timeline_range(start_id, end_id)
             .iter()
@@ -372,6 +378,13 @@ impl TransactionStore {
                 self.transactions
                     .get(account)
                     .and_then(|txns| txns.get(sequence_number))
+                    .filter(|txn| {
+                        if let Some(transmission_filter) = transmission_filter.as_ref() {
+                            &txn.transmission_state == transmission_filter
+                        } else {
+                            true
+                        }
+                    })
                     .map(|txn| txn.txn.clone())
             })
             .collect()

@@ -264,8 +264,14 @@ impl Mempool {
     }
 
     /// Read transactions from timeline from `start_id` (exclusive) to `end_id` (inclusive).
-    pub(crate) fn timeline_range(&mut self, start_id: u64, end_id: u64) -> Vec<SignedTransaction> {
-        self.transactions.timeline_range(start_id, end_id)
+    pub(crate) fn timeline_range(
+        &mut self,
+        start_id: u64,
+        end_id: u64,
+        transmission_filter: Option<TransmissionState>,
+    ) -> Vec<SignedTransaction> {
+        self.transactions
+            .timeline_range(start_id, end_id, transmission_filter)
     }
 
     pub fn gen_snapshot(&self) -> TxnsLog {

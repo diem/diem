@@ -63,7 +63,7 @@ pub enum TimelineState {
     NonQualified,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct TransmissionState {
     pub from_vfn: bool,
 }
