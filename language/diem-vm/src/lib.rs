@@ -117,7 +117,11 @@ pub mod transaction_metadata;
 pub mod diem_transaction_executor;
 pub mod diem_transaction_validator;
 pub mod logging;
+mod script_to_script_function;
 pub mod system_module_names;
+
+#[cfg(test)]
+mod unit_tests;
 
 pub use crate::{
     diem_transaction_executor::DiemVM, diem_transaction_validator::DiemVMValidator,

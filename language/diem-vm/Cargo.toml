@@ -35,6 +35,7 @@ serde = { version = "1.0.124", default-features = false }
 proptest = "1.0.0"
 
 diem-types = { path = "../../types", features = ["fuzzing"] }
+compiled-stdlib = { path = "../diem-framework/compiled" }
 
 [features]
 default = []

@@ -2327,6 +2327,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "compiled-stdlib",
  "diem-crypto",
  "diem-logger",
  "diem-metrics",

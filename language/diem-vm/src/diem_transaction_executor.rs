@@ -11,6 +11,7 @@ use crate::{
     },
     errors::expect_only_successful_execution,
     logging::AdapterLogSchema,
+    script_to_script_function,
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
     VMExecutor,
@@ -174,14 +175,36 @@ impl DiemVM {
                 .map_err(|e| e.into_vm_status())?;
 
             match payload {
-                TransactionPayload::Script(script) => session.execute_script(
-                    script.code().to_vec(),
-                    script.ty_args().to_vec(),
-                    convert_txn_args(script.args()),
-                    vec![txn_data.sender()],
-                    cost_strategy,
-                    log_context,
-                ),
+                TransactionPayload::Script(script) => {
+                    let diem_version = self.0.get_diem_version()?;
+                    let remapped_script =
+                        if diem_version < diem_types::on_chain_config::DIEM_VERSION_2 {
+                            None
+                        } else {
+                            script_to_script_function::remapping(script.code())
+                        };
+                    match remapped_script {
+                        // We are in this case before VERSION_2
+                        // or if there is no remapping for the script
+                        None => session.execute_script(
+                            script.code().to_vec(),
+                            script.ty_args().to_vec(),
+                            convert_txn_args(script.args()),
+                            vec![txn_data.sender()],
+                            cost_strategy,
+                            log_context,
+                        ),
+                        Some((module, function)) => session.execute_script_function(
+                            module,
+                            function,
+                            script.ty_args().to_vec(),
+                            convert_txn_args(script.args()),
+                            vec![txn_data.sender()],
+                            cost_strategy,
+                            log_context,
+                        ),
+                    }
+                }
                 TransactionPayload::ScriptFunction(script_fn) => session.execute_script_function(
                     script_fn.module(),
                     script_fn.function(),

@@ -219,14 +219,13 @@ Check if sender can execute script with <code>hash</code>
 
 <pre><code><b>public</b> <b>fun</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool {
     // DiemRoot can send any <b>script</b>
-    <b>if</b> (<a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account)) {
-        <b>return</b> <b>true</b>
-    };
+    <b>if</b> (<a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account)) <b>return</b> <b>true</b>;
 
     // No one <b>except</b> DiemRoot can send scripts when transactions are halted
-    <b>if</b> (<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>()) {
-        <b>return</b> <b>false</b>
-    };
+    <b>if</b> (<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>()) <b>return</b> <b>false</b>;
+
+    // The adapter passes an empty hash for <b>script</b> functions. All <b>script</b> functions are allowed
+    <b>if</b> (<a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(hash)) <b>return</b> <b>true</b>;
 
     <b>let</b> publish_option = <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;();
     // allowlist empty = open publishing, anyone can send txes
@@ -245,7 +244,9 @@ Check if sender can execute script with <code>hash</code>
 
 
 
-<pre><code><b>include</b> !<a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account) && !<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>() ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_AbortsIfNotPublished">DiemConfig::AbortsIfNotPublished</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;{};
+<pre><code><b>include</b>
+    !<a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account) && !<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>() && !<a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(hash)
+    ==&gt; <a href="DiemConfig.md#0x1_DiemConfig_AbortsIfNotPublished">DiemConfig::AbortsIfNotPublished</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;{};
 </code></pre>
 
 
@@ -536,8 +537,10 @@ DiemTransactionPublishingOption config [[H11]][PERMISSION]
 <pre><code><b>define</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_spec_is_script_allowed">spec_is_script_allowed</a>(account: signer, hash: vector&lt;u8&gt;): bool {
     <b>let</b> publish_option = <a href="DiemConfig.md#0x1_DiemConfig_spec_get_config">DiemConfig::spec_get_config</a>&lt;<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>&gt;();
     <a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account) || (!<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>() && (
-    <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
-        || <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash)))
+        <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(hash) ||
+            (<a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
+                || <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash))
+    ))
 }
 <a name="0x1_DiemTransactionPublishingOption_spec_is_module_allowed"></a>
 <b>define</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_spec_is_module_allowed">spec_is_module_allowed</a>(account: signer): bool {
