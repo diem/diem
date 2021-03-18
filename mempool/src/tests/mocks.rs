@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState},
+    core_mempool::{CoreMempool, TimelineState, TransmissionState},
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::start_shared_mempool,
     CommitNotification, ConsensusRequest, SubmissionStatus,
@@ -113,6 +113,7 @@ impl MockSharedMempool {
                         0,
                         TimelineState::NotReady,
                         GovernanceRole::NonGovernanceRole,
+                        TransmissionState::mock(),
                     )
                     .code
                     != MempoolStatusCode::Accepted

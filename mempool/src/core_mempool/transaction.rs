@@ -17,6 +17,7 @@ pub struct MempoolTransaction {
     pub ranking_score: u64,
     pub timeline_state: TimelineState,
     pub governance_role: GovernanceRole,
+    pub transmission_state: TransmissionState,
 }
 
 impl MempoolTransaction {
@@ -27,6 +28,7 @@ impl MempoolTransaction {
         ranking_score: u64,
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
+        transmission_state: TransmissionState,
     ) -> Self {
         Self {
             txn,
@@ -35,6 +37,7 @@ impl MempoolTransaction {
             expiration_time,
             timeline_state,
             governance_role,
+            transmission_state,
         }
     }
     pub(crate) fn get_sequence_number(&self) -> u64 {
@@ -58,4 +61,19 @@ pub enum TimelineState {
     // Transaction will never be qualified for broadcasting.
     // Currently we don't broadcast transactions originated on other peers.
     NonQualified,
+}
+
+#[derive(Clone)]
+pub struct TransmissionState {
+    pub from_vfn: bool,
+}
+
+impl TransmissionState {
+    pub fn new(from_vfn: bool) -> Self {
+        TransmissionState { from_vfn }
+    }
+
+    pub fn mock() -> Self {
+        Self::new(false)
+    }
 }

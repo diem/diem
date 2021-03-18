@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState},
+    core_mempool::{CoreMempool, TimelineState, TransmissionState},
     shared_mempool::{peer_manager::PeerManager, tasks, types::SharedMempool},
 };
 use diem_config::config::NodeConfig;
@@ -44,8 +44,9 @@ pub fn test_mempool_process_incoming_transactions_impl(
         peer_manager: Arc::new(PeerManager::new(config.base.role, config.mempool)),
         subscribers: vec![],
     };
+    let transmission_state = TransmissionState::mock();
 
-    let _ = tasks::process_incoming_transactions(&smp, txns, timeline_state);
+    let _ = tasks::process_incoming_transactions(&smp, txns, timeline_state, transmission_state);
 }
 
 proptest! {

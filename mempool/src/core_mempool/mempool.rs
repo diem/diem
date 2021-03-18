@@ -6,7 +6,7 @@
 use crate::{
     core_mempool::{
         index::TxnPointer,
-        transaction::{MempoolTransaction, TimelineState},
+        transaction::{MempoolTransaction, TimelineState, TransmissionState},
         transaction_store::TransactionStore,
         ttl_cache::TtlCache,
     },
@@ -110,6 +110,7 @@ impl Mempool {
         db_sequence_number: u64,
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
+        transmission_state: TransmissionState,
     ) -> MempoolStatus {
         trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
@@ -146,6 +147,7 @@ impl Mempool {
             ranking_score,
             timeline_state,
             governance_role,
+            transmission_state,
         );
 
         self.transactions.insert(txn_info, sequence_number)

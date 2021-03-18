@@ -4,7 +4,7 @@
 //! Processes that are directly spawned by shared mempool runtime initialization
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState},
+    core_mempool::{CoreMempool, TimelineState, TransmissionState},
     counters,
     logging::{LogEntry, LogEvent, LogSchema},
     network::{MempoolNetworkEvents, MempoolSyncMsg},
@@ -121,6 +121,7 @@ async fn handle_client_event<V>(
             smp.clone(),
             msg,
             callback,
+            TransmissionState::new(false),
             task_start_timer,
         ))
         .await;
@@ -215,6 +216,10 @@ async fn handle_event<V>(
                         counters::PEER_BROADCAST_EVENT_LABEL,
                         counters::START_LABEL,
                     );
+
+                    let transmission_state =
+                        TransmissionState::new(smp_clone.peer_manager.is_vfn(&peer));
+
                     bounded_executor
                         .spawn(tasks::process_transaction_broadcast(
                             smp_clone,
@@ -222,6 +227,7 @@ async fn handle_event<V>(
                             request_id,
                             timeline_state,
                             peer,
+                            transmission_state,
                             task_start_timer,
                         ))
                         .await;

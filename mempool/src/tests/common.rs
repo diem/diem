@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
+use crate::core_mempool::{CoreMempool, TimelineState, TransmissionState, TxnPointer};
 use anyhow::{format_err, Result};
 use diem_config::config::NodeConfig;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -112,6 +112,7 @@ pub(crate) fn add_txns_to_mempool(
             0,
             TimelineState::NotReady,
             transaction.governance_role,
+            TransmissionState::mock(),
         );
         transactions.push(txn);
     }
@@ -131,6 +132,7 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
             0,
             TimelineState::NotReady,
             GovernanceRole::NonGovernanceRole,
+            TransmissionState::mock(),
         )
         .code
     {

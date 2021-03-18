@@ -464,6 +464,12 @@ impl PeerManager {
             self.peer_states.lock().contains_key(peer)
         }
     }
+
+    pub fn is_vfn(&self, peer: &PeerNetworkId) -> bool {
+        self.peer_states.lock().get(peer).map_or(false, |state| {
+            state.metadata.role == PeerRole::ValidatorFullNode
+        })
+    }
 }
 
 /// Provides ordering for prioritized peers

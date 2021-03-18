@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState, TtlCache},
+    core_mempool::{CoreMempool, TimelineState, TransmissionState, TtlCache},
     tests::common::{
         add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
         TestTransaction,
@@ -411,6 +411,7 @@ fn test_gc_ready_transaction() {
         0,
         TimelineState::NotReady,
         GovernanceRole::NonGovernanceRole,
+        TransmissionState::mock(),
     );
 
     // Insert few transactions after it.
@@ -450,6 +451,7 @@ fn test_clean_stuck_transactions() {
         db_sequence_number,
         TimelineState::NotReady,
         GovernanceRole::NonGovernanceRole,
+        TransmissionState::mock(),
     );
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
