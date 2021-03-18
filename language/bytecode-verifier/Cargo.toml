@@ -16,7 +16,6 @@ petgraph = "0.5.1"
 
 borrow-graph = { path = "../borrow-graph" }
 vm = { path = "../vm" }
-diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
 
@@ -25,4 +24,3 @@ invalid-mutations = { path = "invalid-mutations" }
 
 [features]
 default = []
-fuzzing = ["diem-types/fuzzing"]

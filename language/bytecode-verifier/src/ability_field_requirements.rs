@@ -5,7 +5,7 @@
 //! abilities required by the struct's abilities
 use crate::binary_views;
 use binary_views::BinaryIndexedView;
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMResult, VMResult},

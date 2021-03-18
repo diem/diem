@@ -7,8 +7,7 @@
 //! - All types non-signer arguments have a type that is valid for constants
 //! - Has an empty return type
 use crate::binary_views::BinaryIndexedView;
-use diem_types::vm_status::StatusCode;
-use move_core_types::identifier::IdentStr;
+use move_core_types::{identifier::IdentStr, vm_status::StatusCode};
 use vm::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},

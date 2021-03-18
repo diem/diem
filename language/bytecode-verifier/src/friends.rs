@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},

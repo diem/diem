@@ -5,7 +5,7 @@
 //! It does not utilize control flow, but does check each block independently
 
 use crate::binary_views::BinaryIndexedView;
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},

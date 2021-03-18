@@ -6,7 +6,7 @@
 //! - All forward jumps do not enter into the middle of a loop
 //! - All "breaks" (forward, loop-exiting jumps) go to the "end" of the loop
 //! - All "continues" (back jumps in a loop) are only to the current loop
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use std::{collections::HashSet, convert::TryInto};
 use vm::{
     errors::{PartialVMError, PartialVMResult},

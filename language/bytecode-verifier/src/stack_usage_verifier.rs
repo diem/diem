@@ -12,7 +12,7 @@ use crate::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::{BlockId, ControlFlowGraph},
 };
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, Signature, StructFieldInformation},

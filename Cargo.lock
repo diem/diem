@@ -614,7 +614,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "borrow-graph",
- "diem-types",
  "diem-workspace-hack",
  "invalid-mutations",
  "mirai-annotations",

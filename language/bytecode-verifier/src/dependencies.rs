@@ -3,8 +3,7 @@
 
 //! This module contains verification of usage of dependencies for modules and scripts.
 use crate::binary_views::BinaryIndexedView;
-use diem_types::vm_status::StatusCode;
-use move_core_types::{identifier::Identifier, language_storage::ModuleId};
+use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use vm::{
     access::{ModuleAccess, ScriptAccess},

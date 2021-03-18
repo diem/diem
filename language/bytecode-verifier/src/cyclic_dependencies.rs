@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules
-use diem_types::vm_status::StatusCode;
-use move_core_types::language_storage::ModuleId;
+use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
 use std::collections::BTreeSet;
 use vm::{
     access::ModuleAccess,

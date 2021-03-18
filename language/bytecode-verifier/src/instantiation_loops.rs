@@ -12,7 +12,7 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},

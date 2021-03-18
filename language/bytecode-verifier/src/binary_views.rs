@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::control_flow_graph::VMControlFlowGraph;
-use diem_types::vm_status::StatusCode;
 use move_core_types::{
     account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
+    vm_status::StatusCode,
 };
 use vm::{
     access::{ModuleAccess, ScriptAccess},

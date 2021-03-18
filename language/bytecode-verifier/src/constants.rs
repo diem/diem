@@ -4,7 +4,7 @@
 //! This module implements a checker for verifying that
 //! - a constant's type only refers to primitive types
 //! - a constant's data serializes correctly for that type
-use diem_types::vm_status::StatusCode;
+use move_core_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMResult, VMResult},

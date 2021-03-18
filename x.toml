@@ -228,7 +228,6 @@ existing_deps = [
     ["language-benchmarks", "diem-types"],
     ["language-benchmarks", "diem-state-view"],
     ["language-benchmarks", "diem-proptest-helpers"],
-    ["bytecode-verifier", "diem-types"],
     ["bytecode-verifier-tests", "diem-types"],
     ["invalid-mutations", "diem-types"],
     ["invalid-mutations", "diem-proptest-helpers"],
