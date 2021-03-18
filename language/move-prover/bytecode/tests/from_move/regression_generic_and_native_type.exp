@@ -1,18 +1,6 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public fun Signer::address_of($t0|s: &signer): address {
-     var $t1: &signer
-     var $t2: &address
-     var $t3: address
-  0: $t1 := move($t0)
-  1: $t2 := Signer::borrow_address($t1)
-  2: $t3 := read_ref($t2)
-  3: return $t3
-}
-
-
-[variant baseline]
 public fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
      var $t2: &mut vector<#0>
      var $t3: &vector<#0>
@@ -404,6 +392,18 @@ public fun Vector::swap_remove<$tv0>($t0|v: &mut vector<#0>, $t1|i: u64): #0 {
  10: $t11 := move($t0)
  11: $t12 := Vector::pop_back<#0>($t11)
  12: return $t12
+}
+
+
+[variant baseline]
+public fun Signer::address_of($t0|s: &signer): address {
+     var $t1: &signer
+     var $t2: &address
+     var $t3: address
+  0: $t1 := move($t0)
+  1: $t2 := Signer::borrow_address($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
 }
 
 

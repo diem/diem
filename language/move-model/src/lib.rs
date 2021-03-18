@@ -167,14 +167,7 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
 }
 
 #[allow(deprecated)]
-fn run_spec_checker(env: &mut GlobalEnv, mut units: Vec<CompiledUnit>, mut eprog: Program) {
-    // Ensure that modules with builtin types are at front.
-    // TODO: this is a workaround for that the compiler does not longer ensures they are
-    //   dep-sorted if only the builtin types presented by those modules are used. We need
-    //   a full dep analysis instead which considers both spec and move lang constructs;
-    //   CompiledUnit is only sorted w.r.t. move-lang constructs.
-    move_to_front("00000000000000000000000000000001::Vector", &mut units);
-    move_to_front("00000000000000000000000000000001::Signer", &mut units);
+fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Program) {
     let mut builder = ModelBuilder::new(env);
     // Merge the compiled units with the expanded program, preserving the order of the compiled
     // units which is topological w.r.t. use relation.
@@ -271,19 +264,6 @@ fn run_spec_checker(env: &mut GlobalEnv, mut units: Vec<CompiledUnit>, mut eprog
     }
     // After all specs have been processed, warn about any unused schemas.
     builder.warn_unused_schemas();
-}
-
-fn move_to_front(name: &str, units: &mut Vec<CompiledUnit>) {
-    if let Some(i) = units.iter().position(|u| {
-        if let CompiledUnit::Module { module, .. } = u {
-            module.self_id().to_string().as_str() == name
-        } else {
-            false
-        }
-    }) {
-        let unit = units.remove(i);
-        units.insert(0, unit);
-    }
 }
 
 // =================================================================================================
