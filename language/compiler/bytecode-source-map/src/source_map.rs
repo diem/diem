@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{format_err, Result};
-use diem_types::account_address::AccountAddress;
-use move_core_types::identifier::Identifier;
+use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use move_ir_types::ast::{ConstantName, ModuleName, NopLabel, QualifiedModuleIdent};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, ops::Bound};

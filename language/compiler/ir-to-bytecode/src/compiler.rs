@@ -7,8 +7,10 @@ use crate::{
 };
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
-use diem_types::account_address::AccountAddress;
-use move_core_types::value::{MoveTypeLayout, MoveValue};
+use move_core_types::{
+    account_address::AccountAddress,
+    value::{MoveTypeLayout, MoveValue},
+};
 use move_ir_types::{
     ast::{self, Bytecode as IRBytecode, Bytecode_ as IRBytecode_, *},
     location::*,

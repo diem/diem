@@ -240,7 +240,8 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (CompiledModule, Signed
 
     let compiler = Compiler {
         address: *sender.address(),
-        ..Compiler::default()
+        skip_stdlib_deps: false,
+        extra_deps: vec![],
     };
     let module = compiler
         .into_compiled_module("file_name", module_code.as_str())

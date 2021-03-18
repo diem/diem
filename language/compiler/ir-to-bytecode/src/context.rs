@@ -3,8 +3,10 @@
 
 use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
-use diem_types::account_address::AccountAddress;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+};
 use move_ir_types::{
     ast::{
         BlockLabel, ConstantName, Field_, FunctionName, ModuleName, QualifiedModuleIdent,

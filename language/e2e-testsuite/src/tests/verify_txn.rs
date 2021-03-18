@@ -777,7 +777,9 @@ fn bad_module() -> (CompiledModule, Vec<u8>) {
     }
     ";
     let compiler = Compiler {
-        ..Compiler::default()
+        address: account_config::CORE_CODE_ADDRESS,
+        skip_stdlib_deps: false,
+        extra_deps: vec![],
     };
     let module = compiler
         .into_compiled_module("file_name", bad_module_code)
@@ -807,8 +809,8 @@ fn good_module_uses_bad(
 
     let compiler = Compiler {
         address,
+        skip_stdlib_deps: false,
         extra_deps: vec![bad_dep],
-        ..Compiler::default()
     };
     let module = compiler
         .into_compiled_module("file_name", good_module_code)
@@ -843,9 +845,9 @@ fn test_script_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
+        skip_stdlib_deps: false,
         // This is OK because we *know* the module is unverified.
         extra_deps: vec![module],
-        ..Compiler::default()
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -926,9 +928,9 @@ fn test_type_tag_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
+        skip_stdlib_deps: false,
         // This is OK because we *know* the module is unverified.
         extra_deps: vec![module],
-        ..Compiler::default()
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -990,9 +992,9 @@ fn test_script_transitive_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
+        skip_stdlib_deps: false,
         // This is OK because we *know* the module is unverified.
         extra_deps: vec![good_module],
-        ..Compiler::default()
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1046,8 +1048,8 @@ fn test_module_transitive_dependency_fails_verification() {
     let module = {
         let compiler = Compiler {
             address: *sender.address(),
+            skip_stdlib_deps: false,
             extra_deps: vec![good_module],
-            ..Compiler::default()
         };
         diem_types::transaction::Module::new(
             compiler
@@ -1101,9 +1103,9 @@ fn test_type_tag_transitive_dependency_fails_verification() {
 
     let compiler = Compiler {
         address: *sender.address(),
+        skip_stdlib_deps: false,
         // This is OK because we *know* the module is unverified.
         extra_deps: vec![good_module],
-        ..Compiler::default()
     };
     let script = compiler
         .into_script_blob("file_name", code)
@@ -1222,8 +1224,8 @@ pub fn publish_and_register_new_currency() {
             "#;
             let compiler = Compiler {
                 address: account_config::CORE_CODE_ADDRESS,
+                skip_stdlib_deps: false,
                 extra_deps: vec![compiled_module],
-                ..Compiler::default()
             };
             compiler
                 .into_script_blob("file_name", code)

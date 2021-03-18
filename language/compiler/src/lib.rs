@@ -11,11 +11,11 @@ mod unit_tests;
 use anyhow::Result;
 use bytecode_source_map::source_map::SourceMap;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
-use diem_types::{account_address::AccountAddress, account_config};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use std::mem;
 use vm::file_format::{CompiledModule, CompiledScript};
@@ -29,31 +29,21 @@ pub struct Compiler {
     pub skip_stdlib_deps: bool,
     /// Extra dependencies to compile with.
     pub extra_deps: Vec<CompiledModule>,
-
-    // The typical way this should be used is with functional record update syntax:
-    //
-    // let compiler = Compiler { address, code, ..Compiler::new() };
-    //
-    // Until the #[non_exhaustive] attribute is available (see
-    // https://github.com/rust-lang/rust/issues/44109), this workaround is required to make the
-    // syntax be mandatory.
-    #[allow(missing_docs)]
-    #[doc(hidden)]
-    pub _non_exhaustive: (),
-}
-
-impl Default for Compiler {
-    fn default() -> Self {
-        Self {
-            address: account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![],
-            _non_exhaustive: (),
-        }
-    }
 }
 
 impl Compiler {
+    pub fn new(
+        address: AccountAddress,
+        skip_stdlib_deps: bool,
+        extra_deps: Vec<CompiledModule>,
+    ) -> Self {
+        Self {
+            address,
+            skip_stdlib_deps,
+            extra_deps,
+        }
+    }
+
     /// Compiles into a `CompiledScript` where the bytecode hasn't been serialized.
     pub fn into_compiled_script_and_source_map(
         mut self,

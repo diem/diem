@@ -7,10 +7,9 @@ use anyhow::Context;
 use bytecode_verifier::{dependencies, verify_module, verify_script};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
-use diem_types::{access_path::AccessPath, account_address::AccountAddress, account_config};
 use ir_to_bytecode::parser::{parse_module, parse_script};
+use move_core_types::account_address::AccountAddress;
 use std::{
-    convert::TryFrom,
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -26,7 +25,7 @@ struct Args {
     pub module_input: bool,
     /// Account address used for publishing
     #[structopt(short = "a", long = "address")]
-    pub address: Option<String>,
+    pub address: String,
     /// Do not automatically compile stdlib dependencies
     #[structopt(long = "no-stdlib")]
     pub no_stdlib: bool,
@@ -73,10 +72,13 @@ fn write_output(path: &PathBuf, buf: &[u8]) {
 fn main() {
     let args = Args::from_args();
 
-    let address = args
-        .address
-        .map(|a| AccountAddress::try_from(a).unwrap())
-        .unwrap_or(account_config::CORE_CODE_ADDRESS);
+    let address = match AccountAddress::from_hex_literal(&args.address) {
+        Ok(address) => address,
+        Err(_) => {
+            println!("Bad address: {}", args.address);
+            std::process::exit(1);
+        }
+    };
     let source_path = Path::new(&args.source_path);
     let mvir_extension = "mvir";
     let mv_extension = "mv";
@@ -96,16 +98,13 @@ fn main() {
 
     if args.list_dependencies {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
-        let dependency_list: Vec<AccessPath> = if args.module_input {
+        let dependency_list = if args.module_input {
             let module = parse_module(file_name, &source).expect("Unable to parse module");
             module.get_external_deps()
         } else {
             let script = parse_script(file_name, &source).expect("Unable to parse module");
             script.get_external_deps()
-        }
-        .into_iter()
-        .map(AccessPath::code_access_path)
-        .collect();
+        };
         println!(
             "{}",
             serde_json::to_string(&dependency_list).expect("Unable to serialize dependencies")
@@ -142,7 +141,6 @@ fn main() {
             address,
             skip_stdlib_deps: args.no_stdlib,
             extra_deps: deps,
-            ..Compiler::default()
         };
         let (compiled_script, source_map) = compiler
             .into_compiled_script_and_source_map(file_name, &source)

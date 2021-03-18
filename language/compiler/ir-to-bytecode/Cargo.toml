@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 ir-to-bytecode-syntax = { path = "syntax" }
-diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
@@ -26,4 +25,3 @@ rental = "0.5.4"
 
 [features]
 default = []
-fuzzing = ["diem-types/fuzzing"]

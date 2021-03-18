@@ -47,8 +47,8 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
+        skip_stdlib_deps: false,
         extra_deps: vec![],
-        ..Compiler::default()
     };
     compiler
         .into_script_blob("file_name", code)
@@ -64,8 +64,8 @@ pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     let compiler = Compiler {
         address: account_config::CORE_CODE_ADDRESS,
+        skip_stdlib_deps: false,
         extra_deps: vec![],
-        ..Compiler::default()
     };
     compiler
         .into_script_blob("file_name", code)

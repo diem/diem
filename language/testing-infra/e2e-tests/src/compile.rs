@@ -20,14 +20,16 @@ pub fn compile_module_with_address(
 ) -> (CompiledModule, Module) {
     let compiled_module = Compiler {
         address: *address,
-        ..Compiler::default()
+        skip_stdlib_deps: false,
+        extra_deps: vec![],
     }
     .into_compiled_module(file_name, code)
     .expect("Module compilation failed");
     let module = Module::new(
         Compiler {
             address: *address,
-            ..Compiler::default()
+            skip_stdlib_deps: false,
+            extra_deps: vec![],
         }
         .into_module_blob(file_name, code)
         .expect("Module compilation failed"),
@@ -45,8 +47,8 @@ pub fn compile_script_with_address(
 ) -> Script {
     let compiler = Compiler {
         address: *address,
+        skip_stdlib_deps: false,
         extra_deps,
-        ..Compiler::default()
     };
     Script::new(
         compiler

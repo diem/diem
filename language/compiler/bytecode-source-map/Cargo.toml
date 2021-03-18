@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
-diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
@@ -20,4 +19,3 @@ serde = { version = "1.0.124", default-features = false }
 
 [features]
 default = []
-fuzzing = ["diem-types/fuzzing"]
