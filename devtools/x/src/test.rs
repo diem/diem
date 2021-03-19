@@ -24,6 +24,9 @@ pub struct Args {
     #[structopt(long, short)]
     /// Skip running expensive diem testsuite integration tests
     unit: bool,
+    #[structopt(long)]
+    /// Only run doctests
+    doc: bool,
     #[structopt(flatten)]
     pub(crate) build_args: BuildArgs,
     #[structopt(long)]
@@ -91,6 +94,9 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     if args.no_fail_fast {
         direct_args.push(OsString::from("--no-fail-fast"));
     };
+    if args.doc {
+        direct_args.push(OsString::from("--doc"));
+    }
 
     let cmd = CargoCommand::Test {
         cargo_config: xctx.config().cargo_config(),

@@ -495,7 +495,15 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       - name: run unit tests
         run: |
-          $pre_command && cargo x test --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          $pre_command && cargo nextest --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          sccache -s
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: run doctests
+        run: |
+          $pre_command && cargo xtest --doc --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
@@ -527,7 +535,7 @@ jobs:
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
       - name: run codegen unit tests
-        run: $pre_command && cargo x test --jobs ${max_threads} -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" -- --ignored
+        run: $pre_command && cargo nextest --jobs ${max_threads} -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
