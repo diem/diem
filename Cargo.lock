@@ -6634,9 +6634,9 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "standback"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2beb4d1860a61f571530b3f855a1b538d0200f7871c63331ecd6f17b1f014f8"
+checksum = "decebb311175fdaf1bf8a14583716e93163c566db2ead1c1d608c3e1e4313cb8"
 dependencies = [
  "version_check",
 ]
