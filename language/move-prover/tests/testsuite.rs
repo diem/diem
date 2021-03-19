@@ -20,7 +20,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const ENV_TEST_EXTENDED: &str = "MVP_TEST_X";
-const STDLIB_FLAGS: &[&str] = &[
+const MVP_TEST_INCONSISTENCY: &str = "MVP_TEST_INCONSISTENCY";
+const INCONSISTENCY_TEST_FLAGS: &[&str] = &[
+    "--dependency=../move-stdlib/modules",
+    "--dependency=../diem-framework/modules",
+    "--check-inconsistency",
+];
+const REGULAR_TEST_FLAGS: &[&str] = &[
     "--dependency=../move-stdlib/modules",
     "--dependency=../diem-framework/modules",
 ];
@@ -227,11 +233,22 @@ fn cvc4_deny_listed(path: &Path) -> bool {
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
+
+    let stdlib_test_flags = if read_env_var(MVP_TEST_INCONSISTENCY).is_empty() {
+        REGULAR_TEST_FLAGS
+    } else {
+        INCONSISTENCY_TEST_FLAGS
+    };
+
     let (base_flags, baseline_path, modifier) =
         if path_str.contains("diem-framework/") || path_str.contains("move-stdlib/") {
-            (STDLIB_FLAGS, None, "std_")
+            (stdlib_test_flags, None, "std_")
         } else {
-            (STDLIB_FLAGS, Some(path.with_extension("exp")), "prover_")
+            (
+                REGULAR_TEST_FLAGS,
+                Some(path.with_extension("exp")),
+                "prover_",
+            )
         };
     let mut flags = base_flags.iter().map(|s| (*s).to_string()).collect_vec();
     // Add any flags specified in the source.
