@@ -34,7 +34,8 @@ use {{alice}}::SillyColdWallet;
 use 0x1::DiemAccount;
 
 // create a cold wallet for Bob that withdraws from Alice's account
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
     let cap = DiemAccount::extract_withdraw_capability(sender);
     SillyColdWallet::publish(sender, cap, {{bob}});
 }
@@ -48,7 +49,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
 // check that Alice can no longer withdraw from her account
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     // should fail with withdrawal capability already extracted
     DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1000, x"", x"");
@@ -64,7 +66,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
 // check that Bob can still withdraw from his normal account
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1000, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -78,7 +81,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
 // check that other users can still pay into Alice's account in the normal way
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1000, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);

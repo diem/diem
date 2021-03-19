@@ -13,7 +13,8 @@
 //! new-transaction
 script {
     use 0x1::DiemTimestamp;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemTimestamp::set_time_has_started(account);
     }
 }
@@ -23,7 +24,8 @@ script {
 //! sender: diemroot
 script {
     use 0x1::DiemTimestamp;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemTimestamp::set_time_has_started(account);
     }
 }

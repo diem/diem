@@ -14,7 +14,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let xus = Diem::mint<XUS>(account, 10000);
     assert(Diem::value<XUS>(&xus) == 10000, 0);
 
@@ -40,7 +41,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::destroy_zero(Diem::mint<XUS>(account, 1));
 }
 }
@@ -90,7 +92,8 @@ script {
     use 0x1::Diem;
     use 0x1::XUS::XUS;
     use {{default}}::Holder;
-    fun main(account: &signer)  {
+    fun main(account: signer)  {
+    let account = &account;
         Holder::hold(
             account,
             Diem::remove_burn_capability<XUS>(account)
@@ -105,7 +108,8 @@ script {
 use 0x1::Diem;
 use 0x1::FixedPoint32;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let (mint_cap, burn_cap) = Diem::register_currency<u64>(
         account, FixedPoint32::create_from_rational(1, 1), true, 10, 10, b"wat"
     );
@@ -121,7 +125,8 @@ script {
 use 0x1::Diem;
 use 0x1::FixedPoint32;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let (mint_cap, burn_cap) = Diem::register_currency<u64>(
         account, FixedPoint32::create_from_rational(1, 1), true, 10, 10, b"wat"
     );
@@ -136,7 +141,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::FixedPoint32;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::register_SCS_currency<u64>(
         account, account, FixedPoint32::create_from_rational(1, 1), 10, 10, b"wat"
     );
@@ -150,7 +156,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Holder::hold(account, Diem::create_preburn<XUS>(account));
 }
 }
@@ -161,7 +168,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::publish_preburn_queue_to_account<XDX>(account, account);
 }
 }
@@ -172,7 +180,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::publish_preburn_queue_to_account<XUS>(account, account);
 }
 }
@@ -183,7 +192,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let xus = Diem::mint<XUS>(account, 1);
     let tmp = Diem::withdraw(&mut xus, 10);
     Diem::destroy_zero(tmp);
@@ -210,7 +220,8 @@ fun main() {
 //! sender: blessed
 script {
 use 0x1::CoreAddresses;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     CoreAddresses::assert_currency_info(account)
 }
 }
@@ -221,7 +232,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(tc_account: &signer) {
+fun main(tc_account: signer) {
+    let tc_account = &tc_account;
     let max_u64 = 18446744073709551615;
     let coin1 = Diem::mint<XUS>(tc_account, max_u64);
     let coin2 = Diem::mint<XUS>(tc_account, 1);

@@ -70,12 +70,9 @@ fn verify_main_signature_impl(
     let all_args_have_valid_type = arguments
         .iter()
         .skip_while(|typ| {
-            match typ {
-                // &signer is a type that can only be populated by the Move VM. And its value is filled
-                // based on the sender of the transaction
-                S::Reference(inner) => matches!(&**inner, S::Signer),
-                _ => false,
-            }
+            // signer is a type that can only be populated by the Move VM. And its value is filled
+            // based on the sender of the transaction
+            matches!(typ, S::Signer)
         })
         .all(|typ| typ.is_valid_for_constant());
     let has_valid_return_type = match return_type_opt {

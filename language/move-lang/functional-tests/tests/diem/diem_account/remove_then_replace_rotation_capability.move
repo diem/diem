@@ -1,7 +1,8 @@
 script {
 use 0x1::DiemAccount;
 use 0x1::Signer;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let sender = Signer::address_of(account);
     let old_auth_key = DiemAccount::authentication_key(sender);
 
@@ -26,7 +27,8 @@ fun main(account: &signer) {
 //! new-transaction
 script {
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let cap = DiemAccount::extract_key_rotation_capability(account);
     let cap2 = DiemAccount::extract_key_rotation_capability(account);
 

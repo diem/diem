@@ -16,8 +16,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main(s: &signer) {
-    M.test(move(s));
+main(s: signer) {
+    M.test(&s);
     return;
 }
 // The following checks ensure that we do not emit a deletion op for R.

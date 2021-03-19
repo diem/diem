@@ -35,7 +35,8 @@ module AlicePays {
 //! sender: alice
 script {
 use {{alice}}::AlicePays;
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
     AlicePays::create(sender)
 }
 }

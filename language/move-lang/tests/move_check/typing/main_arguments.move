@@ -1,6 +1,6 @@
 script {
 fun main(
-    _sender: &signer,
+    _sender: signer,
 
     _a: address,
     _x8: u8,

@@ -52,9 +52,9 @@ import {{default}}.M;
 import 0x1.XUS;
 import 0x1.Diem;
 
-main(account: &signer) {
-    M.new(copy(account));
-    M.put_coin(copy(account), Diem.zero<XUS.XUS>());
+main(account: signer) {
+    M.new(&account);
+    M.put_coin(&account, Diem.zero<XUS.XUS>());
 
     return;
 }

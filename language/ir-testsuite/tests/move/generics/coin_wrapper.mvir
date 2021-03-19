@@ -78,15 +78,15 @@ import {{default}}.M;
 import 0x1.XUS;
 import 0x1.Diem;
 
-main(account: &signer) {
+main(account: signer) {
   let coin: Diem.Diem<XUS.XUS>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
   coin = Diem.zero<XUS.XUS>();
 
-  M.coin_wrapper(copy(account), move(coin));
-  M.inner_wrapper(copy(account), move(byte));
+  M.coin_wrapper(&account, move(coin));
+  M.inner_wrapper(&account, move(byte));
 
   return;
 }
@@ -97,13 +97,13 @@ import {{default}}.M;
 import 0x1.XUS;
 import 0x1.Diem;
 
-main(account: &signer) {
+main(account: signer) {
   let coin: Diem.Diem<XUS.XUS>;
   let byte: vector<u8>;
 
   byte = h"bac1ac";
-  assert(M.get_coin_value(copy(account)) == 0, 4);
-  assert(M.get_inner(move(account)) == move(byte), 4);
+  assert(M.get_coin_value(&account) == 0, 4);
+  assert(M.get_inner(&account) == move(byte), 4);
   return;
 }
 // check: "Keep(EXECUTED)"
@@ -113,9 +113,9 @@ import {{default}}.M;
 import 0x1.XUS;
 import 0x1.Diem;
 
-main(account: &signer) {
+main(account: signer) {
   let coin: Diem.Diem<XUS.XUS>;
-  coin = M.destroy(copy(account));
+  coin = M.destroy(&account);
   Diem.destroy_zero<XUS.XUS>(move(coin));
   return;
 }

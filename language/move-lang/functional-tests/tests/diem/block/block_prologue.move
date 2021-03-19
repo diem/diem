@@ -33,7 +33,8 @@ fun main() {
 script{
 use 0x1::DiemTimestamp;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemTimestamp::update_global_time(account, {{vivian}}, 20);
 }
 }

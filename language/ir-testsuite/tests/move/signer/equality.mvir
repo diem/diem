@@ -1,5 +1,5 @@
-main(s: &signer) {
-    assert(copy(s) == copy(s), 42);
-    assert(!(copy(s) != move(s)), 42);
+main(s: signer) {
+    assert(&s == &s, 42);
+    assert(!(&s != &s), 42);
     return;
 }

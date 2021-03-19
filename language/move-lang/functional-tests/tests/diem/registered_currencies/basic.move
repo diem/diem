@@ -1,7 +1,8 @@
 //! account: alice
 script {
     use 0x1::RegisteredCurrencies;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         RegisteredCurrencies::initialize(account);
     }
 }
@@ -11,7 +12,8 @@ script {
 //! sender: diemroot
 script {
     use 0x1::RegisteredCurrencies;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         RegisteredCurrencies::initialize(account);
     }
 }
@@ -21,7 +23,8 @@ script {
 //! sender: diemroot
 script {
     use 0x1::RegisteredCurrencies;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         RegisteredCurrencies::add_currency_code(account, b"XDX");
     }
 }

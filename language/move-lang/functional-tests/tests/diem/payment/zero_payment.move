@@ -3,7 +3,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 use 0x1::Signer;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let addr = Signer::address_of(account);
     let old_balance = DiemAccount::balance<XUS>(addr);
 

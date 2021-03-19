@@ -5,7 +5,11 @@ use crate::{errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
 };
-use std::{collections::HashSet, convert::TryInto, io::Read};
+use std::{
+    collections::{BTreeMap, HashSet},
+    convert::TryInto,
+    io::Read,
+};
 
 impl CompiledScript {
     /// Deserializes a &[u8] slice into a `CompiledScript` instance.
@@ -275,6 +279,9 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
 
     build_compiled_script(&mut script, &table_contents, &tables)?;
 
+    if cursor.version() < VERSION_2 {
+        remap_borrow_owned_signers(&mut script)
+    }
     Ok(script)
 }
 
@@ -1509,4 +1516,215 @@ impl Opcodes {
             _ => Err(PartialVMError::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }
+}
+
+//
+// Migration from V1 to V2+
+//
+
+// - Remaps borrowed signer parameters in scripts to owned signers
+// - Borrows the owned signers and remapps any usage of the parameter to this borrowed version
+// - Updates the offsets based on the number of new instructions added
+// - Updates the signature pool
+//
+// If the script has the max number of signatures before, it will fail as it needs to add
+// new signatures.
+// Otherwise:
+// If the script passes the bytecode verifier before, it will pass after.
+// If the script fails the bytecode verifier before, it will fail after.
+fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
+    // check and return early for invalid indicies
+    if script.clone().freeze().is_err() {
+        return;
+    }
+
+    let parameters_signature = &script.signatures[script.parameters.0 as usize];
+    let locals_idx = script.code.locals;
+    let locals_signature = &script.signatures[locals_idx.0 as usize];
+
+    // Find the parameters that need to be updated
+    let num_parameters = parameters_signature.len() as LocalIndex;
+    let signer_ref_parameters = parameters_signature
+        .0
+        .iter()
+        .enumerate()
+        .filter(|(_idx, sig_token)| {
+            matches!(
+                sig_token,
+                SignatureToken::Reference(inner) if matches!(&**inner, SignatureToken::Signer)
+            )
+        })
+        .map(|(idx, _sig)| idx as LocalIndex)
+        .collect::<Vec<_>>();
+    if signer_ref_parameters.is_empty() {
+        return;
+    }
+
+    // Make a new parameter signature
+    let new_parameters = Signature(
+        parameters_signature
+            .0
+            .iter()
+            .map(|s| match s {
+                SignatureToken::Reference(inner) if matches!(&**inner, SignatureToken::Signer) => {
+                    SignatureToken::Signer
+                }
+                // Map signer to signer ref to keep invalid scripts invalid
+                SignatureToken::Signer => {
+                    SignatureToken::Reference(Box::new(SignatureToken::Signer))
+                }
+                _ => s.clone(),
+            })
+            .collect::<Vec<_>>(),
+    );
+
+    // Make a new local signature
+    let (new_locals_signature, new_local_idxs) = {
+        let mut new_sig = (0..signer_ref_parameters.len())
+            .map(|_| SignatureToken::Reference(Box::new(SignatureToken::Signer)))
+            .collect::<Vec<_>>();
+        new_sig.extend(locals_signature.0.iter().cloned());
+        let new_local_idxs = (0..signer_ref_parameters.len())
+            .map(|idx| idx as LocalIndex + num_parameters)
+            .collect::<Vec<_>>();
+        (Signature(new_sig), new_local_idxs)
+    };
+
+    // Determine a mapping from the owned signers to the new locals with the borrowed signer param
+    // Build instructions to borrow those params
+    let (signer_ref_remapping, mut borrow_owned_signers_instructions) = {
+        let mut new_code = vec![];
+        let mut signer_ref_remapping = (0..num_parameters).map(|_| None).collect::<Vec<_>>();
+
+        for (signer_ref_parameter_idx, new_local_idx) in
+            signer_ref_parameters.iter().zip(&new_local_idxs)
+        {
+            signer_ref_remapping[*signer_ref_parameter_idx as usize] = Some(new_local_idx);
+            new_code.push(Bytecode::ImmBorrowLoc(*signer_ref_parameter_idx));
+            new_code.push(Bytecode::StLoc(*new_local_idx));
+        }
+        (signer_ref_remapping, new_code)
+    };
+
+    // Update the code
+    let number_of_new_locals = signer_ref_parameters.len() as LocalIndex;
+    let number_of_new_instructions = borrow_owned_signers_instructions.len() as CodeOffset;
+    for instr in &mut script.code.code {
+        match instr {
+            // increment the offsets based on the number of new instructions added
+            Bytecode::BrTrue(offset) | Bytecode::BrFalse(offset) | Bytecode::Branch(offset) => {
+                *offset = *offset + number_of_new_instructions
+            }
+
+            // If the local used was an old signer reference, remapp it to the new local borrowing
+            // the owned signer
+            Bytecode::CopyLoc(local_idx)
+            | Bytecode::MoveLoc(local_idx)
+            | Bytecode::StLoc(local_idx)
+            | Bytecode::MutBorrowLoc(local_idx)
+            | Bytecode::ImmBorrowLoc(local_idx) => {
+                if *local_idx < num_parameters {
+                    if let Some(new_local) = signer_ref_remapping[*local_idx as usize] {
+                        *local_idx = *new_local
+                    }
+                } else {
+                    *local_idx = *local_idx + number_of_new_locals
+                }
+            }
+            Bytecode::Pop
+            | Bytecode::Ret
+            | Bytecode::LdU8(_)
+            | Bytecode::LdU64(_)
+            | Bytecode::LdU128(_)
+            | Bytecode::CastU8
+            | Bytecode::CastU64
+            | Bytecode::CastU128
+            | Bytecode::LdConst(_)
+            | Bytecode::LdTrue
+            | Bytecode::LdFalse
+            | Bytecode::Call(_)
+            | Bytecode::CallGeneric(_)
+            | Bytecode::Pack(_)
+            | Bytecode::PackGeneric(_)
+            | Bytecode::Unpack(_)
+            | Bytecode::UnpackGeneric(_)
+            | Bytecode::ReadRef
+            | Bytecode::WriteRef
+            | Bytecode::FreezeRef
+            | Bytecode::MutBorrowField(_)
+            | Bytecode::MutBorrowFieldGeneric(_)
+            | Bytecode::ImmBorrowField(_)
+            | Bytecode::ImmBorrowFieldGeneric(_)
+            | Bytecode::MutBorrowGlobal(_)
+            | Bytecode::MutBorrowGlobalGeneric(_)
+            | Bytecode::ImmBorrowGlobal(_)
+            | Bytecode::ImmBorrowGlobalGeneric(_)
+            | Bytecode::Add
+            | Bytecode::Sub
+            | Bytecode::Mul
+            | Bytecode::Mod
+            | Bytecode::Div
+            | Bytecode::BitOr
+            | Bytecode::BitAnd
+            | Bytecode::Xor
+            | Bytecode::Or
+            | Bytecode::And
+            | Bytecode::Not
+            | Bytecode::Eq
+            | Bytecode::Neq
+            | Bytecode::Lt
+            | Bytecode::Gt
+            | Bytecode::Le
+            | Bytecode::Ge
+            | Bytecode::Abort
+            | Bytecode::Nop
+            | Bytecode::Exists(_)
+            | Bytecode::ExistsGeneric(_)
+            | Bytecode::MoveFrom(_)
+            | Bytecode::MoveFromGeneric(_)
+            | Bytecode::MoveTo(_)
+            | Bytecode::MoveToGeneric(_)
+            | Bytecode::Shl
+            | Bytecode::Shr => (),
+        }
+    }
+    script.code.code = {
+        let old_code = std::mem::take(&mut script.code.code);
+        borrow_owned_signers_instructions.extend(old_code);
+        borrow_owned_signers_instructions
+    };
+
+    // Build a mapping of the signatures to their old index
+    // Update signatures
+    let mut signature_to_index = script
+        .signatures
+        .iter()
+        .enumerate()
+        .map(|(idx, sig)| (sig.clone(), idx))
+        .collect::<BTreeMap<_, _>>();
+    let new_parameters_idx = match signature_to_index.get(&new_parameters) {
+        Some(idx) => *idx,
+        None => {
+            script.signatures.push(new_parameters.clone());
+            let idx = signature_to_index.len();
+            signature_to_index.insert(new_parameters, idx);
+            idx
+        }
+    };
+    let new_locals_signature_idx = match signature_to_index.get(&new_locals_signature) {
+        Some(idx) => *idx,
+        None => {
+            script.signatures.push(new_locals_signature.clone());
+            let idx = signature_to_index.len();
+            signature_to_index.insert(new_locals_signature, idx);
+            idx
+        }
+    };
+    let table_index_max = TableIndex::MAX as usize;
+    if new_parameters_idx > table_index_max || new_locals_signature_idx > table_index_max {
+        // TODO
+        panic!()
+    }
+    script.parameters = SignatureIndex(new_parameters_idx as TableIndex);
+    script.code.locals = SignatureIndex(new_locals_signature_idx as TableIndex);
 }

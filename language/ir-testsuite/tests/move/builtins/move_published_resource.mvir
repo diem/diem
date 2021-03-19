@@ -53,19 +53,19 @@ module TestMoveFrom {
 
 import {{default}}.TestMoveFrom;
 
-main(account: &signer) {
+main(account: signer) {
   let has1: bool;
   let has2: bool;
 
-  TestMoveFrom.publish(copy(account));
-  TestMoveFrom.increment(copy(account));
+  TestMoveFrom.publish(&account);
+  TestMoveFrom.increment(&account);
 
-  has1 = TestMoveFrom.has(copy(account));
+  has1 = TestMoveFrom.has(&account);
   assert(move(has1), 77);
 
-  TestMoveFrom.unpublish(copy(account));
+  TestMoveFrom.unpublish(&account);
 
-  has2 = TestMoveFrom.has(copy(account));
+  has2 = TestMoveFrom.has(&account);
   assert(!move(has2), 88);
 
   return;

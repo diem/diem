@@ -1,16 +1,16 @@
 import 0x1.CoreAddresses;
 import 0x1.Signer;
 //! sender: diemroot
-main(account: &signer) {
-    assert(Signer.address_of(move(account)) == CoreAddresses.DIEM_ROOT_ADDRESS(), 0);
+main(account: signer) {
+    assert(Signer.address_of(&account) == CoreAddresses.DIEM_ROOT_ADDRESS(), 0);
     return;
 }
 
 //! new-transaction
 import 0x1.CoreAddresses;
 import 0x1.Signer;
-main(account: &signer) {
-    assert(Signer.address_of(move(account)) != CoreAddresses.DIEM_ROOT_ADDRESS(), 1);
+main(account: signer) {
+    assert(Signer.address_of(&account) != CoreAddresses.DIEM_ROOT_ADDRESS(), 1);
     return;
 }
 
@@ -19,8 +19,8 @@ main(account: &signer) {
 //! sender: alice
 import 0x1.CoreAddresses;
 import 0x1.Signer;
-main(account: &signer) {
-    assert(Signer.address_of(move(account)) != CoreAddresses.DIEM_ROOT_ADDRESS(), 2);
+main(account: signer) {
+    assert(Signer.address_of(&account) != CoreAddresses.DIEM_ROOT_ADDRESS(), 2);
     assert({{alice}} != CoreAddresses.DIEM_ROOT_ADDRESS(), 3);
     return;
 }

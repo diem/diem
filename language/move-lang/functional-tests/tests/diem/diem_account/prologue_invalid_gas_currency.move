@@ -14,7 +14,9 @@ script {
 use 0x1::AccountLimits;
 use 0x1::XUS;
 use 0x1::Signer;
-fun main(dr_account: &signer, vasp: &signer) {
+fun main(dr_account: signer, vasp: signer) {
+    let dr_account = &dr_account;
+    let vasp = &vasp;
     AccountLimits::publish_unrestricted_limits<XUS::XUS>(vasp);
     AccountLimits::publish_window<XUS::XUS>(
         dr_account,

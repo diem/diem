@@ -64,8 +64,8 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::preburn`
 
-    public(script) fun cancel_burn_with_amount<Token: store>(account: &signer, preburn_address: address, amount: u64) {
-        DiemAccount::cancel_burn<Token>(account, preburn_address, amount)
+    public(script) fun cancel_burn_with_amount<Token: store>(account: signer, preburn_address: address, amount: u64) {
+        DiemAccount::cancel_burn<Token>(&account, preburn_address, amount)
     }
 
     spec fun cancel_burn_with_amount {
@@ -163,9 +163,9 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
     /// * `TreasuryComplianceScripts::preburn`
 
-    public(script) fun burn_with_amount<Token: store>(account: &signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
-        SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-        Diem::burn<Token>(account, preburn_address, amount)
+    public(script) fun burn_with_amount<Token: store>(account: signer, sliding_nonce: u64, preburn_address: address, amount: u64) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        Diem::burn<Token>(&account, preburn_address, amount)
     }
     spec fun burn_with_amount {
         use 0x1::Errors;
@@ -237,9 +237,9 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::burn_txn_fees`
 
-    public(script) fun preburn<Token: store>(account: &signer, amount: u64) {
-        let withdraw_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::preburn<Token>(account, &withdraw_cap, amount);
+    public(script) fun preburn<Token: store>(account: signer, amount: u64) {
+        let withdraw_cap = DiemAccount::extract_withdraw_capability(&account);
+        DiemAccount::preburn<Token>(&account, &withdraw_cap, amount);
         DiemAccount::restore_withdraw_capability(withdraw_cap);
     }
 
@@ -302,8 +302,8 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::burn_with_amount`
     /// * `TreasuryComplianceScripts::cancel_burn_with_amount`
 
-    public(script) fun burn_txn_fees<CoinType: store>(tc_account: &signer) {
-        TransactionFee::burn_fees<CoinType>(tc_account);
+    public(script) fun burn_txn_fees<CoinType: store>(tc_account: signer) {
+        TransactionFee::burn_fees<CoinType>(&tc_account);
     }
 
     /// # Summary
@@ -360,16 +360,16 @@ module TreasuryComplianceScripts {
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
     public(script) fun tiered_mint<CoinType: store>(
-            tc_account: &signer,
-            sliding_nonce: u64,
-            designated_dealer_address: address,
-            mint_amount: u64,
-            tier_index: u64
-            ) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+        tc_account: signer,
+        sliding_nonce: u64,
+        designated_dealer_address: address,
+        mint_amount: u64,
+        tier_index: u64
+    ) {
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
         DiemAccount::tiered_mint<CoinType>(
-                tc_account, designated_dealer_address, mint_amount, tier_index
-                );
+            &tc_account, designated_dealer_address, mint_amount, tier_index
+        );
     }
 
     spec fun tiered_mint {
@@ -439,9 +439,9 @@ module TreasuryComplianceScripts {
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::unfreeze_account`
 
-    public(script) fun freeze_account(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-        AccountFreezing::freeze_account(tc_account, to_freeze_account);
+    public(script) fun freeze_account(tc_account: signer, sliding_nonce: u64, to_freeze_account: address) {
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
+        AccountFreezing::freeze_account(&tc_account, to_freeze_account);
     }
 
     /// # Summary
@@ -478,9 +478,9 @@ module TreasuryComplianceScripts {
     /// # Related Scripts
     /// * `TreasuryComplianceScripts::freeze_account`
 
-    public(script) fun unfreeze_account(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
-        SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-        AccountFreezing::unfreeze_account(account, to_unfreeze_account);
+    public(script) fun unfreeze_account(account: signer, sliding_nonce: u64, to_unfreeze_account: address) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        AccountFreezing::unfreeze_account(&account, to_unfreeze_account);
     }
 
     /// # Summary
@@ -513,12 +513,12 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_minting_ability`
 
     public(script) fun update_dual_attestation_limit(
-            tc_account: &signer,
+            tc_account: signer,
             sliding_nonce: u64,
             new_micro_xdx_limit: u64
         ) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-        DualAttestation::set_microdiem_limit(tc_account, new_micro_xdx_limit);
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
+        DualAttestation::set_microdiem_limit(&tc_account, new_micro_xdx_limit);
     }
 
     /// # Summary
@@ -558,17 +558,17 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_minting_ability`
 
     public(script) fun update_exchange_rate<Currency: store>(
-            tc_account: &signer,
+            tc_account: signer,
             sliding_nonce: u64,
             new_exchange_rate_numerator: u64,
             new_exchange_rate_denominator: u64,
     ) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
         let rate = FixedPoint32::create_from_rational(
                 new_exchange_rate_numerator,
                 new_exchange_rate_denominator,
         );
-        Diem::update_xdx_exchange_rate<Currency>(tc_account, rate);
+        Diem::update_xdx_exchange_rate<Currency>(&tc_account, rate);
     }
     spec fun update_exchange_rate {
         use 0x1::Errors;
@@ -630,10 +630,10 @@ module TreasuryComplianceScripts {
     /// * `TreasuryComplianceScripts::update_exchange_rate`
 
     public(script) fun update_minting_ability<Currency: store>(
-        tc_account: &signer,
+        tc_account: signer,
         allow_minting: bool
     ) {
-        Diem::update_minting_ability<Currency>(tc_account, allow_minting);
+        Diem::update_minting_ability<Currency>(&tc_account, allow_minting);
     }
 }
 }

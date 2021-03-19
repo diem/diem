@@ -40,9 +40,9 @@ fn is_signer_reference(s: &Type) -> bool {
     }
 }
 
-fn number_of_signer_ref_params(tys: &[Type]) -> usize {
+fn number_of_signer_params(tys: &[Type]) -> usize {
     for (i, ty) in tys.iter().enumerate() {
-        if !is_signer_reference(ty) {
+        if !matches!(ty, Type::Signer) {
             return i;
         }
     }
@@ -144,9 +144,7 @@ impl VMRuntime {
         for (ty, arg) in tys.iter().zip(args.into_iter()) {
             let val = if is_signer_reference(ty) {
                 match MoveValue::simple_deserialize(&arg, &MoveTypeLayout::Signer) {
-                    Ok(MoveValue::Signer(addr)) => {
-                        Value::transaction_argument_signer_reference(addr)
-                    }
+                    Ok(MoveValue::Signer(addr)) => Value::signer_reference(addr),
                     Ok(_) | Err(_) => {
                         warn!("[VM] failed to deserialize argument");
                         return Err(PartialVMError::new(
@@ -190,7 +188,7 @@ impl VMRuntime {
         // Build the arguments list and check the arguments are of restricted types.
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
         // signer arguments can be be used by a script.
-        let n_signer_params = number_of_signer_ref_params(tys);
+        let n_signer_params = number_of_signer_params(tys);
 
         let args = if n_signer_params == 0 {
             self.deserialize_args(&tys, args)?
@@ -205,10 +203,7 @@ impl VMRuntime {
                         )),
                 );
             }
-            let mut vals: Vec<Value> = senders
-                .into_iter()
-                .map(Value::transaction_argument_signer_reference)
-                .collect();
+            let mut vals: Vec<Value> = senders.into_iter().map(Value::signer).collect();
             vals.extend(self.deserialize_args(&tys[n_signers..], args)?);
             vals
         };

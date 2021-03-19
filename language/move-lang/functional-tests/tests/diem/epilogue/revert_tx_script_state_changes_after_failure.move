@@ -6,7 +6,8 @@ script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 514, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);

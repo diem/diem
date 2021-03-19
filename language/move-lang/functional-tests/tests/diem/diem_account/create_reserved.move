@@ -6,7 +6,8 @@
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
         account, 0x0, x"00000000000000000000000000000000", x"", false);
 }
@@ -18,7 +19,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
         account, 0x0, x"00000000000000000000000000000000", x"", false);
 }
@@ -30,7 +32,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(
         account, 0x1, x"00000000000000000000000000000000", x"", false);
 }
@@ -42,7 +45,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(
         account, 0x1, x"00000000000000000000000000000000", x"", false);
 }

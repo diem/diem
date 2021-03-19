@@ -5,7 +5,8 @@
 script {
 use 0x1::DesignatedDealer;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DesignatedDealer::publish_designated_dealer_credential<XUS>(
         account, account, false
     );
@@ -18,7 +19,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DesignatedDealer;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DesignatedDealer::publish_designated_dealer_credential<XUS>(
         account, account, false
     );
@@ -30,7 +32,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DesignatedDealer;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DesignatedDealer::add_currency<XUS>(account, account);
 }
 }
@@ -41,7 +44,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DesignatedDealer;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DesignatedDealer::add_currency<XUS>(account, account);
 }
 }
@@ -63,7 +67,8 @@ script {
 use 0x1::DesignatedDealer;
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::destroy_zero(
         DesignatedDealer::tiered_mint<XUS>(account, 0, {{bob}}, 0)
     );
@@ -77,7 +82,8 @@ script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
     use 0x1::Diem;
-    fun main(tc_account: &signer) {
+    fun main(tc_account: signer) {
+    let tc_account = &tc_account;
         DiemAccount::tiered_mint<XUS>(
             tc_account, {{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
         );
@@ -98,7 +104,8 @@ script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
     use 0x1::Diem;
-    fun main(tc_account: &signer) {
+    fun main(tc_account: signer) {
+    let tc_account = &tc_account;
         DiemAccount::tiered_mint<XUS>(
             tc_account, {{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
         );

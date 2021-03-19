@@ -20,9 +20,9 @@ module M {
 //! type-args: u64
 import {{default}}.M;
 
-main<T: store>(account: &signer) {
-    assert(M.type_eq<T, u64>(copy(account)), 100);
-    assert(!M.type_eq<T, u8>(copy(account)), 101);
+main<T: store>(account: signer) {
+    assert(M.type_eq<T, u64>(&account), 100);
+    assert(!M.type_eq<T, u8>(&account), 101);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -33,9 +33,9 @@ main<T: store>(account: &signer) {
 import {{default}}.M;
 import 0x1.DiemAccount;
 
-main<T: store>(account: &signer) {
-    assert(M.type_eq<T, DiemAccount.DiemAccount>(copy(account)), 100);
-    assert(!M.type_eq<T, u8>(copy(account)), 101);
+main<T: store>(account: signer) {
+    assert(M.type_eq<T, DiemAccount.DiemAccount>(&account), 100);
+    assert(!M.type_eq<T, u8>(&account), 101);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -46,9 +46,9 @@ main<T: store>(account: &signer) {
 import {{default}}.M;
 import 0x1.DiemAccount;
 
-main<T: store>(account: &signer) {
-    assert(M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u64>>>>(copy(account)), 100);
-    assert(!M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u8>>>>(copy(account)), 101);
+main<T: store>(account: signer) {
+    assert(M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u64>>>>(&account), 100);
+    assert(!M.type_eq<T, DiemAccount.Balance<DiemAccount.Balance<vector<u8>>>>(&account), 101);
     return;
 }
 // check: "Keep(EXECUTED)"

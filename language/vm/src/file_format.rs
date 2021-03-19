@@ -495,7 +495,7 @@ pub struct FunctionSignature {
 ///
 /// Locals include the arguments to the function from position `0` to argument `count - 1`.
 /// The remaining elements are the type of each local.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
 pub struct Signature(

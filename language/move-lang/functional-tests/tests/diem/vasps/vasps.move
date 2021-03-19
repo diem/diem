@@ -10,7 +10,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 use 0x1::DiemTimestamp;
 use 0x1::VASP;
-fun main(dr_account: &signer) {
+fun main(dr_account: signer) {
+    let dr_account = &dr_account;
     let add_all_currencies = false;
 
     DiemAccount::create_parent_vasp_account<XUS>(
@@ -46,7 +47,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 use 0x1::VASP;
-fun main(parent_vasp: &signer) {
+fun main(parent_vasp: signer) {
+    let parent_vasp = &parent_vasp;
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let add_all_currencies = false;
     assert(VASP::num_children({{parent}}) == 0, 2010);
@@ -69,7 +71,8 @@ fun main(parent_vasp: &signer) {
 //! sender: parent
 script {
 use 0x1::DualAttestation;
-fun main(parent_vasp: &signer) {
+fun main(parent_vasp: signer) {
+    let parent_vasp = &parent_vasp;
     let old_pubkey = DualAttestation::compliance_public_key({{parent}});
     let new_pubkey = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     assert(old_pubkey != copy new_pubkey, 2011);
@@ -95,7 +98,8 @@ fun main() {
 //! sender: blessed
 script {
 use 0x1::VASP;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     VASP::publish_parent_vasp_credential(account, account);
     abort 99
 }
@@ -106,7 +110,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::VASP;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     VASP::publish_parent_vasp_credential(account, account);
 }
 }
@@ -116,7 +121,8 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::VASP;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     VASP::publish_child_vasp_credential(account, account);
 }
 }
@@ -126,7 +132,8 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::VASP;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     VASP::publish_child_vasp_credential(account, account);
 }
 }
@@ -136,7 +143,8 @@ fun main(account: &signer) {
 //! sender: parent
 script {
 use 0x1::VASP;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     VASP::publish_child_vasp_credential(account, account);
 }
 }

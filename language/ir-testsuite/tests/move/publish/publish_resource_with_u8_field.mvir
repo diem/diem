@@ -21,15 +21,15 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main(account: &signer) {
-    M.foo(move(account));
+main(account: signer) {
+    M.foo(&account);
     return;
 }
 
 //! new-transaction
 import {{default}}.M;
 
-main(account: &signer) {
-    assert(M.bar(move(account)) == 100u8, 42);
+main(account: signer) {
+    assert(M.bar(&account) == 100u8, 42);
     return;
 }

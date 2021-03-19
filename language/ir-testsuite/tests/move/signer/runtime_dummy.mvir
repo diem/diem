@@ -1,15 +1,15 @@
-main(s: &signer) {
+main(s: signer) {
     return;
 }
 
 //! new-transaction
 //! args: 0
-main(s: &signer, u: u64) {
+main(s: signer, u: u64) {
     return;
 }
 
 //! new-transaction
 //! args: 0, 0x1
-main(s: &signer, u: u64, b: address) {
+main(s: signer, u: u64, b: address) {
     return;
 }

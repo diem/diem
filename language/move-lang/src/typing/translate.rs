@@ -127,14 +127,14 @@ fn check_primitive_script_arg(
     };
 
     let loc = ty.loc;
-    let signer_ref = sp(loc, Type_::Ref(false, Box::new(Type_::signer(loc))));
-    let is_signer_ref = {
+    let signer = Type_::signer(loc);
+    let is_signer = {
         let old_subst = context.subst.clone();
-        let result = subtype_no_report(context, ty.clone(), signer_ref.clone());
+        let result = subtype_no_report(context, ty.clone(), signer.clone());
         context.subst = old_subst;
         result.is_ok()
     };
-    if is_signer_ref {
+    if is_signer {
         if !*seen_non_signer {
             return;
         } else {
@@ -142,7 +142,7 @@ fn check_primitive_script_arg(
             let tmsg = format!(
                 "{}s must be a prefix of the arguments to a script--they must come before any \
                  non-signer types",
-                core::error_format(&signer_ref, &Subst::empty()),
+                core::error_format(&signer, &Subst::empty()),
             );
             context.error(vec![(mloc, msg), (loc, tmsg)]);
             return;

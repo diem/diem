@@ -59,8 +59,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main(account: &signer) {
-    M.publish_128(move(account));
+main(account: signer) {
+    M.publish_128(&account);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -69,8 +69,8 @@ main(account: &signer) {
 //! new-transaction
 import {{default}}.M;
 
-main(account: &signer) {
-    M.publish_256(move(account));
+main(account: signer) {
+    M.publish_256(&account);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -79,8 +79,8 @@ main(account: &signer) {
 //! new-transaction
 import {{default}}.M;
 
-main(account: &signer) {
-    M.publish_257(move(account));
+main(account: signer) {
+    M.publish_257(&account);
     return;
 }
 // check: VM_MAX_VALUE_DEPTH_REACHED

@@ -1,5 +1,5 @@
 //! sender: default
 
 script {
-fun main(_s: &signer) {}
+fun main(_s: signer) {}
 }

@@ -10,7 +10,8 @@
 script {
     use 0x1::SlidingNonce;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
         SlidingNonce::record_nonce_or_abort(account, 129);
     }
@@ -21,7 +22,8 @@ script {
 script {
     use 0x1::SlidingNonce;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::record_nonce_or_abort(account, 1);
     }
 }
@@ -31,7 +33,8 @@ script {
 script {
     use 0x1::SlidingNonce;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
     }
 }
@@ -39,7 +42,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::try_record_nonce(account, 1);
     }
 }
@@ -47,7 +51,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
     }
 }
@@ -55,7 +60,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
     }
 }
@@ -63,7 +69,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(default_account: &signer) {
+    fun main(default_account: signer) {
+    let default_account = &default_account;
         SlidingNonce::publish(default_account);
     }
 }
@@ -71,7 +78,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
     }
 }
@@ -79,7 +87,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
     }
 }
@@ -87,7 +96,8 @@ script {
 //! new-transaction
 script {
     use 0x1::SlidingNonce;
-    fun main(default_account: &signer) {
+    fun main(default_account: signer) {
+    let default_account = &default_account;
         SlidingNonce::publish(default_account);
     }
 }

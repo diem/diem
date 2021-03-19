@@ -19,7 +19,8 @@ script {
 //! sender: diemroot
 script {
 use 0x1::DiemAccount;
-fun main(creator: &signer) {
+fun main(creator: signer) {
+    let creator = &creator;
 //    DiemAccount::create_validator_account(
 //        creator, &r, 0xAA, x"00000000000000000000000000000000"
     DiemAccount::create_validator_account(
@@ -41,7 +42,9 @@ stdlib_script::create_validator_account
 //! execute-as: alex
 script {
 use 0x1::ValidatorConfig;
-fun main(dr_account: &signer, alex_signer: &signer) {
+fun main(dr_account: signer, alex_signer: signer) {
+    let dr_account = &dr_account;
+    let alex_signer = &alex_signer;
     ValidatorConfig::publish(alex_signer, dr_account, b"alex");
 }
 }

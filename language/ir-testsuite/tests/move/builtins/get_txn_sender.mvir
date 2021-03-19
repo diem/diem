@@ -1,10 +1,10 @@
 import 0x1.Signer;
 
-main(account: &signer) {
+main(account: signer) {
     let sender: address;
     let addr: address;
 
-    sender = Signer.address_of(move(account));
+    sender = Signer.address_of(&account);
     addr = 0x0;
     assert(copy(sender) != copy(addr), 42);
     // TODO: do we really need to test this?

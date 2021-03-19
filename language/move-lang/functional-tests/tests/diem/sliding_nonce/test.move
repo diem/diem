@@ -10,7 +10,8 @@
 script {
     use 0x1::SlidingNonce;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::publish(account);
 
         // 0-nonce is always allowed
@@ -42,7 +43,8 @@ script {
 script {
     use 0x1::SlidingNonce;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         SlidingNonce::record_nonce_or_abort(account, 0);
         SlidingNonce::record_nonce_or_abort(account, 0);
     }

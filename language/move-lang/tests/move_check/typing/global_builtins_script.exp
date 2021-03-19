@@ -10,7 +10,7 @@ error:
 
     ┌── tests/move_check/typing/global_builtins_script.move:17:5 ───
     │
- 17 │     move_to(account, r);
-    │     ^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
+ 17 │     move_to(&account, r);
+    │     ^^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
     │
 

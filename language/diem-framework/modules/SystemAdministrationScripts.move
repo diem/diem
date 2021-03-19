@@ -32,9 +32,9 @@ module SystemAdministrationScripts {
     /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | `account` is not the Diem Root account.                                                   |
     /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER` | `major` is less-than or equal to the current major version stored on-chain.                |
 
-    public(script) fun update_diem_version(account: &signer, sliding_nonce: u64, major: u64) {
-        SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-        DiemVersion::set(account, major)
+    public(script) fun update_diem_version(account: signer, sliding_nonce: u64, major: u64) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        DiemVersion::set(&account, major)
     }
 }
 }

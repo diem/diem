@@ -25,15 +25,15 @@ module M {
 
 //! new-transaction
 import {{default}}.M;
-main(sender: &signer) {
-    M.store(copy(sender), false);
-    assert((M.read(copy(sender)) == false), 42);
+main(sender: signer) {
+    M.store(&sender, false);
+    assert((M.read(&sender) == false), 42);
 
-    M.store_gen<bool>(copy(sender), true);
-    assert((M.read_gen<bool>(copy(sender)) == true), 42);
+    M.store_gen<bool>(&sender, true);
+    assert((M.read_gen<bool>(&sender) == true), 42);
 
-    M.store_gen<u64>(copy(sender), 112);
-    assert((M.read_gen<u64>(copy(sender)) == 112), 42);
+    M.store_gen<u64>(&sender, 112);
+    assert((M.read_gen<u64>(&sender) == 112), 42);
 
     return;
 }
@@ -42,19 +42,19 @@ main(sender: &signer) {
 //! new-transaction
 //! sender: alice
 import {{default}}.M;
-main(sender: &signer) {
-    M.store(copy(sender), false);
-    M.store_gen<bool>(copy(sender), true);
-    M.store_gen<u64>(copy(sender), 112);
+main(sender: signer) {
+    M.store(&sender, false);
+    M.store_gen<bool>(&sender, true);
+    M.store_gen<u64>(&sender, 112);
     return;
 }
 
 //! new-transaction
 //! sender: alice
 import {{default}}.M;
-main(sender: &signer) {
-    assert((M.read(copy(sender)) == false), 42);
-    assert((M.read_gen<bool>(copy(sender)) == true), 42);
-    assert((M.read_gen<u64>(copy(sender)) == 112), 42);
+main(sender: signer) {
+    assert((M.read(&sender) == false), 42);
+    assert((M.read_gen<bool>(&sender) == true), 42);
+    assert((M.read_gen<u64>(&sender) == 112), 42);
     return;
 }

@@ -9,7 +9,8 @@
 //! sender: diemroot
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemTransactionPublishingOption::halt_all_transactions(account);
 }
 }
@@ -38,7 +39,8 @@ stdlib_script::rotate_authentication_key
 //! sender: diemroot
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemTransactionPublishingOption::resume_transactions(account);
 }
 }
@@ -54,7 +56,8 @@ stdlib_script::rotate_authentication_key
 //! new-transaction
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemTransactionPublishingOption::halt_all_transactions(account);
 }
 }

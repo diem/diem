@@ -124,7 +124,8 @@ module ApprovedPayment {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let invalid_pubkey = x"aa"; // too short
     ApprovedPayment::publish(account, invalid_pubkey)
 }
@@ -137,7 +138,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     ApprovedPayment::publish(account, pubkey)
 }
@@ -151,7 +153,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let invalid_pubkey = x"aa"; // too short
     ApprovedPayment::rotate_sender_key(account, invalid_pubkey)
 }
@@ -167,7 +170,8 @@ fun main(account: &signer) {
 //! sender: alice1
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(!ApprovedPayment::exists_at({{alice1}}), 6001);
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
     ApprovedPayment::publish(account, pubkey);
@@ -191,7 +195,8 @@ fun main(account: &signer) {
 //! sender: alice2
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
     ApprovedPayment::publish(account, pubkey);
     ApprovedPayment::rotate_sender_key(account, x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d");
@@ -207,7 +212,8 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
     ApprovedPayment::deposit_to_payee<XDX>(account, {{alice2}}, 1000, payment_id, signature);
@@ -221,7 +227,8 @@ fun main(account: &signer) {
 //! sender: charlie2
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     ApprovedPayment::publish(account, pubkey);
     // rotate to an invalid key
@@ -247,7 +254,8 @@ fun main(account: &signer) {
 //! sender: alice3
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     ApprovedPayment::publish(account, pubkey)
 }
@@ -262,7 +270,8 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
     ApprovedPayment::deposit_to_payee<XDX>(account, {{alice3}}, 1000, payment_id, signature);
@@ -277,7 +286,8 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
     ApprovedPayment::deposit_to_payee<XDX>(account, {{alice}}, 1000, payment_id, signature);
@@ -293,7 +303,8 @@ fun main(account: &signer) {
 script {
 use {{default}}::ApprovedPayment;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let payment_id = x"07";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
     ApprovedPayment::deposit_to_payee<XDX>(account, {{alice3}}, 1000, payment_id, signature);
@@ -306,7 +317,8 @@ fun main(account: &signer) {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"010000000000000000000000000000000000000000000000000000000000000000";
     ApprovedPayment::publish(account, pubkey);
 }
@@ -319,7 +331,8 @@ fun main(account: &signer) {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"0100";
     ApprovedPayment::publish(account, pubkey);
 }
@@ -332,7 +345,8 @@ fun main(account: &signer) {
 //! sender: charlie3
 script {
 use {{default}}::ApprovedPayment;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let pubkey = x"0000000000000000000000000000000000000000000000000000000000000000";
     ApprovedPayment::publish(account, pubkey);
 }

@@ -23,7 +23,9 @@ module M {
 //! new-transaction
 script {
 use {{default}}::M;
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
+    let sender = sender;
     M::store(sender, false);
     assert(M::read(sender) == false, 42);
 
@@ -40,7 +42,8 @@ fun main(sender: &signer) {
 //! sender: alice
 script {
 use {{default}}::M;
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
     M::store(sender, false);
     M::store_gen<bool>(sender, true);
     M::store_gen<u64>(sender, 112)
@@ -51,7 +54,8 @@ fun main(sender: &signer) {
 //! sender: alice
 script {
 use {{default}}::M;
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
     assert(M::read(sender) == false, 42);
     assert(M::read_gen<bool>(sender) == true, 42);
     assert(M::read_gen<u64>(sender) == 112, 42)

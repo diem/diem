@@ -13,7 +13,8 @@
 //! sender: diemroot
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{vivian}});
     }
 }

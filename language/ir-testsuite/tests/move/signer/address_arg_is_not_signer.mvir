@@ -2,21 +2,21 @@
 //! args: 0x0
 import {{default}}.M;
 main(s: signer) {
-    move_to<signer>(&s, move(s));
+    move_to<signer>(&s, s);
     return;
 }
 // check: ParserError
 
 //! new-transaction
 //! args: 0x0
-main(s: &signer) {
+main(s: signer) {
     return;
 }
 // check: NUMBER_OF_ARGUMENTS_MISMATCH
 
 //! new-transaction
 //! args: 0x0
-main(s: &signer, s2: &signer) {
+main(s: signer, s2: signer) {
     return;
 }
 // check: NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH

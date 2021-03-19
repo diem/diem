@@ -17,8 +17,8 @@ script {
 //! type-args: 0x1::XUS::XUS
 script {
 use 0x1::TransactionFee;
-fun burn_txn_fees<CoinType: store>(blessed_account: &signer) {
-    TransactionFee::burn_fees<CoinType>(blessed_account);
+fun burn_txn_fees<CoinType: store>(blessed_account: signer) {
+    TransactionFee::burn_fees<CoinType>(&blessed_account);
 }
 }
 // check: PreburnEvent
@@ -32,8 +32,8 @@ fun burn_txn_fees<CoinType: store>(blessed_account: &signer) {
 //! type-args: 0x1::XUS::XUS
 script {
 use 0x1::TransactionFee;
-fun burn_txn_fees<CoinType: store>(blessed_account: &signer) {
-    TransactionFee::burn_fees<CoinType>(blessed_account);
+fun burn_txn_fees<CoinType: store>(blessed_account: signer) {
+    TransactionFee::burn_fees<CoinType>(&blessed_account);
 }
 }
 

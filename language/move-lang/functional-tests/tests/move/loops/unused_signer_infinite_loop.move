@@ -1,6 +1,6 @@
 //! max-gas: 700
 script {
-    fun main(_s: &signer) {
+    fun main(_s: signer) {
         loop ()
     }
 }

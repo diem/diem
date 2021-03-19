@@ -11,7 +11,8 @@ fun main() {
 //! sender: blessed
 script {
 use 0x1::ValidatorOperatorConfig;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     ValidatorOperatorConfig::publish(account, account, x"");
 }
 }

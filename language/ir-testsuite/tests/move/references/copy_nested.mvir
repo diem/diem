@@ -46,18 +46,18 @@ module Test {
 import {{default}}.Test;
 import 0x1.Signer;
 
-main(account: &signer) {
+main(account: signer) {
     let sender: address;
     let config: Test.Config;
     let config1: Test.Config;
 
-    Test.publish_config(copy(account), false);
+    Test.publish_config(&account, false);
 
-    sender = Signer.address_of(copy(account));
+    sender = Signer.address_of(&account);
     config = Test.config(copy(sender));
     assert(Test.value(&config) == false, 77);
 
-    Test.set(copy(account), true); // shouldn't affect local config variable
+    Test.set(&account, true); // shouldn't affect local config variable
     assert(Test.value(&config) == false, 88);
 
     config1 = Test.config(move(sender));

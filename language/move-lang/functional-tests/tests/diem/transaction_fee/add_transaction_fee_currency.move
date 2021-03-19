@@ -7,7 +7,8 @@
 // Change option to CustomModule
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(config: &signer) {
+fun main(config: signer) {
+    let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
@@ -52,7 +53,9 @@ module COIN {
 //! execute-as: blessed
 script {
 use 0x1::COIN;
-fun main(dr_account: &signer, tc_account: &signer) {
+fun main(dr_account: signer, tc_account: signer) {
+    let dr_account = &dr_account;
+    let tc_account = &tc_account;
     COIN::initialize(dr_account, tc_account);
 }
 }
@@ -75,7 +78,8 @@ fun main() {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::COIN;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     TransactionFee::burn_fees<COIN>(tc);
 }
 }
@@ -86,7 +90,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::COIN;
-fun main(tc_account: &signer) {
+fun main(tc_account: signer) {
+    let tc_account = &tc_account;
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
@@ -100,7 +105,8 @@ fun main(tc_account: &signer) {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::COIN;
-fun main(tc_account: &signer) {
+fun main(tc_account: signer) {
+    let tc_account = &tc_account;
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
@@ -111,7 +117,8 @@ fun main(tc_account: &signer) {
 script {
 use 0x1::TransactionFee;
 use 0x1::XDX::XDX;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     TransactionFee::add_txn_fee_currency<XDX>(tc);
     TransactionFee::burn_fees<XDX>(tc);
 }

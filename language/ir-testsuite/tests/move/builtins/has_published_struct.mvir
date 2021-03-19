@@ -22,7 +22,7 @@ module Token {
 import 0x1.Signer;
 import {{default}}.Token;
 
-main(account: &signer) {
+main(account: signer) {
     let z: Token.T;
     let sender: address;
     let exists1: bool;
@@ -30,8 +30,8 @@ main(account: &signer) {
     let exists2: bool;
 
     z = Token.new();
-    Token.publish(copy(account), move(z));
-    sender = Signer.address_of(move(account));
+    Token.publish(&account, move(z));
+    sender = Signer.address_of(&account);
     exists1 = Token.has(copy(sender));
     assert(copy(exists1), 42);
 

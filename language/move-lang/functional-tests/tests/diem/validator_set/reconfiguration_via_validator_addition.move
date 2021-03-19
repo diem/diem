@@ -12,7 +12,8 @@
 //! sender: diemroot
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{alice}});
         assert(!DiemSystem::is_validator({{alice}}), 77);
         assert(DiemSystem::is_validator({{bob}}), 78);
@@ -32,7 +33,8 @@ script{
 // bob cannot remove itself, only the diem root account can remove validators from the set
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{bob}});
     }
 }
@@ -47,7 +49,8 @@ script{
 //! new-transaction
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::add_validator(account, {{alice}});
     }
 }
@@ -57,7 +60,8 @@ script{
 //! sender: diemroot
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::add_validator(account, {{invalidvalidator}});
     }
 }
@@ -67,7 +71,8 @@ script{
 //! sender: diemroot
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::add_validator(account, {{alice}});
 
         assert(DiemSystem::is_validator({{alice}}), 77);
@@ -81,7 +86,8 @@ script{
 //! sender: diemroot
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::add_validator(account, {{alice}});
     }
 }
