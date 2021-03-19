@@ -337,13 +337,13 @@ fn test_lagging_upstream_long_poll() {
 
     // Fullnode 1 sends long-poll subscription to fullnode 0
     let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
-    check_chunk_response(message, 600, 251, 250);
+    check_chunk_response(message, 400, 251, 150);
 
     // Fullnode 0 sends chunk request to fullnode 1 and commits to latest state
     let (_, message) = env.deliver_msg(fullnode_0_peer_id_pfn);
-    check_chunk_request(message, 500, None);
+    check_chunk_request(message, 400, None);
     let (_, message) = env.deliver_msg(fullnode_1_peer_id_pfn);
-    check_chunk_response(message, 600, 501, 100);
+    check_chunk_response(message, 600, 401, 200);
     env.get_state_sync_peer(2).wait_for_version(600, Some(600));
 }
 

@@ -2183,13 +2183,12 @@ mod tests {
         let (sync_request, _) = create_sync_request_at_version(10);
         let _ = validator_coordinator.process_sync_request(sync_request);
 
-        // Verify wrong chunk type for non-target messages
-        let mut chunk_responses = create_non_empty_chunk_responses(1);
-        let _ = chunk_responses.remove(1); // Ignore the target chunk response
+        // Verify wrong chunk type for waypoint message
+        let chunk_responses = create_non_empty_chunk_responses(1);
         verify_all_chunk_responses_are_the_wrong_type(
             &mut validator_coordinator,
             &peer_network_id,
-            &chunk_responses,
+            &chunk_responses[0..1], // Ignore the target and highest chunk responses
         );
 
         // Verify ledger info version doesn't exceed sync request version
