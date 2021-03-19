@@ -8,7 +8,7 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-camino = { version = "1.0.3", features = ["serde1"] }
+camino = { version = "1.0.4", features = ["serde1"] }
 determinator = "0.4.0"
 guppy = "0.9.0"
 indoc = "1.0.3"
