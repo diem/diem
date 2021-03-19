@@ -11,6 +11,9 @@ outputs:
   changes-target-branch:
     description: If a target branch exists for either bors or a pr, the branch.
     value: ${{ steps.calc.outputs.changes-target-branch }}
+  changes-base-git-rev:
+    description: If a target branch exists for either bors or a pr, the base rev.
+    value: ${{ steps.calc.outputs.changes-base-git-rev }}
   changes-pull-request-number:
     description: If a pullrequest number can be found, either in bors, or in a pr, the number.
     value: ${{ steps.calc.outputs.changes-pull-request-number }}
@@ -27,17 +30,20 @@ runs:
         eval $(./.github/actions/changes/get_pr_info.sh -w "${WORKFLOW}" -b -d)
 
         echo "CHANGES_TARGET_BRANCH=${CHANGES_TARGET_BRANCH}" >> $GITHUB_ENV
+        echo "CHANGES_BASE_GIT_REV=${CHANGES_BASE_GIT_REV}" >> $GITHUB_ENV
         echo "CHANGES_PULL_REQUEST=${CHANGES_PULL_REQUEST}" >> $GITHUB_ENV
         echo "CHANGES_CHANGED_FILE_OUTPUTFILE=${CHANGES_CHANGED_FILE_OUTPUTFILE}" >> $GITHUB_ENV
         echo "CHANGES_BASE_GITHASH=${CHANGES_BASE_GITHASH}" >> $GITHUB_ENV
 
         echo "::set-output name=changes-base-githash::$(echo $CHANGES_BASE_GITHASH)"
+        echo "::set-output name=changes-base-git-rev::$(echo $CHANGES_BASE_GIT_REV)"
         echo "::set-output name=changes-target-branch::$(echo $CHANGES_TARGET_BRANCH)"
         echo "::set-output name=changes-pull-request-number::$(echo $CHANGES_PULL_REQUEST)"
 
         echo
         echo CALCULATED:
         echo CHANGES_TARGET_BRANCH=${CHANGES_TARGET_BRANCH}
+        echo CHANGES_BASE_GIT_REV=${CHANGES_BASE_GIT_REV}
         echo CHANGES_PULL_REQUEST=${CHANGES_PULL_REQUEST}
         echo CHANGES_CHANGED_FILE_OUTPUTFILE=${CHANGES_CHANGED_FILE_OUTPUTFILE}
         echo CHANGES_BASE_GITHASH=${CHANGES_BASE_GITHASH}
