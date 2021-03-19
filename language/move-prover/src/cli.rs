@@ -229,7 +229,7 @@ impl Options {
                     .validator(is_number)
                     .help("sets the number of cores to use. \
                      NOTE: multiple cores may currently lead to scrambled model \
-                     output from boogie (default 1)")
+                     output from boogie (default 4)")
             )
             .arg(
                 Arg::with_name("timeout")
