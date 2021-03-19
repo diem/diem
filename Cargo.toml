@@ -120,6 +120,7 @@ members = [
     "network/socket-bench-server",
     "sdk",
     "sdk/client",
+    "sdk/compatability",
     "sdk/transaction-builder",
     "secure/key-manager",
     "secure/net",

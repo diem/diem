@@ -652,6 +652,11 @@ jobs:
         env:
           # this overrides the default docker tag of "testnet"
           IMAGE_TAG: "test"
+      - name: run sdk-compatability tests from main
+        run: cd sdk/compatability && cargo test -- --include-ignored
+        env:
+          JSON_RPC_URL: "http://127.0.0.1:8080"
+          FAUCET_URL: "http://127.0.0.1:8000"
 
   crypto-unit-test:
     runs-on: ubuntu-latest

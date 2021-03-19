@@ -6250,6 +6250,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sdk-compatability"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "diem-sdk",
+ "diem-workspace-hack",
+ "once_cell",
+ "rand 0.8.3",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
