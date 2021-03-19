@@ -140,6 +140,9 @@ pub struct AccountView {
     pub delegated_withdrawal_capability: bool,
     pub is_frozen: bool,
     pub role: AccountRoleView,
+    // the transaction version of the account data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<u64>,
 }
 
 impl AccountView {
@@ -149,6 +152,7 @@ impl AccountView {
         balances: BTreeMap<Identifier, BalanceResource>,
         account_role: AccountRole,
         freezing_bit: FreezingBit,
+        version: u64,
     ) -> Self {
         Self {
             address,
@@ -166,6 +170,7 @@ impl AccountView {
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
             is_frozen: freezing_bit.is_frozen(),
             role: AccountRoleView::from(account_role),
+            version: Some(version),
         }
     }
 }

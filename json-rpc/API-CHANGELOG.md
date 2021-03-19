@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-03-18 Add optional parameter `version` to `get_account` method
+
+- Get account data by version.
+- A new field `version` is added to [Account](docs/type_account.md) in the `get_account` method response.
+
 ## 2021-03-16 Add support for script functions in `TransactionDataView` and `ScriptView`
 
 Update `ScriptView` to support script functions. This adds three new nullable

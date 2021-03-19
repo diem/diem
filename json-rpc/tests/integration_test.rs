@@ -163,7 +163,8 @@ fn create_test_cases() -> Vec<Test> {
                         "received_events_key": "02000000000000000000000000000000000000000a550c18",
                         "role": { "type": "unknown" },
                         "sent_events_key": "03000000000000000000000000000000000000000a550c18",
-                        "sequence_number": 1
+                        "sequence_number": 1,
+                        "version": resp.diem_ledger_version,
                     }),
                 );
             },
@@ -222,7 +223,8 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
                         },
                         "sent_events_key": "0400000000000000000000000000000000000000000000dd",
-                        "sequence_number": 2
+                        "sequence_number": 2,
+                        "version": resp.diem_ledger_version,
                     }),
                 );
             },
@@ -301,7 +303,8 @@ fn create_test_cases() -> Vec<Test> {
                             "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
                         },
                         "sent_events_key": "0400000000000000000000000000000000000000000000dd",
-                        "sequence_number": 5
+                        "sequence_number": 5,
+                        "version": resp.diem_ledger_version,
                     }),
                 );
             },
@@ -334,7 +337,48 @@ fn create_test_cases() -> Vec<Test> {
                             "type": "parent_vasp"
                         },
                         "sent_events_key": format!("0300000000000000{}", address),
-                        "sequence_number": 1
+                        "sequence_number": 1,
+                        "version": resp.diem_ledger_version,
+                    }),
+                );
+            },
+        },
+        Test {
+            name: "get account by version",
+            run: |env: &mut testing::Env| {
+                let account = &env.vasps[0];
+                let address = format!("{:x}", &account.address);
+                // The account txn is creating child VASP.
+                let account_sequence = 0;
+
+                let resp = env.send("get_account_transaction", json!([address, account_sequence, false]));
+                let result = resp.result.unwrap();
+                let prev_version: u64 = result["version"].as_u64().unwrap() - 1;
+                let resp = env.send("get_account", json!([address, prev_version]));
+                let result = resp.result.unwrap();
+                assert_eq!(
+                    result,
+                    json!({
+                        "address": address,
+                        "authentication_key": account.auth_key().to_string(),
+                        "balances": [{"amount": 1000000000000_u64, "currency": "XUS"}],
+                        "delegated_key_rotation_capability": false,
+                        "delegated_withdrawal_capability": false,
+                        "is_frozen": false,
+                        "received_events_key": format!("0200000000000000{}", address),
+                        "role": {
+                            "base_url": "",
+                            "base_url_rotation_events_key": format!("0100000000000000{}", address),
+                            "compliance_key": "",
+                            "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
+                            "expiration_time": 18446744073709551615_u64,
+                            "human_name": "Novi 0",
+                            "num_children": 0,
+                            "type": "parent_vasp"
+                        },
+                        "sent_events_key": format!("0300000000000000{}", address),
+                        "sequence_number": 0,
+                        "version": prev_version,
                     }),
                 );
             },
@@ -362,7 +406,8 @@ fn create_test_cases() -> Vec<Test> {
                             "parent_vasp_address": format!("{:x}", &parent.address),
                         },
                         "sent_events_key": format!("0100000000000000{}", address),
-                        "sequence_number": 0
+                        "sequence_number": 0,
+                        "version": resp.diem_ledger_version,
                     }),
                 );
             },

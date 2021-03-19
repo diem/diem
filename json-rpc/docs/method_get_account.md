@@ -7,9 +7,12 @@ Get the latest account information for a given account address.
 
 ### Parameters
 
-| Name    | Type   | Description                 |
-|---------|--------|-----------------------------|
-| account | string | Hex-encoded account address |
+| Name    | Type           | Description                                                                                         |
+|---------|----------------|-----------------------------------------------------------------------------------------------------|
+| account | string         | Hex-encoded account address                                                                         |
+| version | unsigned int64 | The transaction version, this parameter is optional, default is server's latest transaction version |
+
+> Depending on server's configuration, querying too old version may get error indicating data is pruned.
 
 
 ### Returns

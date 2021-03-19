@@ -59,6 +59,8 @@ message Account {
   bool is_frozen = 9 [json_name="delegated_withdrawal_capability"];
 
   AccountRole role = 10;
+  // the transaction version of the account
+  uint64 version = 11;
 }
 
 message AccountRole {

@@ -602,7 +602,7 @@ impl Client for diem_client::BlockingClient {
 
         let account_state =
             AccountState::try_from(&account_blob).context("Failed to deserialize account state")?;
-        let account_view = make_account_view(address, account_state, currency_ids)
+        let account_view = make_account_view(address, account_state, currency_ids, version)
             .context("Failed to project account state into account view")?;
         Ok(Response::new(Some(account_view), response_state))
     }
@@ -613,6 +613,7 @@ fn make_account_view(
     address: AccountAddress,
     account_state: AccountState,
     currency_ids: &[Identifier],
+    version: Version,
 ) -> Result<AccountView> {
     let account_resource = account_state
         .get_account_resource()?
@@ -631,6 +632,7 @@ fn make_account_view(
         balances,
         account_role,
         freezing_bit,
+        version,
     ))
 }
 

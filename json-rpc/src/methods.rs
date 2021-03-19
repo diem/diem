@@ -259,8 +259,9 @@ async fn get_account(
     request: JsonRpcRequest,
 ) -> Result<Option<AccountView>> {
     let account_address: AccountAddress = request.parse_account_address(0)?;
+    let version: u64 = request.parse_version_param(1, "version")?;
 
-    let account_state = match service.get_account_state(account_address, request.version())? {
+    let account_state = match service.get_account_state(account_address, version)? {
         Some(val) => val,
         None => return Ok(None),
     };
@@ -289,6 +290,7 @@ async fn get_account(
         balances,
         account_role,
         freezing_bit,
+        version,
     )))
 }
 
@@ -297,11 +299,7 @@ async fn get_account(
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<MetadataView> {
     let chain_id = service.chain_id().id();
-    let version = if !request.params.is_empty() {
-        request.parse_version_param(0, "version")?
-    } else {
-        request.version()
-    };
+    let version = request.parse_version_param(0, "version")?;
 
     let mut script_hash_allow_list: Option<Vec<HashValue>> = None;
     let mut module_publishing_allowed: Option<bool> = None;
@@ -678,7 +676,7 @@ pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
     register_rpc_method!(registry, "submit", submit, 1, 0);
     register_rpc_method!(registry, "get_metadata", get_metadata, 0, 1);
-    register_rpc_method!(registry, "get_account", get_account, 1, 0);
+    register_rpc_method!(registry, "get_account", get_account, 1, 1);
     register_rpc_method!(registry, "get_transactions", get_transactions, 3, 0);
     register_rpc_method!(
         registry,

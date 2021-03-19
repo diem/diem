@@ -291,11 +291,11 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "invalid arguments: too many arguments",
-            json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_currencies", "params": [1, 2], "id": 1}),
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params: wrong number of arguments (given 2, expected 1)",
+                    "message": "Invalid params: wrong number of arguments (given 2, expected 0)",
                     "data": null
                 },
                 "id": 1,
@@ -307,11 +307,11 @@ fn test_json_rpc_protocol_invalid_requests() {
         ),
         (
             "invalid arguments: not enough arguments",
-            json!({"jsonrpc": "2.0", "method": "get_account", "id": 1}),
+            json!({"jsonrpc": "2.0", "method": "get_events", "id": 1}),
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params: wrong number of arguments (given 0, expected 1)",
+                    "message": "Invalid params: wrong number of arguments (given 0, expected 3)",
                     "data": null
                 },
                 "id": 1,
@@ -376,6 +376,22 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "error": {
                     "code": -32602,
                     "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "diem_chain_id": ChainId::test().id(),
+                "diem_ledger_timestampusec": timestamp,
+                "diem_ledger_version": version
+            }),
+        ),
+        (
+            "get_account: invalid version param type",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", true], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param version(params[1]): should be unsigned int64",
                     "data": null
                 },
                 "id": 1,
