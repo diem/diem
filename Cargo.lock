@@ -1773,6 +1773,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bcs",
+ "diem-client",
  "diem-config",
  "diem-crypto",
  "diem-json-rpc-types",

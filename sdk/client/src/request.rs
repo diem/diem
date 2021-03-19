@@ -6,7 +6,7 @@ use diem_types::{account_address::AccountAddress, transaction::SignedTransaction
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicU64;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "method", content = "params")]
 pub enum MethodRequest {

@@ -25,6 +25,7 @@ bcs = "0.1.2"
 diem-json-rpc-types  = { path = "../../json-rpc/types" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-client = { path = "../../sdk/client" }
 
 
 [dev-dependencies]

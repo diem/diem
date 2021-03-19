@@ -7,3 +7,5 @@ pub use diem_types::{account_address::AccountAddress, transaction::SignedTransac
 // new implementation module
 
 pub mod async_client;
+mod broadcast_client;
+pub use broadcast_client::BroadcastingClient;

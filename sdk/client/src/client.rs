@@ -34,6 +34,10 @@ pub struct Client {
 
 impl Client {
     pub fn new<T: Into<String>>(url: T) -> Self {
+        Self::new_with_retry(url, Retry::default())
+    }
+
+    pub fn new_with_retry<T: Into<String>>(url: T, retry: Retry) -> Self {
         let inner = ReqwestClient::builder()
             .timeout(Duration::from_secs(10))
             .build()
@@ -43,7 +47,7 @@ impl Client {
             url: url.into(),
             inner,
             state: StateManager::new(),
-            retry: Retry::default(),
+            retry,
         }
     }
 
