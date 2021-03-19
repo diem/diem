@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This module implements a checker for verifying that all of the struct's fields satisify the
+//! This module implements a checker for verifying that all of the struct's fields satisfy the
 //! abilities required by the struct's abilities
 use crate::binary_views;
 use binary_views::BinaryIndexedView;

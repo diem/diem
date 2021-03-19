@@ -9,7 +9,7 @@ error:
    │                    -------------- The type '0x8675309::M::R' does not have the ability 'key'
    ·
  2 │     struct R { f: bool }
-   │            - To satisify the constraint, the 'key' ability would need to be added here
+   │            - To satisfy the constraint, the 'key' ability would need to be added here
    │
 
 error: 
@@ -23,6 +23,6 @@ error:
     │                         -------------- The type '0x8675309::N::R<bool>' does not have the ability 'key'
     ·
  12 │     struct R<T> { f: T }
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 

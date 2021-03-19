@@ -9,6 +9,6 @@ error:
     │                 - The type '0x8675309::M::S' does not have the ability 'copy'
     ·
   2 │     struct S has drop { f: u64 }
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     │
 

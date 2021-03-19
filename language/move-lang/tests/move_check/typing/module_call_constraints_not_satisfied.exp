@@ -9,7 +9,7 @@ error:
     │              --- The type '0x8675309::M::S' does not have the ability 'key'
     ·
   2 │     struct S has copy, drop {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     ·
   7 │     fun both<R: key, C: copy>(r: R, c: C) {
     │                 --- 'key' constraint declared here
@@ -26,7 +26,7 @@ error:
     │                   ------ The type '0x8675309::M::Coin' does not have the ability 'copy'
     ·
   3 │     struct Coin has key {}
-    │            ---- To satisify the constraint, the 'copy' ability would need to be added here
+    │            ---- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
   7 │     fun both<R: key, C: copy>(r: R, c: C) {
     │                         ---- 'copy' constraint declared here
@@ -57,7 +57,7 @@ error:
     │                 ------ The type '0x8675309::M::Coin' does not have the ability 'copy'
     ·
   3 │     struct Coin has key {}
-    │            ---- To satisify the constraint, the 'copy' ability would need to be added here
+    │            ---- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
   7 │     fun both<R: key, C: copy>(r: R, c: C) {
     │                         ---- 'copy' constraint declared here
@@ -74,7 +74,7 @@ error:
     │              --------- The type '0x8675309::M::Box<C>' does not have the ability 'key'
     ·
   4 │     struct Box<T> has copy, drop {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
   7 │     fun both<R: key, C: copy>(r: R, c: C) {
     │                 --- 'key' constraint declared here
@@ -108,7 +108,7 @@ error:
     │              ---------------- The type '0x8675309::M::Box3<C, C, C>' does not have the ability 'key'
     ·
   5 │     struct Box3<T1, T2, T3> has copy, drop {}
-    │            ---- To satisify the constraint, the 'key' ability would need to be added here
+    │            ---- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  15 │     fun rsrc<R: key>(r: R) {
     │                 --- 'key' constraint declared here

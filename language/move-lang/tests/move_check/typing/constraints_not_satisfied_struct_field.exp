@@ -9,7 +9,7 @@ error:
    │                 - The type '0x8675309::M::R' does not have the ability 'copy'
    ·
  3 │     struct R {}
-   │            - To satisify the constraint, the 'copy' ability would need to be added here
+   │            - To satisfy the constraint, the 'copy' ability would need to be added here
    ·
  2 │     struct CupC<T: copy> {}
    │                    ---- 'copy' constraint declared here

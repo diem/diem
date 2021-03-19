@@ -41,7 +41,7 @@ impl<T: TName> UniqueSet<T> {
         self.0.get_loc_(x_)
     }
 
-    // interesection of two sets. Keeps the loc of the first set
+    // intersection of two sets. Keeps the loc of the first set
     pub fn intersect(&self, other: &Self) -> Self {
         let mut intersection = Self::new();
         for x in self.cloned_iter() {

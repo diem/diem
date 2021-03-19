@@ -9,7 +9,7 @@ error:
    │                - The type '0x8675309::M::R' does not have the ability 'copy'
    ·
  2 │     struct R {}
-   │            - To satisify the constraint, the 'copy' ability would need to be added here
+   │            - To satisfy the constraint, the 'copy' ability would need to be added here
    │
 
 error: 
@@ -23,7 +23,7 @@ error:
    │                       - The type '0x8675309::M::B' does not have the ability 'copy'
    ·
  3 │     struct B { r: R }
-   │            - To satisify the constraint, the 'copy' ability would need to be added here
+   │            - To satisfy the constraint, the 'copy' ability would need to be added here
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
    │                   - The type '0x8675309::M::R' does not have the ability 'copy'
    ·
  2 │     struct R {}
-   │            - To satisify the constraint, the 'copy' ability would need to be added here
+   │            - To satisfy the constraint, the 'copy' ability would need to be added here
    │
 
 error: 
@@ -51,7 +51,7 @@ error:
     │                    - The type '0x8675309::M::R' does not have the ability 'copy'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     │
 
 error: 
@@ -65,7 +65,7 @@ error:
     │                               - The type '0x8675309::M::B' does not have the ability 'copy'
     ·
   3 │     struct B { r: R }
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     │
 
 error: 
@@ -79,7 +79,7 @@ error:
     │                   - The type '0x8675309::M::R' does not have the ability 'copy'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     │
 
 error: 
@@ -93,6 +93,6 @@ error:
     │                   - The type '0x8675309::M::R' does not have the ability 'copy'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     │
 

@@ -9,7 +9,7 @@ error:
    │                                  - The type 'T' does not have the ability 'copy'
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                       - To satisify the constraint, the 'copy' ability would need to be added here
+   │                       - To satisfy the constraint, the 'copy' ability would need to be added here
    ·
  3 │     struct CupC<T: copy> {}
    │                    ---- 'copy' constraint declared here
@@ -26,7 +26,7 @@ error:
    │                                              - The type 'T' does not have the ability 'key'
    ·
  7 │     fun no_constraint<T>(c: CupC<T>, r: CupR<T>) {}
-   │                       - To satisify the constraint, the 'key' ability would need to be added here
+   │                       - To satisfy the constraint, the 'key' ability would need to be added here
    ·
  2 │     struct CupR<T: key> {}
    │                    --- 'key' constraint declared here
@@ -43,7 +43,7 @@ error:
    │                                    - The type 'T' does not have the ability 'copy'
    ·
  9 │     fun t_resource<T: key>(c: CupC<T>, r: CupR<T>) {}
-   │                    - To satisify the constraint, the 'copy' ability would need to be added here
+   │                    - To satisfy the constraint, the 'copy' ability would need to be added here
    ·
  3 │     struct CupC<T: copy> {}
    │                    ---- 'copy' constraint declared here
@@ -60,7 +60,7 @@ error:
     │                                                 - The type 'T' does not have the ability 'key'
     ·
  11 │     fun t_copyable<T: copy>(c: CupC<T>, r: CupR<T>) {}
-    │                    - To satisify the constraint, the 'key' ability would need to be added here
+    │                    - To satisfy the constraint, the 'key' ability would need to be added here
     ·
   2 │     struct CupR<T: key> {}
     │                    --- 'key' constraint declared here
@@ -77,7 +77,7 @@ error:
     │                   - The type '0x8675309::M::R' does not have the ability 'copy'
     ·
   4 │     struct R has key {}
-    │            - To satisify the constraint, the 'copy' ability would need to be added here
+    │            - To satisfy the constraint, the 'copy' ability would need to be added here
     ·
   3 │     struct CupC<T: copy> {}
     │                    ---- 'copy' constraint declared here
@@ -94,7 +94,7 @@ error:
     │                               - The type '0x8675309::M::C' does not have the ability 'key'
     ·
   5 │     struct C has copy {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     ·
   2 │     struct CupR<T: key> {}
     │                    --- 'key' constraint declared here

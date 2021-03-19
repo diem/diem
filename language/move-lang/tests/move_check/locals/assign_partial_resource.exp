@@ -20,7 +20,7 @@ error:
    │                - The type '0x8675309::M::R' does not have the ability 'drop'
    ·
  2 │     struct R {}
-   │            - To satisify the constraint, the 'drop' ability would need to be added here
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -45,7 +45,7 @@ error:
     │                - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -70,7 +70,7 @@ error:
     │                - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -87,7 +87,7 @@ error:
     │                - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -112,7 +112,7 @@ error:
     │                - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -129,7 +129,7 @@ error:
     │                              - The type 'T' does not have the ability 'drop'
     ·
  30 │     fun t5<T>(cond: bool, x: T, y: T): (T, T) {
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 

@@ -76,7 +76,7 @@ error:
     │          ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
   3 │     struct X has copy, drop { s: S }
-    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies is limitied so simple primitive values
+    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
     │
 
 error: 
@@ -115,7 +115,7 @@ error:
     │          ^^^^^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
   3 │     struct X has copy, drop { s: S }
-    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies is limitied so simple primitive values
+    │                                  - The type '0x8675309::M::S' is not implicitly copyable. Implicit copies are limited to simple primitive values
     │
 
 error: 

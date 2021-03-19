@@ -159,7 +159,7 @@ fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
         format!(
             "    struct {}{}{} {{",
             ctx.module.identifier_at(shandle.name),
-            write_type_paramters(&shandle.type_parameters),
+            write_type_parameters(&shandle.type_parameters),
             write_ability_modifiers(shandle.abilities),
         )
     );
@@ -194,7 +194,7 @@ fn write_function_def(ctx: &mut Context, fdef: &FunctionDefinition) -> String {
         "    native {}fun {}{}({}){};",
         write_visibility(fdef.visibility),
         ctx.module.identifier_at(fhandle.name),
-        write_type_paramters(&fhandle.type_parameters),
+        write_type_parameters(&fhandle.type_parameters),
         write_parameters(ctx, parameters),
         write_return_type(ctx, return_)
     )
@@ -247,7 +247,7 @@ fn write_ability(ab: Ability) -> String {
     .to_string()
 }
 
-fn write_type_paramters(tps: &[AbilitySet]) -> String {
+fn write_type_parameters(tps: &[AbilitySet]) -> String {
     if tps.is_empty() {
         return "".to_string();
     }

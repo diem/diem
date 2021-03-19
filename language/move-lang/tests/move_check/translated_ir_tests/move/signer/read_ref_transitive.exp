@@ -20,6 +20,6 @@ error:
     │         ^^^ Invalid implicit copy of field 's'. Try adding '*&' to the front of the field access
     ·
  14 │         let x = S<signer> { s };
-    │                   ------ The type 'signer' is not implicitly copyable. Implicit copies is limitied so simple primitive values
+    │                   ------ The type 'signer' is not implicitly copyable. Implicit copies are limited to simple primitive values
     │
 

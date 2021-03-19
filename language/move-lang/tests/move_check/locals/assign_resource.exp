@@ -20,7 +20,7 @@ error:
    │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
    ·
  2 │     struct R {}
-   │            - To satisify the constraint, the 'drop' ability would need to be added here
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
    │
 
 error: 
@@ -37,7 +37,7 @@ error:
     │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -54,7 +54,7 @@ error:
     │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -71,7 +71,7 @@ error:
     │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -96,7 +96,7 @@ error:
     │                 --- The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   2 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -113,6 +113,6 @@ error:
     │                  - The type 'T' does not have the ability 'drop'
     ·
  33 │     fun t5<T>(x: T, y: T): T {
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 

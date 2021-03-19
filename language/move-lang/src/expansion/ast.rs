@@ -371,7 +371,7 @@ impl AbilitySet {
         self.0.contains_(&a)
     }
 
-    // interesection of two sets. Keeps the loc of the first set
+    // intersection of two sets. Keeps the loc of the first set
     pub fn intersect(&self, other: &Self) -> Self {
         Self(self.0.intersect(&other.0))
     }

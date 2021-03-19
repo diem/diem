@@ -274,7 +274,7 @@ where
         T::Param(_) => {
             let ty_debug = core::error_format(global_type, &Subst::empty());
             let tmsg = format!(
-                "Expected a struct type, global storage operations are restricted to struct types \
+                "Expected a struct type. Global storage operations are restricted to struct types \
                  declared in the current module. Found the type parameter: {}",
                 ty_debug
             );

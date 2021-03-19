@@ -93,7 +93,7 @@ error:
     │               - The type '0x8675309::M::R' does not have the ability 'drop'
     ·
   3 │     struct R {
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -131,7 +131,7 @@ error:
     │                 ---- The type '0x8675309::M::G1<_>' does not have the ability 'drop'
     ·
   7 │     struct G1<T: key> {}
-    │            -- To satisify the constraint, the 'drop' ability would need to be added here
+    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 
@@ -161,7 +161,7 @@ error:
     │                 ---- The type '0x8675309::M::G2<_>' does not have the ability 'drop'
     ·
   8 │     struct G2<T> {}
-    │            -- To satisify the constraint, the 'drop' ability would need to be added here
+    │            -- To satisfy the constraint, the 'drop' ability would need to be added here
     │
 
 error: 

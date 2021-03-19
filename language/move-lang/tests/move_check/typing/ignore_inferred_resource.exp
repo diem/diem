@@ -9,7 +9,7 @@ error:
    │         --- The type '0x8675309::M::S<_>' does not have the ability 'drop'
    ·
  2 │     struct S<T> {}
-   │            - To satisify the constraint, the 'drop' ability would need to be added here
+   │            - To satisfy the constraint, the 'drop' ability would need to be added here
    │
 
 error: 

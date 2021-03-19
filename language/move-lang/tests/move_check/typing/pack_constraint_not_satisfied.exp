@@ -37,7 +37,7 @@ error:
    │                ------- The type '0x8675309::M::Coin' does not have the ability 'drop'
    ·
  2 │     struct Coin {}
-   │            ---- To satisify the constraint, the 'drop' ability would need to be added here
+   │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
    ·
  4 │     struct S<T: drop> has drop { c: T }
    │                 ---- 'drop' constraint declared here
@@ -68,7 +68,7 @@ error:
     │                                     ---------- The type '0x8675309::M::R<u64>' does not have the ability 'key'
     ·
   3 │     struct R<T: key>  { r: T }
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     ·
   3 │     struct R<T: key>  { r: T }
     │                 --- 'key' constraint declared here
@@ -99,7 +99,7 @@ error:
     │                                     ---------- The type '0x8675309::M::R<u64>' does not have the ability 'key'
     ·
   3 │     struct R<T: key>  { r: T }
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     ·
   3 │     struct R<T: key>  { r: T }
     │                 --- 'key' constraint declared here
@@ -161,7 +161,7 @@ error:
     │                       ------- The type '0x8675309::M::Coin' does not have the ability 'drop'
     ·
   2 │     struct Coin {}
-    │            ---- To satisify the constraint, the 'drop' ability would need to be added here
+    │            ---- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   4 │     struct S<T: drop> has drop { c: T }
     │                 ---- 'drop' constraint declared here

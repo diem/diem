@@ -993,7 +993,7 @@ pub fn ability_not_satisified_tips<'a>(
         (Some(dloc), false) => error.push((
             dloc,
             format!(
-                "To satisify the constraint, the '{}' ability would need to be added here",
+                "To satisfy the constraint, the '{}' ability would need to be added here",
                 constraint
             ),
         )),
@@ -1069,7 +1069,7 @@ fn solve_implicitly_copyable_constraint(
             (
                 tloc,
                 format!(
-                    "The type {} is not implicitly copyable. Implicit copies is limitied so \
+                    "The type {} is not implicitly copyable. Implicit copies are limited to \
                      simple primitive values",
                     ty_str
                 ),

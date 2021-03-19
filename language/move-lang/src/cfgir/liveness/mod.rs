@@ -164,7 +164,7 @@ fn exp_list_item(state: &mut LivenessState, item: &ExpListItem) {
 /// - Switches the last inferred `copy` to a `move`.
 ///   It will error if the `copy` was specified by the user
 /// - Reports an error if an assignment/let was not used
-///   Switches it to an `Ignore` if it is has drop (helps with error messages for borrows)
+///   Switches it to an `Ignore` if it has the drop ability (helps with error messages for borrows)
 
 pub fn last_usage(
     errors: &mut Errors,

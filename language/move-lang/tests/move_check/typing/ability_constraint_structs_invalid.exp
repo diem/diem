@@ -9,7 +9,7 @@ error:
     │           --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
   9 │     fun c<T: copy>() {}
     │              ---- 'copy' constraint declared here
@@ -26,7 +26,7 @@ error:
     │           -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
   9 │     fun c<T: copy>() {}
     │              ---- 'copy' constraint declared here
@@ -60,7 +60,7 @@ error:
     │           --- The type '0x42::M::NoK' does not have the ability 'key'
     ·
   4 │     struct NoK has copy, drop, store {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  10 │     fun k<T: key>() {}
     │              --- 'key' constraint declared here
@@ -77,7 +77,7 @@ error:
     │           -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  10 │     fun k<T: key>() {}
     │              --- 'key' constraint declared here
@@ -111,7 +111,7 @@ error:
     │             --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                ---- 'copy' constraint declared here
@@ -128,7 +128,7 @@ error:
     │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                ---- 'copy' constraint declared here
@@ -145,7 +145,7 @@ error:
     │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                       ---- 'drop' constraint declared here
@@ -162,7 +162,7 @@ error:
     │             -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                              ----- 'store' constraint declared here
@@ -179,7 +179,7 @@ error:
     │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                ---- 'copy' constraint declared here
@@ -196,7 +196,7 @@ error:
     │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                       ---- 'drop' constraint declared here
@@ -213,7 +213,7 @@ error:
     │             -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  11 │     fun cds<T: copy + drop + store>() {}
     │                              ----- 'store' constraint declared here
@@ -247,7 +247,7 @@ error:
     │                        --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  13 │     struct Sc<T: copy> {}
     │                  ---- 'copy' constraint declared here
@@ -264,7 +264,7 @@ error:
     │                        --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  13 │     struct Sc<T: copy> {}
     │                  ---- 'copy' constraint declared here
@@ -281,7 +281,7 @@ error:
     │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  13 │     struct Sc<T: copy> {}
     │                  ---- 'copy' constraint declared here
@@ -298,7 +298,7 @@ error:
     │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  13 │     struct Sc<T: copy> {}
     │                  ---- 'copy' constraint declared here
@@ -349,7 +349,7 @@ error:
     │                        --- The type '0x42::M::NoK' does not have the ability 'key'
     ·
   4 │     struct NoK has copy, drop, store {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  14 │     struct Sk<T: key> {}
     │                  --- 'key' constraint declared here
@@ -366,7 +366,7 @@ error:
     │                        --- The type '0x42::M::NoK' does not have the ability 'key'
     ·
   4 │     struct NoK has copy, drop, store {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  14 │     struct Sk<T: key> {}
     │                  --- 'key' constraint declared here
@@ -383,7 +383,7 @@ error:
     │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  14 │     struct Sk<T: key> {}
     │                  --- 'key' constraint declared here
@@ -400,7 +400,7 @@ error:
     │                        -------- The type '0x42::M::Cup<u64>' does not have the ability 'key'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'key' ability would need to be added here
+    │            --- To satisfy the constraint, the 'key' ability would need to be added here
     ·
  14 │     struct Sk<T: key> {}
     │                  --- 'key' constraint declared here
@@ -451,7 +451,7 @@ error:
     │                            --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -468,7 +468,7 @@ error:
     │                            --- The type '0x42::M::NoC' does not have the ability 'copy'
     ·
   3 │     struct NoC has drop, store, key {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -485,7 +485,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -502,7 +502,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                           ---- 'drop' constraint declared here
@@ -519,7 +519,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                                  ----- 'store' constraint declared here
@@ -536,7 +536,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -553,7 +553,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                           ---- 'drop' constraint declared here
@@ -570,7 +570,7 @@ error:
     │                            -------- The type '0x42::M::Cup<u64>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                                  ----- 'store' constraint declared here
@@ -587,7 +587,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -604,7 +604,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                           ---- 'drop' constraint declared here
@@ -621,7 +621,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                                  ----- 'store' constraint declared here
@@ -638,7 +638,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'copy'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'copy' ability would need to be added here
+    │            --- To satisfy the constraint, the 'copy' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                    ---- 'copy' constraint declared here
@@ -655,7 +655,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'drop'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'drop' ability would need to be added here
+    │            --- To satisfy the constraint, the 'drop' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                           ---- 'drop' constraint declared here
@@ -672,7 +672,7 @@ error:
     │                            -------- The type '0x42::M::Cup<0x42::M::NoC>' does not have the ability 'store'
     ·
   5 │     struct Cup<T> {}
-    │            --- To satisify the constraint, the 'store' ability would need to be added here
+    │            --- To satisfy the constraint, the 'store' ability would need to be added here
     ·
  15 │     struct Scds<T: copy + drop + store> {}
     │                                  ----- 'store' constraint declared here

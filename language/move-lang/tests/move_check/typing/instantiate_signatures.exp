@@ -9,7 +9,7 @@ error:
     │               - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here
@@ -70,7 +70,7 @@ error:
     │                - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here
@@ -120,7 +120,7 @@ error:
     │           - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here
@@ -170,7 +170,7 @@ error:
     │                   - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here
@@ -234,7 +234,7 @@ error:
     │              - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here
@@ -326,7 +326,7 @@ error:
     │             - The type '0x42::M::R' does not have the ability 'drop'
     ·
   4 │     struct R {}
-    │            - To satisify the constraint, the 'drop' ability would need to be added here
+    │            - To satisfy the constraint, the 'drop' ability would need to be added here
     ·
   3 │     struct S<T: drop> has drop {}
     │                 ---- 'drop' constraint declared here

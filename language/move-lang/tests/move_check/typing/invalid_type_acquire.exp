@@ -60,7 +60,7 @@ error:
     │                          ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  31 │         destroy(account, move_from<T>(a));
-    │                                    - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
+    │                                    - Expected a struct type. Global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -96,7 +96,7 @@ error:
     │                                    - The type '0x2::M::S' does not have the ability 'key'
     ·
  10 │     struct S has store {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -126,7 +126,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  37 │         borrow_global<T>(a);
-    │                       - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
+    │                       - Expected a struct type. Global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -162,7 +162,7 @@ error:
     │                       - The type '0x2::M::S' does not have the ability 'key'
     ·
  10 │     struct S has store {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -192,7 +192,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  43 │         borrow_global_mut<T>(a);
-    │                           - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
+    │                           - Expected a struct type. Global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -228,7 +228,7 @@ error:
     │                           - The type '0x2::M::S' does not have the ability 'key'
     ·
  10 │     struct S has store {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -258,7 +258,7 @@ error:
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  49 │         exists<T>(a);
-    │                - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
+    │                - Expected a struct type. Global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -294,7 +294,7 @@ error:
     │                - The type '0x2::M::S' does not have the ability 'key'
     ·
  10 │     struct S has store {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
 error: 
@@ -321,7 +321,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
     ·
  55 │         move_to<T>(account, any());
-    │                 - Expected a struct type, global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
+    │                 - Expected a struct type. Global storage operations are restricted to struct types declared in the current module. Found the type parameter: 'T'
     │
 
 error: 
@@ -357,6 +357,6 @@ error:
     │                 - The type '0x2::M::S' does not have the ability 'key'
     ·
  10 │     struct S has store {}
-    │            - To satisify the constraint, the 'key' ability would need to be added here
+    │            - To satisfy the constraint, the 'key' ability would need to be added here
     │
 
