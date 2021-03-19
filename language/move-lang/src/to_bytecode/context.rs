@@ -6,7 +6,7 @@ use crate::{
     hlir::ast as H,
     parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
 };
-use diem_types::account_address::AccountAddress as DiemAddress;
+use move_core_types::account_address::AccountAddress as MoveAddress;
 use move_ir_types::ast as IR;
 use std::{
     clone::Clone,
@@ -217,7 +217,7 @@ impl<'a> Context<'a> {
         let name = Self::translate_module_name_(name);
         IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
             name,
-            DiemAddress::new(address.to_u8()),
+            MoveAddress::new(address.to_u8()),
         ))
     }
 

@@ -235,7 +235,6 @@ existing_deps = [
     ["compiled-stdlib", "diem-crypto"],
     ["move-lang", "fallible"],
     ["move-lang", "diem-framework"],
-    ["move-lang", "diem-types"],
     ["move-lang", "datatest-stable"],
     ["move-lang-test-utils", "datatest-stable"],
     ["move-model", "diem-types"],

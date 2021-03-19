@@ -4287,7 +4287,6 @@ dependencies = [
  "codespan-reporting",
  "datatest-stable",
  "diem-framework",
- "diem-types",
  "diem-workspace-hack",
  "difference",
  "fallible",

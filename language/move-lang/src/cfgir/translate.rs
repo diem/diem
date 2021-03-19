@@ -14,8 +14,7 @@ use crate::{
     shared::unique_map::UniqueMap,
     FullyCompiledProgram,
 };
-use diem_types::account_address::AccountAddress as DiemAddress;
-use move_core_types::value::MoveValue;
+use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
 use move_ir_types::location::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -340,7 +339,7 @@ fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
     use MoveValue as MV;
     use Value_ as V;
     match v_ {
-        V::Address(a) => MV::Address(DiemAddress::new(a.to_u8())),
+        V::Address(a) => MV::Address(MoveAddress::new(a.to_u8())),
         V::U8(u) => MV::U8(u),
         V::U64(u) => MV::U64(u),
         V::U128(u) => MV::U128(u),
