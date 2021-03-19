@@ -9,7 +9,7 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        Bytecode, CodeOffset, CompiledModule, CompiledScript, FunctionDefinitionIndex,
+        AbilitySet, Bytecode, CodeOffset, CompiledModule, CompiledScript, FunctionDefinitionIndex,
         FunctionHandleIndex, ModuleHandleIndex, SignatureToken, StructHandleIndex, TableIndex,
         Visibility,
     },
@@ -209,8 +209,11 @@ fn verify_imported_structs(context: &Context) -> PartialVMResult<()> {
         {
             Some(def_idx) => {
                 let def_handle = owner_module.struct_handle_at(*def_idx);
-                if struct_handle.abilities != def_handle.abilities
-                    || struct_handle.type_parameters != def_handle.type_parameters
+                if !compatible_struct_abilities(struct_handle.abilities, def_handle.abilities)
+                    || !compatible_type_parameters(
+                        &struct_handle.type_parameters,
+                        &def_handle.type_parameters,
+                    )
                 {
                     return Err(verification_error(
                         StatusCode::TYPE_MISMATCH,
@@ -249,8 +252,11 @@ fn verify_imported_functions(context: &Context) -> PartialVMResult<()> {
         {
             Some(def_idx) => {
                 let def_handle = owner_module.function_handle_at(*def_idx);
-                // same type parameter constraints
-                if function_handle.type_parameters != def_handle.type_parameters {
+                // compatible type parameter constraints
+                if !compatible_type_parameters(
+                    &function_handle.type_parameters,
+                    &def_handle.type_parameters,
+                ) {
                     return Err(verification_error(
                         StatusCode::TYPE_MISMATCH,
                         IndexKind::FunctionHandle,
@@ -309,6 +315,41 @@ fn verify_imported_functions(context: &Context) -> PartialVMResult<()> {
         }
     }
     Ok(())
+}
+
+// The local view must be a subset of (or equal to) the defined set of abilities. Conceptually, the
+// local view can be more constrained than the defined one. Removing abilities locally does nothing
+// but limit the local usage.
+// (Note this works because there are no negative constraints, i.e. you cannot constrain a type
+// parameter with the absence of an ability)
+fn compatible_struct_abilities(
+    local_struct_abilities_declaration: AbilitySet,
+    defined_struct_abilities: AbilitySet,
+) -> bool {
+    local_struct_abilities_declaration.is_subset(defined_struct_abilities)
+}
+
+// - The number of type parameters must be the same
+// - For each type parameter, the local view must be a superset of (or equal to) the defined
+//   constraints. Conceptually, the local view can be more constrained than the defined one as the
+//   local context is only limiting usage, and cannot take advantage of the additional constraints.
+fn compatible_type_parameters(
+    local_type_parameters_declaration: &[AbilitySet],
+    defined_type_parameters: &[AbilitySet],
+) -> bool {
+    local_type_parameters_declaration.len() == defined_type_parameters.len()
+        && local_type_parameters_declaration
+            .iter()
+            .zip(defined_type_parameters)
+            .all(
+                |(
+                    local_type_parameter_constraints_declaration,
+                    defined_type_parameter_constraints,
+                )| {
+                    (*defined_type_parameter_constraints)
+                        .is_subset(*local_type_parameter_constraints_declaration)
+                },
+            )
 }
 
 fn compare_cross_module_signatures(
