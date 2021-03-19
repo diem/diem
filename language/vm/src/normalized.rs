@@ -4,7 +4,7 @@
 use crate::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, CompiledModule, FieldDefinition, FunctionHandle, SignatureToken,
+        AbilitySet, CompiledModule, FieldDefinition, FunctionDefinition, SignatureToken,
         StructDefinition, StructFieldInformation, TypeParameterIndex, Visibility,
     },
 };
@@ -59,7 +59,6 @@ pub struct Field {
 /// `ModuleId` or `Module`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Struct {
-    pub name: Identifier,
     pub abilities: AbilitySet,
     pub type_parameters: Vec<AbilitySet>,
     pub fields: Vec<Field>,
@@ -68,11 +67,11 @@ pub struct Struct {
 /// Normalized version of a `FunctionDefinition`. Not safe to compare without an associated
 /// `ModuleId` or `Module`.
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub struct FunctionSignature {
-    pub name: Identifier,
+pub struct Function {
+    pub visibility: Visibility,
     pub type_parameters: Vec<AbilitySet>,
-    pub formals: Vec<Type>,
-    pub ret: Vec<Type>,
+    pub parameters: Vec<Type>,
+    pub return_: Vec<Type>,
 }
 
 /// Normalized version of a `CompiledModule`: its address, name, struct declarations, and public
@@ -82,8 +81,8 @@ pub struct Module {
     pub address: AccountAddress,
     pub name: Identifier,
     pub friends: Vec<ModuleId>,
-    pub structs: Vec<Struct>,
-    pub exposed_functions: BTreeMap<FunctionSignature, Visibility>,
+    pub structs: BTreeMap<Identifier, Struct>,
+    pub exposed_functions: BTreeMap<Identifier, Function>,
 }
 
 impl Module {
@@ -100,12 +99,7 @@ impl Module {
                 Visibility::Public | Visibility::Script | Visibility::Friend => true,
                 Visibility::Private => false,
             })
-            .map(|func_def| {
-                (
-                    FunctionSignature::new(m, m.function_handle_at(func_def.function)),
-                    func_def.visibility,
-                )
-            })
+            .map(|func_def| Function::new(m, func_def))
             .collect();
 
         Self {
@@ -231,7 +225,7 @@ impl Field {
 impl Struct {
     /// Create a `Struct` for `StructDefinition` `def` in module `m`. Panics if `def` is a
     /// a native struct definition.
-    pub fn new(m: &CompiledModule, def: &StructDefinition) -> Self {
+    pub fn new(m: &CompiledModule, def: &StructDefinition) -> (Identifier, Self) {
         let handle = m.struct_handle_at(def.struct_handle);
         let fields = match &def.field_information {
             StructFieldInformation::Native => panic!("Can't extract  for native struct"),
@@ -239,33 +233,37 @@ impl Struct {
                 fields.iter().map(|f| Field::new(m, f)).collect()
             }
         };
-        Struct {
-            name: m.identifier_at(handle.name).to_owned(),
+        let name = m.identifier_at(handle.name).to_owned();
+        let s = Struct {
             abilities: handle.abilities,
             type_parameters: handle.type_parameters.clone(),
             fields,
-        }
+        };
+        (name, s)
     }
 }
 
-impl FunctionSignature {
+impl Function {
     /// Create a `FunctionSignature` for `FunctionHandle` `f` in module `m`.
-    pub fn new(m: &CompiledModule, f: &FunctionHandle) -> Self {
-        FunctionSignature {
-            name: m.identifier_at(f.name).to_owned(),
-            type_parameters: f.type_parameters.clone(),
-            formals: m
-                .signature_at(f.parameters)
+    pub fn new(m: &CompiledModule, def: &FunctionDefinition) -> (Identifier, Self) {
+        let fhandle = m.function_handle_at(def.function);
+        let name = m.identifier_at(fhandle.name).to_owned();
+        let f = Function {
+            visibility: def.visibility,
+            type_parameters: fhandle.type_parameters.clone(),
+            parameters: m
+                .signature_at(fhandle.parameters)
                 .0
                 .iter()
                 .map(|s| Type::new(m, s))
                 .collect(),
-            ret: m
-                .signature_at(f.return_)
+            return_: m
+                .signature_at(fhandle.return_)
                 .0
                 .iter()
                 .map(|s| Type::new(m, s))
                 .collect(),
-        }
+        };
+        (name, f)
     }
 }

@@ -382,7 +382,7 @@ pub struct FieldDefinition {
 
 /// `Visibility` restricts the accessibility of the associated entity.
 /// - For function visibility, it restricts who may call into the associated function.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 #[repr(u8)]
