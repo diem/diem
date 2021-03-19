@@ -11,7 +11,6 @@ license = "Apache-2.0"
 move-lang = { path = "../move-lang" }
 bytecode-verifier = { path = "../bytecode-verifier" }
 vm = { path = "../vm" }
-diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 move-ir-types = { path = "../move-ir/types" }

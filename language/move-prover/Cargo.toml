@@ -16,7 +16,6 @@ abigen = { path = "abigen" }
 errmapgen = { path = "errmapgen" }
 bytecode = { path = "bytecode" }
 vm = { path = "../vm" }
-diem-types = { path = "../../types" }
 diem-temppath = { path = "../../common/temppath" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
