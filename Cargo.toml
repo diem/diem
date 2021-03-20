@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "client/assets-proof",
     "client/faucet",
     "client/json-rpc",
     "client/swiss-knife",
@@ -166,6 +167,7 @@ default-members = [
     "config/management/operational",
     "config/seed-peer-generator",
     "consensus/safety-rules",
+    "client/assets-proof",
     "client/faucet",
     "client/swiss-knife",
     "execution/db-bootstrapper",

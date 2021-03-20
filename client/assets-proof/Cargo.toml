@@ -1,0 +1,25 @@
+[package]
+name = "diem-assets-proof"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem Proof-of-Assets CLI"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+serde = { version = "1.0.124", default-features = false }
+serde_json = "1.0.64"
+structopt = "0.3.21"
+
+bcs = "0.1.2"
+diem-client = { path = "../../sdk/client", features = ["blocking"], default-features = false }
+diem-crypto = { path = "../../crypto/crypto" }
+diem-types = { path = "../../types" }
+move-core-types = { path = "../../language/move-core/types" }
+
+[dev-dependencies]
+diem-workspace-hack = { path = "../../common/workspace-hack" }
