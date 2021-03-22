@@ -1,0 +1,30 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/strong_edges.move:55:9 ───
+    │
+ 55 │         ensures global<S>(addr).x == 3;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/strong_edges.move:48: glob_and_field_incorrect
+    =         addr = <redacted>
+    =     at tests/sources/functional/strong_edges.move:49: glob_and_field_incorrect
+    =         s = <redacted>
+    =     at tests/sources/functional/strong_edges.move:50: glob_and_field_incorrect
+    =     at tests/sources/functional/strong_edges.move:51: glob_and_field_incorrect
+    =     at tests/sources/functional/strong_edges.move:56
+    =     at tests/sources/functional/strong_edges.move:55
+
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/strong_edges.move:65:13 ───
+    │
+ 65 │             assert r == 5;
+    │             ^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/strong_edges.move:61: loc_incorrect
+    =         r = <redacted>
+    =     at tests/sources/functional/strong_edges.move:62: loc_incorrect
+    =         r_ref = <redacted>
+    =     at tests/sources/functional/strong_edges.move:63: loc_incorrect
+    =     at tests/sources/functional/strong_edges.move:65: loc_incorrect
