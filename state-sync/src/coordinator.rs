@@ -666,14 +666,19 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         let result = match request.target.clone() {
             TargetType::TargetLedgerInfo(li) => {
-                self.process_request_highest_available(peer, request, Some(li), None)
+                self.process_request_for_target_and_highest(peer, request, Some(li), None)
             }
             TargetType::HighestAvailable {
                 target_li,
                 timeout_ms,
-            } => self.process_request_highest_available(peer, request, target_li, Some(timeout_ms)),
+            } => self.process_request_for_target_and_highest(
+                peer,
+                request,
+                target_li,
+                Some(timeout_ms),
+            ),
             TargetType::Waypoint(waypoint_version) => {
-                self.process_request_waypoint(peer, request, waypoint_version)
+                self.process_request_for_waypoint(peer, request, waypoint_version)
             }
         };
         Ok(result?)
@@ -724,7 +729,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
     /// Processing requests with no target LedgerInfo (highest available) and potentially long
     /// polling.
     /// Assumes that the local state is uptodate with storage.
-    fn process_request_highest_available(
+    fn process_request_for_target_and_highest(
         &mut self,
         peer: PeerNetworkId,
         request: GetChunkRequest,
@@ -792,7 +797,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok((target_li, highest_li))
     }
 
-    fn process_request_waypoint(
+    fn process_request_for_waypoint(
         &mut self,
         peer: PeerNetworkId,
         request: GetChunkRequest,
@@ -940,14 +945,14 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         let known_version = self.local_state.synced_version();
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                self.process_response_with_verifiable_li(txn_list_with_proof, li, None)
+                self.process_response_with_target_and_highest(txn_list_with_proof, li, None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
                 highest_li,
             } => {
                 let highest_li = highest_li.unwrap_or_else(|| target_li.clone());
-                self.process_response_with_verifiable_li(
+                self.process_response_with_target_and_highest(
                     txn_list_with_proof,
                     target_li,
                     Some(highest_li),
@@ -1115,18 +1120,18 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
                 end_of_epoch_li,
-            } => self.verify_ledger_info_for_waypoint(waypoint_li, end_of_epoch_li),
+            } => self.verify_response_with_waypoint_li(waypoint_li, end_of_epoch_li),
             ResponseLedgerInfo::VerifiableLedgerInfo(response_li) => {
-                self.verify_progressive_ledger_info(response_li, &None)
+                self.verify_response_with_target_and_highest(response_li, &None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
                 highest_li,
-            } => self.verify_progressive_ledger_info(target_li, highest_li),
+            } => self.verify_response_with_target_and_highest(target_li, highest_li),
         }
     }
 
-    fn verify_progressive_ledger_info(
+    fn verify_response_with_target_and_highest(
         &mut self,
         target_li: &LedgerInfoWithSignatures,
         highest_li: &Option<LedgerInfoWithSignatures>,
@@ -1165,7 +1170,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         Ok(())
     }
 
-    fn verify_ledger_info_for_waypoint(
+    fn verify_response_with_waypoint_li(
         &mut self,
         waypoint_li: &LedgerInfoWithSignatures,
         end_of_epoch_li: &Option<LedgerInfoWithSignatures>,
@@ -1278,7 +1283,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
     /// Processing chunk responses that carry a LedgerInfo that should be verified using the
     /// current local trusted validator set.
-    fn process_response_with_verifiable_li(
+    fn process_response_with_target_and_highest(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         response_li: LedgerInfoWithSignatures,
