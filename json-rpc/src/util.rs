@@ -54,6 +54,50 @@ macro_rules! register_rpc_method {
     };
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SdkLang {
+    Rust,
+    Java,
+    Python,
+    Typescript,
+    Go,
+    CSharp,
+    Cpp,
+    Unknown,
+}
+
+impl SdkLang {
+    pub fn from_user_agent(user_agent: &str) -> SdkLang {
+        // parse our sdk user agent strings, i.e `diem-client-sdk-python / 0.1.12`
+        if let Some(sdk_lang_part) = user_agent.to_lowercase().split('/').next() {
+            return match str::trim(sdk_lang_part) {
+                "diem-client-sdk-rust" => SdkLang::Rust,
+                "diem-client-sdk-java" => SdkLang::Java,
+                "diem-client-sdk-python" => SdkLang::Python,
+                "diem-client-sdk-typescript" => SdkLang::Typescript,
+                "diem-client-sdk-golang" => SdkLang::Go,
+                "diem-client-sdk-csharp" => SdkLang::CSharp,
+                "diem-client-sdk-cpp" => SdkLang::Cpp,
+                _ => SdkLang::Unknown,
+            };
+        }
+        SdkLang::Unknown
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SdkLang::Rust => "rust",
+            SdkLang::Java => "java",
+            SdkLang::Python => "python",
+            SdkLang::Typescript => "typescript",
+            SdkLang::Go => "golang",
+            SdkLang::CSharp => "csharp",
+            SdkLang::Cpp => "cpp",
+            SdkLang::Unknown => "unknown",
+        }
+    }
+}
+
 pub fn vm_status_view_from_kept_vm_status(status: &KeptVMStatus) -> VMStatusView {
     match status {
         KeptVMStatus::Executed => VMStatusView::Executed,
@@ -205,5 +249,12 @@ pub fn script_view_from_script_function(script: &ScriptFunction) -> ScriptView {
         ),
         type_arguments: Some(ty_args),
         ..Default::default()
+    }
+}
+
+pub fn sdk_language_from_user_agent(user_agent: Option<&str>) -> SdkLang {
+    match user_agent {
+        Some(user_agent) => SdkLang::from_user_agent(user_agent),
+        None => SdkLang::Unknown,
     }
 }

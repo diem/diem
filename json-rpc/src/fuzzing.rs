@@ -139,7 +139,7 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
         }
     });
     let body = rt.block_on(async {
-        let reply = runtime::rpc_endpoint(json_request, service, registry)
+        let reply = runtime::rpc_endpoint(json_request, service, registry, None)
             .await
             .unwrap();
 

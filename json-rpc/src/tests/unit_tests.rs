@@ -8,7 +8,7 @@ use crate::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockDiemDB},
     },
-    util::vm_status_view_from_kept_vm_status,
+    util::{sdk_language_from_user_agent, vm_status_view_from_kept_vm_status, SdkLang},
 };
 use diem_client::{views::TransactionDataView, BlockingClient, MethodRequest};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
@@ -1053,12 +1053,12 @@ fn test_metrics() {
         "diem_client_service_rpc_request_latency_seconds{type=single}",
         "diem_client_service_rpc_request_latency_seconds{type=batch}",
         // method request count
-        "diem_client_service_requests_count{method=get_currencies,result=success,type=single}",
+        "diem_client_service_requests_count{method=get_currencies,result=success,sdk_lang=unknown,type=single}",
         // method latency
         "diem_client_service_method_latency_seconds{method=get_currencies,type=single}",
         "diem_client_service_method_latency_seconds{method=get_currencies,type=batch}",
         // invalid params
-        "diem_client_service_invalid_requests_count{errortype=invalid_params,method=get_currencies,type=single}",
+        "diem_client_service_invalid_requests_count{errortype=invalid_params,method=get_currencies,sdk_lang=unknown,type=single}",
     ];
 
     for name in expected_metrics {
@@ -1525,6 +1525,24 @@ fn test_health_check() {
     );
     let resp = client.get(&healthy_url).send().unwrap();
     assert_eq!(resp.status(), 200);
+}
+
+#[test]
+fn test_sdk_language_from_user_agent() {
+    assert_eq!(sdk_language_from_user_agent(None), SdkLang::Unknown);
+    assert_eq!(sdk_language_from_user_agent(Some("")), SdkLang::Unknown);
+    assert_eq!(
+        sdk_language_from_user_agent(Some("diem-client-SdK-JaVa/ 213.21.2")),
+        SdkLang::Java
+    );
+    assert_eq!(
+        sdk_language_from_user_agent(Some("diem-client-sdk-python / 0.1.22")),
+        SdkLang::Python
+    );
+    assert_eq!(
+        sdk_language_from_user_agent(Some("very-custom ! user-agent")),
+        SdkLang::Unknown
+    );
 }
 
 #[test]

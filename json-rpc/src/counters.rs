@@ -29,9 +29,10 @@ pub static REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
         "diem_client_service_requests_count",
         "Cumulative number of requests that JSON RPC client service receives",
         &[
-            "type",   // batch / single
+            "type",     // batch / single
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "result", // result of request: "success", "fail"
+            "sdk_lang", // the language of the SDK: "java", "python", etc
         ]
     )
     .unwrap()
@@ -46,6 +47,7 @@ pub static INVALID_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
             "type",      // batch / single
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "errortype", // categories of invalid requests: "invalid_format", "invalid_params", "invalid_method", "method_not_found"
+            "sdk_lang",  // the language of the SDK: "java", "python", etc
         ]
     )
     .unwrap()
@@ -60,6 +62,7 @@ pub static INTERNAL_ERRORS: Lazy<IntCounterVec> = Lazy::new(|| {
             "type",      // batch / single
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "errorcode", // error code
+            "sdk_lang", // the language of the SDK: "java", "python", etc
         ]
     )
     .unwrap()
