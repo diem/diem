@@ -1380,15 +1380,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diagen"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "diem-workspace-hack",
- "regex",
-]
-
-[[package]]
 name = "diem-bitvec"
 version = "0.1.0"
 dependencies = [
