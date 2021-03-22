@@ -10,7 +10,7 @@ $ cargo install --path diem/language/tools/move-cli
 ```
 or
 ```shell
-$ cargo install --git https://github.com/diem/diem move-cli
+$ cargo install --git https://github.com/diem/diem move-cli --branch main
 ```
 
 This will install the `move` binary in your Cargo binary directory. On
