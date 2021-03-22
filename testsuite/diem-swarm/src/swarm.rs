@@ -24,7 +24,7 @@ use thiserror::Error;
 
 pub struct DiemNode {
     node: Child,
-    node_id: String,
+    pub(crate) node_id: String,
     validator_peer_id: Option<AccountAddress>,
     role: RoleType,
     debug_client: NodeDebugClient,
@@ -129,13 +129,13 @@ impl DiemNode {
         }
     }
 
-    pub fn check_connectivity(&mut self, expected_peers: i64) -> bool {
+    pub fn check_connectivity(&mut self, expected_peers: usize) -> bool {
         let connected_peers = format!(
             "diem_network_peers{{role_type={},state=connected}}",
             self.role.to_string()
         );
         if let Some(num_connected_peers) = self.get_metric(&connected_peers) {
-            if num_connected_peers < expected_peers {
+            if (num_connected_peers as usize) < expected_peers {
                 println!(
                     "Node '{}' Expected peers: {}, found peers: {}",
                     self.node_id, expected_peers, num_connected_peers
@@ -337,7 +337,7 @@ impl DiemSwarm {
             self.nodes.insert(node_id, node);
         }
         let expected_peers = match self.role {
-            RoleType::Validator => self.nodes.len() as i64 - 1,
+            RoleType::Validator => self.nodes.len() - 1,
             RoleType::FullNode => 1,
         };
         self.wait_for_startup()?;
@@ -346,7 +346,7 @@ impl DiemSwarm {
         Ok(())
     }
 
-    fn wait_for_connectivity(&mut self, expected_peers: i64) -> Result<(), SwarmLaunchFailure> {
+    fn wait_for_connectivity(&mut self, expected_peers: usize) -> Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
             return Ok(());
@@ -534,7 +534,7 @@ impl DiemSwarm {
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.nodes.insert(node_id, node);
-                return self.wait_for_connectivity(self.nodes.len() as i64 - 1);
+                return self.wait_for_connectivity(self.nodes.len() - 1);
             }
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
