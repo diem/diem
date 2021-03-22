@@ -7,9 +7,9 @@ use diem_types::{account_address::AccountAddress, transaction::WriteSetPayload};
 pub fn add_currency_to_system(
     executor: &mut FakeExecutor,
     currency_code_to_register: &str,
+    dr_account: &Account,
     current_dr_sequence_number: u64,
 ) -> u64 {
-    let dr_account = Account::new_diem_root();
     let mut dr_sequence_number = current_dr_sequence_number;
 
     {

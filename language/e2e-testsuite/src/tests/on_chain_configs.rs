@@ -14,123 +14,129 @@ use language_e2e_tests::{
     common_transactions::peer_to_peer_txn,
     current_function_name,
     executor::FakeExecutor,
-    transaction_status_eq,
+    test_with_different_versions, transaction_status_eq,
+    versioning::CURRENT_RELEASE_VERSIONS,
 };
 use transaction_builder::encode_update_dual_attestation_limit_script;
 
 #[test]
 fn initial_diem_version() {
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.set_golden_file(current_function_name!());
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
 
-    let vm = DiemVM::new(executor.get_state_view());
+        let vm = DiemVM::new(executor.get_state_view());
 
-    assert_eq!(
-        vm.internals().diem_version().unwrap(),
-        DiemVersion { major: 1 }
-    );
+        assert_eq!(
+            vm.internals().diem_version().unwrap(),
+            DiemVersion { major: test_env.version_number }
+        );
 
-    let account = Account::new_genesis_account(diem_types::on_chain_config::config_address());
-    let txn = account
-        .transaction()
-        .script(Script::new(
-            LegacyStdlibScript::UpdateDiemVersion
-                .compiled_bytes()
-                .into_vec(),
-            vec![],
-            vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
-        ))
-        .sequence_number(1)
-        .sign();
-    executor.new_block();
-    executor.execute_and_apply(txn);
+        let account = test_env.dr_account;
+        let txn = account
+            .transaction()
+            .script(Script::new(
+                LegacyStdlibScript::UpdateDiemVersion
+                    .compiled_bytes()
+                    .into_vec(),
+                vec![],
+                vec![TransactionArgument::U64(0), TransactionArgument::U64(test_env.version_number + 1)],
+            ))
+            .sequence_number(test_env.dr_sequence_number)
+            .sign();
+        executor.new_block();
+        executor.execute_and_apply(txn);
 
-    let new_vm = DiemVM::new(executor.get_state_view());
-    assert_eq!(
-        new_vm.internals().diem_version().unwrap(),
-        DiemVersion { major: 2 }
-    );
+        let new_vm = DiemVM::new(executor.get_state_view());
+        assert_eq!(
+            new_vm.internals().diem_version().unwrap(),
+            DiemVersion { major: test_env.version_number + 1 }
+        );
+    }
+    }
 }
 
 #[test]
 fn drop_txn_after_reconfiguration() {
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.set_golden_file(current_function_name!());
-    let vm = DiemVM::new(executor.get_state_view());
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
+        let vm = DiemVM::new(executor.get_state_view());
 
-    assert_eq!(
-        vm.internals().diem_version().unwrap(),
-        DiemVersion { major: 1 }
-    );
+        assert_eq!(
+            vm.internals().diem_version().unwrap(),
+            DiemVersion { major: test_env.version_number }
+        );
 
-    let account = Account::new_genesis_account(diem_types::on_chain_config::config_address());
-    let txn = account
-        .transaction()
-        .script(Script::new(
-            LegacyStdlibScript::UpdateDiemVersion
-                .compiled_bytes()
-                .into_vec(),
-            vec![],
-            vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
-        ))
-        .sequence_number(1)
-        .sign();
-    executor.new_block();
+        let account = test_env.dr_account;
+        let txn = account
+            .transaction()
+            .script(Script::new(
+                LegacyStdlibScript::UpdateDiemVersion
+                    .compiled_bytes()
+                    .into_vec(),
+                vec![],
+                vec![TransactionArgument::U64(0), TransactionArgument::U64(test_env.version_number + 1)],
+            ))
+            .sequence_number(test_env.dr_sequence_number)
+            .sign();
+        executor.new_block();
 
-    let sender = executor.create_raw_account_data(1_000_000, 10);
-    let receiver = executor.create_raw_account_data(100_000, 10);
-    let txn2 = peer_to_peer_txn(&sender.account(), &receiver.account(), 11, 1000);
+        let sender = executor.create_raw_account_data(1_000_000, 10);
+        let receiver = executor.create_raw_account_data(100_000, 10);
+        let txn2 = peer_to_peer_txn(&sender.account(), &receiver.account(), 11, 1000);
 
-    let mut output = executor.execute_block(vec![txn, txn2]).unwrap();
-    assert_eq!(output.pop().unwrap().status(), &TransactionStatus::Retry)
+        let mut output = executor.execute_block(vec![txn, txn2]).unwrap();
+        assert_eq!(output.pop().unwrap().status(), &TransactionStatus::Retry)
+    }
+    }
 }
 
 #[test]
 fn updated_limit_allows_txn() {
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.set_golden_file(current_function_name!());
-    let blessed = Account::new_blessed_tc();
-    // create and publish a sender with 5_000_000 coins and a receiver with 0 coins
-    let sender = executor.create_raw_account_data(5_000_000, 10);
-    let receiver = executor.create_raw_account_data(0, 10);
-    executor.add_account_data(&sender);
-    executor.add_account_data(&receiver);
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
+        let blessed = test_env.tc_account;
+        // create and publish a sender with 5_000_000 coins and a receiver with 0 coins
+        let sender = executor.create_raw_account_data(5_000_000, 10);
+        let receiver = executor.create_raw_account_data(0, 10);
+        executor.add_account_data(&sender);
+        executor.add_account_data(&receiver);
 
-    // Execute updated dual attestation limit
-    let new_micro_xdx_limit = 1_000_011;
-    let output = executor.execute_and_apply(
-        blessed
-            .transaction()
-            .script(encode_update_dual_attestation_limit_script(
-                3,
-                new_micro_xdx_limit,
-            ))
-            .sequence_number(0)
-            .sign(),
-    );
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
-    );
+        // Execute updated dual attestation limit
+        let new_micro_xdx_limit = 1_000_011;
+        let output = executor.execute_and_apply(
+            blessed
+                .transaction()
+                .script(encode_update_dual_attestation_limit_script(
+                    3,
+                    new_micro_xdx_limit,
+                ))
+                .sequence_number(test_env.tc_sequence_number)
+                .sign(),
+        );
+        assert_eq!(
+            output.status(),
+            &TransactionStatus::Keep(KeptVMStatus::Executed)
+        );
 
-    // higher transaction works with higher limit
-    let transfer_amount = 1_000_010;
-    let txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
-    let output = executor.execute_and_apply(txn);
-    assert!(transaction_status_eq(
-        &output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
-    ));
-    let sender_balance = executor
-        .read_balance_resource(sender.account(), account::xus_currency_code())
-        .expect("sender balance must exist");
-    let receiver_balance = executor
-        .read_balance_resource(receiver.account(), account::xus_currency_code())
-        .expect("receiver balcne must exist");
+        // higher transaction works with higher limit
+        let transfer_amount = 1_000_010;
+        let txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
+        let output = executor.execute_and_apply(txn);
+        assert!(transaction_status_eq(
+            &output.status(),
+            &TransactionStatus::Keep(KeptVMStatus::Executed)
+        ));
+        let sender_balance = executor
+            .read_balance_resource(sender.account(), account::xus_currency_code())
+            .expect("sender balance must exist");
+        let receiver_balance = executor
+            .read_balance_resource(receiver.account(), account::xus_currency_code())
+            .expect("receiver balance must exist");
 
-    assert_eq!(3_999_990, sender_balance.coin());
-    assert_eq!(1_000_010, receiver_balance.coin());
+        assert_eq!(3_999_990, sender_balance.coin());
+        assert_eq!(1_000_010, receiver_balance.coin());
+    }
+    }
 }
 
 #[test]

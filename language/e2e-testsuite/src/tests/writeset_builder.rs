@@ -10,65 +10,65 @@ use diem_types::{
 use diem_vm::DiemVM;
 use diem_writeset_generator::build_changeset;
 use language_e2e_tests::{
-    account::Account, compile::compile_module_with_address, executor::FakeExecutor,
+    compile::compile_module_with_address, test_with_different_versions,
+    versioning::CURRENT_RELEASE_VERSIONS,
 };
 
 #[test]
 fn build_upgrade_writeset() {
-    // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_file();
-    executor.new_block();
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
 
-    // create a transaction trying to publish a new module.
-    let genesis_account = Account::new_diem_root();
+        // create a transaction trying to publish a new module.
+        let genesis_account = test_env.dr_account;
 
-    let program = String::from(
-        "
+        let program = String::from(
+            "
         module M {
             public magic(): u64 { return 42; }
         }
         ",
-    );
+        );
 
-    let module =
-        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program).0;
-    let module_bytes = {
-        let mut v = vec![];
-        module.serialize(&mut v).unwrap();
-        v
-    };
-    let change_set = build_changeset(
-        executor.get_state_view(),
-        |session| {
-            session.set_diem_version(11);
-        },
-        &[module_bytes],
-        &[module.clone()],
-    );
+        let module =
+            compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program).0;
+        let module_bytes = {
+            let mut v = vec![];
+            module.serialize(&mut v).unwrap();
+            v
+        };
+        let change_set = build_changeset(
+            executor.get_state_view(),
+            |session| {
+                session.set_diem_version(11);
+            },
+            &[module_bytes],
+            &[module.clone()],
+        );
 
-    let writeset_txn = genesis_account
-        .transaction()
-        .write_set(WriteSetPayload::Direct(change_set))
-        .sequence_number(1)
-        .sign();
+        let writeset_txn = genesis_account
+            .transaction()
+            .write_set(WriteSetPayload::Direct(change_set))
+            .sequence_number(test_env.dr_sequence_number)
+            .sign();
 
-    let output = executor.execute_transaction(writeset_txn.clone());
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
-    );
-    assert!(executor.verify_transaction(writeset_txn).status().is_none());
+        let output = executor.execute_transaction(writeset_txn.clone());
+        assert_eq!(
+            output.status(),
+            &TransactionStatus::Keep(KeptVMStatus::Executed)
+        );
+        assert!(executor.verify_transaction(writeset_txn).status().is_none());
 
-    executor.apply_write_set(output.write_set());
+        executor.apply_write_set(output.write_set());
 
-    let new_vm = DiemVM::new(executor.get_state_view());
-    assert_eq!(
-        new_vm.internals().diem_version().unwrap(),
-        DiemVersion { major: 11 }
-    );
+        let new_vm = DiemVM::new(executor.get_state_view());
+        assert_eq!(
+            new_vm.internals().diem_version().unwrap(),
+            DiemVersion { major: 11 }
+        );
 
-    let script_body = {
-        let code = r#"
+        let script_body = {
+            let code = r#"
 import 0x1.M;
 
 main(lr_account: &signer) {
@@ -77,25 +77,27 @@ main(lr_account: &signer) {
 }
 "#;
 
-        let compiler = Compiler {
-            address: account_config::CORE_CODE_ADDRESS,
-            skip_stdlib_deps: false,
-            extra_deps: vec![module],
+            let compiler = Compiler {
+                address: account_config::CORE_CODE_ADDRESS,
+                skip_stdlib_deps: false,
+                extra_deps: vec![module],
+            };
+            compiler
+                .into_script_blob("file_name", code)
+                .expect("Failed to compile")
         };
-        compiler
-            .into_script_blob("file_name", code)
-            .expect("Failed to compile")
-    };
 
-    let txn = genesis_account
-        .transaction()
-        .script(Script::new(script_body, vec![], vec![]))
-        .sequence_number(2)
-        .sign();
+        let txn = genesis_account
+            .transaction()
+            .script(Script::new(script_body, vec![], vec![]))
+            .sequence_number(test_env.dr_sequence_number.checked_add(1).unwrap())
+            .sign();
 
-    let output = executor.execute_transaction(txn);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
-    );
+        let output = executor.execute_transaction(txn);
+        assert_eq!(
+            output.status(),
+            &TransactionStatus::Keep(KeptVMStatus::Executed)
+        );
+    }
+    }
 }
