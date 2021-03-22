@@ -34,7 +34,6 @@ const paperMeta = {
       '2019-11-08',
       '2019-10-24',
       '2019-09-26',
-      '2019-09-19',
       '2019-06-28',
     ],
     imgLoc: '/papers/illustrations/state-machine-pdf.png',
