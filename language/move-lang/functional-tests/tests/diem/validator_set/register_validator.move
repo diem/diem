@@ -61,7 +61,7 @@ script{
 // script{
 
 //     // register Alice as a validator candidate, then rotate a key + check that it worked.
-//     fun main(account: &signer) {
+//     fun main(account: signer) {
 //         // Alice registers as a validator candidate
 
 //         // Rotating the consensus_pubkey should work

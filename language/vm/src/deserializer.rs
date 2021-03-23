@@ -280,7 +280,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
     build_compiled_script(&mut script, &table_contents, &tables)?;
 
     if cursor.version() < VERSION_2 {
-        remap_borrow_owned_signers(&mut script)
+        remap_borrow_owned_signers(&mut script)?;
     }
     Ok(script)
 }
@@ -1532,10 +1532,10 @@ impl Opcodes {
 // Otherwise:
 // If the script passes the bytecode verifier before, it will pass after.
 // If the script fails the bytecode verifier before, it will fail after.
-fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
+fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) -> BinaryLoaderResult<()> {
     // check and return early for invalid indicies
     if script.clone().freeze().is_err() {
-        return;
+        return Ok(());
     }
 
     let parameters_signature = &script.signatures[script.parameters.0 as usize];
@@ -1557,7 +1557,7 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
         .map(|(idx, _sig)| idx as LocalIndex)
         .collect::<Vec<_>>();
     if signer_ref_parameters.is_empty() {
-        return;
+        return Ok(());
     }
 
     // Make a new parameter signature
@@ -1613,7 +1613,7 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
         match instr {
             // increment the offsets based on the number of new instructions added
             Bytecode::BrTrue(offset) | Bytecode::BrFalse(offset) | Bytecode::Branch(offset) => {
-                *offset = *offset + number_of_new_instructions
+                *offset += number_of_new_instructions
             }
 
             // If the local used was an old signer reference, remapp it to the new local borrowing
@@ -1628,7 +1628,7 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
                         *local_idx = *new_local
                     }
                 } else {
-                    *local_idx = *local_idx + number_of_new_locals
+                    *local_idx += number_of_new_locals
                 }
             }
             Bytecode::Pop
@@ -1722,9 +1722,14 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) {
     };
     let table_index_max = TableIndex::MAX as usize;
     if new_parameters_idx > table_index_max || new_locals_signature_idx > table_index_max {
-        // TODO
-        panic!()
+        return Err(PartialVMError::new(StatusCode::MALFORMED).with_message(
+            "Signature pool of migrated script exceeded maximum size once new signatures were \
+            added"
+                .to_string(),
+        ));
     }
     script.parameters = SignatureIndex(new_parameters_idx as TableIndex);
     script.code.locals = SignatureIndex(new_locals_signature_idx as TableIndex);
+
+    Ok(())
 }

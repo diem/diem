@@ -1,6 +1,6 @@
 script {
 /// This script does also abort, similar as script `some` and `other`.
-fun yet_another<T>(_account: &signer) {
+fun yet_another<T>(_account: signer) {
     abort 3
 }
 spec fun yet_another {

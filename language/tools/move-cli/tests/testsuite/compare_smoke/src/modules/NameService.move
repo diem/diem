@@ -102,7 +102,7 @@ module NameService {
 //initialize the nameservice list
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     NameService::initialize(account);
 }
 }
@@ -113,7 +113,7 @@ fun main(account: &signer) {
 //adding a new name to NameService's list _@nameservice -> b"alice"@alice
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let head = NameService::entry_handle({{nameservice}}, 0);
     NameService::find_position_and_insert(account, b"alice", head);
 }
@@ -125,7 +125,7 @@ fun main(account: &signer) {
 //adding a new name to NameService's list _@nameservice -> b"bob"@bob -> b"alice"@alice
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let head = NameService::entry_handle({{nameservice}}, 0);
     NameService::find_position_and_insert(account, b"bob", head);
 }
@@ -137,7 +137,7 @@ fun main(account: &signer) {
 //adding a new name to NameService's list _@nameservice -> b"bob"@bob -> b"alice"@alice -> b"carol"@carol
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let head = NameService::entry_handle({{nameservice}}, 0);
     NameService::find_position_and_insert(account, b"carol", head);
 }
@@ -162,7 +162,7 @@ fun main() {
 //removes her entry _@nameservice -> b"bob"@bob -> b"alice"@alice
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let entry = NameService::entry_handle({{carol}}, 0);
     NameService::remove_entry_by_entry_owner(account, entry);
 }
@@ -174,7 +174,7 @@ fun main(account: &signer) {
 //removes bob's entry _@nameservice -> b"alice"@alice
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let entry = NameService::entry_handle({{bob}}, 0);
     assert(NameService::is_expired(copy entry), 27);
     NameService::remove_entry_by_service_owner(account, entry);
@@ -212,7 +212,7 @@ fun main(account: &signer) {
 //removes her entry _@nameservice -> b"alice"@alice
 script {
 use {{nameservice}}::NameService;
-fun main(account: &signer) {
+fun main(account: signer) {
     let entry = NameService::entry_handle({{bob}}, 0);
     assert(NameService::is_expired(copy entry), 27);
     NameService::remove_entry_by_service_owner(account, entry);
