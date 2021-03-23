@@ -313,12 +313,12 @@ impl BorrowAnnotation {
 
 /// Borrow analysis processor.
 pub struct BorrowAnalysisProcessor {
-    strong_edges: bool,
+    weak_edges: bool,
 }
 
 impl BorrowAnalysisProcessor {
-    pub fn new(strong_edges: bool) -> Box<Self> {
-        Box::new(BorrowAnalysisProcessor { strong_edges })
+    pub fn new(weak_edges: bool) -> Box<Self> {
+        Box::new(BorrowAnalysisProcessor { weak_edges })
     }
 }
 
@@ -334,7 +334,7 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
             BorrowAnnotation(BTreeMap::new())
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
-            let analyzer = BorrowAnalysis::new(&func_target, self.strong_edges);
+            let analyzer = BorrowAnalysis::new(&func_target, self.weak_edges);
             let result = analyzer.analyze(&data.code);
             let propagator = PropagateSplicedAnalysis::new(result);
             BorrowAnnotation(propagator.run(&data.code))
@@ -376,11 +376,11 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
-    strong_edges: bool,
+    weak_edges: bool,
 }
 
 impl<'a> BorrowAnalysis<'a> {
-    fn new(func_target: &'a FunctionTarget<'a>, strong_edges: bool) -> Self {
+    fn new(func_target: &'a FunctionTarget<'a>, weak_edges: bool) -> Self {
         let livevar_annotation = func_target
             .get_annotations()
             .get::<LiveVarAnnotation>()
@@ -389,7 +389,7 @@ impl<'a> BorrowAnalysis<'a> {
         Self {
             func_target,
             livevar_annotation,
-            strong_edges,
+            weak_edges,
         }
     }
 
@@ -476,7 +476,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                     }
                     AssignKind::Copy => {
                         state.add_node(dest_node.clone());
-                        if self.strong_edges {
+                        if !self.weak_edges {
                             state.add_edge(
                                 src_node,
                                 dest_node,
@@ -499,7 +499,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                         let dest_node = self.borrow_node(dests[0]);
                         let src_node = self.borrow_node(srcs[0]);
                         state.add_node(dest_node.clone());
-                        if self.strong_edges {
+                        if !self.weak_edges {
                             state.add_edge(
                                 src_node,
                                 dest_node,
@@ -518,7 +518,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             id: *sid,
                         });
                         state.add_node(dest_node.clone());
-                        if self.strong_edges {
+                        if !self.weak_edges {
                             state.add_edge(
                                 src_node,
                                 dest_node,
@@ -534,7 +534,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                         let dest_node = self.borrow_node(dests[0]);
                         let src_node = self.borrow_node(srcs[0]);
                         state.add_node(dest_node.clone());
-                        if self.strong_edges {
+                        if !self.weak_edges {
                             state.add_edge(
                                 src_node,
                                 dest_node,
@@ -592,7 +592,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                                         .global_env()
                                         .get_extension::<VecBorMutInfo>()
                                         .unwrap();
-                                    if self.strong_edges
+                                    if !self.weak_edges
                                         && vec_bor_mut_info.0.is_some()
                                         && mid == &vec_bor_mut_info.0.unwrap().0
                                         && fid == &vec_bor_mut_info.0.unwrap().1

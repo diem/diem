@@ -64,7 +64,7 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
-            pipeline.add_processor(BorrowAnalysisProcessor::new(false));
+            pipeline.add_processor(BorrowAnalysisProcessor::new(true));
             Ok(Some(pipeline))
         }
         "borrow_strong" => {
@@ -73,7 +73,7 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(MutRefInstrumenter::new());
             pipeline.add_processor(ReachingDefProcessor::new());
             pipeline.add_processor(LiveVarAnalysisProcessor::new());
-            pipeline.add_processor(BorrowAnalysisProcessor::new(true));
+            pipeline.add_processor(BorrowAnalysisProcessor::new(false));
             Ok(Some(pipeline))
         }
         "memory_instr" => {

@@ -21,7 +21,7 @@ pub fn pipelines(options: &Options) -> Vec<Box<dyn FunctionTargetProcessor>> {
             MutRefInstrumenter::new(),
             ReachingDefProcessor::new(),
             LiveVarAnalysisProcessor::new(),
-            BorrowAnalysisProcessor::new(options.strong_edges),
+            BorrowAnalysisProcessor::new(options.weak_edges),
             MemoryInstrumentationProcessor::new(),
             CleanAndOptimizeProcessor::new(),
             UsageProcessor::new(),
