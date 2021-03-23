@@ -33,3 +33,53 @@ error: function does not abort under this condition
     =     at tests/sources/functional/loops.move:51: iter10_no_abort_incorrect
     =     at tests/sources/functional/loops.move:49: iter10_no_abort_incorrect
     =     at tests/sources/functional/loops.move:58
+
+error: unknown assertion failed
+
+     ┌── tests/sources/functional/loops.move:144:17 ───
+     │
+ 144 │ ╭                 spec {
+ 145 │ │                     assert x != y;
+ 146 │ │                 };
+     │ ╰─────────────────^
+     │
+     =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/loops.move:140: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:143: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:144: nested_loop_inner_invariant_incorrect
+
+error: unknown assertion failed
+
+     ┌── tests/sources/functional/loops.move:157:10 ───
+     │
+ 157 │         };
+     │          ^
+     │
+     =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/loops.move:140: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:143: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:144: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:145: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:147: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:150: nested_loop_inner_invariant_incorrect
+     =         y = <redacted>
+
+error: unknown assertion failed
+
+     ┌── tests/sources/functional/loops.move:132:10 ───
+     │
+ 132 │         };
+     │          ^
+     │
+     =     at tests/sources/functional/loops.move:113: nested_loop_outer_invariant_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/loops.move:115: nested_loop_outer_invariant_incorrect
+     =     at tests/sources/functional/loops.move:118: nested_loop_outer_invariant_incorrect
+     =     at tests/sources/functional/loops.move:119: nested_loop_outer_invariant_incorrect
+     =     at tests/sources/functional/loops.move:122: nested_loop_outer_invariant_incorrect
+     =         x = <redacted>

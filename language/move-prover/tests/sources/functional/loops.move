@@ -87,4 +87,76 @@ module VerifyLoops {
         pragma verify=true;
         aborts_if false;
     }
+
+    public fun nested_loop_correct(x: u64, y: u64) {
+        loop {
+            loop {
+                if (x <= y) {
+                    break
+                };
+                y = y + 1;
+            };
+
+            if (y <= x) {
+                break
+            };
+            x = x + 1;
+        };
+        spec {
+            assert x == y;
+        };
+    }
+    spec fun nested_loop_correct {
+        aborts_if false;
+    }
+
+    public fun nested_loop_outer_invariant_incorrect(x: u64, y: u64) {
+        spec {
+            assume x != y;
+        };
+        loop {
+            spec {
+                assert x != y;
+            };
+            loop {
+                if (x <= y) {
+                    break
+                };
+                y = y + 1;
+            };
+
+            if (y <= x) {
+                break
+            };
+            x = x + 1;
+        };
+    }
+    spec fun nested_loop_outer_invariant_incorrect {
+        aborts_if false;
+    }
+
+    public fun nested_loop_inner_invariant_incorrect(x: u64, y: u64) {
+        spec {
+            assume x != y;
+        };
+        loop {
+            loop {
+                spec {
+                    assert x != y;
+                };
+                if (x <= y) {
+                    break
+                };
+                y = y + 1;
+            };
+
+            if (y <= x) {
+                break
+            };
+            x = x + 1;
+        };
+    }
+    spec fun nested_loop_inner_invariant_incorrect {
+        aborts_if false;
+    }
 }
