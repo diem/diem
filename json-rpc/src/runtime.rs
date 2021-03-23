@@ -6,7 +6,7 @@ use crate::{
     errors::{is_internal_error, JsonRpcError},
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
-    util::{sdk_language_from_user_agent, SdkLang},
+    util::{sdk_info_from_user_agent, SdkInfo},
 };
 use anyhow::{ensure, Result};
 use diem_config::config::{NodeConfig, RoleType};
@@ -287,7 +287,7 @@ async fn rpc_endpoint_without_metrics(
     let chain_id = service.chain_id();
     let latest_ledger_version = ledger_info.ledger_info().version();
     let latest_ledger_timestamp_usecs = ledger_info.ledger_info().timestamp_usecs();
-    let sdk_lang = sdk_language_from_user_agent(user_agent);
+    let sdk_info = sdk_info_from_user_agent(user_agent);
 
     let resp = Ok(if let Value::Array(requests) = data {
         match service.validate_batch_size_limit(requests.len()) {
@@ -301,7 +301,7 @@ async fn rpc_endpoint_without_metrics(
                         ledger_info.clone(),
                         LABEL_BATCH,
                         trace_id.clone(),
-                        sdk_lang,
+                        sdk_info,
                     )
                 });
                 let responses = join_all(futures).await;
@@ -316,7 +316,7 @@ async fn rpc_endpoint_without_metrics(
                     latest_ledger_version,
                     latest_ledger_timestamp_usecs,
                 );
-                set_response_error(&mut resp, err, LABEL_BATCH, "unknown", sdk_lang);
+                set_response_error(&mut resp, err, LABEL_BATCH, "unknown", sdk_info);
                 log_response!(trace_id.clone(), &resp, true);
 
                 warp::reply::json(&resp)
@@ -331,7 +331,7 @@ async fn rpc_endpoint_without_metrics(
             ledger_info,
             LABEL_SINGLE,
             trace_id.clone(),
-            sdk_lang,
+            sdk_info,
         )
         .await;
         log_response!(trace_id, &resp, false);
@@ -367,7 +367,7 @@ async fn rpc_request_handler(
     ledger_info: LedgerInfoWithSignatures,
     request_type_label: &str,
     trace_id: String,
-    sdk_lang: SdkLang,
+    sdk_info: SdkInfo,
 ) -> JsonRpcResponse {
     let request: Map<String, Value>;
     let mut response = JsonRpcResponse::new(
@@ -386,7 +386,7 @@ async fn rpc_request_handler(
                 JsonRpcError::invalid_format(),
                 request_type_label,
                 "unknown",
-                sdk_lang,
+                sdk_info,
             );
             return response;
         }
@@ -398,14 +398,14 @@ async fn rpc_request_handler(
             response.id = Some(request_id);
         }
         Err(err) => {
-            set_response_error(&mut response, err, request_type_label, "unknown", sdk_lang);
+            set_response_error(&mut response, err, request_type_label, "unknown", sdk_info);
             return response;
         }
     };
 
     // verify protocol version
     if let Err(err) = verify_protocol(&request) {
-        set_response_error(&mut response, err, request_type_label, "unknown", sdk_lang);
+        set_response_error(&mut response, err, request_type_label, "unknown", sdk_info);
         return response;
     }
 
@@ -437,7 +437,8 @@ async fn rpc_request_handler(
                                 request_type_label,
                                 name,
                                 LABEL_SUCCESS,
-                                sdk_lang.as_str(),
+                                sdk_info.language.as_str(),
+                                &sdk_info.version.to_string(),
                             ])
                             .inc();
                     }
@@ -450,14 +451,15 @@ async fn rpc_request_handler(
                                 .unwrap_or_else(|| JsonRpcError::internal_error(err.to_string())),
                             request_type_label,
                             &name,
-                            sdk_lang,
+                            sdk_info,
                         );
                         counters::REQUESTS
                             .with_label_values(&[
                                 request_type_label,
                                 name,
                                 LABEL_FAIL,
-                                sdk_lang.as_str(),
+                                sdk_info.language.as_str(),
+                                &sdk_info.version.to_string(),
                             ])
                             .inc();
                     }
@@ -469,7 +471,7 @@ async fn rpc_request_handler(
                 JsonRpcError::method_not_found(),
                 request_type_label,
                 "not_found",
-                sdk_lang,
+                sdk_info,
             ),
         },
         _ => set_response_error(
@@ -477,7 +479,7 @@ async fn rpc_request_handler(
             JsonRpcError::method_not_found(),
             request_type_label,
             "not_found",
-            sdk_lang,
+            sdk_info,
         ),
     }
 
@@ -491,7 +493,7 @@ fn set_response_error(
     error: JsonRpcError,
     request_type: &str,
     method: &str,
-    sdk_lang: SdkLang,
+    sdk_info: SdkInfo,
 ) {
     let err_code = error.code;
     if is_internal_error(&error.code) {
@@ -500,7 +502,8 @@ fn set_response_error(
                 request_type,
                 method,
                 &err_code.to_string(),
-                sdk_lang.as_str(),
+                sdk_info.language.as_str(),
+                &sdk_info.version.to_string(),
             ])
             .inc();
     } else {
@@ -512,7 +515,13 @@ fn set_response_error(
             _ => "unexpected_code",
         };
         counters::INVALID_REQUESTS
-            .with_label_values(&[request_type, method, label, sdk_lang.as_str()])
+            .with_label_values(&[
+                request_type,
+                method,
+                label,
+                sdk_info.language.as_str(),
+                &sdk_info.version.to_string(),
+            ])
             .inc();
     }
 

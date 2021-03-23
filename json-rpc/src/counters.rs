@@ -33,6 +33,7 @@ pub static REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "result", // result of request: "success", "fail"
             "sdk_lang", // the language of the SDK: "java", "python", etc
+            "sdk_ver", // the version of the SDK: "0.0.11", "1.45.31", etc
         ]
     )
     .unwrap()
@@ -48,6 +49,7 @@ pub static INVALID_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "errortype", // categories of invalid requests: "invalid_format", "invalid_params", "invalid_method", "method_not_found"
             "sdk_lang",  // the language of the SDK: "java", "python", etc
+            "sdk_ver",   // the version of the SDK: "0.0.11", "1.45.31", etc
         ]
     )
     .unwrap()
@@ -63,6 +65,7 @@ pub static INTERNAL_ERRORS: Lazy<IntCounterVec> = Lazy::new(|| {
             "method", // method of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "errorcode", // error code
             "sdk_lang", // the language of the SDK: "java", "python", etc
+            "sdk_ver", // the version of the SDK: "0.0.11", "1.45.31", etc
         ]
     )
     .unwrap()

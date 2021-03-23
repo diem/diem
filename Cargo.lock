@@ -1786,6 +1786,7 @@ dependencies = [
  "once_cell",
  "proptest",
  "rand 0.8.3",
+ "regex",
  "reqwest",
  "scratchpad",
  "serde",

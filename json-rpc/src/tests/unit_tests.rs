@@ -8,7 +8,9 @@ use crate::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockDiemDB},
     },
-    util::{sdk_language_from_user_agent, vm_status_view_from_kept_vm_status, SdkLang},
+    util::{
+        sdk_info_from_user_agent, vm_status_view_from_kept_vm_status, SdkInfo, SdkLang, SdkVersion,
+    },
 };
 use diem_client::{views::TransactionDataView, BlockingClient, MethodRequest};
 use diem_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
@@ -1039,7 +1041,10 @@ fn test_metrics() {
             json!({"jsonrpc": "2.0", "method": "get_currencies", "params": ["invalid"], "id": 1}),
         ),
     ];
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::ClientBuilder::new()
+        .user_agent("diem-client-sdk-python / 2.11.15")
+        .build()
+        .expect("Client::new()");
     for (_name, request) in calls {
         let _ = client.post(&url).json(&request).send();
     }
@@ -1053,12 +1058,12 @@ fn test_metrics() {
         "diem_client_service_rpc_request_latency_seconds{type=single}",
         "diem_client_service_rpc_request_latency_seconds{type=batch}",
         // method request count
-        "diem_client_service_requests_count{method=get_currencies,result=success,sdk_lang=unknown,type=single}",
+        "diem_client_service_requests_count{method=get_currencies,result=success,sdk_lang=python,sdk_ver=2.11.15,type=single}",
         // method latency
         "diem_client_service_method_latency_seconds{method=get_currencies,type=single}",
         "diem_client_service_method_latency_seconds{method=get_currencies,type=batch}",
         // invalid params
-        "diem_client_service_invalid_requests_count{errortype=invalid_params,method=get_currencies,sdk_lang=unknown,type=single}",
+        "diem_client_service_invalid_requests_count{errortype=invalid_params,method=get_currencies,sdk_lang=python,sdk_ver=2.11.15,type=single}",
     ];
 
     for name in expected_metrics {
@@ -1528,20 +1533,58 @@ fn test_health_check() {
 }
 
 #[test]
-fn test_sdk_language_from_user_agent() {
-    assert_eq!(sdk_language_from_user_agent(None), SdkLang::Unknown);
-    assert_eq!(sdk_language_from_user_agent(Some("")), SdkLang::Unknown);
+fn test_sdk_info_from_user_agent() {
+    // Invalid user agents:
+    assert_eq!(sdk_info_from_user_agent(None), SdkInfo::default());
+    assert_eq!(sdk_info_from_user_agent(Some("")), SdkInfo::default());
+    // If we have a bad language, don't trust the version
     assert_eq!(
-        sdk_language_from_user_agent(Some("diem-client-SdK-JaVa/ 213.21.2")),
-        SdkLang::Java
+        sdk_info_from_user_agent(Some("very-custom-unreal / 1.1.1")),
+        SdkInfo::default()
+    );
+    // If we have a bad version, don't trust the language
+    assert_eq!(
+        sdk_info_from_user_agent(Some("diem-client-sdk-python / 0.12.223")),
+        SdkInfo::default()
     );
     assert_eq!(
-        sdk_language_from_user_agent(Some("diem-client-sdk-python / 0.1.22")),
-        SdkLang::Python
+        sdk_info_from_user_agent(Some("diem-client-sdk-python / 105.12.22")),
+        SdkInfo::default()
+    );
+
+    // Valid user agents:
+    assert_eq!(
+        sdk_info_from_user_agent(Some("diem-client-SdK-JaVa/ 3.21.09")),
+        SdkInfo {
+            language: SdkLang::Java,
+            version: SdkVersion {
+                major: 3,
+                minor: 21,
+                patch: 9
+            }
+        }
     );
     assert_eq!(
-        sdk_language_from_user_agent(Some("very-custom ! user-agent")),
-        SdkLang::Unknown
+        sdk_info_from_user_agent(Some("diem-client-SdK-cpp/3.21.09")),
+        SdkInfo {
+            language: SdkLang::Cpp,
+            version: SdkVersion {
+                major: 3,
+                minor: 21,
+                patch: 9
+            }
+        }
+    );
+    assert_eq!(
+        sdk_info_from_user_agent(Some("diem-client-sdk-python / 0.1.22")),
+        SdkInfo {
+            language: SdkLang::Python,
+            version: SdkVersion {
+                major: 0,
+                minor: 1,
+                patch: 22
+            }
+        }
     );
 }
 
