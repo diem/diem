@@ -74,8 +74,7 @@ mod node;
 #[cfg(test)]
 mod sparse_merkle_test;
 
-use self::node::LeafValue;
-use crate::sparse_merkle::node::{Node, SubTree};
+use crate::sparse_merkle::node::{LeafValue, Node, SubTree};
 use arc_swap::{ArcSwap, ArcSwapOption};
 use diem_crypto::{
     hash::{CryptoHash, HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -124,7 +123,7 @@ impl<V: CryptoHash> Inner<V> {
         // Replace the link to the root node with a weak reference, so all nodes created by this
         // version can be dropped. A weak link is still maintained so that if it's cached somehow,
         // we still have access to it without resorting to the DB.
-        self.root.store(Arc::new(self.root.load().as_ref().weak()));
+        self.root.store(Arc::new(self.root.load().weak()));
         // Disconnect the base tree, so that nodes created by previous versions can be dropped.
         self.base.store(None);
     }

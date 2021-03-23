@@ -220,8 +220,8 @@ pub enum LeafValue<V> {
 impl<V: CryptoHash> LeafValue<V> {
     pub fn calc_hash(&self) -> HashValue {
         match self {
-            LeafValue::Value(ref val) => val.hash(),
-            LeafValue::ValueHash(ref val_hash) => *val_hash,
+            LeafValue::Value(val) => val.hash(),
+            LeafValue::ValueHash(val_hash) => *val_hash,
         }
     }
 }
