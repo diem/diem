@@ -12,6 +12,6 @@ fun main(account: signer) {
     assert(!Offer::exists_at<M::T>(0xA11CE), 79);
 
     // create a new offer for Carl
-    Offer::create(account, redeemed, 0xCA21);
+    Offer::create(&account, redeemed, 0xCA21);
 }
 }

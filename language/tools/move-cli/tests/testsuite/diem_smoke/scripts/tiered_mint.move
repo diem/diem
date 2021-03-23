@@ -56,15 +56,15 @@ use 0x1::SlidingNonce;
 /// * `Script::rotate_dual_attestation_info`
 
 fun tiered_mint<CoinType: store>(
-    tc_account: &signer,
+    tc_account: signer,
     sliding_nonce: u64,
     designated_dealer_address: address,
     mint_amount: u64,
     tier_index: u64
 ) {
-    SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+    SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
     DiemAccount::tiered_mint<CoinType>(
-        tc_account, designated_dealer_address, mint_amount, tier_index
+        &tc_account, designated_dealer_address, mint_amount, tier_index
     );
 }
 }

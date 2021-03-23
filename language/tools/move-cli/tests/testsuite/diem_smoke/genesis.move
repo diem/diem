@@ -17,9 +17,11 @@ script {
     use 0x1::Vector;
 
     fun initialize(
-        dr_account: &signer,
-        tc_account: &signer,
+        dr_account: signer,
+        tc_account: signer,
     ) {
+        let dr_account = &dr_account;
+        let tc_account = &tc_account;
         let dummy_auth_key = x"0000000000000000000000000000000000000000000000000000000000000000";
         let dr_auth_key = copy dummy_auth_key;
         let tc_auth_key = dummy_auth_key;
