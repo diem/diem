@@ -78,7 +78,7 @@ pub fn get_bin<S: AsRef<str>>(bin_name: S) -> PathBuf {
     // We have to check to see if the workspace is built first to ensure that the binaries we're
     // testing are up to date.
     if !*WORKSPACE_BUILT {
-        panic!(WORKSPACE_BUILD_ERROR_MSG);
+        panic!("{}", WORKSPACE_BUILD_ERROR_MSG);
     }
 
     let bin_name = bin_name.as_ref();
@@ -87,10 +87,10 @@ pub fn get_bin<S: AsRef<str>>(bin_name: S) -> PathBuf {
     // If the binary doesn't exist then either building them failed somehow or the supplied binary
     // name doesn't match any binaries this workspace can produce.
     if !bin_path.exists() {
-        panic!(format!(
+        panic!(
             "Can't find binary '{}' in expected path {:?}",
             bin_name, bin_path
-        ));
+        );
     }
 
     bin_path
@@ -121,10 +121,10 @@ pub fn get_diem_node_with_failpoints() -> PathBuf {
     }
     let bin_path = build_dir().join(format!("{}{}", "diem-node", env::consts::EXE_SUFFIX));
     if !bin_path.exists() {
-        panic!(format!(
+        panic!(
             "Can't find binary diem-node in expected path {:?}",
             bin_path
-        ));
+        );
     }
 
     bin_path

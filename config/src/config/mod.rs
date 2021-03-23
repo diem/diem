@@ -211,7 +211,7 @@ impl fmt::Display for RoleType {
 pub struct ParseRoleError(String);
 
 impl NodeConfig {
-    pub fn data_dir(&self) -> &PathBuf {
+    pub fn data_dir(&self) -> &Path {
         &self.base.data_dir
     }
 
@@ -233,7 +233,7 @@ impl NodeConfig {
         config.execution.load(&input_dir)?;
 
         let mut config = config.validate_network_configs()?;
-        config.set_data_dir(config.data_dir().clone());
+        config.set_data_dir(config.data_dir().to_path_buf());
         Ok(config)
     }
 
@@ -414,11 +414,11 @@ impl RootPath {
     }
 
     /// This adds a full path when loading / storing if one is not specified
-    pub fn full_path(&self, file_path: &PathBuf) -> PathBuf {
+    pub fn full_path(&self, file_path: &Path) -> PathBuf {
         if file_path.is_relative() {
             self.root_path.join(file_path)
         } else {
-            file_path.clone()
+            file_path.to_path_buf()
         }
     }
 }

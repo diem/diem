@@ -39,11 +39,11 @@ macro_rules! execute_command {
 }
 
 use diem_crypto::ed25519::Ed25519PublicKey;
-use std::{convert::TryInto, fs, path::PathBuf};
+use std::{convert::TryInto, fs, path::Path};
 
 /// Reads a given ed25519 public key from file. Attempts to read the key using
 /// bcs encoding first. If this fails, attempts reading the key using hex.
-pub fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
+pub fn read_key_from_file(path: &Path) -> Result<Ed25519PublicKey, String> {
     let bcs_bytes = fs::read(path).map_err(|e| e.to_string())?;
     if let Ok(key) = bcs::from_bytes(&bcs_bytes) {
         Ok(key)

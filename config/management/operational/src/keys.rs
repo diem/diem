@@ -3,7 +3,11 @@
 
 use diem_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
 use serde::Serialize;
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -60,7 +64,7 @@ impl ExtractPrivateKey {
     }
 }
 
-fn save_key<T: Serialize>(key: &T, key_name: &'static str, path: &PathBuf) -> Result<(), Error> {
+fn save_key<T: Serialize>(key: &T, key_name: &'static str, path: &Path) -> Result<(), Error> {
     let encoded = bcs::to_bytes(key).map_err(|e| Error::BCS(key_name.to_string(), e))?;
     let mut file = File::create(path).map_err(|e| Error::IO(key_name.to_string(), e))?;
     file.write_all(&encoded)

@@ -29,9 +29,9 @@ impl KeyCodec<TransactionSchema> for Version {
         Ok(self.to_be_bytes().to_vec())
     }
 
-    fn decode_key(data: &[u8]) -> Result<Self> {
+    fn decode_key(mut data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<Version>())?;
-        Ok((&data[..]).read_u64::<BigEndian>()?)
+        Ok(data.read_u64::<BigEndian>()?)
     }
 }
 

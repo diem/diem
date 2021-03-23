@@ -491,7 +491,7 @@ impl<'a> Context<'a> {
 
     /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
     pub fn label_index(&mut self, label: BlockLabel) -> Result<CodeOffset> {
-        Ok(get_or_add_item(&mut self.labels, label)?)
+        get_or_add_item(&mut self.labels, label)
     }
 
     /// Get the identifier pool index, adds it if missing.

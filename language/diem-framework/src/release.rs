@@ -166,7 +166,7 @@ pub fn generate_script_builder(
 
     std::process::Command::new("rustfmt")
         .arg("--config")
-        .arg("merge_imports=true")
+        .arg("imports_granularity=crate")
         .arg(output_path)
         .status()
         .expect("Failed to run rustfmt on generated code");

@@ -478,6 +478,6 @@ impl BlockStore {
     /// Helper function to insert the block with the qc together
     pub fn insert_block_with_qc(&self, block: Block) -> anyhow::Result<Arc<ExecutedBlock>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
-        Ok(self.execute_and_insert_block(block)?)
+        self.execute_and_insert_block(block)
     }
 }

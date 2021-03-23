@@ -169,7 +169,7 @@ impl JsonRpcRequest {
         T: TryFrom<String>,
     {
         let raw_str: String = self.parse_param(index, name)?;
-        Ok(T::try_from(raw_str).map_err(|_| invalid_param(index, name))?)
+        T::try_from(raw_str).map_err(|_| invalid_param(index, name))
     }
 
     /// Return native type of params[index] deserialized by from json value.
@@ -179,10 +179,7 @@ impl JsonRpcRequest {
     where
         T: DeserializeOwned,
     {
-        Ok(
-            serde_json::from_value(self.get_param(index))
-                .map_err(|_| invalid_param(index, name))?,
-        )
+        serde_json::from_value(self.get_param(index)).map_err(|_| invalid_param(index, name))
     }
 
     fn parse_version_param(&self, index: usize, name: &str) -> Result<u64, JsonRpcError> {
@@ -205,15 +202,13 @@ impl JsonRpcRequest {
         index: usize,
         name: &str,
     ) -> Result<SignedTransaction, JsonRpcError> {
-        Ok(self
-            ._parse_signed_transaction(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
+        self._parse_signed_transaction(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))
     }
 
     fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey, JsonRpcError> {
-        Ok(self
-            ._parse_event_key(self.get_param(index))
-            .map_err(|_| invalid_param(index, name))?)
+        self._parse_event_key(self.get_param(index))
+            .map_err(|_| invalid_param(index, name))
     }
 
     // the following methods should not be called directly as they return error causes internal error

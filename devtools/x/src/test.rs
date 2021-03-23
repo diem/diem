@@ -12,7 +12,7 @@ use log::info;
 use std::{
     ffi::OsString,
     fs::create_dir_all,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 use structopt::StructOpt;
@@ -121,7 +121,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     cmd_result
 }
 
-fn exec_lcov_genhtml(html_lcov_path: &PathBuf) -> Result<()> {
+fn exec_lcov_genhtml(html_lcov_path: &Path) -> Result<()> {
     let mut genhtml = Command::new("genhtml");
     let mut lcov_file_path = PathBuf::new();
     lcov_file_path.push(html_lcov_path);
@@ -148,7 +148,7 @@ fn exec_lcov_genhtml(html_lcov_path: &PathBuf) -> Result<()> {
     }
 }
 
-fn exec_lcov(html_lcov_path: &PathBuf) -> Result<()> {
+fn exec_lcov(html_lcov_path: &Path) -> Result<()> {
     let debug_dir = project_root().join("target/debug/");
     let mut lcov_file_path = PathBuf::new();
     lcov_file_path.push(html_lcov_path);
@@ -186,7 +186,7 @@ fn exec_lcov(html_lcov_path: &PathBuf) -> Result<()> {
     }
 }
 
-fn exec_grcov(html_cov_path: &PathBuf) -> Result<()> {
+fn exec_grcov(html_cov_path: &Path) -> Result<()> {
     let debug_dir = project_root().join("target/debug/");
     let mut grcov_html = Command::new("grcov");
     grcov_html

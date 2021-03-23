@@ -12,7 +12,7 @@ macro_rules! impl_array_newtype {
             fn from(data: &'a [$ty]) -> $thing {
                 assert_eq!(data.len(), $len);
                 let mut ret = [0; $len];
-                ret.copy_from_slice(&data[..]);
+                ret.copy_from_slice(data);
                 $thing(ret)
             }
         }

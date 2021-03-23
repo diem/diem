@@ -48,7 +48,7 @@ fn test_ir_test_coverage() {
         msg.push_str(
             "  cargo run -p move-lang-ir-utils --bin ir-test-translation -- -d <dir_name>\n\n",
         );
-        panic!(msg)
+        panic!("{}", msg)
     }
 }
 

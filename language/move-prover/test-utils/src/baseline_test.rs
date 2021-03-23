@@ -81,17 +81,14 @@ fn diff(old_content: &str, new_content: &str) -> anyhow::Result<()> {
     };
 
     let diff = diff_lines(&new_content, &old_content);
-    let mut result = vec![];
-    result.push(
-        "
+    let mut result = vec!["
 New output differs from baseline!
 Call this test with env variable UPBL=1 to regenerate or remove old baseline files.
 Then use your favorite changelist diff tool to verify you are good with the changes.
 
 Or check the rudimentary diff below:
 "
-        .to_string(),
-    );
+    .to_string()];
     for d in diff.diff() {
         match d {
             DiffOp::Equal(lines) => print_context(&mut result, lines),

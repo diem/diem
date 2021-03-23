@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::path::Path;
 use tokio::io::AsyncReadExt;
 
 #[derive(Clone, Deserialize)]
@@ -78,7 +78,7 @@ pub struct CommandAdapterConfig {
 }
 
 impl CommandAdapterConfig {
-    pub async fn load_from_file(path: &PathBuf) -> Result<Self> {
+    pub async fn load_from_file(path: &Path) -> Result<Self> {
         let path_str = path.to_str().unwrap_or_default();
         let mut file = tokio::fs::File::open(path).await.err_notes(path_str)?;
         let mut content = Vec::new();

@@ -668,15 +668,15 @@ impl DbReader for DiemDB {
             let limit = std::cmp::min(limit, ledger_version - start_version + 1);
 
             let txns = (start_version..start_version + limit)
-                .map(|version| Ok(self.transaction_store.get_transaction(version)?))
+                .map(|version| self.transaction_store.get_transaction(version))
                 .collect::<Result<Vec<_>>>()?;
             let txn_infos = (start_version..start_version + limit)
-                .map(|version| Ok(self.ledger_store.get_transaction_info(version)?))
+                .map(|version| self.ledger_store.get_transaction_info(version))
                 .collect::<Result<Vec<_>>>()?;
             let events = if fetch_events {
                 Some(
                     (start_version..start_version + limit)
-                        .map(|version| Ok(self.event_store.get_events_by_version(version)?))
+                        .map(|version| self.event_store.get_events_by_version(version))
                         .collect::<Result<Vec<_>>>()?,
                 )
             } else {

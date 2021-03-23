@@ -271,7 +271,7 @@ pub fn script_view_from_script(script: &Script) -> ScriptView {
     // handle legacy fields, backward compatible
     if name == "peer_to_peer_with_metadata" {
         if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
-            &script.args()[..]
+            script.args()
         {
             view.receiver = Some(*receiver);
             view.amount = Some(*amount);

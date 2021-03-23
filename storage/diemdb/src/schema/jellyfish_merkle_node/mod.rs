@@ -40,11 +40,11 @@ impl KeyCodec<JellyfishMerkleNodeSchema> for NodeKey {
 
 impl ValueCodec<JellyfishMerkleNodeSchema> for Node {
     fn encode_value(&self) -> Result<Vec<u8>> {
-        Ok(self.encode()?)
+        self.encode()
     }
 
     fn decode_value(data: &[u8]) -> Result<Self> {
-        Ok(Self::decode(&data[..])?)
+        Self::decode(data)
     }
 }
 

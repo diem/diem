@@ -112,21 +112,16 @@ impl<'a> VerifiedStateView<'a> {
     }
 }
 
-impl<'a>
-    Into<(
+impl<'a> From<VerifiedStateView<'a>>
+    for (
         HashMap<AccountAddress, AccountState>,
         HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
-    )> for VerifiedStateView<'a>
+    )
 {
-    fn into(
-        self,
-    ) -> (
-        HashMap<AccountAddress, AccountState>,
-        HashMap<HashValue, SparseMerkleProof<AccountStateBlob>>,
-    ) {
+    fn from(view: VerifiedStateView<'a>) -> Self {
         (
-            self.account_to_state_cache.into_inner(),
-            self.account_to_proof_cache.into_inner(),
+            view.account_to_state_cache.into_inner(),
+            view.account_to_proof_cache.into_inner(),
         )
     }
 }

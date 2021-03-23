@@ -230,9 +230,9 @@ fn retrieve_waypoint(url_str: &str) -> anyhow::Result<Waypoint> {
     let client = reqwest::blocking::ClientBuilder::new().build()?;
     let response = client.get(url_str).send()?;
 
-    Ok(response
+    response
         .error_for_status()
         .map_err(|_| anyhow::format_err!("Failed to retrieve waypoint from URL {}", url_str))?
         .text()
-        .map(|r| Waypoint::from_str(r.trim()))??)
+        .map(|r| Waypoint::from_str(r.trim()))?
 }

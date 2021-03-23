@@ -45,7 +45,7 @@ impl<'l> ProjectContext<'l> {
 
     /// Returns the package graph, computing it for the first time if necessary.
     pub fn package_graph(&self) -> Result<&'l PackageGraph> {
-        Ok(self.core.package_graph()?)
+        self.core.package_graph()
     }
 
     /// Returns the absolute path from the project root.

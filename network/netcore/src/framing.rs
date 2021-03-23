@@ -97,7 +97,7 @@ mod test {
         drop(a);
 
         let result = block_on(read_u16frame_len(&mut b));
-        assert!(result.is_err(), true);
+        assert!(result.is_err());
 
         Ok(())
     }
@@ -108,7 +108,7 @@ mod test {
         drop(b);
 
         let result = block_on(a.write_all(&[42]));
-        assert!(result.is_err(), true);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -155,6 +155,6 @@ mod test {
         buf.resize((u16::max_value() as usize) * 2, 0);
 
         let result = block_on(write_u16frame(&mut a, &buf));
-        assert!(result.is_err(), true);
+        assert!(result.is_err());
     }
 }

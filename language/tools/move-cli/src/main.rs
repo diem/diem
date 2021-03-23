@@ -906,7 +906,7 @@ fn view(state: OnDiskStateView, file: &str) -> Result<()> {
 /// (4) all events can be deserialized
 /// (5) build/mv_interfaces is consistent with the global storage (TODO?)
 fn doctor(state: OnDiskStateView) -> Result<()> {
-    fn parent_addr(p: &PathBuf) -> &OsStr {
+    fn parent_addr(p: &Path) -> &OsStr {
         p.parent().unwrap().parent().unwrap().file_name().unwrap()
     }
 

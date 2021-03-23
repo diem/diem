@@ -593,9 +593,9 @@ impl DnsName {
     }
 }
 
-impl Into<String> for DnsName {
-    fn into(self) -> String {
-        self.0
+impl From<DnsName> for String {
+    fn from(dns_name: DnsName) -> String {
+        dns_name.0
     }
 }
 

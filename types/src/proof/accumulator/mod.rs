@@ -225,7 +225,7 @@ where
         current_num_leaves += remaining_new_leaves;
         current_subtree_roots.extend(subtree_iter);
 
-        Ok(Self::new(current_subtree_roots, current_num_leaves)?)
+        Self::new(current_subtree_roots, current_num_leaves)
     }
 
     /// Returns the root hash of the accumulator.

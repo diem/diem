@@ -271,8 +271,8 @@ fn constant_(
     let (start, mut blocks, block_info) = context.finish_blocks();
 
     let (mut cfg, infinite_loop_starts, errors) = BlockCFG::new(start, &mut blocks, block_info);
-    assert!(infinite_loop_starts.is_empty(), ICE_MSG);
-    assert!(errors.is_empty(), ICE_MSG);
+    assert!(infinite_loop_starts.is_empty(), "{}", ICE_MSG);
+    assert!(errors.is_empty(), "{}", ICE_MSG);
 
     let mut fake_errors = vec![];
     let fake_signature = H::FunctionSignature {
@@ -291,7 +291,7 @@ fn constant_(
         &mut cfg,
         &fake_infinite_loop_starts,
     );
-    assert!(fake_errors.is_empty(), ICE_MSG);
+    assert!(fake_errors.is_empty(), "{}", ICE_MSG);
     cfgir::optimize(&fake_signature, &locals, &mut cfg);
 
     if blocks.len() != 1 {

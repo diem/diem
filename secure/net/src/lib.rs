@@ -498,7 +498,7 @@ impl NetworkStream {
     /// Writing to a TCP socket will take in as much data as the underlying buffer has space for.
     /// This wraps around that buffer and blocks until all the data has been pushed.
     fn write_all(&mut self, data: &[u8]) -> Result<(), Error> {
-        let mut unwritten = &data[..];
+        let mut unwritten = data;
         let mut total_written = 0;
 
         while !unwritten.is_empty() {

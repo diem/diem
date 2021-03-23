@@ -6,7 +6,11 @@ use diem_secure_storage::{
     GitHubStorage, InMemoryStorage, NamespacedStorage, OnDiskStorage, Storage, VaultStorage,
 };
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -136,7 +140,7 @@ impl OnDiskStorageConfig {
     }
 }
 
-fn read_file(path: &PathBuf) -> Result<String, Error> {
+fn read_file(path: &Path) -> Result<String, Error> {
     let mut file =
         File::open(path).map_err(|e| Error::IO(path.to_str().unwrap().to_string(), e))?;
     let mut contents = String::new();

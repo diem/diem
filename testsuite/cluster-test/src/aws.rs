@@ -111,17 +111,15 @@ pub async fn set_asg_size(
                     info!("Scale down completed");
                     Ok(())
                 }
+            } else if total < desired_capacity {
+                bail!(
+                    "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
+                    total,
+                    desired_capacity
+                );
             } else {
-                if total < desired_capacity {
-                    bail!(
-                        "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
-                        total,
-                        desired_capacity
-                    );
-                } else {
-                    info!("Scale up completed");
-                    Ok(())
-                }
+                info!("Scale up completed");
+                Ok(())
             }
         })
     })

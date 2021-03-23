@@ -456,12 +456,7 @@ where
             // The new leaf node will have the same nibble_path with a new version as node_key.
             node_key.set_version(version);
             // Create the new leaf node with the same address but the new value.
-            return Ok(Self::create_leaf_node(
-                node_key,
-                nibble_iter,
-                value,
-                tree_cache,
-            )?);
+            return Self::create_leaf_node(node_key, nibble_iter, value, tree_cache);
         }
 
         // 2.2. both are unfinished(They have keys with same length so it's impossible to have one

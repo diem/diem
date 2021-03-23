@@ -57,10 +57,10 @@ impl ValueCodec<EventByVersionSchema> for Value {
         Ok(self.to_be_bytes().to_vec())
     }
 
-    fn decode_value(data: &[u8]) -> Result<Self> {
+    fn decode_value(mut data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<Self>())?;
 
-        Ok((&data[..]).read_u64::<BigEndian>()?)
+        Ok(data.read_u64::<BigEndian>()?)
     }
 }
 

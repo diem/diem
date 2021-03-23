@@ -147,9 +147,9 @@ impl<T: DiemInterface> DiemInterfaceTestHarness<T> {
     fn retrieve_validator_set(&self) -> Result<ValidatorSet, Error> {
         let account = account_config::validator_set_address();
         let account_state = self.diem.retrieve_account_state(account)?;
-        Ok(account_state
+        account_state
             .get_validator_set()?
-            .ok_or_else(|| Error::DataDoesNotExist("ValidatorSetResource".into()))?)
+            .ok_or_else(|| Error::DataDoesNotExist("ValidatorSetResource".into()))
     }
 
     /// Returns the diem block resource associated with the association address.
@@ -268,7 +268,7 @@ impl DiemInterface for MockDiemInterface {
             .get_latest_account_state(account)?
             .ok_or_else(|| Error::DataDoesNotExist("AccountState".into()))?;
         let account_state = AccountState::try_from(&blob)?;
-        Ok(account_state
+        account_state
             .get_validator_config_resource()?
             .ok_or_else(|| Error::DataDoesNotExist("ValidatorConfigResource".into()))?
             .validator_config
@@ -277,7 +277,7 @@ impl DiemInterface for MockDiemInterface {
                     "ValidatorConfigResource not found for account: {:?}",
                     account
                 ))
-            })?)
+            })
     }
 
     fn retrieve_validator_info(

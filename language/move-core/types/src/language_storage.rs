@@ -40,9 +40,7 @@ pub struct StructTag {
 
 impl StructTag {
     pub fn access_vector(&self) -> Vec<u8> {
-        let mut key = vec![];
-        key.push(RESOURCE_TAG);
-
+        let mut key = vec![RESOURCE_TAG];
         key.append(&mut bcs::to_bytes(self).unwrap());
         key
     }
@@ -106,9 +104,7 @@ impl ModuleId {
     }
 
     pub fn access_vector(&self) -> Vec<u8> {
-        let mut key = vec![];
-        key.push(CODE_TAG);
-
+        let mut key = vec![CODE_TAG];
         key.append(&mut bcs::to_bytes(self).unwrap());
         key
     }

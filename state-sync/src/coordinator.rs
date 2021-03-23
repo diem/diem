@@ -372,7 +372,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         }
 
         if target_version == local_li_version {
-            return Ok(Self::send_sync_req_callback(request, Ok(()))?);
+            return Self::send_sync_req_callback(request, Ok(()));
         }
         if target_version < local_li_version {
             Self::send_sync_req_callback(
@@ -664,7 +664,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             return Err(error);
         }
 
-        let result = match request.target.clone() {
+        match request.target.clone() {
             TargetType::TargetLedgerInfo(li) => {
                 self.process_request_for_target_and_highest(peer, request, Some(li), None)
             }
@@ -680,8 +680,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             TargetType::Waypoint(waypoint_version) => {
                 self.process_request_for_waypoint(peer, request, waypoint_version)
             }
-        };
-        Ok(result?)
+        }
     }
 
     fn verify_chunk_request_is_valid(&mut self, request: &GetChunkRequest) -> Result<(), Error> {
@@ -1578,7 +1577,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         counters::set_version(counters::VersionType::Target, target_version);
 
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
-        Ok(self.request_manager.send_chunk_request(req)?)
+        self.request_manager.send_chunk_request(req)
     }
 
     fn deliver_subscription(

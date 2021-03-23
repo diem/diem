@@ -100,10 +100,10 @@ fn extract_updates(
             let addrs = if is_validator {
                 let result = encryptor.decrypt(&config.validator_network_addresses, peer_id);
                 if let Err(EncryptorError::StorageError(_)) = result {
-                    panic!(format!(
+                    panic!(
                         "Unable to initialize validator network addresses: {:?}",
                         result
-                    ));
+                    );
                 }
                 result.map_err(anyhow::Error::from)
             } else {

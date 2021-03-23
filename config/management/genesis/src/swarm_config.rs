@@ -5,7 +5,11 @@ use anyhow::Result;
 use diem_config::config::NodeConfig;
 use diem_crypto::ed25519::Ed25519PrivateKey;
 use diem_types::waypoint::Waypoint;
-use std::{fs::File, io::Write, path::PathBuf};
+use std::{
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 pub trait BuildSwarm {
     /// Generate the configs for a swarm
@@ -19,7 +23,7 @@ pub struct SwarmConfig {
 }
 
 impl SwarmConfig {
-    pub fn build<T: BuildSwarm>(config_builder: &T, output_dir: &PathBuf) -> Result<Self> {
+    pub fn build<T: BuildSwarm>(config_builder: &T, output_dir: &Path) -> Result<Self> {
         let (mut configs, diem_root_key) = config_builder.build_swarm()?;
         let mut config_files = vec![];
 

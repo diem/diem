@@ -557,12 +557,10 @@ where
                 } else {
                     break;
                 }
+            } else if num_visited_right_siblings > proof.right_siblings().len() {
+                num_visited_right_siblings -= 1;
             } else {
-                if num_visited_right_siblings > proof.right_siblings().len() {
-                    num_visited_right_siblings -= 1;
-                } else {
-                    break;
-                }
+                break;
             }
         }
 

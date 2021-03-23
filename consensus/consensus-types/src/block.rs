@@ -294,7 +294,7 @@ impl<'de> Deserialize<'de> for Block {
         struct BlockWithoutId {
             block_data: BlockData,
             signature: Option<Ed25519Signature>,
-        };
+        }
 
         let BlockWithoutId {
             block_data,

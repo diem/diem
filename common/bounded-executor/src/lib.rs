@@ -163,7 +163,7 @@ mod test {
             if completed == NUM_TASKS {
                 break;
             } else {
-                ::std::sync::atomic::spin_loop_hint();
+                std::hint::spin_loop()
             }
         }
     }

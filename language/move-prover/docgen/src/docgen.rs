@@ -26,7 +26,7 @@ use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fs::{self, File},
     io::{Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     rc::Rc,
 };
@@ -539,9 +539,9 @@ impl<'env> Docgen<'env> {
     }
 
     /// Make path relative to other path.
-    fn path_relative_to(&self, path: &PathBuf, to: &PathBuf) -> PathBuf {
+    fn path_relative_to(&self, path: &Path, to: &Path) -> PathBuf {
         if path.is_absolute() || to.is_absolute() {
-            path.clone()
+            path.to_path_buf()
         } else {
             let mut result = PathBuf::new();
             for _ in to.components() {
@@ -803,7 +803,7 @@ impl<'env> Docgen<'env> {
     }
 
     /// Execute the external tool "dot" with doc_src as input to generate a .svg image file.
-    fn gen_svg_file(&self, out_file_path: &PathBuf, dot_src: &str) {
+    fn gen_svg_file(&self, out_file_path: &Path, dot_src: &str) {
         if let Err(e) = fs::create_dir_all(out_file_path.parent().unwrap()) {
             self.env.error(
                 &self.env.unknown_loc(),
@@ -852,7 +852,6 @@ impl<'env> Docgen<'env> {
                             dot_src
                         ),
                     );
-                    return;
                 }
             }
             Err(e) => {
@@ -1469,10 +1468,11 @@ impl<'env> Docgen<'env> {
                     // inside inline code section. Eagerly consume/match this '`'
                     let code = chars.take_while_ref(non_code_filter).collect::<String>();
                     // consume the remaining '`'. Report an error if we find an unmatched '`'.
-                    assert!(chars.next() == Some('`'),
-                    format!("Missing backtick found in {} while generating documentation for the following text: \"{}\"",
-                        self.current_module.as_ref().unwrap().get_name().display_full(self.env.symbol_pool()), text,
-                    ));
+                    assert!(
+                                            chars.next() == Some('`'),
+                                            "Missing backtick found in {} while generating documentation for the following text: \"{}\"",
+                                            self.current_module.as_ref().unwrap().get_name().display_full(self.env.symbol_pool()), text,
+                                        );
                     decorated_text += &format!("<code>{}</code>", self.decorate_code(&code));
                 }
             } else {

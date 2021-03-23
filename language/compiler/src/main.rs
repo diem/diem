@@ -60,7 +60,7 @@ fn do_verify_module(module: CompiledModule, dependencies: &[CompiledModule]) -> 
     module
 }
 
-fn write_output(path: &PathBuf, buf: &[u8]) {
+fn write_output(path: &Path, buf: &[u8]) {
     let mut f = fs::File::create(path)
         .with_context(|| format!("Unable to open output file {:?}", path))
         .unwrap();

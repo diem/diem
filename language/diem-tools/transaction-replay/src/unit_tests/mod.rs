@@ -75,11 +75,10 @@ impl DiemValidatorInterface for TestInterface {
         account: AccountAddress,
         version: Version,
     ) -> Result<Option<AccountState>> {
-        Ok(self
-            .state_db
+        self.state_db
             .get(&(version, account))
             .map(AccountState::try_from)
-            .transpose()?)
+            .transpose()
     }
 
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {

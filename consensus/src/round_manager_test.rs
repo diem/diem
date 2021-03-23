@@ -872,7 +872,7 @@ fn safety_rules_crash() {
         let safety_rules =
             MetricsSafetyRules::new(node.safety_rules_manager.client(), node.storage.clone());
         node.round_manager.set_safety_rules(safety_rules);
-    };
+    }
 
     timed_block_on(&mut runtime, async {
         for _ in 0..2 {

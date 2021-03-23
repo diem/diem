@@ -227,7 +227,7 @@ pub(crate) fn should_cut_chunk(chunk: &[u8], record: &[u8], max_chunk_size: usiz
 }
 
 // TODO: use Path::exists() when Rust 1.5 stabilizes.
-pub(crate) async fn path_exists(path: &PathBuf) -> bool {
+pub(crate) async fn path_exists(path: &Path) -> bool {
     metadata(&path).await.is_ok()
 }
 

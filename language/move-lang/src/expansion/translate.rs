@@ -554,7 +554,7 @@ fn use_(context: &mut Context, acc: &mut AliasMap, u: P::Use) {
                 duplicate_module_alias(context, old_loc, alias)
             }
         }};
-    };
+    }
     match u {
         P::Use::Module(mident, alias_opt) => {
             if !context.module_members.contains_key(&mident) {

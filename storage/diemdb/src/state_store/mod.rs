@@ -145,7 +145,7 @@ impl StateStore {
 
 impl TreeReader<AccountStateBlob> for StateStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
-        Ok(self.db.get::<JellyfishMerkleNodeSchema>(node_key)?)
+        self.db.get::<JellyfishMerkleNodeSchema>(node_key)
     }
 
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {

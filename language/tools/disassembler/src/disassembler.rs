@@ -243,7 +243,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .0
             .iter()
             .map(|sig_tok| {
-                Ok(self.disassemble_sig_tok(sig_tok.clone(), &struct_source_map.type_parameters)?)
+                self.disassemble_sig_tok(sig_tok.clone(), &struct_source_map.type_parameters)
             })
             .collect::<Result<Vec<String>>>()?;
 
@@ -663,7 +663,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .signature_at(function_handle.parameters)
                     .0
                     .iter()
-                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &[])?))
+                    .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &[]))
                     .collect::<Result<Vec<String>>>()?
                     .join(", ");
                 let type_rets = self
@@ -672,7 +672,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .signature_at(function_handle.return_)
                     .0
                     .iter()
-                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &[])?))
+                    .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &[]))
                     .collect::<Result<Vec<String>>>()?;
                 Ok(format!(
                     "Call[{}]({}({}){})",
@@ -718,7 +718,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .signature_at(function_handle.parameters)
                     .0
                     .iter()
-                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
+                    .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &ty_params))
                     .collect::<Result<Vec<String>>>()?
                     .join(", ");
                 let type_rets = self
@@ -727,7 +727,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .signature_at(function_handle.return_)
                     .0
                     .iter()
-                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
+                    .map(|sig_tok| self.disassemble_sig_tok(sig_tok.clone(), &ty_params))
                     .collect::<Result<Vec<String>>>()?;
                 Ok(format!(
                     "Call[{}]({}{}({}){})",

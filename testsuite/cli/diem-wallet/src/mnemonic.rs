@@ -532,12 +532,12 @@ fn test_failed_checksum() {
 
     // Test: change first word.
     let mut mnemonic = "science abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
-    let mut computed_mnemonic = Mnemonic::from(&mnemonic[..]);
+    let mut computed_mnemonic = Mnemonic::from(mnemonic);
     assert!(computed_mnemonic.is_err());
 
     // Test: change last word.
     mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon zoo";
-    computed_mnemonic = Mnemonic::from(&mnemonic[..]);
+    computed_mnemonic = Mnemonic::from(mnemonic);
     assert!(computed_mnemonic.is_err());
 
     // CORRECT MNEMONIC: "void come effort suffer camp survey warrior heavy shoot primary clutch
@@ -545,12 +545,12 @@ fn test_failed_checksum() {
 
     // Test: change second word.
     let mut mnemonic = "void black effort suffer camp survey warrior heavy shoot primary clutch crush open amazing screen patrol group space point ten exist slush involve unfold";
-    let mut computed_mnemonic = Mnemonic::from(&mnemonic[..]);
+    let mut computed_mnemonic = Mnemonic::from(mnemonic);
     assert!(computed_mnemonic.is_err());
 
     // Test: change last word.
     mnemonic = "void come effort suffer camp survey warrior heavy shoot primary clutch crush open amazing screen patrol group space point ten exist slush involve holiday";
-    computed_mnemonic = Mnemonic::from(&mnemonic[..]);
+    computed_mnemonic = Mnemonic::from(mnemonic);
     assert!(computed_mnemonic.is_err());
 }
 
