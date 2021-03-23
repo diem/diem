@@ -12,7 +12,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 tempfile = "3.2.0"
 
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

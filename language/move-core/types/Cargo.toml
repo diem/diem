@@ -10,7 +10,7 @@ publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 bcs = "0.1.2"
 hex = "0.4.3"
 mirai-annotations = "1.10.1"

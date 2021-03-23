@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 once_cell = "1.7.2"
 rand = "0.8.3"
 

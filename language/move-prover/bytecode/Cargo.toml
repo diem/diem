@@ -32,7 +32,7 @@ move-prover-test-utils = { path = "../test-utils" }
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"
 diem-temppath = { path = "../../../common/temppath" }
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 
 [[test]]
 name = "testsuite"

@@ -10,7 +10,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 goldenfile = "1.1.0"
 bcs = "0.1.2"
 compiler = { path = "../../compiler" }

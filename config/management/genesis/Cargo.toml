@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 rand = "0.8.3"
 serde = { version = "1.0.124", features = ["rc"], default-features = false }
 structopt = "0.3.21"

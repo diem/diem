@@ -10,7 +10,7 @@ publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 hex = "0.4.3"
 serde = { version = "1.0.124", default-features = false }
 serde_json = "1.0.64"

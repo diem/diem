@@ -10,7 +10,7 @@ publish = ["crates-io"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 bytes = "1.0.1"
 curve25519-dalek = { version = "0.1.0", package = "curve25519-dalek-fiat", default-features = false, features = ["std"] }
 digest = "0.9.0"

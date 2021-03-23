@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 heck = "0.3.2"
 regex = "1.4.3"
 structopt = "0.3.21"

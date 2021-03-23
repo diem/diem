@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 flate2 = { version = "1.0.20", features = ["rust_backend"], default-features = false }
 hex = "0.4.3"
 itertools = "0.10.0"

@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dev-dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 bytecode-verifier = { path = "../bytecode-verifier" }
 datatest-stable = { path = "../../common/datatest-stable" }
 functional-tests = { path = "../testing-infra/functional-tests" }

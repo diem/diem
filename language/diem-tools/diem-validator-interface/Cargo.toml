@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 diem-config = { path = "../../../config" }
 diem-client = { path = "../../../sdk/client" }
 diem-types = { path = "../../../types" }

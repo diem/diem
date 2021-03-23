@@ -27,7 +27,7 @@ move-vm-types = { path = "../types" }
 vm = { path = "../../vm" }
 
 [dev-dependencies]
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 hex = "0.4.3"
 proptest = "1.0.0"
 

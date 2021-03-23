@@ -15,7 +15,7 @@ bcs = "0.1.2"
 
 # external dependencies
 log = "0.4.14"
-anyhow = "1.0.38"
+anyhow = "1.0.39"
 serde = { version = "1.0.124", features = ["derive"] }
 
 [dev-dependencies]
