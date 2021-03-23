@@ -7,6 +7,10 @@ module DiemVMConfig {
     use 0x1::DiemTimestamp;
     use 0x1::CoreAddresses;
     use 0x1::Roles;
+    use 0x1::Errors;
+
+    /// The provided gas constants were inconsistent.
+    const EGAS_CONSTANT_INCONSISTENCY: u64 = 0;
 
     /// The struct to hold config data needed to operate the DiemVM.
     struct DiemVMConfig has copy, drop, store {
@@ -32,7 +36,7 @@ module DiemVMConfig {
     }
 
     struct GasConstants has copy, drop, store {
-        /// The cost per-byte written to global storage.
+        /// The cost per-byte read from global storage.
         global_memory_per_byte_cost: u64,
 
         /// The cost per-byte written to storage.
@@ -45,7 +49,7 @@ module DiemVMConfig {
         /// Any transaction over this size will be charged an additional amount per byte.
         large_transaction_cutoff: u64,
 
-        /// The units of gas that to be charged per byte over the `large_transaction_cutoff` in addition to
+        /// The units of gas to be charged per byte over the `large_transaction_cutoff` in addition to
         /// `min_transaction_gas_units` for transactions whose size exceeds `large_transaction_cutoff`.
         intrinsic_gas_per_byte: u64,
 
@@ -134,6 +138,79 @@ module DiemVMConfig {
             }};
     }
 
+    public fun set_gas_constants(
+        dr_account: &signer,
+        global_memory_per_byte_cost: u64,
+        global_memory_per_byte_write_cost: u64,
+        min_transaction_gas_units: u64,
+        large_transaction_cutoff: u64,
+        intrinsic_gas_per_byte: u64,
+        maximum_number_of_gas_units: u64,
+        min_price_per_gas_unit: u64,
+        max_price_per_gas_unit: u64,
+        max_transaction_size_in_bytes: u64,
+        gas_unit_scaling_factor: u64,
+        default_account_size: u64,
+    ) {
+        DiemTimestamp::assert_operating();
+        Roles::assert_diem_root(dr_account);
+        assert(
+            min_price_per_gas_unit <= max_price_per_gas_unit,
+            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+        );
+        assert(
+            min_transaction_gas_units <= maximum_number_of_gas_units,
+            Errors::invalid_argument(EGAS_CONSTANT_INCONSISTENCY)
+        );
+
+        let config = DiemConfig::get<DiemVMConfig>();
+        let gas_constants = &mut config.gas_schedule.gas_constants;
+
+        gas_constants.global_memory_per_byte_cost       = global_memory_per_byte_cost;
+        gas_constants.global_memory_per_byte_write_cost = global_memory_per_byte_write_cost;
+        gas_constants.min_transaction_gas_units         = min_transaction_gas_units;
+        gas_constants.large_transaction_cutoff          = large_transaction_cutoff;
+        gas_constants.intrinsic_gas_per_byte            = intrinsic_gas_per_byte;
+        gas_constants.maximum_number_of_gas_units       = maximum_number_of_gas_units;
+        gas_constants.min_price_per_gas_unit            = min_price_per_gas_unit;
+        gas_constants.max_price_per_gas_unit            = max_price_per_gas_unit;
+        gas_constants.max_transaction_size_in_bytes     = max_transaction_size_in_bytes;
+        gas_constants.gas_unit_scaling_factor           = gas_unit_scaling_factor;
+        gas_constants.default_account_size              = default_account_size;
+
+        DiemConfig::set(dr_account, config);
+    }
+    spec fun set_gas_constants {
+        include DiemTimestamp::AbortsIfNotOperating;
+        /// No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSION].
+        include Roles::AbortsIfNotDiemRoot{account: dr_account};
+        include DiemConfig::SetAbortsIf<DiemVMConfig>{account: dr_account };
+        aborts_if min_price_per_gas_unit > max_price_per_gas_unit with Errors::INVALID_ARGUMENT;
+        aborts_if min_transaction_gas_units > maximum_number_of_gas_units with Errors::INVALID_ARGUMENT;
+        let config = DiemConfig::spec_get_config<DiemVMConfig>();
+        ensures DiemConfig::spec_is_published<DiemVMConfig>();
+        ensures DiemConfig::get<DiemVMConfig>() == DiemVMConfig {
+            gas_schedule: GasSchedule {
+                instruction_schedule: old(config).gas_schedule.instruction_schedule,
+                native_schedule: old(config).gas_schedule.native_schedule,
+                gas_constants: GasConstants {
+                        global_memory_per_byte_cost,
+                        global_memory_per_byte_write_cost,
+                        min_transaction_gas_units,
+                        large_transaction_cutoff,
+                        intrinsic_gas_per_byte,
+                        maximum_number_of_gas_units,
+                        min_price_per_gas_unit,
+                        max_price_per_gas_unit,
+                        max_transaction_size_in_bytes,
+                        gas_unit_scaling_factor,
+                        default_account_size,
+                    },
+                }
+            };
+        ensures old(DiemConfig::spec_has_config()) == DiemConfig::spec_has_config();
+    }
+
     spec module { } // Switch documentation context to module level.
 
     /// # Initialization
@@ -144,14 +221,14 @@ module DiemVMConfig {
 
     /// # Access Control
 
-    /// Currently, no one can update DiemVMConfig [[H11]][PERMISSION]
+    /// No one can update DiemVMConfig except for the Diem Root account [[H11]][PERMISSION].
     spec schema DiemVMConfigRemainsSame {
         ensures old(DiemConfig::spec_is_published<DiemVMConfig>()) ==>
             global<DiemConfig<DiemVMConfig>>(CoreAddresses::DIEM_ROOT_ADDRESS()) ==
                 old(global<DiemConfig<DiemVMConfig>>(CoreAddresses::DIEM_ROOT_ADDRESS()));
     }
     spec module {
-        apply DiemVMConfigRemainsSame to *;
+        apply DiemVMConfigRemainsSame to * except set_gas_constants;
     }
 }
 }
