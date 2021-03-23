@@ -1523,7 +1523,7 @@ impl Opcodes {
 //
 
 // - Remaps borrowed signer parameters in scripts to owned signers
-// - Borrows the owned signers and remapps any usage of the parameter to this borrowed version
+// - Borrows the owned signers and remaps any usage of the parameter to this borrowed version
 // - Updates the offsets based on the number of new instructions added
 // - Updates the signature pool
 //
@@ -1616,7 +1616,7 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) -> BinaryLoaderRes
                 *offset += number_of_new_instructions
             }
 
-            // If the local used was an old signer reference, remapp it to the new local borrowing
+            // If the local used was an old signer reference, remap it to the new local borrowing
             // the owned signer
             Bytecode::CopyLoc(local_idx)
             | Bytecode::MoveLoc(local_idx)
@@ -1631,61 +1631,7 @@ fn remap_borrow_owned_signers(script: &mut CompiledScriptMut) -> BinaryLoaderRes
                     *local_idx += number_of_new_locals
                 }
             }
-            Bytecode::Pop
-            | Bytecode::Ret
-            | Bytecode::LdU8(_)
-            | Bytecode::LdU64(_)
-            | Bytecode::LdU128(_)
-            | Bytecode::CastU8
-            | Bytecode::CastU64
-            | Bytecode::CastU128
-            | Bytecode::LdConst(_)
-            | Bytecode::LdTrue
-            | Bytecode::LdFalse
-            | Bytecode::Call(_)
-            | Bytecode::CallGeneric(_)
-            | Bytecode::Pack(_)
-            | Bytecode::PackGeneric(_)
-            | Bytecode::Unpack(_)
-            | Bytecode::UnpackGeneric(_)
-            | Bytecode::ReadRef
-            | Bytecode::WriteRef
-            | Bytecode::FreezeRef
-            | Bytecode::MutBorrowField(_)
-            | Bytecode::MutBorrowFieldGeneric(_)
-            | Bytecode::ImmBorrowField(_)
-            | Bytecode::ImmBorrowFieldGeneric(_)
-            | Bytecode::MutBorrowGlobal(_)
-            | Bytecode::MutBorrowGlobalGeneric(_)
-            | Bytecode::ImmBorrowGlobal(_)
-            | Bytecode::ImmBorrowGlobalGeneric(_)
-            | Bytecode::Add
-            | Bytecode::Sub
-            | Bytecode::Mul
-            | Bytecode::Mod
-            | Bytecode::Div
-            | Bytecode::BitOr
-            | Bytecode::BitAnd
-            | Bytecode::Xor
-            | Bytecode::Or
-            | Bytecode::And
-            | Bytecode::Not
-            | Bytecode::Eq
-            | Bytecode::Neq
-            | Bytecode::Lt
-            | Bytecode::Gt
-            | Bytecode::Le
-            | Bytecode::Ge
-            | Bytecode::Abort
-            | Bytecode::Nop
-            | Bytecode::Exists(_)
-            | Bytecode::ExistsGeneric(_)
-            | Bytecode::MoveFrom(_)
-            | Bytecode::MoveFromGeneric(_)
-            | Bytecode::MoveTo(_)
-            | Bytecode::MoveToGeneric(_)
-            | Bytecode::Shl
-            | Bytecode::Shr => (),
+            _ => (),
         }
     }
     script.code.code = {
