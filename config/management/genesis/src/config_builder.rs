@@ -242,7 +242,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum FullnodeType {
     ValidatorFullnode,
     PublicFullnode(usize),

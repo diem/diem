@@ -109,12 +109,7 @@ fn test_client_waypoints() {
     );
 
     // Start next epoch
-    let peer_id = env
-        .validator_swarm
-        .get_validator(0)
-        .unwrap()
-        .validator_peer_id()
-        .unwrap();
+    let peer_id = env.validator_swarm.get_validator(0).unwrap().peer_id();
     let op_tool = get_op_tool(&env.validator_swarm, 1);
     let diem_root = load_diem_root_storage(&env.validator_swarm, 0);
     let _ = op_tool

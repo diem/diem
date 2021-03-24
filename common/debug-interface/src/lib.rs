@@ -23,9 +23,36 @@ impl NodeDebugClient {
         Self { client, addr }
     }
 
+    /// Retrieves the individual node metric.  Requires all sub fields to match in alphabetical order.
     pub fn get_node_metric<S: AsRef<str>>(&mut self, metric: S) -> Result<Option<i64>> {
         let metrics = self.get_node_metrics()?;
         Ok(metrics.get(metric.as_ref()).cloned())
+    }
+
+    /// Retrieves all node metrics for a given metric name.  Allows for filtering metrics by fields afterwards.
+    pub fn get_node_metric_with_name(
+        &mut self,
+        metric: &str,
+    ) -> Result<Option<HashMap<String, i64>>> {
+        let metrics = self.get_node_metrics()?;
+        let search_string = format!("{}{{", metric);
+
+        let result: HashMap<_, _> = metrics
+            .iter()
+            .filter_map(|(key, value)| {
+                if key.starts_with(&search_string) {
+                    Some((key.clone(), *value))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if result.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(result))
+        }
     }
 
     pub fn get_node_metrics(&mut self) -> Result<HashMap<String, i64>> {

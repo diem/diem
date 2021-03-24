@@ -3,14 +3,14 @@
 
 use anyhow::{Context, Result};
 use debug_interface::NodeDebugClient;
-use diem_config::config::{NodeConfig, RoleType};
+use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_genesis_tool::{
     config_builder::{FullnodeBuilder, FullnodeType, ValidatorBuilder},
     swarm_config::SwarmConfig,
 };
 use diem_logger::prelude::*;
 use diem_temppath::TempPath;
-use diem_types::account_address::AccountAddress;
+use diem_types::{account_address::AccountAddress, PeerId};
 use std::{
     collections::HashMap,
     env,
@@ -23,49 +23,60 @@ use std::{
 use thiserror::Error;
 
 pub struct DiemNode {
-    node: Child,
+    process: Child,
     pub(crate) node_id: String,
-    validator_peer_id: Option<AccountAddress>,
-    role: RoleType,
+    node_type: NodeType,
+    peer_id: AccountAddress,
     debug_client: NodeDebugClient,
-    port: u16,
-    pub log: PathBuf,
+    pub log_path: PathBuf,
+    config: NodeConfig,
 }
 
 impl Drop for DiemNode {
     // When the DiemNode struct goes out of scope we need to kill the child process
     fn drop(&mut self) {
         // check if the process has already been terminated
-        match self.node.try_wait() {
+        match self.process.try_wait() {
             // The child process has already terminated, perhaps due to a crash
             Ok(Some(_)) => {}
 
             // The node is still running so we need to attempt to kill it
             _ => {
-                if let Err(e) = self.node.kill() {
+                if let Err(e) = self.process.kill() {
                     panic!("DiemNode process could not be killed: '{}'", e);
                 }
-                self.node.wait().unwrap();
+                self.process.wait().unwrap();
             }
         }
     }
 }
 
 impl DiemNode {
+    /// Launch a `DiemNode`
     pub fn launch(
         diem_node_bin_path: &Path,
         node_id: String,
-        role: RoleType,
+        node_type: NodeType,
         config_path: &Path,
         log_path: PathBuf,
     ) -> Result<Self> {
         let config = NodeConfig::load(&config_path)
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
         let log_file = File::create(&log_path)?;
-        let validator_peer_id = match role {
-            RoleType::Validator => Some(config.validator_network.as_ref().unwrap().peer_id()),
-            RoleType::FullNode => None,
+
+        let main_network_config = match node_type {
+            NodeType::Validator => config.validator_network.as_ref().unwrap(),
+            _ => config
+                .full_node_networks
+                .iter()
+                .find(|config| config.network_id == NetworkId::Public)
+                .as_ref()
+                .unwrap(),
         };
+
+        let peer_id = main_network_config.peer_id();
+
+        // Start node process
         let mut node_command = Command::new(diem_node_bin_path);
         node_command.arg("-f").arg(config_path);
         if env::var("RUST_LOG").is_err() {
@@ -75,37 +86,43 @@ impl DiemNode {
         node_command
             .stdout(log_file.try_clone()?)
             .stderr(log_file.try_clone()?);
-        let node = node_command.spawn().with_context(|| {
+        let process = node_command.spawn().with_context(|| {
             format!(
                 "Error launching node process with binary: {:?}",
                 diem_node_bin_path
             )
         })?;
+
         let debug_client = NodeDebugClient::new(
             "localhost",
             config.debug_interface.admission_control_node_debug_port,
         );
+
         Ok(Self {
-            node,
+            process,
             node_id,
-            validator_peer_id,
-            role,
+            peer_id,
+            node_type,
             debug_client,
-            port: config.json_rpc.address.port(),
-            log: log_path,
+            log_path,
+            config,
         })
     }
 
-    pub fn validator_peer_id(&self) -> Option<AccountAddress> {
-        self.validator_peer_id
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
     }
 
     pub fn port(&self) -> u16 {
-        self.port
+        self.config.json_rpc.address.port()
+    }
+
+    pub fn config(&self) -> &NodeConfig {
+        &self.config
     }
 
     pub fn get_log_contents(&self) -> Result<String> {
-        let mut log = File::open(&self.log)?;
+        let mut log = File::open(&self.log_path)?;
         let mut contents = String::new();
         log.read_to_string(&mut contents)?;
         Ok(contents)
@@ -129,30 +146,101 @@ impl DiemNode {
         }
     }
 
-    pub fn check_connectivity(&mut self, expected_peers: usize) -> bool {
-        let connected_peers = format!(
-            "diem_network_peers{{role_type={},state=connected}}",
-            self.role.to_string()
-        );
-        if let Some(num_connected_peers) = self.get_metric(&connected_peers) {
-            if (num_connected_peers as usize) < expected_peers {
+    pub fn get_metric_with_fields(
+        &mut self,
+        metric_name: &str,
+        fields: HashMap<String, String>,
+    ) -> Option<i64> {
+        let result = self.debug_client.get_node_metric_with_name(metric_name);
+
+        match result {
+            Err(e) => {
                 println!(
-                    "Node '{}' Expected peers: {}, found peers: {}",
-                    self.node_id, expected_peers, num_connected_peers
+                    "error getting {} for node: {}; error: {}",
+                    metric_name, self.node_id, e
                 );
-                return false;
-            } else {
-                return true;
+                None
+            }
+            Ok(None) => {
+                println!("Node: {} did not report {}", self.node_id, metric_name);
+                None
+            }
+            Ok(Some(map)) => {
+                let filtered: Vec<_> = map
+                    .iter()
+                    .filter_map(|(metric, metric_value)| {
+                        if fields
+                            .iter()
+                            .all(|(key, value)| metric.contains(&format!("{}={}", key, value)))
+                        {
+                            Some(*metric_value)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                if filtered.is_empty() {
+                    None
+                } else {
+                    Some(filtered.iter().sum())
+                }
             }
         }
-        false
+    }
+
+    pub fn get_connected_peers(
+        &mut self,
+        network_id: NetworkId,
+        direction: Option<&str>,
+    ) -> Option<i64> {
+        let mut map = HashMap::new();
+        map.insert("network_id".to_string(), network_id.to_string());
+        if let Some(direction) = direction {
+            map.insert("direction".to_string(), direction.to_string());
+        }
+        self.get_metric_with_fields("diem_connections", map)
+    }
+
+    pub fn check_connectivity(&mut self, expected_peers: usize) -> bool {
+        const OUTBOUND: &str = "outbound";
+
+        // Determine which networks to check
+        let checks: Vec<_> = match self.node_type {
+            NodeType::Validator => vec![(NetworkId::Validator, None, expected_peers)],
+            NodeType::ValidatorFullNode => vec![
+                (NetworkId::vfn_network(), Some(OUTBOUND), 1),
+                (NetworkId::Public, Some(OUTBOUND), expected_peers),
+            ],
+            NodeType::PublicFullNode => {
+                vec![(NetworkId::Public, Some(OUTBOUND), expected_peers)]
+            }
+        };
+
+        // Check all networks and ensure that they match
+        checks.iter().all(|(network, direction, expected)| {
+            if let Some(num_connected_peers) = self.get_connected_peers(network.clone(), *direction)
+            {
+                if (num_connected_peers as usize) >= *expected {
+                    true
+                } else {
+                    println!(
+                        "Node {:?} '{}' on {} network Expected peers: {}, found peers: {}",
+                        self.node_type, self.node_id, network, expected, num_connected_peers
+                    );
+                    false
+                }
+            } else {
+                false
+            }
+        })
     }
 
     pub fn health_check(&mut self) -> HealthStatus {
         println!("Health check on node '{}'", self.node_id);
 
         // check if the process has terminated
-        match self.node.try_wait() {
+        match self.process.try_wait() {
             // This would mean the child process has crashed
             Ok(Some(status)) => {
                 println!("Node '{}' crashed with: {}", self.node_id, status);
@@ -203,6 +291,13 @@ impl AsRef<Path> for DiemSwarmDir {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeType {
+    Validator,
+    ValidatorFullNode,
+    PublicFullNode,
+}
+
 /// Struct holding instances and information of Diem Swarm
 pub struct DiemSwarm {
     diem_node_bin_path: PathBuf,
@@ -211,7 +306,7 @@ pub struct DiemSwarm {
     // Maps the node id of a node to the DiemNode struct
     pub nodes: HashMap<String, DiemNode>,
     pub config: SwarmConfig,
-    pub role: RoleType,
+    pub node_type: NodeType,
 }
 
 #[derive(Debug, Error)]
@@ -274,13 +369,16 @@ impl DiemSwarm {
             fn_type,
         );
         let config = SwarmConfig::build(&builder, config_path)?;
-
+        let node_type = match fn_type {
+            FullnodeType::ValidatorFullnode => NodeType::ValidatorFullNode,
+            FullnodeType::PublicFullnode(_) => NodeType::PublicFullNode,
+        };
         Ok(Self {
             diem_node_bin_path: diem_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
-            role: RoleType::FullNode,
+            node_type,
         })
     }
 
@@ -304,7 +402,7 @@ impl DiemSwarm {
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
-            role: RoleType::Validator,
+            node_type: NodeType::Validator,
         })
     }
 
@@ -329,29 +427,28 @@ impl DiemSwarm {
             let node = DiemNode::launch(
                 &self.diem_node_bin_path,
                 node_id.clone(),
-                self.role,
+                self.node_type,
                 &path,
                 logs_dir_path.join(format!("{}.log", index)),
             )
             .unwrap();
             self.nodes.insert(node_id, node);
         }
-        let expected_peers = match self.role {
-            RoleType::Validator => self.nodes.len() - 1,
-            RoleType::FullNode => 1,
-        };
         self.wait_for_startup()?;
+
+        // TODO: Maybe wait for mroe than one on full nodes
+        let expected_peers = match self.node_type {
+            NodeType::Validator => self.nodes.len() - 1,
+            NodeType::ValidatorFullNode => 1,
+            NodeType::PublicFullNode => 1,
+        };
+
         self.wait_for_connectivity(expected_peers)?;
         info!("Successfully launched Swarm");
         Ok(())
     }
 
     fn wait_for_connectivity(&mut self, expected_peers: usize) -> Result<(), SwarmLaunchFailure> {
-        // Early return if we're only launching a single node
-        if self.nodes.len() == 1 {
-            return Ok(());
-        }
-
         let num_attempts = 60;
 
         for i in 0..num_attempts {
@@ -526,7 +623,7 @@ impl DiemSwarm {
         let mut node = DiemNode::launch(
             &self.diem_node_bin_path,
             node_id.clone(),
-            self.role,
+            self.node_type,
             path,
             log_file_path,
         )
