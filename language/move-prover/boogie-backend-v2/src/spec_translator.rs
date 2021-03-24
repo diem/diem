@@ -26,6 +26,7 @@ use crate::{
         boogie_local_type, boogie_modifies_memory_name, boogie_resource_memory_name,
         boogie_spec_fun_name, boogie_spec_var_name, boogie_type_suffix, boogie_type_value,
         boogie_type_value_array, boogie_type_value_array_from_strings, boogie_well_formed_expr,
+        MAX_MAKE_VEC_ARGS,
     },
     options::BoogieOptions,
 };
@@ -597,8 +598,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Result(pos) => {
                 emit!(self.writer, "$ret{}", pos);
             }
-            Operation::Index => self.translate_primitive_call("$ReadValueArray", args),
-            Operation::Slice => self.translate_primitive_call("$SliceValueArrayByRange", args),
+            Operation::Index => self.translate_primitive_call("ReadVec", args),
+            Operation::Slice => self.translate_primitive_call("$SliceVecByRange", args),
             Operation::Range => self.translate_primitive_call("$Range", args),
 
             // Binary operators
@@ -634,16 +635,16 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_resource_exists(node_id, args, memory_label)
             }
             Operation::CanModify => self.translate_can_modify(node_id, args),
-            Operation::Len => self.translate_primitive_call("$LenValueArray", args),
+            Operation::Len => self.translate_primitive_call("LenVec", args),
             Operation::TypeValue => self.translate_type_value(node_id),
             Operation::TypeDomain | Operation::ResourceDomain => self.error(
                 &loc,
                 "domain functions can only be used as the range of a quantifier",
             ),
-            Operation::Update => self.translate_primitive_call("$UpdateValueArray", args),
-            Operation::Concat => self.translate_primitive_call("$ConcatValueArray", args),
-            Operation::Empty => self.translate_primitive_call("$EmptyValueArray", args),
-            Operation::Single => self.translate_primitive_call("$SingleValueArray", args),
+            Operation::Update => self.translate_primitive_call("UpdateVec", args),
+            Operation::Concat => self.translate_primitive_call("ConcatVec", args),
+            Operation::Empty => self.translate_primitive_call("EmptyVec", args),
+            Operation::Single => self.translate_primitive_call("MakeVec1", args),
             Operation::Old => panic!("old(..) expression unexpected"),
             Operation::Trace => self.translate_exp(&args[0]),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
@@ -703,14 +704,25 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_pack(&self, mid: ModuleId, sid: StructId, args: &[Exp]) {
-        emit!(self.writer, "$ValueArray($MapConstValue($DefaultValue())");
         let struct_env = self.env.get_module(mid).into_struct(sid);
-        for (i, field_env) in struct_env.get_fields().enumerate() {
-            emit!(self.writer, "[{} := ", boogie_field_name(&field_env));
-            self.translate_exp(&args[i]);
-            emit!(self.writer, "]");
+        let field_count = struct_env.get_field_count();
+        let direct_make_count = usize::min(field_count, MAX_MAKE_VEC_ARGS);
+        for _ in direct_make_count..field_count {
+            emit!(self.writer, "ExtendVec(")
         }
-        emit!(self.writer, ", {})", struct_env.get_field_count());
+        emit!(self.writer, "MakeVec{}(", direct_make_count);
+        for (i, arg) in args[0..direct_make_count].iter().enumerate() {
+            if i > 0 {
+                emit!(self.writer, ", ");
+            }
+            self.translate_exp(arg);
+        }
+        emit!(self.writer, ")");
+        for arg in &args[direct_make_count..] {
+            emit!(self.writer, ", ");
+            self.translate_exp(arg);
+            emit!(self.writer, ")");
+        }
     }
 
     fn translate_spec_fun_call(
@@ -785,7 +797,7 @@ impl<'env> SpecTranslator<'env> {
         let struct_env = module_env.get_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
         let field_name = boogie_field_name(&field_env);
-        emit!(self.writer, "$ReadValueArray(");
+        emit!(self.writer, "ReadVec(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ", {})", field_name);
     }
@@ -801,7 +813,7 @@ impl<'env> SpecTranslator<'env> {
         let struct_env = module_env.get_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
         let field_name = boogie_field_name(&field_env);
-        emit!(self.writer, "$UpdateValueArray(");
+        emit!(self.writer, "UpdateVec(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ", {}, ", field_name);
         self.translate_exp(&args[1]);
@@ -884,7 +896,7 @@ impl<'env> SpecTranslator<'env> {
                     let suffix = boogie_type_suffix(&elem_ty);
                     emit!(
                         self.writer,
-                        "(var {} := $Unbox{}($ReadValueArray({}, {}));\n",
+                        "(var {} := $Unbox{}(ReadVec({}, {}));\n",
                         var_name,
                         suffix,
                         range_tmp,
@@ -1048,7 +1060,7 @@ impl<'env> SpecTranslator<'env> {
                     let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(
                         self.writer,
-                        "{}$InValueArrayRange({}, {})",
+                        "{}$InRangeVec({}, {})",
                         separator,
                         range_tmp,
                         quant_var,

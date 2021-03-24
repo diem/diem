@@ -8,12 +8,12 @@ error: post-condition does not hold
     │
     =     at tests/sources/functional/return_values.move:31: one_two_wrapper_incorrect
     =     at tests/sources/functional/return_values.move:4: one_two
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:5: one_two
     =     at tests/sources/functional/return_values.move:31: one_two_wrapper_incorrect
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:32: one_two_wrapper_incorrect
     =     at tests/sources/functional/return_values.move:16
     =     at tests/sources/functional/return_values.move:34
@@ -28,11 +28,11 @@ error: post-condition does not hold
     │
     =     at tests/sources/functional/return_values.move:57: true_one_wrapper_incorrect
     =     at tests/sources/functional/return_values.move:40: true_one
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:41: true_one
     =     at tests/sources/functional/return_values.move:57: true_one_wrapper_incorrect
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:58: true_one_wrapper_incorrect
     =     at tests/sources/functional/return_values.move:60

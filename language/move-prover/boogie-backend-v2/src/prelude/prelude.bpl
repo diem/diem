@@ -6,62 +6,22 @@
 // to multiple options. We only use a few selected template constructs which are
 // mostly self-explaining. See the handlebars crate documentation for more information.
 //
-// The object passed in as context for templates is the struct cli::Options and its
-// sub-structs.
+// The object passed in as context for templates is the struct `crate::TemplateOptions` and
+// which contains a field `options` which points `crate::options::Options`, that is the
+// backend command line options.
 
 // ================================================================================
-// Domains
+// Included theories
 
-// Debug tracking
-// --------------
+// Which theory implementation is bound to these includes is determined
+// by the function `crate::add_prelude`, based on options provided to the prover.
 
-// Debug tracking is used to inject information used for model analysis. The generated code emits statements
-// like this:
-//
-//     assume $DebugTrackLocal(file_id, byte_index, var_idx, $Value);
-//
-// While those tracking assumptions are trivially true for the provers logic, the solver (at least Z3)
-// will construct a function mapping which appears in the model, e.g.:
-//
-//     $DebugTrackLocal -> {
-//         1 440 0 (Vector (ValueArray |T@[Int]$Value!val!0| 0)) -> true
-//         1 533 1 ($Integer 1) -> true
-//         ...
-//         else -> true
-//     }
-//
-// This information can then be read out from the model.
+{{> vector-theory }}
+{{> multiset-theory }}
 
 
-// Tracks debug information for a parameter, local or a return parameter. Return parameter indices start at
-// the overall number of locals (including parameters).
-function $DebugTrackLocal(file_id: int, byte_index:  int, var_idx: int, $Value: $Value) : bool {
-  true
-}
-
-// Tracks at which location a function was aborted.
-function $DebugTrackAbort(file_id: int, byte_index: int, code: int) : bool {
-  true
-}
-
-// Tracks the $Value of a specification (sub-)expression.
-function $DebugTrackExp(node_id: int, $Value: $Value) : $Value { $Value }
-
-
-// Path type
-// ---------
-
-type {:datatype} $Path;
-function {:constructor} $Path(p: [int]int, size: int): $Path;
-const $EmptyPath: $Path;
-axiom size#$Path($EmptyPath) == 0;
-
-function {:inline} $path_index_at(p: $Path, i: int): int {
-    p#$Path(p)[i]
-}
-
+// ============================================================================================
 // Type Values
-// -----------
 
 type $TypeName;
 type $FieldName = int;
@@ -72,23 +32,13 @@ function {:constructor} $IntegerType() : $TypeValue;
 function {:constructor} $AddressType() : $TypeValue;
 function {:constructor} $StrType() : $TypeValue;
 function {:constructor} $VectorType(t: $TypeValue) : $TypeValue;
-function {:constructor} $StructType(name: $TypeName, ts: $TypeValueArray) : $TypeValue;
+function {:constructor} $StructType(name: $TypeName, ts: Vec $TypeValue) : $TypeValue;
 function {:constructor} $TypeType(): $TypeValue;
 function {:constructor} $ErrorType() : $TypeValue;
 
-function {:inline} $DefaultTypeValue() : $TypeValue { $ErrorType() }
-function {:builtin "MapConst"} $MapConstTypeValue(tv: $TypeValue): [int]$TypeValue;
 
-type {:datatype} $TypeValueArray;
-function {:constructor} $TypeValueArray(v: [int]$TypeValue, l: int): $TypeValueArray;
-const $EmptyTypeValueArray: $TypeValueArray;
-axiom l#$TypeValueArray($EmptyTypeValueArray) == 0;
-axiom v#$TypeValueArray($EmptyTypeValueArray) == $MapConstTypeValue($DefaultTypeValue());
-
-
-
+// ============================================================================================
 // Values
-// ------
 
 type {:datatype} $Value;
 
@@ -102,13 +52,12 @@ axiom $MAX_U128 == 340282366920938463463374607431768211455;
 function {:constructor} $Boolean(b: bool): $Value;
 function {:constructor} $Integer(i: int): $Value;
 function {:constructor} $Address(a: int): $Value;
-function {:constructor} $Vector(v: $ValueArray): $Value; // used to both represent Move Struct and Vector
+function {:constructor} $Vector(v: Vec $Value): $Value; // used to both represent Move Struct and Vector
 function {:constructor} $Range(lb: int, ub: int): $Value;
 function {:constructor} $Type(t: $TypeValue): $Value;
 function {:constructor} $Error(): $Value;
 
 function {:inline} $DefaultValue(): $Value { $Error() }
-function {:builtin "MapConst"} $MapConstValue(v: $Value): [int]$Value;
 
 function {:inline} $IsValidBox(v: $Value): bool {
     true
@@ -142,9 +91,9 @@ function {:inline} $IsValidU8(v: int): bool {
   $TagU8(v) && v >= 0 && v <= $MAX_U8
 }
 
-function {:inline} $IsValidU8Vector(v: $ValueArray): bool {
+function {:inline} $IsValidU8Vector(v: Vec $Value): bool {
   $Vector_$is_well_formed($IntegerType(), v) &&
-  (forall i: int :: {$ReadValueArray(v, i)} 0 <= i && i < $LenValueArray(v) ==> $IsValidU8Boxed($ReadValueArray(v, i)))
+  (forall i: int :: {ReadVec(v, i)} 0 <= i && i < LenVec(v) ==> $IsValidU8Boxed(ReadVec(v, i)))
 }
 
 function {:inline} $IsValidU64(v: int): bool {
@@ -173,7 +122,7 @@ function $TagU128(x: int): bool { true }
 function $TagNum(x: int): bool { true }
 function $TagAddr(x: int): bool { true }
 function $TagType(x: $TypeValue): bool { true }
-function $TagVec(et: $TypeValue, x: $ValueArray): bool { true }
+function $TagVec(et: $TypeValue, x: Vec $Value): bool { true }
 
 
 function {:inline} $IsValidRange(r: $Value): bool {
@@ -184,8 +133,7 @@ function {:inline} $InRange(r: $Value, i: int): bool {
    lb#$Range(r) <= i && i < ub#$Range(r)
 }
 
-// Boxing/unboxing of values based on type suffix
-// ----------------------------------------------
+// Canonical API to constructors/selectors, supporting codegen.
 
 function {:inline} $Box(x: $Value): $Value {
     x
@@ -199,7 +147,7 @@ function {:inline} $Box_bool(x: bool): $Value {
 function {:inline} $Box_addr(x: int): $Value {
     $Address(x)
 }
-function {:inline} $Box_vec(x: $ValueArray): $Value {
+function {:inline} $Box_vec(x: Vec $Value): $Value {
     $Vector(x)
 }
 
@@ -215,239 +163,78 @@ function {:inline} $Unbox_bool(x: $Value): bool {
 function {:inline} $Unbox_addr(x: $Value): int {
     a#$Address(x)
 }
-function {:inline} $Unbox_vec(x: $Value): $ValueArray {
+function {:inline} $Unbox_vec(x: $Value): Vec $Value {
     v#$Vector(x)
 }
 
+// ============================================================================================
+// Helpers for Vectors
 
-
-
-// Value Array
-// -----------
-
-type {:datatype} $ValueArray;
-
-function {:constructor} $ValueArray(v: [int]$Value, l: int): $ValueArray;
-
-function $EmptyValueArray(): $ValueArray;
-axiom l#$ValueArray($EmptyValueArray()) == 0;
-axiom v#$ValueArray($EmptyValueArray()) == $MapConstValue($Error());
-
-function {:inline} $ValueArray_$is_well_formed(v: $ValueArray): bool {
-    (
-        var l := l#$ValueArray(v);
-        0 <= l && l <= $MAX_U64
-    )
+function {:inline} $SliceVecByRange(v: Vec $Value, r: $Value): Vec $Value {
+    SliceVec(v, lb#$Range(r), ub#$Range(r))
 }
 
-function {{backend.func_inline}} $ReadValueArray(a: $ValueArray, i: int): $Value {
-    (
-        v#$ValueArray(a)[i]
-    )
+{{#if options.native_equality}}
+
+function {:inline} $ContainsVec(v: Vec $Value, e: $Value): bool {
+    ContainsVec(v, e)
 }
 
-function {{backend.func_inline}} $LenValueArray(a: $ValueArray): int {
-    (
-        l#$ValueArray(a)
-    )
-}
-
-function {{backend.func_inline}} $RemoveValueArray(a: $ValueArray): $ValueArray {
-    (
-        var l := l#$ValueArray(a) - 1;
-        $ValueArray(
-            (lambda i: int ::
-                if i >= 0 && i < l then v#$ValueArray(a)[i] else $DefaultValue()),
-            l
-        )
-    )
-}
-
-function {{backend.func_inline}} $SingleValueArray(v: $Value): $ValueArray {
-    $ValueArray($MapConstValue($DefaultValue())[0 := v], 1)
-}
-
-function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int): $ValueArray {
-    (
-        var l := l#$ValueArray(a) - 1;
-        $ValueArray(
-            (lambda j: int ::
-                if j >= 0 && j < l then
-                    if j < i then v#$ValueArray(a)[j] else v#$ValueArray(a)[j+1]
-                else $DefaultValue()),
-            l
-        )
-    )
-}
-
-function {{backend.func_inline}} $ConcatValueArray(a1: $ValueArray, a2: $ValueArray): $ValueArray {
-    (
-        var l1, m1, l2, m2 := l#$ValueArray(a1), v#$ValueArray(a1), l#$ValueArray(a2), v#$ValueArray(a2);
-        $ValueArray(
-            (lambda i: int ::
-                if i >= 0 && i < l1 + l2 then
-                    if i < l1 then m1[i] else m2[i - l1]
-                else
-                    $DefaultValue()),
-            l1 + l2)
-    )
-}
-
-function {{backend.func_inline}} $ReverseValueArray(a: $ValueArray): $ValueArray {
-    (
-        var l := l#$ValueArray(a);
-        $ValueArray(
-            (lambda i: int :: if 0 <= i && i < l then v#$ValueArray(a)[l - i - 1] else $DefaultValue()),
-            l
-        )
-    )
-}
-
-function {{backend.func_inline}} $SliceValueArray(a: $ValueArray, i: int, j: int): $ValueArray { // return the sliced vector of a for the range [i, j)
-    $ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#$ValueArray(a)[i+k] else $DefaultValue()), (if j-i < 0 then 0 else j-i))
-}
-
-function {{backend.func_inline}} $SliceValueArrayByRange(a: $ValueArray, r: $Value): $ValueArray {
-    $SliceValueArray(a, lb#$Range(r), ub#$Range(r))
-}
-
-function {{backend.func_inline}} $ExtendValueArray(a: $ValueArray, elem: $Value): $ValueArray {
-    (var len := l#$ValueArray(a);
-     $ValueArray(v#$ValueArray(a)[len := elem], len + 1))
-}
-
-function {{backend.func_inline}} $UpdateValueArray(a: $ValueArray, i: int, elem: $Value): $ValueArray {
-    $ValueArray(v#$ValueArray(a)[i := elem], l#$ValueArray(a))
-}
-
-function {{backend.func_inline}} $SwapValueArray(a: $ValueArray, i: int, j: int): $ValueArray {
-    $ValueArray(v#$ValueArray(a)[i := v#$ValueArray(a)[j]][j := v#$ValueArray(a)[i]], l#$ValueArray(a))
-}
-
-function {:inline} $IsEmpty(a: $ValueArray): bool {
-    l#$ValueArray(a) == 0
-}
-
-// All invalid elements of array are DefaultValue. This is useful in specialized
-// cases. This is used to defined normalization for $Vector
-function {:inline} $IsNormalizedValueArray(a: $ValueArray, len: int): bool {
-    (forall i: int :: i < 0 || i >= len ==> v#$ValueArray(a)[i] == $DefaultValue())
-}
-
-function {{backend.func_inline}} $ContainValueArray(a: $ValueArray, v: $Value): bool {
-    (var len := l#$ValueArray(a);
-     (exists i: int :: i >= 0 && i < len && $IsEqual(v#$ValueArray(a)[i], v)))
-}
-
-function {{backend.func_inline}} $InValueArrayRange(v: $ValueArray, i: int): bool {
-    i >= 0 && i < $LenValueArray(v)
-}
-
-// Value Multiset
-// --------------
-
-// An encoding of set elements. Because $Value has no extensional equality, we need this.
-type $ValueMultisetElem;
-function $EncodeMultisetElem(elem: $Value): $ValueMultisetElem;
-axiom (forall v1, v2: $Value :: {$EncodeMultisetElem(v1), $EncodeMultisetElem(v2)}
-    $IsEqual(v1, v2) <==> $EncodeMultisetElem(v1) == $EncodeMultisetElem(v2));
-
-
-type {:datatype} $ValueMultiset;
-function {:constructor} $ValueMultiset(v: [$ValueMultisetElem]int, l: int): $ValueMultiset;
-
-function {:builtin "MapConst"} $MapConstInt(l: int): [$ValueMultisetElem]int;
-
-const $EmptyValueMultiset: $ValueMultiset;
-axiom $IsEmptyValueMultiset($EmptyValueMultiset);
-
-function {{backend.func_inline}} $LenValueMultiset(s: $ValueMultiset): int {
-    l#$ValueMultiset(s)
-}
-
-function {{backend.func_inline}} $ExtendValueMultiset(s: $ValueMultiset, v: $Value): $ValueMultiset {
-    (var enc := $EncodeMultisetElem(v);
-    (var len := l#$ValueMultiset(s);
-    (var cnt := v#$ValueMultiset(s)[enc];
-    $ValueMultiset(v#$ValueMultiset(s)[enc := (cnt + 1)], len + 1))))
-}
-
-// This function returns (s1 - s2). This function assumes that s2 is a subset of s1.
-function {{backend.func_inline}} $SubtractValueMultiset(s1: $ValueMultiset, s2: $ValueMultiset): $ValueMultiset {
-    (var len1 := l#$ValueMultiset(s1);
-    (var len2 := l#$ValueMultiset(s2);
-    $ValueMultiset((lambda v:$ValueMultisetElem :: v#$ValueMultiset(s1)[v]-v#$ValueMultiset(s2)[v]), len1-len2)))
-}
-
-function {:inline} $IsEmptyValueMultiset(s: $ValueMultiset): bool {
-    (l#$ValueMultiset(s) == 0) &&
-    (forall v: $ValueMultisetElem :: v#$ValueMultiset(s)[v] == 0)
-}
-
-function {:inline} $IsSubsetValueMultiset(s1: $ValueMultiset, s2: $ValueMultiset): bool {
-    (l#$ValueMultiset(s1) <= l#$ValueMultiset(s2)) &&
-    (forall v: $ValueMultisetElem :: v#$ValueMultiset(s1)[v] <= v#$ValueMultiset(s2)[v])
-}
-
-function {{backend.func_inline}} $ContainValueMultiset(s: $ValueMultiset, v: $Value): bool {
-    (var enc := $EncodeMultisetElem(v);
-    v#$ValueMultiset(s)[enc] > 0)
-}
-
-
-// Stratified Functions on Values
-// ------------------------------
-
-const $StratificationDepth: int;
-axiom $StratificationDepth == {{backend.stratification_depth}};
-
-{{#if backend.native_equality}}
-
-// Map IsEqual to native Boogie equality. This only works with extensional arrays as provided
-// by the array theory.
-function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
-    v1 == v2
+function {:inline} $IndexOfVec(v: Vec $Value, e: $Value): int {
+    IndexOfVec(v, e)
 }
 
 {{else}}
 
-// Generate a stratified version of IsEqual for depth of {{backend.stratification_depth}}.
-{{#stratified}}
-function {{backend.aggressive_func_inline}} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
-    (v1 == v2) ||
-    (is#$Vector(v1) &&
-     is#$Vector(v2) &&
-     (var va1 := $Unbox_vec(v1);
-     (var va2 := $Unbox_vec(v2);
-      $LenValueArray(va1) == $LenValueArray(va2) &&
-      (forall i: int :: 0 <= i && i < $LenValueArray(va1) ==>
-          $IsEqual_{{@next_suffix}}($ReadValueArray(va1,i), $ReadValueArray(va2,i))))))
-}
-{{else}}
-function {:inline} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
-    v1 == v2
-}
-{{/stratified}}
+// Because the vector implementation does not support extensional equality,
+// we need to redefine some functions here using $IsEqual.
 
-function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
-    $IsEqual_stratified(v1, v2)
+function {:inline} $ContainsVec(v: Vec $Value, e: $Value): bool {
+    (exists i: int :: $InRangeVec(v, i) && $IsEqual(ReadVec(v, i), e))
 }
 
-
+function $IndexOfVec(v: Vec $Value, e: $Value): int;
+axiom (forall v: Vec $Value, e: $Value:: {$IndexOfVec(v, e)}
+    (var i := $IndexOfVec(v,e);
+     if (!$ContainsVec(v, e)) then i == -1
+     else $InRangeVec(v, i) && $IsEqual(ReadVec(v, i), e) &&
+        (forall j: int :: j >= 0 && j < i ==> !$IsEqual(ReadVec(v, j), e))));
 
 {{/if}}
 
-// Generate stratified $UpdateValue for the depth of {{backend.stratification_depth}}.
+// Specialize function InRangeVec. Currently there is no difference to the one
+// provided by the vectory theory, but we may want to refine this for triggering.
+function {:inline} $InRangeVec(v: Vec $Value, i: int): bool {
+    InRangeVec(v, i)
+}
+
+// ================================================================================
+// Path type
+
+type {:datatype} $Path;
+function {:constructor} $Path(p: [int]int, size: int): $Path;
+const $EmptyPath: $Path;
+axiom size#$Path($EmptyPath) == 0;
+
+function {:inline} $path_index_at(p: $Path, i: int): int {
+    p#$Path(p)[i]
+}
+
+const $StratificationDepth: int;
+axiom $StratificationDepth == {{options.stratification_depth}};
+
+
+// Generate stratified $UpdateValue for the depth of {{options.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_func_inline}} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
+function {{options.aggressive_func_inline}} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
     (var poffset := offset + {{@this_level}};
     if (poffset == size#$Path(p)) then
         new_v
     else
         (var va := $Unbox_vec(v);
-         $Box_vec($UpdateValueArray(va, $path_index_at(p, poffset),
-                       $UpdateValue_{{@next_suffix}}(p, offset, $ReadValueArray(va, $path_index_at(p, poffset)), new_v)))))
+         $Box_vec(UpdateVec(va, $path_index_at(p, poffset),
+                       $UpdateValue_{{@next_suffix}}(p, offset, ReadVec(va, $path_index_at(p, poffset)), new_v)))))
 }
 {{else}}
 function {:inline} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
@@ -459,10 +246,10 @@ function {:inline} $UpdateValue(p: $Path, offset: int, v: $Value, new_v: $Value)
     $UpdateValue_stratified(p, offset, v, new_v)
 }
 
-// Generate stratified $IsPathPrefix for the depth of {{backend.stratification_depth}}.
+// Generate stratified $IsPathPrefix for the depth of {{options.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_func_inline}} $IsPathPrefix_{{@this_suffix}}(p1: $Path, p2: $Path): bool {
+function {{options.aggressive_func_inline}} $IsPathPrefix_{{@this_suffix}}(p1: $Path, p2: $Path): bool {
     if ({{@this_level}} == size#$Path(p1)) then
         true
     else if (p#$Path(p1)[{{@this_level}}] == p#$Path(p2)[{{@this_level}}]) then
@@ -480,10 +267,10 @@ function {:inline} $IsPathPrefix(p1: $Path, p2: $Path): bool {
     $IsPathPrefix_stratified(p1, p2)
 }
 
-// Generate stratified $ConcatPath for the depth of {{backend.stratification_depth}}.
+// Generate stratified $ConcatPath for the depth of {{options.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_func_inline}} $ConcatPath_{{@this_suffix}}(p1: $Path, p2: $Path): $Path {
+function {{options.aggressive_func_inline}} $ConcatPath_{{@this_suffix}}(p1: $Path, p2: $Path): $Path {
     if ({{@this_level}} == size#$Path(p2)) then
         p1
     else
@@ -499,31 +286,69 @@ function {:inline} $ConcatPath(p1: $Path, p2: $Path): $Path {
     $ConcatPath_stratified(p1, p2)
 }
 
-// Type specific equality
-// ----------------------
+// ============================================================================================
+// Equality
 
-function {{backend.func_inline}} $IsEqual_int(x: int, y: int): bool {
+{{#if options.native_equality}}
+
+// Map IsEqual to native Boogie equality. This only works with vector theories with
+// extensional equality.
+function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
+    v1 == v2
+}
+
+function {:inline} $IsEqual_vec(x: Vec $Value, y: Vec $Value): bool {
     x == y
 }
 
-function {{backend.func_inline}} $IsEqual_addr(x: int, y: int): bool {
+{{else}}
+
+// Generate a stratified version of IsEqual for depth of {{options.stratification_depth}}.
+
+{{#stratified}}
+function {{options.aggressive_func_inline}} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
+    (v1 == v2) ||
+    (is#$Vector(v1) &&
+     is#$Vector(v2) &&
+     (var vec1, vec2 := $Unbox_vec(v1), $Unbox_vec(v2);
+      LenVec(vec1) == LenVec(vec2) &&
+      (forall i: int :: 0 <= i && i < LenVec(vec1) ==> $IsEqual_{{@next_suffix}}(ReadVec(vec1,i), ReadVec(vec2,i)))))
+}
+{{else}}
+function {:inline} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
+    v1 == v2
+}
+{{/stratified}}
+
+function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
+    $IsEqual_stratified(v1, v2)
+}
+
+function {:inline} $IsEqual_vec(v1: Vec $Value, v2: Vec $Value): bool {
+    v1 == v2 ||
+    (LenVec(v1) == LenVec(v2) &&
+     (forall i: int :: 0 <= i && i < LenVec(v1) ==> $IsEqual(ReadVec(v1, i), ReadVec(v2, i))))
+}
+
+{{/if}}
+
+function {:inline} $IsEqual_int(x: int, y: int): bool {
     x == y
 }
 
-function {{backend.func_inline}} $IsEqual_bool(x: bool, y: bool): bool {
+function {:inline} $IsEqual_addr(x: int, y: int): bool {
     x == y
 }
 
-function {{backend.func_inline}} $IsEqual_type(x: $TypeValue, y: $TypeValue): bool {
+function {:inline} $IsEqual_bool(x: bool, y: bool): bool {
     x == y
 }
 
-function {{backend.func_inline}} $IsEqual_vec(x: $ValueArray, y: $ValueArray): bool {
-    (x == y) ||
-    ( $LenValueArray(x) == $LenValueArray(y) &&
-      (forall i: int:: i >= 0 && i < $LenValueArray(x) ==> $IsEqual($ReadValueArray(x, i), $ReadValueArray(y, i)))
-    )
+function {:inline} $IsEqual_type(x: $TypeValue, y: $TypeValue): bool {
+    x == y
 }
+
+
 
 
 // ============================================================================================
@@ -533,7 +358,7 @@ type {:datatype} $Location;
 
 // A global resource location within the statically known resource type's memory.
 // `ts` are the type parameters for the outer type, and `a` is the address.
-function {:constructor} $Global(ts: $TypeValueArray, a: int): $Location;
+function {:constructor} $Global(ts: Vec $TypeValue, a: int): $Location;
 
 // A local location. `i` is the unique index of the local.
 function {:constructor} $Local(i: int): $Location;
@@ -552,76 +377,119 @@ function {:constructor} $Mutation(l: $Location, p: $Path, v: $Value): $Mutation;
 
 // Representation of memory for a given type. The maps take the content of a Global location.
 type {:datatype} $Memory;
-function {:constructor} $Memory(domain: [$TypeValueArray, int]bool, contents: [$TypeValueArray, int]$ValueArray): $Memory;
+function {:constructor} $Memory(domain: [Vec $TypeValue, int]bool, contents: [Vec $TypeValue, int]Vec $Value): $Memory;
 
 function {:inline} $Memory__is_well_formed(m: $Memory): bool {
     true
 }
 
-function {:builtin "MapConst"} $ConstMemoryDomain(v: bool): [$TypeValueArray, int]bool;
-function {:builtin "MapConst"} $ConstMemoryContent(v: $ValueArray): [$TypeValueArray, int]$ValueArray;
-axiom $ConstMemoryDomain(false) == (lambda ta: $TypeValueArray, i: int :: false);
-axiom $ConstMemoryDomain(true) == (lambda ta: $TypeValueArray, i: int :: true);
+function {:builtin "MapConst"} $ConstMemoryDomain(v: bool): [Vec $TypeValue, int]bool;
+function {:builtin "MapConst"} $ConstMemoryContent(v: Vec $Value): [Vec $TypeValue, int]Vec $Value;
+axiom $ConstMemoryDomain(false) == (lambda ta: Vec $TypeValue, i: int :: false);
+axiom $ConstMemoryDomain(true) == (lambda ta: Vec $TypeValue, i: int :: true);
 
 const $EmptyMemory: $Memory;
 axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
-axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent($EmptyValueArray());
+axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent(EmptyVec());
 
 // Returns a new memory which is identical than the given memory except at (type_args, addr) which
 // is arbitrary.
-procedure {:inline 1} $Modifies(m: $Memory, type_args: $TypeValueArray, addr: int) returns (m': $Memory) {
+procedure {:inline 1} $Modifies(m: $Memory, type_args: Vec $TypeValue, addr: int) returns (m': $Memory) {
     m' := $Memory(
         domain#$Memory(m)[type_args, addr := domain#$Memory(m')[type_args, addr]],
         contents#$Memory(m)[type_args, addr := contents#$Memory(m')[type_args, addr]]
     );
 }
 
+// Dereferences a mutation.
+function {:inline} $Dereference(ref: $Mutation): $Value {
+    v#$Mutation(ref)
+}
+
+// Update the value of a mutation.
+function {:inline} $UpdateMutation(m: $Mutation, v: $Value): $Mutation {
+    $Mutation(l#$Mutation(m), p#$Mutation(m), v)
+}
+
+// Havoc the value of a mutation.
+procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
+  var v': $Value;
+  m' := $Mutation(l#$Mutation(m), p#$Mutation(m), v');
+}
+
+// Tests whether resource exists.
+function {:inline} $ResourceExists(m: $Memory, args: Vec $TypeValue, addr: int): bool {
+    domain#$Memory(m)[args, addr]
+}
+
+// Obtains Value of given resource.
+function {:inline} $ResourceValue(m: $Memory, args: Vec $TypeValue, addr: int): Vec $Value {
+    contents#$Memory(m)[args, addr]
+}
+
 // ============================================================================================
 // EventStore
 
-// The abstract type of guids, used to index EventStore
-type $AbstractGuid;
+{{#if options.native_equality}}
 
-// An bijective mapping of guids to abstract guids. Since we use Guids as array indices, we
-// need to map them into a value which provides extensional equality.
-function $ToAbstractGuid(vec: $ValueArray): $AbstractGuid;
-axiom (forall v1, v2: $ValueArray :: {$ToAbstractGuid(v1), $ToAbstractGuid(v2)}
-    $IsEqual_vec(v1, v2) <==> $ToAbstractGuid(v1) == $ToAbstractGuid(v2));
+// TODO: like to have this as aliases, but currently blocked by boogie issue #364
+type {:datatype} $EventRep;
+type {:datatype} $GuidRep;
+function {:constructor} $ToEventRep(event: $Value): $EventRep;
+function {:constructor} $ToGuidRep(guid: Vec $Value): $GuidRep;
+
+{{else}}
+
+// Because we do not have extensional equality we need to encode events and guids
+// in abstract types which have equality, so they can be used as indices for Boogie arrays.
+
+type $EventRep;
+type $GuidRep;
+
+function $ToEventRep(event: $Value): $EventRep;
+function $ToGuidRep(guid: Vec $Value): $GuidRep;
+
+axiom (forall v1, v2: $Value :: {$ToEventRep(v1), $ToEventRep(v2)}
+    $IsEqual(v1, v2) <==> $ToEventRep(v1) == $ToEventRep(v2));
+
+axiom (forall v1, v2: Vec $Value :: {$ToGuidRep(v1), $ToGuidRep(v2)}
+    $IsEqual_vec(v1, v2) <==> $ToGuidRep(v1) == $ToGuidRep(v2));
+
+
+{{/if}}
 
 // The well-known field index of the event handle guid.
 const $EventHandle_$guid: $FieldName;
 axiom $EventHandle_$guid == 1;
 
-// Representation of EventStore that consists of event streams. The map `streams` takes GUIDs (with type of $Value),
-// and returns sequences of messages (with type of $ValueArray).
+// Representation of EventStore that consists of event streams.
 type {:datatype} $EventStore;
-function {:constructor} $EventStore(counter: int, streams: [$AbstractGuid]$ValueMultiset): $EventStore;
+function {:constructor} $EventStore(counter: int, streams: [$GuidRep]Multiset $EventRep): $EventStore;
 
 function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
     true
 }
 
-
 function {:inline} $EventStore__is_empty(es: $EventStore): bool {
     (counter#$EventStore(es) == 0) &&
-    (forall guid: $AbstractGuid ::
+    (forall guid: $GuidRep ::
         (var stream := streams#$EventStore(es)[guid];
-        $IsEmptyValueMultiset(stream)))
+        IsEmptyMultiset(stream)))
 }
 
 // This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
 function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
     $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
-        (lambda guid: $AbstractGuid ::
-        $SubtractValueMultiset(
+        (lambda guid: $GuidRep ::
+        SubtractMultiset(
             streams#$EventStore(es1)[guid],
             streams#$EventStore(es2)[guid])))
 }
 
 function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
     (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
-    (forall guid: $AbstractGuid ::
-        $IsSubsetValueMultiset(
+    (forall guid: $GuidRep ::
+        IsSubsetMultiset(
             streams#$EventStore(es1)[guid],
             streams#$EventStore(es2)[guid]
         )
@@ -635,25 +503,27 @@ procedure {:inline 1} $EventStore__diverge(es: $EventStore) returns (es': $Event
 const $EmptyEventStore: $EventStore;
 axiom $EventStore__is_empty($EmptyEventStore);
 
-function {:inline} $ExtendEventStore(es: $EventStore, guid: $ValueArray, msg: $Value): $EventStore {
-    (var abstract_guid := $ToAbstractGuid(guid);
-    (var stream := streams#$EventStore(es)[abstract_guid];
-    (var stream_new := $ExtendValueMultiset(stream, msg);
-    $EventStore(counter#$EventStore(es)+1, streams#$EventStore(es)[abstract_guid := stream_new]))))
+function {:inline} $ExtendEventStore(es: $EventStore, guid: Vec $Value, msg: $Value): $EventStore {
+    (var stream := streams#$EventStore(es)[$ToGuidRep(guid)];
+    (var stream_new := ExtendMultiset(stream, $ToEventRep(msg));
+    $EventStore(counter#$EventStore(es)+1, streams#$EventStore(es)[$ToGuidRep(guid) := stream_new])))
 }
 
-function {:inline} $CondExtendEventStore(es: $EventStore, guid: $ValueArray, msg: $Value, cond: bool): $EventStore {
+function {:inline} $CondExtendEventStore(es: $EventStore, guid: Vec $Value, msg: $Value, cond: bool): $EventStore {
     if cond then
         $ExtendEventStore(es, guid, msg)
     else
         es
 }
 
-function {:inline} $GetEventHandleGuid(handle: $ValueArray): $ValueArray {
-    $Unbox_vec($ReadValueArray(handle, $EventHandle_$guid))
+function {:inline} $GetEventHandleGuid(handle: Vec $Value): Vec $Value {
+    $Unbox_vec(ReadVec(handle, $EventHandle_$guid))
 }
 
 var $es: $EventStore;
+
+// ============================================================================================
+// Abort Handling
 
 var $abort_flag: bool;
 var $abort_code: int;
@@ -682,39 +552,9 @@ procedure {:inline 1} $InitVerification() {
 }
 
 // ============================================================================================
-// Functional APIs
-
-// TODO: unify some of this with instruction procedures to avoid duplication
-
-// Tests whether resource exists.
-function {:inline} $ResourceExists(m: $Memory, args: $TypeValueArray, addr: int): bool {
-    domain#$Memory(m)[args, addr]
-}
-
-
-// Obtains Value of given resource.
-function {:inline} $ResourceValue(m: $Memory, args: $TypeValueArray, addr: int): $ValueArray {
-    contents#$Memory(m)[args, addr]
-}
-
-// Dereferences a mutation.
-function {:inline} $Dereference(ref: $Mutation): $Value {
-    v#$Mutation(ref)
-}
-
-function {:inline} $UpdateMutation(m: $Mutation, v: $Value): $Mutation {
-    $Mutation(l#$Mutation(m), p#$Mutation(m), v)
-}
-
-procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
-  var v': $Value;
-  m' := $Mutation(l#$Mutation(m), p#$Mutation(m), v');
-}
-
-// ============================================================================================
 // Instructions
 
-procedure {:inline 1} $MoveTo(m: $Memory, ta: $TypeValueArray, a: int, v: $ValueArray) returns (m': $Memory)
+procedure {:inline 1} $MoveTo(m: $Memory, ta: Vec $TypeValue, a: int, v: Vec $Value) returns (m': $Memory)
 {
     if ($ResourceExists(m, ta, a)) {
         call $ExecFailureAbort();
@@ -723,17 +563,17 @@ procedure {:inline 1} $MoveTo(m: $Memory, ta: $TypeValueArray, a: int, v: $Value
     m' := $Memory(domain#$Memory(m)[ta, a := true], contents#$Memory(m)[ta, a := v]);
 }
 
-procedure {:inline 1} $MoveFrom(m: $Memory, a: int, ta: $TypeValueArray) returns (m': $Memory, dst: $ValueArray)
+procedure {:inline 1} $MoveFrom(m: $Memory, a: int, ta: Vec $TypeValue) returns (m': $Memory, dst: Vec $Value)
 {
     if (!$ResourceExists(m, ta, a)) {
         call $ExecFailureAbort();
         return;
     }
     dst := contents#$Memory(m)[ta, a];
-    m' := $Memory(domain#$Memory(m)[ta, a := false], contents#$Memory(m)[ta, a := $EmptyValueArray()]);
+    m' := $Memory(domain#$Memory(m)[ta, a := false], contents#$Memory(m)[ta, a := EmptyVec()]);
 }
 
-procedure {:inline 1} $BorrowGlobal(m: $Memory, a: int, ta: $TypeValueArray) returns (dst: $Mutation)
+procedure {:inline 1} $BorrowGlobal(m: $Memory, a: int, ta: Vec $TypeValue) returns (dst: $Mutation)
 {
     if (!$ResourceExists(m, ta, a)) {
         call $ExecFailureAbort();
@@ -755,10 +595,10 @@ procedure {:inline 1} $BorrowField(src: $Mutation, f: $FieldName) returns (dst: 
     p := p#$Mutation(src);
     size := size#$Path(p);
     p := $Path(p#$Path(p)[size := f], size+1);
-    dst := $Mutation(l#$Mutation(src), p, $ReadValueArray($Unbox_vec(v#$Mutation(src)), f));
+    dst := $Mutation(l#$Mutation(src), p, ReadVec($Unbox_vec(v#$Mutation(src)), f));
 }
 
-procedure {:inline 1} $GetGlobal(m: $Memory, a: int, ta: $TypeValueArray) returns (dst: $ValueArray)
+procedure {:inline 1} $GetGlobal(m: $Memory, a: int, ta: Vec $TypeValue) returns (dst: Vec $Value)
 {
     if (!$ResourceExists(m, ta, a)) {
         call $ExecFailureAbort();
@@ -770,7 +610,7 @@ procedure {:inline 1} $GetGlobal(m: $Memory, a: int, ta: $TypeValueArray) return
 procedure {:inline 1} $WritebackToGlobalWeak(m: $Memory, src: $Mutation) returns (m': $Memory)
 {
     var l: $Location;
-    var ta: $TypeValueArray;
+    var ta: Vec $TypeValue;
     var a: int;
     var v: $Value;
 
@@ -821,7 +661,7 @@ procedure {:inline 1} $WritebackToValueWeak_addr(src: $Mutation, idx: int, vdst:
     }
 }
 
-procedure {:inline 1} $WritebackToValueWeak_vec(src: $Mutation, idx: int, vdst: $ValueArray) returns (vdst': $ValueArray)
+procedure {:inline 1} $WritebackToValueWeak_vec(src: $Mutation, idx: int, vdst: Vec $Value) returns (vdst': Vec $Value)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_vec($UpdateValue(p#$Mutation(src), 0, $Box_vec(vdst), v#$Mutation(src)));
@@ -850,7 +690,7 @@ procedure {:inline 1} $WritebackToReferenceWeak(src: $Mutation, dst: $Mutation) 
 procedure {:inline 1} $WritebackToGlobalStrong(m: $Memory, src: $Mutation) returns (m': $Memory)
 {
     var l: $Location;
-    var ta: $TypeValueArray;
+    var ta: Vec $TypeValue;
     var a: int;
     var v: $Value;
 
@@ -901,7 +741,7 @@ procedure {:inline 1} $WritebackToValueStrong_addr(src: $Mutation, idx: int, vds
     }
 }
 
-procedure {:inline 1} $WritebackToValueStrong_vec(src: $Mutation, idx: int, vdst: $ValueArray) returns (vdst': $ValueArray)
+procedure {:inline 1} $WritebackToValueStrong_vec(src: $Mutation, idx: int, vdst: Vec $Value) returns (vdst': Vec $Value)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_vec(v#$Mutation(src));
@@ -937,7 +777,7 @@ returns (dst': $Mutation)
         dst' := $Mutation(
                     l#$Mutation(dst),
                     dstPath,
-                    $Vector($UpdateValueArray(v#$Vector(v#$Mutation(dst)), edge, v#$Mutation(src)))
+                    $Box_vec(UpdateVec($Unbox_vec(v#$Mutation(dst)), edge, v#$Mutation(src)))
                     );
     } else {
         dst' := dst;
@@ -956,7 +796,7 @@ returns (dst': $Mutation)
         dst' := $Mutation(
                     l#$Mutation(dst),
                     dstPath,
-                    $Vector($UpdateValueArray(v#$Vector(v#$Mutation(dst)),
+                    $Box_vec(UpdateVec($Unbox_vec(v#$Mutation(dst)),
                     $path_index_at(srcPath, size#$Path(srcPath) - 1), v#$Mutation(src)))
                     );
     } else {
@@ -1170,162 +1010,176 @@ function {:inline} $Vector_type_value(tv: $TypeValue): $TypeValue {
     $VectorType(tv)
 }
 
-function {:inline} $Vector_$is_well_formed(et: $TypeValue, v: $ValueArray): bool {
-    $TagVec(et, v) && $IsValidU64($LenValueArray(v)) && $ValueArray_$is_well_formed(v)
+function {:inline} $Vector_$is_well_formed(et: $TypeValue, v: Vec $Value): bool {
+    $TagVec(et, v) && LenVec(v) >= 0 && $IsValidU64(LenVec(v))
 }
 
-procedure {:inline 1} $Vector_empty(ta: $TypeValue) returns (v: $ValueArray) {
-    v := $EmptyValueArray();
+procedure {:inline 1} $Vector_empty(ta: $TypeValue) returns (v: Vec $Value) {
+    v := EmptyVec();
 }
 
-function {:inline} $Vector_$empty(ta: $TypeValue): $ValueArray {
-    $EmptyValueArray()
+function {:inline} $Vector_$empty(ta: $TypeValue): Vec $Value {
+    EmptyVec()
 }
 
-procedure {:inline 1} $Vector_is_empty(ta: $TypeValue, v: $ValueArray) returns (b: bool) {
-    b := $LenValueArray(v) == 0;
+procedure {:inline 1} $Vector_is_empty(ta: $TypeValue, v: Vec $Value) returns (b: bool) {
+    b := LenVec(v) == 0;
 }
 
 procedure {:inline 1} $Vector_push_back(ta: $TypeValue, m: $Mutation, val: $Value) returns (m': $Mutation) {
-    var v: $ValueArray;
+    var v: Vec $Value;
     v := $Unbox_vec($Dereference(m));
-    m' := $UpdateMutation(m, $Box_vec($ExtendValueArray(v, val)));
+    m' := $UpdateMutation(m, $Box_vec(ExtendVec(v, val)));
 }
 
-function {:inline} $Vector_$push_back(ta: $TypeValue, v: $ValueArray, val: $Value): $ValueArray {
-    $ExtendValueArray(v, val)
+function {:inline} $Vector_$push_back(ta: $TypeValue, v: Vec $Value, val: $Value): Vec $Value {
+    ExtendVec(v, val)
 }
 
 procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, m: $Mutation) returns (e: $Value, m': $Mutation) {
-    var v: $ValueArray;
+    var v: Vec $Value;
     var len: int;
     v := $Unbox_vec($Dereference(m));
-    len := $LenValueArray(v);
+    len := LenVec(v);
     if (len == 0) {
         call $ExecFailureAbort();
         return;
     }
-    e := $ReadValueArray(v, len-1);
-    m' := $UpdateMutation(m, $Box_vec($RemoveValueArray(v)));
+    e := ReadVec(v, len-1);
+    m' := $UpdateMutation(m, $Box_vec(RemoveVec(v)));
 }
 
-procedure {:inline 1} $Vector_append(ta: $TypeValue, m: $Mutation, other: $ValueArray) returns (m': $Mutation) {
-    var v: $ValueArray;
+procedure {:inline 1} $Vector_append(ta: $TypeValue, m: $Mutation, other: Vec $Value) returns (m': $Mutation) {
+    var v: Vec $Value;
     v := $Unbox_vec($Dereference(m));
-    m' := $UpdateMutation(m, $Box_vec($ConcatValueArray(v, other)));
+    m' := $UpdateMutation(m, $Box_vec(ConcatVec(v, other)));
 }
 
 procedure {:inline 1} $Vector_reverse(ta: $TypeValue, m: $Mutation) returns (m': $Mutation) {
-    var v: $ValueArray;
+    var v: Vec $Value;
     v := $Unbox_vec($Dereference(m));
-    m' := $UpdateMutation(m, $Box_vec($ReverseValueArray(v)));
+    m' := $UpdateMutation(m, $Box_vec(ReverseVec(v)));
 }
 
-procedure {:inline 1} $Vector_length(ta: $TypeValue, v: $ValueArray) returns (l: int) {
-    l := $LenValueArray(v);
+procedure {:inline 1} $Vector_length(ta: $TypeValue, v: Vec $Value) returns (l: int) {
+    l := LenVec(v);
 }
 
-function {:inline} $Vector_$length(ta: $TypeValue, v: $ValueArray): int {
-    $LenValueArray(v)
+function {:inline} $Vector_$length(ta: $TypeValue, v: Vec $Value): int {
+    LenVec(v)
 }
 
-procedure {:inline 1} $Vector_borrow(ta: $TypeValue, v: $ValueArray, i: int) returns (dst: $Value) {
-    if (i < 0 || i >= $LenValueArray(v)) {
+procedure {:inline 1} $Vector_borrow(ta: $TypeValue, v: Vec $Value, i: int) returns (dst: $Value) {
+    if (i < 0 || i >= LenVec(v)) {
         call $ExecFailureAbort();
         return;
     }
-    dst := $ReadValueArray(v, i);
+    dst := ReadVec(v, i);
 }
 
-function {:inline} $Vector_$borrow(ta: $TypeValue, v: $ValueArray, i: int): $Value {
-    $ReadValueArray(v, i)
+function {:inline} $Vector_$borrow(ta: $TypeValue, v: Vec $Value, i: int): $Value {
+    ReadVec(v, i)
 }
 
 procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, m: $Mutation, index: int) returns (dst: $Mutation, m': $Mutation)
 {
-    var v: $ValueArray;
+    var v: Vec $Value;
     var p: $Path;
     var size: int;
 
     v := $Unbox_vec($Dereference(m));
-    if (index < 0 || index >= $LenValueArray(v)) {
+    if (index < 0 || index >= LenVec(v)) {
         call $ExecFailureAbort();
         return;
     }
     p := p#$Mutation(m);
     size := size#$Path(p);
     p := $Path(p#$Path(p)[size := index], size+1);
-    dst := $Mutation(l#$Mutation(m), p, $ReadValueArray(v, index));
+    dst := $Mutation(l#$Mutation(m), p, ReadVec(v, index));
     m' := m;
 }
 
-function {:inline} $Vector_$borrow_mut(ta: $TypeValue, v: $ValueArray, i: int): $Value {
-    $ReadValueArray(v, i)
+function {:inline} $Vector_$borrow_mut(ta: $TypeValue, v: Vec $Value, i: int): $Value {
+    ReadVec(v, i)
 }
 
-procedure {:inline 1} $Vector_destroy_empty(ta: $TypeValue, v: $ValueArray) {
-    if ($LenValueArray(v) != 0) {
+procedure {:inline 1} $Vector_destroy_empty(ta: $TypeValue, v: Vec $Value) {
+    if (!IsEmptyVec(v)) {
       call $ExecFailureAbort();
     }
 }
 
 procedure {:inline 1} $Vector_swap(ta: $TypeValue, m: $Mutation, i: int, j: int) returns (m': $Mutation)
 {
-    var v: $ValueArray;
+    var v: Vec $Value;
     v := $Unbox_vec($Dereference(m));
-    if (i >= $LenValueArray(v) || j >= $LenValueArray(v) || i < 0 || j < 0) {
+    if (i >= LenVec(v) || j >= LenVec(v) || i < 0 || j < 0) {
         call $ExecFailureAbort();
         return;
     }
-    m' := $UpdateMutation(m, $Box_vec($SwapValueArray(v, i, j)));
+    m' := $UpdateMutation(m, $Box_vec(SwapVec(v, i, j)));
 }
 
-function {:inline} $Vector_$swap(ta: $TypeValue, v: $ValueArray, i: int, j: int): $ValueArray {
-    $SwapValueArray(v, i, j)
+function {:inline} $Vector_$swap(ta: $TypeValue, v: Vec $Value, i: int, j: int): Vec $Value {
+    SwapVec(v, i, j)
 }
 
 procedure {:inline 1} $Vector_remove(ta: $TypeValue, m: $Mutation, i: int) returns (e: $Value, m': $Mutation)
 {
-    var v: $ValueArray;
+    var v: Vec $Value;
 
     v := $Unbox_vec($Dereference(m));
 
-    if (i < 0 || i >= $LenValueArray(v)) {
+    if (i < 0 || i >= LenVec(v)) {
         call $ExecFailureAbort();
         return;
     }
-    e := $ReadValueArray(v, i);
-    m' := $UpdateMutation(m, $Box_vec($RemoveIndexValueArray(v, i)));
+    e := ReadVec(v, i);
+    m' := $UpdateMutation(m, $Box_vec(RemoveAtVec(v, i)));
 }
 
 procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, m: $Mutation, i: int) returns (e: $Value, m': $Mutation)
 {
     var len: int;
-    var v: $ValueArray;
+    var v: Vec $Value;
 
     v := $Unbox_vec($Dereference(m));
 
-    len := $LenValueArray(v);
+    len := LenVec(v);
     if (i < 0 || i >= len) {
         call $ExecFailureAbort();
         return;
     }
-    e := $ReadValueArray(v, i);
-    m' := $UpdateMutation(m, $Box_vec($RemoveValueArray($SwapValueArray(v, i, len-1))));
+    e := ReadVec(v, i);
+    m' := $UpdateMutation(m, $Box_vec(RemoveVec(SwapVec(v, i, len-1))));
 }
 
-procedure {:inline 1} $Vector_contains(ta: $TypeValue, v: $ValueArray, e: $Value) returns (res: bool)  {
-    res := $ContainValueArray(v, e);
+procedure {:inline 1} $Vector_contains(ta: $TypeValue, v: Vec $Value, e: $Value) returns (res: bool)  {
+    res := $ContainsVec(v, e);
 }
+
+/*
+procedure {:inline 1}
+$Vector_index_of(ta: $TypeValue, v: Vec $Value, e: $Value) returns (res1: bool, res2: int) {
+    res2 := $IndexOfVec(v, e);
+    if (res2 >= 0) {
+        res1 := true;
+    } else {
+        res1 := false;
+        res2 := 0;
+    }
+}
+*/
 
 // FIXME: This procedure sometimes (not always) make the test (performance_200511) very slow (> 10 mins) or hang
 // although this is not used in the test script (performance_200511). The test finishes in 20 secs when it works fine.
-procedure {:inline 1} $Vector_index_of(ta: $TypeValue, v: $ValueArray, e: $Value) returns (res1: bool, res2: int);
-ensures 0 <= res2 && res2 < $LenValueArray(v);
-ensures res1 == $ContainValueArray(v, e);
-ensures res1 ==> $IsEqual($ReadValueArray(v, res2), e);
-ensures res1 ==> (forall i:int :: 0 <= i && i < res2 ==> !$IsEqual($ReadValueArray(v, i), e));
+procedure {:inline 1} $Vector_index_of(ta: $TypeValue, v: Vec $Value, e: $Value) returns (res1: bool, res2: int);
+ensures 0 <= res2 && res2 < LenVec(v);
+ensures res1 == $ContainsVec(v, e);
+ensures res1 ==> $IsEqual(ReadVec(v, res2), e);
+ensures res1 ==> (forall i:int :: 0 <= i && i < res2 ==> !$IsEqual(ReadVec(v, i), e));
 ensures !res1 ==> res2 == 0;
+
 
 // ==================================================================================
 // Native hash
@@ -1341,46 +1195,46 @@ ensures !res1 ==> res2 == 0;
 // assert that sha2/3 are injections without using global quantified axioms.
 
 
-function {:inline} $Hash_sha2(val: $ValueArray): $ValueArray {
+function {:inline} $Hash_sha2(val: Vec $Value): Vec $Value {
     $Hash_sha2_core(val)
 }
 
-function $Hash_sha2_core(val: $ValueArray): $ValueArray;
+function $Hash_sha2_core(val: Vec $Value): Vec $Value;
 
 // This says that Hash_sha2 is bijective.
-axiom (forall v1,v2: $ValueArray :: {$Hash_sha2_core(v1), $Hash_sha2_core(v2)}
+axiom (forall v1,v2: Vec $Value :: {$Hash_sha2_core(v1), $Hash_sha2_core(v2)}
        $IsEqual_vec(v1, v2) <==> $IsEqual_vec($Hash_sha2_core(v1), $Hash_sha2_core(v2)));
 
 // This procedure has no body. We want Boogie to just use its requires
 // and ensures properties when verifying code that calls it.
-procedure $Hash_sha2_256(val: $ValueArray) returns (res: $ValueArray);
+procedure $Hash_sha2_256(val: Vec $Value) returns (res: Vec $Value);
 // It will still work without this, but this helps verifier find more reasonable counterexamples.
-{{backend.type_requires}} $IsValidU8Vector(val);
+{{options.type_requires}} $IsValidU8Vector(val);
 ensures res == $Hash_sha2_core(val);     // returns Hash_sha2 Value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
-ensures $LenValueArray(res) == 32;               // result is 32 bytes.
+ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $Hash_$sha2_256(val: $ValueArray): $ValueArray {
+function {:inline} $Hash_$sha2_256(val: Vec $Value): Vec $Value {
     $Hash_sha2_core(val)
 }
 
 // similarly for Hash_sha3
-function {:inline} $Hash_sha3(val: $ValueArray): $ValueArray {
+function {:inline} $Hash_sha3(val: Vec $Value): Vec $Value {
     $Hash_sha3_core(val)
 }
-function $Hash_sha3_core(val: $ValueArray): $ValueArray;
+function $Hash_sha3_core(val: Vec $Value): Vec $Value;
 
-axiom (forall v1,v2: $ValueArray :: {$Hash_sha3_core(v1), $Hash_sha3_core(v2)}
+axiom (forall v1,v2: Vec $Value :: {$Hash_sha3_core(v1), $Hash_sha3_core(v2)}
        $IsEqual_vec(v1, v2) <==> $IsEqual_vec($Hash_sha3_core(v1), $Hash_sha3_core(v2)));
 
-procedure $Hash_sha3_256(val: $ValueArray) returns (res: $ValueArray);
+procedure $Hash_sha3_256(val: Vec $Value) returns (res: Vec $Value);
 ensures res == $Hash_sha3_core(val);     // returns Hash_sha3 Value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
-ensures $LenValueArray(res) == 32;               // result is 32 bytes.
+ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
-function {:inline} $Hash_$sha3_256(val: $ValueArray): $ValueArray {
+function {:inline} $Hash_$sha3_256(val: Vec $Value): Vec $Value {
     $Hash_sha3_core(val)
 }
 
@@ -1414,25 +1268,25 @@ procedure {:inline 1} $Signer_borrow_address(signer: int) returns (res: int) {
 // currently because we verify every code path based on signature verification with
 // an arbitrary interpretation.
 
-function $Signature_$ed25519_validate_pubkey(public_key: $ValueArray): bool;
-function $Signature_$ed25519_verify(signature: $ValueArray, public_key: $ValueArray, message: $ValueArray): bool;
+function $Signature_$ed25519_validate_pubkey(public_key: Vec $Value): bool;
+function $Signature_$ed25519_verify(signature: Vec $Value, public_key: Vec $Value, message: Vec $Value): bool;
 
 // Needed because we do not have extensional equality:
-axiom (forall k1, k2: $ValueArray ::
+axiom (forall k1, k2: Vec $Value ::
     {$Signature_$ed25519_validate_pubkey(k1), $Signature_$ed25519_validate_pubkey(k2)}
     $IsEqual_vec(k1, k2) ==> $Signature_$ed25519_validate_pubkey(k1) == $Signature_$ed25519_validate_pubkey(k2));
-axiom (forall s1, s2, k1, k2, m1, m2: $ValueArray ::
+axiom (forall s1, s2, k1, k2, m1, m2: Vec $Value ::
     {$Signature_$ed25519_verify(s1, k1, m1), $Signature_$ed25519_verify(s2, k2, m2)}
     $IsEqual_vec(s1, s2) && $IsEqual_vec(k1, k2) && $IsEqual_vec(m1, m2)
     ==> $Signature_$ed25519_verify(s1, k1, m1) == $Signature_$ed25519_verify(s2, k2, m2));
 
 
-procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $ValueArray) returns (res: bool) {
+procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: Vec $Value) returns (res: bool) {
     res := $Signature_$ed25519_validate_pubkey(public_key);
 }
 
 procedure {:inline 1} $Signature_ed25519_verify(
-        signature: $ValueArray, public_key: $ValueArray, message: $ValueArray) returns (res: bool) {
+        signature: Vec $Value, public_key: Vec $Value, message: Vec $Value) returns (res: bool) {
     res := $Signature_$ed25519_verify(signature, public_key, message);
 }
 
@@ -1444,33 +1298,33 @@ procedure {:inline 1} $Signature_ed25519_verify(
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
-function {:inline} $BCS_serialize(ta: $TypeValue, v: $Value): $ValueArray {
+function {:inline} $BCS_serialize(ta: $TypeValue, v: $Value): Vec $Value {
     $BCS_serialize_core(v)
 }
 
-function $BCS_serialize_core(v: $Value): $ValueArray;
+function $BCS_serialize_core(v: $Value): Vec $Value;
 axiom (forall v1, v2: $Value :: {$BCS_serialize_core(v1), $BCS_serialize_core(v2)}
    $IsEqual(v1, v2) <==> $IsEqual_vec($BCS_serialize_core(v1), $BCS_serialize_core(v2)));
 
 // This says that serialize returns a non-empty vec<u8>
-{{#if (eq backend.serialize_bound 0)}}
+{{#if (eq options.serialize_bound 0)}}
 axiom (forall v: $Value :: {$BCS_serialize_core(v)}
-     ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && $LenValueArray(r) > 0 ));
+     ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && LenVec(r) > 0 ));
 {{else}}
 axiom (forall v: $Value :: {$BCS_serialize_core(v)}
-     ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && $LenValueArray(r) > 0 &&
-                            $LenValueArray(r) <= {{backend.serialize_bound}} ));
+     ( var r := $BCS_serialize_core(v); $IsValidU8Vector(r) && LenVec(r) > 0 &&
+                            LenVec(r) <= {{options.serialize_bound}} ));
 {{/if}}
 
 // Serialized addresses should have the same length
 const $serialized_address_len: int;
 axiom (forall v: $Value :: {$BCS_serialize_core(v)}
-     ( var r := $BCS_serialize_core(v); is#$Address(v) ==> $LenValueArray(r) == $serialized_address_len));
+     ( var r := $BCS_serialize_core(v); is#$Address(v) ==> LenVec(r) == $serialized_address_len));
 
-procedure $BCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: $ValueArray);
+procedure $BCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: Vec $Value);
 ensures res == $BCS_serialize_core(v);
 
-function {:inline} $BCS_$to_bytes(ta: $TypeValue, v: $Value): $ValueArray {
+function {:inline} $BCS_$to_bytes(ta: $TypeValue, v: $Value): Vec $Value {
     $BCS_serialize_core(v)
 }
 
@@ -1492,7 +1346,7 @@ function {:inline} $Signer_$borrow_address(signer: int): int
 // ==================================================================================
 // Mocked out Event module
 
-procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: int) returns (res: $ValueArray) {
+procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: int) returns (res: Vec $Value) {
 }
 
 procedure {:inline 1} $Event_publish_generator(account: int) {
@@ -1502,16 +1356,16 @@ procedure {:inline 1} $Event_publish_generator(account: int) {
 // mutating (or increasing) `counter`.
 
 procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Mutation, msg: $Value) returns (res: $Mutation) {
-    var guid: $ValueArray;
+    var guid: Vec $Value;
     guid := $GetEventHandleGuid($Unbox_vec($Dereference(handler)));
     $es := $ExtendEventStore($es, guid, msg);
     res := handler;
 }
 
-procedure {:inline 1} $Event_write_to_event_store(t: $TypeValue, guid: $ValueArray, count: int, msg: $Value) {
+procedure {:inline 1} $Event_write_to_event_store(t: $TypeValue, guid: Vec $Value, count: int, msg: $Value) {
     // This function should never be called as it is private to Event but the caller, emit_event, is mocked out.
     assert false;
 }
 
-procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: $ValueArray) {
+procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: Vec $Value) {
 }

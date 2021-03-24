@@ -1,0 +1,37 @@
+Run with FLAGS=" --vnext --vector-theory=SmtArray" from Sun Mar 28 04:17:38 PM PDT 2021
+AccountAdministrationScripts.move: 2.63s
+AccountCreationScripts.move: 2.98s
+AccountFreezing.move: 2.24s
+AccountLimits.move: 2.27s
+Authenticator.move: 0.83s
+ChainId.move: 1.88s
+CoreAddresses.move: 0.88s
+DesignatedDealer.move: 1.42s
+DiemAccount.move: 9.99s
+DiemBlock.move: 2.01s
+DiemConfig.move: 2.38s
+Diem.move: 6.09s
+DiemSystem.move: Command exited with non-zero status 1
+157.67s
+DiemTimestamp.move: 2.07s
+DiemTransactionPublishingOption.move: 2.31s
+DiemVersion.move: 2.08s
+DiemVMConfig.move: 1.82s
+DualAttestation.move: 2.95s
+Genesis.move: 1.65s
+PaymentScripts.move: 1.81s
+RecoveryAddress.move: 1.52s
+RegisteredCurrencies.move: 2.20s
+Roles.move: 2.81s
+SharedEd25519PublicKey.move: 1.50s
+Signature.move: 0.55s
+SlidingNonce.move: 1.87s
+SystemAdministrationScripts.move: 1.20s
+TransactionFee.move: 2.73s
+TreasuryComplianceScripts.move: 3.43s
+ValidatorAdministrationScripts.move: 96.30s
+ValidatorConfig.move: 1.89s
+ValidatorOperatorConfig.move: 1.34s
+VASP.move: 1.61s
+XDX.move: 3.36s
+XUS.move: 3.25s

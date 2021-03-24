@@ -17,8 +17,8 @@ error: post-condition does not hold
     =     at tests/sources/functional/hash_model_invalid.move:14: hash_test1
     =         h2 = <redacted>
     =     at tests/sources/functional/hash_model_invalid.move:15: hash_test1
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/hash_model_invalid.move:16: hash_test1
     =     at tests/sources/functional/hash_model_invalid.move:18
     =     at tests/sources/functional/hash_model_invalid.move:22
@@ -41,8 +41,8 @@ error: post-condition does not hold
     =     at tests/sources/functional/hash_model_invalid.move:29: hash_test2
     =         h2 = <redacted>
     =     at tests/sources/functional/hash_model_invalid.move:30: hash_test2
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/hash_model_invalid.move:31: hash_test2
     =     at tests/sources/functional/hash_model_invalid.move:33
     =     at tests/sources/functional/hash_model_invalid.move:35

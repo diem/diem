@@ -8,7 +8,7 @@ use handlebars::{
 
 #[derive(Clone, Copy)]
 pub struct StratificationHelper {
-    depth: usize,
+    pub depth: usize,
 }
 
 impl StratificationHelper {

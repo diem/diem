@@ -17,7 +17,7 @@ use simplelog::{
 };
 
 use abigen::AbigenOptions;
-use boogie_backend_v2::options::BoogieOptions;
+use boogie_backend_v2::options::{BoogieOptions, VectorTheory};
 use bytecode::options::ProverOptions;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
@@ -34,6 +34,10 @@ static TEST_MODE: AtomicBool = AtomicBool::new(false);
 
 /// Represents options provided to the tool. Most of those options are configured via a toml
 /// source; some over the command line flags.
+///
+/// NOTE: any fields carrying structured data must appear at the end for making
+/// toml printing work. When changing this config, use `mvp --print-config` to
+/// verify this works.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Options {
@@ -59,26 +63,27 @@ pub struct Options {
     /// The paths to any dependencies for the Move sources. Those will not be verified but
     /// can be used by `move_sources`.
     pub move_deps: Vec<String>,
+    /// Whether to run experimental pipeline
+    pub experimental_pipeline: bool,
+    /// Whether to use exclusively weak edges in borrow analysis
+    pub weak_edges: bool,
+    /// Whether to use the next major version instead of the current one
+    pub vnext: bool,
+    /// Whether to use the v2 invariant scheme.
+    pub inv_v2: bool,
+    /// BEGIN OF STRUCTURED OPTIONS
+    /// Options for the documentation generator.
+    pub docgen: DocgenOptions,
     /// Options for the prover.
     pub prover: ProverOptions,
     /// Options for the prover backend.
     pub backend: BoogieOptions,
-    /// Whether to use the v2 invariant scheme.
-    pub inv_v2: bool,
-    /// Options for the documentation generator.
-    pub docgen: DocgenOptions,
     /// Options for the ABI generator.
     pub abigen: AbigenOptions,
     /// Options for the error map generator.
     /// TODO: this currently create errors during deserialization, so skip them for this.
     #[serde(skip_serializing)]
     pub errmapgen: ErrmapOptions,
-    /// Whether to run experimental pipeline
-    pub experimental_pipeline: bool,
-    /// Whether to use the next major version instead of the current one
-    pub vnext: bool,
-    /// Whether to use exclusively weak edges in borrow analysis
-    pub weak_edges: bool,
 }
 
 impl Default for Options {
@@ -175,7 +180,15 @@ impl Options {
                     .long("verbose")
                     .takes_value(true)
                     .possible_values(&["error", "warn", "info", "debug"])
-                    .help("verbosity level."),
+                    .help("verbosity level"),
+            )
+            .arg(
+                Arg::with_name("vector-theory")
+                    .long("vector-theory")
+                    .takes_value(true)
+                    .possible_values(&["BoogieArray", "BoogieArrayIntern",
+                                              "SmtArray", "SmtArrayExt", "SmtSeq"])
+                    .help("vector theory to use"),
             )
             .arg(
                 Arg::with_name("generate-only")
@@ -441,6 +454,17 @@ impl Options {
                 _ => unreachable!("should not happen"),
             }
         }
+        if matches.is_present("vector-theory") {
+            options.backend.vector_theory = match matches.value_of("vector-theory").unwrap() {
+                "BoogieArray" => VectorTheory::BoogieArray,
+                "BoogieArrayIntern" => VectorTheory::BoogieArrayIntern,
+                "SmtArray" => VectorTheory::SmtArray,
+                "SmtArrayExt" => VectorTheory::SmtArrayExt,
+                "SmtSeq" => VectorTheory::SmtSeq,
+                _ => unreachable!("should not happen"),
+            }
+        }
+
         if matches.is_present("generate-only") {
             options.prover.generate_only = true;
         }
@@ -550,10 +574,14 @@ impl Options {
         if matches.is_present("check-inconsistency") {
             options.prover.check_inconsistency = true;
         }
+
         if matches.is_present("verify-only") {
             options.prover.verify_scope =
                 VerificationScope::Only(matches.value_of("verify-only").unwrap().to_string());
         }
+
+        options.backend.derive_options();
+
         if matches.is_present("print-config") {
             println!("{}", toml::to_string(&options).unwrap());
             Err(anyhow!("exiting"))

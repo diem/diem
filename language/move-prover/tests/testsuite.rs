@@ -33,9 +33,58 @@ const REGULAR_TEST_FLAGS: &[&str] = &[
 
 static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
 
-fn test_runner(path: &Path) -> datatest_stable::Result<()> {
+/// A list of different feature variants to test. Each test will be executed for each variant,
+/// unless it (a) contains a line comment of the form `// exclude_for: <feature1> <feature2> ...` (b)
+/// its path is in the blacklisted paths specified.
+/// TODO: currently only default is active, as vnext is too unstable for release via sporadic
+///   timeouts.
+const TESTED_FEATURES: &[&str] = &["default" /*, "vnext"*/];
+const DENYLISTED_PATHS: &[(&str, &str)] = &[];
+
+/// Determines the runner based on feature name. Because the datatest framework requires a
+/// function pointer (not a closure) to set up a test, we need to have a specific static function
+/// for each feature.
+fn get_runner(feature: &str) -> fn(&Path) -> datatest_stable::Result<()> {
+    fn runner_default(p: &Path) -> datatest_stable::Result<()> {
+        test_runner_variant(p, "default", "")
+    }
+    fn runner_vnext(p: &Path) -> datatest_stable::Result<()> {
+        test_runner_variant(p, "vnext", "--vnext")
+    }
+    match feature {
+        "default" => runner_default,
+        "vnext" => runner_vnext,
+        _ => panic!("unknown feature"),
+    }
+}
+
+fn test_runner_variant(
+    path: &Path,
+    feature: &str,
+    feature_flags: &str,
+) -> datatest_stable::Result<()> {
     // Use the below + `cargo test -- --test-threads=1` to identify a long running test
     //println!(">>> testing {}", path.to_string_lossy().to_string());
+
+    // Determine whether the test is excluded for the given feature.
+    let feature_exclusion = extract_test_directives(path, "// exclude_for: ")?;
+    if feature_exclusion.contains(&feature.to_string()) {
+        info!("skipping {} for feature `{}`", path.display(), feature);
+        return Ok(());
+    }
+    for (feature_name, path_frag) in DENYLISTED_PATHS {
+        if feature == *feature_name && path.to_string_lossy().to_string().contains(path_frag) {
+            info!("skipping {} for feature `{}`", path.display(), feature);
+            return Ok(());
+        }
+    }
+    info!(
+        "testing {} with feature `{}` (flags = `{}`)",
+        path.display(),
+        feature,
+        feature_flags
+    );
+
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
     let baseline_valid =
         !no_boogie || !extract_test_directives(path, "// no-boogie-test")?.is_empty();
@@ -53,6 +102,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     // args.push("--sequential".to_owned());
     args.push(path.to_string_lossy().to_string());
 
+    args.extend(shell_words::split(feature_flags)?);
     args.extend(shell_words::split(&read_env_var(ENV_FLAGS))?);
 
     let mut options = Options::create_from_args(&args)?;
@@ -92,142 +142,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         }
     }
 
-    // Run again with cvc4 if TEST_CVC4 is set and UPBL (update baselines) is not set.
-    // We do not run CVC4 based tests by default because the way how things are setup,
-    // they would always be run in CI and make verification roughly 2x slower because all tools
-    // are installed in CI and on user machines and `CVC4_EXE` is always set.
-    if !read_env_var("MVP_TEST_CVC4").is_empty()
-        && read_env_var("UPBL").is_empty()
-        && !no_boogie
-        && !read_env_var("CVC4_EXE").is_empty()
-        && !cvc4_deny_listed(path)
-    {
-        info!("running with cvc4");
-        args.push("--use-cvc4".to_owned());
-        options = Options::create_from_args(&args)?;
-        options.setup_logging_for_test();
-        options.prover.stable_test_output = true;
-        error_writer = Buffer::no_color();
-        diags = match run_move_prover(&mut error_writer, options) {
-            Ok(()) => "".to_string(),
-            Err(err) => format!("Move prover returns: {}\n", err),
-        };
-        if let Some(path) = baseline_path {
-            diags += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
-            verify_or_update_baseline(path.as_path(), &diags)?
-        } else if !diags.is_empty() {
-            return Err(anyhow!(
-                "Unexpected prover output (expected none): {}{}",
-                diags,
-                String::from_utf8_lossy(&error_writer.into_inner())
-            )
-            .into());
-        }
-    }
-
     Ok(())
-}
-
-fn cvc4_deny_listed(path: &Path) -> bool {
-    static DENY_LIST: &[&str] = &[
-        "diem-framework/modules/ValidatorOperatorConfig.move",
-        "diem-framework/modules/Option.move",
-        "diem-framework/modules/RegisteredCurrencies.move",
-        "diem-framework/modules/AccountFreezing.move",
-        "diem-framework/modules/DiemTransactionPublishingOption.move",
-        "diem-framework/modules/VASP.move",
-        "diem-framework/modules/ValidatorConfig.move",
-        "diem-framework/modules/DiemConfig.move",
-        "diem-framework/modules/DiemSystem.move",
-        "diem-framework/modules/XUS.move",
-        "diem-framework/modules/DualAttestation.move",
-        "diem-framework/modules/XDX.move",
-        "tests/sources/functional/cast.move",
-        "diem-framework/modules/RecoveryAddress.move",
-        "tests/sources/functional/loops.move",
-        "diem-framework/transaction_scripts/add_validator_and_reconfigure.move",
-        "diem-framework/transaction_scripts/rotate_authentication_key.move",
-        "tests/sources/functional/aborts_if_assume_assert.move",
-        "diem-framework/transaction_scripts/remove_validator_and_reconfigure.move",
-        "diem-framework/modules/DesignatedDealer.move",
-        "tests/sources/functional/marketcap.move",
-        "tests/sources/functional/invariants.move",
-        "tests/sources/functional/invariants_resources.move",
-        "tests/sources/functional/module_invariants.move",
-        "tests/sources/functional/ModifiesSchemaTest.move",
-        "tests/sources/functional/resources.move",
-        "tests/sources/functional/schema_exp.move",
-        "tests/sources/functional/marketcap_generic.move",
-        "tests/sources/functional/aborts_if_with_code.move",
-        "tests/sources/functional/address_serialization_constant_size.move",
-        "diem-framework/transaction_scripts/set_validator_config_and_reconfigure.move",
-        "diem-framework/burn.move",
-        "tests/sources/functional/global_invariants.move",
-        "tests/sources/functional/nested_invariants.move",
-        "diem-framework/transaction_scripts/rotate_authentication_key_with_recovery_address.move",
-        "tests/sources/functional/marketcap_as_schema_apply.move",
-        "tests/sources/functional/global_vars.move",
-        "diem-framework/transaction_scripts/rotate_authentication_key_with_nonce.move",
-        "tests/sources/functional/specs_in_fun_ref.move",
-        "tests/sources/functional/references.move",
-        "tests/sources/functional/mut_ref_unpack.move",
-        "tests/sources/functional/hash_model.move",
-        "tests/sources/functional/ModifiesErrorTest.move",
-        "tests/sources/functional/consts.move",
-        "tests/sources/functional/type_values.move",
-        "tests/sources/functional/pragma.move",
-        "tests/sources/functional/exists_in_vector.move",
-        "tests/sources/functional/aborts_with_check.move",
-        "tests/sources/functional/aborts_with_negative_check.move",
-        "tests/sources/functional/opaque.move",
-        "tests/sources/functional/marketcap_as_schema.move",
-        "tests/sources/functional/aborts_if.move",
-        "tests/sources/functional/address_quant.move",
-        "tests/sources/functional/hash_model_invalid.move",
-        "tests/sources/functional/serialize_model.move",
-        "tests/sources/functional/return_values.move",
-        "tests/sources/functional/pack_unpack.move",
-        "tests/sources/functional/specs_in_fun.move",
-        "tests/sources/functional/arithm.move",
-        "tests/sources/regression/Escape.move",
-        "tests/sources/functional/mut_ref_accross_modules.move",
-        "tests/sources/regression/type_param_bug_200228.move",
-        "tests/sources/regression/trace200527.move",
-        "tests/sources/regression/generic_invariant200518.move",
-        "diem-framework/transaction_scripts/rotate_authentication_key_with_nonce_admin.move",
-        "tests/sources/functional/simple_vector_client.move",
-        "diem-framework/transaction_scripts/publish_shared_ed25519_public_key.move",
-        "tests/sources/functional/verify_vector.move",
-        "diem-framework/transaction_scripts/create_designated_dealer.move",
-        "diem-framework/transaction_scripts/create_parent_vasp_account.move",
-        "diem-framework/modules/Diem.move",
-        "diem-framework/transaction_scripts/create_child_vasp_account.move",
-        "diem-framework/modules/FixedPoint32.move",
-        "diem-framework/modules/Genesis.move",
-        "diem-framework/modules/DiemAccount.move",
-        "diem-framework/transaction_scripts/update_exchange_rate.move",
-        "tests/sources/functional/script_incorrect.move",
-        "tests/sources/functional/emits.move",
-        "tests/sources/functional/friend.move",
-        "tests/sources/regression/set_200701.move",
-        "diem-framework/modules/DiemBlock.move",
-        "diem-framework/modules/ChainId.move",
-        "diem-framework/modules/DiemVMConfig.move",
-        "diem-framework/modules/SlidingNonce.move",
-        "diem-framework/modules/TransactionFee.move",
-        "diem-framework/modules/Roles.move",
-        "diem-framework/modules/DiemTimestamp.move",
-        "diem-framework/modules/DiemVersion.move",
-        "diem-framework/modules/AccountLimits.move", // This one takes over a minute
-    ];
-
-    let path_str = path.to_str().unwrap();
-    for entry in DENY_LIST {
-        if path_str.contains(entry) {
-            return true;
-        }
-    }
-    false
 }
 
 fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
@@ -270,32 +185,35 @@ fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Optio
 // Test entry point based on datatest runner.
 fn main() {
     let mut reqs = vec![];
-    if read_env_var(ENV_TEST_EXTENDED) == "1" {
-        reqs.push(Requirements::new(
-            test_runner,
-            "extended".to_string(),
-            "tests/xsources".to_string(),
-            r".*\.move$".to_string(),
-        ));
-    } else {
-        reqs.push(Requirements::new(
-            test_runner,
-            "functional".to_string(),
-            "tests/sources".to_string(),
-            r".*\.move$".to_string(),
-        ));
-        reqs.push(Requirements::new(
-            test_runner,
-            "fx".to_string(),
-            "../move-stdlib".to_string(),
-            r".*\.move$".to_string(),
-        ));
-        reqs.push(Requirements::new(
-            test_runner,
-            "fx".to_string(),
-            "../diem-framework".to_string(),
-            r".*\.move$".to_string(),
-        ));
+    for feature in TESTED_FEATURES {
+        let runner = get_runner(*feature);
+        if read_env_var(ENV_TEST_EXTENDED) == "1" {
+            reqs.push(Requirements::new(
+                runner,
+                format!("extended[{}]", feature),
+                "tests/xsources".to_string(),
+                r".*\.move$".to_string(),
+            ));
+        } else {
+            reqs.push(Requirements::new(
+                runner,
+                format!("unit[{}]", feature),
+                "tests/sources".to_string(),
+                r".*\.move$".to_string(),
+            ));
+            reqs.push(Requirements::new(
+                runner,
+                format!("stdlib[{}]", feature),
+                "../move-stdlib".to_string(),
+                r".*\.move$".to_string(),
+            ));
+            reqs.push(Requirements::new(
+                runner,
+                format!("diem[{}]", feature),
+                "../diem-framework".to_string(),
+                r".*\.move$".to_string(),
+            ));
+        }
     }
     datatest_stable::runner(&reqs);
 }

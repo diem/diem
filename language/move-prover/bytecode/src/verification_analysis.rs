@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Analysis which computes an annotation for each function whether
+//! Analysis which computes an annotation for each function whether it is verified or inlined.
 
 use crate::{
     function_target::{FunctionData, FunctionTarget},

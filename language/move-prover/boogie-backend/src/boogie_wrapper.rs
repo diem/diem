@@ -237,7 +237,7 @@ impl<'env> BoogieWrapper<'env> {
                         let n = fun_target.get_return_count();
                         if *idx < n {
                             let var_name = if n > 1 {
-                                format!("result_{}", idx)
+                                format!("result_{}", idx.saturating_add(1))
                             } else {
                                 "result".to_string()
                             };

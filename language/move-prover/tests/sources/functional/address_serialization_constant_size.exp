@@ -13,7 +13,7 @@ error: post-condition does not hold
     =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
     =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
     =     at tests/sources/functional/address_serialization_constant_size.move:16: serialized_move_values_diff_len_incorrect
-    =         result_0 = <redacted>
     =         result_1 = <redacted>
+    =         result_2 = <redacted>
     =     at tests/sources/functional/address_serialization_constant_size.move:17: serialized_move_values_diff_len_incorrect
     =     at tests/sources/functional/address_serialization_constant_size.move:19

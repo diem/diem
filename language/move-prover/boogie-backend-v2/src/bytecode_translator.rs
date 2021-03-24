@@ -27,9 +27,10 @@ use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
         boogie_debug_track_return, boogie_declare_temps, boogie_equality_for_type,
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
-        boogie_resource_memory_name, boogie_struct_name, boogie_type_suffix, boogie_type_value,
-        boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
+        boogie_field_name, boogie_function_name, boogie_local_type, boogie_make_vec_from_strings,
+        boogie_modifies_memory_name, boogie_resource_memory_name, boogie_struct_name,
+        boogie_type_suffix, boogie_type_value, boogie_type_value_array, boogie_type_values,
+        boogie_well_formed_check,
     },
     options::BoogieOptions,
     spec_translator::SpecTranslator,
@@ -187,7 +188,7 @@ impl<'env> ModuleTranslator<'env> {
         // Emit type tag predicate
         emitln!(
             self.writer,
-            "function {{:inline}} $Tag{}(x: $ValueArray): bool {{ true }}",
+            "function {{:inline}} $Tag{}(x: Vec $Value): bool {{ true }}",
             struct_name
         );
     }
@@ -349,7 +350,7 @@ impl<'env> ModuleTranslator<'env> {
                 self.writer,
                 "var {}: {}",
                 boogie_modifies_memory_name(fun_target.global_env(), *ty),
-                "[$TypeValueArray, int]bool;"
+                "[Vec $TypeValue, int]bool;"
             );
         });
 
@@ -853,25 +854,18 @@ impl<'env> ModuleTranslator<'env> {
                             .env
                             .get_module(*mid)
                             .into_struct(*sid);
-                        let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
-                        for (i, field_env) in struct_env.get_fields().enumerate() {
-                            let suffix =
-                                boogie_type_suffix(&field_env.get_type().instantiate(type_actuals));
-                            ctor_expr = format!(
-                                "{}[{} := $Box{}({})]",
-                                ctor_expr,
-                                boogie_field_name(&field_env),
-                                suffix,
-                                str_local(srcs[i])
-                            );
-                        }
-                        emitln!(
-                            self.writer,
-                            "{} := $ValueArray({}, {});",
-                            str_local(dests[0]),
-                            ctor_expr,
-                            struct_env.get_field_count()
-                        );
+                        let args = struct_env
+                            .get_fields()
+                            .enumerate()
+                            .map(|(i, field_env)| {
+                                let suffix = boogie_type_suffix(
+                                    &field_env.get_type().instantiate(type_actuals),
+                                );
+                                format!("$Box{}({})", suffix, str_local(srcs[i]))
+                            })
+                            .collect_vec();
+                        let make = boogie_make_vec_from_strings(&args);
+                        emitln!(self.writer, "{} := {};", str_local(dests[0]), make,);
                     }
                     Unpack(mid, sid, _type_actuals) => {
                         let struct_env = fun_target
@@ -884,7 +878,7 @@ impl<'env> ModuleTranslator<'env> {
                             let suffix = boogie_type_suffix(fun_target.get_local_type(dests[i]));
                             emitln!(
                                 self.writer,
-                                "{} := $Unbox{}($ReadValueArray({}, {}));",
+                                "{} := $Unbox{}(ReadVec({}, {}));",
                                 str_local(dests[i]),
                                 suffix,
                                 str_local(srcs[0]),
@@ -936,7 +930,7 @@ impl<'env> ModuleTranslator<'env> {
                         let suffix = boogie_type_suffix(dest_ty);
                         emitln!(
                             self.writer,
-                            "{} := $Unbox{}($ReadValueArray({}, {}));",
+                            "{} := $Unbox{}(ReadVec({}, {}));",
                             str_local(dest),
                             suffix,
                             struct_arg,

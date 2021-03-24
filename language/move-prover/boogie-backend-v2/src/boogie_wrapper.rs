@@ -24,7 +24,7 @@ use move_model::{
 use crate::prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds};
 // DEBUG
 // use backtrace::Backtrace;
-use crate::options::BoogieOptions;
+use crate::options::{BoogieOptions, VectorTheory};
 use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 use move_model::{
     ast::TempIndex,
@@ -238,7 +238,7 @@ impl<'env> BoogieWrapper<'env> {
                         let n = fun_target.get_return_count();
                         if *idx < n {
                             let var_name = if n > 1 {
-                                format!("result_{}", idx)
+                                format!("result_{}", idx.saturating_add(1))
                             } else {
                                 "result".to_string()
                             };
@@ -368,10 +368,7 @@ impl<'env> BoogieWrapper<'env> {
 
         if let Some(cap) = MODEL_REGION.captures(&out[*at..]) {
             *at = usize::saturating_add(*at, cap.get(0).unwrap().end());
-            match model
-                .parse(self, cap.name("mod").unwrap().as_str())
-                .and_then(|_| model.derive(self))
-            {
+            match model.parse(self, cap.name("mod").unwrap().as_str()) {
                 Ok(_) => {}
                 Err(parse_error) => {
                     let context_module = self
@@ -612,8 +609,7 @@ pub enum ValueArrayRep {
 #[derive(Debug)]
 pub struct Model {
     vars: BTreeMap<ModelValue, ModelValue>,
-    tracked_exps: BTreeMap<ExpDescriptor, Vec<ModelValue>>,
-    value_array_rep: ValueArrayRep,
+    vector_theory: VectorTheory,
 }
 
 impl Model {
@@ -621,12 +617,7 @@ impl Model {
     fn new(wrapper: &BoogieWrapper<'_>) -> Self {
         Model {
             vars: Default::default(),
-            tracked_exps: Default::default(),
-            value_array_rep: if wrapper.options.vector_using_sequences {
-                ValueArrayRep::ValueArrayIsSeq
-            } else {
-                ValueArrayRep::ValueArrayIsMap
-            },
+            vector_theory: wrapper.options.vector_theory,
         }
     }
 
@@ -650,46 +641,6 @@ impl Model {
                 }
                 _ => Err(ModelParseError("expected ModelValue::Map".to_string())),
             })
-    }
-
-    /// Derive information from the model.
-    fn derive(&mut self, wrapper: &BoogieWrapper<'_>) -> Result<(), ModelParseError> {
-        // Extract the tracked expressions. (No boogie attribute/other support for this.)
-        let track_exp_map = self
-            .vars
-            .get(&ModelValue::literal("$DebugTrackExp"))
-            .and_then(|x| x.extract_map())
-            .ok_or_else(invalid_track_info)?;
-        for k in track_exp_map.keys() {
-            if k == &ModelValue::literal("else") {
-                continue;
-            }
-            let (desc, value) = Self::extract_debug_exp(wrapper, k)?;
-            self.tracked_exps
-                .entry(desc)
-                .or_insert_with(Vec::new)
-                .push(value);
-        }
-        Ok(())
-    }
-
-    /// Extract and validate a tracked expression from $DebugTrackExp map.
-    fn extract_debug_exp(
-        wrapper: &BoogieWrapper<'_>,
-        map_entry: &ModelValue,
-    ) -> Result<(ExpDescriptor, ModelValue), ModelParseError> {
-        if let ModelValue::List(args) = map_entry {
-            if args.len() != 2 {
-                return Err(invalid_track_info());
-            }
-            let node_id = NodeId::new(args[0].extract_number().ok_or_else(invalid_track_info)?);
-            if wrapper.env.get_node_type(node_id) == Type::Error {
-                return Err(invalid_track_info());
-            }
-            Ok((ExpDescriptor { node_id }, args[1].clone()))
-        } else {
-            Err(invalid_track_info())
-        }
     }
 }
 
@@ -723,16 +674,10 @@ impl ModelValue {
         ModelValue::List(vec![ModelValue::literal("Error")])
     }
 
-    /// Extracts a vector. This follows indirections in the model
-    /// to extract the actual values.
-    fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
-        // In current encoding, directly forward to value array,
-        self.extract_value_array(model)
-    }
-
-    /// Extracts a value array from it's representation.
-    /// If the representation uses maps it is defined by `(ValueArray map_key size)`. The function
-    /// follows indirections in the model. We find the value array map at `Select_[$int]$Value`.
+    /// Extracts a vector from its representation.
+    ///
+    /// If the representation uses arrays it is defined by `(Vec* map_key size)`. The function
+    /// follows indirections in the model. We find the array map at `Select_[$int]$Value`.
     /// This has e.g. the form
     /// ```model
     ///   Select_[$int]$Value -> {
@@ -747,41 +692,31 @@ impl ModelValue {
     /// or
     /// ```(as seq.empty (Seq T@$Value))```
     /// depending on whether it is an empty or nonempty sequence, respectively.
-    // In this case the sequence representation does not explicitly denote a constructor like ValueArray(..),
-    // instead reducing expressions to native SMT sequence theory expressions.
-    fn extract_value_array(&self, model: &Model) -> Option<ModelValueVector> {
-        if ValueArrayRep::ValueArrayIsSeq == model.value_array_rep {
-            // Implementation of $ValueArray using sequences
-            let seq_type_modelvalue = ModelValue::List(vec![
-                ModelValue::literal("Seq"),
-                ModelValue::List(vec![ModelValue::literal("T@$Value")]),
-            ]);
-            let empty_seq_model_value = ModelValue::List(vec![
-                ModelValue::literal("as"),
-                ModelValue::List(vec![ModelValue::literal("seq.empty")]),
-                seq_type_modelvalue,
-            ]);
-            let default = ModelValue::error();
-            let (size, values) = if &empty_seq_model_value == self {
-                (0, BTreeMap::new())
-            } else {
-                let mut values = BTreeMap::new();
-                let seq_elems = self.extract_list("seq.++")?;
-                for (index, wrapped_seq_value_at_index) in seq_elems.iter().enumerate() {
-                    let seq_value_at_index =
-                        (&wrapped_seq_value_at_index).extract_list("seq.unit")?;
-                    values.insert(index, (&seq_value_at_index[0]).clone());
+    fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
+        if matches!(model.vector_theory, VectorTheory::SmtSeq) {
+            // Implementation of vectors using sequences
+            let mut values = BTreeMap::new();
+            if let Some(elems) = self.extract_list("as") {
+                if elems.is_empty() {
+                    return None;
                 }
-                (seq_elems.len(), values)
+            } else if let Some(elem) = self.extract_seq_unit() {
+                values.insert(0, elem);
+            } else if let Some(elems) = self.extract_list("seq.++") {
+                for (i, e) in elems.iter().enumerate() {
+                    values.insert(i, e.extract_seq_unit()?);
+                }
+            } else {
+                return None;
             };
             Some(ModelValueVector {
-                size,
+                size: values.len(),
                 values,
-                default,
+                default: ModelValue::error(),
             })
         } else {
-            // Implementation of $ValueArray using integer maps
-            let args = self.extract_list("$ValueArray")?;
+            // Implementation of vectors using arrays
+            let args = self.extract_list_ctor_prefix("Vec_")?;
             if args.len() != 2 {
                 return None;
             }
@@ -812,6 +747,16 @@ impl ModelValue {
         }
     }
 
+    fn extract_seq_unit(&self) -> Option<ModelValue> {
+        self.extract_list("seq.unit").and_then(|elems| {
+            if elems.is_empty() {
+                None
+            } else {
+                Some(elems[0].clone())
+            }
+        })
+    }
+
     fn extract_map(&self) -> Option<&BTreeMap<ModelValue, ModelValue>> {
         if let ModelValue::Map(map) = self {
             Some(map)
@@ -830,14 +775,24 @@ impl ModelValue {
         None
     }
 
-    /// Extract a $Value box value.
-    fn extract_box(&self) -> Option<&ModelValue> {
+    /// Extract the arguments of a list of the form `(<ctor> element...)`.
+    fn extract_list_ctor_prefix(&self, ctor_prefix: &str) -> Option<&[ModelValue]> {
         if let ModelValue::List(elems) = self {
-            if elems.len() == 2 {
-                return Some(&elems[1]);
+            if !elems.is_empty() && elems[0].extract_literal()?.starts_with(ctor_prefix) {
+                return Some(&elems[1..]);
             }
         }
         None
+    }
+
+    /// Extract a $Value box value.
+    fn extract_box(&self) -> &ModelValue {
+        if let ModelValue::List(elems) = self {
+            if elems.len() == 2 {
+                return &elems[1];
+            }
+        }
+        self
     }
 
     /// Extract a number from a literal.
@@ -974,7 +929,7 @@ impl ModelValue {
             let mut p = values
                 .values
                 .get(idx)?
-                .extract_box()?
+                .extract_box()
                 .pretty_or_raw(wrapper, model, param);
             if *idx > next {
                 p = PrettyDoc::text(format!("{}: ", idx)).append(p);
@@ -986,7 +941,7 @@ impl ModelValue {
         if next < values.size || sparse {
             let default = values
                 .default
-                .extract_box()?
+                .extract_box()
                 .pretty(wrapper, model, param)
                 .unwrap_or_else(|| PrettyDoc::text("undef"));
             entries.insert(0, PrettyDoc::text(format!("(size): {}", values.size)));
@@ -1016,9 +971,10 @@ impl ModelValue {
                     .values
                     .get(&i)
                     .unwrap_or(&values.default)
-                    .extract_box()
-                    .unwrap_or(&values.default);
-                let vp = v.pretty_or_raw(wrapper, model, &ty);
+                    .extract_box();
+                let vp = v
+                    .pretty(wrapper, model, &ty)
+                    .unwrap_or_else(|| values.default.pretty_or_raw(wrapper, model, &ty));
                 PrettyDoc::text(format!(
                     "{}",
                     f.get_name().display(struct_env.symbol_pool())
@@ -1186,8 +1142,4 @@ fn index_range_check(max: usize) -> impl FnOnce(usize) -> Result<usize, ModelPar
             )))
         }
     }
-}
-
-fn invalid_track_info() -> ModelParseError {
-    ModelParseError::new("invalid debug track info")
 }

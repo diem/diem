@@ -16,6 +16,8 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 
+pub const MAX_MAKE_VEC_ARGS: usize = 12;
+
 /// Return boogie name of given module.
 pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
     let name = env.symbol_pool().string(env.get_name().name());
@@ -189,14 +191,22 @@ pub fn boogie_type_value_array(env: &GlobalEnv, args: &[Type]) -> String {
 
 /// Creates a type value array for types given as strings.
 pub fn boogie_type_value_array_from_strings(args: &[String]) -> String {
+    boogie_make_vec_from_strings(args)
+}
+
+/// Creates a vector from the given list of arguments.
+pub fn boogie_make_vec_from_strings(args: &[String]) -> String {
     if args.is_empty() {
-        return "$EmptyTypeValueArray".to_string();
+        "EmptyVec()".to_string()
+    } else {
+        let n = usize::min(args.len(), MAX_MAKE_VEC_ARGS);
+        let direct_args = &args[0..n];
+        let mut make = format!("MakeVec{}({})", n, direct_args.iter().join(", "));
+        for arg in args.iter().skip(n) {
+            make = format!("ExtendVec({}, {})", make, arg)
+        }
+        make
     }
-    let mut map = String::from("$MapConstTypeValue($DefaultTypeValue())");
-    for (i, arg) in args.iter().enumerate() {
-        map = format!("{}[{} := {}]", map, i, arg);
-    }
-    format!("$TypeValueArray({}, {})", map, args.len())
 }
 
 /// Return boogie type for a local with given signature token.
@@ -210,7 +220,7 @@ pub fn boogie_local_type(ty: &Type) -> String {
             TypeValue => "$TypeValue".to_string(),
             _ => panic!("unexpected type"),
         },
-        Vector(..) | Struct(..) => "$ValueArray".to_string(),
+        Vector(..) | Struct(..) => "Vec $Value".to_string(),
         Reference(..) => "$Mutation".to_string(),
         TypeParameter(..) => "$Value".to_string(),
         Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
@@ -220,7 +230,7 @@ pub fn boogie_local_type(ty: &Type) -> String {
 
 pub fn boogie_declare_temps() -> String {
     "var $$t_bool: bool;\nvar $$t_int: int;\nvar $$t_addr: int;\nvar $$t_type: $TypeValue;\
-    \nvar $$t, $$t1, $$t2, $$t3: $Value;\nvar $$t_vec: $ValueArray;"
+    \nvar $$t, $$t1, $$t2, $$t3: $Value;\nvar $$t_vec: Vec $Value;"
         .to_string()
 }
 
@@ -288,7 +298,7 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             ));
             if !matches!(**elem_ty, Type::TypeParameter(..)) {
                 let suffix = boogie_type_suffix(elem_ty);
-                let nest_value = &format!("$ReadValueArray({},$${})", name, nest);
+                let nest_value = &format!("ReadVec({},$${})", name, nest);
                 let mut check = format!("$IsValidBox{}({})", suffix, nest_value);
                 let nest_value_unboxed = &format!("$Unbox{}({})", suffix, nest_value);
                 let nest_check = boogie_well_formed_expr_impl(
@@ -301,21 +311,21 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
                     check = format!("{} &&\n  {}", check, nest_check);
                 }
                 add_type_check(format!(
-                    "(forall $${}: int :: {{{}}}\n{}    $${} >= 0 && $${} < $LenValueArray({}) ==> {})",
-                    nest, nest_value, indent, nest, nest, name, check,
+                    "(forall $${}: int :: {{{}}}\n{}    $InRangeVec({}, $${}) ==> {})",
+                    nest, nest_value, indent, name, nest, check,
                 ));
             }
         }
         Type::Struct(module_idx, struct_idx, targs) => {
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
             add_type_check(format!(
-                "$Tag{}({}) && $ValueArray_$is_well_formed({})",
+                "$Tag{}({}) && $IsValidU64(LenVec({}))",
                 boogie_struct_name(&struct_env),
                 name,
                 name
             ));
             add_type_check(format!(
-                "$LenValueArray({}) == {}",
+                "LenVec({}) == {}",
                 name,
                 struct_env.get_field_count()
             ));
@@ -323,11 +333,7 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             for field_env in struct_env.get_fields() {
                 let ty = field_env.get_type().instantiate(targs);
                 let suffix = boogie_type_suffix(&ty);
-                let field_value = format!(
-                    "$ReadValueArray({}, {})",
-                    name,
-                    boogie_field_name(&field_env)
-                );
+                let field_value = format!("ReadVec({}, {})", name, boogie_field_name(&field_env));
                 add_type_check(format!("$IsValidBox{}({})", suffix, field_value));
                 let nest_check = boogie_well_formed_expr_impl(
                     env,
@@ -431,23 +437,12 @@ pub fn boogie_global_declarator(
     }
 }
 
-pub fn boogie_byte_blob(options: &BoogieOptions, val: &[u8]) -> String {
-    if options.vector_using_sequences {
-        // Use concatenation.
-        let mut res = "$mk_vector()".to_string();
-        for b in val {
-            res = format!("$push_back_vector({}, $Integer({}))", res, b);
-        }
-        res
-    } else {
-        // Repeated push backs very expensive in map representation, so construct the value
-        // array directly.
-        let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
-        for (i, b) in val.iter().enumerate() {
-            ctor_expr = format!("{}[{} := $Integer({})]", ctor_expr, i, *b);
-        }
-        format!("$ValueArray({}, {})", ctor_expr, val.len())
-    }
+pub fn boogie_byte_blob(_options: &BoogieOptions, val: &[u8]) -> String {
+    let args = val
+        .iter()
+        .map(|v| format!("$Box_int({})", *v))
+        .collect_vec();
+    boogie_make_vec_from_strings(&args)
 }
 
 /// Construct a statement to debug track a local based on the Boogie attribute approach.

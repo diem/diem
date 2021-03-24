@@ -9,7 +9,26 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-printVerifiedProceduresCount:0",
     "-printModel:1",
     "-enhancedErrorMessages:1",
+    "-monomorphize",
 ];
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum VectorTheory {
+    BoogieArray,
+    BoogieArrayIntern,
+    SmtArray,
+    SmtArrayExt,
+    SmtSeq,
+}
+
+impl VectorTheory {
+    pub fn is_extensional(&self) -> bool {
+        matches!(
+            self,
+            VectorTheory::BoogieArrayIntern | VectorTheory::SmtArrayExt | VectorTheory::SmtSeq
+        )
+    }
+}
 
 /// Boogie options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +86,8 @@ pub struct BoogieOptions {
     pub num_instances: usize,
     /// Whether to run Boogie instances sequentially.
     pub sequential_task: bool,
+    /// What vector theory to use.
+    pub vector_theory: VectorTheory,
 }
 
 impl Default for BoogieOptions {
@@ -98,11 +119,21 @@ impl Default for BoogieOptions {
             stable_test_output: false,
             num_instances: 1,
             sequential_task: false,
+            vector_theory: VectorTheory::BoogieArray,
         }
     }
 }
 
 impl BoogieOptions {
+    /// Derive options based on other set options.
+    pub fn derive_options(&mut self) {
+        use VectorTheory::*;
+        self.native_equality = self.vector_theory.is_extensional();
+        if matches!(self.vector_theory, SmtArray | SmtArrayExt) {
+            self.use_array_theory = true;
+        }
+    }
+
     /// Returns command line to call boogie.
     pub fn get_boogie_command(&self, boogie_file: &str) -> Vec<String> {
         let mut result = vec![self.boogie_exe.clone()];
@@ -117,10 +148,10 @@ impl BoogieOptions {
             add(&[&format!("-proverOpt:PROVER_PATH={}", &self.z3_exe)]);
         }
         if self.use_array_theory {
-            add(&[
-                "-useArrayTheory",
-                "/proverOpt:O:smt.array.extensional=false",
-            ]);
+            add(&["-useArrayTheory"]);
+            if matches!(self.vector_theory, VectorTheory::SmtArray) {
+                add(&["/proverOpt:O:smt.array.extensional=false"])
+            }
         } else {
             add(&[&format!(
                 "-proverOpt:O:smt.QI.EAGER_THRESHOLD={}",
