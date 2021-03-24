@@ -610,7 +610,7 @@ impl DiemSwarm {
         self.nodes.remove(&node_id);
     }
 
-    pub fn add_node(&mut self, idx: usize) -> Result<(), SwarmLaunchFailure> {
+    pub fn start_node(&mut self, idx: usize) -> Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
         // `launch_node`.
         let path = self

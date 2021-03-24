@@ -64,7 +64,7 @@ fn test_basic_state_synchronization() {
         .unwrap();
 
     // Reconnect and synchronize the state
-    assert!(env.validator_swarm.add_node(node_to_restart).is_ok());
+    assert!(env.validator_swarm.start_node(node_to_restart).is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
@@ -99,7 +99,7 @@ fn test_basic_state_synchronization() {
     }
 
     // Reconnect and synchronize the state
-    assert!(env.validator_swarm.add_node(node_to_restart).is_ok());
+    assert!(env.validator_swarm.start_node(node_to_restart).is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
@@ -150,7 +150,7 @@ fn test_startup_sync_state() {
     // behind consensus db and forcing a state sync
     // during a node startup
     fs::remove_dir_all(state_db_path).unwrap();
-    assert!(env.validator_swarm.add_node(peer_to_stop).is_ok());
+    assert!(env.validator_swarm.start_node(peer_to_stop).is_ok());
     // create the client for the restarted node
     let accounts = client_1.copy_all_accounts();
     let mut client_0 = env.get_validator_client(0, None);
@@ -217,7 +217,7 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     assert!(consensus_db_path.as_path().exists());
     // Delete the consensus db to simulate consensus db is nuked
     fs::remove_dir_all(consensus_db_path).unwrap();
-    assert!(env.validator_swarm.add_node(peer_to_stop).is_ok());
+    assert!(env.validator_swarm.start_node(peer_to_stop).is_ok());
     // create the client for the restarted node
     let accounts = client_1.copy_all_accounts();
     let mut client_0 = env.get_validator_client(0, None);
@@ -323,7 +323,7 @@ fn test_state_sync_multichunk_epoch() {
     node_config.execution.genesis_file_location = PathBuf::from("");
     insert_waypoint(&mut node_config, waypoint_epoch_2);
     save_node_config(&mut node_config, &env.validator_swarm, 3);
-    env.validator_swarm.add_node(3).unwrap();
+    env.validator_swarm.start_node(3).unwrap();
 
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 }

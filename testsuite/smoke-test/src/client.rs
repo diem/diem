@@ -63,7 +63,7 @@ fn test_basic_restartability() {
     let peer_to_restart = 0;
     env.validator_swarm.kill_node(peer_to_restart);
 
-    assert!(env.validator_swarm.add_node(peer_to_restart).is_ok());
+    assert!(env.validator_swarm.start_node(peer_to_restart).is_ok());
     assert!(compare_balances(
         vec![(90.0, "XUS".to_string())],
         client.get_balances(&["b", "0"]).unwrap(),

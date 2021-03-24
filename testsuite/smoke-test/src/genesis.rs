@@ -58,13 +58,13 @@ fn test_genesis_transaction_flow() {
         node_config.consensus.sync_only = true;
         save_node_config(&mut node_config, &env.validator_swarm, i);
         env.validator_swarm.kill_node(i);
-        env.validator_swarm.add_node(i).unwrap();
+        env.validator_swarm.start_node(i).unwrap();
     }
 
     println!("3. delete one node's db and test they can still sync when sync_only is true for every nodes");
     env.validator_swarm.kill_node(0);
     fs::remove_dir_all(node_config.storage.dir()).unwrap();
-    env.validator_swarm.add_node(0).unwrap();
+    env.validator_swarm.start_node(0).unwrap();
 
     println!("4. verify all nodes are at the same round and no progress being made in 5 sec");
     env.validator_swarm.wait_for_all_nodes_to_catchup();
@@ -139,7 +139,7 @@ fn test_genesis_transaction_flow() {
     }
 
     for i in 1..4 {
-        env.validator_swarm.add_node(i).unwrap();
+        env.validator_swarm.start_node(i).unwrap();
     }
 
     println!("8. verify it's able to mint after the waypoint");
@@ -192,7 +192,7 @@ fn test_genesis_transaction_flow() {
     node_config.execution.genesis_file_location = PathBuf::from("");
     insert_waypoint(&mut node_config, waypoint);
     save_node_config(&mut node_config, &env.validator_swarm, 0);
-    env.validator_swarm.add_node(0).unwrap();
+    env.validator_swarm.start_node(0).unwrap();
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
     let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
@@ -205,7 +205,7 @@ fn test_genesis_transaction_flow() {
     let db_dir = node_config.storage.dir();
     fs::remove_dir_all(&db_dir).unwrap();
     db_restore(backup_path.path(), db_dir.as_path(), &[waypoint]);
-    env.validator_swarm.add_node(0).unwrap();
+    env.validator_swarm.start_node(0).unwrap();
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     let mut client = env.get_validator_client(0, Some(waypoint));
