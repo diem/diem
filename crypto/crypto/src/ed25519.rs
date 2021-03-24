@@ -42,6 +42,8 @@ use mirai_annotations::*;
 use serde::Serialize;
 use std::{cmp::Ordering, fmt};
 
+pub use ed25519_dalek;
+
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
 /// The length of the Ed25519PublicKey
