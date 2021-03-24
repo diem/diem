@@ -68,7 +68,7 @@ members = [
     "language/compiler/ir-to-bytecode",
     "language/compiler/ir-to-bytecode/syntax",
     "language/diem-framework",
-    "language/diem-framework/compiled",
+    "language/diem-framework/releases",
     "language/diem-tools/diem-events-fetcher",
     "language/diem-tools/diem-validator-interface",
     "language/diem-tools/transaction-replay",

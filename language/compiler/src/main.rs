@@ -5,7 +5,6 @@
 
 use anyhow::Context;
 use bytecode_verifier::{dependencies, verify_module, verify_script};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
 use move_core_types::account_address::AccountAddress;
@@ -129,9 +128,7 @@ fn main() {
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules(StdLibOptions::Compiled)
-                .compiled_modules
-                .to_vec()
+            diem_framework_releases::current_modules().to_vec()
         }
     };
 

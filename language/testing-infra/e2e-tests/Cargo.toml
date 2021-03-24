@@ -29,7 +29,7 @@ proptest = "1.0.0"
 proptest-derive = "0.3.0"
 diem-proptest-helpers = { path = "../../../common/proptest-helpers" }
 diem-config =  { path = "../../../config" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 transaction-builder = { path = "../../transaction-builder"}
 hex = "0.4.3"

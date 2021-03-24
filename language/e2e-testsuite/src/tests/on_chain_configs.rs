@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     account_config::CORE_CODE_ADDRESS,
     on_chain_config::DiemVersion,

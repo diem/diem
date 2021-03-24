@@ -66,7 +66,8 @@ target/debug/generate-transaction-builders \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
     --with-custom-diem-code language/transaction-builder/generator/examples/python3/custom_diem_code/*.py -- \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [Python demo file](examples/python3/stdlib_demo.py) with:
 ```bash
@@ -83,7 +84,8 @@ target/debug/generate-transaction-builders \
     --module-name diem_framework \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [C++ demo file](examples/cpp/stdlib_demo.cpp) with:
 ```bash
@@ -102,7 +104,8 @@ target/debug/generate-transaction-builders \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
     --with-custom-diem-code language/transaction-builder/generator/examples/java/custom_diem_code/*.java -- \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.java) with:
 ```bash
@@ -122,7 +125,8 @@ target/debug/generate-transaction-builders \
     --diem-package-name testing \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [Go demo file](examples/golang/stdlib_demo.go) as follows:
 (Note that `$DEST` must be an absolute path)
@@ -140,7 +144,8 @@ target/debug/generate-transaction-builders \
     --module-name diem-framework \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [Rust demo file](examples/rust/stdlib_demo.rs). (See [unit test](tests/generation.rs) for details.)
 
@@ -154,7 +159,8 @@ target/debug/generate-transaction-builders \
     --module-name diemStdlib \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 
 ### C#
@@ -167,7 +173,8 @@ target/debug/generate-transaction-builders \
     --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
     --target-source-dir "$DEST" \
     --with-custom-diem-code language/transaction-builder/generator/examples/csharp/custom_diem_code/*.cs -- \
-    "language/diem-framework/compiled"
+    "language/diem-framework/releases/legacy" \
+    "language/diem-framework/releases/artifacts/current"
 ```
 Next, you may copy and execute the [C# demo file](examples/csharp/StdlibDemo.cs) with:
 ```bash

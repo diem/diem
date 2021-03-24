@@ -15,21 +15,14 @@ pub use create::create_release;
 pub use verify::verify_release;
 
 pub mod test_utils {
-    use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
     use diem_types::account_config::CORE_CODE_ADDRESS;
     use vm::{file_format::empty_module, CompiledModule};
 
     pub fn release_modules() -> Vec<(Vec<u8>, CompiledModule)> {
-        let StdLibModules {
-            bytes_opt,
-            compiled_modules,
-        } = stdlib_modules(StdLibOptions::Compiled);
-        let mut modules = bytes_opt
-            .unwrap()
-            .iter()
-            .cloned()
-            .zip(compiled_modules.iter().cloned())
-            .collect::<Vec<_>>();
+        let mut modules: Vec<_> = diem_framework_releases::current_modules_with_blobs()
+            .into_iter()
+            .map(|(bytes, modules)| (bytes.clone(), modules.clone()))
+            .collect();
         // Publish a new dummy module
         let mut module = empty_module();
         module.address_identifiers[0] = CORE_CODE_ADDRESS;

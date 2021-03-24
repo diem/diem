@@ -23,13 +23,14 @@ pub fn iterate_directory(path: &Path) -> impl Iterator<Item = PathBuf> {
         .map(|entry| entry.path().to_path_buf())
 }
 
-pub fn time_it<F>(msg: &str, mut f: F)
+pub fn time_it<F, R>(msg: &str, f: F) -> R
 where
-    F: FnMut(),
+    F: FnOnce() -> R,
 {
     let now = Instant::now();
     print!("{} ... ", msg);
     let _ = std::io::stdout().flush();
-    f();
+    let res = f();
     println!("(took {:.3}s)", now.elapsed().as_secs_f64());
+    res
 }

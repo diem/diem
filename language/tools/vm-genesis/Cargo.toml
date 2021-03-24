@@ -24,7 +24,8 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-runtime = { path = "../../move-vm/runtime"}
 move-vm-types = { path = "../../move-vm/types" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework = { path = "../../diem-framework" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 transaction-builder = { path = "../../transaction-builder"}
 vm = { path = "../../vm" }
 diem-vm = { path = "../../diem-vm" }

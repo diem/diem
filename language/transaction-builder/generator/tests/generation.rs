@@ -18,12 +18,12 @@ fn get_diem_registry() -> Registry {
 
 fn get_stdlib_script_abis() -> Vec<ScriptABI> {
     // This is also a custom rule in diem/x.toml.
-    let legacy_path = Path::new("../../diem-framework/compiled/legacy/transaction_scripts/abi");
-    let new_abis = Path::new("../../diem-framework/compiled/script_abis");
+    let legacy_path = Path::new("../../diem-framework/releases/legacy/script_abis");
+    let new_abis = Path::new("../../diem-framework/releases/artifacts/current/script_abis");
     let mut abis =
-        buildgen::read_abis(&legacy_path).expect("reading legacy ABI files should not fail");
+        buildgen::read_abis(&[legacy_path]).expect("reading legacy ABI files should not fail");
     abis.extend(
-        buildgen::read_abis(&new_abis)
+        buildgen::read_abis(&[new_abis])
             .expect("reading new ABI files should not fail")
             .into_iter(),
     );

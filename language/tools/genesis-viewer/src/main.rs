@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::StdLibOptions;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -73,7 +72,8 @@ pub fn main() {
     // we default to `all`
     let arg_count = std::env::args().len();
     let args = Args::from_args();
-    let ws = vm_genesis::generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
+    let ws =
+        vm_genesis::generate_genesis_change_set_for_testing(vm_genesis::GenesisOptions::Compiled);
     if args.all || arg_count == 3 {
         print_all(&ws);
     } else {

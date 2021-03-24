@@ -202,6 +202,7 @@ members = [
 [workspace.move-to-diem-deps]
 diem_crates_in_language = [
     "diem-framework",
+    "diem-framework-releases",
     "diem-events-fetcher",
     "diem-validator-interface",
     "diem-transaction-replay",
@@ -233,6 +234,8 @@ existing_deps = [
     ["compiled-stdlib", "diem-proptest-helpers"],
     ["compiled-stdlib", "diem-framework"],
     ["compiled-stdlib", "diem-crypto"],
+    ["compiler", "diem-framework-releases"],
+    ["move-explain", "diem-framework-releases"],
     ["move-lang", "fallible"],
     ["move-lang", "diem-framework"],
     ["move-lang", "datatest-stable"],
@@ -250,6 +253,7 @@ existing_deps = [
     ["bytecode", "diem-types"],
     ["bytecode", "diem-temppath"],
     ["bytecode", "datatest-stable"],
+    ["bytecode-verifier-tests", "diem-framework-releases"],
     ["docgen", "diem-temppath"],
     ["docgen", "datatest-stable"],
     ["errmapgen", "datatest-stable"],
@@ -272,8 +276,10 @@ existing_deps = [
     ["move-cli", "diem-types"],
     ["move-cli", "diem-state-view"],
     ["move-cli", "diem-framework"],
+    ["move-cli", "diem-framework-releases"],
     ["move-cli", "datatest-stable"],
     ["move-coverage", "diem-types"],
+    ["resource-viewer", "diem-framework-releases"],
     ["resource-viewer", "diem-types"],
     ["resource-viewer", "diem-state-view"],
     ["vm", "num-variants"],
@@ -341,7 +347,7 @@ mark-changed = []
 
 [[determinator.path-rule]]
 # Required by get_stdlib_script_abis in transaction-builder-generator.
-globs = ["language/diem-framework/compiled/transaction_scripts/abi/**/*"]
+globs = ["language/diem-framework/releases/artifacts/current/script_abis/**/*"]
 mark-changed = ["transaction-builder-generator"]
 post-rule = "skip-rules"
 

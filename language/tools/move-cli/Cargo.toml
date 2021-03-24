@@ -18,7 +18,7 @@ structopt = "0.3.21"
 
 bcs = "0.1.2"
 bytecode-verifier = { path = "../../bytecode-verifier" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 disassembler = { path = "../disassembler" }
 errmapgen = { path = "../../move-prover/errmapgen" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

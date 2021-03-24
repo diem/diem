@@ -8,7 +8,6 @@ use diem_types::{
     transaction::{Transaction, TransactionPayload, WriteSetPayload},
 };
 
-use compiled_stdlib::{stdlib_modules as stdlib, StdLibModules, StdLibOptions};
 use diem_writeset_generator::{
     create_release, encode_custom_script, encode_halt_network_payload,
     encode_remove_validators_payload, verify_release,
@@ -16,8 +15,6 @@ use diem_writeset_generator::{
 use std::path::PathBuf;
 use structopt::StructOpt;
 use vm::CompiledModule;
-
-const GENESIS_MODULE_NAME: &str = "Genesis";
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -81,19 +78,12 @@ fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
         .map_err(|_| format_err!("Unable to write to path"))
 }
 
-fn stdlib_modules() -> Vec<(Vec<u8>, CompiledModule)> {
+fn diem_framework_modules() -> Vec<(Vec<u8>, CompiledModule)> {
     // Need to filter out Genesis module similiar to what is done in vmgenesis to make sure Genesis
     // module isn't published on-chain.
-    let StdLibModules {
-        bytes_opt,
-        compiled_modules,
-    } = stdlib(StdLibOptions::Compiled);
-    bytes_opt
-        .unwrap()
-        .iter()
-        .zip(compiled_modules)
-        .filter(|(_bytes, module)| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
-        .map(|(bytes, module)| (bytes.clone(), module.clone()))
+    diem_framework_releases::current_modules_with_blobs()
+        .into_iter()
+        .map(|(bytes, modules)| (bytes.clone(), modules.clone()))
         .collect()
 }
 
@@ -118,7 +108,7 @@ fn main() -> Result<()> {
             first_release,
             diem_version,
         } => {
-            let release_modules = stdlib_modules();
+            let release_modules = diem_framework_modules();
             create_release(
                 chain_id,
                 url,
@@ -150,7 +140,7 @@ fn main() -> Result<()> {
                     }
                 })?
             };
-            let release_modules = stdlib_modules();
+            let release_modules = diem_framework_modules();
             verify_release(chain_id, url, &writeset_payload, &release_modules)?;
             return Ok(());
         }

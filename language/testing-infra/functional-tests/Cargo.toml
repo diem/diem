@@ -29,7 +29,8 @@ termcolor = "1.1.2"
 datatest-stable = { path = "../../../common/datatest-stable" }
 mirai-annotations = "1.10.1"
 move-core-types = { path = "../../move-core/types" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework = { path = "../../diem-framework" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 itertools = "0.10.0"
 difference = "2.0.0"
 term_size = "0.3.2"

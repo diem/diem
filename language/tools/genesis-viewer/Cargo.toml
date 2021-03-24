@@ -16,6 +16,6 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 vm = { path = "../../vm" }
 resource-viewer = { path = "../resource-viewer"}
 vm-genesis = { path = "../vm-genesis" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 
 structopt = "0.3.21"

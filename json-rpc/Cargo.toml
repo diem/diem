@@ -26,7 +26,7 @@ proptest = { version = "1.0.0", optional = true }
 regex = { version = "1.4.3", default-features = false, features = ["std", "perf"] }
 
 bcs = "0.1.2"
-compiled-stdlib = { path = "../language/diem-framework/compiled" }
+diem-framework-releases= { path = "../language/diem-framework/releases" }
 diem-config = { path = "../config" }
 diem-crypto = { path = "../crypto/crypto" }
 diemdb = { path = "../storage/diemdb", optional = true }
@@ -58,7 +58,7 @@ diem-proptest-helpers = { path = "../common/proptest-helpers" }
 diem-temppath = { path = "../common/temppath" }
 diem-types = { path = "../types", features = ["fuzzing"] }
 vm-validator = { path = "../vm-validator" }
-compiled-stdlib = { path = "../language/diem-framework/compiled" }
+diem-framework-releases= { path = "../language/diem-framework/releases" }
 vm-genesis = { path = "../language/tools/vm-genesis" }
 executor = { path = "../execution/executor" }
 executor-types = { path = "../execution/executor-types" }

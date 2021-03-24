@@ -7,12 +7,12 @@ mod genesis_context;
 pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
-use compiled_stdlib::{
-    legacy::transaction_scripts::LegacyStdlibScript, stdlib_modules, StdLibOptions,
-};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
+};
+use diem_framework_releases::{
+    current_module_blobs, legacy::transaction_scripts::LegacyStdlibScript,
 };
 use diem_types::{
     account_address,
@@ -83,7 +83,7 @@ pub fn encode_genesis_transaction(
         &treasury_compliance_key,
         operator_assignments,
         operator_registrations,
-        stdlib_modules(StdLibOptions::Compiled).bytes_opt.unwrap(), // Must use compiled stdlib,
+        current_module_blobs(), // Must use compiled stdlib,
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::locked(LegacyStdlibScript::allowlist())),
         chain_id,
@@ -514,14 +514,22 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
     assert_eq!(new_epoch_events[0].sequence_number(), 0,);
 }
 
+/// An enum specifying whether the compiled stdlib/scripts should be used or freshly built versions
+/// should be used.
+#[derive(Debug, Eq, PartialEq)]
+pub enum GenesisOptions {
+    Compiled,
+    Fresh,
+}
+
 /// Generate an artificial genesis `ChangeSet` for testing
-pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
-    generate_test_genesis(
-        &stdlib_modules(stdlib_options).bytes_vec(),
-        VMPublishingOption::open(),
-        None,
-    )
-    .0
+pub fn generate_genesis_change_set_for_testing(genesis_options: GenesisOptions) -> ChangeSet {
+    let modules = match genesis_options {
+        GenesisOptions::Compiled => diem_framework_releases::current_module_blobs(),
+        GenesisOptions::Fresh => diem_framework::module_blobs(),
+    };
+
+    generate_test_genesis(modules, VMPublishingOption::open(), None).0
 }
 
 pub fn test_genesis_transaction() -> Transaction {
@@ -531,7 +539,7 @@ pub fn test_genesis_transaction() -> Transaction {
 
 pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
     generate_test_genesis(
-        &stdlib_modules(StdLibOptions::Compiled).bytes_vec(),
+        &current_module_blobs(),
         VMPublishingOption::locked(LegacyStdlibScript::allowlist()),
         count,
     )

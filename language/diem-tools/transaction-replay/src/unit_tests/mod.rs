@@ -5,7 +5,6 @@ mod bisection_tests;
 
 use crate::DiemValidatorInterface;
 use anyhow::{bail, Result};
-use compiled_stdlib::StdLibOptions;
 use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
@@ -14,7 +13,7 @@ use diem_types::{
     write_set::WriteOp,
 };
 use std::{collections::HashMap, convert::TryFrom};
-use vm_genesis::generate_genesis_change_set_for_testing;
+use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
 pub struct TestInterface {
     state_db: HashMap<(Version, AccountAddress), AccountStateBlob>,
@@ -45,7 +44,7 @@ impl TestInterface {
     }
 
     pub fn genesis() -> Self {
-        let changeset = generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
+        let changeset = generate_genesis_change_set_for_testing(GenesisOptions::Compiled);
         let mut state_db = HashMap::new();
         for (ap, op) in changeset.write_set().iter() {
             match op {

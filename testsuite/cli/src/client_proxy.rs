@@ -7,7 +7,6 @@ use crate::{
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
-use compiled_stdlib::StdLibOptions;
 use compiler::Compiler;
 use diem_client::{views, WaitForTransactionError};
 use diem_crypto::{
@@ -640,7 +639,7 @@ impl ClientProxy {
         match self.diem_root_account {
             Some(_) => self.association_transaction_with_local_diem_root_account(
                 TransactionPayload::WriteSet(WriteSetPayload::Direct(
-                    encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
+                    encode_stdlib_upgrade_transaction(),
                 )),
                 is_blocking,
             ),
@@ -1586,11 +1585,11 @@ impl ClientProxy {
 }
 
 // Update WriteSet
-fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
+fn encode_stdlib_upgrade_transaction() -> ChangeSet {
     let mut write_set = WriteSetMut::new(vec![]);
-    let stdlib_modules = compiled_stdlib::stdlib_modules(option);
-    let bytes = stdlib_modules.bytes_vec();
-    for (module, bytes) in stdlib_modules.compiled_modules.iter().zip(bytes) {
+    for module in diem_framework::modules() {
+        let mut bytes = vec![];
+        module.serialize(&mut bytes).unwrap();
         write_set.push((
             AccessPath::code_access_path(module.self_id()),
             WriteOp::Value(bytes),

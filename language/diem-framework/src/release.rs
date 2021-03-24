@@ -3,19 +3,47 @@
 
 use crate::{path_in_crate, save_binary};
 use log::LevelFilter;
+use move_core_types::language_storage::ModuleId;
 use std::{
     collections::BTreeMap,
-    fs::{create_dir_all, remove_dir_all},
+    fs::{create_dir_all, remove_dir_all, File},
+    io::Read,
     path::Path,
 };
-use vm::CompiledModule;
+use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
-fn recreate_dir(dir_path: &Path) {
+fn recreate_dir(dir_path: impl AsRef<Path>) {
+    let dir_path = dir_path.as_ref();
     remove_dir_all(&dir_path).unwrap_or(());
     create_dir_all(&dir_path).unwrap();
 }
 
-pub fn build_modules(output_path: &Path) -> BTreeMap<String, CompiledModule> {
+fn extract_old_apis(modules_path: impl AsRef<Path>) -> Option<BTreeMap<ModuleId, Module>> {
+    let modules_path = modules_path.as_ref();
+
+    if !modules_path.is_dir() {
+        println!(
+            "Warning: failed to extract old module APIs -- path \"{}\" is not a directory",
+            modules_path.to_string_lossy()
+        );
+        return None;
+    }
+
+    let mut old_module_apis = BTreeMap::new();
+    for f in move_stdlib::utils::iterate_directory(&modules_path) {
+        let mut bytes = Vec::new();
+        File::open(f)
+            .expect("Failed to open module bytecode file")
+            .read_to_end(&mut bytes)
+            .expect("Failed to read module bytecode file");
+        let m = CompiledModule::deserialize(&bytes).expect("Failed to deserialize module bytecode");
+        old_module_apis.insert(m.self_id(), Module::new(&m));
+    }
+    Some(old_module_apis)
+}
+
+fn build_modules(output_path: impl AsRef<Path>) -> BTreeMap<String, CompiledModule> {
+    let output_path = output_path.as_ref();
     recreate_dir(output_path);
 
     let compiled_modules = crate::build_stdlib();
@@ -31,13 +59,39 @@ pub fn build_modules(output_path: &Path) -> BTreeMap<String, CompiledModule> {
     compiled_modules
 }
 
+fn check_api_compatibility<'a, I>(old: &BTreeMap<ModuleId, Module>, new: I)
+where
+    I: IntoIterator<Item = &'a CompiledModule>,
+{
+    let mut is_linking_layout_compatible = true;
+    for module in new.into_iter() {
+        // extract new linking/layout API and check compatibility with old
+        let new_module_id = module.self_id();
+        if let Some(old_api) = old.get(&new_module_id) {
+            let new_api = Module::new(module);
+            let compatibility = Compatibility::check(old_api, &new_api);
+            if is_linking_layout_compatible && !compatibility.is_fully_compatible() {
+                println!("Found linking/layout-incompatible change:");
+                is_linking_layout_compatible = false
+            }
+            if !compatibility.struct_and_function_linking {
+                println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", new_module_id.name())
+            }
+            if !compatibility.struct_layout {
+                println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", new_module_id.name())
+            }
+        }
+    }
+}
+
 /// The documentation root template for the Diem Framework modules.
 const MODULE_DOC_TEMPLATE: &str = "modules/overview_template.md";
 
 /// Path to the references template.
 const REFERENCES_DOC_TEMPLATE: &str = "modules/references_template.md";
 
-pub fn generate_module_docs(output_path: &Path, with_diagram: bool) {
+fn generate_module_docs(output_path: impl AsRef<Path>, with_diagram: bool) {
+    let output_path = output_path.as_ref();
     recreate_dir(output_path);
 
     move_stdlib::build_doc(
@@ -66,8 +120,13 @@ const SCRIPT_DOC_TEMPLATE: &str = "script_documentation/script_documentation_tem
 /// The specification root template for scripts and stdlib.
 const SPEC_DOC_TEMPLATE: &str = "script_documentation/spec_documentation_template.md";
 
-pub fn generate_script_docs(output_path: &Path, modules_doc_path: &Path, with_diagram: bool) {
-    // recreate_dir(output_path);
+fn generate_script_docs(
+    output_path: impl AsRef<Path>,
+    modules_doc_path: impl AsRef<Path>,
+    with_diagram: bool,
+) {
+    let output_path = output_path.as_ref();
+    recreate_dir(output_path);
 
     move_stdlib::build_doc(
         // FIXME: make move_stdlib::build_doc use Path.
@@ -75,7 +134,7 @@ pub fn generate_script_docs(output_path: &Path, modules_doc_path: &Path, with_di
         // FIXME: links to move stdlib modules are broken since the tool does not currently
         // support multiple paths.
         // FIXME: use absolute path.
-        &modules_doc_path.to_string_lossy(),
+        &modules_doc_path.as_ref().to_string_lossy(),
         vec![
             path_in_crate(SCRIPT_DOC_TEMPLATE)
                 .to_string_lossy()
@@ -123,7 +182,11 @@ pub fn generate_script_docs(output_path: &Path, modules_doc_path: &Path, with_di
     )
 }
 
-pub fn generate_script_abis(output_path: &Path, compiled_scripts_path: &Path) {
+fn generate_script_abis(
+    output_path: impl AsRef<Path>,
+    legacy_compiled_scripts_path: impl AsRef<Path>,
+) {
+    let output_path = output_path.as_ref();
     recreate_dir(output_path);
 
     let options = move_prover::cli::Options {
@@ -136,7 +199,10 @@ pub fn generate_script_abis(output_path: &Path, compiled_scripts_path: &Path) {
         run_abigen: true,
         abigen: abigen::AbigenOptions {
             output_directory: output_path.to_string_lossy().to_string(),
-            compiled_script_directory: compiled_scripts_path.to_string_lossy().to_string(),
+            compiled_script_directory: legacy_compiled_scripts_path
+                .as_ref()
+                .to_string_lossy()
+                .to_string(),
         },
         ..Default::default()
     };
@@ -144,21 +210,20 @@ pub fn generate_script_abis(output_path: &Path, compiled_scripts_path: &Path) {
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
-pub fn generate_script_builder(
-    output_path: &Path,
-    abi_paths: impl IntoIterator<Item = impl AsRef<Path>>,
-) {
+fn generate_script_builder(output_path: impl AsRef<Path>, abi_paths: &[impl AsRef<Path>]) {
+    let output_path = output_path.as_ref();
+
     let abis: Vec<_> = abi_paths
-        .into_iter()
+        .iter()
         .flat_map(|path| {
-            transaction_builder_generator::read_abis(path.as_ref()).unwrap_or_else(|_| {
+            transaction_builder_generator::read_abis(&[path.as_ref()]).unwrap_or_else(|_| {
                 panic!("Failed to read ABIs at {}", path.as_ref().to_string_lossy())
             })
         })
         .collect();
 
     {
-        let mut file = std::fs::File::create(&output_path)
+        let mut file = std::fs::File::create(output_path)
             .expect("Failed to open file for Rust script build generation");
         transaction_builder_generator::rust::output(&mut file, &abis, /* local types */ true)
             .expect("Failed to generate Rust builders for Diem");
@@ -172,8 +237,9 @@ pub fn generate_script_builder(
         .expect("Failed to run rustfmt on generated code");
 }
 
-pub fn build_error_code_map(output_path: &Path) {
-    assert!(output_path.is_file());
+fn build_error_code_map(output_path: impl AsRef<Path>) {
+    let output_path = output_path.as_ref();
+    //assert!(output_path.is_file());
     recreate_dir(&output_path.parent().unwrap());
 
     let options = move_prover::cli::Options {
@@ -189,4 +255,122 @@ pub fn build_error_code_map(output_path: &Path) {
     };
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
+}
+
+/// Options to configure the generation of a release.
+pub struct ReleaseOptions {
+    pub check_layout_compatibility: bool,
+    pub build_modules: bool,
+    pub module_docs: bool,
+    pub script_docs: bool,
+    pub with_diagram: bool,
+    pub script_abis: bool,
+    pub script_builder: bool,
+    pub errmap: bool,
+    pub time_it: bool,
+}
+
+impl Default for ReleaseOptions {
+    fn default() -> Self {
+        Self {
+            check_layout_compatibility: false,
+            build_modules: true,
+            module_docs: true,
+            script_docs: true,
+            with_diagram: false,
+            script_abis: true,
+            script_builder: true,
+            errmap: true,
+            time_it: false,
+        }
+    }
+}
+
+fn run_step<F, R>(step_msg: Option<&str>, f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    match step_msg {
+        Some(msg) => move_stdlib::utils::time_it(msg, f),
+        None => f(),
+    }
+}
+
+/// Create a Diem Framework release in the specified directroy.
+///
+/// Unless being specifically disabled, the release will contain
+///   - Compiled Modules
+///   - Module Docs
+///   - Script Docs
+///   - Script ABIs
+///   - Script Builder
+///   - Error Descriptions
+pub fn create_release(output_path: impl AsRef<Path>, options: &ReleaseOptions) {
+    let output_path = output_path.as_ref();
+
+    let msg = |s: &'static str| if options.time_it { Some(s) } else { None };
+
+    if options.build_modules {
+        let modules_path = output_path.join("modules");
+        let mut old_module_apis = None;
+        if options.check_layout_compatibility {
+            old_module_apis = run_step(
+                msg("Extracting linking/layout APIs from old module bytecodes"),
+                || extract_old_apis(&modules_path),
+            );
+        }
+
+        let modules = run_step(msg("Compiling modules"), || build_modules(&modules_path));
+
+        if let Some(old_module_apis) = old_module_apis {
+            run_step(msg("Checking linking/layout compatibility"), || {
+                check_api_compatibility(&old_module_apis, modules.values())
+            })
+        }
+    }
+
+    let docs_path = output_path.join("docs");
+    let module_docs_path = docs_path.join("modules");
+    if options.module_docs {
+        run_step(msg("Generating module docs"), || {
+            generate_module_docs(&module_docs_path, options.with_diagram)
+        });
+    }
+    if options.script_docs {
+        run_step(msg("Generating script docs"), || {
+            generate_script_docs(
+                &docs_path.join("scripts"),
+                &module_docs_path,
+                options.with_diagram,
+            )
+        });
+    }
+
+    if options.script_abis {
+        let script_abis_path = output_path.join("script_abis");
+        run_step(msg("Generating script ABIs"), || {
+            generate_script_abis(&script_abis_path, &Path::new("releases/legacy/scripts"))
+        });
+        if options.script_builder {
+            run_step(msg("Generating Rust script builder"), || {
+                generate_script_builder(
+                    &output_path.join("transaction_script_builder.rs"),
+                    &[
+                        script_abis_path,
+                        Path::new("releases/legacy/script_abis").into(),
+                    ],
+                )
+            });
+        }
+    }
+
+    if options.errmap {
+        let mut err_exp_path = output_path
+            .join("error_description")
+            .join("error_description");
+        err_exp_path.set_extension("errmap");
+        run_step(msg("Generating error explanations"), || {
+            build_error_code_map(&err_exp_path)
+        });
+    }
 }

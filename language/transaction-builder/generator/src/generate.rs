@@ -33,7 +33,7 @@ enum Language {
 )]
 struct Options {
     /// Path to the directory containing ABI files in BCS encoding.
-    abi_directory: PathBuf,
+    abi_directories: Vec<PathBuf>,
 
     /// Language for code generation.
     #[structopt(long, possible_values = &Language::variants(), case_insensitive = true, default_value = "Python3")]
@@ -77,7 +77,7 @@ struct Options {
 fn main() {
     let options = Options::from_args();
     let abis =
-        buildgen::read_abis(&options.abi_directory).expect("Failed to read ABI in directory");
+        buildgen::read_abis(&options.abi_directories).expect("Failed to read ABI in directory");
 
     let install_dir = match options.target_source_dir {
         None => {

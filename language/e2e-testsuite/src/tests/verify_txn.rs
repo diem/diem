@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use compiler::Compiler;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     account_address::AccountAddress,
     account_config,

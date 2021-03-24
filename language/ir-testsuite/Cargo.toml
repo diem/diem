@@ -18,7 +18,7 @@ ir-to-bytecode = { path = "../compiler/ir-to-bytecode" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
-compiled-stdlib = { path = "../diem-framework/compiled" }
+diem-framework-releases = { path = "../diem-framework/releases" }
 vm = { path = "../vm" }
 move-core-types = { path = "../move-core/types" }
 

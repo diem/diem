@@ -64,8 +64,9 @@ pub fn upgrade_df(
     update_version_number: Option<u64>,
 ) {
     close_module_publishing(executor, dr_account, dr_seqno);
-    for compiled_module_bytes in
-        compiled_stdlib::stdlib_modules(compiled_stdlib::StdLibOptions::Compiled).bytes_vec()
+    for compiled_module_bytes in diem_framework_releases::current_module_blobs()
+        .iter()
+        .cloned()
     {
         let compiled_module_id = CompiledModule::deserialize(&compiled_module_bytes)
             .unwrap()

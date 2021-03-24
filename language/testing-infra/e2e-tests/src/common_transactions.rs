@@ -4,8 +4,8 @@
 //! Support for encoding transactions for common situations.
 
 use crate::account::Account;
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use compiler::Compiler;
+use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     account_config,
     transaction::{RawTransaction, Script, SignedTransaction, TransactionArgument},

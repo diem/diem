@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 set timeout 10
-
 set basedir [file normalize [file dirname $argv0]]
 cd $basedir
 

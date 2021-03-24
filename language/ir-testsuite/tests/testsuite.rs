@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use diem_types::account_address::AccountAddress;
 use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
@@ -22,8 +21,8 @@ struct IRCompiler {
 }
 
 impl IRCompiler {
-    fn new(stdlib_modules: Vec<CompiledModule>) -> Self {
-        let deps = stdlib_modules
+    fn new(diem_framework_modules: Vec<CompiledModule>) -> Self {
+        let deps = diem_framework_modules
             .into_iter()
             .map(|m| (m.self_id(), m))
             .collect();
@@ -63,11 +62,7 @@ impl Compiler for IRCompiler {
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
     testsuite::functional_tests(
-        IRCompiler::new(
-            stdlib_modules(StdLibOptions::Compiled)
-                .compiled_modules
-                .to_vec(),
-        ),
+        IRCompiler::new(diem_framework_releases::current_modules().to_vec()),
         path,
     )
 }

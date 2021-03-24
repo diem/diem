@@ -1,0 +1,25 @@
+[package]
+name = "diem-framework-releases"
+version = "0.1.0"
+edition = "2018"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem Framework Releases"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+
+
+[dependencies]
+diem-crypto = { path = "../../../crypto/crypto" }
+diem-types = { path = "../../../types" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+vm = { path = "../../vm" }
+
+anyhow = "1.0.38"
+include_dir = "0.6.0"
+bcs = "0.1.2"
+once_cell = "1.7.2"
+
+[dev-dependencies]
+bytecode-verifier = { path = "../../bytecode-verifier" }

@@ -12,8 +12,8 @@ fn check_that_version_control_has_no_unstaged_changes() -> Result<()> {
         .unwrap();
     if !(output.stdout.is_empty() && output.status.success()) {
         Err(anyhow!(
-            "Git repository should be in a clean state, but found:\n{}",
-            std::str::from_utf8(&output.stdout).unwrap_or("<binary>")
+            "Git repository should be in a clean state, but found:\n{}\n",
+            std::str::from_utf8(&output.stdout).unwrap_or("<binary>"),
         ))
     } else {
         Ok(())

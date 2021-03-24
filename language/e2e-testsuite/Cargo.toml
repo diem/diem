@@ -26,7 +26,7 @@ vm = { path = "../vm" }
 diem-vm = { path = "../diem-vm" }
 proptest = "1.0.0"
 diem-logger = { path = "../../common/logger" }
-compiled-stdlib = { path = "../diem-framework/compiled" }
+diem-framework-releases = { path = "../diem-framework/releases" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-writeset-generator = { path = "../diem-tools/writeset-transaction-generator"}
 

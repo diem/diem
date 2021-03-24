@@ -8,7 +8,6 @@ pub struct StringError(String);
 pub const SENDER: &str = "0x8675309";
 
 // These paths are relative to the move-lang directory.
-pub const STD_LIB_COMPILED_DIR: &str = "../diem-framework/compiled/stdlib";
 pub const FUNCTIONAL_TEST_DIR: &str = "functional-tests/tests";
 pub const MOVE_CHECK_DIR: &str = "tests/move_check";
 pub const PATH_TO_IR_TESTS: &str = "../ir-testsuite/tests";

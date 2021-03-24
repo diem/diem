@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use diem_framework::build_stdlib;
 use diem_transaction_replay::DiemDebugger;
 use diem_types::{account_address::AccountAddress, transaction::Version};
 use difference::Changeset;
@@ -188,7 +187,7 @@ fn main() -> Result<()> {
                 end,
                 if reload_stdlib {
                     let mut change_set = ChangeSet::new();
-                    for (_, module) in build_stdlib().into_iter() {
+                    for module in diem_framework::modules() {
                         let mut bytes = vec![];
                         module.serialize(&mut bytes)?;
                         change_set.publish_module(module.self_id(), bytes)?;

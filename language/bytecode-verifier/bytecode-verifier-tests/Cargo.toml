@@ -17,7 +17,7 @@ bytecode-verifier = { path = "../" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 invalid-mutations = { path = "../invalid-mutations" }
 move-core-types = { path = "../../move-core/types" }
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 vm = { path = "../../vm", features = ["fuzzing"] }
 
 [features]

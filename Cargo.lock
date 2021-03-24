@@ -656,7 +656,7 @@ name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier",
- "compiled-stdlib",
+ "diem-framework-releases",
  "diem-workspace-hack",
  "invalid-mutations",
  "move-core-types",
@@ -847,12 +847,13 @@ dependencies = [
  "anyhow",
  "bcs",
  "chrono",
- "compiled-stdlib",
  "compiler",
  "crash-handler",
  "diem-client",
  "diem-config",
  "diem-crypto",
+ "diem-framework",
+ "diem-framework-releases",
  "diem-infallible",
  "diem-logger",
  "diem-metrics",
@@ -989,27 +990,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "compiled-stdlib"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcs",
- "bytecode-verifier",
- "diem-crypto",
- "diem-framework",
- "diem-proptest-helpers",
- "diem-types",
- "diem-workspace-hack",
- "include_dir",
- "move-core-types",
- "once_cell",
- "proptest",
- "proptest-derive",
- "sha2",
- "vm",
-]
-
-[[package]]
 name = "compiler"
 version = "0.1.0"
 dependencies = [
@@ -1017,7 +997,7 @@ dependencies = [
  "bcs",
  "bytecode-source-map",
  "bytecode-verifier",
- "compiled-stdlib",
+ "diem-framework-releases",
  "diem-workspace-hack",
  "ir-to-bytecode",
  "move-core-types",
@@ -1614,17 +1594,36 @@ dependencies = [
  "diem-crypto",
  "diem-types",
  "diem-workspace-hack",
+ "dir-diff",
  "docgen",
  "errmapgen",
  "log",
+ "move-core-types",
  "move-lang",
  "move-prover",
  "move-stdlib",
+ "once_cell",
  "rayon",
  "sha2",
+ "tempfile",
  "transaction-builder-generator",
  "vm",
  "walkdir",
+]
+
+[[package]]
+name = "diem-framework-releases"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs",
+ "bytecode-verifier",
+ "diem-crypto",
+ "diem-types",
+ "diem-workspace-hack",
+ "include_dir",
+ "once_cell",
+ "vm",
 ]
 
 [[package]]
@@ -1765,10 +1764,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "diem-client",
  "diem-config",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-genesis-tool",
  "diem-json-rpc-types",
  "diem-logger",
@@ -2211,9 +2210,9 @@ name = "diem-storage-inspector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "compiled-stdlib",
  "diem-config",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-logger",
  "diem-types",
  "diem-workspace-hack",
@@ -2301,8 +2300,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "diem-framework",
+ "diem-framework-releases",
  "diem-state-view",
  "diem-types",
  "diem-validator-interface",
@@ -2392,8 +2391,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-logger",
  "diem-metrics",
  "diem-state-view",
@@ -2494,10 +2493,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "diem-crypto",
  "diem-crypto-derive",
  "diem-framework",
+ "diem-framework-releases",
  "diem-state-view",
  "diem-transaction-replay",
  "diem-types",
@@ -2882,11 +2881,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "compiler",
  "consensus-types",
  "diem-config",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-genesis-tool",
  "diem-infallible",
  "diem-logger",
@@ -3088,10 +3087,11 @@ dependencies = [
  "aho-corasick",
  "anyhow",
  "bytecode-verifier",
- "compiled-stdlib",
  "datatest-stable",
  "diem-config",
  "diem-crypto",
+ "diem-framework",
+ "diem-framework-releases",
  "diem-state-view",
  "diem-types",
  "diem-vm",
@@ -3274,7 +3274,7 @@ name = "genesis-viewer"
 version = "0.1.0"
 dependencies = [
  "bcs",
- "compiled-stdlib",
+ "diem-framework-releases",
  "diem-types",
  "diem-workspace-hack",
  "resource-viewer",
@@ -3757,8 +3757,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytecode-verifier",
- "compiled-stdlib",
  "datatest-stable",
+ "diem-framework-releases",
  "diem-types",
  "diem-workspace-hack",
  "functional-tests",
@@ -3977,10 +3977,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
  "compiler",
  "diem-config",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-proptest-helpers",
  "diem-state-view",
  "diem-types",
@@ -4006,9 +4006,9 @@ version = "0.1.0"
 dependencies = [
  "bcs",
  "bytecode-verifier",
- "compiled-stdlib",
  "compiler",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-logger",
  "diem-transaction-builder",
  "diem-types",
@@ -4253,9 +4253,9 @@ dependencies = [
  "anyhow",
  "bcs",
  "bytecode-verifier",
- "compiled-stdlib",
  "datatest-stable",
  "diem-framework",
+ "diem-framework-releases",
  "diem-state-view",
  "diem-types",
  "diem-vm",
@@ -4323,7 +4323,7 @@ name = "move-explain"
 version = "0.1.0"
 dependencies = [
  "bcs",
- "compiled-stdlib",
+ "diem-framework-releases",
  "diem-workspace-hack",
  "errmapgen",
  "move-core-types",
@@ -5885,7 +5885,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
- "compiled-stdlib",
+ "diem-framework-releases",
  "diem-state-view",
  "diem-types",
  "diem-workspace-hack",
@@ -6647,13 +6647,13 @@ dependencies = [
  "backup-cli",
  "bcs",
  "cli",
- "compiled-stdlib",
  "debug-interface",
  "diem-client",
  "diem-config",
  "diem-crypto",
  "diem-events-fetcher",
  "diem-framework",
+ "diem-framework-releases",
  "diem-genesis-tool",
  "diem-global-constants",
  "diem-infallible",
@@ -6747,9 +6747,9 @@ dependencies = [
  "bcs",
  "bytes",
  "channel",
- "compiled-stdlib",
  "diem-config",
  "diem-crypto",
+ "diem-framework-releases",
  "diem-genesis-tool",
  "diem-infallible",
  "diem-logger",
@@ -7782,9 +7782,10 @@ dependencies = [
  "anyhow",
  "bcs",
  "bytecode-verifier",
- "compiled-stdlib",
  "diem-config",
  "diem-crypto",
+ "diem-framework",
+ "diem-framework-releases",
  "diem-proptest-helpers",
  "diem-state-view",
  "diem-types",

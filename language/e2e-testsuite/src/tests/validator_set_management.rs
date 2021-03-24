@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::{self, StdLibOptions};
 use diem_types::{
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{TransactionOutput, TransactionStatus, WriteSetPayload},
@@ -119,9 +118,7 @@ fn validator_add() {
 #[test]
 fn validator_add_max_number() {
     let mut executor = FakeExecutor::custom_genesis(
-        compiled_stdlib::stdlib_modules(StdLibOptions::Compiled)
-            .bytes_opt
-            .unwrap(),
+        diem_framework_releases::current_module_blobs(),
         Some(256),
         VMPublishingOption::open(),
     );

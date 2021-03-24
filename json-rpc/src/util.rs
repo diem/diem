@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::legacy::transaction_scripts;
 use diem_crypto::HashValue;
+use diem_framework_releases::legacy::transaction_scripts;
 use diem_json_rpc_types::views::{
     BytesView, MoveAbortExplanationView, ScriptView, TransactionDataView, VMStatusView,
 };

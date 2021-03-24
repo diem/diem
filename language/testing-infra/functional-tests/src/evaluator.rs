@@ -7,7 +7,6 @@ use crate::{
     errors::*,
 };
 use bytecode_verifier::{cyclic_dependencies, dependencies};
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use diem_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use diem_state_view::StateView;
 use diem_types::{
@@ -809,16 +808,15 @@ pub fn eval<TComp: Compiler>(
             FakeExecutor::from_fresh_genesis()
         }
     } else {
-        let stdlib_modules = stdlib_modules(if compiler.use_compiled_genesis() {
-            StdLibOptions::Compiled
+        let module_blobs = if compiler.use_compiled_genesis() {
+            diem_framework_releases::current_module_blobs()
         } else {
-            StdLibOptions::Fresh
-        });
-        let module_bytes = stdlib_modules.bytes_vec();
+            diem_framework::module_blobs()
+        };
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            &module_bytes,
+            &module_blobs,
             Some(config.validator_accounts),
             VMPublishingOption::open(),
         )

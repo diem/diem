@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::test_utils::{diem_swarm_utils::get_json_rpc_url, setup_swarm_and_client_proxy};
-use compiled_stdlib::{stdlib_modules, StdLibModules, StdLibOptions};
+use diem_framework_releases::current_modules_with_blobs;
 use diem_types::{
     chain_id::ChainId, on_chain_config::DIEM_MAX_KNOWN_VERSION, transaction::TransactionPayload,
 };
@@ -19,15 +19,9 @@ fn test_move_release_flow() {
     let validator_interface = JsonRpcDebuggerInterface::new(&url).unwrap();
 
     let chain_id = ChainId::test();
-    let StdLibModules {
-        bytes_opt: old_modules_bytes,
-        compiled_modules: old_compiled_modules,
-    } = stdlib_modules(StdLibOptions::Compiled);
-    let old_modules = old_modules_bytes
-        .unwrap()
-        .iter()
-        .cloned()
-        .zip(old_compiled_modules.iter().cloned())
+    let old_modules = current_modules_with_blobs()
+        .into_iter()
+        .map(|(bytes, modules)| (bytes.clone(), modules.clone()))
         .collect::<Vec<_>>();
 
     let release_modules = release_modules();

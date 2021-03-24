@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.21"
-compiled-stdlib = { path = "../../diem-framework/compiled" }
+diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 errmapgen = { path = "../../move-prover/errmapgen" }
 move-core-types = { path = "../../move-core/types" }

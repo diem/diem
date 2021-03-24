@@ -50,7 +50,7 @@ bytes = "1.0.1"
 proptest = "1.0.0"
 
 channel = { path = "../common/channel" }
-compiled-stdlib = { path = "../language/diem-framework/compiled" }
+diem-framework-releases= { path = "../language/diem-framework/releases" }
 diem-crypto = { path = "../crypto/crypto" }
 diem-genesis-tool = {path = "../config/management/genesis", features = ["testing"] }
 diem-mempool = { path = "../mempool", features = ["fuzzing"] }

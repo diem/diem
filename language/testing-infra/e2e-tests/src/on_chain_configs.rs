@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account::Account, executor::FakeExecutor};
-use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
     on_chain_config::DiemVersion,
     transaction::{Script, TransactionArgument},

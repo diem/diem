@@ -5,6 +5,7 @@
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Address};
+use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -84,7 +85,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
     res
 }
 
-pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
+pub(crate) fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_files, compiled_units) = move_compile_and_report(
         &diem_stdlib_files(),
         &[],
@@ -131,6 +132,32 @@ pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
         .expect("stdlib module has cyclic dependencies");
     }
     modules
+}
+
+static MODULES: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
+    build_stdlib()
+        .into_iter()
+        .map(|(_key, value)| value)
+        .collect()
+});
+
+static MODULE_BLOBS: Lazy<Vec<Vec<u8>>> = Lazy::new(|| {
+    MODULES
+        .iter()
+        .map(|module| {
+            let mut bytes = vec![];
+            module.serialize(&mut bytes).unwrap();
+            bytes
+        })
+        .collect()
+});
+
+pub fn modules() -> &'static [CompiledModule] {
+    &MODULES
+}
+
+pub fn module_blobs() -> &'static [Vec<u8>] {
+    &MODULE_BLOBS
 }
 
 fn save_binary(path: &Path, binary: &[u8]) -> bool {
