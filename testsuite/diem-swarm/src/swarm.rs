@@ -444,7 +444,7 @@ impl DiemSwarm {
 
         // TODO: Maybe wait for mroe than one on full nodes
         let expected_peers = match self.node_type {
-            NodeType::Validator => self.nodes.len() - 1,
+            NodeType::Validator => self.nodes.len().saturating_sub(1),
             NodeType::ValidatorFullNode => 1,
             NodeType::PublicFullNode => 1,
         };

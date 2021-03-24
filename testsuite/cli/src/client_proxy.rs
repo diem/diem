@@ -214,6 +214,11 @@ impl ClientProxy {
         })
     }
 
+    /// Gets account data for the indexed address
+    pub fn get_account(&self, address_num: usize) -> Option<&AccountData> {
+        self.accounts.get(address_num)
+    }
+
     fn get_account_data(&self, address: &AccountAddress) -> Result<(usize, &AccountData)> {
         for (index, acc) in self.accounts.iter().enumerate() {
             if &acc.address == address {
