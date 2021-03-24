@@ -143,6 +143,43 @@ jobs:
         if: ${{ failure() }}
       - uses: ./.github/actions/build-teardown
 
+  prover-inconsistency-test:
+    runs-on: ubuntu-latest-xl
+    container:
+      image: diem/build_environment:${{ matrix.target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    env:
+      MESSAGE_PAYLOAD_FILE: /tmp/message
+    strategy:
+      fail-fast: false
+      matrix:
+        target-branch: [main, release-1.1]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ matrix.target-branch }}
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: Run the prover tests with the inconsistency check
+        run: |
+          cd /opt/git/diem/
+          MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
+          sccache -s
+        env:
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - uses: ./.github/actions/slack-file
+        with:
+          webhook: ${{ secrets.WEBHOOK_MOVE_PROVER }}
+          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+        if: ${{ failure() }}
+      - uses: ./.github/actions/build-teardown
+
   prune-docker-images:
     runs-on: ubuntu-latest
     steps:
