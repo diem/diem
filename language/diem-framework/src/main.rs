@@ -34,7 +34,7 @@ const COMPILED_SCRIPTS_ABI_DIR: &str = "compiled/script_abis";
 const LEGACY_COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/legacy/transaction_scripts/abi";
 /// Where to write generated transaction builders.
 const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
-    "compiled/src/shim/tmp_new_transaction_script_builders.rs";
+    "../../client/transaction-builder/src/stdlib.rs";
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
 // modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for

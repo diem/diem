@@ -5,9 +5,6 @@
 
 // Old transaction scripts, and ways of handling them and getting their name etc.
 pub mod legacy;
-// Temporary shim code that replicated the above logic for any new scripts between now, and when we
-// fully support script functions.
-pub mod shim;
 
 use crate::legacy::transaction_scripts::LegacyStdlibScript;
 use anyhow::Result;

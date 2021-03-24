@@ -3,7 +3,6 @@
 
 use serde_json::json;
 
-use compiled_stdlib::shim::tmp_new_transaction_script_builders;
 use diem_crypto::hash::CryptoHash;
 use diem_transaction_builder::stdlib;
 use diem_types::{
@@ -584,7 +583,7 @@ fn create_test_cases() -> Vec<Test> {
                     let txn1 = {
                         let account1 = env.get_account(0, 0);
                         let account2 = env.get_account(1, 0);
-                        let script = diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script(
+                        let script = stdlib::encode_peer_to_peer_with_metadata_script(
                             xus_tag(),
                             account2.address,
                             100,
@@ -617,7 +616,7 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "Upgrade diem version",
             run: |env: &mut testing::Env| {
-                let script = tmp_new_transaction_script_builders::encode_update_diem_version_script(0, 2);
+                let script = stdlib::encode_update_diem_version_script(0, 2);
                 let txn = env.create_txn(&env.root, script);
                 env.submit_and_wait(txn);
             },
@@ -675,7 +674,7 @@ fn create_test_cases() -> Vec<Test> {
                     result["transaction"]
                 );
 
-                let script = tmp_new_transaction_script_builders::encode_burn_with_amount_script_function(
+                let script = stdlib::encode_burn_with_amount_script_function(
                     xus_tag(), 0, env.dd.address, 100
                 );
                 let burn_txn = env.create_txn_by_payload(&env.tc, script);
@@ -724,7 +723,7 @@ fn create_test_cases() -> Vec<Test> {
                     env.create_txn(&env.dd, stdlib::encode_preburn_script(xus_tag(), 100));
                 env.submit_and_wait(txn);
 
-                let script = tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script_function(xus_tag(), env.dd.address, 100);
+                let script = stdlib::encode_cancel_burn_with_amount_script_function(xus_tag(), env.dd.address, 100);
                 let cancel_burn_txn = env.create_txn_by_payload(&env.tc, script);
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();

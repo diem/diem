@@ -23,7 +23,6 @@ const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("legacy/transaction_scripts/abi");
 pub enum LegacyStdlibScript {
     AddCurrencyToAccount,
     AddRecoveryRotationCapability,
-    AddScriptAllowList,
     AddValidatorAndReconfigure,
     Burn,
     BurnTxnFees,
@@ -66,7 +65,6 @@ impl LegacyStdlibScript {
         vec![
             AddCurrencyToAccount,
             AddRecoveryRotationCapability,
-            AddScriptAllowList,
             AddValidatorAndReconfigure,
             Burn,
             BurnTxnFees,
@@ -197,7 +195,6 @@ impl fmt::Display for LegacyStdlibScript {
                 AddValidatorAndReconfigure => "add_validator_and_reconfigure",
                 AddCurrencyToAccount => "add_currency_to_account",
                 AddRecoveryRotationCapability => "add_recovery_rotation_capability",
-                AddScriptAllowList => "add_to_script_allow_list",
                 Burn => "burn",
                 BurnTxnFees => "burn_txn_fees",
                 CancelBurn => "cancel_burn",

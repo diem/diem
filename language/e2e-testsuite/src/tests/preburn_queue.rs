@@ -1,7 +1,6 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::shim::tmp_new_transaction_script_builders;
 use diem_types::{account_config, transaction::TransactionOutput};
 use language_e2e_tests::{account::Account, current_function_name, executor::FakeExecutor, utils};
 use move_core_types::vm_status::{DiscardedVMStatus, KeptVMStatus};
@@ -85,14 +84,12 @@ fn burn_with_amount_new(
 ) -> Option<TransactionOutput> {
     let txn = tc_account
         .transaction()
-        .payload(
-            tmp_new_transaction_script_builders::encode_burn_with_amount_script_function(
-                account_config::xus_tag(),
-                0,
-                account_config::testnet_dd_account_address(),
-                amount,
-            ),
-        )
+        .payload(encode_burn_with_amount_script_function(
+            account_config::xus_tag(),
+            0,
+            account_config::testnet_dd_account_address(),
+            amount,
+        ))
         .sequence_number(*tc_seqno)
         .sign();
     if should_fail {
@@ -113,13 +110,11 @@ fn cancel_burn_with_amount_new(
 ) -> Option<TransactionOutput> {
     let txn = tc_account
         .transaction()
-        .payload(
-            tmp_new_transaction_script_builders::encode_cancel_burn_with_amount_script_function(
-                account_config::xus_tag(),
-                account_config::testnet_dd_account_address(),
-                amount,
-            ),
-        )
+        .payload(encode_cancel_burn_with_amount_script_function(
+            account_config::xus_tag(),
+            account_config::testnet_dd_account_address(),
+            amount,
+        ))
         .sequence_number(*tc_seqno)
         .sign();
     if should_fail {
