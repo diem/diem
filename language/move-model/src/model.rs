@@ -1433,6 +1433,11 @@ impl<'env> ModuleEnv<'env> {
         &self.data.module
     }
 
+    /// Gets the source map for the module
+    pub fn get_source_map(&'env self) -> &'env SourceMap<MoveIrLoc> {
+        &self.data.source_map
+    }
+
     /// Gets a `NamedConstantEnv` in this module by name
     pub fn find_named_constant(&'env self, name: Symbol) -> Option<NamedConstantEnv<'env>> {
         let id = NamedConstantId(name);

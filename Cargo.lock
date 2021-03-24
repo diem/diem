@@ -4449,6 +4449,7 @@ dependencies = [
  "datatest-stable",
  "diem-temppath",
  "diem-workspace-hack",
+ "disassembler",
  "docgen",
  "errmapgen",
  "futures",
