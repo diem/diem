@@ -109,7 +109,7 @@ fn test_client_waypoints() {
     );
 
     // Start next epoch
-    let peer_id = env.validator_swarm.get_validator(0).unwrap().peer_id();
+    let peer_id = env.validator_swarm.get_node(0).unwrap().peer_id();
     let op_tool = get_op_tool(&env.validator_swarm, 1);
     let diem_root = load_diem_root_storage(&env.validator_swarm, 0);
     let _ = op_tool
@@ -183,7 +183,7 @@ fn test_concurrent_transfers_single_node() {
 fn test_trace() {
     let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
 
-    let port = env.validator_swarm.get_validators_debug_ports()[0];
+    let port = env.validator_swarm.get_node(0).unwrap().debug_port();
     let mut debug_client = NodeDebugClient::new("localhost", port);
 
     client.create_next_account(false).unwrap();

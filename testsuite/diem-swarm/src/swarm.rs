@@ -117,6 +117,12 @@ impl DiemNode {
         self.config.json_rpc.address.port()
     }
 
+    pub fn debug_port(&self) -> u16 {
+        self.config
+            .debug_interface
+            .admission_control_node_debug_port
+    }
+
     pub fn config(&self) -> &NodeConfig {
         &self.config
     }
@@ -583,24 +589,7 @@ impl DiemSwarm {
         self.nodes.get(&node_id).map(|node| node.port()).unwrap()
     }
 
-    /// Vector with the peer ids of the validators in the swarm.
-    pub fn get_validators_ids(&self) -> Vec<String> {
-        self.nodes.keys().cloned().collect()
-    }
-
-    /// Vector with the debug ports of all the validators in the swarm.
-    pub fn get_validators_debug_ports(&self) -> Vec<u16> {
-        self.config
-            .config_files
-            .iter()
-            .map(|path| {
-                let config = NodeConfig::load(&path).unwrap();
-                config.debug_interface.admission_control_node_debug_port
-            })
-            .collect()
-    }
-
-    pub fn get_validator(&self, idx: usize) -> Option<&DiemNode> {
+    pub fn get_node(&self, idx: usize) -> Option<&DiemNode> {
         let node_id = format!("{}", idx);
         self.nodes.get(&node_id)
     }
