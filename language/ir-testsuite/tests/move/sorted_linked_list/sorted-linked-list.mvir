@@ -258,8 +258,8 @@ module SortedLinkedList
 //! sender: alice
 //creating a new list _@alice
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.create_new_list(move(account));
+main(account: signer) {
+    SortedLinkedList.create_new_list(&account);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -268,8 +268,8 @@ main(account: &signer) {
 //! sender: alice
 //attempting to create another list with the same head
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.create_new_list(move(account));
+main(account: signer) {
+    SortedLinkedList.create_new_list(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 1,"
@@ -278,8 +278,8 @@ main(account: &signer) {
 //! sender: bob
 //adding a new element to Alice's list _@alice -> 10@bob
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 10, {{alice}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 10, {{alice}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -288,8 +288,8 @@ main(account: &signer) {
 //! sender: bob
 //adding another Bob node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 12, {{alice}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 12, {{alice}});
     return;
 }
 // check: "Keep(ABORTED { code: 3,"
@@ -298,8 +298,8 @@ main(account: &signer) {
 //! sender: carol
 //adding a node that does not satisfy the order between Alice and Bob _@alice -> 15@carol -> 10@bob
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 15, {{alice}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 15, {{alice}});
     return;
 }
 // check: "Keep(ABORTED { code: 7,"
@@ -308,8 +308,8 @@ main(account: &signer) {
 //! sender: carol
 //adding a node between Alice and Bob _@alice -> 5@carol -> 10@bob
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 5, {{alice}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 5, {{alice}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -318,8 +318,8 @@ main(account: &signer) {
 //! sender: david
 //adding a node that does not satisfy order after Bob _@alice -> 5@carol -> 10@bob -> 4@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 4, {{bob}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 4, {{bob}});
     return;
 }
 // check: "Keep(ABORTED { code: 6,"
@@ -328,8 +328,8 @@ main(account: &signer) {
 //! sender: david
 //adding a node after Bob _@alice -> 5@carol -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 15, {{bob}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 15, {{bob}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -338,8 +338,8 @@ main(account: &signer) {
 //! sender: frank
 //adding a node after a non-existent node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 15, {{eve}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 15, {{eve}});
     return;
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -348,8 +348,8 @@ main(account: &signer) {
 //! sender: eve
 //adding a node after Carol with the same value _@alice -> 5@carol -> 5@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 5, {{carol}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 5, {{carol}});
     return;
 }
 // check: "Keep(ABORTED { code: 6,"
@@ -358,8 +358,8 @@ main(account: &signer) {
 //! sender: carol
 //adding a node after itself
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 5, {{carol}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 5, {{carol}});
     return;
 }
 // check: "Keep(ABORTED { code: 3,"
@@ -368,8 +368,8 @@ main(account: &signer) {
 //! sender: eve
 //adding a node between Carol and Bob _@alice -> 5@carol -> 7@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 7, {{carol}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 7, {{carol}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -378,8 +378,8 @@ main(account: &signer) {
 //! sender: carol
 //remove node  _@alice -> 7@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_node_owner(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_node_owner(&account);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -388,8 +388,8 @@ main(account: &signer) {
 //! sender: carol
 //remove node again
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_node_owner(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_node_owner(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 11,"
@@ -398,8 +398,8 @@ main(account: &signer) {
 //! sender: carol
 //add a new carol node elsewhere in the list _@alice -> 7@eve -> 9@carol -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.add_node(copy(account), 9, {{eve}});
+main(account: signer) {
+    SortedLinkedList.add_node(&account, 9, {{eve}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -408,8 +408,8 @@ main(account: &signer) {
 //! sender: alice
 //Alice removes Bob's node _@alice -> 7@eve -> 9@carol -> 15@david
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(move(account), {{bob}});
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{bob}});
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -418,8 +418,8 @@ main(account: &signer) {
 //! sender: bob
 //Bob tries to remove his now-non-existent node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_node_owner(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_node_owner(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 11,"
@@ -428,8 +428,8 @@ main(account: &signer) {
 //! sender: bob
 //A non-owner tries to remove a node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(move(account), {{david}});
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{david}});
     return;
 }
 // check: "Keep(ABORTED { code: 15,"
@@ -438,8 +438,8 @@ main(account: &signer) {
 //! sender: alice
 //Alice attempts to remove her head node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(move(account), {{alice}});
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{alice}});
     return;
 }
 // check: "Keep(ABORTED { code: 14,"
@@ -448,8 +448,8 @@ main(account: &signer) {
 //! sender: alice
 //Alice attempts to remove her head node
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_node_owner(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_node_owner(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 12,"
@@ -458,8 +458,8 @@ main(account: &signer) {
 //! sender: alice
 //Alice attempts to remove her list while it is not empty
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_list(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_list(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 9,"
@@ -468,11 +468,11 @@ main(account: &signer) {
 //! sender: alice
 //Alice empties her list and removes it using the wrong method
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{alice}});
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{carol}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{david}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{eve}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{alice}});
     return;
 }
 // check: "Keep(ABORTED { code: 14,"
@@ -481,11 +481,11 @@ main(account: &signer) {
 //! sender: alice
 //Alice empties her list and removes it using the wrong method
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
-    SortedLinkedList.remove_node_by_node_owner(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{david}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{carol}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{eve}});
+    SortedLinkedList.remove_node_by_node_owner(&account);
     return;
 }
 // check: "Keep(ABORTED { code: 12,"
@@ -494,11 +494,11 @@ main(account: &signer) {
 //! sender: alice
 //Alice empties her list and removes it
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
-    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
-    SortedLinkedList.remove_list(move(account));
+main(account: signer) {
+    SortedLinkedList.remove_node_by_list_owner(&account, {{eve}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{david}});
+    SortedLinkedList.remove_node_by_list_owner(&account, {{carol}});
+    SortedLinkedList.remove_list(&account);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -507,8 +507,8 @@ main(account: &signer) {
 //! sender: bob
 //Bob creates a new list _@bob
 import {{sys}}.SortedLinkedList;
-main(account: &signer) {
-    SortedLinkedList.create_new_list(move(account));
+main(account: signer) {
+    SortedLinkedList.create_new_list(&account);
     return;
 }
 // check: "Keep(EXECUTED)"

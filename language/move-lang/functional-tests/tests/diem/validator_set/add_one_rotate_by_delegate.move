@@ -15,7 +15,8 @@ stdlib_script::create_validator_operator_account
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         // register alice as bob's delegate
         ValidatorConfig::set_operator(account, {{alice}});
     }
@@ -28,7 +29,8 @@ script {
 script {
     use 0x1::ValidatorConfig;
     // test alice can rotate bob's consensus public key
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         assert(ValidatorConfig::get_operator({{bob}}) == {{alice}}, 44);
         ValidatorConfig::set_config(account, {{bob}}, x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", x"", x"");
 
@@ -45,7 +47,8 @@ script {
 script {
     use 0x1::ValidatorConfig;
     // test bob can not rotate his public key because it delegated
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         // check initial key was "beefbeef"
         let config = ValidatorConfig::get_config({{bob}});
         assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", 99);
@@ -67,7 +70,8 @@ script {
 script {
     use 0x1::DiemSystem;
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
         // the local validator's key is now different from the one in the validator set
         assert(ValidatorConfig::get_consensus_pubkey(&DiemSystem::get_validator_config({{bob}})) !=

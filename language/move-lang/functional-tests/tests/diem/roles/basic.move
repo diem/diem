@@ -6,7 +6,8 @@
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::grant_diem_root_role(account);
 }
 }
@@ -16,7 +17,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::grant_treasury_compliance_role(account, account);
 }
 }
@@ -26,7 +28,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_designated_dealer_role(account, account);
 }
 }
@@ -36,7 +39,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_designated_dealer_role(account, account);
 }
 }
@@ -47,7 +51,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_designated_dealer<XUS>(
         account,
         {{bob}},
@@ -63,7 +68,8 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_validator_account(
         account,
         {{bob}},
@@ -78,7 +84,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_validator_role(account, account);
 }
 }
@@ -88,7 +95,8 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_validator_operator_account(
         account,
         {{bob}},
@@ -103,7 +111,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_validator_operator_role(account, account);
 }
 }
@@ -114,7 +123,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
         account,
         {{bob}},
@@ -130,7 +140,8 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_parent_vasp_role(account, account);
 }
 }
@@ -141,7 +152,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_child_vasp_account<XUS>(
         account,
         {{bob}},
@@ -163,7 +175,8 @@ stdlib_script::create_parent_vasp_account
 //! sender: vasp
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Roles::new_child_vasp_role(account, account);
 }
 }
@@ -173,7 +186,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::Roles;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(!Roles::can_hold_balance(account), 1);
 }
 }
@@ -184,7 +198,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Roles;
 use 0x1::Signer;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(!Roles::has_validator_role(account), 1);
     assert(!Roles::has_validator_operator_role(account), 1);
     assert(Roles::get_role_id(Signer::address_of(account)) == 0, 1);
@@ -197,7 +212,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Roles;
 use 0x1::Signer;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(Roles::has_treasury_compliance_role(account), 0);
     assert(Roles::get_role_id(Signer::address_of(account)) == 1, 1);
 }
@@ -207,7 +223,8 @@ fun main(account: &signer) {
 //! new-transaction
 script {
 use 0x1::Roles;
-fun main(_account: &signer) {
+fun main(_account: signer) {
+    let _account = &_account;
     let _ = Roles::get_role_id(0x7); // does not exist, should abort
 }
 }

@@ -44,16 +44,16 @@ use 0x1::SlidingNonce;
 /// * `Script::rotate_dual_attestation_info`
 
 fun create_parent_vasp_account<CoinType: store>(
-    tc_account: &signer,
+    tc_account: signer,
     sliding_nonce: u64,
     new_account_address: address,
     auth_key_prefix: vector<u8>,
     human_name: vector<u8>,
     add_all_currencies: bool
 ) {
-    SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+    SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
     DiemAccount::create_parent_vasp_account<CoinType>(
-        tc_account,
+        &tc_account,
         new_account_address,
         auth_key_prefix,
         human_name,

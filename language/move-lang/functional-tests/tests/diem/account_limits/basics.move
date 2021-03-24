@@ -13,7 +13,8 @@ module Holder {
 script {
 use 0x1::AccountLimits;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Holder::hold(
         account,
         AccountLimits::grant_mutation_capability(account)
@@ -27,7 +28,9 @@ fun main(account: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(dr: &signer, bob_account: &signer) {
+fun main(dr: signer, bob_account: signer) {
+    let dr = &dr;
+    let bob_account = &bob_account;
     AccountLimits::publish_unrestricted_limits<XUS>(bob_account);
     AccountLimits::publish_window<XUS>(dr, bob_account, {{bob}});
 }
@@ -39,7 +42,9 @@ fun main(dr: &signer, bob_account: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(dr: &signer, bob_account: &signer) {
+fun main(dr: signer, bob_account: signer) {
+    let dr = &dr;
+    let bob_account = &bob_account;
     AccountLimits::publish_window<XUS>(dr, bob_account, {{bob}});
 }
 }
@@ -49,7 +54,8 @@ fun main(dr: &signer, bob_account: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(bob_account: &signer) {
+fun main(bob_account: signer) {
+    let bob_account = &bob_account;
     AccountLimits::publish_window<XUS>(bob_account, bob_account, {{bob}});
 }
 }
@@ -59,7 +65,8 @@ fun main(bob_account: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(bob_account: &signer) {
+fun main(bob_account: signer) {
+    let bob_account = &bob_account;
     AccountLimits::publish_unrestricted_limits<XUS>(bob_account);
 }
 }
@@ -69,7 +76,8 @@ fun main(bob_account: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
         {{bob}},
@@ -86,7 +94,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
         {{bob}},
@@ -103,7 +112,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
         {{bob}},
@@ -120,7 +130,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
         {{default}},
@@ -137,7 +148,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
         {{bob}},
@@ -154,7 +166,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
         {{bob}},
@@ -169,7 +182,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
         {{bob}},
@@ -184,7 +198,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(tc: &signer) {
+fun main(tc: signer) {
+    let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
         {{bob}},
@@ -199,7 +214,8 @@ fun main(tc: &signer) {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(dr: &signer) {
+fun main(dr: signer) {
+    let dr = &dr;
     AccountLimits::update_window_info<XUS>(
         dr,
         {{bob}},
@@ -237,7 +253,9 @@ fun main() {
 script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
-fun main(dr: &signer, bob_account: &signer) {
+fun main(dr: signer, bob_account: signer) {
+    let dr = &dr;
+    let bob_account = &bob_account;
     AccountLimits::publish_window<XUS>(dr, bob_account, {{default}});
 }
 }

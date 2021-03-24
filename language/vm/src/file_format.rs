@@ -30,6 +30,7 @@ use crate::{
     access::ModuleAccess,
     check_bounds::BoundsChecker,
     errors::{PartialVMError, PartialVMResult},
+    file_format_common,
     internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
@@ -495,7 +496,7 @@ pub struct FunctionSignature {
 ///
 /// Locals include the arguments to the function from position `0` to argument `count - 1`.
 /// The remaining elements are the type of each local.
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
 pub struct Signature(
@@ -1605,6 +1606,8 @@ pub struct CompiledScript(CompiledScriptMut);
 /// the bounds checker.
 #[derive(Clone, Default, Eq, PartialEq, Debug)]
 pub struct CompiledScriptMut {
+    /// Version number found during deserialization
+    pub version: u32,
     /// Handles to all modules referenced.
     pub module_handles: Vec<ModuleHandle>,
     /// Handles to external/imported types.
@@ -1776,6 +1779,7 @@ impl CompiledScriptMut {
         };
 
         let m = CompiledModuleMut {
+            version: self.version,
             module_handles: self.module_handles,
             self_module_handle_idx,
             struct_handles: self.struct_handles,
@@ -1814,6 +1818,8 @@ pub struct CompiledModule(CompiledModuleMut);
 /// the bounds checker.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CompiledModuleMut {
+    /// Version number found during deserialization
+    pub version: u32,
     /// Handle to self.
     pub self_module_handle_idx: ModuleHandleIndex,
     /// Handles to external dependency modules and self.
@@ -1886,6 +1892,7 @@ impl Arbitrary for CompiledScriptMut {
                 )| {
                     // TODO actual constant generation
                     CompiledScriptMut {
+                        version: file_format_common::VERSION_MAX,
                         module_handles,
                         struct_handles,
                         function_handles,
@@ -1940,6 +1947,7 @@ impl Arbitrary for CompiledModuleMut {
                 )| {
                     // TODO actual constant generation
                     CompiledModuleMut {
+                        version: file_format_common::VERSION_MAX,
                         module_handles,
                         struct_handles,
                         function_handles,
@@ -2062,6 +2070,7 @@ impl CompiledModule {
         let main_handle = inner.function_handles.pop().unwrap();
 
         CompiledScript(CompiledScriptMut {
+            version: inner.version,
             module_handles: inner.module_handles,
             struct_handles: inner.struct_handles,
             function_handles: inner.function_handles,
@@ -2084,6 +2093,7 @@ impl CompiledModule {
 /// Return the simplest module that will pass the bounds checker
 pub fn empty_module() -> CompiledModuleMut {
     CompiledModuleMut {
+        version: file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
@@ -2185,6 +2195,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
 /// Return a simple script that contains only a return in the main()
 pub fn empty_script() -> CompiledScriptMut {
     CompiledScriptMut {
+        version: file_format_common::VERSION_MAX,
         module_handles: vec![],
         struct_handles: vec![],
         function_handles: vec![],

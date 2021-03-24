@@ -11,7 +11,8 @@
 script {
 use 0x1::DiemConfig;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemConfig::reconfigure(account);
 }
 }
@@ -23,7 +24,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemConfig;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemConfig::reconfigure(account);
     DiemConfig::reconfigure(account);
 }
@@ -42,7 +44,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemConfig;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemConfig::reconfigure(account);
 }
 }

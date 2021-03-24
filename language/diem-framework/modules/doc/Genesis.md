@@ -39,7 +39,7 @@ when executing from a fresh state.
 Initializes the Diem framework.
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: &signer, tc_account: &signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(dr_account: signer, tc_account: signer, dr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
 </code></pre>
 
 
@@ -49,8 +49,8 @@ Initializes the Diem framework.
 
 
 <pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(
-    dr_account: &signer,
-    tc_account: &signer,
+    dr_account: signer,
+    tc_account: signer,
     dr_auth_key: vector&lt;u8&gt;,
     tc_auth_key: vector&lt;u8&gt;,
     initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
@@ -59,6 +59,8 @@ Initializes the Diem framework.
     native_schedule: vector&lt;u8&gt;,
     chain_id: u8,
 ) {
+    <b>let</b> dr_account = &dr_account;
+    <b>let</b> tc_account = &tc_account;
 
     <a href="DiemAccount.md#0x1_DiemAccount_initialize">DiemAccount::initialize</a>(dr_account, x"00000000000000000000000000000000");
 

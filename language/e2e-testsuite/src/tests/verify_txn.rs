@@ -1235,8 +1235,8 @@ pub fn publish_and_register_new_currency() {
         let program = {
             let code = r#"
             import 0x1.COIN;
-            main(lr_account: &signer, tc_account: &signer) {
-                COIN.initialize(move(lr_account), move(tc_account));
+            main(lr_account: signer, tc_account: signer) {
+                COIN.initialize(&lr_account, &tc_account);
                 return;
             }
             "#;

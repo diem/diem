@@ -54,13 +54,13 @@ use 0x1::DiemAccount;
 /// * `Script::add_currency_to_account`
 
 fun peer_to_peer_with_metadata<Currency: store>(
-    payer: &signer,
+    payer: signer,
     payee: address,
     amount: u64,
     metadata: vector<u8>,
     metadata_signature: vector<u8>
 ) {
-    let payer_withdrawal_cap = DiemAccount::extract_withdraw_capability(payer);
+    let payer_withdrawal_cap = DiemAccount::extract_withdraw_capability(&payer);
     DiemAccount::pay_from<Currency>(
         &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
     );

@@ -57,21 +57,21 @@ use 0x1::DiemAccount;
 /// * `Script::create_recovery_address`
 
 fun create_child_vasp_account<CoinType: store>(
-    parent_vasp: &signer,
+    parent_vasp: signer,
     child_address: address,
     auth_key_prefix: vector<u8>,
     add_all_currencies: bool,
     child_initial_balance: u64
 ) {
     DiemAccount::create_child_vasp_account<CoinType>(
-        parent_vasp,
+        &parent_vasp,
         child_address,
         auth_key_prefix,
         add_all_currencies,
     );
     // Give the newly created child `child_initial_balance` coins
     if (child_initial_balance > 0) {
-        let vasp_withdrawal_cap = DiemAccount::extract_withdraw_capability(parent_vasp);
+        let vasp_withdrawal_cap = DiemAccount::extract_withdraw_capability(&parent_vasp);
         DiemAccount::pay_from<CoinType>(
             &vasp_withdrawal_cap, child_address, child_initial_balance, x"", x""
         );

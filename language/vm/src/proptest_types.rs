@@ -311,6 +311,7 @@ impl CompiledModuleStrategyGen {
 
                     // Build a compiled module
                     let module = CompiledModuleMut {
+                        version: crate::file_format_common::VERSION_MAX,
                         module_handles,
                         self_module_handle_idx: ModuleHandleIndex(0),
                         struct_handles,

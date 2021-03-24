@@ -71,7 +71,7 @@ fn build_upgrade_writeset() {
             let code = r#"
 import 0x1.M;
 
-main(lr_account: &signer) {
+main(lr_account: signer) {
   assert(M.magic() == 42, 100);
   return;
 }

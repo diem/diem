@@ -28,9 +28,9 @@ fn admin_script_rotate_key_single_signer_no_epoch() {
             let code = r#"
 import 0x1.DiemAccount;
 
-main(dr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
+main(dr_account: signer, account: signer, auth_key_prefix: vector<u8>) {
   let rotate_cap: DiemAccount.KeyRotationCapability;
-  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  rotate_cap = DiemAccount.extract_key_rotation_capability(&account);
   DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
   DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 
@@ -95,13 +95,13 @@ fn admin_script_rotate_key_single_signer_new_epoch() {
 import 0x1.DiemAccount;
 import 0x1.DiemConfig;
 
-main(dr_account: &signer, account: &signer, auth_key_prefix: vector<u8>) {
+main(dr_account: signer, account: signer, auth_key_prefix: vector<u8>) {
   let rotate_cap: DiemAccount.KeyRotationCapability;
-  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  rotate_cap = DiemAccount.extract_key_rotation_capability(&account);
   DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
   DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 
-  DiemConfig.reconfigure(move(dr_account));
+  DiemConfig.reconfigure(&dr_account);
   return;
 }
 "#;
@@ -162,9 +162,9 @@ fn admin_script_rotate_key_multi_signer() {
             let code = r#"
 import 0x1.DiemAccount;
 
-main(account: &signer, auth_key_prefix: vector<u8>) {
+main(account: signer, auth_key_prefix: vector<u8>) {
   let rotate_cap: DiemAccount.KeyRotationCapability;
-  rotate_cap = DiemAccount.extract_key_rotation_capability(copy(account));
+  rotate_cap = DiemAccount.extract_key_rotation_capability(&account);
   DiemAccount.rotate_authentication_key(&rotate_cap, move(auth_key_prefix));
   DiemAccount.restore_key_rotation_capability(move(rotate_cap));
 

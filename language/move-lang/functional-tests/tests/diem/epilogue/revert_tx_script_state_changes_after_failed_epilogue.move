@@ -16,7 +16,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 
-fun main(account: &signer, amount: u64) {
+fun main(account: signer, amount: u64) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{carol}}, amount, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -37,7 +38,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 
-fun main(account: &signer, amount: u64) {
+fun main(account: signer, amount: u64) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{carol}}, amount, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);

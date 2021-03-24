@@ -14,7 +14,8 @@ script{
 //! new-transaction
 script{
     use 0x1::DualAttestation::{Self};
-    fun main(not_blessed: &signer) {
+    fun main(not_blessed: signer) {
+    let not_blessed = &not_blessed;
         DualAttestation::set_microdiem_limit(not_blessed, 99);
     }
 }
@@ -24,7 +25,8 @@ script{
 //! sender: blessed
 script{
     use 0x1::DualAttestation::{Self};
-    fun main(not_blessed: &signer) {
+    fun main(not_blessed: signer) {
+    let not_blessed = &not_blessed;
         DualAttestation::set_microdiem_limit(not_blessed, 1001);
     }
 }
@@ -34,7 +36,8 @@ script{
 //! sender: blessed
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::publish_credential(account, account, x"");
     }
 }
@@ -44,7 +47,8 @@ script{
 //! sender: blessed
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::publish_credential(account, account, x"");
     }
 }
@@ -61,7 +65,8 @@ stdlib_script::create_parent_vasp_account
 //! sender: bob
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::publish_credential(account, account, x"");
     }
 }
@@ -71,7 +76,8 @@ script{
 //! sender: blessed
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::rotate_base_url(account, x"");
     }
 }
@@ -81,7 +87,8 @@ script{
 //! sender: bob
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::rotate_base_url(account, x"");
     }
 }
@@ -93,7 +100,8 @@ script{
 //! sender: blessed
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::rotate_compliance_public_key(account, x"");
     }
 }
@@ -103,7 +111,8 @@ script{
 //! sender: bob
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::rotate_compliance_public_key(account, x"");
     }
 }
@@ -113,7 +122,8 @@ script{
 //! sender: bob
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::initialize(account);
     }
 }
@@ -123,7 +133,8 @@ script{
 //! sender: bob
 script{
     use 0x1::DualAttestation;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DualAttestation::initialize(account);
     }
 }
@@ -134,7 +145,9 @@ script{
 //! execute-as: freddymac
 script{
 use 0x1::DualAttestation;
-fun main(dr_account: &signer, freddy: &signer) {
+fun main(dr_account: signer, freddy: signer) {
+    let dr_account = &dr_account;
+    let freddy = &freddy;
     DualAttestation::publish_credential(freddy, dr_account, b"freddy");
     DualAttestation::publish_credential(freddy, dr_account, b"freddy");
 }

@@ -7,7 +7,8 @@ script{
     use 0x1::DiemSystem;
     use 0x1::Signer;
 
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let sender = Signer::address_of(account);
         assert(!DiemSystem::is_validator(sender), 1);
         assert(!DiemSystem::is_validator({{alice}}), 2);
@@ -29,7 +30,8 @@ script{
     use 0x1::Signer;
 
     // check that sending from validator accounts works
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let sender = Signer::address_of(account);
         assert(DiemSystem::is_validator(sender), 8);
     }
@@ -43,7 +45,8 @@ script{
     use 0x1::DiemAccount;
 
     // register Alice as a validator candidate
-    fun main(creator: &signer) {
+    fun main(creator: signer) {
+    let creator = &creator;
         DiemAccount::create_validator_account(
             creator, 0xAA, x"00000000000000000000000000000000", b"owner_name"
         );
@@ -58,7 +61,7 @@ script{
 // script{
 
 //     // register Alice as a validator candidate, then rotate a key + check that it worked.
-//     fun main(account: &signer) {
+//     fun main(account: signer) {
 //         // Alice registers as a validator candidate
 
 //         // Rotating the consensus_pubkey should work

@@ -46,17 +46,18 @@ use vm::{
     views::ModuleView,
 };
 
-static PRECOMPILED_TXN_SCRIPTS: Lazy<HashMap<String, CompiledScript>> = Lazy::new(|| {
-    LegacyStdlibScript::all()
-        .into_iter()
-        .map(|script| {
-            let name = script.name();
-            let bytes = script.compiled_bytes().into_vec();
-            let compiled_script = CompiledScript::deserialize(&bytes).unwrap();
-            (name, compiled_script)
-        })
-        .collect::<HashMap<String, CompiledScript>>()
-});
+static PRECOMPILED_TXN_SCRIPTS: Lazy<HashMap<String, (Vec<u8>, CompiledScript)>> =
+    Lazy::new(|| {
+        LegacyStdlibScript::all()
+            .into_iter()
+            .map(|script| {
+                let name = script.name();
+                let bytes = script.compiled_bytes().into_vec();
+                let compiled_script = CompiledScript::deserialize(&bytes).unwrap();
+                (name, (bytes, compiled_script))
+            })
+            .collect::<HashMap<_, _>>()
+    });
 
 /// A transaction to be evaluated by the testing infra.
 /// Contains code and a transaction config.
@@ -379,10 +380,8 @@ fn get_transaction_parameters<'a>(
 fn make_script_transaction(
     exec: &FakeExecutor,
     config: &TransactionConfig,
-    script: CompiledScript,
+    blob: Vec<u8>,
 ) -> Result<SignedTransaction> {
-    let mut blob = vec![];
-    script.serialize(&mut blob)?;
     let script = TransactionScript::new(blob, config.ty_args.clone(), config.args.clone());
 
     let params = get_transaction_parameters(exec, config);
@@ -549,7 +548,7 @@ fn serialize_and_deserialize_module(module: &CompiledModule) -> Result<()> {
     Ok(())
 }
 
-fn is_precompiled_script(input_str: &str) -> Option<CompiledScript> {
+fn is_precompiled_script(input_str: &str) -> Option<(Vec<u8>, CompiledScript)> {
     if let Some(script_name) = input_str.strip_prefix("stdlib_script::") {
         return PRECOMPILED_TXN_SCRIPTS.get(script_name).cloned();
     }
@@ -588,8 +587,8 @@ fn eval_transaction<TComp: Compiler>(
     }
 
     let parsed_script_or_module =
-        if let Some(compiled_script) = is_precompiled_script(&transaction.input) {
-            ScriptOrModule::Script(compiled_script)
+        if let Some((bytes, compiled_script)) = is_precompiled_script(&transaction.input) {
+            ScriptOrModule::Script(Some(bytes), compiled_script)
         } else {
             let compiler_log = |s| {
                 if !global_config.exp_mode {
@@ -616,7 +615,7 @@ fn eval_transaction<TComp: Compiler>(
         };
 
     match parsed_script_or_module {
-        ScriptOrModule::Script(compiled_script) => {
+        ScriptOrModule::Script(bytes_opt, compiled_script) => {
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Output(OutputType::CompiledScript(
                     Box::new(compiled_script.clone()),
@@ -640,7 +639,7 @@ fn eval_transaction<TComp: Compiler>(
             };
 
             // stage 3: serializer round trip
-            if !transaction.config.is_stage_disabled(Stage::Serializer) {
+            if bytes_opt.is_none() && !transaction.config.is_stage_disabled(Stage::Serializer) {
                 if !global_config.exp_mode {
                     log.append(EvaluationOutput::Stage(Stage::Serializer));
                 }
@@ -654,8 +653,15 @@ fn eval_transaction<TComp: Compiler>(
             if !global_config.exp_mode {
                 log.append(EvaluationOutput::Stage(Stage::Runtime));
             }
-            let script_transaction =
-                make_script_transaction(&exec, &transaction.config, compiled_script)?;
+            let bytes = match bytes_opt {
+                Some(bytes) => bytes,
+                None => {
+                    let mut bytes = vec![];
+                    compiled_script.serialize(&mut bytes).unwrap();
+                    bytes
+                }
+            };
+            let script_transaction = make_script_transaction(&exec, &transaction.config, bytes)?;
 
             if global_config.exp_mode {
                 run_transaction_exp_mode(exec, script_transaction, log, &transaction.config);

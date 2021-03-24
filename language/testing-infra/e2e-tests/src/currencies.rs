@@ -16,8 +16,8 @@ pub fn add_currency_to_system(
         let compiled_script = {
             let script = "
             import 0x1.DiemTransactionPublishingOption;
-            main(config: &signer) {
-                DiemTransactionPublishingOption.set_open_module(move(config), false);
+            main(config: signer) {
+                DiemTransactionPublishingOption.set_open_module(&config, false);
                 return;
             }
             ";
@@ -83,8 +83,8 @@ pub fn add_currency_to_system(
             let script = format!(
                 r#"
             import 0x1.{currency_code};
-            main(dr_account: &signer, tc_account: &signer) {{
-                {currency_code}.init(move(dr_account), move(tc_account));
+            main(dr_account: signer, tc_account: signer) {{
+                {currency_code}.init(&dr_account, &tc_account);
                 return;
             }}
             "#,

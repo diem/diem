@@ -51,16 +51,16 @@ fn test_malformed_resource() {
         script {
             use {{ADDR}}::M;
 
-            fun main(s: &signer) {
-                M::publish(s);
+            fun main(s: signer) {
+                M::publish(&s);
             }
         }
 
         script {
             use {{ADDR}}::M;
 
-            fun main(s: &signer) {
-                M::check(s);
+            fun main(s: signer) {
+                M::check(&s);
             }
         }
     "#;

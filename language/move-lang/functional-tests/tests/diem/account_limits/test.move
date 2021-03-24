@@ -11,7 +11,8 @@
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -26,7 +27,8 @@ script {
 script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{otherblessed}}, 1, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap)
@@ -44,7 +46,8 @@ script {
     use 0x1::AccountLimits;
     use 0x1::CoreAddresses;
     use 0x1::XDX::XDX;
-    fun main(tc_account: &signer) {
+    fun main(tc_account: signer) {
+    let tc_account = &tc_account;
         AccountLimits::update_limits_definition<XDX>(tc_account, CoreAddresses::DIEM_ROOT_ADDRESS(), 2, 2, 0, 0);
     }
 }
@@ -58,7 +61,8 @@ script {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 3, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap)
@@ -77,7 +81,8 @@ script {
     use 0x1::AccountLimits;
     use 0x1::CoreAddresses;
     use 0x1::XDX::XDX;
-    fun main(tc_account: &signer) {
+    fun main(tc_account: signer) {
+    let tc_account = &tc_account;
         AccountLimits::update_limits_definition<XDX>(tc_account, CoreAddresses::DIEM_ROOT_ADDRESS(), 1000, 1000, 1000, 0);
     }
 }
@@ -90,7 +95,8 @@ script {
     // Since we directly wrote into this account using fake data store, we
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -103,7 +109,8 @@ script {
 script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{otherblessed}}, 2, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -116,7 +123,8 @@ fun main(account: &signer) {
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -129,7 +137,8 @@ script {
 script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 2, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -142,7 +151,8 @@ fun main(account: &signer) {
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -155,7 +165,8 @@ script {
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -174,7 +185,8 @@ script {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 100, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -187,7 +199,8 @@ script {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -202,7 +215,8 @@ script {
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 101, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -216,7 +230,8 @@ script {
 script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -231,7 +246,8 @@ script {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);

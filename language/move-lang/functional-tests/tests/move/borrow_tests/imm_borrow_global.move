@@ -50,7 +50,8 @@ module Tester {
 script {
 use {{bob}}::Tester;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Tester::test(account);
 }
 }

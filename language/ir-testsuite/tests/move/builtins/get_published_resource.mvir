@@ -50,7 +50,7 @@ module Token {
 
 import {{default}}.Token;
 
-main(account: &signer) {
-    Token.test(move(account));
+main(account: signer) {
+    Token.test(&account);
     return;
 }

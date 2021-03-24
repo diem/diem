@@ -59,21 +59,21 @@ module AccountCreationScripts {
     /// * `AccountAdministrationScripts::create_recovery_address`
 
     public(script) fun create_child_vasp_account<CoinType: store>(
-        parent_vasp: &signer,
+        parent_vasp: signer,
         child_address: address,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
         child_initial_balance: u64
     ) {
         DiemAccount::create_child_vasp_account<CoinType>(
-            parent_vasp,
+            &parent_vasp,
             child_address,
             auth_key_prefix,
             add_all_currencies,
         );
         // Give the newly created child `child_initial_balance` coins
         if (child_initial_balance > 0) {
-            let vasp_withdrawal_cap = DiemAccount::extract_withdraw_capability(parent_vasp);
+            let vasp_withdrawal_cap = DiemAccount::extract_withdraw_capability(&parent_vasp);
             DiemAccount::pay_from<CoinType>(
                 &vasp_withdrawal_cap, child_address, child_initial_balance, x"", x""
             );
@@ -163,15 +163,15 @@ module AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun create_validator_operator_account(
-        dr_account: &signer,
+        dr_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>
     ) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         DiemAccount::create_validator_operator_account(
-            dr_account,
+            &dr_account,
             new_account_address,
             auth_key_prefix,
             human_name,
@@ -252,15 +252,15 @@ module AccountCreationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun create_validator_account(
-        dr_account: &signer,
+        dr_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         DiemAccount::create_validator_account(
-            dr_account,
+            &dr_account,
             new_account_address,
             auth_key_prefix,
             human_name,
@@ -340,16 +340,16 @@ module AccountCreationScripts {
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
     public(script) fun create_parent_vasp_account<CoinType: store>(
-        tc_account: &signer,
+        tc_account: signer,
         sliding_nonce: u64,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         add_all_currencies: bool
     ) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
         DiemAccount::create_parent_vasp_account<CoinType>(
-            tc_account,
+            &tc_account,
             new_account_address,
             auth_key_prefix,
             human_name,
@@ -424,16 +424,16 @@ module AccountCreationScripts {
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
     public(script) fun create_designated_dealer<Currency: store>(
-        tc_account: &signer,
+        tc_account: signer,
         sliding_nonce: u64,
         addr: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         add_all_currencies: bool,
     ) {
-        SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&tc_account, sliding_nonce);
         DiemAccount::create_designated_dealer<Currency>(
-            tc_account,
+            &tc_account,
             addr,
             auth_key_prefix,
             human_name,

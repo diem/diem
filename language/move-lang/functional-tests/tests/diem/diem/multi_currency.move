@@ -11,7 +11,8 @@
 // Change option to CustomModule
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(config: &signer) {
+fun main(config: signer) {
+    let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
@@ -56,7 +57,9 @@ module COIN {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::{Self, COIN};
-fun main(dr_account: &signer, tc_account: &signer) {
+fun main(dr_account: signer, tc_account: signer) {
+    let dr_account = &dr_account;
+    let tc_account = &tc_account;
     COIN::initialize(dr_account, tc_account);
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
@@ -77,7 +80,8 @@ stdlib_script::create_designated_dealer
 script {
 use 0x1::COIN::COIN;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::tiered_mint<COIN>(account, {{sally}}, 10, 3);
 }
 }
@@ -89,7 +93,8 @@ script {
 use 0x1::XUS::XUS;
 use 0x1::COIN::COIN;
 use 0x1::DiemAccount;
-fun main(tc_account: &signer) {
+fun main(tc_account: signer) {
+    let tc_account = &tc_account;
     let add_all_currencies = false;
 
     DiemAccount::create_parent_vasp_account<XUS>(
@@ -117,7 +122,8 @@ fun main(tc_account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -131,7 +137,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<COIN>(&with_cap, {{bob}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -144,7 +151,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<COIN>(account);
 }
 }
@@ -155,7 +163,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }
@@ -166,7 +175,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<u64>(account);
 }
 }
@@ -178,7 +188,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }
@@ -189,7 +200,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -205,7 +217,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<COIN>(&with_cap, {{alice}}, 10, x"", x"");
     DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 10, x"", x"");

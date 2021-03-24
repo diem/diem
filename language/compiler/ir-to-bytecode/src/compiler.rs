@@ -32,6 +32,7 @@ use vm::{
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, TableIndex,
         TypeParameterIndex, TypeSignature, Visibility,
     },
+    file_format_common::VERSION_MAX,
 };
 
 macro_rules! record_src_loc {
@@ -461,6 +462,7 @@ pub fn compile_script<'a>(
         source_map,
     ) = context.materialize_pools();
     let compiled_script = CompiledScriptMut {
+        version: VERSION_MAX,
         module_handles,
         struct_handles,
         function_handles,
@@ -559,6 +561,7 @@ pub fn compile_module<'a>(
         source_map,
     ) = context.materialize_pools();
     let compiled_module = CompiledModuleMut {
+        version: VERSION_MAX,
         module_handles,
         self_module_handle_idx,
         struct_handles,
@@ -638,6 +641,7 @@ fn compile_explicit_dependency_declarations(
             _source_map,
         ) = context.materialize_pools();
         let compiled_module = CompiledModuleMut {
+            version: VERSION_MAX,
             module_handles,
             self_module_handle_idx,
             struct_handles,

@@ -4,7 +4,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 use 0x1::FixedPoint32;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(Diem::approx_xdx_for_value<XUS>(10) == 10, 1);
     assert(Diem::scaling_factor<XUS>() == 1000000, 2);
     assert(Diem::fractional_part<XUS>() == 100, 3);

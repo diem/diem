@@ -11,7 +11,8 @@ stdlib_script::create_validator_operator_account
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+        let account = &account;
         // bob rotates his public key to invalid key
         ValidatorConfig::set_operator(account, {{alice}});
     }
@@ -22,7 +23,8 @@ script {
 //! sender: alice
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+        let account = &account;
         // bob rotates his public key to invalid key
         ValidatorConfig::set_config(account, {{bob}},
                                     x"0000000000000000000000000000000000000000000000000000000000000000",
@@ -35,7 +37,8 @@ script {
 //! sender: alice
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+        let account = &account;
         // bob rotates his public key to a valid key
         ValidatorConfig::set_config(account, {{bob}},
                                     x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",

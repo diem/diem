@@ -2,7 +2,8 @@ script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 use 0x1::Signer;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let sender = Signer::address_of(account);
 
     // by default, an account has not delegated its withdrawal capability

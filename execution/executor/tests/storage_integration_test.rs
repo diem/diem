@@ -290,8 +290,8 @@ fn test_change_publishing_option_to_custom() {
         let code = "
     import 0x1.DiemTransactionPublishingOption;
 
-    main(account: &signer) {
-      DiemTransactionPublishingOption.set_open_script(move(account));
+    main(account: signer) {
+      DiemTransactionPublishingOption.set_open_script(&account);
 
       return;
     }

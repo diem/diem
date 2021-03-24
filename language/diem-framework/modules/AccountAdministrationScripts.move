@@ -37,8 +37,8 @@ module AccountAdministrationScripts {
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `PaymentScripts::peer_to_peer_with_metadata`
 
-    public(script) fun add_currency_to_account<Currency: store>(account: &signer) {
-        DiemAccount::add_currency<Currency>(account);
+    public(script) fun add_currency_to_account<Currency: store>(account: signer) {
+        DiemAccount::add_currency<Currency>(&account);
     }
     spec fun add_currency_to_account {
         use 0x1::Errors;
@@ -101,9 +101,9 @@ module AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun add_recovery_rotation_capability(to_recover_account: &signer, recovery_address: address) {
+    public(script) fun add_recovery_rotation_capability(to_recover_account: signer, recovery_address: address) {
         RecoveryAddress::add_rotation_capability(
-            DiemAccount::extract_key_rotation_capability(to_recover_account), recovery_address
+            DiemAccount::extract_key_rotation_capability(&to_recover_account), recovery_address
         )
     }
     spec fun add_recovery_rotation_capability {
@@ -158,8 +158,8 @@ module AccountAdministrationScripts {
     /// # Related Scripts
     /// * `AccountAdministrationScripts::rotate_shared_ed25519_public_key`
 
-    public(script) fun publish_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
-        SharedEd25519PublicKey::publish(account, public_key)
+    public(script) fun publish_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
+        SharedEd25519PublicKey::publish(&account, public_key)
     }
     spec fun publish_shared_ed25519_public_key {
         use 0x1::Errors;
@@ -202,8 +202,8 @@ module AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key(account: &signer, new_key: vector<u8>) {
-        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(account);
+    public(script) fun rotate_authentication_key(account: signer, new_key: vector<u8>) {
+        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
@@ -263,9 +263,9 @@ module AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce(account: &signer, sliding_nonce: u64, new_key: vector<u8>) {
-        SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
-        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(account);
+    public(script) fun rotate_authentication_key_with_nonce(account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
@@ -327,9 +327,9 @@ module AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce_admin(dr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector<u8>) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
-        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(account);
+    public(script) fun rotate_authentication_key_with_nonce_admin(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
+        let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
@@ -395,12 +395,12 @@ module AccountAdministrationScripts {
     /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
 
     public(script) fun rotate_authentication_key_with_recovery_address(
-            account: &signer,
+            account: signer,
             recovery_address: address,
             to_recover: address,
             new_key: vector<u8>
             ) {
-        RecoveryAddress::rotate_authentication_key(account, recovery_address, to_recover, new_key)
+        RecoveryAddress::rotate_authentication_key(&account, recovery_address, to_recover, new_key)
     }
     spec fun rotate_authentication_key_with_recovery_address {
         use 0x1::Errors;
@@ -461,9 +461,9 @@ module AccountAdministrationScripts {
     /// * `AccountCreationScripts::create_designated_dealer`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
-    public(script) fun rotate_dual_attestation_info(account: &signer, new_url: vector<u8>, new_key: vector<u8>) {
-        DualAttestation::rotate_base_url(account, new_url);
-        DualAttestation::rotate_compliance_public_key(account, new_key)
+    public(script) fun rotate_dual_attestation_info(account: signer, new_url: vector<u8>, new_key: vector<u8>) {
+        DualAttestation::rotate_base_url(&account, new_url);
+        DualAttestation::rotate_compliance_public_key(&account, new_key)
     }
     spec fun rotate_dual_attestation_info {
         use 0x1::Errors;
@@ -515,8 +515,8 @@ module AccountAdministrationScripts {
     /// # Related Scripts
     /// * `AccountAdministrationScripts::publish_shared_ed25519_public_key`
 
-    public(script) fun rotate_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
-        SharedEd25519PublicKey::rotate_key(account, public_key)
+    public(script) fun rotate_shared_ed25519_public_key(account: signer, public_key: vector<u8>) {
+        SharedEd25519PublicKey::rotate_key(&account, public_key)
     }
     spec fun rotate_shared_ed25519_public_key {
         use 0x1::Errors;
@@ -561,8 +561,8 @@ module AccountAdministrationScripts {
     /// * `Script::add_recovery_rotation_capability`
     /// * `Script::rotate_authentication_key_with_recovery_address`
 
-    public(script) fun create_recovery_address(account: &signer) {
-        RecoveryAddress::publish(account, DiemAccount::extract_key_rotation_capability(account))
+    public(script) fun create_recovery_address(account: signer) {
+        RecoveryAddress::publish(&account, DiemAccount::extract_key_rotation_capability(&account))
     }
 
     spec fun create_recovery_address {

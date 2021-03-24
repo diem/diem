@@ -16,7 +16,8 @@ use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 use 0x1::Signer;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let sender = Signer::address_of(account);
     // Ensures that the account was deducted for the gas fee.
     assert(DiemAccount::balance<XUS>(sender) < 10000, 42);

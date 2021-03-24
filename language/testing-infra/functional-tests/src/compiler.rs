@@ -18,6 +18,6 @@ pub trait Compiler {
 }
 
 pub enum ScriptOrModule {
-    Script(CompiledScript),
+    Script(Option<Vec<u8>>, CompiledScript),
     Module(CompiledModule),
 }

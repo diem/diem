@@ -100,8 +100,8 @@ fun main() {
 // check: MISSING_DATA
 script {
 use {{default}}::M;
-fun main(account: &signer) {
-  M::t5(account)
+fun main(account: signer) {
+  M::t5(&account)
 }
 }
 
@@ -109,7 +109,7 @@ fun main(account: &signer) {
 // check: RESOURCE_ALREADY_EXISTS
 script {
 use {{default}}::M;
-fun main(account: &signer) {
-  M::t6(account)
+fun main(account: signer) {
+  M::t6(&account)
 }
 }

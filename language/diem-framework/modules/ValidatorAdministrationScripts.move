@@ -53,14 +53,14 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun add_validator_and_reconfigure(
-        dr_account: &signer,
+        dr_account: signer,
         sliding_nonce: u64,
         validator_name: vector<u8>,
         validator_address: address
     ) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         assert(ValidatorConfig::get_human_name(validator_address) == validator_name, 0);
-        DiemSystem::add_validator(dr_account, validator_address);
+        DiemSystem::add_validator(&dr_account, validator_address);
     }
 
 
@@ -138,7 +138,7 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun register_validator_config(
-        validator_operator_account: &signer,
+        validator_operator_account: signer,
         // TODO Rename to validator_addr, since it is an address.
         validator_account: address,
         consensus_pubkey: vector<u8>,
@@ -146,7 +146,7 @@ module ValidatorAdministrationScripts {
         fullnode_network_addresses: vector<u8>,
     ) {
         ValidatorConfig::set_config(
-            validator_operator_account,
+            &validator_operator_account,
             validator_account,
             consensus_pubkey,
             validator_network_addresses,
@@ -221,15 +221,15 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun remove_validator_and_reconfigure(
-        dr_account: &signer,
+        dr_account: signer,
         sliding_nonce: u64,
         validator_name: vector<u8>,
         validator_address: address
     ) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         // TODO: Use an error code from Errors.move
         assert(ValidatorConfig::get_human_name(validator_address) == validator_name, 0);
-        DiemSystem::remove_validator(dr_account, validator_address);
+        DiemSystem::remove_validator(&dr_account, validator_address);
     }
 
     spec fun remove_validator_and_reconfigure {
@@ -306,20 +306,20 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::register_validator_config`
 
     public(script) fun set_validator_config_and_reconfigure(
-        validator_operator_account: &signer,
+        validator_operator_account: signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
         validator_network_addresses: vector<u8>,
         fullnode_network_addresses: vector<u8>,
     ) {
         ValidatorConfig::set_config(
-            validator_operator_account,
+            &validator_operator_account,
             validator_account,
             consensus_pubkey,
             validator_network_addresses,
             fullnode_network_addresses
         );
-        DiemSystem::update_config_and_reconfigure(validator_operator_account, validator_account);
+        DiemSystem::update_config_and_reconfigure(&validator_operator_account, validator_account);
      }
 
     spec fun set_validator_config_and_reconfigure {
@@ -419,12 +419,12 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun set_validator_operator(
-        account: &signer,
+        account: signer,
         operator_name: vector<u8>,
         operator_account: address
     ) {
         assert(ValidatorOperatorConfig::get_human_name(operator_account) == operator_name, 0);
-        ValidatorConfig::set_operator(account, operator_account);
+        ValidatorConfig::set_operator(&account, operator_account);
     }
 
     spec fun set_validator_operator {
@@ -502,15 +502,15 @@ module ValidatorAdministrationScripts {
     /// * `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
     public(script) fun set_validator_operator_with_nonce_admin(
-        dr_account: &signer,
-        account: &signer,
+        dr_account: signer,
+        account: signer,
         sliding_nonce: u64,
         operator_name: vector<u8>,
         operator_account: address
     ) {
-        SlidingNonce::record_nonce_or_abort(dr_account, sliding_nonce);
+        SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         assert(ValidatorOperatorConfig::get_human_name(operator_account) == operator_name, 0);
-        ValidatorConfig::set_operator(account, operator_account);
+        ValidatorConfig::set_operator(&account, operator_account);
     }
 
     spec fun set_validator_operator_with_nonce_admin {

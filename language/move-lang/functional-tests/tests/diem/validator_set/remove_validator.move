@@ -13,7 +13,8 @@
 // remove_validator cannot be called on a non-validator
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{alice}});
     }
 }
@@ -25,7 +26,8 @@ script{
 //! sender: alice
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{vivian}});
     }
 }
@@ -37,7 +39,8 @@ script{
 // should work because Vivian is a validator
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{vivian}});
     }
 }
@@ -50,7 +53,8 @@ script{
 // double-removing Vivian should fail
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::remove_validator(account, {{vivian}});
     }
 }

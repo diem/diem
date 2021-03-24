@@ -24,8 +24,8 @@ module Genesis {
 
     /// Initializes the Diem framework.
     fun initialize(
-        dr_account: &signer,
-        tc_account: &signer,
+        dr_account: signer,
+        tc_account: signer,
         dr_auth_key: vector<u8>,
         tc_auth_key: vector<u8>,
         initial_script_allow_list: vector<vector<u8>>,
@@ -34,6 +34,8 @@ module Genesis {
         native_schedule: vector<u8>,
         chain_id: u8,
     ) {
+        let dr_account = &dr_account;
+        let tc_account = &tc_account;
 
         DiemAccount::initialize(dr_account, x"00000000000000000000000000000000");
 

@@ -8,7 +8,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_designated_dealer<XUS>(
         account,
         {{dd}},
@@ -34,7 +35,8 @@ script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     // send the coins to the preburn area. market cap should not be affected, but the preburn
@@ -56,7 +58,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer)  {
+fun main(account: signer)  {
+    let account = &account;
     DiemAccount::cancel_burn<XUS>(account, {{dd}}, 56);
 }
 }
@@ -68,7 +71,8 @@ fun main(account: &signer)  {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     // this should fail since the amount is 0
     Diem::burn<XUS>(account, {{dd}}, 0);
     }
@@ -81,7 +85,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer)  {
+fun main(account: signer)  {
+    let account = &account;
     DiemAccount::cancel_burn<XUS>(account, {{dd}}, 55);
     DiemAccount::cancel_burn<XUS>(account, {{dd}}, 45);
 }
@@ -98,7 +103,8 @@ script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     // send the coins to the preburn area. market cap should not be affected, but the preburn
@@ -119,7 +125,8 @@ fun main(account: &signer) {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         // Preburn area already occupied, aborts
         DiemAccount::preburn<XUS>(account, &with_cap, 200);
@@ -135,7 +142,8 @@ script {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     // this should fail since there isn't a preburn with a value of 300
     Diem::burn<XUS>(account, {{dd}}, 300);
     }
@@ -148,7 +156,8 @@ fun main(account: &signer) {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     // this should fail since the amount is 0
     Diem::burn<XUS>(account, {{dd}}, 0);
     }
@@ -161,7 +170,8 @@ fun main(account: &signer) {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
     // do the burn. the market cap should now decrease, and the preburn area should be empty
     Diem::burn<XUS>(account, {{dd}}, 100);
@@ -182,7 +192,8 @@ script {
     use 0x1::XUS::XUS;
     // use 0x1::Diem;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::preburn<XUS>(account, &with_cap, 501);
         DiemAccount::restore_withdraw_capability(with_cap);
@@ -196,7 +207,8 @@ script {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::burn<XUS>(account, {{default}}, 0);
 }
 }
@@ -207,7 +219,8 @@ fun main(account: &signer) {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::burn<XUS>(account, {{default}}, 0);
 }
 }
@@ -218,7 +231,8 @@ fun main(account: &signer) {
 script {
 use 0x1::XUS::XUS;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::destroy_zero(Diem::cancel_burn<XUS>(account, {{dd}}, 0));
 }
 }
@@ -229,7 +243,8 @@ fun main(account: &signer) {
 script {
 use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::preburn<XUS>(account, &with_cap, 1);
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -242,7 +257,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XDX::XDX;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_designated_dealer<XDX>(
         account,
         {{baddd}},
@@ -278,7 +294,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let u64_max = 18446744073709551615;
     Holder::hold(
         account,
@@ -295,7 +312,8 @@ script {
 use 0x1::Diem::{Self, Diem};
 use 0x1::XUS::XUS;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let (xus, coin2) = Holder::get<Diem<XUS>>({{blessed}});
     Diem::preburn_to(account, xus);
     Diem::preburn_to(account, coin2);
@@ -308,7 +326,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::preburn<XUS>(account, &with_cap, 1);
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -322,7 +341,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::burn<XUS>(account, {{dd}}, 1);
 }
 }
@@ -332,7 +352,8 @@ fun main(account: &signer) {
 script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::publish_burn_capability(
         account,
         Diem::remove_burn_capability<XUS>(account)
@@ -347,7 +368,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 use {{default}}::Holder;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let index = 0;
     let max_outstanding_requests = 256;
     let (xus1, xus2) = Holder::get<Diem::Diem<XUS>>({{blessed}});
@@ -368,7 +390,8 @@ fun main(account: &signer) {
 script {
     use 0x1::XUS::XUS;
     use 0x1::DiemAccount;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
         DiemAccount::preburn<XUS>(account, &with_cap, 0);
         DiemAccount::restore_withdraw_capability(with_cap);

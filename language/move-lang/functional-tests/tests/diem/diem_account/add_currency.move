@@ -12,7 +12,8 @@
 // Change option to CustomModule
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(config: &signer) {
+fun main(config: signer) {
+    let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
@@ -57,7 +58,9 @@ module COIN {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::{Self, COIN};
-fun main(dr_account: &signer, tc_account: &signer) {
+fun main(dr_account: signer, tc_account: signer) {
+    let dr_account = &dr_account;
+    let tc_account = &tc_account;
     COIN::initialize(dr_account, tc_account);
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
@@ -72,7 +75,8 @@ fun main(dr_account: &signer, tc_account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }
@@ -84,7 +88,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }
@@ -96,7 +101,8 @@ fun main(account: &signer) {
 //! sender: diemroot
 script {
 use 0x1::DiemAccount;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::create_validator_account(account, {{vivian}}, {{vivian::auth_key}}, b"owner_name");
     DiemAccount::create_validator_operator_account(account, {{otto}}, {{otto::auth_key}}, b"operator_name")
 
@@ -110,7 +116,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }
@@ -122,7 +129,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<XUS>(account);
 }
 }

@@ -18,7 +18,8 @@ script {
 //! sender: diemroot
 script {
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let num_validators = DiemSystem::validator_set_size();
         assert(num_validators == 1, 98);
         let index = 0;

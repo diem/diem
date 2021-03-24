@@ -1,7 +1,8 @@
 script {
 use 0x1::XUS;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     // This will fail because XUS has already been initialized
     XUS::initialize(account,  account);
 }

@@ -102,7 +102,7 @@ Successful execution of this script emits two events:
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -112,13 +112,13 @@ Successful execution of this script emits two events:
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency: store&gt;(
-    payer: &signer,
+    payer: signer,
     payee: address,
     amount: u64,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) {
-    <b>let</b> payer_withdrawal_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(payer);
+    <b>let</b> payer_withdrawal_cap = <a href="DiemAccount.md#0x1_DiemAccount_extract_withdraw_capability">DiemAccount::extract_withdraw_capability</a>(&payer);
     <a href="DiemAccount.md#0x1_DiemAccount_pay_from">DiemAccount::pay_from</a>&lt;Currency&gt;(
         &payer_withdrawal_cap, payee, amount, metadata, metadata_signature
     );

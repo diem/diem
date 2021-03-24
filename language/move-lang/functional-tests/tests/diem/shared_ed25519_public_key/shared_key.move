@@ -8,7 +8,8 @@
 script {
 use 0x1::DiemAccount;
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let old_auth_key = DiemAccount::authentication_key({{default}});
     // from RFC 8032
     let pubkey1 = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
@@ -40,7 +41,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let invalid_pubkey = x"0000";
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
@@ -63,7 +65,8 @@ fun main() {
 //! sender: alice
 script {
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let invalid_pubkey = x"10003d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
@@ -75,7 +78,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     // from RFC 8032
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, valid_pubkey);
@@ -91,7 +95,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, valid_pubkey);
     // now rotate to an invalid key
@@ -106,7 +111,8 @@ fun main(account: &signer) {
 //! sender: alice
 script {
 use 0x1::SharedEd25519PublicKey;
-fun main(account: &signer)  {
+fun main(account: signer)  {
+    let account = &account;
     let invalid_pubkey = x"";
     SharedEd25519PublicKey::rotate_key(account, invalid_pubkey);
 }

@@ -25,7 +25,7 @@ use vm::{
 // `CompiledScript`.
 // Operations that are not allowed for `CompiledScript` return an error.
 // A typical use of a `BinaryIndexedView` is while resolving indexes in bytecodes.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum BinaryIndexedView<'a> {
     Module(&'a CompiledModule),
     Script(&'a CompiledScript),
@@ -217,6 +217,13 @@ impl<'a> BinaryIndexedView<'a> {
         match self {
             BinaryIndexedView::Module(m) => Some(m.self_id()),
             BinaryIndexedView::Script(_) => None,
+        }
+    }
+
+    pub(crate) fn version(&self) -> u32 {
+        match self {
+            BinaryIndexedView::Module(module) => module.version(),
+            BinaryIndexedView::Script(script) => script.version(),
         }
     }
 }

@@ -41,6 +41,7 @@ fn make_script(parameters: Signature) -> Vec<u8> {
         }
     };
     CompiledScriptMut {
+        version: vm::file_format_common::VERSION_MAX,
         module_handles: vec![],
         struct_handles: vec![],
         function_handles: vec![],
@@ -85,6 +86,7 @@ fn make_script_with_non_linking_structs(parameters: Signature) -> Vec<u8> {
         }
     };
     CompiledScriptMut {
+        version: vm::file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
@@ -154,6 +156,7 @@ fn make_module_with_function(
         }
     };
     let module = CompiledModuleMut {
+        version: vm::file_format_common::VERSION_MAX,
         self_module_handle_idx: ModuleHandleIndex(0),
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
@@ -349,17 +352,16 @@ fn bad_signatures() -> Vec<Signature> {
         Signature(vec![SignatureToken::Reference(Box::new(
             SignatureToken::U64,
         ))]),
-        // `Signer` in signature (not `&Signer`)
-        Signature(vec![SignatureToken::Signer]),
+        // `&Signer` in signature (not `Signer`)
+        Signature(vec![SignatureToken::Reference(Box::new(
+            SignatureToken::Signer,
+        ))]),
         // vector of `Signer` in signature
         Signature(vec![SignatureToken::Vector(Box::new(
             SignatureToken::Signer,
         ))]),
         // `Signer` ref not first arg
-        Signature(vec![
-            SignatureToken::Bool,
-            SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-        ]),
+        Signature(vec![SignatureToken::Bool, SignatureToken::Signer]),
     ]
 }
 
@@ -526,30 +528,21 @@ fn general_cases() -> Vec<(
     vec![
         // too few signers (0)
         (
-            Signature(vec![
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-            ]),
+            Signature(vec![SignatureToken::Signer, SignatureToken::Signer]),
             vec![],
             vec![],
             Some(StatusCode::NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH),
         ),
         // too few signers (1)
         (
-            Signature(vec![
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-            ]),
+            Signature(vec![SignatureToken::Signer, SignatureToken::Signer]),
             vec![],
             vec![AccountAddress::random()],
             Some(StatusCode::NUMBER_OF_SIGNER_ARGUMENTS_MISMATCH),
         ),
         // too few signers (3)
         (
-            Signature(vec![
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-            ]),
+            Signature(vec![SignatureToken::Signer, SignatureToken::Signer]),
             vec![],
             vec![
                 AccountAddress::random(),
@@ -560,10 +553,7 @@ fn general_cases() -> Vec<(
         ),
         // correct number of signers (2)
         (
-            Signature(vec![
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
-            ]),
+            Signature(vec![SignatureToken::Signer, SignatureToken::Signer]),
             vec![],
             vec![AccountAddress::random(), AccountAddress::random()],
             None,
@@ -575,10 +565,10 @@ fn general_cases() -> Vec<(
             vec![AccountAddress::random()],
             None,
         ),
-        // signer ref
+        // signer
         (
             Signature(vec![
-                SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+                SignatureToken::Signer,
                 SignatureToken::Bool,
                 SignatureToken::Address,
             ]),

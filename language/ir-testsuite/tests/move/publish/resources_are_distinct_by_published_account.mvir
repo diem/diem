@@ -49,7 +49,7 @@ module DiemAccount {
 
 import {{default}}.DiemAccount as MyAccount;
 
-main(account: &signer) {
-  MyAccount.test(move(account));
+main(account: signer) {
+  MyAccount.test(&account);
   return;
 }

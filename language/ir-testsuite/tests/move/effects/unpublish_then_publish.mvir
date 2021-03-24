@@ -21,8 +21,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main(s: &signer) {
-    M.init(move(s));
+main(s: signer) {
+    M.init(&s);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -31,8 +31,8 @@ main(s: &signer) {
 //! new-transaction
 import {{default}}.M;
 
-main(s: &signer) {
-    M.test(move(s));
+main(s: signer) {
+    M.test(&s);
     return;
 }
 // The following checks ensure that we do emit a write op for R in case it's unpublished then

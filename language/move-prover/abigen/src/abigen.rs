@@ -157,16 +157,14 @@ impl<'env> Abigen<'env> {
         let args = func
             .get_parameters()
             .iter()
-            .filter_map(
-                |param| match self.get_type_tag_skipping_references(&param.1) {
-                    Ok(Some(tag)) => Some(Ok(ArgumentABI::new(
-                        symbol_pool.string(param.0).to_string(),
-                        tag,
-                    ))),
-                    Ok(None) => None,
-                    Err(error) => Some(Err(error)),
-                },
-            )
+            .filter(|param| !matches!(&param.1, ty::Type::Primitive(ty::PrimitiveType::Signer)))
+            .map(|param| {
+                let tag = self.get_type_tag(&param.1)?;
+                Ok(ArgumentABI::new(
+                    symbol_pool.string(param.0).to_string(),
+                    tag,
+                ))
+            })
             .collect::<anyhow::Result<_>>()?;
 
         // This is a transaction script, so include the code, but no module ID
@@ -204,7 +202,7 @@ impl<'env> Abigen<'env> {
         Ok(bytes)
     }
 
-    fn get_type_tag_skipping_references(&self, ty0: &ty::Type) -> anyhow::Result<Option<TypeTag>> {
+    fn get_type_tag(&self, ty0: &ty::Type) -> anyhow::Result<TypeTag> {
         use ty::Type::*;
         let tag = match ty0 {
             Primitive(prim) => {
@@ -221,10 +219,6 @@ impl<'env> Abigen<'env> {
                     }
                 }
             }
-            Reference(_, _) => {
-                // Skip references (most likely a `&signer` type)
-                return Ok(None);
-            }
             Vector(ty) => {
                 let tag = self.get_type_tag(ty)?;
                 TypeTag::Vector(Box::new(tag))
@@ -237,18 +231,9 @@ impl<'env> Abigen<'env> {
             | ResourceDomain(..)
             | TypeLocal(_)
             | Error
-            | Var(_) => bail!("Type {:?} is not allowed in scripts.", ty0),
+            | Var(_)
+            | Reference(_, _) => bail!("Type {:?} is not allowed in scripts.", ty0),
         };
-        Ok(Some(tag))
-    }
-
-    fn get_type_tag(&self, ty: &ty::Type) -> anyhow::Result<TypeTag> {
-        if let Some(tag) = self.get_type_tag_skipping_references(ty)? {
-            return Ok(tag);
-        }
-        bail!(
-            "References such as {:?} are only allowed in the list of parameters.",
-            ty
-        );
+        Ok(tag)
     }
 }

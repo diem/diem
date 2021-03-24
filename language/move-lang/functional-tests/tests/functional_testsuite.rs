@@ -110,7 +110,7 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
         };
 
         Ok(match unit {
-            CompiledUnit::Script { script, .. } => ScriptOrModule::Script(script),
+            CompiledUnit::Script { script, .. } => ScriptOrModule::Script(None, script),
             CompiledUnit::Module { module, .. } => {
                 let input = if input.starts_with("address") {
                     input.to_string()

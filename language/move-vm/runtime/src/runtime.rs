@@ -24,6 +24,7 @@ use vm::{
     access::ModuleAccess,
     compatibility::Compatibility,
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
+    file_format_common::VERSION_1,
     normalized, CompiledModule, IndexKind,
 };
 
@@ -38,15 +39,6 @@ fn is_signer_reference(s: &Type) -> bool {
         Type::Reference(ty) => matches!(&**ty, Type::Signer),
         _ => false,
     }
-}
-
-fn number_of_signer_ref_params(tys: &[Type]) -> usize {
-    for (i, ty) in tys.iter().enumerate() {
-        if !is_signer_reference(ty) {
-            return i;
-        }
-    }
-    tys.len()
 }
 
 impl VMRuntime {
@@ -124,7 +116,12 @@ impl VMRuntime {
         data_store.publish_module(&module_id, module)
     }
 
-    fn deserialize_args(&self, tys: &[Type], args: Vec<Vec<u8>>) -> PartialVMResult<Vec<Value>> {
+    fn deserialize_args(
+        &self,
+        _file_format_version: u32,
+        tys: &[Type],
+        args: Vec<Vec<u8>>,
+    ) -> PartialVMResult<Vec<Value>> {
         if tys.len() != args.len() {
             return Err(
                 PartialVMError::new(StatusCode::NUMBER_OF_ARGUMENTS_MISMATCH).with_message(
@@ -143,10 +140,9 @@ impl VMRuntime {
         let mut vals = vec![];
         for (ty, arg) in tys.iter().zip(args.into_iter()) {
             let val = if is_signer_reference(ty) {
+                // TODO signer_reference should be version gated
                 match MoveValue::simple_deserialize(&arg, &MoveTypeLayout::Signer) {
-                    Ok(MoveValue::Signer(addr)) => {
-                        Value::transaction_argument_signer_reference(addr)
-                    }
+                    Ok(MoveValue::Signer(addr)) => Value::signer_reference(addr),
                     Ok(_) | Err(_) => {
                         warn!("[VM] failed to deserialize argument");
                         return Err(PartialVMError::new(
@@ -183,17 +179,32 @@ impl VMRuntime {
 
     fn create_signers_and_arguments(
         &self,
+        file_format_version: u32,
         tys: &[Type],
         senders: Vec<AccountAddress>,
         args: Vec<Vec<u8>>,
     ) -> PartialVMResult<Vec<Value>> {
+        fn number_of_signer_params(file_format_version: u32, tys: &[Type]) -> usize {
+            let is_signer = if file_format_version <= VERSION_1 {
+                |ty: &Type| matches!(ty, Type::Reference(inner) if matches!(&**inner, Type::Signer))
+            } else {
+                |ty: &Type| matches!(ty, Type::Signer)
+            };
+            for (i, ty) in tys.iter().enumerate() {
+                if !is_signer(ty) {
+                    return i;
+                }
+            }
+            tys.len()
+        }
+
         // Build the arguments list and check the arguments are of restricted types.
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
         // signer arguments can be be used by a script.
-        let n_signer_params = number_of_signer_ref_params(tys);
+        let n_signer_params = number_of_signer_params(file_format_version, tys);
 
         let args = if n_signer_params == 0 {
-            self.deserialize_args(&tys, args)?
+            self.deserialize_args(file_format_version, &tys, args)?
         } else {
             let n_signers = senders.len();
             if n_signer_params != n_signers {
@@ -205,11 +216,13 @@ impl VMRuntime {
                         )),
                 );
             }
-            let mut vals: Vec<Value> = senders
-                .into_iter()
-                .map(Value::transaction_argument_signer_reference)
-                .collect();
-            vals.extend(self.deserialize_args(&tys[n_signers..], args)?);
+            let make_signer = if file_format_version <= VERSION_1 {
+                Value::signer_reference
+            } else {
+                Value::signer
+            };
+            let mut vals: Vec<Value> = senders.into_iter().map(make_signer).collect();
+            vals.extend(self.deserialize_args(file_format_version, &tys[n_signers..], args)?);
             vals
         };
 
@@ -233,7 +246,7 @@ impl VMRuntime {
                 .load_script(&script, &ty_args, data_store, log_context)?;
 
         let signers_and_args = self
-            .create_signers_and_arguments(&params, senders, args)
+            .create_signers_and_arguments(main.file_format_version(), &params, senders, args)
             .map_err(|err| err.finish(Location::Undefined))?;
         // run the script
         let return_vals = Interpreter::entrypoint(
@@ -271,7 +284,7 @@ impl VMRuntime {
         log_context: &impl LogContext,
     ) -> VMResult<Vec<Vec<u8>>>
     where
-        F: FnOnce(&VMRuntime, &[Type]) -> PartialVMResult<Vec<Value>>,
+        F: FnOnce(&VMRuntime, u32, &[Type]) -> PartialVMResult<Vec<Value>>,
     {
         let (func, ty_args, params, return_tys) = self.loader.load_function(
             function_name,
@@ -301,7 +314,8 @@ impl VMRuntime {
             .collect::<PartialVMResult<Vec<_>>>()
             .map_err(|err| err.finish(Location::Undefined))?;
 
-        let args = make_args(self, &params).map_err(|err| err.finish(Location::Undefined))?;
+        let args = make_args(self, func.file_format_version(), &params)
+            .map_err(|err| err.finish(Location::Undefined))?;
 
         let return_vals = Interpreter::entrypoint(
             func,
@@ -353,7 +367,9 @@ impl VMRuntime {
             module,
             function_name,
             ty_args,
-            move |runtime, params| runtime.create_signers_and_arguments(params, senders, args),
+            move |runtime, version, params| {
+                runtime.create_signers_and_arguments(version, params, senders, args)
+            },
             true,
             data_store,
             cost_strategy,
@@ -393,7 +409,7 @@ impl VMRuntime {
             module,
             function_name,
             ty_args,
-            move |runtime, params| runtime.deserialize_args(params, args),
+            move |runtime, version, params| runtime.deserialize_args(version, params, args),
             false,
             data_store,
             cost_strategy,

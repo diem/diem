@@ -5,9 +5,9 @@
 script {
 use 0x1::Signer;
 use 0x1::CoreAddresses;
-fun main(dr: &signer, bob: &signer) {
-    assert(Signer::address_of(dr) == CoreAddresses::DIEM_ROOT_ADDRESS(), 0);
-    assert(Signer::address_of(bob) == {{bob}}, 1);
+fun main(dr: signer, bob: signer) {
+    assert(Signer::address_of(&dr) == CoreAddresses::DIEM_ROOT_ADDRESS(), 0);
+    assert(Signer::address_of(&bob) == {{bob}}, 1);
 }
 }
 
@@ -17,8 +17,8 @@ fun main(dr: &signer, bob: &signer) {
 script {
 use 0x1::Signer;
 use 0x1::CoreAddresses;
-fun main(dr: &signer, bob: &signer) {
-    assert(Signer::address_of(dr) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
-    assert(Signer::address_of(bob) == {{bob}}, 1);
+fun main(dr: signer, bob: signer) {
+    assert(Signer::address_of(&dr) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
+    assert(Signer::address_of(&bob) == {{bob}}, 1);
 }
 }

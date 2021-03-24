@@ -264,6 +264,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
     )?;
 
     let mut script = CompiledScriptMut {
+        version: cursor.version(),
         type_parameters: load_ability_sets(
             &mut cursor,
             AbilitySetPosition::FunctionTypeParameters,
@@ -274,7 +275,6 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
     };
 
     build_compiled_script(&mut script, &table_contents, &tables)?;
-
     Ok(script)
 }
 
@@ -295,6 +295,7 @@ fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModu
     )?;
 
     let mut module = CompiledModuleMut {
+        version: cursor.version(),
         self_module_handle_idx: load_module_handle_index(&mut cursor)?,
         ..Default::default()
     };

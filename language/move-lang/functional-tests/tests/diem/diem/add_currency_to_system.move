@@ -20,7 +20,8 @@ fun main() {}
 script {
 use 0x1::DiemTransactionPublishingOption;
 
-fun main(config: &signer) {
+fun main(config: signer) {
+    let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
@@ -66,7 +67,9 @@ module COIN {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::{Self, COIN};
-fun main(dr_account: &signer, tc_account: &signer) {
+fun main(dr_account: signer, tc_account: signer) {
+    let dr_account = &dr_account;
+    let tc_account = &tc_account;
     COIN::initialize(dr_account, tc_account);
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
@@ -82,7 +85,8 @@ script {
 use 0x1::Diem;
 use 0x1::COIN::COIN;
 use 0x1::FixedPoint32;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(Diem::approx_xdx_for_value<COIN>(10) == 5, 1);
     assert(Diem::scaling_factor<COIN>() == 1000000, 2);
     assert(Diem::fractional_part<COIN>() == 100, 3);
@@ -99,7 +103,8 @@ script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
 use 0x1::Diem;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let prev_mcap3 = Diem::market_cap<COIN>();
     DiemAccount::create_designated_dealer<COIN>(
         account,
@@ -124,7 +129,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     DiemAccount::add_currency<COIN>(account);
 }
 }
@@ -135,7 +141,8 @@ fun main(account: &signer) {
 script {
 use 0x1::DiemAccount;
 use 0x1::COIN::COIN;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<COIN>(
         &with_cap,

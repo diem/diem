@@ -5,7 +5,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 use 0x1::Signer;
 
-fun main(sender: &signer) {
+fun main(sender: signer) {
+    let sender = &sender;
     let sender_addr = Signer::address_of(sender);
     let recipient_addr = {{bob}};
     let sender_original_balance = DiemAccount::balance<XUS>(sender_addr);

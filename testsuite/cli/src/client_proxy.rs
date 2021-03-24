@@ -569,8 +569,8 @@ impl ClientProxy {
             let code = "
                 import 0x1.DiemTransactionPublishingOption;
 
-                main(account: &signer) {
-                    DiemTransactionPublishingOption.set_open_script(move(account));
+                main(account: signer) {
+                    DiemTransactionPublishingOption.set_open_script(&account);
 
                     return;
                 }

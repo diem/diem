@@ -29,12 +29,12 @@ fn encode_add_account_limits_admin_script(execute_as: AccountAddress) -> WriteSe
     import 0x1.XUS;
     import 0x1.Signer;
 
-    main(dr_account: &signer, vasp: &signer) {
-        AccountLimits.publish_unrestricted_limits<XUS.XUS>(copy(vasp));
+    main(dr_account: signer, vasp: signer) {
+        AccountLimits.publish_unrestricted_limits<XUS.XUS>(&vasp);
         AccountLimits.publish_window<XUS.XUS>(
-            move(dr_account),
-            copy(vasp),
-            Signer.address_of(move(vasp))
+            &dr_account,
+            &vasp,
+            Signer.address_of(&vasp)
         );
         return;
     }
@@ -68,7 +68,7 @@ fn encode_update_account_limit_definition_script(
     import 0x1.XUS;
 
     main(
-        account: &signer,
+        account: signer,
         limit_addr: address,
         new_max_inflow: u64,
         new_max_outflow: u64,
@@ -76,7 +76,7 @@ fn encode_update_account_limit_definition_script(
         new_time_period: u64
     ) {
         AccountLimits.update_limits_definition<XUS.XUS>(
-            move(account),
+            &account,
             move(limit_addr),
             move(new_max_inflow),
             move(new_max_outflow),
@@ -119,13 +119,13 @@ fn encode_update_account_limit_window_info_script(
     import 0x1.AccountLimits;
     import 0x1.XUS;
 
-    main(account: &signer,
+    main(account: signer,
         window_addr: address,
         aggregate_balance: u64,
         new_limit_address: address
     ) {
         AccountLimits.update_window_info<XUS.XUS>(
-            move(account),
+            &account,
             move(window_addr),
             move(aggregate_balance),
             move(new_limit_address),

@@ -192,7 +192,8 @@ module ColdWallet {
 script {
 use {{default}}::ApprovalGroup;
 use {{default}}::ColdWallet;
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let genesis_group = ApprovalGroup::create(x"1234", x"5678", x"abc123");
     ColdWallet::create(account, genesis_group);
 }

@@ -9,7 +9,8 @@
 // Change option to CustomModule
 script {
 use 0x1::DiemTransactionPublishingOption;
-fun main(config: &signer) {
+fun main(config: signer) {
+    let config = &config;
     DiemTransactionPublishingOption::set_open_module(config, false)
 }
 }
@@ -54,7 +55,9 @@ module COIN {
 script {
 use 0x1::TransactionFee;
 use 0x1::COIN::{Self, COIN};
-fun main(dr_account: &signer, tc_account: &signer) {
+fun main(dr_account: signer, tc_account: signer) {
+    let dr_account = &dr_account;
+    let tc_account = &tc_account;
     COIN::initialize(dr_account, tc_account);
     TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
@@ -72,7 +75,8 @@ use 0x1::COIN::COIN;
 use 0x1::Diem;
 
 // register dd(1|2) as a preburner
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let prev_mcap1 = Diem::market_cap<XUS>();
     let prev_mcap2 = Diem::market_cap<COIN>();
     DiemAccount::create_designated_dealer<XUS>(
@@ -114,7 +118,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
 // do some preburning
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::preburn<XUS>(account, &with_cap, 10);
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -129,7 +134,8 @@ use 0x1::COIN::COIN;
 use 0x1::DiemAccount;
 
 // do some preburning
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::preburn<COIN>(account, &with_cap, 100);
     DiemAccount::restore_withdraw_capability(with_cap);
@@ -146,7 +152,8 @@ use 0x1::Diem;
 use 0x1::XUS::XUS;
 use 0x1::COIN::COIN;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     let prev_mcap1 = Diem::market_cap<XUS>();
     let prev_mcap2 = Diem::market_cap<COIN>();
     Diem::burn<XUS>(account, {{dd1}}, 10);
@@ -164,7 +171,8 @@ script {
 use 0x1::Diem;
 use 0x1::XUS::XUS;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     Diem::update_minting_ability<XUS>(account, false);
     let coin = Diem::mint<XUS>(account, 10); // will abort here
     Diem::destroy_zero(coin);

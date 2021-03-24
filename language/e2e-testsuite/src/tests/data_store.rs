@@ -271,8 +271,8 @@ fn add_resource_txn(
         "
             import 0x{}.M;
 
-            main(account: &signer) {{
-                M.publish_t1(move(account));
+            main(account: signer) {{
+                M.publish_t1(&account);
                 return;
             }}
         ",
@@ -297,8 +297,8 @@ fn remove_resource_txn(
         "
             import 0x{}.M;
 
-            main(account: &signer) {{
-                M.remove_t1(move(account));
+            main(account: signer) {{
+                M.remove_t1(&account);
                 return;
             }}
         ",
@@ -323,8 +323,8 @@ fn borrow_resource_txn(
         "
             import 0x{}.M;
 
-            main(account: &signer) {{
-                M.borrow_t1(move(account));
+            main(account: signer) {{
+                M.borrow_t1(&account);
                 return;
             }}
         ",
@@ -349,8 +349,8 @@ fn change_resource_txn(
         "
             import 0x{}.M;
 
-            main(account: &signer) {{
-                M.change_t1(move(account), 20);
+            main(account: signer) {{
+                M.change_t1(&account, 20);
                 return;
             }}
         ",

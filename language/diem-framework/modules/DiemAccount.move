@@ -1481,7 +1481,7 @@ module DiemAccount {
 
     /// The prologue for module transaction
     fun module_prologue<Token: store>(
-        sender: &signer,
+        sender: signer,
         txn_sequence_number: u64,
         txn_public_key: vector<u8>,
         txn_gas_price: u64,
@@ -1490,12 +1490,12 @@ module DiemAccount {
         chain_id: u8,
     ) acquires DiemAccount, Balance {
         assert(
-            DiemTransactionPublishingOption::is_module_allowed(sender),
+            DiemTransactionPublishingOption::is_module_allowed(&sender),
             Errors::invalid_state(PROLOGUE_EMODULE_NOT_ALLOWED),
         );
 
         prologue_common<Token>(
-            sender,
+            &sender,
             txn_sequence_number,
             txn_public_key,
             txn_gas_price,
@@ -1537,7 +1537,7 @@ module DiemAccount {
 
     /// The prologue for script transaction
     fun script_prologue<Token: store>(
-        sender: &signer,
+        sender: signer,
         txn_sequence_number: u64,
         txn_public_key: vector<u8>,
         txn_gas_price: u64,
@@ -1547,12 +1547,12 @@ module DiemAccount {
         script_hash: vector<u8>,
     ) acquires DiemAccount, Balance {
         assert(
-            DiemTransactionPublishingOption::is_script_allowed(sender, &script_hash),
+            DiemTransactionPublishingOption::is_script_allowed(&sender, &script_hash),
             Errors::invalid_state(PROLOGUE_ESCRIPT_NOT_ALLOWED),
         );
 
         prologue_common<Token>(
-            sender,
+            &sender,
             txn_sequence_number,
             txn_public_key,
             txn_gas_price,
@@ -1588,21 +1588,21 @@ module DiemAccount {
 
     /// The prologue for WriteSet transaction
     fun writeset_prologue(
-        sender: &signer,
+        sender: signer,
         txn_sequence_number: u64,
         txn_public_key: vector<u8>,
         txn_expiration_time: u64,
         chain_id: u8,
     ) acquires DiemAccount, Balance {
         assert(
-            Signer::address_of(sender) == CoreAddresses::DIEM_ROOT_ADDRESS(),
+            Signer::address_of(&sender) == CoreAddresses::DIEM_ROOT_ADDRESS(),
             Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER)
         );
-        assert(Roles::has_diem_root_role(sender), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
+        assert(Roles::has_diem_root_role(&sender), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
 
         // Currency code don't matter here as it won't be charged anyway. Gas constants are ommitted.
         prologue_common<XUS>(
-            sender,
+            &sender,
             txn_sequence_number,
             txn_public_key,
             0,
@@ -1776,6 +1776,22 @@ module DiemAccount {
     /// If the exection of the epilogue fails, it is re-invoked with different arguments, and
     /// based on the conditions checked in the prologue, should never fail.
     fun epilogue<Token: store>(
+        account: signer,
+        txn_sequence_number: u64,
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        gas_units_remaining: u64
+    ) acquires DiemAccount, Balance {
+        epilogue_common<Token>(
+            &account,
+            txn_sequence_number,
+            txn_gas_price,
+            txn_max_gas_units,
+            gas_units_remaining,
+        )
+    }
+
+    fun epilogue_common<Token: store>(
         account: &signer,
         txn_sequence_number: u64,
         txn_gas_price: u64,
@@ -1839,10 +1855,11 @@ module DiemAccount {
 
     /// Epilogue for WriteSet trasnaction
     fun writeset_epilogue(
-        dr_account: &signer,
+        dr_account: signer,
         txn_sequence_number: u64,
         should_trigger_reconfiguration: bool,
     ) acquires DiemWriteSetManager, DiemAccount, Balance {
+        let dr_account = &dr_account;
         let writeset_events_ref = borrow_global_mut<DiemWriteSetManager>(CoreAddresses::DIEM_ROOT_ADDRESS());
         Event::emit_event<AdminTransactionEvent>(
             &mut writeset_events_ref.upgrade_events,
@@ -1857,7 +1874,7 @@ module DiemAccount {
         assert(Roles::has_diem_root_role(dr_account), Errors::invalid_argument(PROLOGUE_EINVALID_WRITESET_SENDER));
 
         // Currency code don't matter here as it won't be charged anyway.
-        epilogue<XUS>(dr_account, txn_sequence_number, 0, 0, 0);
+        epilogue_common<XUS>(dr_account, txn_sequence_number, 0, 0, 0);
         if (should_trigger_reconfiguration) DiemConfig::reconfigure(dr_account)
     }
     spec fun writeset_epilogue {
@@ -2031,7 +2048,7 @@ module DiemAccount {
         /// only `Self::withdraw_from` and its helper and clients can withdraw [[H18]][PERMISSION].
         apply BalanceNotDecrease<Token> to *<Token>
             except withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
-                preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
+                preburn, pay_from, epilogue_common, epilogue, failure_epilogue, success_epilogue;
     }
 
     spec schema BalanceNotDecrease<Token> {

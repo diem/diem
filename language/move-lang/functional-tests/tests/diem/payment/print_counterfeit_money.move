@@ -36,7 +36,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 use 0x1::Signer;
 
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     M::become_rich(account);
     assert(DiemAccount::balance<XUS>(Signer::address_of(account)) == 500000, 42);
 }

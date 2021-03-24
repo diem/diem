@@ -14,6 +14,7 @@ script {
 use 0x42::M::{S, R, Cup};
 
 fun main<T: drop>(
+    s: &signer,
     a0: T,
     a1: vector<T>,
     a2: vector<vector<T>>,

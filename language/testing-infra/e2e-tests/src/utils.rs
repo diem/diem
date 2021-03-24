@@ -18,8 +18,8 @@ pub fn close_module_publishing(
     let compiled_script = {
         let script = "
             import 0x1.DiemTransactionPublishingOption;
-        main(config: &signer) {
-            DiemTransactionPublishingOption.set_open_module(move(config), false);
+        main(config: signer) {
+            DiemTransactionPublishingOption.set_open_module(&config, false);
             return;
         }
         ";

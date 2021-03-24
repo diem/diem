@@ -24,7 +24,7 @@ fn prepare_module(executor: &mut FakeExecutor, account: &Account, seq_num: u64) 
                 return;
             }
 
-            public(script) f_script(s: &signer) {
+            public(script) f_script(s: signer) {
                 return;
             }
         }

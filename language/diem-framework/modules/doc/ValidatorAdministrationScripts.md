@@ -123,7 +123,7 @@ or does not have a <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_Validat
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_add_validator_and_reconfigure">add_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_add_validator_and_reconfigure">add_validator_and_reconfigure</a>(dr_account: signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -133,14 +133,14 @@ or does not have a <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_Validat
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_add_validator_and_reconfigure">add_validator_and_reconfigure</a>(
-    dr_account: &signer,
+    dr_account: signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
     validator_address: address
 ) {
-    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&dr_account, sliding_nonce);
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
-    <a href="DiemSystem.md#0x1_DiemSystem_add_validator">DiemSystem::add_validator</a>(dr_account, validator_address);
+    <a href="DiemSystem.md#0x1_DiemSystem_add_validator">DiemSystem::add_validator</a>(&dr_account, validator_address);
 }
 </code></pre>
 
@@ -254,7 +254,7 @@ only "locally" under the <code>validator_account</code> account address.
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_register_validator_config">register_validator_config</a>(validator_operator_account: signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -264,7 +264,7 @@ only "locally" under the <code>validator_account</code> account address.
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_register_validator_config">register_validator_config</a>(
-    validator_operator_account: &signer,
+    validator_operator_account: signer,
     // TODO Rename <b>to</b> validator_addr, since it is an address.
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
@@ -272,7 +272,7 @@ only "locally" under the <code>validator_account</code> account address.
     fullnode_network_addresses: vector&lt;u8&gt;,
 ) {
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
-        validator_operator_account,
+        &validator_operator_account,
         validator_account,
         consensus_pubkey,
         validator_network_addresses,
@@ -383,7 +383,7 @@ is not in the validator set.
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(dr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(dr_account: signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -393,15 +393,15 @@ is not in the validator set.
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
-    dr_account: &signer,
+    dr_account: signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,
     validator_address: address
 ) {
-    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&dr_account, sliding_nonce);
     // TODO: Use an error code from <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors">Errors</a>.<b>move</b>
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_get_human_name">ValidatorConfig::get_human_name</a>(validator_address) == validator_name, 0);
-    <a href="DiemSystem.md#0x1_DiemSystem_remove_validator">DiemSystem::remove_validator</a>(dr_account, validator_address);
+    <a href="DiemSystem.md#0x1_DiemSystem_remove_validator">DiemSystem::remove_validator</a>(&dr_account, validator_address);
 }
 </code></pre>
 
@@ -515,7 +515,7 @@ on-chain with the updated <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_register_validator_config">ValidatorAdministrationScripts::register_validator_config</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(validator_operator_account: signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -525,20 +525,20 @@ on-chain with the updated <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">set_validator_config_and_reconfigure</a>(
-    validator_operator_account: &signer,
+    validator_operator_account: signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
     validator_network_addresses: vector&lt;u8&gt;,
     fullnode_network_addresses: vector&lt;u8&gt;,
 ) {
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
-        validator_operator_account,
+        &validator_operator_account,
         validator_account,
         consensus_pubkey,
         validator_network_addresses,
         fullnode_network_addresses
     );
-    <a href="DiemSystem.md#0x1_DiemSystem_update_config_and_reconfigure">DiemSystem::update_config_and_reconfigure</a>(validator_operator_account, validator_account);
+    <a href="DiemSystem.md#0x1_DiemSystem_update_config_and_reconfigure">DiemSystem::update_config_and_reconfigure</a>(&validator_operator_account, validator_account);
  }
 </code></pre>
 
@@ -666,7 +666,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator">set_validator_operator</a>(account: signer, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -676,12 +676,12 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator">set_validator_operator</a>(
-    account: &signer,
+    account: signer,
     operator_name: vector&lt;u8&gt;,
     operator_account: address
 ) {
     <b>assert</b>(<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) == operator_name, 0);
-    <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(account, operator_account);
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(&account, operator_account);
 }
 </code></pre>
 
@@ -800,7 +800,7 @@ the system is initiated by this script.
 * <code><a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(dr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(dr_account: signer, account: signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -810,15 +810,15 @@ the system is initiated by this script.
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="ValidatorAdministrationScripts.md#0x1_ValidatorAdministrationScripts_set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
-    dr_account: &signer,
-    account: &signer,
+    dr_account: signer,
+    account: signer,
     sliding_nonce: u64,
     operator_name: vector&lt;u8&gt;,
     operator_account: address
 ) {
-    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(dr_account, sliding_nonce);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&dr_account, sliding_nonce);
     <b>assert</b>(<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_get_human_name">ValidatorOperatorConfig::get_human_name</a>(operator_account) == operator_name, 0);
-    <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(account, operator_account);
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">ValidatorConfig::set_operator</a>(&account, operator_account);
 }
 </code></pre>
 

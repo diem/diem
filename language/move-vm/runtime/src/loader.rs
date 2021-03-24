@@ -1480,6 +1480,7 @@ impl Script {
         let name = Identifier::new("main").unwrap();
         let native = None; // Script entries cannot be native
         let main: Arc<Function> = Arc::new(Function {
+            file_format_version: script.version(),
             index: FunctionDefinitionIndex(0),
             code,
             parameters,
@@ -1524,6 +1525,7 @@ enum Scope {
 // A runtime function
 #[derive(Debug)]
 pub(crate) struct Function {
+    file_format_version: u32,
     index: FunctionDefinitionIndex,
     code: Vec<Bytecode>,
     parameters: Signature,
@@ -1573,6 +1575,7 @@ impl Function {
         let return_ = module.signature_at(handle.return_).clone();
         let type_parameters = handle.type_parameters.clone();
         Self {
+            file_format_version: module.version(),
             index,
             code,
             parameters,
@@ -1583,6 +1586,10 @@ impl Function {
             scope,
             name,
         }
+    }
+
+    pub(crate) fn file_format_version(&self) -> u32 {
+        self.file_format_version
     }
 
     pub(crate) fn module_id(&self) -> Option<&ModuleId> {

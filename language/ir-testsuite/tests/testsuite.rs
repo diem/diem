@@ -43,6 +43,7 @@ impl Compiler for IRCompiler {
             ast::ScriptOrModule::Script(parsed_script) => {
                 log(format!("{}", &parsed_script));
                 ScriptOrModule::Script(
+                    None,
                     compile_script(Some(address), parsed_script, self.deps.values())?.0,
                 )
             }

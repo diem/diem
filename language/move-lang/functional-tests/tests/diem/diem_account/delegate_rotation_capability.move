@@ -39,7 +39,8 @@ script {
 use {{alice}}::SharedKeyRotation;
 use 0x1::DiemAccount;
 // create a SharedKeyRotation for Alice's account with Bob's account key as the master key
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(DiemAccount::sequence_number({{alice}}) == 1, 77);
     SharedKeyRotation::publish(account, DiemAccount::extract_key_rotation_capability(account), {{bob}});
 }
@@ -51,7 +52,8 @@ script {
 use {{alice}}::SharedKeyRotation;
 use 0x1::DiemAccount;
 // Alice can rotate her key. Here, she rotates it to its original value
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(DiemAccount::sequence_number({{alice}}) == 2, 78);
     SharedKeyRotation::rotate(
         account,
@@ -67,7 +69,8 @@ script {
 use {{alice}}::SharedKeyRotation;
 use 0x1::DiemAccount;
 // Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(DiemAccount::sequence_number({{alice}}) == 3, 78);
     SharedKeyRotation::rotate(
         account,
@@ -94,7 +97,8 @@ use 0x1::BCS;
 use 0x1::DiemAccount;
 use 0x1::Vector;
 // Bob now rotates the key back to its old value
-fun main(account: &signer) {
+fun main(account: signer) {
+    let account = &account;
     assert(DiemAccount::sequence_number({{alice}}) == 3, 78);
     // simulates how an auth_key is created
     // details to be found in DiemAccount::make_account

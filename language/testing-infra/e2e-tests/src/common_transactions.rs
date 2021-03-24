@@ -18,20 +18,20 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     import 0x1.Diem;
     import 0x1.DiemAccount;
 
-    main<Token: store>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
+    main<Token: store>(account: signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
       let with_cap: DiemAccount.WithdrawCapability;
       let name: vector<u8>;
       name = h\"\";
 
       DiemAccount.create_parent_vasp_account<Token>(
-        copy(account),
+        &account,
         copy(fresh_address),
         move(auth_key_prefix),
         move(name),
         false
       );
       if (copy(initial_amount) > 0) {
-         with_cap = DiemAccount.extract_withdraw_capability(copy(account));
+         with_cap = DiemAccount.extract_withdraw_capability(&account);
          DiemAccount.pay_from<Token>(
            &with_cap,
            move(fresh_address),
@@ -57,7 +57,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
 pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "
-    main<Token>(account: &signer) {
+    main<Token>(account: signer) {
       return;
     }
 ";

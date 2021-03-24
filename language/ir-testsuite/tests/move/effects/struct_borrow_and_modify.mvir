@@ -33,8 +33,8 @@ module M {
 //! new-transaction
 import {{default}}.M;
 
-main(s: &signer) {
-    M.publish(move(s));
+main(s: signer) {
+    M.publish(&s);
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -44,8 +44,8 @@ main(s: &signer) {
 import {{default}}.M;
 import 0x1.Signer;
 
-main(s: &signer) {
-    M.modify_x(Signer.address_of(move(s)));
+main(s: signer) {
+    M.modify_x(Signer.address_of(&s));
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -55,8 +55,8 @@ main(s: &signer) {
 import {{default}}.M;
 import 0x1.Signer;
 
-main(s: &signer) {
-    M.verify_x(Signer.address_of(move(s)));
+main(s: signer) {
+    M.verify_x(Signer.address_of(&s));
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -66,8 +66,8 @@ main(s: &signer) {
 import {{default}}.M;
 import 0x1.Signer;
 
-main(s: &signer) {
-    M.modify_y_x(Signer.address_of(move(s)));
+main(s: signer) {
+    M.modify_y_x(Signer.address_of(&s));
     return;
 }
 // check: "Keep(EXECUTED)"
@@ -77,8 +77,8 @@ main(s: &signer) {
 import {{default}}.M;
 import 0x1.Signer;
 
-main(s: &signer) {
-    M.verify_y_x(Signer.address_of(move(s)));
+main(s: signer) {
+    M.verify_y_x(Signer.address_of(&s));
     return;
 }
 // check: "Keep(EXECUTED)"

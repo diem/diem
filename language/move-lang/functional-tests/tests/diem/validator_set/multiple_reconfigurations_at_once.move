@@ -24,7 +24,8 @@ stdlib_script::create_validator_operator_account
 //! sender: alice
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         // set bob to be alice's operator
         ValidatorConfig::set_operator(account, {{bob}});
     }
@@ -36,7 +37,8 @@ script {
 //! sender: viola
 script {
     use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         // set dave to be viola's operator
         ValidatorConfig::set_operator(account, {{dave}});
     }
@@ -50,7 +52,8 @@ script{
     use 0x1::DiemSystem;
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         assert(DiemSystem::is_validator({{alice}}) == true, 98);
         assert(DiemSystem::is_validator({{vivian}}) == true, 99);
         assert(DiemSystem::is_validator({{viola}}) == true, 100);
@@ -76,7 +79,8 @@ script{
     use 0x1::DiemSystem;
     use 0x1::ValidatorConfig;
     // Two reconfigurations cannot happen in the same block
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         // the local validator's key was the same as the key in the validator set
         assert(ValidatorConfig::get_consensus_pubkey(&DiemSystem::get_validator_config({{viola}})) ==
                ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{viola}})), 99);
@@ -102,7 +106,8 @@ script{
 //! sender: bob
 script{
     use 0x1::DiemSystem;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         DiemSystem::update_config_and_reconfigure(account, {{viola}});
     }
 }
@@ -115,7 +120,8 @@ script{
 script {
     use 0x1::DiemSystem;
     use 0x1::AccountFreezing;
-    fun main(tc_account: &signer) {
+    fun main(tc_account: signer) {
+    let tc_account = &tc_account;
         assert(DiemSystem::is_validator({{alice}}) == true, 101);
         AccountFreezing::freeze_account(tc_account, {{alice}});
         assert(AccountFreezing::account_is_frozen({{alice}}), 1);

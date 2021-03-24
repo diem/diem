@@ -61,7 +61,7 @@ module DiemBlock {
     /// Set the metadata for the current block.
     /// The runtime always runs this before executing the transactions in a block.
     fun block_prologue(
-        vm: &signer,
+        vm: signer,
         round: u64,
         timestamp: u64,
         previous_block_votes: vector<address>,
@@ -69,7 +69,7 @@ module DiemBlock {
     ) acquires BlockMetadata {
         DiemTimestamp::assert_operating();
         // Operational constraint: can only be invoked by the VM.
-        CoreAddresses::assert_vm(vm);
+        CoreAddresses::assert_vm(&vm);
 
         // Authorization
         assert(
@@ -78,7 +78,7 @@ module DiemBlock {
         );
 
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        DiemTimestamp::update_global_time(vm, proposer, timestamp);
+        DiemTimestamp::update_global_time(&vm, proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(
             &mut block_metadata_ref.new_block_events,

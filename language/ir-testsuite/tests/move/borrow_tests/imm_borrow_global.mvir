@@ -61,7 +61,7 @@ module Tester {
 //! sender: bob
 import {{bob}}.Tester;
 
-main(account: &signer) {
-    Tester.test(move(account));
+main(account: signer) {
+    Tester.test(&account);
     return;
 }

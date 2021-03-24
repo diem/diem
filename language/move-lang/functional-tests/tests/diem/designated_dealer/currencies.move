@@ -8,7 +8,8 @@ script {
     use 0x1::DiemAccount;
     use 0x1::XUS::XUS;
     use 0x1::XDX::XDX;
-    fun main(account: &signer) {
+    fun main(account: signer) {
+    let account = &account;
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
         DiemAccount::create_designated_dealer<XUS>(
             account, 0x2, copy dummy_auth_key_prefix, b"name", false

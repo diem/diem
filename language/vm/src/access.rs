@@ -188,6 +188,10 @@ pub trait ModuleAccess: Sync {
         self.as_module().self_id()
     }
 
+    fn version(&self) -> u32 {
+        self.as_module().as_inner().version
+    }
+
     fn immediate_dependencies(&self) -> Vec<ModuleId> {
         let self_handle = self.self_handle();
         self.module_handles()
@@ -274,6 +278,10 @@ pub trait ScriptAccess: Sync {
 
     fn address_identifiers(&self) -> &[AccountAddress] {
         &self.as_script().as_inner().address_identifiers
+    }
+
+    fn version(&self) -> u32 {
+        self.as_script().as_inner().version
     }
 
     fn code(&self) -> &CodeUnit {

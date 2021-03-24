@@ -12,6 +12,7 @@ use vm::file_format::*;
 // Also make a test function whose body will be filled by given test cases.
 fn make_module() -> CompiledModuleMut {
     CompiledModuleMut {
+        version: vm::file_format_common::VERSION_MAX,
         module_handles: vec![
             // only self module
             ModuleHandle {
