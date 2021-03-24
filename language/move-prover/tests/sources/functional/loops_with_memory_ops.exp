@@ -1,0 +1,76 @@
+Move prover returns: exiting with boogie verification errors
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/loops_with_memory_ops.move:93:13 ───
+    │
+ 93 │             assert forall m in 0..length: a[m] == b[m];
+    │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+    =         a = <redacted>
+    =         b = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
+    =         length = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:59: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:60: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:62: nested_loop2
+    =         i = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
+    =         x = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
+    =         y = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:66: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:67: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:68: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:69: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:70: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:73: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:74: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
+    =         i = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:86: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:93: nested_loop2
+
+error: unknown assertion failed
+
+    ┌── tests/sources/functional/loops_with_memory_ops.move:92:9 ───
+    │
+ 92 │ ╭         spec {
+ 93 │ │             assert forall m in 0..length: a[m] == b[m];
+ 94 │ │         };
+    │ ╰─────────^
+    │
+    =     at tests/sources/functional/loops_with_memory_ops.move:56: nested_loop2
+    =         a = <redacted>
+    =         b = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:57: nested_loop2
+    =         length = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:59: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:60: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:62: nested_loop2
+    =         i = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:63: nested_loop2
+    =         x = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:64: nested_loop2
+    =         y = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:66: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:67: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:68: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:69: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:70: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:73: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:74: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:85: nested_loop2
+    =         i = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:86: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:89: nested_loop2
+    =         x = <redacted>
+    =     at tests/sources/functional/loops_with_memory_ops.move:90: nested_loop2
+    =     at tests/sources/functional/loops_with_memory_ops.move:90: nested_loop2
+    =         y = <redacted>
