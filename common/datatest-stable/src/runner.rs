@@ -38,7 +38,8 @@ struct TestOpts {
     /// List all tests
     list: bool,
     #[structopt(long)]
-    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    /// List or run ignored tests (always empty: it is currently not possible to mark tests as
+    /// ignored)
     ignored: bool,
     #[structopt(long)]
     /// NO-OP: unsupported option, exists for compatibility with the default test harness
@@ -100,7 +101,13 @@ impl Default for Format {
 pub fn runner(reqs: &[Requirements]) {
     let options = TestOpts::from_args();
 
-    let tests: Vec<Test> = reqs.iter().flat_map(|req| req.expand()).collect();
+    let tests: Vec<Test> = if options.ignored {
+        // Currently impossible to mark tests as ignored.
+        // TODO: add support for this in the future, probably by supporting an "ignored" dir
+        vec![]
+    } else {
+        reqs.iter().flat_map(|req| req.expand()).collect()
+    };
 
     if options.list {
         for test in &tests {
