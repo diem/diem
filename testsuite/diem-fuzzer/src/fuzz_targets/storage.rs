@@ -115,12 +115,12 @@ impl FuzzTargetImpl for JellyfishGetRangeProof {
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
         Some(corpus_from_strategy(
-            arb_tree_with_index::<AccountStateBlob>(1000),
+            arb_tree_with_index::<AccountStateBlob>(100),
         ))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let input = fuzz_data_to_value(data, arb_tree_with_index::<AccountStateBlob>(1000));
+        let input = fuzz_data_to_value(data, arb_tree_with_index::<AccountStateBlob>(100));
         test_get_range_proof(input);
     }
 }
