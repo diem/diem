@@ -286,7 +286,7 @@ fun Test::mut_ref_param($t0|r: &mut Test::R): u64 {
   5: $t6 := -($t4, $t5) on_abort goto 15 with $t7
   6: $t8 := borrow_field<Test::R>.v($t0)
   7: write_ref($t8, $t6)
-  8: write_back[Reference($t0)]($t8)
+  8: write_back[Reference($t0).0]($t8)
   9: trace_local[r]($t0)
  10: label L1
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:67:6+42
@@ -365,8 +365,8 @@ fun Test::resource_with_old($t0|val: u64) {
  19: $t10 := +($t9, $t0) on_abort goto 29 with $t6
  20: $t11 := borrow_field<Test::R>.v($t8)
  21: write_ref($t11, $t10)
- 22: write_back[Reference($t8)]($t11)
- 23: write_back[Test::R]($t8)
+ 22: write_back[Reference($t8).0]($t11)
+ 23: write_back[Test::R.D]($t8)
  24: label L3
      # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+34
  25: assert Not(Not(exists[@0]<Test::R>(0)))

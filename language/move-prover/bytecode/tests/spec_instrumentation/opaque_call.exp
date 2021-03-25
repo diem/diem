@@ -105,8 +105,8 @@ fun Test::get_and_incr($t0|addr: address): u64 {
  19: $t11 := +($t9, $t10) on_abort goto 30 with $t6
  20: $t12 := borrow_field<Test::R>.v($t7)
  21: write_ref($t12, $t11)
- 22: write_back[Reference($t7)]($t12)
- 23: write_back[Test::R]($t7)
+ 22: write_back[Reference($t7).0]($t12)
+ 23: write_back[Test::R.D]($t7)
  24: label L3
      # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:16:6+35
  25: assert Not(Not(exists[@0]<Test::R>($t0)))

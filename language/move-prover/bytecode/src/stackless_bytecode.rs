@@ -832,8 +832,9 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             UnpackRefDeep => {
                 write!(f, "unpack_ref_deep")?;
             }
-            //TODO: add edge info to write back display
-            WriteBack(node, _) => write!(f, "write_back[{}]", node.display(self.func_target))?,
+            WriteBack(node, edge) => {
+                write!(f, "write_back[{}.{}]", node.display(self.func_target), edge)?
+            }
             Splice(map) => write!(
                 f,
                 "splice[{}]",
