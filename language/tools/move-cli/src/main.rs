@@ -118,6 +118,12 @@ pub enum Command {
         signers: Vec<String>,
         /// Possibly-empty list of arguments passed to the transaction (e.g., `i` in
         /// `main(i: u64)`). Must match the arguments types expected by `script_file`.
+        /// Supported argument types are
+        /// bool literals (true, false),
+        /// u64 literals (e.g., 10, 58),
+        /// address literals (e.g., 0x12, 0x0000000000000000000000000000000f),
+        /// hexadecimal strings (e.g., x"0012" will parse as the vector<u8> value [00, 12]), and
+        /// ASCII strings (e.g., 'b"hi" will parse as the vector<u8> value [68, 69])
         #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
         args: Vec<TransactionArgument>,
         /// Possibly-empty list of type arguments passed to the transaction (e.g., `T` in

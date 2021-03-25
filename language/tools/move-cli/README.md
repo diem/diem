@@ -85,6 +85,15 @@ The `--signers 0xf` argument indicates which account address(es) have signed
 off on the script. Omitting `--signers` or passing multiple signers to this
 single-`signer` script will trigger a type error.
 
+## Passing arguments
+
+The CLI supports passing non-`signer` arguments to `move run` via `--args`. The following argument types are supported:
+* `bool` literals (`true`, `false`)
+* `u64` literals (e.g., `10`, `58`)
+* `address` literals (e.g., `0x12`, `0x0000000000000000000000000000000f`)
+* hexadecimal strings (e.g., `'x"0012"'` will parse as the `vector<u8>` value `[00, 12]`)
+* ASCII strings (e.g., `'b"hi"'` will parse as the `vector<u8>` value `[68, 69]`)
+
 ## Publishing new modules
 
 When executing a transaction script you'll often want to call into different Move
