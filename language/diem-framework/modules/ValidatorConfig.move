@@ -194,7 +194,6 @@ module ValidatorConfig {
             fullnode_network_addresses,
         });
     }
-
     spec fun set_config {
         pragma opaque;
         modifies global<ValidatorConfig>(validator_addr);
@@ -209,7 +208,6 @@ module ValidatorConfig {
                                                  fullnode_network_addresses,
                                              }));
     }
-
     spec schema SetConfigAbortsIf {
         validator_operator_account: signer;
         validator_addr: address;

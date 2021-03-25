@@ -51,17 +51,17 @@
 -  [Transaction Scripts](#@Transaction_Scripts_45)
     -  [Account Creation](#@Account_Creation_46)
         -  [Module `0x1::AccountCreationScripts`](#0x1_AccountCreationScripts)
-    -  [Account Administration](#@Account_Administration_73)
+    -  [Account Administration](#@Account_Administration_77)
         -  [Module `0x1::AccountAdministrationScripts`](#0x1_AccountAdministrationScripts)
-    -  [Payments](#@Payments_125)
+    -  [Payments](#@Payments_129)
         -  [Module `0x1::PaymentScripts`](#0x1_PaymentScripts)
-    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_132)
+    -  [Validator and Validator Operator Administration](#@Validator_and_Validator_Operator_Administration_136)
         -  [Module `0x1::ValidatorAdministrationScripts`](#0x1_ValidatorAdministrationScripts)
-    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_163)
+    -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_167)
         -  [Module `0x1::TreasuryComplianceScripts`](#0x1_TreasuryComplianceScripts)
-    -  [System Administration](#@System_Administration_221)
+    -  [System Administration](#@System_Administration_225)
         -  [Module `0x1::SystemAdministrationScripts`](#0x1_SystemAdministrationScripts)
-    -  [Index](#@Index_226)
+    -  [Index](#@Index_230)
 
 
 
@@ -738,15 +738,18 @@ child accounts of the creating Parent VASP account.
 
 <a name="@Events_49"></a>
 
-####### Events
+###### Events
 
-Successful execution with a <code>child_initial_balance</code> greater than zero will emit:
-* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> with the <code>payer</code> field being the Parent VASP's address,
-and payee field being <code>child_address</code>. This is emitted on the Parent VASP's
-<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle.
-* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address,
-and payee field being <code>child_address</code>. This is emitted on the new Child VASPS's
-<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
+Successful execution will emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>child_address</code>,
+and the <code>rold_id</code> field being <code><a href="../modules/doc/Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">Roles::CHILD_VASP_ROLE_ID</a></code>. This is emitted on the
+<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+Successful execution with a <code>child_initial_balance</code> greater than zero will additionaly emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> with the <code>payee</code> field being <code>child_address</code>.
+This is emitted on the Parent VASP's <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle.
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address.
+This is emitted on the new Child VASPS's <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
 
 
 <a name="@Parameters_50"></a>
@@ -865,6 +868,14 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>{new_account_address: child_address};
+<b>include</b> child_initial_balance &gt; 0 ==&gt;
+    <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_PayFromEmits">DiemAccount::PayFromEmits</a>&lt;CoinType&gt;{
+        cap: parent_cap,
+        payee: child_address,
+        amount: child_initial_balance,
+        metadata: x"",
+    };
 </code></pre>
 
 
@@ -904,7 +915,17 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_55"></a>
+<a name="@Events_55"></a>
+
+###### Events
+
+Successful execution will emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="../modules/doc/Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">Roles::VALIDATOR_OPERATOR_ROLE_ID</a></code>. This is emitted on the
+<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_56"></a>
 
 ###### Parameters
 
@@ -917,7 +938,7 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
-<a name="@Common_Abort_Conditions_56"></a>
+<a name="@Common_Abort_Conditions_57"></a>
 
 ###### Common Abort Conditions
 
@@ -932,7 +953,7 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_57"></a>
+<a name="@Related_Scripts_58"></a>
 
 ###### Related Scripts
 
@@ -1017,7 +1038,7 @@ Only the Diem Root account can create Validator Operator accounts [[A4]][ROLE].
 ##### Function `create_validator_account`
 
 
-<a name="@Summary_58"></a>
+<a name="@Summary_59"></a>
 
 ###### Summary
 
@@ -1025,7 +1046,7 @@ Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
 
-<a name="@Technical_Description_59"></a>
+<a name="@Technical_Description_60"></a>
 
 ###### Technical Description
 
@@ -1040,7 +1061,17 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_60"></a>
+<a name="@Events_61"></a>
+
+###### Events
+
+Successful execution will emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="../modules/doc/Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">Roles::VALIDATOR_ROLE_ID</a></code>. This is emitted on the
+<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_62"></a>
 
 ###### Parameters
 
@@ -1053,7 +1084,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
-<a name="@Common_Abort_Conditions_61"></a>
+<a name="@Common_Abort_Conditions_63"></a>
 
 ###### Common Abort Conditions
 
@@ -1068,7 +1099,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_62"></a>
+<a name="@Related_Scripts_64"></a>
 
 ###### Related Scripts
 
@@ -1153,14 +1184,14 @@ Only the Diem Root account can create Validator accounts [[A3]][ROLE].
 ##### Function `create_parent_vasp_account`
 
 
-<a name="@Summary_63"></a>
+<a name="@Summary_65"></a>
 
 ###### Summary
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_64"></a>
+<a name="@Technical_Description_66"></a>
 
 ###### Technical Description
 
@@ -1173,7 +1204,17 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_65"></a>
+<a name="@Events_67"></a>
+
+###### Events
+
+Successful execution will emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="../modules/doc/Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a></code>. This is emitted on the
+<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_68"></a>
 
 ###### Parameters
 
@@ -1188,7 +1229,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code>add_all_currencies</code>  | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                                     |
 
 
-<a name="@Common_Abort_Conditions_66"></a>
+<a name="@Common_Abort_Conditions_69"></a>
 
 ###### Common Abort Conditions
 
@@ -1204,7 +1245,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_67"></a>
+<a name="@Related_Scripts_70"></a>
 
 ###### Related Scripts
 
@@ -1283,7 +1324,7 @@ Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE
 ##### Function `create_designated_dealer`
 
 
-<a name="@Summary_68"></a>
+<a name="@Summary_71"></a>
 
 ###### Summary
 
@@ -1291,7 +1332,7 @@ Creates a Designated Dealer account with the provided information, and initializ
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_69"></a>
+<a name="@Technical_Description_72"></a>
 
 ###### Technical Description
 
@@ -1307,7 +1348,17 @@ At the time of creation the account is also initialized with default mint tiers 
 account.
 
 
-<a name="@Parameters_70"></a>
+<a name="@Events_73"></a>
+
+###### Events
+
+Successful execution will emit:
+* A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>addr</code>,
+and the <code>rold_id</code> field being <code><a href="../modules/doc/Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">Roles::DESIGNATED_DEALER_ROLE_ID</a></code>. This is emitted on the
+<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_74"></a>
 
 ###### Parameters
 
@@ -1323,7 +1374,7 @@ account.
 
 
 
-<a name="@Common_Abort_Conditions_71"></a>
+<a name="@Common_Abort_Conditions_75"></a>
 
 ###### Common Abort Conditions
 
@@ -1339,7 +1390,7 @@ account.
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
 
-<a name="@Related_Scripts_72"></a>
+<a name="@Related_Scripts_76"></a>
 
 ###### Related Scripts
 
@@ -1396,6 +1447,7 @@ account.
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>{new_account_address: addr};
 </code></pre>
 
 
@@ -1413,7 +1465,7 @@ Only the Treasury Compliance account can create Designated Dealer accounts [[A5]
 
 ---
 
-<a name="@Account_Administration_73"></a>
+<a name="@Account_Administration_77"></a>
 
 ### Account Administration
 
@@ -1440,7 +1492,7 @@ This module holds transactions that can be used to administer accounts in the Di
 ##### Function `add_currency_to_account`
 
 
-<a name="@Summary_74"></a>
+<a name="@Summary_78"></a>
 
 ###### Summary
 
@@ -1450,7 +1502,7 @@ successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
 
-<a name="@Technical_Description_75"></a>
+<a name="@Technical_Description_79"></a>
 
 ###### Technical Description
 
@@ -1460,7 +1512,7 @@ accounts that can hold balances can send this transaction, the sending account c
 already have a <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_Balance">DiemAccount::Balance</a>&lt;Currency&gt;</code> published under it.
 
 
-<a name="@Parameters_76"></a>
+<a name="@Parameters_80"></a>
 
 ###### Parameters
 
@@ -1470,7 +1522,7 @@ already have a <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_Bala
 | <code>account</code>  | <code>signer</code> | The signer of the sending account of the transaction.                                                                                               |
 
 
-<a name="@Common_Abort_Conditions_77"></a>
+<a name="@Common_Abort_Conditions_81"></a>
 
 ###### Common Abort Conditions
 
@@ -1481,7 +1533,7 @@ already have a <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_Bala
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EADD_EXISTING_CURRENCY">DiemAccount::EADD_EXISTING_CURRENCY</a></code>   | A balance for <code>Currency</code> is already published under the sending <code>account</code>. |
 
 
-<a name="@Related_Scripts_78"></a>
+<a name="@Related_Scripts_82"></a>
 
 ###### Related Scripts
 
@@ -1540,7 +1592,7 @@ and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROL
 ##### Function `add_recovery_rotation_capability`
 
 
-<a name="@Summary_79"></a>
+<a name="@Summary_83"></a>
 
 ###### Summary
 
@@ -1550,7 +1602,7 @@ both be VASP accounts. After this transaction both the sending account and the
 specified recovery account can rotate the sender account's authentication key.
 
 
-<a name="@Technical_Description_80"></a>
+<a name="@Technical_Description_84"></a>
 
 ###### Technical Description
 
@@ -1571,7 +1623,7 @@ removed in this transaction and stored in the <code><a href="../modules/doc/Reco
 resource stored under the account at <code>recovery_address</code>.
 
 
-<a name="@Parameters_81"></a>
+<a name="@Parameters_85"></a>
 
 ###### Parameters
 
@@ -1581,7 +1633,7 @@ resource stored under the account at <code>recovery_address</code>.
 | <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> will be stored. |
 
 
-<a name="@Common_Abort_Conditions_82"></a>
+<a name="@Common_Abort_Conditions_86"></a>
 
 ###### Common Abort Conditions
 
@@ -1593,7 +1645,7 @@ resource stored under the account at <code>recovery_address</code>.
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code> <a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_EMAX_KEYS_REGISTERED">RecoveryAddress::EMAX_KEYS_REGISTERED</a></code>                  | <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_MAX_REGISTERED_KEYS">RecoveryAddress::MAX_REGISTERED_KEYS</a></code> have already been registered with this <code>recovery_address</code>. |
 
 
-<a name="@Related_Scripts_83"></a>
+<a name="@Related_Scripts_87"></a>
 
 ###### Related Scripts
 
@@ -1654,7 +1706,7 @@ resource stored under the account at <code>recovery_address</code>.
 ##### Function `publish_shared_ed25519_public_key`
 
 
-<a name="@Summary_84"></a>
+<a name="@Summary_88"></a>
 
 ###### Summary
 
@@ -1663,7 +1715,7 @@ publishes a new shared authentication key derived from that public key under the
 Any account can send this transaction.
 
 
-<a name="@Technical_Description_85"></a>
+<a name="@Technical_Description_89"></a>
 
 ###### Technical Description
 
@@ -1674,7 +1726,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <code>account</code> under <code>account</code>.
 
 
-<a name="@Parameters_86"></a>
+<a name="@Parameters_90"></a>
 
 ###### Parameters
 
@@ -1684,7 +1736,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | A valid 32-byte Ed25519 public key for <code>account</code>'s authentication key to be rotated to and stored. |
 
 
-<a name="@Common_Abort_Conditions_87"></a>
+<a name="@Common_Abort_Conditions_91"></a>
 
 ###### Common Abort Conditions
 
@@ -1695,7 +1747,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code>            | <code>public_key</code> is an invalid ed25519 public key.                                                      |
 
 
-<a name="@Related_Scripts_88"></a>
+<a name="@Related_Scripts_92"></a>
 
 ###### Related Scripts
 
@@ -1743,14 +1795,14 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 ##### Function `rotate_authentication_key`
 
 
-<a name="@Summary_89"></a>
+<a name="@Summary_93"></a>
 
 ###### Summary
 
 Rotates the <code>account</code>'s authentication key to the supplied new authentication key. May be sent by any account.
 
 
-<a name="@Technical_Description_90"></a>
+<a name="@Technical_Description_94"></a>
 
 ###### Technical Description
 
@@ -1760,7 +1812,7 @@ corresponds to an ed25519 public key as described [here](https://developers.diem
 and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_91"></a>
+<a name="@Parameters_95"></a>
 
 ###### Parameters
 
@@ -1770,7 +1822,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.  |
 
 
-<a name="@Common_Abort_Conditions_92"></a>
+<a name="@Common_Abort_Conditions_96"></a>
 
 ###### Common Abort Conditions
 
@@ -1780,7 +1832,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                    |
 
 
-<a name="@Related_Scripts_93"></a>
+<a name="@Related_Scripts_97"></a>
 
 ###### Related Scripts
 
@@ -1851,7 +1903,7 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 ##### Function `rotate_authentication_key_with_nonce`
 
 
-<a name="@Summary_94"></a>
+<a name="@Summary_98"></a>
 
 ###### Summary
 
@@ -1860,7 +1912,7 @@ any account that has a sliding nonce resource published under it (usually this i
 Compliance or Diem Root accounts).
 
 
-<a name="@Technical_Description_95"></a>
+<a name="@Technical_Description_99"></a>
 
 ###### Technical Description
 
@@ -1870,7 +1922,7 @@ corresponds to an ed25519 public key as described [here](https://developers.diem
 and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_96"></a>
+<a name="@Parameters_100"></a>
 
 ###### Parameters
 
@@ -1881,7 +1933,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                           |
 
 
-<a name="@Common_Abort_Conditions_97"></a>
+<a name="@Common_Abort_Conditions_101"></a>
 
 ###### Common Abort Conditions
 
@@ -1895,7 +1947,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                           |
 
 
-<a name="@Related_Scripts_98"></a>
+<a name="@Related_Scripts_102"></a>
 
 ###### Related Scripts
 
@@ -1969,7 +2021,7 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 ##### Function `rotate_authentication_key_with_nonce_admin`
 
 
-<a name="@Summary_99"></a>
+<a name="@Summary_103"></a>
 
 ###### Summary
 
@@ -1977,7 +2029,7 @@ Rotates the specified account's authentication key to the supplied new authentic
 only be sent by the Diem Root account as a write set transaction.
 
 
-<a name="@Technical_Description_100"></a>
+<a name="@Technical_Description_104"></a>
 
 ###### Technical Description
 
@@ -1987,7 +2039,7 @@ public key as described [here](https://developers.diem.com/docs/core/accounts/#a
 and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_101"></a>
+<a name="@Parameters_105"></a>
 
 ###### Parameters
 
@@ -1999,7 +2051,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                  |
 
 
-<a name="@Common_Abort_Conditions_102"></a>
+<a name="@Common_Abort_Conditions_106"></a>
 
 ###### Common Abort Conditions
 
@@ -2013,7 +2065,7 @@ and <code>account</code> must not have previously delegated its <code><a href=".
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code>              | <code>new_key</code> was an invalid length.                                                                           |
 
 
-<a name="@Related_Scripts_103"></a>
+<a name="@Related_Scripts_107"></a>
 
 ###### Related Scripts
 
@@ -2095,7 +2147,7 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 ##### Function `rotate_authentication_key_with_recovery_address`
 
 
-<a name="@Summary_104"></a>
+<a name="@Summary_108"></a>
 
 ###### Summary
 
@@ -2104,7 +2156,7 @@ new authentication key. Only used for accounts that are part of a recovery addre
 <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code> for account restrictions).
 
 
-<a name="@Technical_Description_105"></a>
+<a name="@Technical_Description_109"></a>
 
 ###### Technical Description
 
@@ -2116,7 +2168,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published that contains <code>to_recover</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
-<a name="@Parameters_106"></a>
+<a name="@Parameters_110"></a>
 
 ###### Parameters
 
@@ -2128,7 +2180,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 | <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New authentication key to be used for the account at the <code>to_recover</code> address.                                                |
 
 
-<a name="@Common_Abort_Conditions_107"></a>
+<a name="@Common_Abort_Conditions_111"></a>
 
 ###### Common Abort Conditions
 
@@ -2140,7 +2192,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EMALFORMED_AUTHENTICATION_KEY">DiemAccount::EMALFORMED_AUTHENTICATION_KEY</a></code> | <code>new_key</code> was an invalid length.                                                                                                                    |
 
 
-<a name="@Related_Scripts_108"></a>
+<a name="@Related_Scripts_112"></a>
 
 ###### Related Scripts
 
@@ -2209,7 +2261,7 @@ the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PER
 ##### Function `rotate_dual_attestation_info`
 
 
-<a name="@Summary_109"></a>
+<a name="@Summary_113"></a>
 
 ###### Summary
 
@@ -2219,7 +2271,7 @@ information published under it. In practice the only such accounts are Designate
 Parent VASPs.
 
 
-<a name="@Technical_Description_110"></a>
+<a name="@Technical_Description_114"></a>
 
 ###### Technical Description
 
@@ -2227,7 +2279,7 @@ Updates the <code>base_url</code> and <code>compliance_public_key</code> fields 
 resource published under <code>account</code>. The <code>new_key</code> must be a valid ed25519 public key.
 
 
-<a name="@Events_111"></a>
+<a name="@Events_115"></a>
 
 ####### Events
 
@@ -2240,7 +2292,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code> <code>base_url_rotation_events</code> handle published under <code>account</code>.
 
 
-<a name="@Parameters_112"></a>
+<a name="@Parameters_116"></a>
 
 ###### Parameters
 
@@ -2251,7 +2303,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for on-chain dual attestation checking. |
 
 
-<a name="@Common_Abort_Conditions_113"></a>
+<a name="@Common_Abort_Conditions_117"></a>
 
 ###### Common Abort Conditions
 
@@ -2261,7 +2313,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">DualAttestation::EINVALID_PUBLIC_KEY</a></code> | <code>new_key</code> is not a valid ed25519 public key.                               |
 
 
-<a name="@Related_Scripts_114"></a>
+<a name="@Related_Scripts_118"></a>
 
 ###### Related Scripts
 
@@ -2324,7 +2376,7 @@ Credential is granted to either a Parent VASP or a designated dealer [[H17]][PER
 ##### Function `rotate_shared_ed25519_public_key`
 
 
-<a name="@Summary_115"></a>
+<a name="@Summary_119"></a>
 
 ###### Summary
 
@@ -2333,7 +2385,7 @@ any account that has previously published a shared ed25519 public key using
 <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_publish_shared_ed25519_public_key">AccountAdministrationScripts::publish_shared_ed25519_public_key</a></code>.
 
 
-<a name="@Technical_Description_116"></a>
+<a name="@Technical_Description_120"></a>
 
 ###### Technical Description
 
@@ -2344,7 +2396,7 @@ rotates the <code>account</code>'s authentication key to the new authentication 
 using the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in <code>account</code>'s <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code>.
 
 
-<a name="@Parameters_117"></a>
+<a name="@Parameters_121"></a>
 
 ###### Parameters
 
@@ -2354,7 +2406,7 @@ using the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotati
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                           |
 
 
-<a name="@Common_Abort_Conditions_118"></a>
+<a name="@Common_Abort_Conditions_122"></a>
 
 ###### Common Abort Conditions
 
@@ -2364,7 +2416,7 @@ using the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotati
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code> | <code>public_key</code> is an invalid ed25519 public key.                                                |
 
 
-<a name="@Related_Scripts_119"></a>
+<a name="@Related_Scripts_123"></a>
 
 ###### Related Scripts
 
@@ -2411,7 +2463,7 @@ using the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotati
 ##### Function `create_recovery_address`
 
 
-<a name="@Summary_120"></a>
+<a name="@Summary_124"></a>
 
 ###### Summary
 
@@ -2422,7 +2474,7 @@ Multiple recovery addresses can exist for a single VASP, but accounts in
 each must be disjoint.
 
 
-<a name="@Technical_Description_121"></a>
+<a name="@Technical_Description_125"></a>
 
 ###### Technical Description
 
@@ -2433,7 +2485,7 @@ other accounts may add their key rotation to this resource so that <code>account
 may be used as a recovery account for those accounts.
 
 
-<a name="@Parameters_122"></a>
+<a name="@Parameters_126"></a>
 
 ###### Parameters
 
@@ -2442,7 +2494,7 @@ may be used as a recovery account for those accounts.
 | <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
-<a name="@Common_Abort_Conditions_123"></a>
+<a name="@Common_Abort_Conditions_127"></a>
 
 ###### Common Abort Conditions
 
@@ -2454,7 +2506,7 @@ may be used as a recovery account for those accounts.
 | <code><a href="_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_ERECOVERY_ADDRESS">RecoveryAddress::ERECOVERY_ADDRESS</a></code>                       | A <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource has already been published under <code>account</code>.     |
 
 
-<a name="@Related_Scripts_124"></a>
+<a name="@Related_Scripts_128"></a>
 
 ###### Related Scripts
 
@@ -2512,7 +2564,7 @@ may be used as a recovery account for those accounts.
 
 ---
 
-<a name="@Payments_125"></a>
+<a name="@Payments_129"></a>
 
 ### Payments
 
@@ -2536,7 +2588,7 @@ Any account that can hold a balance can use the transaction scripts within this 
 ##### Function `peer_to_peer_with_metadata`
 
 
-<a name="@Summary_126"></a>
+<a name="@Summary_130"></a>
 
 ###### Summary
 
@@ -2548,7 +2600,7 @@ balance, and to any account that can hold a balance. Both accounts must hold bal
 currency being transacted.
 
 
-<a name="@Technical_Description_127"></a>
+<a name="@Technical_Description_131"></a>
 
 ###### Technical Description
 
@@ -2566,7 +2618,7 @@ However, a transaction sender can opt in to dual attestation even when it is not
 Standardized <code>metadata</code> BCS format can be found in <code>diem_types::transaction::metadata::Metadata</code>.
 
 
-<a name="@Events_128"></a>
+<a name="@Events_132"></a>
 
 ####### Events
 
@@ -2575,7 +2627,7 @@ Successful execution of this script emits two events:
 * A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> on <code>payee</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
 
 
-<a name="@Parameters_129"></a>
+<a name="@Parameters_133"></a>
 
 ###### Parameters
 
@@ -2588,7 +2640,7 @@ Successful execution of this script emits two events:
 | <code>metadata_signature</code> | <code>vector&lt;u8&gt;</code> | Optional signature over <code>metadata</code> and payment information. See                                                              |
 
 
-<a name="@Common_Abort_Conditions_130"></a>
+<a name="@Common_Abort_Conditions_134"></a>
 
 ###### Common Abort Conditions
 
@@ -2606,7 +2658,7 @@ Successful execution of this script emits two events:
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>           | <code>payee</code> has exceeded its daily deposit limits for XDX.                                                                              |
 
 
-<a name="@Related_Scripts_131"></a>
+<a name="@Related_Scripts_135"></a>
 
 ###### Related Scripts
 
@@ -2675,6 +2727,7 @@ The balances of payer and payee change by the correct amount.
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_PayFromEmits">DiemAccount::PayFromEmits</a>&lt;Currency&gt;{cap: cap};
 </code></pre>
 
 
@@ -2694,7 +2747,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 
 ---
 
-<a name="@Validator_and_Validator_Operator_Administration_132"></a>
+<a name="@Validator_and_Validator_Operator_Administration_136"></a>
 
 ### Validator and Validator Operator Administration
 
@@ -2719,7 +2772,7 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 ##### Function `add_validator_and_reconfigure`
 
 
-<a name="@Summary_133"></a>
+<a name="@Summary_137"></a>
 
 ###### Summary
 
@@ -2728,7 +2781,7 @@ reconfiguration of the system to admit the account to the validator set for the 
 transaction can only be successfully called by the Diem Root account.
 
 
-<a name="@Technical_Description_134"></a>
+<a name="@Technical_Description_138"></a>
 
 ###### Technical Description
 
@@ -2742,7 +2795,7 @@ This transaction script will fail if the <code>validator_address</code> address 
 or does not have a <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource already published under it.
 
 
-<a name="@Parameters_135"></a>
+<a name="@Parameters_139"></a>
 
 ###### Parameters
 
@@ -2754,7 +2807,7 @@ or does not have a <code><a href="../modules/doc/ValidatorConfig.md#0x1_Validato
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be added to the validator set.                                                                    |
 
 
-<a name="@Common_Abort_Conditions_136"></a>
+<a name="@Common_Abort_Conditions_140"></a>
 
 ###### Common Abort Conditions
 
@@ -2773,7 +2826,7 @@ or does not have a <code><a href="../modules/doc/ValidatorConfig.md#0x1_Validato
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemSystem.md#0x1_DiemSystem_EMAX_VALIDATORS">DiemSystem::EMAX_VALIDATORS</a></code>                | The validator set is already at its maximum size. The validator could not be added.                                                       |
 
 
-<a name="@Related_Scripts_137"></a>
+<a name="@Related_Scripts_141"></a>
 
 ###### Related Scripts
 
@@ -2860,7 +2913,7 @@ Only the Diem Root account can add Validators [[H14]][PERMISSION].
 ##### Function `register_validator_config`
 
 
-<a name="@Summary_138"></a>
+<a name="@Summary_142"></a>
 
 ###### Summary
 
@@ -2870,7 +2923,7 @@ only be successfully sent by a Validator Operator account that is already regist
 validator.
 
 
-<a name="@Technical_Description_139"></a>
+<a name="@Technical_Description_143"></a>
 
 ###### Technical Description
 
@@ -2880,7 +2933,7 @@ so the copy of this config held in the validator set will not be updated, and th
 only "locally" under the <code>validator_account</code> account address.
 
 
-<a name="@Parameters_140"></a>
+<a name="@Parameters_144"></a>
 
 ###### Parameters
 
@@ -2893,7 +2946,7 @@ only "locally" under the <code>validator_account</code> account address.
 | <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.              |
 
 
-<a name="@Common_Abort_Conditions_141"></a>
+<a name="@Common_Abort_Conditions_145"></a>
 
 ###### Common Abort Conditions
 
@@ -2904,7 +2957,7 @@ only "locally" under the <code>validator_account</code> account address.
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
 
 
-<a name="@Related_Scripts_142"></a>
+<a name="@Related_Scripts_146"></a>
 
 ###### Related Scripts
 
@@ -2983,7 +3036,7 @@ update the validator's configuration [[H15]][PERMISSION].
 ##### Function `remove_validator_and_reconfigure`
 
 
-<a name="@Summary_143"></a>
+<a name="@Summary_147"></a>
 
 ###### Summary
 
@@ -2992,7 +3045,7 @@ of the system to remove the validator from the system. This transaction can only
 successfully called by the Diem Root account.
 
 
-<a name="@Technical_Description_144"></a>
+<a name="@Technical_Description_148"></a>
 
 ###### Technical Description
 
@@ -3003,7 +3056,7 @@ validator in the network. This transaction will fail if the validator at <code>v
 is not in the validator set.
 
 
-<a name="@Parameters_145"></a>
+<a name="@Parameters_149"></a>
 
 ###### Parameters
 
@@ -3015,7 +3068,7 @@ is not in the validator set.
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be removed from the validator set.                                                                |
 
 
-<a name="@Common_Abort_Conditions_146"></a>
+<a name="@Common_Abort_Conditions_150"></a>
 
 ###### Common Abort Conditions
 
@@ -3033,7 +3086,7 @@ is not in the validator set.
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>      | An invalid time value was encountered in reconfiguration. Unlikely to occur.                    |
 
 
-<a name="@Related_Scripts_147"></a>
+<a name="@Related_Scripts_151"></a>
 
 ###### Related Scripts
 
@@ -3120,7 +3173,7 @@ Only the Diem Root account can remove Validators [[H14]][PERMISSION].
 ##### Function `set_validator_config_and_reconfigure`
 
 
-<a name="@Summary_148"></a>
+<a name="@Summary_152"></a>
 
 ###### Summary
 
@@ -3129,7 +3182,7 @@ validator set with this new validator configuration.  Can only be successfully s
 Validator Operator account that is already registered with a validator.
 
 
-<a name="@Technical_Description_149"></a>
+<a name="@Technical_Description_153"></a>
 
 ###### Technical Description
 
@@ -3139,7 +3192,7 @@ trigger a reconfiguration of the system.  This reconfiguration will update the v
 on-chain with the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.
 
 
-<a name="@Parameters_150"></a>
+<a name="@Parameters_154"></a>
 
 ###### Parameters
 
@@ -3152,7 +3205,7 @@ on-chain with the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_V
 | <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.              |
 
 
-<a name="@Common_Abort_Conditions_151"></a>
+<a name="@Common_Abort_Conditions_155"></a>
 
 ###### Common Abort Conditions
 
@@ -3165,7 +3218,7 @@ on-chain with the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_V
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../modules/doc/DiemConfig.md#0x1_DiemConfig_EINVALID_BLOCK_TIME">DiemConfig::EINVALID_BLOCK_TIME</a></code>             | An invalid time value was encountered in reconfiguration. Unlikely to occur.                          |
 
 
-<a name="@Related_Scripts_152"></a>
+<a name="@Related_Scripts_156"></a>
 
 ###### Related Scripts
 
@@ -3248,6 +3301,7 @@ for which there is no useful recovery except to resubmit the transaction.
     <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
     <a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>;
+<b>include</b> is_validator_info_updated ==&gt; <a href="../modules/doc/DiemConfig.md#0x1_DiemConfig_ReconfigureEmits">DiemConfig::ReconfigureEmits</a>;
 </code></pre>
 
 
@@ -3270,7 +3324,7 @@ update the validator's configuration [[H15]][PERMISSION].
 ##### Function `set_validator_operator`
 
 
-<a name="@Summary_153"></a>
+<a name="@Summary_157"></a>
 
 ###### Summary
 
@@ -3280,7 +3334,7 @@ system until a reconfiguration of the system is triggered. May only be sent by a
 Validator role.
 
 
-<a name="@Technical_Description_154"></a>
+<a name="@Technical_Description_158"></a>
 
 ###### Technical Description
 
@@ -3292,7 +3346,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 <code><a href="../modules/doc/DiemConfig.md#0x1_DiemConfig_NewEpochEvent">DiemConfig::NewEpochEvent</a></code> and no reconfiguration of the system is initiated by this script.
 
 
-<a name="@Parameters_155"></a>
+<a name="@Parameters_159"></a>
 
 ###### Parameters
 
@@ -3303,7 +3357,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator. |
 
 
-<a name="@Common_Abort_Conditions_156"></a>
+<a name="@Common_Abort_Conditions_160"></a>
 
 ###### Common Abort Conditions
 
@@ -3316,7 +3370,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
 
-<a name="@Related_Scripts_157"></a>
+<a name="@Related_Scripts_161"></a>
 
 ###### Related Scripts
 
@@ -3397,7 +3451,7 @@ Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 ##### Function `set_validator_operator_with_nonce_admin`
 
 
-<a name="@Summary_158"></a>
+<a name="@Summary_162"></a>
 
 ###### Summary
 
@@ -3407,7 +3461,7 @@ system until a reconfiguration of the system is triggered. May only be sent by t
 account as a write set transaction.
 
 
-<a name="@Technical_Description_159"></a>
+<a name="@Technical_Description_163"></a>
 
 ###### Technical Description
 
@@ -3419,7 +3473,7 @@ have a <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_Vali
 the system is initiated by this script.
 
 
-<a name="@Parameters_160"></a>
+<a name="@Parameters_164"></a>
 
 ###### Parameters
 
@@ -3432,7 +3486,7 @@ the system is initiated by this script.
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.  |
 
 
-<a name="@Common_Abort_Conditions_161"></a>
+<a name="@Common_Abort_Conditions_165"></a>
 
 ###### Common Abort Conditions
 
@@ -3450,7 +3504,7 @@ the system is initiated by this script.
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
 
-<a name="@Related_Scripts_162"></a>
+<a name="@Related_Scripts_166"></a>
 
 ###### Related Scripts
 
@@ -3534,7 +3588,7 @@ Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 
 ---
 
-<a name="@Treasury_and_Compliance_Operations_163"></a>
+<a name="@Treasury_and_Compliance_Operations_167"></a>
 
 ### Treasury and Compliance Operations
 
@@ -3569,7 +3623,7 @@ per-transaction basis.
 ##### Function `cancel_burn_with_amount`
 
 
-<a name="@Summary_164"></a>
+<a name="@Summary_168"></a>
 
 ###### Summary
 
@@ -3579,7 +3633,7 @@ resource with the matching amount and returns the funds to the <code>preburn_add
 Can only be successfully sent by an account with Treasury Compliance role.
 
 
-<a name="@Technical_Description_165"></a>
+<a name="@Technical_Description_169"></a>
 
 ###### Technical Description
 
@@ -3594,7 +3648,7 @@ the entire balance held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_Pr
 before this script is called otherwise the transaction will fail.
 
 
-<a name="@Events_166"></a>
+<a name="@Events_170"></a>
 
 ####### Events
 
@@ -3606,7 +3660,7 @@ resource's <code>burn_events</code> published under <code>0xA550C18</code>.
 being <code>preburn_address</code>.
 
 
-<a name="@Parameters_167"></a>
+<a name="@Parameters_171"></a>
 
 ###### Parameters
 
@@ -3618,7 +3672,7 @@ being <code>preburn_address</code>.
 | <code>amount</code>          | <code>u64</code>     | The amount to be cancelled.                                                                                                          |
 
 
-<a name="@Common_Abort_Conditions_168"></a>
+<a name="@Common_Abort_Conditions_172"></a>
 
 ###### Common Abort Conditions
 
@@ -3633,7 +3687,7 @@ being <code>preburn_address</code>.
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET">DualAttestation::EPAYEE_COMPLIANCE_KEY_NOT_SET</a></code> | The <code>account</code> does not have a compliance key set on it but dual attestion checking was performed.                                   |
 
 
-<a name="@Related_Scripts_169"></a>
+<a name="@Related_Scripts_173"></a>
 
 ###### Related Scripts
 
@@ -3721,7 +3775,7 @@ Only the account with the burn capability can cancel burning [[H3]][PERMISSION].
 ##### Function `burn_with_amount`
 
 
-<a name="@Summary_170"></a>
+<a name="@Summary_174"></a>
 
 ###### Summary
 
@@ -3734,7 +3788,7 @@ The account that holds the preburn queue resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
 
-<a name="@Technical_Description_171"></a>
+<a name="@Technical_Description_175"></a>
 
 ###### Technical Description
 
@@ -3752,7 +3806,7 @@ under <code>preburn_address</code> immediately before this transaction, and the
 <code>to_burn</code> field of the preburn resource will have a zero value.
 
 
-<a name="@Events_172"></a>
+<a name="@Events_176"></a>
 
 ####### Events
 
@@ -3761,7 +3815,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 <code>0xA550C18</code>.
 
 
-<a name="@Parameters_173"></a>
+<a name="@Parameters_177"></a>
 
 ###### Parameters
 
@@ -3774,7 +3828,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 | <code>amount</code>          | <code>u64</code>     | The amount to be burned.                                                                                           |
 
 
-<a name="@Common_Abort_Conditions_174"></a>
+<a name="@Common_Abort_Conditions_178"></a>
 
 ###### Common Abort Conditions
 
@@ -3790,7 +3844,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>       | <code><a href="../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>                  | The specified <code>Token</code> is not a registered currency on-chain.                                                                        |
 
 
-<a name="@Related_Scripts_175"></a>
+<a name="@Related_Scripts_179"></a>
 
 ###### Related Scripts
 
@@ -3823,8 +3877,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 
 
 
-<pre><code><b>pragma</b> verify = <b>false</b>;
-<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
+<pre><code><b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_TransactionChecks">DiemAccount::TransactionChecks</a>{sender: account};
 <b>include</b> <a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{ seq_nonce: sliding_nonce };
 <b>include</b> <a href="../modules/doc/Diem.md#0x1_Diem_BurnAbortsIf">Diem::BurnAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="../modules/doc/Diem.md#0x1_Diem_BurnEnsures">Diem::BurnEnsures</a>&lt;Token&gt;;
@@ -3834,7 +3887,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
-<b>include</b> <a href="../modules/doc/Diem.md#0x1_Diem_BurnWithResourceCapEmits">Diem::BurnWithResourceCapEmits</a>&lt;Token&gt;{preburn: <b>global</b>&lt;<a href="../modules/doc/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(preburn_address)};
+<b>include</b> <a href="../modules/doc/Diem.md#0x1_Diem_BurnWithResourceCapEmits">Diem::BurnWithResourceCapEmits</a>&lt;Token&gt;{preburn: <a href="../modules/doc/Diem.md#0x1_Diem_spec_make_preburn">Diem::spec_make_preburn</a>(amount)};
 </code></pre>
 
 
@@ -3854,7 +3907,7 @@ Only the account with the burn capability can burn coins [[H3]][PERMISSION].
 ##### Function `preburn`
 
 
-<a name="@Summary_176"></a>
+<a name="@Summary_180"></a>
 
 ###### Summary
 
@@ -3864,7 +3917,7 @@ transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
 
-<a name="@Technical_Description_177"></a>
+<a name="@Technical_Description_181"></a>
 
 ###### Technical Description
 
@@ -3874,7 +3927,7 @@ Moves the specified <code>amount</code> of coins in <code>Token</code> currency 
 transaction in order for it to execute successfully.
 
 
-<a name="@Events_178"></a>
+<a name="@Events_182"></a>
 
 ####### Events
 
@@ -3886,7 +3939,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <code>preburn_address</code> set to <code>account</code>'s address.
 
 
-<a name="@Parameters_179"></a>
+<a name="@Parameters_183"></a>
 
 ###### Parameters
 
@@ -3897,7 +3950,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code>amount</code>  | <code>u64</code>    | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
 
 
-<a name="@Common_Abort_Conditions_180"></a>
+<a name="@Common_Abort_Conditions_184"></a>
 
 ###### Common Abort Conditions
 
@@ -3913,7 +3966,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code><a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>  | <code><a href="../modules/doc/Roles.md#0x1_Roles_EDESIGNATED_DEALER">Roles::EDESIGNATED_DEALER</a></code>                              | The <code>account</code> did not have the role of DesignatedDealer.                                |
 
 
-<a name="@Related_Scripts_181"></a>
+<a name="@Related_Scripts_185"></a>
 
 ###### Related Scripts
 
@@ -3955,6 +4008,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">DiemAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
 <b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">DiemAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
 <b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnEnsures">DiemAccount::PreburnEnsures</a>&lt;Token&gt;{dd: account, payer: account_addr};
+<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_PreburnEmits">DiemAccount::PreburnEmits</a>&lt;Token&gt;{dd: account, cap: cap};
 <b>aborts_with</b> [check]
     <a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
@@ -3979,7 +4033,7 @@ Only the account with a Preburn resource or PreburnQueue resource can preburn [[
 ##### Function `burn_txn_fees`
 
 
-<a name="@Summary_182"></a>
+<a name="@Summary_186"></a>
 
 ###### Summary
 
@@ -3988,7 +4042,7 @@ Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_183"></a>
+<a name="@Technical_Description_187"></a>
 
 ###### Technical Description
 
@@ -4001,7 +4055,7 @@ currency. Both <code>balance</code> and <code>preburn</code> fields in the
 account address will have a value of 0 after the successful execution of this script.
 
 
-<a name="@Events_184"></a>
+<a name="@Events_188"></a>
 
 ####### Events
 
@@ -4010,7 +4064,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 <code>0xA550C18</code>.
 
 
-<a name="@Parameters_185"></a>
+<a name="@Parameters_189"></a>
 
 ###### Parameters
 
@@ -4020,7 +4074,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 | <code>tc_account</code> | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 
 
-<a name="@Common_Abort_Conditions_186"></a>
+<a name="@Common_Abort_Conditions_190"></a>
 
 ###### Common Abort Conditions
 
@@ -4031,7 +4085,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/Diem.md#0x1_Diem_ECOIN">Diem::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
 
 
-<a name="@Related_Scripts_187"></a>
+<a name="@Related_Scripts_191"></a>
 
 ###### Related Scripts
 
@@ -4062,7 +4116,7 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 ##### Function `tiered_mint`
 
 
-<a name="@Summary_188"></a>
+<a name="@Summary_192"></a>
 
 ###### Summary
 
@@ -4071,7 +4125,7 @@ must be the Treasury Compliance account, and coins can only be minted to a Desig
 account.
 
 
-<a name="@Technical_Description_189"></a>
+<a name="@Technical_Description_193"></a>
 
 ###### Technical Description
 
@@ -4084,7 +4138,7 @@ they support. The sending <code>tc_account</code> must be the Treasury Complianc
 receiver an authorized Designated Dealer account.
 
 
-<a name="@Events_190"></a>
+<a name="@Events_194"></a>
 
 ####### Events
 
@@ -4097,7 +4151,7 @@ Dealer's address is emitted on the <code>mint_event_handle</code> in the stored 
 resource published under the <code>designated_dealer_address</code>.
 
 
-<a name="@Parameters_191"></a>
+<a name="@Parameters_195"></a>
 
 ###### Parameters
 
@@ -4111,7 +4165,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code>tier_index</code>                | <code>u64</code>     | [Deprecated] The mint tier index to use for the Designated Dealer account. Will be ignored                 |
 
 
-<a name="@Common_Abort_Conditions_192"></a>
+<a name="@Common_Abort_Conditions_196"></a>
 
 ###### Common Abort Conditions
 
@@ -4130,7 +4184,7 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>      | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>      | The depositing of the funds would exceed the <code>account</code>'s account limits.                                                     |
 
 
-<a name="@Related_Scripts_193"></a>
+<a name="@Related_Scripts_197"></a>
 
 ###### Related Scripts
 
@@ -4183,6 +4237,7 @@ resource published under the <code>designated_dealer_address</code>.
     <a href="_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
     <a href="_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_TieredMintEmits">DiemAccount::TieredMintEmits</a>&lt;CoinType&gt;;
 </code></pre>
 
 
@@ -4202,7 +4257,7 @@ Only the Treasury Compliance account can mint [[H1]][PERMISSION].
 ##### Function `freeze_account`
 
 
-<a name="@Summary_194"></a>
+<a name="@Summary_198"></a>
 
 ###### Summary
 
@@ -4213,7 +4268,7 @@ execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
 
-<a name="@Technical_Description_195"></a>
+<a name="@Technical_Description_199"></a>
 
 ###### Technical Description
 
@@ -4227,7 +4282,7 @@ accounts and vice versa.
 
 
 
-<a name="@Events_196"></a>
+<a name="@Events_200"></a>
 
 ####### Events
 
@@ -4236,7 +4291,7 @@ the <code>freeze_event_handle</code> held in the <code><a href="../modules/doc/A
 under <code>0xA550C18</code> with the <code>frozen_address</code> being the <code>to_freeze_account</code>.
 
 
-<a name="@Parameters_197"></a>
+<a name="@Parameters_201"></a>
 
 ###### Parameters
 
@@ -4247,7 +4302,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
-<a name="@Common_Abort_Conditions_198"></a>
+<a name="@Common_Abort_Conditions_202"></a>
 
 ###### Common Abort Conditions
 
@@ -4263,7 +4318,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_DIEM_ROOT">AccountFreezing::ECANNOT_FREEZE_DIEM_ROOT</a></code> | <code>to_freeze_account</code> was the Diem Root account (<code>0xA550C18</code>).                              |
 
 
-<a name="@Related_Scripts_199"></a>
+<a name="@Related_Scripts_203"></a>
 
 ###### Related Scripts
 
@@ -4294,7 +4349,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 ##### Function `unfreeze_account`
 
 
-<a name="@Summary_200"></a>
+<a name="@Summary_204"></a>
 
 ###### Summary
 
@@ -4303,7 +4358,7 @@ Treasury Compliance account. After the successful execution of this transaction 
 may be sent from the previously frozen account, and coins may be sent and received.
 
 
-<a name="@Technical_Description_201"></a>
+<a name="@Technical_Description_205"></a>
 
 ###### Technical Description
 
@@ -4313,7 +4368,7 @@ account. Note that this is a per-account property so unfreezing a Parent VASP wi
 the status any of its child accounts and vice versa.
 
 
-<a name="@Events_202"></a>
+<a name="@Events_206"></a>
 
 ####### Events
 
@@ -4321,7 +4376,7 @@ Successful execution of this script will emit a <code>AccountFreezing::UnFreezeA
 the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s address.
 
 
-<a name="@Parameters_203"></a>
+<a name="@Parameters_207"></a>
 
 ###### Parameters
 
@@ -4332,7 +4387,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
-<a name="@Common_Abort_Conditions_204"></a>
+<a name="@Common_Abort_Conditions_208"></a>
 
 ###### Common Abort Conditions
 
@@ -4345,7 +4400,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | The sending account is not the Treasury Compliance account.                                |
 
 
-<a name="@Related_Scripts_205"></a>
+<a name="@Related_Scripts_209"></a>
 
 ###### Related Scripts
 
@@ -4376,7 +4431,7 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 ##### Function `update_dual_attestation_limit`
 
 
-<a name="@Summary_206"></a>
+<a name="@Summary_210"></a>
 
 ###### Summary
 
@@ -4385,7 +4440,7 @@ only be sent by the Treasury Compliance account.  After this transaction all int
 payments over this limit must be checked for dual attestation.
 
 
-<a name="@Technical_Description_207"></a>
+<a name="@Technical_Description_211"></a>
 
 ###### Technical Description
 
@@ -4393,7 +4448,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../modules/
 <code>0xA550C18</code>. The amount is set in micro-XDX.
 
 
-<a name="@Parameters_208"></a>
+<a name="@Parameters_212"></a>
 
 ###### Parameters
 
@@ -4404,7 +4459,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../modules/
 | <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
 
 
-<a name="@Common_Abort_Conditions_209"></a>
+<a name="@Common_Abort_Conditions_213"></a>
 
 ###### Common Abort Conditions
 
@@ -4417,7 +4472,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../modules/
 | <code><a href="_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<a name="@Related_Scripts_210"></a>
+<a name="@Related_Scripts_214"></a>
 
 ###### Related Scripts
 
@@ -4453,7 +4508,7 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../modules/
 ##### Function `update_exchange_rate`
 
 
-<a name="@Summary_211"></a>
+<a name="@Summary_215"></a>
 
 ###### Summary
 
@@ -4463,7 +4518,7 @@ transaction the updated exchange rate will be used for normalization of gas pric
 dual attestation checking.
 
 
-<a name="@Technical_Description_212"></a>
+<a name="@Technical_Description_216"></a>
 
 ###### Technical Description
 
@@ -4471,7 +4526,7 @@ Updates the on-chain exchange rate from the given <code>Currency</code> to micro
 is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</code>.
 
 
-<a name="@Parameters_213"></a>
+<a name="@Parameters_217"></a>
 
 ###### Parameters
 
@@ -4484,7 +4539,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code>new_exchange_rate_denominator</code> | <code>u64</code>    | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
 
 
-<a name="@Common_Abort_Conditions_214"></a>
+<a name="@Common_Abort_Conditions_218"></a>
 
 ###### Common Abort Conditions
 
@@ -4501,7 +4556,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="">FixedPoint32</a></code>.                                       |
 
 
-<a name="@Related_Scripts_215"></a>
+<a name="@Related_Scripts_219"></a>
 
 ###### Related Scripts
 
@@ -4581,7 +4636,7 @@ Only the Treasury Compliance account can update the exchange rate [[H5]][PERMISS
 ##### Function `update_minting_ability`
 
 
-<a name="@Summary_216"></a>
+<a name="@Summary_220"></a>
 
 ###### Summary
 
@@ -4590,7 +4645,7 @@ only be sent by the Treasury Compliance account.  Turning minting off for a curr
 no effect on coins already in circulation, and coins may still be removed from the system.
 
 
-<a name="@Technical_Description_217"></a>
+<a name="@Technical_Description_221"></a>
 
 ###### Technical Description
 
@@ -4600,7 +4655,7 @@ this field is set to <code><b>true</b></code> and minting of new coins in <code>
 This transaction needs to be sent by the Treasury Compliance account.
 
 
-<a name="@Parameters_218"></a>
+<a name="@Parameters_222"></a>
 
 ###### Parameters
 
@@ -4611,7 +4666,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code>allow_minting</code> | <code>bool</code>   | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
-<a name="@Common_Abort_Conditions_219"></a>
+<a name="@Common_Abort_Conditions_223"></a>
 
 ###### Common Abort Conditions
 
@@ -4621,7 +4676,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 | <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/Diem.md#0x1_Diem_ECURRENCY_INFO">Diem::ECURRENCY_INFO</a></code>               | <code>Currency</code> is not a registered currency on-chain.    |
 
 
-<a name="@Related_Scripts_220"></a>
+<a name="@Related_Scripts_224"></a>
 
 ###### Related Scripts
 
@@ -4653,7 +4708,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ---
 
-<a name="@System_Administration_221"></a>
+<a name="@System_Administration_225"></a>
 
 ### System Administration
 
@@ -4678,7 +4733,7 @@ network outside of validators and validator operators.
 ##### Function `update_diem_version`
 
 
-<a name="@Summary_222"></a>
+<a name="@Summary_226"></a>
 
 ###### Summary
 
@@ -4686,7 +4741,7 @@ Updates the Diem major version that is stored on-chain and is used by the VM.  T
 transaction can only be sent from the Diem Root account.
 
 
-<a name="@Technical_Description_223"></a>
+<a name="@Technical_Description_227"></a>
 
 ###### Technical Description
 
@@ -4696,7 +4751,7 @@ than the current major version held on-chain. The VM reads this information and 
 preserve backwards compatibility with previous major versions of the VM.
 
 
-<a name="@Parameters_224"></a>
+<a name="@Parameters_228"></a>
 
 ###### Parameters
 
@@ -4707,7 +4762,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>major</code>         | <code>u64</code>    | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
-<a name="@Common_Abort_Conditions_225"></a>
+<a name="@Common_Abort_Conditions_229"></a>
 
 ###### Common Abort Conditions
 
@@ -4742,7 +4797,7 @@ preserve backwards compatibility with previous major versions of the VM.
 
 
 
-<a name="@Index_226"></a>
+<a name="@Index_230"></a>
 
 ### Index
 

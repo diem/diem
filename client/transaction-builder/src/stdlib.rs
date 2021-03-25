@@ -1734,14 +1734,17 @@ pub enum ScriptFunctionCall {
     /// Parent VASP account. The child account will be recorded against the limit of
     /// child accounts of the creating Parent VASP account.
     ///
-    /// ## Events
-    /// Successful execution with a `child_initial_balance` greater than zero will emit:
-    /// * A `DiemAccount::SentPaymentEvent` with the `payer` field being the Parent VASP's address,
-    /// and payee field being `child_address`. This is emitted on the Parent VASP's
-    /// `DiemAccount::DiemAccount` `sent_events` handle.
-    /// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address,
-    /// and payee field being `child_address`. This is emitted on the new Child VASPS's
-    /// `DiemAccount::DiemAccount` `received_events` handle.
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `child_address`,
+    /// and the `rold_id` field being `Roles::CHILD_VASP_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
+    /// Successful execution with a `child_initial_balance` greater than zero will additionaly emit:
+    /// * A `DiemAccount::SentPaymentEvent` with the `payee` field being `child_address`.
+    /// This is emitted on the Parent VASP's `DiemAccount::DiemAccount` `sent_events` handle.
+    /// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address.
+    /// This is emitted on the new Child VASPS's `DiemAccount::DiemAccount` `received_events` handle.
     ///
     /// # Parameters
     /// | Name                    | Type         | Description                                                                                                                                 |
@@ -1796,6 +1799,12 @@ pub enum ScriptFunctionCall {
     /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
     /// account.
     ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `addr`,
+    /// and the `rold_id` field being `Roles::DESIGNATED_DEALER_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
     /// # Parameters
     /// | Name                 | Type         | Description                                                                                                                                         |
     /// | ------               | ------       | -------------                                                                                                                                       |
@@ -1844,6 +1853,12 @@ pub enum ScriptFunctionCall {
     /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
     /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::PARENT_VASP_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                                                                                                    |
@@ -1931,6 +1946,12 @@ pub enum ScriptFunctionCall {
     /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::VALIDATOR_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                              |
     /// | ------                | ------       | -------------                                                                            |
@@ -1977,6 +1998,12 @@ pub enum ScriptFunctionCall {
     /// This script does not assign the validator operator to any validator accounts but only creates the account.
     /// Authentication key prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::VALIDATOR_OPERATOR_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                              |
@@ -3723,14 +3750,17 @@ pub fn encode_cancel_burn_with_amount_script_function(
 /// Parent VASP account. The child account will be recorded against the limit of
 /// child accounts of the creating Parent VASP account.
 ///
-/// ## Events
-/// Successful execution with a `child_initial_balance` greater than zero will emit:
-/// * A `DiemAccount::SentPaymentEvent` with the `payer` field being the Parent VASP's address,
-/// and payee field being `child_address`. This is emitted on the Parent VASP's
-/// `DiemAccount::DiemAccount` `sent_events` handle.
-/// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address,
-/// and payee field being `child_address`. This is emitted on the new Child VASPS's
-/// `DiemAccount::DiemAccount` `received_events` handle.
+/// # Events
+/// Successful execution will emit:
+/// * A `DiemAccount::CreateAccountEvent` with the `created` field being `child_address`,
+/// and the `rold_id` field being `Roles::CHILD_VASP_ROLE_ID`. This is emitted on the
+/// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+///
+/// Successful execution with a `child_initial_balance` greater than zero will additionaly emit:
+/// * A `DiemAccount::SentPaymentEvent` with the `payee` field being `child_address`.
+/// This is emitted on the Parent VASP's `DiemAccount::DiemAccount` `sent_events` handle.
+/// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address.
+/// This is emitted on the new Child VASPS's `DiemAccount::DiemAccount` `received_events` handle.
 ///
 /// # Parameters
 /// | Name                    | Type         | Description                                                                                                                                 |
@@ -3800,6 +3830,12 @@ pub fn encode_create_child_vasp_account_script_function(
 /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
 /// account.
 ///
+/// # Events
+/// Successful execution will emit:
+/// * A `DiemAccount::CreateAccountEvent` with the `created` field being `addr`,
+/// and the `rold_id` field being `Roles::DESIGNATED_DEALER_ROLE_ID`. This is emitted on the
+/// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+///
 /// # Parameters
 /// | Name                 | Type         | Description                                                                                                                                         |
 /// | ------               | ------       | -------------                                                                                                                                       |
@@ -3864,6 +3900,12 @@ pub fn encode_create_designated_dealer_script_function(
 /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
 /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
 /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+///
+/// # Events
+/// Successful execution will emit:
+/// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+/// and the `rold_id` field being `Roles::PARENT_VASP_ROLE_ID`. This is emitted on the
+/// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
 ///
 /// # Parameters
 /// | Name                  | Type         | Description                                                                                                                                                    |
@@ -3977,6 +4019,12 @@ pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
 /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
 /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
+/// # Events
+/// Successful execution will emit:
+/// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+/// and the `rold_id` field being `Roles::VALIDATOR_ROLE_ID`. This is emitted on the
+/// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+///
 /// # Parameters
 /// | Name                  | Type         | Description                                                                              |
 /// | ------                | ------       | -------------                                                                            |
@@ -4038,6 +4086,12 @@ pub fn encode_create_validator_account_script_function(
 /// This script does not assign the validator operator to any validator accounts but only creates the account.
 /// Authentication key prefixes, and how to construct them from an ed25519 public key are described
 /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+///
+/// # Events
+/// Successful execution will emit:
+/// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+/// and the `rold_id` field being `Roles::VALIDATOR_OPERATOR_ROLE_ID`. This is emitted on the
+/// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
 ///
 /// # Parameters
 /// | Name                  | Type         | Description                                                                              |

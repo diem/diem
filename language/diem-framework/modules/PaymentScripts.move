@@ -98,6 +98,8 @@ module PaymentScripts {
             Errors::INVALID_ARGUMENT,
             Errors::LIMIT_EXCEEDED;
 
+        include DiemAccount::PayFromEmits<Currency>{cap: cap};
+
         /// **Access Control:**
         /// Both the payer and the payee must hold the balances of the Currency. Only Designated Dealers,
         /// Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][ROLE][[D4]][ROLE][[D5]][ROLE][[D6]][ROLE][[D7]][ROLE].

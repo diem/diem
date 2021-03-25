@@ -345,6 +345,10 @@ module DiemAccount {
             == old(global<DiemAccount>(payee).withdraw_capability);
         ensures global<DiemAccount>(payee).authentication_key
             == old(global<DiemAccount>(payee).authentication_key);
+        ensures global<DiemAccount>(payee).sent_events.guid
+            == old(global<DiemAccount>(payee).sent_events.guid);
+        ensures global<DiemAccount>(payee).received_events.guid
+            == old(global<DiemAccount>(payee).received_events.guid);
         let amount = to_deposit.value;
         include DepositAbortsIf<Token>{amount: amount};
         include DepositOverflowAbortsIf<Token>{amount: amount};
@@ -434,8 +438,8 @@ module DiemAccount {
         modifies global<Diem::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include TieredMintAbortsIf<Token>;
         include TieredMintEnsures<Token>;
+        include TieredMintEmits<Token>;
     }
-
     spec schema TieredMintAbortsIf<Token> {
         tc_account: signer;
         designated_dealer_address: address;
@@ -446,7 +450,6 @@ module DiemAccount {
             payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
         include DepositOverflowAbortsIf<Token>{payee: designated_dealer_address, amount: mint_amount};
     }
-
     spec schema TieredMintEnsures<Token> {
         designated_dealer_address: address;
         mint_amount: u64;
@@ -456,6 +459,18 @@ module DiemAccount {
         ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + mint_amount);
         /// The balance of designated dealer increases by `amount`.
         ensures dealer_balance == old(dealer_balance) + mint_amount;
+    }
+    spec schema TieredMintEmits<Token> {
+        tc_account: signer;
+        designated_dealer_address: address;
+        mint_amount: u64;
+        tier_index: u64;
+        include DepositEmits<Token>{
+            payer: CoreAddresses::VM_RESERVED_ADDRESS(),
+            payee: designated_dealer_address,
+            amount: mint_amount,
+            metadata: x""
+        };
     }
 
     // Cancel the burn request from `preburn_address` and return the funds.
@@ -594,6 +609,10 @@ module DiemAccount {
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                     == old(global<DiemAccount>(payer).withdraw_capability);
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
         include WithdrawFromAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>{balance: global<Balance<Token>>(payer)};
         include WithdrawOnlyFromCapAddress<Token>;
@@ -652,8 +671,17 @@ module DiemAccount {
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                 == old(global<DiemAccount>(payer).withdraw_capability);
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
+        ensures global<DiemAccount>(dd_addr).sent_events.guid
+            == old(global<DiemAccount>(dd_addr).sent_events.guid);
+        ensures global<DiemAccount>(dd_addr).received_events.guid
+            == old(global<DiemAccount>(dd_addr).received_events.guid);
         include PreburnAbortsIf<Token>;
         include PreburnEnsures<Token>{dd, payer};
+        include PreburnEmits<Token>;
     }
     spec schema PreburnAbortsIf<Token> {
         dd: signer;
@@ -673,6 +701,14 @@ module DiemAccount {
         ensures payer_balance == old(payer_balance) - amount;
         /// The value of preburn at `dd_addr` increases by `amount`;
         include Diem::PreburnToEnsures<Token>{amount, account: dd};
+    }
+    spec schema PreburnEmits<Token> {
+        dd: signer;
+        cap: WithdrawCapability;
+        amount: u64;
+        let dd_addr = Signer::spec_address_of(dd);
+        include Diem::PreburnWithResourceEmits<Token>{preburn_address: dd_addr};
+        include WithdrawFromEmits<Token>{payee: dd_addr, metadata: x""};
     }
 
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -726,6 +762,8 @@ module DiemAccount {
         pragma opaque;
         let cap_addr = cap.account_address;
         modifies global<DiemAccount>(cap_addr);
+        ensures global<DiemAccount>(cap_addr) == update_field(old(global<DiemAccount>(cap_addr)),
+            withdraw_capability, Option::spec_some(cap));
         aborts_if !exists_at(cap_addr) with Errors::NOT_PUBLISHED;
         aborts_if !delegated_withdraw_capability(cap_addr) with Errors::INVALID_STATE;
         ensures spec_holds_own_withdraw_cap(cap_addr);
@@ -764,17 +802,26 @@ module DiemAccount {
         ensures exists_at(payee);
         ensures exists<Balance<Token>>(payer);
         ensures exists<Balance<Token>>(payee);
-        ensures global<DiemAccount>(payer).withdraw_capability ==
-            old(global<DiemAccount>(payer).withdraw_capability);
+        ensures global<DiemAccount>(payer).withdraw_capability
+            == old(global<DiemAccount>(payer).withdraw_capability);
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
+        ensures global<DiemAccount>(payee).sent_events.guid
+            == old(global<DiemAccount>(payee).sent_events.guid);
+        ensures global<DiemAccount>(payee).received_events.guid
+            == old(global<DiemAccount>(payee).received_events.guid);
         include PayFromAbortsIf<Token>;
         include PayFromEnsures<Token>{payer};
+        include PayFromEmits<Token>;
     }
     spec schema PayFromAbortsIf<Token> {
         cap: WithdrawCapability;
         payee: address;
         amount: u64;
         metadata: vector<u8>;
-        metadata_signature: vector<u8> ;
+        metadata_signature: vector<u8>;
         include DepositAbortsIf<Token>{payer: cap.account_address};
         include cap.account_address != payee ==> DepositOverflowAbortsIf<Token>;
         include WithdrawFromAbortsIf<Token>;
@@ -797,6 +844,15 @@ module DiemAccount {
         ensures payer == payee ==> balance<Token>(payer) == old(balance<Token>(payer));
         ensures payer != payee ==> balance<Token>(payer) == old(balance<Token>(payer)) - amount;
         ensures payer != payee ==> balance<Token>(payee) == old(balance<Token>(payee)) + amount;
+    }
+    spec schema PayFromEmits<Token> {
+        cap: WithdrawCapability;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+        let payer = cap.account_address;
+        include DepositEmits<Token>{payer: payer};
+        include WithdrawFromEmits<Token>;
     }
 
     /// Rotate the authentication key for the account under cap.account_address
@@ -1906,6 +1962,7 @@ module DiemAccount {
     spec fun create_validator_account {
         include CreateValidatorAccountAbortsIf;
         include CreateValidatorAccountEnsures;
+        include MakeAccountEmits;
     }
 
     spec schema CreateValidatorAccountAbortsIf {

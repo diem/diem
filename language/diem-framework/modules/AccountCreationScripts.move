@@ -20,14 +20,17 @@ module AccountCreationScripts {
     /// Parent VASP account. The child account will be recorded against the limit of
     /// child accounts of the creating Parent VASP account.
     ///
-    /// ## Events
-    /// Successful execution with a `child_initial_balance` greater than zero will emit:
-    /// * A `DiemAccount::SentPaymentEvent` with the `payer` field being the Parent VASP's address,
-    /// and payee field being `child_address`. This is emitted on the Parent VASP's
-    /// `DiemAccount::DiemAccount` `sent_events` handle.
-    /// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address,
-    /// and payee field being `child_address`. This is emitted on the new Child VASPS's
-    /// `DiemAccount::DiemAccount` `received_events` handle.
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `child_address`,
+    /// and the `rold_id` field being `Roles::CHILD_VASP_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
+    /// Successful execution with a `child_initial_balance` greater than zero will additionaly emit:
+    /// * A `DiemAccount::SentPaymentEvent` with the `payee` field being `child_address`.
+    /// This is emitted on the Parent VASP's `DiemAccount::DiemAccount` `sent_events` handle.
+    /// * A `DiemAccount::ReceivedPaymentEvent` with the  `payer` field being the Parent VASP's address.
+    /// This is emitted on the new Child VASPS's `DiemAccount::DiemAccount` `received_events` handle.
     ///
     /// # Parameters
     /// | Name                    | Type         | Description                                                                                                                                 |
@@ -119,6 +122,15 @@ module AccountCreationScripts {
             Errors::INVALID_STATE,
             Errors::INVALID_ARGUMENT;
 
+        include DiemAccount::MakeAccountEmits{new_account_address: child_address};
+        include child_initial_balance > 0 ==>
+            DiemAccount::PayFromEmits<CoinType>{
+                cap: parent_cap,
+                payee: child_address,
+                amount: child_initial_balance,
+                metadata: x"",
+            };
+
         /// **Access Control:**
         /// Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
         include Roles::AbortsIfNotParentVasp{account: parent_vasp};
@@ -135,6 +147,12 @@ module AccountCreationScripts {
     /// This script does not assign the validator operator to any validator accounts but only creates the account.
     /// Authentication key prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::VALIDATOR_OPERATOR_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                              |
@@ -226,6 +244,12 @@ module AccountCreationScripts {
     /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::VALIDATOR_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                              |
     /// | ------                | ------       | -------------                                                                            |
@@ -271,7 +295,6 @@ module AccountCreationScripts {
         );
       }
 
-
     /// Only Diem root may create Validator accounts
     /// Authentication: ValidatorAccountAbortsIf includes AbortsIfNotDiemRoot.
     /// Checks that above table includes all error categories.
@@ -313,6 +336,12 @@ module AccountCreationScripts {
     /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
     /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
     /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `new_account_address`,
+    /// and the `rold_id` field being `Roles::PARENT_VASP_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                                                                                                    |
@@ -402,6 +431,12 @@ module AccountCreationScripts {
     /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
     /// account.
     ///
+    /// # Events
+    /// Successful execution will emit:
+    /// * A `DiemAccount::CreateAccountEvent` with the `created` field being `addr`,
+    /// and the `rold_id` field being `Roles::DESIGNATED_DEALER_ROLE_ID`. This is emitted on the
+    /// `DiemAccount::AccountOperationsCapability` `creation_events` handle.
+    ///
     /// # Parameters
     /// | Name                 | Type         | Description                                                                                                                                         |
     /// | ------               | ------       | -------------                                                                                                                                       |
@@ -465,6 +500,8 @@ module AccountCreationScripts {
             Errors::NOT_PUBLISHED,
             Errors::ALREADY_PUBLISHED,
             Errors::REQUIRES_ROLE;
+
+        include DiemAccount::MakeAccountEmits{new_account_address: addr};
 
         /// **Access Control:**
         /// Only the Treasury Compliance account can create Designated Dealer accounts [[A5]][ROLE].

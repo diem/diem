@@ -519,8 +519,8 @@ module Diem {
     spec schema PreburnEnsures<CoinType> {
         amount: u64;
         preburn: Preburn<CoinType>;
-        ensures spec_currency_info<CoinType>().preburn_value
-                    == old(spec_currency_info<CoinType>().preburn_value) + amount;
+        let info = spec_currency_info<CoinType>();
+        ensures info == update_field(old(info), preburn_value, old(info.preburn_value) + amount);
     }
     spec schema PreburnWithResourceEmits<CoinType> {
         amount: u64;

@@ -371,6 +371,8 @@ module ValidatorAdministrationScripts {
             Errors::INVALID_ARGUMENT,
             Errors::INVALID_STATE;
 
+        include is_validator_info_updated ==> DiemConfig::ReconfigureEmits;
+
         /// **Access Control:**
         /// Only the Validator Operator account which has been registered with the validator can
         /// update the validator's configuration [[H15]][PERMISSION].

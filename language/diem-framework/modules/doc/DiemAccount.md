@@ -1067,7 +1067,11 @@ Record a payment of <code>to_deposit</code> from <code>payer</code> to <code>pay
     == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).withdraw_capability);
 <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).authentication_key
     == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).authentication_key);
-<a name="0x1_DiemAccount_amount$84"></a>
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events.guid);
+<a name="0x1_DiemAccount_amount$86"></a>
 <b>let</b> amount = to_deposit.value;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: amount};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;{amount: amount};
@@ -1227,6 +1231,7 @@ Sender should be treasury compliance account and receiver authorized DD.
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt;;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_TieredMintEmits">TieredMintEmits</a>&lt;Token&gt;;
 </code></pre>
 
 
@@ -1278,6 +1283,26 @@ The balance of designated dealer increases by <code>amount</code>.
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt; {
     <b>ensures</b> dealer_balance == <b>old</b>(dealer_balance) + mint_amount;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_DiemAccount_TieredMintEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_TieredMintEmits">TieredMintEmits</a>&lt;Token&gt; {
+    tc_account: signer;
+    designated_dealer_address: address;
+    mint_amount: u64;
+    tier_index: u64;
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEmits">DepositEmits</a>&lt;Token&gt;{
+        payer: <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(),
+        payee: designated_dealer_address,
+        amount: mint_amount,
+        metadata: x""
+    };
 }
 </code></pre>
 
@@ -1527,7 +1552,7 @@ Withdraw <code>amount</code> <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&
 
 
 
-<a name="0x1_DiemAccount_payer$85"></a>
+<a name="0x1_DiemAccount_payer$87"></a>
 
 
 <pre><code><b>let</b> payer = cap.account_address;
@@ -1537,6 +1562,10 @@ Withdraw <code>amount</code> <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&
 <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
 <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
             == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt;{balance: <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer)};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawOnlyFromCapAddress">WithdrawOnlyFromCapAddress</a>&lt;Token&gt;;
@@ -1656,17 +1685,26 @@ resource under <code>dd</code>.
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_dd_addr$86"></a>
+<a name="0x1_DiemAccount_dd_addr$88"></a>
 <b>let</b> dd_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
-<a name="0x1_DiemAccount_payer$87"></a>
+<a name="0x1_DiemAccount_payer$89"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer));
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
 <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
 <b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
         == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(dd_addr).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(dd_addr).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(dd_addr).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(dd_addr).received_events.guid);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnAbortsIf">PreburnAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEnsures">PreburnEnsures</a>&lt;Token&gt;{dd, payer};
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEmits">PreburnEmits</a>&lt;Token&gt;;
 </code></pre>
 
 
@@ -1721,6 +1759,23 @@ The value of preburn at <code>dd_addr</code> increases by <code>amount</code>;
 
 
 
+
+<a name="0x1_DiemAccount_PreburnEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PreburnEmits">PreburnEmits</a>&lt;Token&gt; {
+    dd: signer;
+    cap: <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>;
+    amount: u64;
+    <a name="0x1_DiemAccount_dd_addr$69"></a>
+    <b>let</b> dd_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
+    <b>include</b> <a href="Diem.md#0x1_Diem_PreburnWithResourceEmits">Diem::PreburnWithResourceEmits</a>&lt;Token&gt;{preburn_address: dd_addr};
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromEmits">WithdrawFromEmits</a>&lt;Token&gt;{payee: dd_addr, metadata: x""};
+}
+</code></pre>
+
+
+
 </details>
 
 <a name="0x1_DiemAccount_extract_withdraw_capability"></a>
@@ -1764,7 +1819,7 @@ Return a unique capability granting permission to withdraw from the sender's acc
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_sender_addr$88"></a>
+<a name="0x1_DiemAccount_sender_addr$90"></a>
 <b>let</b> sender_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(sender_addr);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_ExtractWithdrawCapAbortsIf">ExtractWithdrawCapAbortsIf</a>{sender_addr};
@@ -1832,9 +1887,11 @@ Return the withdraw capability to the account it originally came from
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_cap_addr$89"></a>
+<a name="0x1_DiemAccount_cap_addr$91"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(cap_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(cap_addr) == update_field(<b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(cap_addr)),
+    withdraw_capability, <a href="../../../move-stdlib/docs/Option.md#0x1_Option_spec_some">Option::spec_some</a>(cap));
 <b>aborts_if</b> !<a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(cap_addr) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <b>aborts_if</b> !<a href="DiemAccount.md#0x1_DiemAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(cap_addr) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(cap_addr);
@@ -1891,7 +1948,7 @@ attestation protocol
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_payer$90"></a>
+<a name="0x1_DiemAccount_payer$92"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer);
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee);
@@ -1903,10 +1960,19 @@ attestation protocol
 <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(payee);
 <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
 <b>ensures</b> <b>exists</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
-<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability ==
-    <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).withdraw_capability);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payer).received_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).sent_events.guid);
+<b>ensures</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events.guid
+    == <b>old</b>(<b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(payee).received_events.guid);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromAbortsIf">PayFromAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEnsures">PayFromEnsures</a>&lt;Token&gt;{payer};
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEmits">PayFromEmits</a>&lt;Token&gt;;
 </code></pre>
 
 
@@ -1920,7 +1986,7 @@ attestation protocol
     payee: address;
     amount: u64;
     metadata: vector&lt;u8&gt;;
-    metadata_signature: vector&lt;u8&gt; ;
+    metadata_signature: vector&lt;u8&gt;;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{payer: cap.account_address};
     <b>include</b> cap.account_address != payee ==&gt; <a href="DiemAccount.md#0x1_DiemAccount_DepositOverflowAbortsIf">DepositOverflowAbortsIf</a>&lt;Token&gt;;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;Token&gt;;
@@ -1939,7 +2005,7 @@ attestation protocol
     amount: u64;
     metadata: vector&lt;u8&gt;;
     metadata_signature: vector&lt;u8&gt; ;
-    <a name="0x1_DiemAccount_payer$69"></a>
+    <a name="0x1_DiemAccount_payer$70"></a>
     <b>let</b> payer = cap.account_address;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositAbortsIfRestricted">DepositAbortsIfRestricted</a>&lt;Token&gt;{payer: cap.account_address};
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromBalanceNoLimitsAbortsIf">WithdrawFromBalanceNoLimitsAbortsIf</a>&lt;Token&gt;{payer, balance: <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer)};
@@ -1960,6 +2026,24 @@ attestation protocol
     <b>ensures</b> payer == payee ==&gt; <a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payer) == <b>old</b>(<a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payer));
     <b>ensures</b> payer != payee ==&gt; <a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payer) == <b>old</b>(<a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payer)) - amount;
     <b>ensures</b> payer != payee ==&gt; <a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payee) == <b>old</b>(<a href="DiemAccount.md#0x1_DiemAccount_balance">balance</a>&lt;Token&gt;(payee)) + amount;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_DiemAccount_PayFromEmits"></a>
+
+
+<pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_PayFromEmits">PayFromEmits</a>&lt;Token&gt; {
+    cap: <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>;
+    payee: address;
+    amount: u64;
+    metadata: vector&lt;u8&gt;;
+    <a name="0x1_DiemAccount_payer$71"></a>
+    <b>let</b> payer = cap.account_address;
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_DepositEmits">DepositEmits</a>&lt;Token&gt;{payer: payer};
+    <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawFromEmits">WithdrawFromEmits</a>&lt;Token&gt;;
 }
 </code></pre>
 
@@ -2120,7 +2204,7 @@ Return a unique capability granting permission to rotate the sender's authentica
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_ExtractKeyRotationCapabilityAbortsIf">ExtractKeyRotationCapabilityAbortsIf</a> {
     account: signer;
-    <a name="0x1_DiemAccount_account_addr$70"></a>
+    <a name="0x1_DiemAccount_account_addr$72"></a>
     <b>let</b> account_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>aborts_if</b> !<a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(account_addr) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">AbortsIfDelegatedKeyRotationCapability</a>;
@@ -2264,7 +2348,7 @@ then add for both token types.
 
 
 
-<a name="0x1_DiemAccount_new_account_addr$91"></a>
+<a name="0x1_DiemAccount_new_account_addr$93"></a>
 
 
 <pre><code><b>let</b> new_account_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account);
@@ -2396,7 +2480,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_new_account_addr$92"></a>
+<a name="0x1_DiemAccount_new_account_addr$94"></a>
 <b>let</b> new_account_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account);
 <b>modifies</b> <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>&gt;(new_account_addr);
 <b>modifies</b> <b>global</b>&lt;<a href="../../../move-stdlib/docs/Event.md#0x1_Event_EventHandleGenerator">Event::EventHandleGenerator</a>&gt;(new_account_addr);
@@ -2407,7 +2491,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountAbortsIf">MakeAccountAbortsIf</a>{addr: new_account_addr};
 <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(new_account_addr);
 <b>ensures</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_not_frozen">AccountFreezing::spec_account_is_not_frozen</a>(new_account_addr);
-<a name="0x1_DiemAccount_account_ops_cap$93"></a>
+<a name="0x1_DiemAccount_account_ops_cap$95"></a>
 <b>let</b> account_ops_cap = <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>ensures</b> account_ops_cap == update_field(<b>old</b>(account_ops_cap), creation_events, account_ops_cap.creation_events);
 <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(new_account_addr);
@@ -2442,9 +2526,9 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">MakeAccountEmits</a> {
     new_account_address: address;
-    <a name="0x1_DiemAccount_handle$71"></a>
+    <a name="0x1_DiemAccount_handle$73"></a>
     <b>let</b> handle = <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).creation_events;
-    <a name="0x1_DiemAccount_msg$72"></a>
+    <a name="0x1_DiemAccount_msg$74"></a>
     <b>let</b> msg = <a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">CreateAccountEvent</a> {
         created: new_account_address,
         role_id: <a href="Roles.md#0x1_Roles_spec_get_role_id">Roles::spec_get_role_id</a>(new_account_address)
@@ -2609,7 +2693,7 @@ AccountOperationsCapability, WriteSetManager, and finally makes the account.
 <a name="0x1_DiemAccount_CreateDiemRootAccountModifies"></a>
 
 
-<a name="0x1_DiemAccount_dr_addr$73"></a>
+<a name="0x1_DiemAccount_dr_addr$75"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateDiemRootAccountModifies">CreateDiemRootAccountModifies</a> {
@@ -2652,7 +2736,7 @@ AccountOperationsCapability, WriteSetManager, and finally makes the account.
 <a name="0x1_DiemAccount_CreateDiemRootAccountEnsures"></a>
 
 
-<a name="0x1_DiemAccount_dr_addr$74"></a>
+<a name="0x1_DiemAccount_dr_addr$76"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateDiemRootAccountEnsures">CreateDiemRootAccountEnsures</a> {
@@ -2716,14 +2800,14 @@ event handle generator, then makes the account.
 
 
 <pre><code><b>pragma</b> opaque;
-<a name="0x1_DiemAccount_tc_addr$94"></a>
+<a name="0x1_DiemAccount_tc_addr$96"></a>
 <b>let</b> tc_addr = <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateTreasuryComplianceAccountModifies">CreateTreasuryComplianceAccountModifies</a>;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateTreasuryComplianceAccountAbortsIf">CreateTreasuryComplianceAccountAbortsIf</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountAbortsIf">MakeAccountAbortsIf</a>{addr: <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()};
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateTreasuryComplianceAccountEnsures">CreateTreasuryComplianceAccountEnsures</a>;
-<a name="0x1_DiemAccount_account_ops_cap$95"></a>
+<a name="0x1_DiemAccount_account_ops_cap$97"></a>
 <b>let</b> account_ops_cap = <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>());
 <b>ensures</b> account_ops_cap == update_field(<b>old</b>(account_ops_cap), creation_events, account_ops_cap.creation_events);
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">MakeAccountEmits</a>{new_account_address: <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()};
@@ -2735,7 +2819,7 @@ event handle generator, then makes the account.
 <a name="0x1_DiemAccount_CreateTreasuryComplianceAccountModifies"></a>
 
 
-<a name="0x1_DiemAccount_tc_addr$75"></a>
+<a name="0x1_DiemAccount_tc_addr$77"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateTreasuryComplianceAccountModifies">CreateTreasuryComplianceAccountModifies</a> {
@@ -2772,7 +2856,7 @@ event handle generator, then makes the account.
 <a name="0x1_DiemAccount_CreateTreasuryComplianceAccountEnsures"></a>
 
 
-<a name="0x1_DiemAccount_tc_addr$76"></a>
+<a name="0x1_DiemAccount_tc_addr$78"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateTreasuryComplianceAccountEnsures">CreateTreasuryComplianceAccountEnsures</a> {
@@ -3585,11 +3669,11 @@ The prologue for module transaction
 
 
 
-<a name="0x1_DiemAccount_transaction_sender$96"></a>
+<a name="0x1_DiemAccount_transaction_sender$98"></a>
 
 
 <pre><code><b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
-<a name="0x1_DiemAccount_max_transaction_fee$97"></a>
+<a name="0x1_DiemAccount_max_transaction_fee$99"></a>
 <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_ModulePrologueAbortsIf">ModulePrologueAbortsIf</a>&lt;Token&gt; {
     max_transaction_fee,
@@ -3611,7 +3695,7 @@ The prologue for module transaction
     chain_id: u8;
     max_transaction_fee: u128;
     txn_expiration_time_seconds: u64;
-    <a name="0x1_DiemAccount_transaction_sender$77"></a>
+    <a name="0x1_DiemAccount_transaction_sender$79"></a>
     <b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
         transaction_sender,
@@ -3698,11 +3782,11 @@ The prologue for script transaction
 
 
 
-<a name="0x1_DiemAccount_transaction_sender$98"></a>
+<a name="0x1_DiemAccount_transaction_sender$100"></a>
 
 
 <pre><code><b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
-<a name="0x1_DiemAccount_max_transaction_fee$99"></a>
+<a name="0x1_DiemAccount_max_transaction_fee$101"></a>
 <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_ScriptPrologueAbortsIf">ScriptPrologueAbortsIf</a>&lt;Token&gt;{
     max_transaction_fee,
@@ -3725,7 +3809,7 @@ The prologue for script transaction
     max_transaction_fee: u128;
     txn_expiration_time_seconds: u64;
     script_hash: vector&lt;u8&gt;;
-    <a name="0x1_DiemAccount_transaction_sender$78"></a>
+    <a name="0x1_DiemAccount_transaction_sender$80"></a>
     <b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
     <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {transaction_sender};
 }
@@ -3821,7 +3905,7 @@ The prologue for WriteSet transaction
     txn_public_key: vector&lt;u8&gt;;
     txn_expiration_time_seconds: u64;
     chain_id: u8;
-    <a name="0x1_DiemAccount_transaction_sender$79"></a>
+    <a name="0x1_DiemAccount_transaction_sender$81"></a>
     <b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 }
 </code></pre>
@@ -3971,11 +4055,11 @@ The main properties that it verifies:
 
 
 
-<a name="0x1_DiemAccount_transaction_sender$100"></a>
+<a name="0x1_DiemAccount_transaction_sender$102"></a>
 
 
 <pre><code><b>let</b> transaction_sender = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
-<a name="0x1_DiemAccount_max_transaction_fee$101"></a>
+<a name="0x1_DiemAccount_max_transaction_fee$103"></a>
 <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_PrologueCommonAbortsIf">PrologueCommonAbortsIf</a>&lt;Token&gt; {
     transaction_sender,
@@ -4301,12 +4385,12 @@ Epilogue for WriteSet trasnaction
 <a name="0x1_DiemAccount_WritesetEpiloguEmits"></a>
 
 
-<a name="0x1_DiemAccount_handle$80"></a>
+<a name="0x1_DiemAccount_handle$82"></a>
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_WritesetEpiloguEmits">WritesetEpiloguEmits</a> {
     <b>let</b> handle = <b>global</b>&lt;<a href="DiemAccount.md#0x1_DiemAccount_DiemWriteSetManager">DiemWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()).upgrade_events;
-    <a name="0x1_DiemAccount_msg$81"></a>
+    <a name="0x1_DiemAccount_msg$83"></a>
     <b>let</b> msg = <a href="DiemAccount.md#0x1_DiemAccount_AdminTransactionEvent">AdminTransactionEvent</a> {
         committed_timestamp_secs: <a href="DiemTimestamp.md#0x1_DiemTimestamp_spec_now_seconds">DiemTimestamp::spec_now_seconds</a>()
     };
@@ -4360,6 +4444,7 @@ Create a Validator account
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateValidatorAccountAbortsIf">CreateValidatorAccountAbortsIf</a>;
 <b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateValidatorAccountEnsures">CreateValidatorAccountEnsures</a>;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">MakeAccountEmits</a>;
 </code></pre>
 
 
@@ -4536,7 +4621,7 @@ or the key rotation capability for addr itself [[H18]][PERMISSION].
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a> {
     account: signer;
-    <a name="0x1_DiemAccount_addr$82"></a>
+    <a name="0x1_DiemAccount_addr$84"></a>
     <b>let</b> addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr);
 }
@@ -4598,7 +4683,7 @@ or the withdraw capability for addr itself [[H19]][PERMISSION].
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_EnsuresWithdrawCap">EnsuresWithdrawCap</a> {
     account: signer;
-    <a name="0x1_DiemAccount_addr$83"></a>
+    <a name="0x1_DiemAccount_addr$85"></a>
     <b>let</b> addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="DiemAccount.md#0x1_DiemAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr);
 }

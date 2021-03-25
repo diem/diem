@@ -8,34 +8,38 @@
 -  [Function `create_child_vasp_account`](#0x1_AccountCreationScripts_create_child_vasp_account)
     -  [Summary](#@Summary_0)
     -  [Technical Description](#@Technical_Description_1)
-        -  [Events](#@Events_2)
+    -  [Events](#@Events_2)
     -  [Parameters](#@Parameters_3)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_4)
     -  [Related Scripts](#@Related_Scripts_5)
 -  [Function `create_validator_operator_account`](#0x1_AccountCreationScripts_create_validator_operator_account)
     -  [Summary](#@Summary_6)
     -  [Technical Description](#@Technical_Description_7)
-    -  [Parameters](#@Parameters_8)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_9)
-    -  [Related Scripts](#@Related_Scripts_10)
+    -  [Events](#@Events_8)
+    -  [Parameters](#@Parameters_9)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_10)
+    -  [Related Scripts](#@Related_Scripts_11)
 -  [Function `create_validator_account`](#0x1_AccountCreationScripts_create_validator_account)
-    -  [Summary](#@Summary_11)
-    -  [Technical Description](#@Technical_Description_12)
-    -  [Parameters](#@Parameters_13)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_14)
-    -  [Related Scripts](#@Related_Scripts_15)
+    -  [Summary](#@Summary_12)
+    -  [Technical Description](#@Technical_Description_13)
+    -  [Events](#@Events_14)
+    -  [Parameters](#@Parameters_15)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_16)
+    -  [Related Scripts](#@Related_Scripts_17)
 -  [Function `create_parent_vasp_account`](#0x1_AccountCreationScripts_create_parent_vasp_account)
-    -  [Summary](#@Summary_16)
-    -  [Technical Description](#@Technical_Description_17)
-    -  [Parameters](#@Parameters_18)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_19)
-    -  [Related Scripts](#@Related_Scripts_20)
+    -  [Summary](#@Summary_18)
+    -  [Technical Description](#@Technical_Description_19)
+    -  [Events](#@Events_20)
+    -  [Parameters](#@Parameters_21)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_22)
+    -  [Related Scripts](#@Related_Scripts_23)
 -  [Function `create_designated_dealer`](#0x1_AccountCreationScripts_create_designated_dealer)
-    -  [Summary](#@Summary_21)
-    -  [Technical Description](#@Technical_Description_22)
-    -  [Parameters](#@Parameters_23)
-    -  [Common Abort Conditions](#@Common_Abort_Conditions_24)
-    -  [Related Scripts](#@Related_Scripts_25)
+    -  [Summary](#@Summary_24)
+    -  [Technical Description](#@Technical_Description_25)
+    -  [Events](#@Events_26)
+    -  [Parameters](#@Parameters_27)
+    -  [Common Abort Conditions](#@Common_Abort_Conditions_28)
+    -  [Related Scripts](#@Related_Scripts_29)
 
 
 <pre><code><b>use</b> <a href="DiemAccount.md#0x1_DiemAccount">0x1::DiemAccount</a>;
@@ -76,15 +80,18 @@ child accounts of the creating Parent VASP account.
 
 <a name="@Events_2"></a>
 
-#### Events
+### Events
 
-Successful execution with a <code>child_initial_balance</code> greater than zero will emit:
-* A <code><a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> with the <code>payer</code> field being the Parent VASP's address,
-and payee field being <code>child_address</code>. This is emitted on the Parent VASP's
-<code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle.
-* A <code><a href="DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address,
-and payee field being <code>child_address</code>. This is emitted on the new Child VASPS's
-<code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
+Successful execution will emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>child_address</code>,
+and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">Roles::CHILD_VASP_ROLE_ID</a></code>. This is emitted on the
+<code><a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+Successful execution with a <code>child_initial_balance</code> greater than zero will additionaly emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> with the <code>payee</code> field being <code>child_address</code>.
+This is emitted on the Parent VASP's <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle.
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">DiemAccount::ReceivedPaymentEvent</a></code> with the  <code>payer</code> field being the Parent VASP's address.
+This is emitted on the new Child VASPS's <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>received_events</code> handle.
 
 
 <a name="@Parameters_3"></a>
@@ -203,6 +210,14 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>{new_account_address: child_address};
+<b>include</b> child_initial_balance &gt; 0 ==&gt;
+    <a href="DiemAccount.md#0x1_DiemAccount_PayFromEmits">DiemAccount::PayFromEmits</a>&lt;CoinType&gt;{
+        cap: parent_cap,
+        payee: child_address,
+        amount: child_initial_balance,
+        metadata: x"",
+    };
 </code></pre>
 
 
@@ -242,7 +257,17 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_8"></a>
+<a name="@Events_8"></a>
+
+### Events
+
+Successful execution will emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">Roles::VALIDATOR_OPERATOR_ROLE_ID</a></code>. This is emitted on the
+<code><a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_9"></a>
 
 ### Parameters
 
@@ -255,7 +280,7 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
-<a name="@Common_Abort_Conditions_9"></a>
+<a name="@Common_Abort_Conditions_10"></a>
 
 ### Common Abort Conditions
 
@@ -270,7 +295,7 @@ Authentication key prefixes, and how to construct them from an ed25519 public ke
 | <code><a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_10"></a>
+<a name="@Related_Scripts_11"></a>
 
 ### Related Scripts
 
@@ -355,7 +380,7 @@ Only the Diem Root account can create Validator Operator accounts [[A4]][ROLE].
 ## Function `create_validator_account`
 
 
-<a name="@Summary_11"></a>
+<a name="@Summary_12"></a>
 
 ### Summary
 
@@ -363,7 +388,7 @@ Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
 
-<a name="@Technical_Description_12"></a>
+<a name="@Technical_Description_13"></a>
 
 ### Technical Description
 
@@ -378,7 +403,17 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_13"></a>
+<a name="@Events_14"></a>
+
+### Events
+
+Successful execution will emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">Roles::VALIDATOR_ROLE_ID</a></code>. This is emitted on the
+<code><a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_15"></a>
 
 ### Parameters
 
@@ -391,7 +426,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
-<a name="@Common_Abort_Conditions_14"></a>
+<a name="@Common_Abort_Conditions_16"></a>
 
 ### Common Abort Conditions
 
@@ -406,7 +441,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code><a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_15"></a>
+<a name="@Related_Scripts_17"></a>
 
 ### Related Scripts
 
@@ -491,14 +526,14 @@ Only the Diem Root account can create Validator accounts [[A3]][ROLE].
 ## Function `create_parent_vasp_account`
 
 
-<a name="@Summary_16"></a>
+<a name="@Summary_18"></a>
 
 ### Summary
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_17"></a>
+<a name="@Technical_Description_19"></a>
 
 ### Technical Description
 
@@ -511,7 +546,17 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
-<a name="@Parameters_18"></a>
+<a name="@Events_20"></a>
+
+### Events
+
+Successful execution will emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>new_account_address</code>,
+and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a></code>. This is emitted on the
+<code><a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_21"></a>
 
 ### Parameters
 
@@ -526,7 +571,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code>add_all_currencies</code>  | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                                     |
 
 
-<a name="@Common_Abort_Conditions_19"></a>
+<a name="@Common_Abort_Conditions_22"></a>
 
 ### Common Abort Conditions
 
@@ -542,7 +587,7 @@ Authentication keys, prefixes, and how to construct them from an ed25519 public 
 | <code><a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="@Related_Scripts_20"></a>
+<a name="@Related_Scripts_23"></a>
 
 ### Related Scripts
 
@@ -621,7 +666,7 @@ Only the Treasury Compliance account can create Parent VASP accounts [[A6]][ROLE
 ## Function `create_designated_dealer`
 
 
-<a name="@Summary_21"></a>
+<a name="@Summary_24"></a>
 
 ### Summary
 
@@ -629,7 +674,7 @@ Creates a Designated Dealer account with the provided information, and initializ
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
 
-<a name="@Technical_Description_22"></a>
+<a name="@Technical_Description_25"></a>
 
 ### Technical Description
 
@@ -645,7 +690,17 @@ At the time of creation the account is also initialized with default mint tiers 
 account.
 
 
-<a name="@Parameters_23"></a>
+<a name="@Events_26"></a>
+
+### Events
+
+Successful execution will emit:
+* A <code><a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">DiemAccount::CreateAccountEvent</a></code> with the <code>created</code> field being <code>addr</code>,
+and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">Roles::DESIGNATED_DEALER_ROLE_ID</a></code>. This is emitted on the
+<code><a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">DiemAccount::AccountOperationsCapability</a></code> <code>creation_events</code> handle.
+
+
+<a name="@Parameters_27"></a>
 
 ### Parameters
 
@@ -661,7 +716,7 @@ account.
 
 
 
-<a name="@Common_Abort_Conditions_24"></a>
+<a name="@Common_Abort_Conditions_28"></a>
 
 ### Common Abort Conditions
 
@@ -677,7 +732,7 @@ account.
 | <code><a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
 
-<a name="@Related_Scripts_25"></a>
+<a name="@Related_Scripts_29"></a>
 
 ### Related Scripts
 
@@ -734,6 +789,7 @@ account.
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
     <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_MakeAccountEmits">DiemAccount::MakeAccountEmits</a>{new_account_address: addr};
 </code></pre>
 
 

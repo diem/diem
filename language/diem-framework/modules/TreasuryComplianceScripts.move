@@ -171,9 +171,6 @@ module TreasuryComplianceScripts {
         use 0x1::Errors;
         use 0x1::DiemAccount;
 
-        // TODO: burn functionality has specification issues. Fix and reactivate.
-        pragma verify = false;
-
         include DiemAccount::TransactionChecks{sender: account}; // properties checked by the prologue.
         include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
         include Diem::BurnAbortsIf<Token>;
@@ -186,7 +183,7 @@ module TreasuryComplianceScripts {
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED;
 
-        include Diem::BurnWithResourceCapEmits<Token>{preburn: global<Diem::Preburn<Token>>(preburn_address)};
+        include Diem::BurnWithResourceCapEmits<Token>{preburn: Diem::spec_make_preburn(amount)};
 
         /// **Access Control:**
         /// Only the account with the burn capability can burn coins [[H3]][PERMISSION].
@@ -254,6 +251,8 @@ module TreasuryComplianceScripts {
         include DiemAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
         include DiemAccount::PreburnAbortsIf<Token>{dd: account, cap: cap};
         include DiemAccount::PreburnEnsures<Token>{dd: account, payer: account_addr};
+
+        include DiemAccount::PreburnEmits<Token>{dd: account, cap: cap};
 
         aborts_with [check]
             Errors::NOT_PUBLISHED,
@@ -389,6 +388,8 @@ module TreasuryComplianceScripts {
             Errors::INVALID_STATE,
             Errors::LIMIT_EXCEEDED,
             Errors::REQUIRES_ROLE;
+
+        include DiemAccount::TieredMintEmits<CoinType>;
 
         /// **Access Control:**
         /// Only the Treasury Compliance account can mint [[H1]][PERMISSION].

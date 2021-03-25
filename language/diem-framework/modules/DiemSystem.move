@@ -319,6 +319,7 @@ module DiemSystem {
                 v_info.addr == validator_addr
                 && v_info.config != ValidatorConfig::spec_get_config(validator_addr));
         include is_validator_info_updated ==> DiemConfig::ReconfigureAbortsIf;
+        include UpdateConfigAndReconfigureEmits;
     }
     spec schema UpdateConfigAndReconfigureAbortsIf {
         validator_addr: address;
