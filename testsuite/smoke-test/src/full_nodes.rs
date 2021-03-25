@@ -4,7 +4,15 @@
 use crate::{smoke_test_environment::SmokeTestEnvironment, test_utils::compare_balances};
 use cli::client_proxy::{ClientProxy, IndexAndSequence};
 use diem_client::AccountAddress;
-use diem_types::account_config::{testnet_dd_account_address, treasury_compliance_account_address};
+use diem_config::{
+    config::{NodeConfig, Peer, PeerRole, HANDSHAKE_VERSION},
+    network_id::NetworkId,
+};
+use diem_types::{
+    account_config::{testnet_dd_account_address, treasury_compliance_account_address},
+    network_address::{NetworkAddress, Protocol},
+};
+use std::{collections::HashSet, net::Ipv4Addr};
 
 // TODO: All of this convenience code below should be put in the client proxy directly, it's
 // very hard for users to know what the order of a bunch of random inputs should be
@@ -80,9 +88,10 @@ const PUBLIC: &str = "public";
 
 #[test]
 fn test_full_node_basic_flow() {
-    let mut env = SmokeTestEnvironment::new(4);
+    let mut env = SmokeTestEnvironment::new(7);
     env.setup_vfn_swarm();
-    env.add_public_fn_swarm(PUBLIC, 2);
+    let vfn_swarm = env.vfn_swarm();
+    env.add_public_fn_swarm(PUBLIC, 2, None, &vfn_swarm.lock().config);
 
     env.validator_swarm.launch();
     env.vfn_swarm().lock().launch();
@@ -172,7 +181,8 @@ fn test_full_node_basic_flow() {
 fn test_vfn_failover() {
     let mut env = SmokeTestEnvironment::new(7);
     env.setup_vfn_swarm();
-    env.add_public_fn_swarm(PUBLIC, 1);
+    let vfn_swarm = env.vfn_swarm();
+    env.add_public_fn_swarm(PUBLIC, 1, None, &vfn_swarm.lock().config);
 
     env.validator_swarm.launch();
     env.vfn_swarm().lock().launch();
@@ -268,4 +278,147 @@ fn test_vfn_failover() {
         transfer_coins(&mut pfn_0_client, 4, 5, 1, XUS, false);
     }
     transfer_coins(&mut pfn_0_client, 4, 5, 1, XUS, true);
+}
+
+#[test]
+fn test_private_full_node() {
+    const PRIVATE: &str = "private";
+    const USER: &str = "user";
+
+    let mut env = SmokeTestEnvironment::new(7);
+    env.setup_vfn_swarm();
+
+    // Here we want to add two swarms, a private full node, followed by a user full node connected to it
+    let mut private_config = NodeConfig::default_for_public_full_node();
+    let private_network = private_config.full_node_networks.first_mut().unwrap();
+    // Disallow public connections
+    private_network.max_inbound_connections = 0;
+    // Also, we only want it to purposely connect to 1 VFN
+    private_network.max_outbound_connections = 1;
+
+    let mut user_config = NodeConfig::default_for_public_full_node();
+    let user_network = user_config.full_node_networks.first_mut().unwrap();
+    // Disallow fallbacks to VFNs
+    user_network.max_outbound_connections = 1;
+
+    // The secret sauce, add the user as a downstream to the seeds
+    add_node_to_seeds(
+        &mut private_config,
+        &user_config,
+        NetworkId::Public,
+        PeerRole::Downstream,
+    );
+
+    // Startup the Validator and VFN swarms so we can connect them
+    env.validator_swarm.launch();
+    let vfn_swarm = env.vfn_swarm();
+    vfn_swarm.lock().launch();
+
+    // Now we need to connect the VFNs to the private swarm
+    add_node_to_seeds(
+        &mut private_config,
+        vfn_swarm.lock().get_node(0).unwrap().config(),
+        NetworkId::Public,
+        PeerRole::PreferredUpstream,
+    );
+    env.add_public_fn_swarm(PRIVATE, 1, Some(private_config), &vfn_swarm.lock().config);
+    let private_swarm = env.public_swarm(PRIVATE);
+    private_swarm.lock().launch();
+
+    // And connect the user to the private swarm
+    add_node_to_seeds(
+        &mut user_config,
+        private_swarm.lock().get_node(0).unwrap().config(),
+        NetworkId::Public,
+        PeerRole::PreferredUpstream,
+    );
+    env.add_public_fn_swarm(USER, 1, Some(user_config), &private_swarm.lock().config);
+    let user_swarm = env.public_swarm(USER);
+
+    user_swarm.lock().launch();
+
+    // Ensure that User node is connected to private node and only the private node
+    {
+        let mut user_swarm = user_swarm.lock();
+        let user_node = user_swarm.nodes.get_mut("0").unwrap();
+        assert_eq!(
+            1,
+            user_node
+                .get_connected_peers(NetworkId::Public, None)
+                .unwrap_or(0),
+            "User node is connected to more than one peer"
+        );
+    }
+
+    // read state from full node client
+    let mut validator_client = env.get_validator_client(0, None);
+    let mut user_client = env.get_pfn_client(USER, 0, None);
+
+    // mint from user node and check both validator and user node have correct balance
+    let _account = validator_client.create_next_account(false).unwrap().address;
+    user_client.create_next_account(false).unwrap();
+
+    let sender_account = testnet_dd_account_address();
+    let creation_account = treasury_compliance_account_address();
+
+    get_and_reset_sequence_number(&mut user_client, sender_account);
+    get_and_reset_sequence_number(&mut user_client, creation_account);
+    mint_coins(&mut user_client, 0, 10, XUS, true);
+
+    assert!(compare_balances(
+        vec![(10.0, XUS.to_string())],
+        get_balances(&mut user_client, 0)
+    ));
+
+    let sequence = get_and_reset_sequence_number(&mut user_client, sender_account);
+    wait_for_transaction(&mut validator_client, sender_account, sequence - 1);
+    assert!(compare_balances(
+        vec![(10.0, XUS.to_string())],
+        get_balances(&mut validator_client, 0),
+    ));
+}
+
+fn add_node_to_seeds(
+    dest_config: &mut NodeConfig,
+    seed_config: &NodeConfig,
+    network_id: NetworkId,
+    peer_role: PeerRole,
+) {
+    let dest_network_config = dest_config
+        .full_node_networks
+        .iter_mut()
+        .find(|network| network.network_id == network_id)
+        .unwrap();
+    let seed_network_config = seed_config
+        .full_node_networks
+        .iter()
+        .find(|network| network.network_id == network_id)
+        .unwrap();
+
+    let seed_peer_id = seed_network_config.peer_id();
+    let seed_key = seed_network_config.identity_key().public_key();
+
+    let seed_peer = if peer_role != PeerRole::Downstream {
+        // For upstreams, we know the address, but so don't duplicate the keys in the config (lazy way)
+        // TODO: This is ridiculous, we need a better way to manipulate these `NetworkAddress`s
+        let address = seed_network_config.listen_address.clone();
+        let port_protocol = address
+            .as_slice()
+            .iter()
+            .find(|protocol| matches!(protocol, Protocol::Tcp(_)))
+            .unwrap();
+        let address = NetworkAddress::from(Protocol::Ip4(Ipv4Addr::new(127, 0, 0, 1)))
+            .push(port_protocol.clone())
+            .push(Protocol::NoiseIK(seed_key))
+            .push(Protocol::Handshake(HANDSHAKE_VERSION));
+
+        Peer::new(vec![address], HashSet::new(), peer_role)
+    } else {
+        // For downstreams, we don't know the address, but we know the keys
+        let mut seed_keys = HashSet::new();
+        seed_keys.insert(seed_key);
+        Peer::new(vec![], seed_keys, peer_role)
+    };
+
+    dest_network_config.seeds.insert(seed_peer_id, seed_peer);
 }

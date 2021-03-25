@@ -5,7 +5,7 @@ use crate::{test_utils::diem_swarm_utils::get_client_proxy, workspace_builder};
 use cli::client_proxy::ClientProxy;
 use diem_config::config::NodeConfig;
 use diem_crypto::ed25519::Ed25519PrivateKey;
-use diem_genesis_tool::config_builder::FullnodeType;
+use diem_genesis_tool::{config_builder::FullnodeType, swarm_config::SwarmConfig};
 use diem_infallible::Mutex;
 use diem_swarm::swarm::DiemSwarm;
 use diem_temppath::TempPath;
@@ -72,6 +72,7 @@ impl SmokeTestEnvironment {
         }
 
         let swarm = DiemSwarm::configure_fn_swarm(
+            "ValidatorFullNode",
             &workspace_builder::get_diem_node_with_failpoints(),
             None,
             None,
@@ -82,17 +83,24 @@ impl SmokeTestEnvironment {
         self.add_fn_swarm(swarm_key, swarm);
     }
 
-    pub fn add_public_fn_swarm(&mut self, name: &'static str, num_nodes: usize) {
+    pub fn add_public_fn_swarm(
+        &mut self,
+        name: &'static str,
+        num_nodes: usize,
+        template: Option<NodeConfig>,
+        upstream_swarm: &SwarmConfig,
+    ) {
         // Let's shortcut it so we don't have to wait for any startup time
         let swarm_key = FullNodeSwarmType::Public(name);
         if self.fn_swarms.contains_key(&swarm_key) {
             panic!("Already setup full node {:?} swarm", swarm_key);
         }
         let swarm = DiemSwarm::configure_fn_swarm(
+            name,
             &workspace_builder::get_diem_node_with_failpoints(),
             None,
-            None,
-            &self.validator_swarm.config,
+            template,
+            upstream_swarm,
             FullnodeType::PublicFullnode(num_nodes),
         )
         .unwrap();

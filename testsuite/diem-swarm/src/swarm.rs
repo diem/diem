@@ -315,6 +315,7 @@ pub enum NodeType {
 
 /// Struct holding instances and information of Diem Swarm
 pub struct DiemSwarm {
+    label: &'static str,
     diem_node_bin_path: PathBuf,
     // Output log, DiemNodes' config file, diemdb etc, into this dir.
     pub dir: DiemSwarmDir,
@@ -362,6 +363,7 @@ impl DiemSwarm {
     }
 
     pub fn configure_fn_swarm(
+        label: &'static str,
         diem_node_bin_path: &Path,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
@@ -389,6 +391,7 @@ impl DiemSwarm {
             FullnodeType::PublicFullnode(_) => NodeType::PublicFullNode,
         };
         Ok(Self {
+            label,
             diem_node_bin_path: diem_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
@@ -413,6 +416,7 @@ impl DiemSwarm {
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
+            label: "Validator",
             diem_node_bin_path: diem_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
@@ -474,7 +478,7 @@ impl DiemSwarm {
         let num_attempts = 60;
 
         for i in 0..num_attempts {
-            println!("Wait for connectivity attempt: {}", i);
+            println!("{:?} Wait for connectivity attempt: {}", self.node_type, i);
 
             if self
                 .nodes
@@ -483,7 +487,6 @@ impl DiemSwarm {
             {
                 return Ok(());
             }
-            // TODO check full node connectivity for full nodes
 
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }
@@ -652,7 +655,7 @@ impl Drop for DiemSwarm {
             if let DiemSwarmDir::Temporary(temp_dir) = &mut self.dir {
                 temp_dir.persist();
                 let log_path = temp_dir.path();
-                println!("logs located at {:?}", log_path);
+                println!("{:?} logs located at {:?}", self.label, log_path);
 
                 // Dump logs for each validator to stdout when `DIEM_DUMP_LOGS`
                 // environment variable is set
