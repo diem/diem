@@ -12,6 +12,7 @@ use std::{
 };
 
 pub mod ast_debug;
+pub mod graph;
 pub mod remembering_unique_map;
 pub mod unique_map;
 pub mod unique_set;
