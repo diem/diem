@@ -62,7 +62,11 @@ impl DiemNode {
     ) -> Result<Self> {
         let config = NodeConfig::load(&config_path)
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
-        let log_file = File::create(&log_path)?;
+        // Ensure log file exists
+        let log_file = match File::create(&log_path) {
+            Ok(file) => file,
+            Err(_) => File::open(&log_path)?,
+        };
 
         let main_network_config = match node_type {
             NodeType::Validator => config.validator_network.as_ref().unwrap(),
@@ -209,6 +213,11 @@ impl DiemNode {
     }
 
     pub fn check_connectivity(&mut self, expected_peers: usize) -> bool {
+        // If for some reason the node isn't supposed to be connected
+        if expected_peers == 0 {
+            return true;
+        }
+
         const OUTBOUND: &str = "outbound";
 
         // Determine which networks to check
@@ -425,7 +434,14 @@ impl DiemSwarm {
 
     pub fn launch_attempt(&mut self) -> Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
-        std::fs::create_dir(&logs_dir_path)?;
+
+        // Make sure the directory exists
+        match std::fs::create_dir(&logs_dir_path) {
+            Ok(_) => {}
+            Err(_) => {
+                std::fs::read_dir(&logs_dir_path)?;
+            }
+        };
         // For each config launch a node
         for (index, path) in self.config.config_files.iter().enumerate() {
             // Use index as node id.

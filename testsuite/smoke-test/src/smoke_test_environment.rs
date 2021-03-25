@@ -6,14 +6,23 @@ use cli::client_proxy::ClientProxy;
 use diem_config::config::NodeConfig;
 use diem_crypto::ed25519::Ed25519PrivateKey;
 use diem_genesis_tool::config_builder::FullnodeType;
+use diem_infallible::Mutex;
 use diem_swarm::swarm::DiemSwarm;
 use diem_temppath::TempPath;
 use diem_types::waypoint::Waypoint;
+use std::{collections::HashMap, sync::Arc};
+
+/// A way to get us to have multiple full node swarms in the environment
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum FullNodeSwarmType {
+    Validator,
+    Public(&'static str),
+}
 
 pub struct SmokeTestEnvironment {
     pub validator_swarm: DiemSwarm,
-    pub vfn_swarm: Option<DiemSwarm>,
-    pub pfn_swarm: Option<DiemSwarm>,
+    /// A list of full node swarms.  Uses an `Arc<Mutex` to not have to deal with mutability
+    fn_swarms: HashMap<FullNodeSwarmType, Arc<Mutex<DiemSwarm>>>,
     diem_root_key: (Ed25519PrivateKey, String),
     mnemonic_file: TempPath,
 }
@@ -47,8 +56,7 @@ impl SmokeTestEnvironment {
 
         Self {
             validator_swarm,
-            vfn_swarm: None,
-            pfn_swarm: None,
+            fn_swarms: HashMap::new(),
             diem_root_key: (key, key_path),
             mnemonic_file,
         }
@@ -58,29 +66,86 @@ impl SmokeTestEnvironment {
     }
 
     pub fn setup_vfn_swarm(&mut self) {
-        self.vfn_swarm = Some(
-            DiemSwarm::configure_fn_swarm(
-                &workspace_builder::get_diem_node_with_failpoints(),
-                None,
-                None,
-                &self.validator_swarm.config,
-                FullnodeType::ValidatorFullnode,
-            )
-            .unwrap(),
-        );
+        let swarm_key = FullNodeSwarmType::Validator;
+        if self.fn_swarms.contains_key(&swarm_key) {
+            panic!("Already setup VFN swarm");
+        }
+
+        let swarm = DiemSwarm::configure_fn_swarm(
+            &workspace_builder::get_diem_node_with_failpoints(),
+            None,
+            None,
+            &self.validator_swarm.config,
+            FullnodeType::ValidatorFullnode,
+        )
+        .unwrap();
+        self.add_fn_swarm(swarm_key, swarm);
     }
 
-    pub fn setup_pfn_swarm(&mut self, num_nodes: usize) {
-        self.pfn_swarm = Some(
-            DiemSwarm::configure_fn_swarm(
-                &workspace_builder::get_diem_node_with_failpoints(),
-                None,
-                None,
-                &self.validator_swarm.config,
-                FullnodeType::PublicFullnode(num_nodes),
-            )
-            .unwrap(),
-        );
+    pub fn add_public_fn_swarm(&mut self, name: &'static str, num_nodes: usize) {
+        // Let's shortcut it so we don't have to wait for any startup time
+        let swarm_key = FullNodeSwarmType::Public(name);
+        if self.fn_swarms.contains_key(&swarm_key) {
+            panic!("Already setup full node {:?} swarm", swarm_key);
+        }
+        let swarm = DiemSwarm::configure_fn_swarm(
+            &workspace_builder::get_diem_node_with_failpoints(),
+            None,
+            None,
+            &self.validator_swarm.config,
+            FullnodeType::PublicFullnode(num_nodes),
+        )
+        .unwrap();
+
+        self.add_fn_swarm(swarm_key, swarm);
+    }
+
+    pub fn add_fn_swarm(&mut self, swarm_key: FullNodeSwarmType, fn_swarm: DiemSwarm) {
+        if self.fn_swarms.contains_key(&swarm_key) {
+            panic!("Already setup full node {:?} swarm", swarm_key);
+        }
+        self.fn_swarms
+            .insert(swarm_key, Arc::new(Mutex::new(fn_swarm)));
+    }
+
+    pub fn fn_swarm(&self, fn_type: FullNodeSwarmType) -> Option<Arc<Mutex<DiemSwarm>>> {
+        self.fn_swarms.get(&fn_type).cloned()
+    }
+
+    pub fn vfn_swarm(&self) -> Arc<Mutex<DiemSwarm>> {
+        self.fn_swarm(FullNodeSwarmType::Validator)
+            .expect("VFN swarm is not initialized")
+    }
+
+    pub fn public_swarm(&self, name: &'static str) -> Arc<Mutex<DiemSwarm>> {
+        self.fn_swarm(FullNodeSwarmType::Public(name))
+            .expect("Public fn swarm is not initialized")
+    }
+
+    fn get_client(
+        &self,
+        swarm: &DiemSwarm,
+        node_index: usize,
+        waypoint: Option<Waypoint>,
+    ) -> ClientProxy {
+        get_client_proxy(
+            swarm,
+            node_index,
+            &self.diem_root_key.1,
+            self.mnemonic_file.path().to_path_buf(),
+            waypoint,
+        )
+    }
+
+    pub fn get_fn_client(
+        &self,
+        fn_key: FullNodeSwarmType,
+        node_index: usize,
+        waypoint: Option<Waypoint>,
+    ) -> ClientProxy {
+        let arc = self.fn_swarm(fn_key).unwrap();
+        let swarm = arc.lock();
+        self.get_client(&swarm, node_index, waypoint)
     }
 
     pub fn get_validator_client(
@@ -88,36 +153,19 @@ impl SmokeTestEnvironment {
         node_index: usize,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
-        get_client_proxy(
-            &self.validator_swarm,
-            node_index,
-            &self.diem_root_key.1,
-            self.mnemonic_file.path().to_path_buf(),
-            waypoint,
-        )
+        self.get_client(&self.validator_swarm, node_index, waypoint)
     }
 
     pub fn get_vfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
-        get_client_proxy(
-            self.vfn_swarm
-                .as_ref()
-                .expect("Vfn swarm is not initialized"),
-            node_index,
-            &self.diem_root_key.1,
-            self.mnemonic_file.path().to_path_buf(),
-            waypoint,
-        )
+        self.get_fn_client(FullNodeSwarmType::Validator, node_index, waypoint)
     }
 
-    pub fn get_pfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
-        get_client_proxy(
-            self.pfn_swarm
-                .as_ref()
-                .expect("Public fn swarm is not initialized"),
-            node_index,
-            &self.diem_root_key.1,
-            self.mnemonic_file.path().to_path_buf(),
-            waypoint,
-        )
+    pub fn get_pfn_client(
+        &self,
+        name: &'static str,
+        node_index: usize,
+        waypoint: Option<Waypoint>,
+    ) -> ClientProxy {
+        self.get_fn_client(FullNodeSwarmType::Public(name), node_index, waypoint)
     }
 }

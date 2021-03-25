@@ -76,21 +76,22 @@ fn wait_for_transaction(client: &mut ClientProxy, account: AccountAddress, seq_n
 }
 
 const XUS: &str = "XUS";
+const PUBLIC: &str = "public";
 
 #[test]
 fn test_full_node_basic_flow() {
     let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
-    env.setup_pfn_swarm(2);
+    env.add_public_fn_swarm(PUBLIC, 2);
 
     env.validator_swarm.launch();
-    env.vfn_swarm.as_mut().unwrap().launch();
-    env.pfn_swarm.as_mut().unwrap().launch();
+    env.vfn_swarm().lock().launch();
+    env.public_swarm(PUBLIC).lock().launch();
 
     // read state from full node client
     let mut validator_client = env.get_validator_client(0, None);
     let mut vfn_client = env.get_vfn_client(1, None);
-    let mut pfn_client = env.get_pfn_client(0, None);
+    let mut pfn_client = env.get_pfn_client(PUBLIC, 0, None);
 
     // mint from full node and check both validator and full node have correct balance
     let account = validator_client.create_next_account(false).unwrap().address;
@@ -171,16 +172,16 @@ fn test_full_node_basic_flow() {
 fn test_vfn_failover() {
     let mut env = SmokeTestEnvironment::new(7);
     env.setup_vfn_swarm();
-    env.setup_pfn_swarm(1);
+    env.add_public_fn_swarm(PUBLIC, 1);
 
     env.validator_swarm.launch();
-    env.vfn_swarm.as_mut().unwrap().launch();
-    env.pfn_swarm.as_mut().unwrap().launch();
+    env.vfn_swarm().lock().launch();
+    env.public_swarm(PUBLIC).lock().launch();
 
     // set up clients
     let mut vfn_0_client = env.get_vfn_client(0, None);
     let mut vfn_1_client = env.get_vfn_client(1, None);
-    let mut pfn_0_client = env.get_pfn_client(0, None);
+    let mut pfn_0_client = env.get_pfn_client(PUBLIC, 0, None);
 
     // some helpers for creation/minting
     let sender_account = testnet_dd_account_address();
