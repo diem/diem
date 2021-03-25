@@ -4,7 +4,8 @@ title: My First Client
 sidebar_label: My First Client
 ---
 
-import Tabs from '@theme/Tabs'; import TabItem from '@theme/TabItem';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 const syntax = [
   {label: 'Python', value: 'python'},
   {label: 'Java', value: 'java'},

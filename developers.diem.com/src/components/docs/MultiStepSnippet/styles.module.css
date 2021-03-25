@@ -74,7 +74,7 @@
 
 @media small-tablet-breakpoint-max-query,
 large-tablet-breakpoint-query and desktop-breakpoint-max-query {
-  li[role="tab"]:before {
+  .root li[role="tab"]:before {
     content: '';
     padding-top: 100%;
   }
