@@ -283,16 +283,25 @@ fn create_test_cases() -> Vec<Test> {
                                     "currency": "XUS",
                                     "preburns": [
                                         {
-                                            "amount": 100_u64,
-                                            "currency": "XUS"
+                                            "preburn": {
+                                                "amount": 100_u64,
+                                                "currency": "XUS",
+                                            },
+                                            "metadata": "",
                                         },
                                         {
-                                            "amount": 50_u64,
-                                            "currency": "XUS"
+                                            "preburn": {
+                                                "amount": 50_u64,
+                                                "currency": "XUS"
+                                            },
+                                            "metadata": "",
                                         },
                                         {
-                                            "amount": 60_u64,
-                                            "currency": "XUS"
+                                            "preburn": {
+                                                "amount": 60_u64,
+                                                "currency": "XUS"
+                                            },
+                                            "metadata": "",
                                         },
                                     ],
                                 }

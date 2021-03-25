@@ -91,7 +91,13 @@ impl AccountRoleView {
                     .iter()
                     .cloned()
                     .map(|amt_view| {
-                        PreburnQueueView::new(amt_view.currency.clone(), vec![amt_view])
+                        PreburnQueueView::new(
+                            amt_view.currency.clone(),
+                            vec![PreburnWithMetadataView {
+                                preburn: amt_view,
+                                metadata: None,
+                            }],
+                        )
                     })
                     .collect();
                 (preburn_balances, Some(preburn_queues))
@@ -102,7 +108,7 @@ impl AccountRoleView {
                     .map(|(currency_code, preburns)| {
                         let total_balance =
                             preburns.preburns().iter().fold(0, |acc: u64, preburn| {
-                                acc.checked_add(preburn.coin()).unwrap()
+                                acc.checked_add(preburn.preburn().coin()).unwrap()
                             });
                         AmountView::new(total_balance, &currency_code.as_str())
                     })
@@ -115,8 +121,12 @@ impl AccountRoleView {
                             preburns
                                 .preburns()
                                 .iter()
-                                .map(|preburn| {
-                                    AmountView::new(preburn.coin(), &currency_code.as_str())
+                                .map(|preburn| PreburnWithMetadataView {
+                                    preburn: AmountView::new(
+                                        preburn.preburn().coin(),
+                                        &currency_code.as_str(),
+                                    ),
+                                    metadata: Some(BytesView::new(preburn.metadata())),
                                 })
                                 .collect::<Vec<_>>(),
                         )
@@ -177,12 +187,18 @@ impl AccountView {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct PreburnQueueView {
-    currency: String,
-    preburns: Vec<AmountView>,
+    pub currency: String,
+    pub preburns: Vec<PreburnWithMetadataView>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct PreburnWithMetadataView {
+    pub preburn: AmountView,
+    pub metadata: Option<BytesView>,
 }
 
 impl PreburnQueueView {
-    pub fn new(currency: String, preburns: Vec<AmountView>) -> Self {
+    pub fn new(currency: String, preburns: Vec<PreburnWithMetadataView>) -> Self {
         Self { currency, preburns }
     }
 }

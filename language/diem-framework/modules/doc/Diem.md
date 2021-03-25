@@ -19,6 +19,7 @@ minting and burning of coins.
 -  [Struct `ToXDXExchangeRateUpdateEvent`](#0x1_Diem_ToXDXExchangeRateUpdateEvent)
 -  [Resource `CurrencyInfo`](#0x1_Diem_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_Diem_Preburn)
+-  [Struct `PreburnWithMetadata`](#0x1_Diem_PreburnWithMetadata)
 -  [Resource `PreburnQueue`](#0x1_Diem_PreburnQueue)
 -  [Constants](#@Constants_0)
 -  [Function `initialize`](#0x1_Diem_initialize)
@@ -556,6 +557,41 @@ the funds to the account that initiated the burn request.
 
 </details>
 
+<a name="0x1_Diem_PreburnWithMetadata"></a>
+
+## Struct `PreburnWithMetadata`
+
+A preburn request, along with (an opaque to Move) metadata that is
+associated with the preburn request.
+
+
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+<code>preburn: <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+<code>metadata: vector&lt;u8&gt;</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
 <a name="0x1_Diem_PreburnQueue"></a>
 
 ## Resource `PreburnQueue`
@@ -584,7 +620,7 @@ existing <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> resource in
 
 <dl>
 <dt>
-<code>preburns: vector&lt;<a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;&gt;</code>
+<code>preburns: vector&lt;<a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;&gt;</code>
 </dt>
 <dd>
  The queue of preburn requests
@@ -610,7 +646,7 @@ The <code>value</code> field of any coin in a <code><a href="Diem.md#0x1_Diem_Pr
 within this field must be nonzero.
 
 
-<pre><code><b>invariant</b> <b>forall</b> i in 0..len(preburns): preburns[i].to_burn.value &gt; 0;
+<pre><code><b>invariant</b> <b>forall</b> i in 0..len(preburns): preburns[i].preburn.to_burn.value &gt; 0;
 </code></pre>
 
 
@@ -1679,7 +1715,10 @@ requests can be outstanding in the same currency for a designated dealer.
         // If the DD has an <b>old</b> preburn balance, this is converted over
         // into the new preburn queue when it's upgraded.
         <b>if</b> (to_burn.value &gt; 0)  {
-            <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>(account, <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn })
+            <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>(account, <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a> {
+                preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn },
+                metadata: x"",
+            })
         } <b>else</b> {
             <a href="Diem.md#0x1_Diem_destroy_zero">destroy_zero</a>(to_burn)
         };
@@ -1763,7 +1802,7 @@ Must abort if the account doesn't have the <code><a href="Diem.md#0x1_Diem_Prebu
         preburn_queue_exists: preburn_queue_exists,
         account_addr: account_addr,
         preburn_queue: preburn_queue,
-        preburn: preburn,
+        preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a> { preburn, metadata: x"" },
     };
 }
 </code></pre>
@@ -1778,7 +1817,7 @@ Must abort if the account doesn't have the <code><a href="Diem.md#0x1_Diem_Prebu
     preburn_queue_exists: bool;
     account_addr: address;
     preburn_queue: <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;;
-    preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;;
+    preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;;
     <b>ensures</b> preburn_queue_exists;
     <b>ensures</b> !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr);
     <b>ensures</b> <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(preburn_queue.preburns) == 1;
@@ -1798,7 +1837,7 @@ Add the <code>preburn</code> request to the preburn queue of <code>account</code
 number of preburn requests does not exceed <code><a href="Diem.md#0x1_Diem_MAX_OUTSTANDING_PREBURNS">MAX_OUTSTANDING_PREBURNS</a></code>.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1807,11 +1846,11 @@ number of preburn requests does not exceed <code><a href="Diem.md#0x1_Diem_MAX_O
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType: store&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType: store&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a> {
     <b>let</b> account_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="Diem.md#0x1_Diem_EPREBURN_QUEUE">EPREBURN_QUEUE</a>));
-    <b>assert</b>(<a href="Diem.md#0x1_Diem_value">value</a>(&preburn.to_burn) &gt; 0, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Diem.md#0x1_Diem_EPREBURN">EPREBURN</a>));
+    <b>assert</b>(<a href="Diem.md#0x1_Diem_value">value</a>(&preburn.preburn.to_burn) &gt; 0, <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="Diem.md#0x1_Diem_EPREBURN">EPREBURN</a>));
     <b>let</b> preburns = &<b>mut</b> borrow_global_mut&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr).preburns;
     <b>assert</b>(
         <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(preburns) &lt; <a href="Diem.md#0x1_Diem_MAX_OUTSTANDING_PREBURNS">MAX_OUTSTANDING_PREBURNS</a>,
@@ -1850,10 +1889,10 @@ number of preburn requests does not exceed <code><a href="Diem.md#0x1_Diem_MAX_O
 
 <pre><code><b>schema</b> <a href="Diem.md#0x1_Diem_AddPreburnToQueueAbortsIf">AddPreburnToQueueAbortsIf</a>&lt;CoinType&gt; {
     account: signer;
-    preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;;
+    preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;;
     <a name="0x1_Diem_account_addr$83"></a>
     <b>let</b> account_addr = <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>aborts_if</b> preburn.to_burn.value == 0 <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> preburn.preburn.to_burn.value == 0 <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
     <b>aborts_if</b> <b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr) &&
         <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(<b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(account_addr).preburns) &gt;= <a href="Diem.md#0x1_Diem_MAX_OUTSTANDING_PREBURNS">MAX_OUTSTANDING_PREBURNS</a>
         <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
@@ -1898,10 +1937,11 @@ Calls to this function will fail if:
     // for the same currency.
     <a href="Diem.md#0x1_Diem_upgrade_preburn">upgrade_preburn</a>&lt;CoinType&gt;(account);
 
-    <b>let</b> preburn = <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> {
-        to_burn: <a href="Diem.md#0x1_Diem_zero">zero</a>&lt;CoinType&gt;(),
+    <b>let</b> preburn = <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a> {
+        preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn: <a href="Diem.md#0x1_Diem_zero">zero</a>&lt;CoinType&gt;() },
+        metadata: x"",
     };
-    <a href="Diem.md#0x1_Diem_preburn_with_resource">preburn_with_resource</a>(coin, &<b>mut</b> preburn, sender);
+    <a href="Diem.md#0x1_Diem_preburn_with_resource">preburn_with_resource</a>(coin, &<b>mut</b> preburn.preburn, sender);
     <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>(account, preburn);
 }
 </code></pre>
@@ -1947,7 +1987,7 @@ the correct role [[H4]][PERMISSION].
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>;
     <b>include</b> <a href="Diem.md#0x1_Diem_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
     <b>include</b> <a href="Diem.md#0x1_Diem_UpgradePreburnAbortsIf">UpgradePreburnAbortsIf</a>&lt;CoinType&gt;;
-    <b>include</b> <a href="Diem.md#0x1_Diem_AddPreburnToQueueAbortsIf">AddPreburnToQueueAbortsIf</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount)};
+    <b>include</b> <a href="Diem.md#0x1_Diem_AddPreburnToQueueAbortsIf">AddPreburnToQueueAbortsIf</a>&lt;CoinType&gt;{preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>{ preburn: <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount), metadata: x"" } };
 }
 </code></pre>
 
@@ -2001,7 +2041,7 @@ Calls to this function will fail if:
 * a preburn request with the correct value for <code>amount</code> cannot be found in the preburn queue for <code>preburn_address</code>;
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2010,7 +2050,7 @@ Calls to this function will fail if:
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType: store&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType: store&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;
 <b>acquires</b> <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a> {
     <b>assert</b>(<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(preburn_address), <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="Diem.md#0x1_Diem_EPREBURN_QUEUE">EPREBURN_QUEUE</a>));
     // We search from the head of the queue
@@ -2021,12 +2061,12 @@ Calls to this function will fail if:
     <b>while</b> ({
         <b>spec</b> {
             <b>assert</b> index &lt;= queue_length;
-            <b>assert</b> <b>forall</b> j in 0..index: preburn_queue[j].to_burn.value != amount;
+            <b>assert</b> <b>forall</b> j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
         };
         (index &lt; queue_length)
         }) {
         <b>let</b> elem = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(preburn_queue, index);
-        <b>if</b> (<a href="Diem.md#0x1_Diem_value">value</a>(&elem.to_burn) == amount) {
+        <b>if</b> (<a href="Diem.md#0x1_Diem_value">value</a>(&elem.preburn.to_burn) == amount) {
             <b>let</b> preburn = <a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_remove">Vector::remove</a>(preburn_queue, index);
             // Make sure that the value is correct
             <b>return</b> preburn
@@ -2036,7 +2076,7 @@ Calls to this function will fail if:
 
     <b>spec</b> {
         <b>assert</b> index == queue_length;
-        <b>assert</b> <b>forall</b> j in 0..queue_length: preburn_queue[j] != <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount);
+        <b>assert</b> <b>forall</b> j in 0..queue_length: preburn_queue[j].preburn != <a href="Diem.md#0x1_Diem_spec_make_preburn">spec_make_preburn</a>(amount);
     };
 
     // If we didn't <b>return</b> already, we couldn't find a preburn <b>with</b> a matching value.
@@ -2058,7 +2098,7 @@ Calls to this function will fail if:
 <b>modifies</b> <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(preburn_address);
 <b>include</b> <a href="Diem.md#0x1_Diem_RemovePreburnFromQueueAbortsIf">RemovePreburnFromQueueAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="Diem.md#0x1_Diem_RemovePreburnFromQueueEnsures">RemovePreburnFromQueueEnsures</a>&lt;CoinType&gt;;
-<b>ensures</b> result.to_burn.value == amount;
+<b>ensures</b> result.preburn.to_burn.value == amount;
 </code></pre>
 
 
@@ -2073,7 +2113,7 @@ Calls to this function will fail if:
     <a name="0x1_Diem_preburn_queue$54"></a>
     <b>let</b> preburn_queue = <b>global</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(preburn_address).preburns;
     <a name="0x1_Diem_preburn$55"></a>
-    <b>let</b> preburn = <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn: <a href="Diem.md#0x1_Diem">Diem</a> { value: amount }};
+    <b>let</b> preburn = <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a> { preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn: <a href="Diem.md#0x1_Diem">Diem</a> { value: amount } }, metadata: x"" };
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;&gt;(preburn_address) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>aborts_if</b> !<a href="../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(preburn_queue, preburn) <b>with</b> <a href="../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
@@ -2129,7 +2169,7 @@ the preburn queue with a <code>to_burn</code> amount equal to <code>amount</code
 ) <b>acquires</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>, <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a> {
 
     // Remove the preburn request
-    <b>let</b> preburn = <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address, amount);
+    <b>let</b> <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>{ preburn, metadata: _ } = <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address, amount);
 
     // Burn the contained coins
     <a href="Diem.md#0x1_Diem_burn_with_resource_cap">burn_with_resource_cap</a>(&<b>mut</b> preburn, preburn_address, capability);
@@ -2344,7 +2384,7 @@ at <code>preburn_address</code> does not contain a preburn request of the right 
 ): <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt; <b>acquires</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>, <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a> {
 
     // destroy the coin in the preburn area
-    <b>let</b> <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn } = <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address, amount);
+    <b>let</b> <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>{ preburn: <a href="Diem.md#0x1_Diem_Preburn">Preburn</a> { to_burn }, metadata: _ } = <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address, amount);
 
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="Diem.md#0x1_Diem_currency_code">currency_code</a>&lt;CoinType&gt;();

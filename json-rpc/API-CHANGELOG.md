@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-03-25 Add `metadata` field to preburns in the `preburn_queues` for designated dealers
+
+This adds an additional `metadata` field coupled with each preburn request held
+in the `preburn_queues` for a designated dealer. This also adds a new `PreburnWithMetadataView`.
+
 ## 2021-03-25 Add `arguments_bcs` in `ScriptView` for hex-encoded BCS bytes
 
 The `ScriptFunction` transaction payload accepts BCS-encoded bytes as arguments

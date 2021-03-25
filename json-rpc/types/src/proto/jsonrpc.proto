@@ -88,7 +88,13 @@ message AccountRole {
 
 message PreburnQueue {
     string currency  = 1 [json_name="currency"];
-    repeated Amount preburns = 2 [json_name="preburns"];
+    repeated PreburnWithMetadata preburns = 2 [json_name="preburns"];
+}
+
+message PreburnWithMetadata {
+    Amount preburn = 1 [json_name="preburn"];
+    // hex-encoded bytes
+    string metadata = 2 [json_name="metadata"];
 }
 
 message Event {
