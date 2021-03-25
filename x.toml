@@ -124,6 +124,7 @@ whitespace-exceptions = [
     "developers.diem.com/**/*.md",
     "**/*.exp",
     "**/*.errmap",
+    "**/*.abi",
 ]
 
 [workspace.enforced-attributes]

@@ -3,8 +3,9 @@
 
 use compiled_stdlib::legacy::transaction_scripts::LegacyStdlibScript;
 use diem_types::{
+    account_config::CORE_CODE_ADDRESS,
     on_chain_config::DiemVersion,
-    transaction::{Script, TransactionArgument, TransactionStatus},
+    transaction::{Script, ScriptFunction, TransactionArgument, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode},
 };
 use diem_vm::DiemVM;
@@ -16,6 +17,9 @@ use language_e2e_tests::{
     executor::FakeExecutor,
     test_with_different_versions, transaction_status_eq,
     versioning::CURRENT_RELEASE_VERSIONS,
+};
+use move_core_types::{
+    identifier::Identifier, language_storage::ModuleId, transaction_argument::convert_txn_args,
 };
 use transaction_builder::encode_update_dual_attestation_limit_script;
 
@@ -178,4 +182,47 @@ fn update_script_allow_list() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
+}
+
+#[test]
+fn update_consensus_config() {
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
+
+        let account = test_env.dr_account;
+        let generate_txn = |seq_num, fun_name, config| {
+            // sliding nonce
+            let mut args = vec![TransactionArgument::U64(seq_num)];
+            if let Some(config) = config {
+                args.push(TransactionArgument::U8Vector(config));
+            }
+            account
+                .transaction()
+                .script_function(ScriptFunction::new(
+                    ModuleId::new(
+                        CORE_CODE_ADDRESS,
+                        Identifier::new("SystemAdministrationScripts").unwrap(),
+                    ),
+                    Identifier::new(fun_name).unwrap(),
+                    vec![],
+                    convert_txn_args(&args),
+                ))
+                .sequence_number(seq_num)
+                .sign()
+        };
+        let seq_num = test_env.dr_sequence_number;
+
+        if test_env.version_number == 1 {
+            assert_eq!(executor.execute_transaction(generate_txn(seq_num, "update_dime_consensus_config", Some(vec![1,2,3]))).status(), &TransactionStatus::Discard(StatusCode::FEATURE_UNDER_GATING));
+        }
+
+        if test_env.version_number == 2 {
+            // update abort when uninitialized
+            assert!(matches!(executor.execute_transaction(generate_txn(seq_num, "update_diem_consensus_config", Some(vec![1,2,3]))).status(), &TransactionStatus::Keep(KeptVMStatus::MoveAbort(_, _))));
+            assert_eq!(executor.execute_and_apply(generate_txn(seq_num, "initialize_diem_consensus_config", None)).status(), &TransactionStatus::Keep(KeptVMStatus::Executed));
+            assert_eq!(executor.execute_and_apply(generate_txn(seq_num + 1, "update_diem_consensus_config", Some(vec![1,2,3]))).status(), &TransactionStatus::Keep(KeptVMStatus::Executed));
+        }
+
+    }
+    }
 }

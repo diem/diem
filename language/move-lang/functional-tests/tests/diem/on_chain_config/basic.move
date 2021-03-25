@@ -35,4 +35,4 @@ script {
         DiemConfig::publish_new_config(account, 0);
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 2,"

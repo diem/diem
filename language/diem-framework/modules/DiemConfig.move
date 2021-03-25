@@ -212,7 +212,6 @@ module DiemConfig {
         dr_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        DiemTimestamp::assert_genesis();
         Roles::assert_diem_root(dr_account);
         assert(
             !exists<DiemConfig<Config>>(Signer::address_of(dr_account)),
@@ -226,7 +225,6 @@ module DiemConfig {
         /// generic type/specific invariant issue
         pragma opaque, verify = false;
         modifies global<DiemConfig<Config>>(CoreAddresses::DIEM_ROOT_ADDRESS());
-        include DiemTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         include AbortsIfPublished<Config>;
         include SetEnsures<Config>;
@@ -258,7 +256,6 @@ module DiemConfig {
     }
     spec schema PublishNewConfigAbortsIf<Config> {
         dr_account: signer;
-        include DiemTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
         aborts_if spec_is_published<Config>();
         aborts_if exists<ModifyConfigCapability<Config>>(Signer::spec_address_of(dr_account));

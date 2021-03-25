@@ -2089,6 +2089,30 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
+    /// Initializes the Diem consensus config that is stored on-chain.  This
+    /// transaction can only be sent from the Diem Root account.
+    ///
+    /// # Technical Description
+    /// Initializes the `DiemConsensusConfig` on-chain config to empty and allows future updates from DiemRoot via
+    /// `update_diem_consensus_config`. This doesn't emit a `DiemConfig::NewEpochEvent`.
+    ///
+    /// # Parameters
+    /// | Name            | Type      | Description                                                                |
+    /// | ------          | ------    | -------------                                                              |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.               |
+    /// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                  | Description                                                                                |
+    /// | ----------------           | --------------                                | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+    InitializeDiemConsensusConfig { sliding_nonce: u64 },
+
+    /// # Summary
     /// Transfers a given number of coins in a specified currency from one account to another.
     /// Transfers over a specified amount defined on-chain that are between two different VASPs, or
     /// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
@@ -2752,6 +2776,31 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
+    /// Updates the Diem consensus config that is stored on-chain and is used by the Consensus.  This
+    /// transaction can only be sent from the Diem Root account.
+    ///
+    /// # Technical Description
+    /// Updates the `DiemConsensusConfig` on-chain config and emits a `DiemConfig::NewEpochEvent` to trigger
+    /// a reconfiguration of the system.
+    ///
+    /// # Parameters
+    /// | Name            | Type          | Description                                                                |
+    /// | ------          | ------        | -------------                                                              |
+    /// | `account`       | `signer`      | Signer of the sending account. Must be the Diem Root account.              |
+    /// | `sliding_nonce` | `u64`         | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    /// | `config`        | `vector<u8>`  | The serialized bytes of consensus config.                                  |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                  | Description                                                                                |
+    /// | ----------------           | --------------                                | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+    UpdateDiemConsensusConfig { sliding_nonce: u64, config: Bytes },
+
+    /// # Summary
     /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
     /// transaction can only be sent from the Diem Root account.
     ///
@@ -2775,8 +2824,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | `account` is not the Diem Root account.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER` | `major` is less-than or equal to the current major version stored on-chain.                |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER`  | `major` is less-than or equal to the current major version stored on-chain.                |
     UpdateDiemVersion { sliding_nonce: u64, major: u64 },
 
     /// # Summary
@@ -3229,6 +3278,9 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 to_freeze_account,
             } => encode_freeze_account_script_function(sliding_nonce, to_freeze_account),
+            InitializeDiemConsensusConfig { sliding_nonce } => {
+                encode_initialize_diem_consensus_config_script_function(sliding_nonce)
+            }
             PeerToPeerWithMetadata {
                 currency,
                 payee,
@@ -3338,6 +3390,10 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 to_unfreeze_account,
             } => encode_unfreeze_account_script_function(sliding_nonce, to_unfreeze_account),
+            UpdateDiemConsensusConfig {
+                sliding_nonce,
+                config,
+            } => encode_update_diem_consensus_config_script_function(sliding_nonce, config),
             UpdateDiemVersion {
                 sliding_nonce,
                 major,
@@ -4201,6 +4257,42 @@ pub fn encode_freeze_account_script_function(
             bcs::to_bytes(&sliding_nonce).unwrap(),
             bcs::to_bytes(&to_freeze_account).unwrap(),
         ],
+    ))
+}
+
+/// # Summary
+/// Initializes the Diem consensus config that is stored on-chain.  This
+/// transaction can only be sent from the Diem Root account.
+///
+/// # Technical Description
+/// Initializes the `DiemConsensusConfig` on-chain config to empty and allows future updates from DiemRoot via
+/// `update_diem_consensus_config`. This doesn't emit a `DiemConfig::NewEpochEvent`.
+///
+/// # Parameters
+/// | Name            | Type      | Description                                                                |
+/// | ------          | ------    | -------------                                                              |
+/// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.               |
+/// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                  | Description                                                                                |
+/// | ----------------           | --------------                                | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+pub fn encode_initialize_diem_consensus_config_script_function(
+    sliding_nonce: u64,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("SystemAdministrationScripts").unwrap(),
+        ),
+        Identifier::new("initialize_diem_consensus_config").unwrap(),
+        vec![],
+        vec![bcs::to_bytes(&sliding_nonce).unwrap()],
     ))
 }
 
@@ -5088,6 +5180,47 @@ pub fn encode_unfreeze_account_script_function(
 }
 
 /// # Summary
+/// Updates the Diem consensus config that is stored on-chain and is used by the Consensus.  This
+/// transaction can only be sent from the Diem Root account.
+///
+/// # Technical Description
+/// Updates the `DiemConsensusConfig` on-chain config and emits a `DiemConfig::NewEpochEvent` to trigger
+/// a reconfiguration of the system.
+///
+/// # Parameters
+/// | Name            | Type          | Description                                                                |
+/// | ------          | ------        | -------------                                                              |
+/// | `account`       | `signer`      | Signer of the sending account. Must be the Diem Root account.              |
+/// | `sliding_nonce` | `u64`         | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+/// | `config`        | `vector<u8>`  | The serialized bytes of consensus config.                                  |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                  | Description                                                                                |
+/// | ----------------           | --------------                                | -------------                                                                              |
+/// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+pub fn encode_update_diem_consensus_config_script_function(
+    sliding_nonce: u64,
+    config: Vec<u8>,
+) -> TransactionPayload {
+    TransactionPayload::ScriptFunction(ScriptFunction::new(
+        ModuleId::new(
+            AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            Identifier::new("SystemAdministrationScripts").unwrap(),
+        ),
+        Identifier::new("update_diem_consensus_config").unwrap(),
+        vec![],
+        vec![
+            bcs::to_bytes(&sliding_nonce).unwrap(),
+            bcs::to_bytes(&config).unwrap(),
+        ],
+    ))
+}
+
+/// # Summary
 /// Updates the Diem major version that is stored on-chain and is used by the VM.  This
 /// transaction can only be sent from the Diem Root account.
 ///
@@ -5111,8 +5244,8 @@ pub fn encode_unfreeze_account_script_function(
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
 /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
-/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | `account` is not the Diem Root account.                                                   |
-/// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER` | `major` is less-than or equal to the current major version stored on-chain.                |
+/// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+/// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER`  | `major` is less-than or equal to the current major version stored on-chain.                |
 pub fn encode_update_diem_version_script_function(
     sliding_nonce: u64,
     major: u64,
@@ -7135,6 +7268,18 @@ fn decode_freeze_account_script_function(
     }
 }
 
+fn decode_initialize_diem_consensus_config_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::InitializeDiemConsensusConfig {
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
 fn decode_peer_to_peer_with_metadata_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
@@ -7345,6 +7490,19 @@ fn decode_unfreeze_account_script_function(
         Some(ScriptFunctionCall::UnfreezeAccount {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
             to_unfreeze_account: bcs::from_bytes(script.args().get(1)?).ok()?,
+        })
+    } else {
+        None
+    }
+}
+
+fn decode_update_diem_consensus_config_script_function(
+    payload: &TransactionPayload,
+) -> Option<ScriptFunctionCall> {
+    if let TransactionPayload::ScriptFunction(script) = payload {
+        Some(ScriptFunctionCall::UpdateDiemConsensusConfig {
+            sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
+            config: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
     } else {
         None
@@ -7863,6 +8021,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_freeze_account_script_function),
         );
         map.insert(
+            "SystemAdministrationScriptsinitialize_diem_consensus_config".to_string(),
+            Box::new(decode_initialize_diem_consensus_config_script_function),
+        );
+        map.insert(
             "PaymentScriptspeer_to_peer_with_metadata".to_string(),
             Box::new(decode_peer_to_peer_with_metadata_script_function),
         );
@@ -7926,6 +8088,10 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
         map.insert(
             "TreasuryComplianceScriptsunfreeze_account".to_string(),
             Box::new(decode_unfreeze_account_script_function),
+        );
+        map.insert(
+            "SystemAdministrationScriptsupdate_diem_consensus_config".to_string(),
+            Box::new(decode_update_diem_consensus_config_script_function),
         );
         map.insert(
             "SystemAdministrationScriptsupdate_diem_version".to_string(),

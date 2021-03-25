@@ -2,6 +2,7 @@ address 0x1 {
 /// This module contains Diem Framework script functions to administer the
 /// network outside of validators and validator operators.
 module SystemAdministrationScripts {
+    use 0x1::DiemConsensusConfig;
     use 0x1::DiemVersion;
     use 0x1::SlidingNonce;
 
@@ -29,12 +30,69 @@ module SystemAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
     /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
-    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                  | `account` is not the Diem Root account.                                                   |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER` | `major` is less-than or equal to the current major version stored on-chain.                |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemVersion::EINVALID_MAJOR_VERSION_NUMBER`  | `major` is less-than or equal to the current major version stored on-chain.                |
 
     public(script) fun update_diem_version(account: signer, sliding_nonce: u64, major: u64) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         DiemVersion::set(&account, major)
+    }
+
+    ///  # Summary
+    /// Initializes the Diem consensus config that is stored on-chain.  This
+    /// transaction can only be sent from the Diem Root account.
+    ///
+    /// # Technical Description
+    /// Initializes the `DiemConsensusConfig` on-chain config to empty and allows future updates from DiemRoot via
+    /// `update_diem_consensus_config`. This doesn't emit a `DiemConfig::NewEpochEvent`.
+    ///
+    /// # Parameters
+    /// | Name            | Type      | Description                                                                |
+    /// | ------          | ------    | -------------                                                              |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.               |
+    /// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                  | Description                                                                                |
+    /// | ----------------           | --------------                                | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+
+    public(script) fun initialize_diem_consensus_config(account: signer, sliding_nonce: u64) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        DiemConsensusConfig::initialize(&account);
+    }
+
+    ///  # Summary
+    /// Updates the Diem consensus config that is stored on-chain and is used by the Consensus.  This
+    /// transaction can only be sent from the Diem Root account.
+    ///
+    /// # Technical Description
+    /// Updates the `DiemConsensusConfig` on-chain config and emits a `DiemConfig::NewEpochEvent` to trigger
+    /// a reconfiguration of the system.
+    ///
+    /// # Parameters
+    /// | Name            | Type          | Description                                                                |
+    /// | ------          | ------        | -------------                                                              |
+    /// | `account`       | `signer`      | Signer of the sending account. Must be the Diem Root account.              |
+    /// | `sliding_nonce` | `u64`         | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    /// | `config`        | `vector<u8>`  | The serialized bytes of consensus config.                                  |
+    ///
+    /// # Common Abort Conditions
+    /// | Error Category             | Error Reason                                  | Description                                                                                |
+    /// | ----------------           | --------------                                | -------------                                                                              |
+    /// | `Errors::NOT_PUBLISHED`    | `SlidingNonce::ESLIDING_NONCE`                | A `SlidingNonce` resource is not published under `account`.                                |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                | The `sliding_nonce` is too old and it's impossible to determine if it's duplicated or not. |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                | The `sliding_nonce` is too far in the future.                                              |
+    /// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`       | The `sliding_nonce` has been previously recorded.                                          |
+    /// | `Errors::REQUIRES_ADDRESS` | `CoreAddresses::EDIEM_ROOT`                   | `account` is not the Diem Root account.                                                    |
+
+    public(script) fun update_diem_consensus_config(account: signer, sliding_nonce: u64, config: vector<u8>) {
+        SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
+        DiemConsensusConfig::set(&account, config)
     }
 }
 }

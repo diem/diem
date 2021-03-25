@@ -1,6 +1,4 @@
 address 0x1 {
-
-
 /// Maintains the version number for the Diem blockchain. The version is stored in a
 /// DiemConfig, and may be updated by Diem root.
 module DiemVersion {
