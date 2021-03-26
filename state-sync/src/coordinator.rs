@@ -358,7 +358,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         let local_li_version = self.local_state.committed_version();
         let target_version = request.target.ledger_info().version();
-        debug!(
+        info!(
             LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Received)
                 .target_version(target_version)
                 .local_li_version(local_li_version)
@@ -514,7 +514,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 ));
             }
             if synced_version == sync_target_version {
-                debug!(
+                info!(
                     LogSchema::event_log(LogEntry::SyncRequest, LogEvent::Complete)
                         .local_li_version(committed_version)
                         .local_synced_version(synced_version)

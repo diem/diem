@@ -289,7 +289,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
                         subscription.name
                     );
                 } else {
-                    debug!(
+                    info!(
                         LogSchema::event_log(LogEntry::Reconfig, LogEvent::Success)
                             .subscription_name(subscription.name.clone()),
                         "Successfully published reconfig notification to subscription {}",
