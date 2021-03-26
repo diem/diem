@@ -10,7 +10,7 @@ use crate::{
 };
 use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 // HLIR + Unstructured Control Flow + CFG
 
@@ -72,6 +72,7 @@ pub enum FunctionBody_ {
     Defined {
         locals: UniqueMap<Var, SingleType>,
         start: Label,
+        loop_heads: BTreeSet<Label>,
         blocks: BasicBlocks,
     },
 }
@@ -93,7 +94,7 @@ pub type BasicBlocks = BTreeMap<Label, BasicBlock>;
 
 pub type BasicBlock = VecDeque<Command>;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LoopEnd {
     // If the generated loop end block was not used
     Unused,
@@ -101,9 +102,16 @@ pub enum LoopEnd {
     Target(Label),
 }
 
-pub struct BlockInfo {
-    // If it is a loop stmt, Some(end)
-    pub loop_stmt_end: Option<LoopEnd>,
+#[derive(Clone, Debug)]
+pub struct LoopInfo {
+    pub is_loop_stmt: bool,
+    pub loop_end: LoopEnd,
+}
+
+#[derive(Clone, Debug)]
+pub enum BlockInfo {
+    LoopHead(LoopInfo),
+    Other,
 }
 
 //**************************************************************************************************
@@ -298,6 +306,7 @@ impl AstDebug for (FunctionName, &Function) {
             FunctionBody_::Defined {
                 locals,
                 start,
+                loop_heads,
                 blocks,
             } => w.block(|w| {
                 w.write("locals:");
@@ -309,6 +318,12 @@ impl AstDebug for (FunctionName, &Function) {
                     })
                 });
                 w.new_line();
+                w.writeln("loop heads:");
+                w.indent(4, |w| {
+                    for loop_head in loop_heads {
+                        w.writeln(&format!("{}", loop_head))
+                    }
+                });
                 w.writeln(&format!("start={}", start.0));
                 w.new_line();
                 blocks.ast_debug(w);

@@ -3,7 +3,7 @@
 
 use crate::{
     cfgir::{
-        ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd},
+        ast::{BasicBlock, BasicBlocks, BlockInfo, LoopEnd, LoopInfo},
         remove_no_ops,
     },
     errors::*,
@@ -46,8 +46,8 @@ impl<'a> BlockCFG<'a> {
     pub fn new(
         start: Label,
         blocks: &'a mut BasicBlocks,
-        block_info: Vec<(Label, BlockInfo)>,
-    ) -> (BlockCFG, BTreeSet<Label>, Errors) {
+        block_info: &[(Label, BlockInfo)],
+    ) -> (Self, BTreeSet<Label>, Errors) {
         let mut cfg = BlockCFG {
             start,
             blocks,
@@ -256,11 +256,11 @@ fn is_implicit_control_flow(block: &BasicBlock) -> bool {
 // This cannot be determined in earlier passes due to dead code
 fn determine_infinite_loop_starts(
     cfg: &BlockCFG,
-    block_info: Vec<(Label, BlockInfo)>,
+    block_info: &[(Label, BlockInfo)],
 ) -> BTreeSet<Label> {
     // Filter dead code
     let block_info = block_info
-        .into_iter()
+        .iter()
         .filter(|(lbl, _info)| cfg.blocks().contains_key(lbl))
         .collect::<Vec<_>>();
 
@@ -278,12 +278,12 @@ fn determine_infinite_loop_starts(
             _ => (),
         }
 
-        let BlockInfo { loop_stmt_end } = info;
-        match loop_stmt_end {
-            None => (),
-            Some(end) => {
+        match info {
+            BlockInfo::Other => (),
+            BlockInfo::LoopHead(LoopInfo { is_loop_stmt, .. }) if !*is_loop_stmt => (),
+            BlockInfo::LoopHead(LoopInfo { loop_end, .. }) => {
                 infinite_loop_starts.insert(*lbl);
-                loop_stack.push((*lbl, *end))
+                loop_stack.push((*lbl, *loop_end))
             }
         }
 
@@ -309,7 +309,7 @@ fn determine_infinite_loop_starts(
             cur_loop_end,
             &cfg.blocks()[&lbl],
         );
-        prev_opt = Some(lbl);
+        prev_opt = Some(*lbl);
     }
 
     infinite_loop_starts

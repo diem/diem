@@ -14,6 +14,7 @@ use crate::{
     shared::unique_map::UniqueMap,
     FullyCompiledProgram,
 };
+use cfgir::ast::LoopInfo;
 use move_core_types::{account_address::AccountAddress as MoveAddress, value::MoveValue};
 use move_ir_types::location::*;
 use std::{
@@ -35,8 +36,9 @@ struct Context {
     label_count: usize,
     blocks: BasicBlocks,
     block_ordering: BTreeMap<Label, usize>,
+    // Used for populating block_info
+    loop_bounds: BTreeMap<Label, G::LoopInfo>,
     block_info: Vec<(Label, BlockInfo)>,
-    loop_stmt_bounds: BTreeMap<Label, Label>,
 }
 
 impl Context {
@@ -73,7 +75,7 @@ impl Context {
             blocks: BasicBlocks::new(),
             block_ordering: BTreeMap::new(),
             block_info: vec![],
-            loop_stmt_bounds: BTreeMap::new(),
+            loop_bounds: BTreeMap::new(),
         }
     }
 
@@ -95,15 +97,11 @@ impl Context {
     fn insert_block(&mut self, lbl: Label, basic_block: BasicBlock) {
         assert!(self.block_ordering.insert(lbl, self.blocks.len()).is_none());
         assert!(self.blocks.insert(lbl, basic_block).is_none());
-        self.block_info.push((
-            lbl,
-            BlockInfo {
-                loop_stmt_end: self
-                    .loop_stmt_bounds
-                    .get(&lbl)
-                    .map(|end| G::LoopEnd::Target(*end)),
-            },
-        ));
+        let block_info = match self.loop_bounds.get(&lbl) {
+            None => BlockInfo::Other,
+            Some(info) => BlockInfo::LoopHead(info.clone()),
+        };
+        self.block_info.push((lbl, block_info));
     }
 
     // Returns the blocks inserted in insertion ordering
@@ -113,7 +111,7 @@ impl Context {
         let blocks = mem::replace(&mut self.blocks, BasicBlocks::new());
         let block_ordering = mem::replace(&mut self.block_ordering, BTreeMap::new());
         let block_info = mem::replace(&mut self.block_info, vec![]);
-        self.loop_stmt_bounds = BTreeMap::new();
+        self.loop_bounds = BTreeMap::new();
         self.label_count = 0;
         self.loop_begin = None;
         self.loop_end = None;
@@ -131,16 +129,26 @@ impl Context {
         let block_info = block_info
             .into_iter()
             .map(|(lbl, info)| {
-                let BlockInfo { loop_stmt_end } = info;
-                let loop_stmt_end = match loop_stmt_end {
-                    None => None,
-                    Some(G::LoopEnd::Target(end)) => Some(match remapping.get(&end) {
-                        None => G::LoopEnd::Unused,
-                        Some(e) => G::LoopEnd::Target(*e),
-                    }),
-                    Some(G::LoopEnd::Unused) => unreachable!(),
+                let info = match info {
+                    BlockInfo::Other => BlockInfo::Other,
+                    BlockInfo::LoopHead(G::LoopInfo {
+                        is_loop_stmt,
+                        loop_end,
+                    }) => {
+                        let loop_end = match loop_end {
+                            G::LoopEnd::Unused => G::LoopEnd::Unused,
+                            G::LoopEnd::Target(end) if remapping.contains_key(&end) => {
+                                G::LoopEnd::Target(remapping[&end])
+                            }
+                            G::LoopEnd::Target(_end) => G::LoopEnd::Unused,
+                        };
+                        BlockInfo::LoopHead(G::LoopInfo {
+                            is_loop_stmt,
+                            loop_end,
+                        })
+                    }
                 };
-                (remapping[&lbl], BlockInfo { loop_stmt_end })
+                (remapping[&lbl], info)
             })
             .collect();
         (start, blocks, block_info)
@@ -270,7 +278,7 @@ fn constant_(
     initial_block(context, block);
     let (start, mut blocks, block_info) = context.finish_blocks();
 
-    let (mut cfg, infinite_loop_starts, errors) = BlockCFG::new(start, &mut blocks, block_info);
+    let (mut cfg, infinite_loop_starts, errors) = BlockCFG::new(start, &mut blocks, &block_info);
     assert!(infinite_loop_starts.is_empty(), "{}", ICE_MSG);
     assert!(errors.is_empty(), "{}", ICE_MSG);
 
@@ -378,7 +386,7 @@ fn function_body(
     assert!(context.blocks.is_empty());
     assert!(context.block_ordering.is_empty());
     assert!(context.block_info.is_empty());
-    assert!(context.loop_stmt_bounds.is_empty());
+    assert!(context.loop_bounds.is_empty());
     assert!(context.loop_begin.is_none());
     assert!(context.loop_end.is_none());
     let b_ = match tb_ {
@@ -388,7 +396,7 @@ fn function_body(
             let (start, mut blocks, block_info) = context.finish_blocks();
 
             let (mut cfg, infinite_loop_starts, errors) =
-                BlockCFG::new(start, &mut blocks, block_info);
+                BlockCFG::new(start, &mut blocks, &block_info);
             for e in errors {
                 context.error(e);
             }
@@ -406,9 +414,17 @@ fn function_body(
                 cfgir::optimize(signature, &locals, &mut cfg);
             }
 
+            let loop_heads = block_info
+                .into_iter()
+                .filter(|(lbl, info)| {
+                    matches!(info, BlockInfo::LoopHead(_)) && blocks.contains_key(lbl)
+                })
+                .map(|(lbl, _info)| lbl)
+                .collect();
             GB::Defined {
                 locals,
                 start,
+                loop_heads,
                 blocks,
             }
         }
@@ -522,6 +538,14 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
                 let loop_body = context.new_label();
                 let loop_end = context.new_label();
 
+                context.loop_bounds.insert(
+                    loop_cond,
+                    LoopInfo {
+                        is_loop_stmt: false,
+                        loop_end: G::LoopEnd::Target(loop_end),
+                    },
+                );
+
                 // Jump to loop condition
                 basic_block.push_back(sp(
                     loc,
@@ -557,7 +581,13 @@ fn block_(context: &mut Context, cur_label: &mut Label, blocks: H::Block) -> Bas
                 assert!(cur_label.0 < loop_body.0);
                 assert!(loop_body.0 < loop_end.0);
 
-                context.loop_stmt_bounds.insert(loop_body, loop_end);
+                context.loop_bounds.insert(
+                    loop_body,
+                    LoopInfo {
+                        is_loop_stmt: true,
+                        loop_end: G::LoopEnd::Target(loop_end),
+                    },
+                );
 
                 // Jump to loop
                 basic_block.push_back(sp(

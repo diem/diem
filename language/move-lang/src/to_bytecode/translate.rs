@@ -489,9 +489,17 @@ fn function(
         G::FunctionBody_::Defined {
             locals,
             start,
+            loop_heads,
             blocks,
         } => {
-            let (locals, code) = function_body(context, parameters.clone(), locals, start, blocks);
+            let (locals, code) = function_body(
+                context,
+                parameters.clone(),
+                locals,
+                loop_heads,
+                start,
+                blocks,
+            );
             IR::FunctionBody::Bytecode { locals, code }
         }
     };
@@ -585,6 +593,7 @@ fn function_body(
     context: &mut Context,
     parameters: Vec<(Var, H::SingleType)>,
     mut locals_map: UniqueMap<Var, H::SingleType>,
+    loop_heads: BTreeSet<H::Label>,
     start: H::Label,
     blocks_map: H::BasicBlocks,
 ) -> (Vec<(IR::Var, IR::Type)>, IR::BytecodeBlocks) {
@@ -611,7 +620,8 @@ fn function_body(
         bytecode_blocks.push((label(lbl), code));
     }
 
-    remove_fallthrough_jumps::code(&mut bytecode_blocks);
+    let loop_heads = loop_heads.into_iter().map(label).collect();
+    remove_fallthrough_jumps::code(&loop_heads, &mut bytecode_blocks);
 
     (locals, bytecode_blocks)
 }

@@ -2,29 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_ir_types::ast as IR;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 // Removes any "fall through jumps", i.e. this a is a jump directly to the next instruction.
 // Iterates to find a fixpoint as it might create empty blocks which could create more jumps to
 // clean up
 
-pub fn code(blocks: &mut IR::BytecodeBlocks) {
+pub fn code(loop_heads: &BTreeSet<IR::BlockLabel>, blocks: &mut IR::BytecodeBlocks) {
     let mut changed = true;
     while changed {
-        let fall_through_removed = remove_fall_through(blocks);
+        let fall_through_removed = remove_fall_through(loop_heads, blocks);
         let block_removed = remove_empty_blocks(blocks);
         changed = fall_through_removed || block_removed;
     }
 }
 
-fn remove_fall_through(blocks: &mut IR::BytecodeBlocks) -> bool {
+fn remove_fall_through(
+    loop_heads: &BTreeSet<IR::BlockLabel>,
+    blocks: &mut IR::BytecodeBlocks,
+) -> bool {
     use IR::Bytecode_ as B;
     let mut changed = false;
     for idx in 0..(blocks.len() - 1) {
-        let next_block = blocks.get(idx + 1).unwrap().0.clone();
-        let (_, block) = blocks.get_mut(idx).unwrap();
+        let next_block = &blocks[idx + 1].0.clone();
+        let (lbl, block) = &mut blocks[idx];
+        // Don't inline loop heads for the move-prover
+        if loop_heads.contains(&lbl) {
+            continue;
+        }
+
         let remove_last =
-            matches!(&block.last().unwrap().value, B::Branch(lbl) if lbl == &next_block);
+            matches!(&block.last().unwrap().value, B::Branch(lbl) if lbl == next_block);
         if remove_last {
             changed = true;
             block.pop();
