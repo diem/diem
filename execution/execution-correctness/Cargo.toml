@@ -36,7 +36,7 @@ consensus-types = { path = "../../consensus/consensus-types", default-features =
 executor-test-helpers = { path = "../executor-test-helpers" }
 diem-config = { path = "../../config" , features = ["fuzzing"] }
 diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 
 [features]
 fuzzing = ["diem-config/fuzzing", "consensus-types/fuzzing"]

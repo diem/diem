@@ -4,6 +4,9 @@
 use compiler::Compiler;
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_transaction_builder::{
+    stdlib as transaction_builder, stdlib::encode_peer_to_peer_with_metadata_script,
+};
 use diem_types::{
     account_address::AccountAddress,
     account_config,
@@ -25,7 +28,6 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
     value::{serialize_values, MoveValue},
 };
-use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm::file_format::CompiledModule;
 
 #[test]

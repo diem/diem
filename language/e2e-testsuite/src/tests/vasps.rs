@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_config,
     transaction::{authenticator::AuthenticationKey, TransactionStatus},
@@ -14,7 +15,6 @@ use move_core_types::{
     value::{serialize_values, MoveValue},
     vm_status::VMStatus,
 };
-use transaction_builder::*;
 
 #[test]
 fn valid_creator_already_vasp() {

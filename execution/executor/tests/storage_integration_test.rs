@@ -3,6 +3,9 @@
 
 use compiler::Compiler;
 use diem_crypto::{ed25519::*, PrivateKey, Uniform};
+use diem_transaction_builder::stdlib::{
+    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
+};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address, xus_tag},
     account_state::AccountState,
@@ -19,9 +22,6 @@ use executor_test_helpers::{
 };
 use executor_types::BlockExecutor;
 use std::convert::TryFrom;
-use transaction_builder::{
-    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
-};
 
 #[test]
 fn test_genesis() {

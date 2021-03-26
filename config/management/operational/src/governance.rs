@@ -9,6 +9,7 @@ use diem_management::{
     secure_backend::ValidatorBackend,
     transaction::build_raw_transaction,
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,

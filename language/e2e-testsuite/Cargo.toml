@@ -20,7 +20,6 @@ diem-types = { path = "../../types", features = ["fuzzing"] }
 move-core-types = { path = "../move-core/types" }
 move-vm-runtime = { path = "../move-vm/runtime" }
 move-vm-types = { path = "../move-vm/types" }
-transaction-builder = { path = "../transaction-builder"}
 diem-transaction-builder = { path = "../../sdk/transaction-builder"}
 vm = { path = "../vm" }
 diem-vm = { path = "../diem-vm" }

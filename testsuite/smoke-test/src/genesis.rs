@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use diem_temppath::TempPath;
+use diem_transaction_builder::stdlib::encode_remove_validator_and_reconfigure_script;
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address},
     transaction::{Transaction, WriteSetPayload},
@@ -22,7 +23,6 @@ use std::{
     fs, fs::File, io::Write, path::PathBuf, process::Command, str::FromStr, thread::sleep,
     time::Duration,
 };
-use transaction_builder::encode_remove_validator_and_reconfigure_script;
 
 #[test]
 /// This test verifies the flow of a genesis transaction after the chain starts.

@@ -15,6 +15,7 @@ use crate::{
 use anyhow::format_err;
 use async_trait::async_trait;
 use diem_logger::prelude::*;
+use diem_transaction_builder::stdlib::encode_update_diem_version_script;
 use diem_types::{
     account_config::XUS_NAME,
     chain_id::ChainId,
@@ -23,7 +24,6 @@ use diem_types::{
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
-use transaction_builder::encode_update_diem_version_script;
 
 #[derive(StructOpt, Debug)]
 pub struct ValidatorVersioningParams {

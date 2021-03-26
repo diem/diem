@@ -5,6 +5,7 @@ use crate::{auto_validate::AutoValidate, json_rpc::JsonRpcClientWrapper, Transac
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use diem_management::{error::Error, transaction::build_raw_transaction};
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, Transaction},

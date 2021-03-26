@@ -36,7 +36,7 @@ diem-temppath = { path = "../../../common/temppath" }
 fallible = { path = "../../../common/fallible" }
 netcore = { path = "../../../network/netcore" }
 network = { path = "../../../network" }
-transaction-builder = { path = "../../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../../sdk/transaction-builder" }
 
 [features]
 testing = []

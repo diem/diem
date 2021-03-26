@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{TransactionOutput, TransactionStatus, WriteSetPayload},
@@ -10,7 +11,6 @@ use language_e2e_tests::{
     account::Account, current_function_name, executor::FakeExecutor, test_with_different_versions,
     versioning::CURRENT_RELEASE_VERSIONS,
 };
-use transaction_builder::*;
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
     assert!(matches!(

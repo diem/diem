@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
-use diem_transaction_builder::stdlib::ScriptCall;
+use diem_transaction_builder::stdlib::{encode_create_parent_vasp_account_script, ScriptCall};
 use diem_types::account_config;
 use language_e2e_tests::{
     account::{self, Account},
@@ -10,7 +10,6 @@ use language_e2e_tests::{
 };
 use proptest::{collection::vec, prelude::*};
 use std::convert::TryFrom;
-use transaction_builder::encode_create_parent_vasp_account_script;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

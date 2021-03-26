@@ -13,6 +13,7 @@ use diem_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     chain_id::ChainId,
     network_address::{NetworkAddress, Protocol},

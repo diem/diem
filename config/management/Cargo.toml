@@ -28,7 +28,7 @@ diem-time-service = { path = "../../common/time-service" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-temppath = { path = "../../common/temppath" }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 
 [dev-dependencies]
 diem-config = { path = "..", features = ["fuzzing"] }

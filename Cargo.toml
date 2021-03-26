@@ -108,7 +108,6 @@ members = [
     "language/tools/move-explain",
     "language/tools/resource-viewer",
     "language/tools/vm-genesis",
-    "language/transaction-builder",
     "language/transaction-builder/generator",
     "language/vm",
     "language/vm/serializer-tests",

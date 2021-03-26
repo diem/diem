@@ -6,6 +6,9 @@
 use anyhow::Result;
 use diem_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use diem_temppath::TempPath;
+use diem_transaction_builder::stdlib::{
+    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
+};
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -42,9 +45,6 @@ use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
-use transaction_builder::{
-    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
-};
 
 #[test]
 fn test_empty_db() {

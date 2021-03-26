@@ -11,6 +11,9 @@ use diem_crypto::{
     PrivateKey, SigningKey, Uniform,
 };
 use diem_logger::prelude::*;
+use diem_transaction_builder::stdlib::{
+    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
+};
 use diem_types::{
     account_address::AccountAddress,
     account_config::{
@@ -47,9 +50,6 @@ use std::{
 use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
-use transaction_builder::{
-    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
-};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,

@@ -29,7 +29,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 storage-client = { path = "../../storage/storage-client" }
 storage-interface = { path = "../../storage/storage-interface" }
 storage-service = { path = "../../storage/storage-service" }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 
 [features]
 default = []

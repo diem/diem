@@ -7,6 +7,7 @@ use diem_crypto::{
     test_utils::KeyPair,
     Signature, SigningKey, Uniform, ValidCryptoMaterialStringExt,
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     chain_id::ChainId,
     transaction::{

@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_config::diem_root_address,
     on_chain_config::new_epoch_event_key,
@@ -19,7 +20,6 @@ use move_core_types::{
     vm_status::StatusCode,
 };
 use serde_json::json;
-use transaction_builder::*;
 
 #[test]
 fn validator_batch_remove() {

@@ -48,7 +48,7 @@ diem-genesis-tool = {path = "../../config/management/genesis", features = ["test
 diem-temppath = { path = "../../common/temppath" }
 diemdb = { path = "../../storage/diemdb" }
 storage-interface = { path = "../../storage/storage-interface", features=["fuzzing"] }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 vm-genesis = { path = "../../language/tools/vm-genesis" }
 
 [features]

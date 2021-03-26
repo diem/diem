@@ -5,6 +5,7 @@ use crate::layout::Layout;
 use diem_crypto::ed25519::Ed25519PublicKey;
 use diem_global_constants::{DIEM_ROOT_KEY, OPERATOR_KEY, OWNER_KEY};
 use diem_management::{config::ConfigPath, constants, error::Error, secure_backend::SharedBackend};
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address,
     chain_id::ChainId,

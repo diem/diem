@@ -3,6 +3,7 @@
 
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_config::{self, BurnEvent, XUS_NAME},
     transaction::{authenticator::AuthenticationKey, Script, TransactionArgument},
@@ -14,7 +15,6 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use std::convert::TryFrom;
-use transaction_builder::*;
 
 #[test]
 fn burn_txn_fees() {

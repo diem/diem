@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_framework_releases::legacy::transaction_scripts::LegacyStdlibScript;
+use diem_transaction_builder::stdlib::encode_update_dual_attestation_limit_script;
 use diem_types::{
     account_config::CORE_CODE_ADDRESS,
     on_chain_config::DiemVersion,
@@ -21,7 +22,6 @@ use language_e2e_tests::{
 use move_core_types::{
     identifier::Identifier, language_storage::ModuleId, transaction_argument::convert_txn_args,
 };
-use transaction_builder::encode_update_dual_attestation_limit_script;
 
 #[test]
 fn initial_diem_version() {

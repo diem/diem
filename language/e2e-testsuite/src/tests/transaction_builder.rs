@@ -9,6 +9,7 @@
 #![forbid(unsafe_code)]
 
 use diem_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_address::AccountAddress,
     account_config,
@@ -20,7 +21,6 @@ use language_e2e_tests::{
     test_with_different_versions, versioning::CURRENT_RELEASE_VERSIONS,
 };
 use move_core_types::language_storage::TypeTag;
-use transaction_builder::*;
 
 const XUS_THRESHOLD: u64 = 10_000_000_000 / 5;
 const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 775;

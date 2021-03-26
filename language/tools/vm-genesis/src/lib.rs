@@ -14,6 +14,7 @@ use diem_crypto::{
 use diem_framework_releases::{
     current_module_blobs, legacy::transaction_scripts::LegacyStdlibScript,
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address,
     account_config::{

@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use compiler::Compiler;
+use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_address::AccountAddress,
     account_config,
@@ -13,7 +14,6 @@ use diem_types::{
 use language_e2e_tests::{
     account, test_with_different_versions, versioning::CURRENT_RELEASE_VERSIONS,
 };
-use transaction_builder::*;
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
     assert!(matches!(

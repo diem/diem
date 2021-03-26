@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
+use diem_transaction_builder::stdlib as transaction_builder;
 use std::{
     env, fmt, slice,
     sync::Arc,

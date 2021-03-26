@@ -6,6 +6,9 @@ use crate::{
 };
 use anyhow::{anyhow, ensure, Result};
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_transaction_builder::stdlib::{
+    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
+};
 use diem_types::{
     account_config::{
         from_currency_code_string, testnet_dd_account_address, treasury_compliance_account_address,
@@ -28,9 +31,6 @@ use executor_types::BlockExecutor;
 use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReaderWriter, Order};
-use transaction_builder::{
-    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
-};
 
 pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
     let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));

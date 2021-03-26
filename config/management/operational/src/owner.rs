@@ -6,6 +6,7 @@ use diem_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     transaction::build_raw_transaction,
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{account_address::AccountAddress, chain_id::ChainId};
 use structopt::StructOpt;
 

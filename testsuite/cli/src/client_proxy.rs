@@ -15,6 +15,7 @@ use diem_crypto::{
 };
 use diem_logger::prelude::{error, info};
 use diem_temppath::TempPath;
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     access_path::AccessPath,
     account_address::AccountAddress,

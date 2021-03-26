@@ -3,6 +3,7 @@
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use diem_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script;
 use diem_types::{
     account_address, account_config,
     account_config::{xus_tag, XUS_NAME},
@@ -17,7 +18,6 @@ use move_core_types::gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SI
 use rand::SeedableRng;
 use std::u64;
 use storage_interface::DbReaderWriter;
-use transaction_builder::encode_peer_to_peer_with_metadata_script;
 
 struct TestValidator {
     vm_validator: VMValidator,

@@ -14,6 +14,10 @@ use async_trait::async_trait;
 use diem_client::Client;
 use diem_logger::prelude::*;
 use diem_operational_tool::json_rpc::JsonRpcClientWrapper;
+use diem_transaction_builder::stdlib::{
+    encode_add_validator_and_reconfigure_script, encode_remove_validator_and_reconfigure_script,
+    encode_update_diem_version_script,
+};
 use diem_types::{
     account_address::AccountAddress, chain_id::ChainId, ledger_info::LedgerInfoWithSignatures,
 };
@@ -23,10 +27,6 @@ use std::{
     time::{Duration, Instant},
 };
 use structopt::StructOpt;
-use transaction_builder::{
-    encode_add_validator_and_reconfigure_script, encode_remove_validator_and_reconfigure_script,
-    encode_update_diem_version_script,
-};
 
 #[derive(StructOpt, Debug)]
 pub struct ReconfigurationParams {

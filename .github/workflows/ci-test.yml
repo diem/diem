@@ -801,7 +801,7 @@ jobs:
       - run: |
           cd /opt/git/diem
           rustup target add powerpc-unknown-linux-gnu
-          cargo xcheck -j ${max_threads} -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+          cargo xcheck -j ${max_threads} -p diem-transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - uses: ./.github/actions/build-teardown
 
   perf-benchmarks:

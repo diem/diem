@@ -12,6 +12,7 @@ use diem_crypto::{
 use diem_infallible::RwLock;
 use diem_mempool::mocks::MockSharedMempool;
 use diem_time_service::TimeService;
+use diem_transaction_builder::stdlib::encode_peer_to_peer_with_metadata_script;
 use diem_types::{
     account_address::AccountAddress,
     account_config::xus_tag,
@@ -72,7 +73,6 @@ use std::{
     sync::Arc,
 };
 use tokio::runtime::Runtime;
-use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm_genesis::GENESIS_KEYPAIR;
 
 // Networks for validators and fullnodes.

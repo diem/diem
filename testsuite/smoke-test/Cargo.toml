@@ -54,4 +54,4 @@ diem-validator-interface = { path = "../../language/diem-tools/diem-validator-in
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 diem-writeset-generator = { path = "../../language/diem-tools/writeset-transaction-generator" }
 diem-framework = { path = "../../language/diem-framework" }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }

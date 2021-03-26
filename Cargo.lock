@@ -858,6 +858,7 @@ dependencies = [
  "diem-logger",
  "diem-metrics",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-wallet",
  "diem-workspace-hack",
@@ -873,7 +874,6 @@ dependencies = [
  "serde",
  "structopt 0.3.21",
  "tokio",
- "transaction-builder",
  "walkdir",
 ]
 
@@ -913,6 +913,7 @@ dependencies = [
  "diem-swarm",
  "diem-time-service",
  "diem-trace",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "flate2",
@@ -943,7 +944,6 @@ dependencies = [
  "termion",
  "tokio",
  "toml",
- "transaction-builder",
 ]
 
 [[package]]
@@ -1693,6 +1693,7 @@ dependencies = [
  "diem-network-address-encryption",
  "diem-secure-storage",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -1705,7 +1706,6 @@ dependencies = [
  "structopt 0.3.21",
  "thiserror",
  "toml",
- "transaction-builder",
  "vm-genesis",
 ]
 
@@ -1922,6 +1922,7 @@ dependencies = [
  "diem-secure-storage",
  "diem-temppath",
  "diem-time-service",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "hex",
@@ -1930,7 +1931,6 @@ dependencies = [
  "structopt 0.3.21",
  "thiserror",
  "toml",
- "transaction-builder",
 ]
 
 [[package]]
@@ -2078,6 +2078,7 @@ dependencies = [
  "diem-network-address-encryption",
  "diem-secure-storage",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "fallible",
@@ -2092,7 +2093,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "toml",
- "transaction-builder",
 ]
 
 [[package]]
@@ -2862,6 +2862,7 @@ dependencies = [
  "diem-secure-net",
  "diem-secure-storage",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2872,7 +2873,6 @@ dependencies = [
  "serde",
  "storage-client",
  "thiserror",
- "transaction-builder",
 ]
 
 [[package]]
@@ -2894,6 +2894,7 @@ dependencies = [
  "diem-state-view",
  "diem-temppath",
  "diem-trace",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2910,7 +2911,6 @@ dependencies = [
  "serde",
  "serde_json",
  "storage-interface",
- "transaction-builder",
  "vm-genesis",
 ]
 
@@ -2923,6 +2923,7 @@ dependencies = [
  "diem-genesis-tool",
  "diem-infallible",
  "diem-logger",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2936,7 +2937,6 @@ dependencies = [
  "storage-interface",
  "storage-service",
  "structopt 0.3.21",
- "transaction-builder",
 ]
 
 [[package]]
@@ -2948,6 +2948,7 @@ dependencies = [
  "diem-crypto",
  "diem-genesis-tool",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2958,7 +2959,6 @@ dependencies = [
  "storage-interface",
  "storage-service",
  "tempfile",
- "transaction-builder",
  "vm-genesis",
 ]
 
@@ -3983,6 +3983,7 @@ dependencies = [
  "diem-framework-releases",
  "diem-proptest-helpers",
  "diem-state-view",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -3995,7 +3996,6 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.8.3",
- "transaction-builder",
  "vm",
  "vm-genesis",
 ]
@@ -4021,7 +4021,6 @@ dependencies = [
  "move-vm-types",
  "proptest",
  "serde_json",
- "transaction-builder",
  "vm",
 ]
 
@@ -6668,6 +6667,7 @@ dependencies = [
  "diem-temppath",
  "diem-time-service",
  "diem-trace",
+ "diem-transaction-builder",
  "diem-transaction-replay",
  "diem-types",
  "diem-validator-interface",
@@ -6686,7 +6686,6 @@ dependencies = [
  "rusty-fork",
  "statistical",
  "tokio",
- "transaction-builder",
 ]
 
 [[package]]
@@ -6758,6 +6757,7 @@ dependencies = [
  "diem-proptest-helpers",
  "diem-temppath",
  "diem-time-service",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -6782,7 +6782,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-stream",
- "transaction-builder",
  "vm-genesis",
 ]
 
@@ -6996,6 +6995,7 @@ version = "0.1.0"
 dependencies = [
  "bcs",
  "diem-crypto",
+ "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
  "hex",
@@ -7004,7 +7004,6 @@ dependencies = [
  "serde",
  "serde_json",
  "structopt 0.3.21",
- "transaction-builder",
 ]
 
 [[package]]
@@ -7508,15 +7507,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transaction-builder"
-version = "0.1.0"
-dependencies = [
- "diem-transaction-builder",
- "diem-workspace-hack",
- "mirai-annotations",
-]
-
-[[package]]
 name = "transaction-builder-generator"
 version = "0.1.0"
 dependencies = [
@@ -7788,6 +7778,7 @@ dependencies = [
  "diem-framework-releases",
  "diem-proptest-helpers",
  "diem-state-view",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -7798,7 +7789,6 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.8.3",
- "transaction-builder",
  "vm",
 ]
 
@@ -7810,6 +7800,7 @@ dependencies = [
  "diem-crypto",
  "diem-state-view",
  "diem-temppath",
+ "diem-transaction-builder",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -7822,7 +7813,6 @@ dependencies = [
  "scratchpad",
  "storage-interface",
  "storage-service",
- "transaction-builder",
  "vm-genesis",
 ]
 

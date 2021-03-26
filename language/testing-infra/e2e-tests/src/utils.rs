@@ -7,6 +7,7 @@ use crate::{
     compile,
     executor::{self, FakeExecutor},
 };
+use diem_transaction_builder::stdlib as transaction_builder;
 use transaction_builder::*;
 use vm::file_format::CompiledModule;
 

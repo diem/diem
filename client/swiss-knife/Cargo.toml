@@ -21,4 +21,4 @@ diem-types = { path = "../../types" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../../language/move-core/types" }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }

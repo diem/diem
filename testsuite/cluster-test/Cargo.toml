@@ -60,7 +60,7 @@ network = { path = "../../network" }
 network-builder = { path = "../../network/builder" }
 seed-peer-generator = { path = "../../config/seed-peer-generator" }
 state-sync = { path = "../../state-sync" }
-transaction-builder = { path = "../../language/transaction-builder" }
+diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 
 futures = "0.3.12"
 tokio = { version = "1.3.0", features = ["full"] }

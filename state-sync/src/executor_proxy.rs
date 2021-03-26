@@ -318,6 +318,10 @@ mod tests {
     use super::*;
     use channel::diem_channel::Receiver;
     use diem_crypto::{ed25519::*, PrivateKey, Uniform};
+    use diem_transaction_builder::stdlib::{
+        encode_peer_to_peer_with_metadata_script,
+        encode_set_validator_config_and_reconfigure_script, encode_update_diem_version_script,
+    };
     use diem_types::{
         account_address::AccountAddress,
         account_config::{diem_root_address, xus_tag},
@@ -339,10 +343,6 @@ mod tests {
     use futures::{future::FutureExt, stream::StreamExt};
     use storage_interface::DbReaderWriter;
     use subscription_service::ReconfigSubscription;
-    use transaction_builder::{
-        encode_peer_to_peer_with_metadata_script,
-        encode_set_validator_config_and_reconfigure_script, encode_update_diem_version_script,
-    };
     use vm_genesis::Validator;
 
     // TODO(joshlind): add unit tests for general executor proxy behaviour!
