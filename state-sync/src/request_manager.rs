@@ -123,8 +123,8 @@ impl RequestManager {
         peer: PeerNetworkId,
         metadata: ConnectionMetadata,
     ) -> Result<(), Error> {
-        if !self.is_upstream_peer(&peer, metadata.origin) {
-            return Err(Error::PeerIsNotUpstream(
+        if !self.is_valid_state_sync_peer(&peer, metadata.origin) {
+            return Err(Error::InvalidStateSyncPeer(
                 peer.to_string(),
                 metadata.origin.to_string(),
             ));
@@ -132,7 +132,7 @@ impl RequestManager {
 
         info!(LogSchema::new(LogEntry::NewPeer)
             .peer(&peer)
-            .is_upstream_peer(true));
+            .is_valid_peer(true));
         counters::ACTIVE_UPSTREAM_PEERS
             .with_label_values(&[&peer.raw_network_id().to_string()])
             .inc();
@@ -159,7 +159,7 @@ impl RequestManager {
     ) -> Result<(), Error> {
         info!(LogSchema::new(LogEntry::LostPeer)
             .peer(&peer)
-            .is_upstream_peer(self.is_upstream_peer(&peer, origin)));
+            .is_valid_peer(self.is_valid_state_sync_peer(&peer, origin)));
 
         if let Some(peer_info) = self.peers.get_mut(peer) {
             counters::ACTIVE_UPSTREAM_PEERS
@@ -498,17 +498,17 @@ impl RequestManager {
         Ok(timeout)
     }
 
-    /// The validator network and vfn network are always considered upstream when state syncing, as
+    /// The validator network and vfn network are always considered valid when state syncing, as
     /// multicasting will prioritize sending chunk requests to the most important network first.
-    /// If the peer is on the public network, we only consider it upstream (i.e., a valid peer
-    /// to send chunk requests to) if we connected to it.
-    fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
+    /// If the peer is on the public network, we only consider it a valid peer to send chunk
+    /// requests to if we connected to it.
+    fn is_valid_state_sync_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
         peer.raw_network_id().is_validator_network()
             || peer.raw_network_id().is_vfn_network()
             || origin == ConnectionOrigin::Outbound
     }
 
-    pub fn is_known_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
+    pub fn is_known_state_sync_peer(&self, peer: &PeerNetworkId) -> bool {
         self.peers.contains_key(peer)
     }
 
@@ -592,7 +592,7 @@ mod tests {
         let validator_0 = validators[0].clone();
 
         // Verify single validator in peers
-        assert!(request_manager.is_known_upstream_peer(&validator_0));
+        assert!(request_manager.is_known_state_sync_peer(&validator_0));
         assert!(!request_manager.no_available_peers());
 
         // Disable validator 0
@@ -601,7 +601,7 @@ mod tests {
             .unwrap();
 
         // Verify validator 0 is still known, but no longer available
-        assert!(request_manager.is_known_upstream_peer(&validator_0));
+        assert!(request_manager.is_known_state_sync_peer(&validator_0));
         assert!(request_manager.no_available_peers());
 
         // Add validator 0 and verify it's now enabled

@@ -1082,8 +1082,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         peer: &PeerNetworkId,
         response: &GetChunkResponse,
     ) -> Result<(), Error> {
-        // Verify response comes from upstream peer
-        if !self.request_manager.is_known_upstream_peer(peer) {
+        // Verify response comes from known peer
+        if !self.request_manager.is_known_state_sync_peer(peer) {
             counters::RESPONSE_FROM_DOWNSTREAM_COUNT
                 .with_label_values(&[
                     &peer.raw_network_id().to_string(),
@@ -1951,12 +1951,12 @@ mod tests {
             ConnectionOrigin::Inbound,
         );
 
-        // Verify error is returned when adding peer that is not upstream
+        // Verify error is returned when adding peer that is not a valid peer
         let new_peer_result =
             validator_coordinator.process_new_peer(node_network_id, connection_metadata.clone());
-        if !matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
+        if !matches!(new_peer_result, Err(Error::InvalidStateSyncPeer(..))) {
             panic!(
-                "Expected a peer is not upstream error but got: {:?}",
+                "Expected an invalid peer error but got: {:?}",
                 new_peer_result
             );
         }
@@ -1965,9 +1965,9 @@ mod tests {
         let node_network_id = NodeNetworkId::new(NetworkId::Validator, 0);
         let new_peer_result =
             validator_coordinator.process_new_peer(node_network_id.clone(), connection_metadata);
-        if matches!(new_peer_result, Err(Error::PeerIsNotUpstream(..))) {
+        if matches!(new_peer_result, Err(Error::InvalidStateSyncPeer(..))) {
             panic!(
-                "Expected not to receive a peer is not upstream error but got: {:?}",
+                "Expected not to receive an invalid peer error but got: {:?}",
                 new_peer_result
             );
         }
@@ -2097,7 +2097,7 @@ mod tests {
             }
         }
 
-        // Add the peer to our upstreams
+        // Add the peer to our known peers
         process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
         // Verify we now get an empty chunk error
@@ -2131,7 +2131,7 @@ mod tests {
         // Create a coordinator for a full node
         let mut full_node_coordinator = test_utils::create_full_node_coordinator();
 
-        // Create a peer for the node and add the peer as an upstream
+        // Create a peer for the node and add the peer as a known peer
         let peer_network_id = PeerNetworkId::random_validator();
         process_new_peer_event(&mut full_node_coordinator, &peer_network_id);
 
@@ -2179,7 +2179,7 @@ mod tests {
         // Create a coordinator for a validator
         let mut validator_coordinator = test_utils::create_validator_coordinator();
 
-        // Create a peer for the node and add the peer as an upstream
+        // Create a peer for the node and add the peer as a known peer
         let peer_network_id = PeerNetworkId::random_validator();
         process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 
@@ -2230,7 +2230,7 @@ mod tests {
         let mut validator_coordinator =
             create_coordinator_with_config_and_waypoint(NodeConfig::default(), waypoint);
 
-        // Create a peer for the node and add the peer as an upstream
+        // Create a peer for the node and add the peer as a known peer
         let peer_network_id = PeerNetworkId::random_validator();
         process_new_peer_event(&mut validator_coordinator, &peer_network_id);
 

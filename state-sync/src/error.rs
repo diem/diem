@@ -19,6 +19,10 @@ pub enum Error {
     IntegerOverflow(String),
     #[error("Received an invalid chunk request: {0}")]
     InvalidChunkRequest(String),
+    #[error(
+        "Unable to add peer as they are not a valid state sync peer: {0}. Connection origin: {1}"
+    )]
+    InvalidStateSyncPeer(String, String),
     #[error("Encountered a network error: {0}")]
     NetworkError(String),
     #[error("No peers are currently available: {0}")]
@@ -29,8 +33,6 @@ pub enum Error {
     NoTransactionsCommitted,
     #[error("Received an old sync request for version {0}, but our known version is: {1}")]
     OldSyncRequestVersion(Version, Version),
-    #[error("Unable to add peer as they are not an upstream peer: {0}. Connection origin: {1}")]
-    PeerIsNotUpstream(String, String),
     #[error("Processed an invalid chunk! Failed to apply the chunk: {0}")]
     ProcessInvalidChunk(String),
     #[error(

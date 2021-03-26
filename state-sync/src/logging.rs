@@ -20,7 +20,7 @@ pub struct LogSchema<'a> {
     error: Option<&'a Error>,
     #[schema(display)]
     peer: Option<&'a PeerNetworkId>,
-    is_upstream_peer: Option<bool>,
+    is_valid_peer: Option<bool>,
     #[schema(display)]
     chunk_request: Option<GetChunkRequest>,
     version: Option<u64>,
@@ -60,7 +60,7 @@ impl<'a> LogSchema<'a> {
             name,
             event,
             peer: None,
-            is_upstream_peer: None,
+            is_valid_peer: None,
             error: None,
             chunk_request: None,
             chunk_response: None,
