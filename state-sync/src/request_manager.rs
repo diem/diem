@@ -130,7 +130,7 @@ impl RequestManager {
             ));
         }
 
-        debug!(LogSchema::new(LogEntry::NewPeer)
+        info!(LogSchema::new(LogEntry::NewPeer)
             .peer(&peer)
             .is_upstream_peer(true));
         counters::ACTIVE_UPSTREAM_PEERS
@@ -157,7 +157,7 @@ impl RequestManager {
         peer: &PeerNetworkId,
         origin: ConnectionOrigin,
     ) -> Result<(), Error> {
-        debug!(LogSchema::new(LogEntry::LostPeer)
+        info!(LogSchema::new(LogEntry::LostPeer)
             .peer(&peer)
             .is_upstream_peer(self.is_upstream_peer(&peer, origin)));
 
