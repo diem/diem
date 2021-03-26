@@ -63,7 +63,8 @@ The sender of the transaction must be a Parent VASP account.
 
 Creates a <code>ChildVASP</code> account for the sender <code>parent_vasp</code> at <code>child_address</code> with a balance of
 <code>child_initial_balance</code> in <code>CoinType</code> and an initial authentication key of
-<code>auth_key_prefix | child_address</code>.
+<code>auth_key_prefix | child_address</code>. Authentication key prefixes, and how to construct them from an ed25519 public key is described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 If <code>add_all_currencies</code> is true, the child address will have a zero balance in all available
 currencies in the system.
@@ -93,7 +94,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | Name                    | Type         | Description                                                                                                                                 |
 | ------                  | ------       | -------------                                                                                                                               |
 | <code>CoinType</code>              | Type         | The Move type for the <code>CoinType</code> that the child account should be created with. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>parent_vasp</code>           | <code>&signer</code>    | The signer reference of the sending account. Must be a Parent VASP account.                                                                 |
+| <code>parent_vasp</code>           | <code>signer</code>     | The reference of the sending account. Must be a Parent VASP account.                                                                        |
 | <code>child_address</code>         | <code>address</code>    | Address of the to-be-created Child VASP account.                                                                                            |
 | <code>auth_key_prefix</code>       | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                    |
 | <code>add_all_currencies</code>    | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                  |
@@ -237,19 +238,21 @@ Creates an account with a Validator Operator role at <code>new_account_address</
 <code>auth_key_prefix</code> | <code>new_account_address</code>. It publishes a
 <code><a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource with the specified <code>human_name</code>.
 This script does not assign the validator operator to any validator accounts but only creates the account.
+Authentication key prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_8"></a>
 
 ### Parameters
 
-| Name                  | Type         | Description                                                                                     |
-| ------                | ------       | -------------                                                                                   |
-| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
-| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
-| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
+| Name                  | Type         | Description                                                                              |
+| ------                | ------       | -------------                                                                            |
+| <code>dr_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.               |
+| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                          |
+| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account. |
+| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
 <a name="@Common_Abort_Conditions_9"></a>
@@ -371,19 +374,21 @@ Creates an account with a Validator role at <code>new_account_address</code>, wi
 <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is set to the passed in <code>human_name</code>.
 This script does not add the validator to the validator set or the system,
 but only creates the account.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_13"></a>
 
 ### Parameters
 
-| Name                  | Type         | Description                                                                                     |
-| ------                | ------       | -------------                                                                                   |
-| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
-| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
-| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
+| Name                  | Type         | Description                                                                              |
+| ------                | ------       | -------------                                                                            |
+| <code>dr_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.               |
+| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                          |
+| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account. |
+| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
 <a name="@Common_Abort_Conditions_14"></a>
@@ -502,6 +507,8 @@ Creates an account with the Parent VASP role at <code>address</code> with authen
 <code>add_all_currencies</code> is true, 0 balances for all available currencies in the system will
 also be added. This can only be invoked by an TreasuryCompliance account.
 <code>sliding_nonce</code> is a unique nonce for operation, see <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> for details.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_18"></a>
@@ -511,7 +518,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | Name                  | Type         | Description                                                                                                                                                    |
 | ------                | ------       | -------------                                                                                                                                                  |
 | <code>CoinType</code>            | Type         | The Move type for the <code>CoinType</code> currency that the Parent VASP account should be initialized with. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                                      |
+| <code>tc_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                                |
 | <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                                                     |
 | <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Parent VASP account.                                                                                                              |
 | <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                                       |
@@ -630,6 +637,8 @@ Creates an account with the Designated Dealer role at <code>addr</code> with aut
 <code>auth_key_prefix</code> | <code>addr</code> and a 0 balance of type <code>Currency</code>. If <code>add_all_currencies</code> is true,
 0 balances for all available currencies in the system will also be added. This can only be
 invoked by an account with the TreasuryCompliance role.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 At the time of creation the account is also initialized with default mint tiers of (500_000,
 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
@@ -643,7 +652,7 @@ account.
 | Name                 | Type         | Description                                                                                                                                         |
 | ------               | ------       | -------------                                                                                                                                       |
 | <code>Currency</code>           | Type         | The Move type for the <code>Currency</code> that the Designated Dealer should be initialized with. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>         | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+| <code>tc_account</code>         | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 | <code>sliding_nonce</code>      | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                                          |
 | <code>addr</code>               | <code>address</code>    | Address of the to-be-created Designated Dealer account.                                                                                             |
 | <code>auth_key_prefix</code>    | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                            |

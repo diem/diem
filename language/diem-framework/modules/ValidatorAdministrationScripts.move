@@ -23,7 +23,7 @@ module ValidatorAdministrationScripts {
     /// # Parameters
     /// | Name                | Type         | Description                                                                                                                        |
     /// | ------              | ------       | -------------                                                                                                                      |
-    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+    /// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
     /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
     /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
     /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
@@ -113,13 +113,13 @@ module ValidatorAdministrationScripts {
     /// only "locally" under the `validator_account` account address.
     ///
     /// # Parameters
-    /// | Name                          | Type         | Description                                                                                                                  |
-    /// | ------                        | ------       | -------------                                                                                                                |
-    /// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+    /// | Name                          | Type         | Description                                                                                                        |
+    /// | ------                        | ------       | -------------                                                                                                      |
+    /// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -192,7 +192,7 @@ module ValidatorAdministrationScripts {
     /// # Parameters
     /// | Name                | Type         | Description                                                                                                                        |
     /// | ------              | ------       | -------------                                                                                                                      |
-    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
+    /// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
     /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
     /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
     /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
@@ -279,13 +279,13 @@ module ValidatorAdministrationScripts {
     /// on-chain with the updated `ValidatorConfig::ValidatorConfig`.
     ///
     /// # Parameters
-    /// | Name                          | Type         | Description                                                                                                                  |
-    /// | ------                        | ------       | -------------                                                                                                                |
-    /// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+    /// | Name                          | Type         | Description                                                                                                        |
+    /// | ------                        | ------       | -------------                                                                                                      |
+    /// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -396,7 +396,7 @@ module ValidatorAdministrationScripts {
     /// # Parameters
     /// | Name               | Type         | Description                                                                                  |
     /// | ------             | ------       | -------------                                                                                |
-    /// | `account`          | `&signer`    | The signer reference of the sending account of the transaction.                              |
+    /// | `account`          | `signer`     | The signer of the sending account of the transaction.                                        |
     /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                             |
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
     ///
@@ -470,13 +470,13 @@ module ValidatorAdministrationScripts {
     /// the system is initiated by this script.
     ///
     /// # Parameters
-    /// | Name               | Type         | Description                                                                                                  |
-    /// | ------             | ------       | -------------                                                                                                |
-    /// | `dr_account`       | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`          | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
-    /// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                                             |
-    /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.                 |
+    /// | Name               | Type         | Description                                                                                   |
+    /// | ------             | ------       | -------------                                                                                 |
+    /// | `dr_account`       | `signer`     | Signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+    /// | `account`          | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.           |
+    /// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.      |
+    /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                              |
+    /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |

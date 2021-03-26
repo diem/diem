@@ -107,10 +107,10 @@ already have a <code><a href="DiemAccount.md#0x1_DiemAccount_Balance">DiemAccoun
 
 ### Parameters
 
-| Name       | Type      | Description                                                                                                                                         |
-| ------     | ------    | -------------                                                                                                                                       |
-| <code>Currency</code> | Type      | The Move type for the <code>Currency</code> being added to the sending account of the transaction. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>account</code>  | <code>&signer</code> | The signer of the sending account of the transaction.                                                                                               |
+| Name       | Type     | Description                                                                                                                                         |
+| ------     | ------   | -------------                                                                                                                                       |
+| <code>Currency</code> | Type     | The Move type for the <code>Currency</code> being added to the sending account of the transaction. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>account</code>  | <code>signer</code> | The signer of the sending account of the transaction.                                                                                               |
 
 
 <a name="@Common_Abort_Conditions_3"></a>
@@ -218,9 +218,9 @@ resource stored under the account at <code>recovery_address</code>.
 
 ### Parameters
 
-| Name                 | Type      | Description                                                                                                |
-| ------               | ------    | -------------                                                                                              |
-| <code>to_recover_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction.                                           |
+| Name                 | Type      | Description                                                                                               |
+| ------               | ------    | -------------                                                                                             |
+| <code>to_recover_account</code> | <code>signer</code>  | The signer of the sending account of this transaction.                                                    |
 | <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> will be stored. |
 
 
@@ -301,16 +301,17 @@ resource stored under the account at <code>recovery_address</code>.
 
 ### Summary
 
-Rotates the authentication key of the sending account to the
-newly-specified public key and publishes a new shared authentication key
-under the sender's account. Any account can send this transaction.
+Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
+publishes a new shared authentication key derived from that public key under the sender's account.
+Any account can send this transaction.
 
 
 <a name="@Technical_Description_11"></a>
 
 ### Technical Description
 
-Rotates the authentication key of the sending account to <code>public_key</code>,
+Rotates the authentication key of the sending account to the
+[authentication key derived from <code>public_key</code>](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
 and publishes a <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource
 containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for
 <code>account</code> under <code>account</code>.
@@ -322,7 +323,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="Di
 
 | Name         | Type         | Description                                                                                        |
 | ------       | ------       | -------------                                                                                      |
-| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction.                                    |
+| <code>account</code>    | <code>signer</code>     | The signer of the sending account of the transaction.                                              |
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | A valid 32-byte Ed25519 public key for <code>account</code>'s authentication key to be rotated to and stored. |
 
 
@@ -389,8 +390,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="Di
 
 ### Summary
 
-Rotates the transaction sender's authentication key to the supplied new authentication key. May
-be sent by any account.
+Rotates the <code>account</code>'s authentication key to the supplied new authentication key. May be sent by any account.
 
 
 <a name="@Technical_Description_16"></a>
@@ -399,18 +399,18 @@ be sent by any account.
 
 Rotate the <code>account</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
 field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
-corresponds to an ed25519 public key, and <code>account</code> must not have previously
-delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_17"></a>
 
 ### Parameters
 
-| Name      | Type         | Description                                                 |
-| ------    | ------       | -------------                                               |
-| <code>account</code> | <code>&signer</code>    | Signer reference of the sending account of the transaction. |
-| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.            |
+| Name      | Type         | Description                                       |
+| ------    | ------       | -------------                                     |
+| <code>account</code> | <code>signer</code>     | Signer of the sending account of the transaction. |
+| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.  |
 
 
 <a name="@Common_Abort_Conditions_18"></a>
@@ -509,8 +509,8 @@ Compliance or Diem Root accounts).
 
 Rotates the <code>account</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
 field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
-corresponds to an ed25519 public key, and <code>account</code> must not have previously
-delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_22"></a>
@@ -519,7 +519,7 @@ delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapabilit
 
 | Name            | Type         | Description                                                                |
 | ------          | ------       | -------------                                                              |
-| <code>account</code>       | <code>&signer</code>    | Signer reference of the sending account of the transaction.                |
+| <code>account</code>       | <code>signer</code>     | Signer of the sending account of the transaction.                          |
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                           |
 
@@ -626,20 +626,20 @@ only be sent by the Diem Root account as a write set transaction.
 
 Rotate the <code>account</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
 <code>new_key</code> must be a valid authentication key that corresponds to an ed25519
-public key, and <code>account</code> must not have previously delegated its
-<code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_27"></a>
 
 ### Parameters
 
-| Name            | Type         | Description                                                                                                 |
-| ------          | ------       | -------------                                                                                               |
-| <code>dr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-| <code>account</code>       | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.               |
-| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
-| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                            |
+| Name            | Type         | Description                                                                                       |
+| ------          | ------       | -------------                                                                                     |
+| <code>dr_account</code>    | <code>signer</code>     | The signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+| <code>account</code>       | <code>signer</code>     | Signer of account specified in the <code>execute_as</code> field of the write set transaction.               |
+| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.          |
+| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                  |
 
 
 <a name="@Common_Abort_Conditions_28"></a>
@@ -753,9 +753,10 @@ new authentication key. Only used for accounts that are part of a recovery addre
 
 Rotates the authentication key of the <code>to_recover</code> account to <code>new_key</code> using the
 <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in the <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource
-published under <code>recovery_address</code>. This transaction can be sent either by the <code>to_recover</code>
-account, or by the account where the <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published
-that contains <code>to_recover</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+published under <code>recovery_address</code>. <code>new_key</code> must be a valide authentication key as described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+This transaction can be sent either by the <code>to_recover</code> account, or by the account where the
+<code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published that contains <code>to_recover</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_32"></a>
@@ -764,7 +765,7 @@ that contains <code>to_recover</code>'s <code><a href="DiemAccount.md#0x1_DiemAc
 
 | Name               | Type         | Description                                                                                                                   |
 | ------             | ------       | -------------                                                                                                                 |
-| <code>account</code>          | <code>&signer</code>    | Signer reference of the sending account of the transaction.                                                                   |
+| <code>account</code>          | <code>signer</code>     | Signer of the sending account of the transaction.                                                                             |
 | <code>recovery_address</code> | <code>address</code>    | Address where <code><a href="RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> that holds <code>to_recover</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> is published. |
 | <code>to_recover</code>       | <code>address</code>    | The address of the account whose authentication key will be updated.                                                          |
 | <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New authentication key to be used for the account at the <code>to_recover</code> address.                                                |
@@ -888,7 +889,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 | Name      | Type         | Description                                                               |
 | ------    | ------       | -------------                                                             |
-| <code>account</code> | <code>&signer</code>    | Signer reference of the sending account of the transaction.               |
+| <code>account</code> | <code>signer</code>     | Signer of the sending account of the transaction.                         |
 | <code>new_url</code> | <code>vector&lt;u8&gt;</code> | ASCII-encoded url to be used for off-chain communication with <code>account</code>.  |
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for on-chain dual attestation checking. |
 
@@ -979,20 +980,21 @@ any account that has previously published a shared ed25519 public key using
 
 ### Technical Description
 
-This first rotates the public key stored in <code>account</code>'s
+<code>public_key</code> must be a valid ed25519 public key.  This transaction first rotates the public key stored in <code>account</code>'s
 <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource to <code>public_key</code>, after which it
-rotates the authentication key using the capability stored in <code>account</code>'s
-<code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> to a new value derived from <code>public_key</code>
+rotates the <code>account</code>'s authentication key to the new authentication key derived from <code>public_key</code> as defined
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
+using the <code><a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in <code>account</code>'s <code><a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code>.
 
 
 <a name="@Parameters_43"></a>
 
 ### Parameters
 
-| Name         | Type         | Description                                                     |
-| ------       | ------       | -------------                                                   |
-| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction. |
-| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                                     |
+| Name         | Type         | Description                                           |
+| ------       | ------       | -------------                                         |
+| <code>account</code>    | <code>signer</code>     | The signer of the sending account of the transaction. |
+| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                           |
 
 
 <a name="@Common_Abort_Conditions_44"></a>
@@ -1057,7 +1059,8 @@ rotates the authentication key using the capability stored in <code>account</cod
 ### Summary
 
 Initializes the sending account as a recovery address that may be used by
-the VASP that it belongs to. The sending account must be a VASP account.
+other accounts belonging to the same VASP as <code>account</code>.
+The sending account must be a VASP account, and can be either a child or parent VASP account.
 Multiple recovery addresses can exist for a single VASP, but accounts in
 each must be disjoint.
 
@@ -1077,9 +1080,9 @@ may be used as a recovery account for those accounts.
 
 ### Parameters
 
-| Name      | Type      | Description                                           |
-| ------    | ------    | -------------                                         |
-| <code>account</code> | <code>&signer</code> | The signer of the sending account of the transaction. |
+| Name      | Type     | Description                                           |
+| ------    | ------   | -------------                                         |
+| <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
 <a name="@Common_Abort_Conditions_49"></a>

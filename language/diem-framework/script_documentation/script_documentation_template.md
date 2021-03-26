@@ -111,7 +111,7 @@ transaction script categorized in the same manner as here can be found in the
 Creates a Child VASP account with its parent being the sending account of the transaction.
 The sender of the transaction must be a Parent VASP account.
 
-Script documentation: `create_child_vasp_account`
+Script documentation: `AccountCreationScripts::create_child_vasp_account`
 
 ---
 #### Script create_validator_operator_account
@@ -119,7 +119,7 @@ Script documentation: `create_child_vasp_account`
 Creates a Validator Operator account. This transaction can only be sent by the Diem
 Root account.
 
-Script documentation: `create_validator_operator_account`
+Script documentation: `AccountCreationScripts::create_validator_operator_account`
 
 ---
 #### Script create_validator_account
@@ -127,14 +127,14 @@ Script documentation: `create_validator_operator_account`
 Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
-Script documentation: `create_validator_account`
+Script documentation: `AccountCreationScripts::create_validator_account`
 
 ---
 #### Script create_parent_vasp_account
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
-Script documentation: `create_parent_vasp_account`
+Script documentation: `AccountCreationScripts::create_parent_vasp_account`
 
 
 ---
@@ -143,7 +143,7 @@ Script documentation: `create_parent_vasp_account`
 Creates a Designated Dealer account with the provided information, and initializes it with
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
-Script documentation: `create_designated_dealer`
+Script documentation: `AccountCreationScripts::create_designated_dealer`
 
 
 ### Account Administration
@@ -156,7 +156,7 @@ send, receive, and hold `Diem::Diem<Currency>` coins. This transaction can be
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
-Script documentation: `add_currency_to_account`
+Script documentation: `AccountAdministrationScripts::add_currency_to_account`
 
 
 ---
@@ -167,7 +167,7 @@ account. Both the sending and recovery accounts need to belong to the same VASP 
 both be VASP accounts. After this transaction both the sending account and the
 specified recovery account can rotate the sender account's authentication key.
 
-Script documentation: `add_recovery_rotation_capability`
+Script documentation: `AccountAdministrationScripts::add_recovery_rotation_capability`
 
 
 ---
@@ -177,7 +177,7 @@ Rotates the authentication key of the sending account to the
 newly-specified public key and publishes a new shared authentication key
 under the sender's account. Any account can send this transaction.
 
-Script documentation: `publish_shared_ed25519_public_key`
+Script documentation: `AccountAdministrationScripts::publish_shared_ed25519_public_key`
 
 
 ---
@@ -186,7 +186,7 @@ Script documentation: `publish_shared_ed25519_public_key`
 Rotates the transaction sender's authentication key to the supplied new authentication key. May
 be sent by any account.
 
-Script documentation: `rotate_authentication_key`
+Script documentation: `AccountAdministrationScripts::rotate_authentication_key`
 
 
 ---
@@ -196,7 +196,7 @@ Rotates the sender's authentication key to the supplied new authentication key. 
 any account that has a sliding nonce resource published under it (usually this is Treasury
 Compliance or Diem Root accounts).
 
-Script documentation: `rotate_authentication_key_with_nonce`
+Script documentation: `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
 
 
 ---
@@ -206,7 +206,7 @@ Rotates the specified account's authentication key to the supplied new authentic
 only be sent by the Diem Root account as a write set transaction.
 
 
-Script documentation: `rotate_authentication_key_with_nonce_admin`
+Script documentation: `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
 
 
 ---
@@ -214,9 +214,9 @@ Script documentation: `rotate_authentication_key_with_nonce_admin`
 
 Rotates the authentication key of a specified account that is part of a recovery address to a
 new authentication key. Only used for accounts that are part of a recovery address (see
-`Script::add_recovery_rotation_capability` for account restrictions).
+`AccountAdministrationScripts::add_recovery_rotation_capability` for account restrictions).
 
-Script documentation: `rotate_authentication_key_with_recovery_address`
+Script documentation: `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
 
 
 ---
@@ -227,7 +227,7 @@ attestation on-chain. Transaction can be sent by any account that has dual attes
 information published under it. In practice the only such accounts are Designated Dealers and
 Parent VASPs.
 
-Script documentation: `rotate_dual_attestation_info`
+Script documentation: `AccountAdministrationScripts::rotate_dual_attestation_info`
 
 
 ---
@@ -235,9 +235,9 @@ Script documentation: `rotate_dual_attestation_info`
 
 Rotates the authentication key in a `SharedEd25519PublicKey`. This transaction can be sent by
 any account that has previously published a shared ed25519 public key using
-`Script::publish_shared_ed25519_public_key`.
+`AccountAdministrationScripts::publish_shared_ed25519_public_key`.
 
-Script documentation: `rotate_shared_ed25519_public_key`
+Script documentation: `AccountAdministrationScripts::rotate_shared_ed25519_public_key`
 
 ### Payments
 
@@ -251,7 +251,7 @@ agreed to receive the coins.  This transaction can be sent by any account that c
 balance, and to any account that can hold a balance. Both accounts must hold balances in the
 currency being transacted.
 
-Script documentation: `peer_to_peer_with_metadata`
+Script documentation: `PaymentScripts::peer_to_peer_with_metadata`
 
 
 ### Validator and Validator Operator Administration
@@ -263,7 +263,7 @@ Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
 transaction can only be successfully called by the Diem Root account.
 
-Script documentation: `add_validator_and_reconfigure`
+Script documentation: `ValidatorAdministrationScripts::add_validator_and_reconfigure`
 
 
 ---
@@ -274,7 +274,7 @@ the configuration in the validator set that is seen by other validators in the n
 only be successfully sent by a Validator Operator account that is already registered with a
 validator.
 
-Script documentation: `register_validator_config`
+Script documentation: `ValidatorAdministrationScripts::register_validator_config`
 
 
 ---
@@ -284,7 +284,7 @@ This script removes a validator account from the validator set, and triggers a r
 of the system to remove the validator from the system. This transaction can only be
 successfully called by the Diem Root account.
 
-Script documentation: `remove_validator_and_reconfigure`
+Script documentation: `ValidatorAdministrationScripts::remove_validator_and_reconfigure`
 
 
 ---
@@ -294,7 +294,7 @@ Updates a validator's configuration, and triggers a reconfiguration of the syste
 validator set with this new validator configuration.  Can only be successfully sent by a
 Validator Operator account that is already registered with a validator.
 
-Script documentation: `set_validator_config_and_reconfigure`
+Script documentation: `ValidatorAdministrationScripts::set_validator_config_and_reconfigure`
 
 
 ---
@@ -305,7 +305,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by an account with
 Validator role.
 
-Script documentation: `set_validator_operator`
+Script documentation: `ValidatorAdministrationScripts::set_validator_operator`
 
 
 ---
@@ -316,7 +316,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 account as a write set transaction.
 
-Script documentation: `set_validator_operator_with_nonce_admin`
+Script documentation: `ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin`
 
 
 ### Treasury and Compliance Operations
@@ -329,29 +329,32 @@ balance to its preburn area after which the coins may be burned. This
 transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
-Script documentation: `preburn`
+Script documentation: `TreasuryComplianceScripts::preburn`
 
 
 ---
-#### Script burn
+#### Script burn_with_amount
 
-Burns all coins held in the preburn resource at the specified
-preburn address and removes them from the system. The sending account must
-be the Treasury Compliance account.
-The account that holds the preburn resource will normally be a Designated
+Burns the coins held in a preburn resource in the preburn queue at the
+specified preburn address, which are equal to the `amount` specified in the
+transaction. Finds the first relevant outstanding preburn request with
+matching amount and removes the contained coins from the system. The sending
+account must be the Treasury Compliance account.
+The account that holds the preburn queue resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
-Script documentation: `burn`
+Script documentation: `TreasuryComplianceScripts::burn`
 
 
 ---
-#### Script cancel_burn
+#### Script cancel_burn_with_amount
 
-Cancels and returns all coins held in the preburn area under
-`preburn_address` and returns the funds to the `preburn_address`'s balance.
+Cancels and returns the coins held in the preburn area under
+`preburn_address`, which are equal to the `amount` specified in the transaction. Finds the first preburn
+resource with the matching amount and returns the funds to the `preburn_address`'s balance.
 Can only be successfully sent by an account with Treasury Compliance role.
 
-Script documentation: `cancel_burn`
+Script documentation: `TreasuryComplianceScripts::cancel_burn`
 
 
 ---
@@ -361,7 +364,7 @@ Burns the transaction fees collected in the `CoinType` currency so that the
 Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
-Script documentation: `burn_txn_fees`
+Script documentation: `TreasuryComplianceScripts::burn_txn_fees`
 
 
 ---
@@ -371,7 +374,7 @@ Mints a specified number of coins in a currency to a Designated Dealer. The send
 must be the Treasury Compliance account, and coins can only be minted to a Designated Dealer
 account.
 
-Script documentation: `tiered_mint`
+Script documentation: `TreasuryComplianceScripts::tiered_mint`
 
 
 ---
@@ -383,7 +386,7 @@ the Diem Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
-Script documentation: `freeze_account`
+Script documentation: `TreasuryComplianceScripts::freeze_account`
 
 
 ---
@@ -393,7 +396,7 @@ Unfreezes the account at `address`. The sending account of this transaction must
 Treasury Compliance account. After the successful execution of this transaction transactions
 may be sent from the previously frozen account, and coins may be sent and received.
 
-Script documentation: `unfreeze_account`
+Script documentation: `TreasuryComplianceScripts::unfreeze_account`
 
 
 ---
@@ -403,7 +406,7 @@ Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The 
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
-Script documentation: `update_dual_attestation_limit`
+Script documentation: `TreasuryComplianceScripts::update_dual_attestation_limit`
 
 
 ---
@@ -414,7 +417,7 @@ to micro-XDX). The transaction can only be sent by the Treasury Compliance accou
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
-Script documentation: `update_exchange_rate`
+Script documentation: `TreasuryComplianceScripts::update_exchange_rate`
 
 
 ---
@@ -424,7 +427,7 @@ Script to allow or disallow minting of new coins in a specified currency.  This 
 only be sent by the Treasury Compliance account.  Turning minting off for a currency will have
 no effect on coins already in circulation, and coins may still be removed from the system.
 
-Script documentation: `update_minting_ability`
+Script documentation: `TreasuryComplianceScripts::update_minting_ability`
 
 
 ### System Administration
@@ -435,7 +438,7 @@ Script documentation: `update_minting_ability`
 Updates the Diem major version that is stored on-chain and is used by the VM.  This
 transaction can only be sent from the Diem Root account.
 
-Script documentation: `update_diem_version`
+Script documentation: `SystemAdministrationScripts::update_diem_version`
 
 
 

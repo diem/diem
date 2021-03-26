@@ -20,10 +20,10 @@ module AccountAdministrationScripts {
     /// already have a `DiemAccount::Balance<Currency>` published under it.
     ///
     /// # Parameters
-    /// | Name       | Type      | Description                                                                                                                                         |
-    /// | ------     | ------    | -------------                                                                                                                                       |
-    /// | `Currency` | Type      | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
-    /// | `account`  | `&signer` | The signer of the sending account of the transaction.                                                                                               |
+    /// | Name       | Type     | Description                                                                                                                                         |
+    /// | ------     | ------   | -------------                                                                                                                                       |
+    /// | `Currency` | Type     | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
+    /// | `account`  | `signer` | The signer of the sending account of the transaction.                                                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                             | Description                                                                |
@@ -84,9 +84,9 @@ module AccountAdministrationScripts {
     /// resource stored under the account at `recovery_address`.
     ///
     /// # Parameters
-    /// | Name                 | Type      | Description                                                                                                |
-    /// | ------               | ------    | -------------                                                                                              |
-    /// | `to_recover_account` | `&signer` | The signer reference of the sending account of this transaction.                                           |
+    /// | Name                 | Type      | Description                                                                                               |
+    /// | ------               | ------    | -------------                                                                                             |
+    /// | `to_recover_account` | `signer`  | The signer of the sending account of this transaction.                                                    |
     /// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `DiemAccount::KeyRotationCapability` will be stored. |
     ///
     /// # Common Abort Conditions
@@ -132,12 +132,13 @@ module AccountAdministrationScripts {
     }
 
     /// # Summary
-    /// Rotates the authentication key of the sending account to the
-    /// newly-specified public key and publishes a new shared authentication key
-    /// under the sender's account. Any account can send this transaction.
+    /// Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
+    /// publishes a new shared authentication key derived from that public key under the sender's account.
+    /// Any account can send this transaction.
     ///
     /// # Technical Description
-    /// Rotates the authentication key of the sending account to `public_key`,
+    /// Rotates the authentication key of the sending account to the
+    /// [authentication key derived from `public_key`](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
     /// and publishes a `SharedEd25519PublicKey::SharedEd25519PublicKey` resource
     /// containing the 32-byte ed25519 `public_key` and the `DiemAccount::KeyRotationCapability` for
     /// `account` under `account`.
@@ -145,7 +146,7 @@ module AccountAdministrationScripts {
     /// # Parameters
     /// | Name         | Type         | Description                                                                                        |
     /// | ------       | ------       | -------------                                                                                      |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+    /// | `account`    | `signer`     | The signer of the sending account of the transaction.                                              |
     /// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
     ///
     /// # Common Abort Conditions
@@ -176,20 +177,19 @@ module AccountAdministrationScripts {
     }
 
     /// # Summary
-    /// Rotates the transaction sender's authentication key to the supplied new authentication key. May
-    /// be sent by any account.
+    /// Rotates the `account`'s authentication key to the supplied new authentication key. May be sent by any account.
     ///
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
     /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name      | Type         | Description                                                 |
-    /// | ------    | ------       | -------------                                               |
-    /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
+    /// | Name      | Type         | Description                                       |
+    /// | ------    | ------       | -------------                                     |
+    /// | `account` | `signer`     | Signer of the sending account of the transaction. |
+    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                              | Description                                                                         |
@@ -238,13 +238,13 @@ module AccountAdministrationScripts {
     /// # Technical Description
     /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
     /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name            | Type         | Description                                                                |
     /// | ------          | ------       | -------------                                                              |
-    /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
+    /// | `account`       | `signer`     | Signer of the sending account of the transaction.                          |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
     /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
     ///
@@ -301,16 +301,16 @@ module AccountAdministrationScripts {
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
     /// `new_key` must be a valid authentication key that corresponds to an ed25519
-    /// public key, and `account` must not have previously delegated its
-    /// `DiemAccount::KeyRotationCapability`.
+    /// public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name            | Type         | Description                                                                                                 |
-    /// | ------          | ------       | -------------                                                                                               |
-    /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
-    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
+    /// | Name            | Type         | Description                                                                                       |
+    /// | ------          | ------       | -------------                                                                                     |
+    /// | `dr_account`    | `signer`     | The signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+    /// | `account`       | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.               |
+    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.          |
+    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                              | Description                                                                                                |
@@ -369,14 +369,15 @@ module AccountAdministrationScripts {
     /// # Technical Description
     /// Rotates the authentication key of the `to_recover` account to `new_key` using the
     /// `DiemAccount::KeyRotationCapability` stored in the `RecoveryAddress::RecoveryAddress` resource
-    /// published under `recovery_address`. This transaction can be sent either by the `to_recover`
-    /// account, or by the account where the `RecoveryAddress::RecoveryAddress` resource is published
-    /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
+    /// published under `recovery_address`. `new_key` must be a valide authentication key as described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    /// This transaction can be sent either by the `to_recover` account, or by the account where the
+    /// `RecoveryAddress::RecoveryAddress` resource is published that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name               | Type         | Description                                                                                                                   |
     /// | ------             | ------       | -------------                                                                                                                 |
-    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
+    /// | `account`          | `signer`     | Signer of the sending account of the transaction.                                                                             |
     /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
     /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
     /// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
@@ -446,7 +447,7 @@ module AccountAdministrationScripts {
     /// # Parameters
     /// | Name      | Type         | Description                                                               |
     /// | ------    | ------       | -------------                                                             |
-    /// | `account` | `&signer`    | Signer reference of the sending account of the transaction.               |
+    /// | `account` | `signer`     | Signer of the sending account of the transaction.                         |
     /// | `new_url` | `vector<u8>` | ASCII-encoded url to be used for off-chain communication with `account`.  |
     /// | `new_key` | `vector<u8>` | New ed25519 public key to be used for on-chain dual attestation checking. |
     ///
@@ -495,16 +496,17 @@ module AccountAdministrationScripts {
     /// `AccountAdministrationScripts::publish_shared_ed25519_public_key`.
     ///
     /// # Technical Description
-    /// This first rotates the public key stored in `account`'s
+    /// `public_key` must be a valid ed25519 public key.  This transaction first rotates the public key stored in `account`'s
     /// `SharedEd25519PublicKey::SharedEd25519PublicKey` resource to `public_key`, after which it
-    /// rotates the authentication key using the capability stored in `account`'s
-    /// `SharedEd25519PublicKey::SharedEd25519PublicKey` to a new value derived from `public_key`
+    /// rotates the `account`'s authentication key to the new authentication key derived from `public_key` as defined
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
+    /// using the `DiemAccount::KeyRotationCapability` stored in `account`'s `SharedEd25519PublicKey::SharedEd25519PublicKey`.
     ///
     /// # Parameters
-    /// | Name         | Type         | Description                                                     |
-    /// | ------       | ------       | -------------                                                   |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction. |
-    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                                     |
+    /// | Name         | Type         | Description                                           |
+    /// | ------       | ------       | -------------                                         |
+    /// | `account`    | `signer`     | The signer of the sending account of the transaction. |
+    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                    | Description                                                                                   |
@@ -533,7 +535,8 @@ module AccountAdministrationScripts {
 
     /// # Summary
     /// Initializes the sending account as a recovery address that may be used by
-    /// the VASP that it belongs to. The sending account must be a VASP account.
+    /// other accounts belonging to the same VASP as `account`.
+    /// The sending account must be a VASP account, and can be either a child or parent VASP account.
     /// Multiple recovery addresses can exist for a single VASP, but accounts in
     /// each must be disjoint.
     ///
@@ -545,9 +548,9 @@ module AccountAdministrationScripts {
     /// may be used as a recovery account for those accounts.
     ///
     /// # Parameters
-    /// | Name      | Type      | Description                                           |
-    /// | ------    | ------    | -------------                                         |
-    /// | `account` | `&signer` | The signer of the sending account of the transaction. |
+    /// | Name      | Type     | Description                                           |
+    /// | ------    | ------   | -------------                                         |
+    /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                                               | Description                                                                                   |

@@ -10,7 +10,8 @@ module AccountCreationScripts {
     /// # Technical Description
     /// Creates a `ChildVASP` account for the sender `parent_vasp` at `child_address` with a balance of
     /// `child_initial_balance` in `CoinType` and an initial authentication key of
-    /// `auth_key_prefix | child_address`.
+    /// `auth_key_prefix | child_address`. Authentication key prefixes, and how to construct them from an ed25519 public key is described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// If `add_all_currencies` is true, the child address will have a zero balance in all available
     /// currencies in the system.
@@ -32,7 +33,7 @@ module AccountCreationScripts {
     /// | Name                    | Type         | Description                                                                                                                                 |
     /// | ------                  | ------       | -------------                                                                                                                               |
     /// | `CoinType`              | Type         | The Move type for the `CoinType` that the child account should be created with. `CoinType` must be an already-registered currency on-chain. |
-    /// | `parent_vasp`           | `&signer`    | The signer reference of the sending account. Must be a Parent VASP account.                                                                 |
+    /// | `parent_vasp`           | `signer`     | The reference of the sending account. Must be a Parent VASP account.                                                                        |
     /// | `child_address`         | `address`    | Address of the to-be-created Child VASP account.                                                                                            |
     /// | `auth_key_prefix`       | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                    |
     /// | `add_all_currencies`    | `bool`       | Whether to publish balance resources for all known currencies when the account is created.                                                  |
@@ -132,15 +133,17 @@ module AccountCreationScripts {
     /// `auth_key_prefix` | `new_account_address`. It publishes a
     /// `ValidatorOperatorConfig::ValidatorOperatorConfig` resource with the specified `human_name`.
     /// This script does not assign the validator operator to any validator accounts but only creates the account.
+    /// Authentication key prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
-    /// | Name                  | Type         | Description                                                                                     |
-    /// | ------                | ------       | -------------                                                                                   |
-    /// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+    /// | Name                  | Type         | Description                                                                              |
+    /// | ------                | ------       | -------------                                                                            |
+    /// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                            | Description                                                                                |
@@ -220,17 +223,18 @@ module AccountCreationScripts {
     /// `ValidatorConfig::ValidatorConfig` is set to the passed in `human_name`.
     /// This script does not add the validator to the validator set or the system,
     /// but only creates the account.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
-    /// | Name                  | Type         | Description                                                                                     |
-    /// | ------                | ------       | -------------                                                                                   |
-    /// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+    /// | Name                  | Type         | Description                                                                              |
+    /// | ------                | ------       | -------------                                                                            |
+    /// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
     ///
-
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                            | Description                                                                                |
     /// | ----------------            | --------------                          | -------------                                                                              |
@@ -307,12 +311,14 @@ module AccountCreationScripts {
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added. This can only be invoked by an TreasuryCompliance account.
     /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                                                                                                    |
     /// | ------                | ------       | -------------                                                                                                                                                  |
     /// | `CoinType`            | Type         | The Move type for the `CoinType` currency that the Parent VASP account should be initialized with. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                                      |
+    /// | `tc_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                                |
     /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                                     |
     /// | `new_account_address` | `address`    | Address of the to-be-created Parent VASP account.                                                                                                              |
     /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                                       |
@@ -389,6 +395,8 @@ module AccountCreationScripts {
     /// `auth_key_prefix` | `addr` and a 0 balance of type `Currency`. If `add_all_currencies` is true,
     /// 0 balances for all available currencies in the system will also be added. This can only be
     /// invoked by an account with the TreasuryCompliance role.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// At the time of creation the account is also initialized with default mint tiers of (500_000,
     /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
@@ -398,7 +406,7 @@ module AccountCreationScripts {
     /// | Name                 | Type         | Description                                                                                                                                         |
     /// | ------               | ------       | -------------                                                                                                                                       |
     /// | `Currency`           | Type         | The Move type for the `Currency` that the Designated Dealer should be initialized with. `Currency` must be an already-registered currency on-chain. |
-    /// | `tc_account`         | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+    /// | `tc_account`         | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
     /// | `sliding_nonce`      | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                          |
     /// | `addr`               | `address`    | Address of the to-be-created Designated Dealer account.                                                                                             |
     /// | `auth_key_prefix`    | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                            |

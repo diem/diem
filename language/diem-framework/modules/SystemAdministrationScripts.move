@@ -16,11 +16,11 @@ module SystemAdministrationScripts {
     /// preserve backwards compatibility with previous major versions of the VM.
     ///
     /// # Parameters
-    /// | Name            | Type      | Description                                                                |
-    /// | ------          | ------    | -------------                                                              |
-    /// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.   |
-    /// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-    /// | `major`         | `u64`     | The `major` version of the VM to be used from this transaction on.         |
+    /// | Name            | Type     | Description                                                                |
+    /// | ------          | ------   | -------------                                                              |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.              |
+    /// | `sliding_nonce` | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    /// | `major`         | `u64`    | The `major` version of the VM to be used from this transaction on.         |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                  | Description                                                                                |

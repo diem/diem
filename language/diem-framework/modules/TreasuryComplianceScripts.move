@@ -44,7 +44,7 @@ module TreasuryComplianceScripts {
     /// | Name              | Type      | Description                                                                                                                          |
     /// | ------            | ------    | -------------                                                                                                                        |
     /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
-    /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
+    /// | `account`         | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it.                   |
     /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
     /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
     ///
@@ -138,13 +138,13 @@ module TreasuryComplianceScripts {
     /// `0xA550C18`.
     ///
     /// # Parameters
-    /// | Name              | Type      | Description                                                                                                                  |
-    /// | ------            | ------    | -------------                                                                                                                |
-    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-    /// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+    /// | Name              | Type      | Description                                                                                                        |
+    /// | ------            | ------    | -------------                                                                                                      |
+    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.      |
+    /// | `tc_account`      | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                         |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                       |
+    /// | `amount`          | `u64`     | The amount to be burned.                                                                                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category                | Error Reason                            | Description                                                                                                                         |
@@ -214,11 +214,11 @@ module TreasuryComplianceScripts {
     /// `preburn_address` set to `account`'s address.
     ///
     /// # Parameters
-    /// | Name      | Type      | Description                                                                                                                      |
-    /// | ------    | ------    | -------------                                                                                                                    |
-    /// | `Token`   | Type      | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
-    /// | `account` | `&signer` | The signer reference of the sending account.                                                                                     |
-    /// | `amount`  | `u64`     | The amount in `Token` to be moved to the preburn area.                                                                           |
+    /// | Name      | Type     | Description                                                                                                                      |
+    /// | ------    | ------   | -------------                                                                                                                    |
+    /// | `Token`   | Type     | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
+    /// | `account` | `signer` | The signer of the sending account.                                                                                               |
+    /// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category           | Error Reason                                             | Description                                                                             |
@@ -286,10 +286,10 @@ module TreasuryComplianceScripts {
     /// `0xA550C18`.
     ///
     /// # Parameters
-    /// | Name         | Type      | Description                                                                                                                                         |
-    /// | ------       | ------    | -------------                                                                                                                                       |
-    /// | `CoinType`   | Type      | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account` | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+    /// | Name         | Type     | Description                                                                                                                                         |
+    /// | ------       | ------   | -------------                                                                                                                                       |
+    /// | `CoinType`   | Type     | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
+    /// | `tc_account` | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                          | Description                                                 |
@@ -333,7 +333,7 @@ module TreasuryComplianceScripts {
     /// | Name                        | Type      | Description                                                                                                |
     /// | ------                      | ------    | -------------                                                                                              |
     /// | `CoinType`                  | Type      | The Move type for the `CoinType` being minted. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account`                | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.  |
+    /// | `tc_account`                | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account.            |
     /// | `sliding_nonce`             | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                 |
     /// | `designated_dealer_address` | `address` | The address of the Designated Dealer account being minted to.                                              |
     /// | `mint_amount`               | `u64`     | The number of coins to be minted.                                                                          |
@@ -418,11 +418,11 @@ module TreasuryComplianceScripts {
     /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
     ///
     /// # Parameters
-    /// | Name                | Type      | Description                                                                                               |
-    /// | ------              | ------    | -------------                                                                                             |
-    /// | `tc_account`        | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `to_freeze_account` | `address` | The account address to be frozen.                                                                         |
+    /// | Name                | Type      | Description                                                                                     |
+    /// | ------              | ------    | -------------                                                                                   |
+    /// | `tc_account`        | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                 | Description                                                                                |
@@ -460,11 +460,11 @@ module TreasuryComplianceScripts {
     /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
     ///
     /// # Parameters
-    /// | Name                  | Type      | Description                                                                                               |
-    /// | ------                | ------    | -------------                                                                                             |
-    /// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                                         |
+    /// | Name                  | Type      | Description                                                                                     |
+    /// | ------                | ------    | -------------                                                                                   |
+    /// | `tc_account`          | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -493,11 +493,11 @@ module TreasuryComplianceScripts {
     /// `0xA550C18`. The amount is set in micro-XDX.
     ///
     /// # Parameters
-    /// | Name                  | Type      | Description                                                                                               |
-    /// | ------                | ------    | -------------                                                                                             |
-    /// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `new_micro_xdx_limit` | `u64`     | The new dual attestation limit to be used on-chain.                                                       |
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -532,13 +532,13 @@ module TreasuryComplianceScripts {
     /// is given by `new_exchange_rate_numerator/new_exchange_rate_denominator`.
     ///
     /// # Parameters
-    /// | Name                            | Type      | Description                                                                                                                        |
-    /// | ------                          | ------    | -------------                                                                                                                      |
-    /// | `Currency`                      | Type      | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
-    /// | `tc_account`                    | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
-    /// | `sliding_nonce`                 | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
-    /// | `new_exchange_rate_numerator`   | `u64`     | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
-    /// | `new_exchange_rate_denominator` | `u64`     | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
+    /// | Name                            | Type     | Description                                                                                                                        |
+    /// | ------                          | ------   | -------------                                                                                                                      |
+    /// | `Currency`                      | Type     | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
+    /// | `tc_account`                    | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                    |
+    /// | `sliding_nonce`                 | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
+    /// | `new_exchange_rate_numerator`   | `u64`    | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
+    /// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -613,11 +613,11 @@ module TreasuryComplianceScripts {
     /// This transaction needs to be sent by the Treasury Compliance account.
     ///
     /// # Parameters
-    /// | Name            | Type      | Description                                                                                                                          |
-    /// | ------          | ------    | -------------                                                                                                                        |
-    /// | `Currency`      | Type      | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
-    /// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.                                                             |
-    /// | `allow_minting` | `bool`    | Whether to allow minting of new coins in `Currency`.                                                                                 |
+    /// | Name            | Type     | Description                                                                                                                          |
+    /// | ------          | ------   | -------------                                                                                                                        |
+    /// | `Currency`      | Type     | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.                                                                        |
+    /// | `allow_minting` | `bool`   | Whether to allow minting of new coins in `Currency`.                                                                                 |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                          | Description                                          |

@@ -47,11 +47,11 @@ preserve backwards compatibility with previous major versions of the VM.
 
 ### Parameters
 
-| Name            | Type      | Description                                                                |
-| ------          | ------    | -------------                                                              |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.   |
-| <code>sliding_nonce</code> | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
-| <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
+| Name            | Type     | Description                                                                |
+| ------          | ------   | -------------                                                              |
+| <code>account</code>       | <code>signer</code> | Signer of the sending account. Must be the Diem Root account.              |
+| <code>sliding_nonce</code> | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
+| <code>major</code>         | <code>u64</code>    | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
 <a name="@Common_Abort_Conditions_3"></a>

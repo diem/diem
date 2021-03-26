@@ -1454,10 +1454,10 @@ pub enum ScriptFunctionCall {
     /// already have a `DiemAccount::Balance<Currency>` published under it.
     ///
     /// # Parameters
-    /// | Name       | Type      | Description                                                                                                                                         |
-    /// | ------     | ------    | -------------                                                                                                                                       |
-    /// | `Currency` | Type      | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
-    /// | `account`  | `&signer` | The signer of the sending account of the transaction.                                                                                               |
+    /// | Name       | Type     | Description                                                                                                                                         |
+    /// | ------     | ------   | -------------                                                                                                                                       |
+    /// | `Currency` | Type     | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
+    /// | `account`  | `signer` | The signer of the sending account of the transaction.                                                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                             | Description                                                                |
@@ -1496,9 +1496,9 @@ pub enum ScriptFunctionCall {
     /// resource stored under the account at `recovery_address`.
     ///
     /// # Parameters
-    /// | Name                 | Type      | Description                                                                                                |
-    /// | ------               | ------    | -------------                                                                                              |
-    /// | `to_recover_account` | `&signer` | The signer reference of the sending account of this transaction.                                           |
+    /// | Name                 | Type      | Description                                                                                               |
+    /// | ------               | ------    | -------------                                                                                             |
+    /// | `to_recover_account` | `signer`  | The signer of the sending account of this transaction.                                                    |
     /// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `DiemAccount::KeyRotationCapability` will be stored. |
     ///
     /// # Common Abort Conditions
@@ -1532,7 +1532,7 @@ pub enum ScriptFunctionCall {
     /// # Parameters
     /// | Name                | Type         | Description                                                                                                                        |
     /// | ------              | ------       | -------------                                                                                                                      |
-    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+    /// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
     /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
     /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
     /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
@@ -1586,10 +1586,10 @@ pub enum ScriptFunctionCall {
     /// `0xA550C18`.
     ///
     /// # Parameters
-    /// | Name         | Type      | Description                                                                                                                                         |
-    /// | ------       | ------    | -------------                                                                                                                                       |
-    /// | `CoinType`   | Type      | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account` | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+    /// | Name         | Type     | Description                                                                                                                                         |
+    /// | ------       | ------   | -------------                                                                                                                                       |
+    /// | `CoinType`   | Type     | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
+    /// | `tc_account` | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                          | Description                                                 |
@@ -1632,13 +1632,13 @@ pub enum ScriptFunctionCall {
     /// `0xA550C18`.
     ///
     /// # Parameters
-    /// | Name              | Type      | Description                                                                                                                  |
-    /// | ------            | ------    | -------------                                                                                                                |
-    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-    /// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-    /// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+    /// | Name              | Type      | Description                                                                                                        |
+    /// | ------            | ------    | -------------                                                                                                      |
+    /// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.      |
+    /// | `tc_account`      | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+    /// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                         |
+    /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                       |
+    /// | `amount`          | `u64`     | The amount to be burned.                                                                                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category                | Error Reason                            | Description                                                                                                                         |
@@ -1692,7 +1692,7 @@ pub enum ScriptFunctionCall {
     /// | Name              | Type      | Description                                                                                                                          |
     /// | ------            | ------    | -------------                                                                                                                        |
     /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
-    /// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
+    /// | `account`         | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it.                   |
     /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
     /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
     ///
@@ -1724,7 +1724,8 @@ pub enum ScriptFunctionCall {
     /// # Technical Description
     /// Creates a `ChildVASP` account for the sender `parent_vasp` at `child_address` with a balance of
     /// `child_initial_balance` in `CoinType` and an initial authentication key of
-    /// `auth_key_prefix | child_address`.
+    /// `auth_key_prefix | child_address`. Authentication key prefixes, and how to construct them from an ed25519 public key is described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// If `add_all_currencies` is true, the child address will have a zero balance in all available
     /// currencies in the system.
@@ -1746,7 +1747,7 @@ pub enum ScriptFunctionCall {
     /// | Name                    | Type         | Description                                                                                                                                 |
     /// | ------                  | ------       | -------------                                                                                                                               |
     /// | `CoinType`              | Type         | The Move type for the `CoinType` that the child account should be created with. `CoinType` must be an already-registered currency on-chain. |
-    /// | `parent_vasp`           | `&signer`    | The signer reference of the sending account. Must be a Parent VASP account.                                                                 |
+    /// | `parent_vasp`           | `signer`     | The reference of the sending account. Must be a Parent VASP account.                                                                        |
     /// | `child_address`         | `address`    | Address of the to-be-created Child VASP account.                                                                                            |
     /// | `auth_key_prefix`       | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                    |
     /// | `add_all_currencies`    | `bool`       | Whether to publish balance resources for all known currencies when the account is created.                                                  |
@@ -1788,6 +1789,8 @@ pub enum ScriptFunctionCall {
     /// `auth_key_prefix` | `addr` and a 0 balance of type `Currency`. If `add_all_currencies` is true,
     /// 0 balances for all available currencies in the system will also be added. This can only be
     /// invoked by an account with the TreasuryCompliance role.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// At the time of creation the account is also initialized with default mint tiers of (500_000,
     /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
@@ -1797,7 +1800,7 @@ pub enum ScriptFunctionCall {
     /// | Name                 | Type         | Description                                                                                                                                         |
     /// | ------               | ------       | -------------                                                                                                                                       |
     /// | `Currency`           | Type         | The Move type for the `Currency` that the Designated Dealer should be initialized with. `Currency` must be an already-registered currency on-chain. |
-    /// | `tc_account`         | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+    /// | `tc_account`         | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
     /// | `sliding_nonce`      | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                          |
     /// | `addr`               | `address`    | Address of the to-be-created Designated Dealer account.                                                                                             |
     /// | `auth_key_prefix`    | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                            |
@@ -1839,12 +1842,14 @@ pub enum ScriptFunctionCall {
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added. This can only be invoked by an TreasuryCompliance account.
     /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
     /// | Name                  | Type         | Description                                                                                                                                                    |
     /// | ------                | ------       | -------------                                                                                                                                                  |
     /// | `CoinType`            | Type         | The Move type for the `CoinType` currency that the Parent VASP account should be initialized with. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                                      |
+    /// | `tc_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                                |
     /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                                     |
     /// | `new_account_address` | `address`    | Address of the to-be-created Parent VASP account.                                                                                                              |
     /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                                       |
@@ -1881,7 +1886,8 @@ pub enum ScriptFunctionCall {
 
     /// # Summary
     /// Initializes the sending account as a recovery address that may be used by
-    /// the VASP that it belongs to. The sending account must be a VASP account.
+    /// other accounts belonging to the same VASP as `account`.
+    /// The sending account must be a VASP account, and can be either a child or parent VASP account.
     /// Multiple recovery addresses can exist for a single VASP, but accounts in
     /// each must be disjoint.
     ///
@@ -1893,9 +1899,9 @@ pub enum ScriptFunctionCall {
     /// may be used as a recovery account for those accounts.
     ///
     /// # Parameters
-    /// | Name      | Type      | Description                                           |
-    /// | ------    | ------    | -------------                                         |
-    /// | `account` | `&signer` | The signer of the sending account of the transaction. |
+    /// | Name      | Type     | Description                                           |
+    /// | ------    | ------   | -------------                                         |
+    /// | `account` | `signer` | The signer of the sending account of the transaction. |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                                               | Description                                                                                   |
@@ -1922,15 +1928,17 @@ pub enum ScriptFunctionCall {
     /// `ValidatorConfig::ValidatorConfig` is set to the passed in `human_name`.
     /// This script does not add the validator to the validator set or the system,
     /// but only creates the account.
+    /// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
-    /// | Name                  | Type         | Description                                                                                     |
-    /// | ------                | ------       | -------------                                                                                   |
-    /// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+    /// | Name                  | Type         | Description                                                                              |
+    /// | ------                | ------       | -------------                                                                            |
+    /// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                            | Description                                                                                |
@@ -1967,15 +1975,17 @@ pub enum ScriptFunctionCall {
     /// `auth_key_prefix` | `new_account_address`. It publishes a
     /// `ValidatorOperatorConfig::ValidatorOperatorConfig` resource with the specified `human_name`.
     /// This script does not assign the validator operator to any validator accounts but only creates the account.
+    /// Authentication key prefixes, and how to construct them from an ed25519 public key are described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
     ///
     /// # Parameters
-    /// | Name                  | Type         | Description                                                                                     |
-    /// | ------                | ------       | -------------                                                                                   |
-    /// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+    /// | Name                  | Type         | Description                                                                              |
+    /// | ------                | ------       | -------------                                                                            |
+    /// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+    /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+    /// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+    /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+    /// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
     ///
     /// # Common Abort Conditions
     /// | Error Category              | Error Reason                            | Description                                                                                |
@@ -2026,11 +2036,11 @@ pub enum ScriptFunctionCall {
     /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
     ///
     /// # Parameters
-    /// | Name                | Type      | Description                                                                                               |
-    /// | ------              | ------    | -------------                                                                                             |
-    /// | `tc_account`        | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `to_freeze_account` | `address` | The account address to be frozen.                                                                         |
+    /// | Name                | Type      | Description                                                                                     |
+    /// | ------              | ------    | -------------                                                                                   |
+    /// | `tc_account`        | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                 | Description                                                                                |
@@ -2062,8 +2072,11 @@ pub enum ScriptFunctionCall {
     /// # Technical Description
     ///
     /// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
-    /// `metadata` and an (optional) `metadata_signature` on the message
-    /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
+    /// `metadata` and an (optional) `metadata_signature` on the message of the form
+    /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`, that
+    /// has been signed by the `payee`'s private key associated with the `compliance_public_key` held in
+    /// the `payee`'s `DualAttestation::Credential`. Both the `Signer::address_of(payer)` and `amount` fields
+    /// in the `metadata_signature` must be BCS-encoded bytes, and `|` denotes concatenation.
     /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
     /// `DualAttestation::get_cur_microdiem_limit` XDX and `payer` and `payee` are distinct VASPs.
     /// However, a transaction sender can opt in to dual attestation even when it is not required
@@ -2079,7 +2092,7 @@ pub enum ScriptFunctionCall {
     /// | Name                 | Type         | Description                                                                                                                  |
     /// | ------               | ------       | -------------                                                                                                                |
     /// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
-    /// | `payer`              | `&signer`    | The signer reference of the sending account that coins are being transferred from.                                           |
+    /// | `payer`              | `signer`     | The signer of the sending account that coins are being transferred from.                                                     |
     /// | `payee`              | `address`    | The address of the account the coins are being transferred to.                                                               |
     /// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
     /// | `metadata_signature` | `vector<u8>` | Optional signature over `metadata` and payment information. See                                                              |
@@ -2087,16 +2100,16 @@ pub enum ScriptFunctionCall {
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                     | Description                                                                                                                         |
     /// | ----------------           | --------------                                   | -------------                                                                                                                       |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
-    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
-    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`       | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`             | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`             | `amount` is zero.                                                                                                                   |
+    /// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`             | No account exists at the `payee` address.                                                                                           |
+    /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
     /// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
     /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
     /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
-    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`        | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+    /// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_child_vasp_account`
@@ -2131,11 +2144,11 @@ pub enum ScriptFunctionCall {
     /// `preburn_address` set to `account`'s address.
     ///
     /// # Parameters
-    /// | Name      | Type      | Description                                                                                                                      |
-    /// | ------    | ------    | -------------                                                                                                                    |
-    /// | `Token`   | Type      | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
-    /// | `account` | `&signer` | The signer reference of the sending account.                                                                                     |
-    /// | `amount`  | `u64`     | The amount in `Token` to be moved to the preburn area.                                                                           |
+    /// | Name      | Type     | Description                                                                                                                      |
+    /// | ------    | ------   | -------------                                                                                                                    |
+    /// | `Token`   | Type     | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
+    /// | `account` | `signer` | The signer of the sending account.                                                                                               |
+    /// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category           | Error Reason                                             | Description                                                                             |
@@ -2156,12 +2169,13 @@ pub enum ScriptFunctionCall {
     Preburn { token: TypeTag, amount: u64 },
 
     /// # Summary
-    /// Rotates the authentication key of the sending account to the
-    /// newly-specified public key and publishes a new shared authentication key
-    /// under the sender's account. Any account can send this transaction.
+    /// Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
+    /// publishes a new shared authentication key derived from that public key under the sender's account.
+    /// Any account can send this transaction.
     ///
     /// # Technical Description
-    /// Rotates the authentication key of the sending account to `public_key`,
+    /// Rotates the authentication key of the sending account to the
+    /// [authentication key derived from `public_key`](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
     /// and publishes a `SharedEd25519PublicKey::SharedEd25519PublicKey` resource
     /// containing the 32-byte ed25519 `public_key` and the `DiemAccount::KeyRotationCapability` for
     /// `account` under `account`.
@@ -2169,7 +2183,7 @@ pub enum ScriptFunctionCall {
     /// # Parameters
     /// | Name         | Type         | Description                                                                                        |
     /// | ------       | ------       | -------------                                                                                      |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+    /// | `account`    | `signer`     | The signer of the sending account of the transaction.                                              |
     /// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
     ///
     /// # Common Abort Conditions
@@ -2196,13 +2210,13 @@ pub enum ScriptFunctionCall {
     /// only "locally" under the `validator_account` account address.
     ///
     /// # Parameters
-    /// | Name                          | Type         | Description                                                                                                                  |
-    /// | ------                        | ------       | -------------                                                                                                                |
-    /// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+    /// | Name                          | Type         | Description                                                                                                        |
+    /// | ------                        | ------       | -------------                                                                                                      |
+    /// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -2241,7 +2255,7 @@ pub enum ScriptFunctionCall {
     /// # Parameters
     /// | Name                | Type         | Description                                                                                                                        |
     /// | ------              | ------       | -------------                                                                                                                      |
-    /// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
+    /// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
     /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
     /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
     /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
@@ -2275,20 +2289,19 @@ pub enum ScriptFunctionCall {
     },
 
     /// # Summary
-    /// Rotates the transaction sender's authentication key to the supplied new authentication key. May
-    /// be sent by any account.
+    /// Rotates the `account`'s authentication key to the supplied new authentication key. May be sent by any account.
     ///
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
     /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name      | Type         | Description                                                 |
-    /// | ------    | ------       | -------------                                               |
-    /// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
+    /// | Name      | Type         | Description                                       |
+    /// | ------    | ------       | -------------                                     |
+    /// | `account` | `signer`     | Signer of the sending account of the transaction. |
+    /// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                              | Description                                                                         |
@@ -2310,13 +2323,13 @@ pub enum ScriptFunctionCall {
     /// # Technical Description
     /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
     /// field to `new_key`. `new_key` must be a valid authentication key that
-    /// corresponds to an ed25519 public key, and `account` must not have previously
-    /// delegated its `DiemAccount::KeyRotationCapability`.
+    /// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name            | Type         | Description                                                                |
     /// | ------          | ------       | -------------                                                              |
-    /// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
+    /// | `account`       | `signer`     | Signer of the sending account of the transaction.                          |
     /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
     /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
     ///
@@ -2343,16 +2356,16 @@ pub enum ScriptFunctionCall {
     /// # Technical Description
     /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
     /// `new_key` must be a valid authentication key that corresponds to an ed25519
-    /// public key, and `account` must not have previously delegated its
-    /// `DiemAccount::KeyRotationCapability`.
+    /// public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+    /// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
-    /// | Name            | Type         | Description                                                                                                 |
-    /// | ------          | ------       | -------------                                                                                               |
-    /// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
-    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
+    /// | Name            | Type         | Description                                                                                       |
+    /// | ------          | ------       | -------------                                                                                     |
+    /// | `dr_account`    | `signer`     | The signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+    /// | `account`       | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.               |
+    /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.          |
+    /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                              | Description                                                                                                |
@@ -2378,14 +2391,15 @@ pub enum ScriptFunctionCall {
     /// # Technical Description
     /// Rotates the authentication key of the `to_recover` account to `new_key` using the
     /// `DiemAccount::KeyRotationCapability` stored in the `RecoveryAddress::RecoveryAddress` resource
-    /// published under `recovery_address`. This transaction can be sent either by the `to_recover`
-    /// account, or by the account where the `RecoveryAddress::RecoveryAddress` resource is published
-    /// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
+    /// published under `recovery_address`. `new_key` must be a valide authentication key as described
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+    /// This transaction can be sent either by the `to_recover` account, or by the account where the
+    /// `RecoveryAddress::RecoveryAddress` resource is published that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
     ///
     /// # Parameters
     /// | Name               | Type         | Description                                                                                                                   |
     /// | ------             | ------       | -------------                                                                                                                 |
-    /// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
+    /// | `account`          | `signer`     | Signer of the sending account of the transaction.                                                                             |
     /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
     /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
     /// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
@@ -2430,7 +2444,7 @@ pub enum ScriptFunctionCall {
     /// # Parameters
     /// | Name      | Type         | Description                                                               |
     /// | ------    | ------       | -------------                                                             |
-    /// | `account` | `&signer`    | Signer reference of the sending account of the transaction.               |
+    /// | `account` | `signer`     | Signer of the sending account of the transaction.                         |
     /// | `new_url` | `vector<u8>` | ASCII-encoded url to be used for off-chain communication with `account`.  |
     /// | `new_key` | `vector<u8>` | New ed25519 public key to be used for on-chain dual attestation checking. |
     ///
@@ -2452,16 +2466,17 @@ pub enum ScriptFunctionCall {
     /// `AccountAdministrationScripts::publish_shared_ed25519_public_key`.
     ///
     /// # Technical Description
-    /// This first rotates the public key stored in `account`'s
+    /// `public_key` must be a valid ed25519 public key.  This transaction first rotates the public key stored in `account`'s
     /// `SharedEd25519PublicKey::SharedEd25519PublicKey` resource to `public_key`, after which it
-    /// rotates the authentication key using the capability stored in `account`'s
-    /// `SharedEd25519PublicKey::SharedEd25519PublicKey` to a new value derived from `public_key`
+    /// rotates the `account`'s authentication key to the new authentication key derived from `public_key` as defined
+    /// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
+    /// using the `DiemAccount::KeyRotationCapability` stored in `account`'s `SharedEd25519PublicKey::SharedEd25519PublicKey`.
     ///
     /// # Parameters
-    /// | Name         | Type         | Description                                                     |
-    /// | ------       | ------       | -------------                                                   |
-    /// | `account`    | `&signer`    | The signer reference of the sending account of the transaction. |
-    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                                     |
+    /// | Name         | Type         | Description                                           |
+    /// | ------       | ------       | -------------                                         |
+    /// | `account`    | `signer`     | The signer of the sending account of the transaction. |
+    /// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                           |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                    | Description                                                                                   |
@@ -2485,13 +2500,13 @@ pub enum ScriptFunctionCall {
     /// on-chain with the updated `ValidatorConfig::ValidatorConfig`.
     ///
     /// # Parameters
-    /// | Name                          | Type         | Description                                                                                                                  |
-    /// | ------                        | ------       | -------------                                                                                                                |
-    /// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+    /// | Name                          | Type         | Description                                                                                                        |
+    /// | ------                        | ------       | -------------                                                                                                      |
+    /// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+    /// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+    /// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+    /// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+    /// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -2534,7 +2549,7 @@ pub enum ScriptFunctionCall {
     /// # Parameters
     /// | Name               | Type         | Description                                                                                  |
     /// | ------             | ------       | -------------                                                                                |
-    /// | `account`          | `&signer`    | The signer reference of the sending account of the transaction.                              |
+    /// | `account`          | `signer`     | The signer of the sending account of the transaction.                                        |
     /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                             |
     /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
     ///
@@ -2575,13 +2590,13 @@ pub enum ScriptFunctionCall {
     /// the system is initiated by this script.
     ///
     /// # Parameters
-    /// | Name               | Type         | Description                                                                                                  |
-    /// | ------             | ------       | -------------                                                                                                |
-    /// | `dr_account`       | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-    /// | `account`          | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
-    /// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-    /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                                             |
-    /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.                 |
+    /// | Name               | Type         | Description                                                                                   |
+    /// | ------             | ------       | -------------                                                                                 |
+    /// | `dr_account`       | `signer`     | Signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+    /// | `account`          | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.           |
+    /// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.      |
+    /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                              |
+    /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
@@ -2638,7 +2653,7 @@ pub enum ScriptFunctionCall {
     /// | Name                        | Type      | Description                                                                                                |
     /// | ------                      | ------    | -------------                                                                                              |
     /// | `CoinType`                  | Type      | The Move type for the `CoinType` being minted. `CoinType` must be an already-registered currency on-chain. |
-    /// | `tc_account`                | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.  |
+    /// | `tc_account`                | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account.            |
     /// | `sliding_nonce`             | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                 |
     /// | `designated_dealer_address` | `address` | The address of the Designated Dealer account being minted to.                                              |
     /// | `mint_amount`               | `u64`     | The number of coins to be minted.                                                                          |
@@ -2687,11 +2702,11 @@ pub enum ScriptFunctionCall {
     /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
     ///
     /// # Parameters
-    /// | Name                  | Type      | Description                                                                                               |
-    /// | ------                | ------    | -------------                                                                                             |
-    /// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                                         |
+    /// | Name                  | Type      | Description                                                                                     |
+    /// | ------                | ------    | -------------                                                                                   |
+    /// | `tc_account`          | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                               |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -2720,11 +2735,11 @@ pub enum ScriptFunctionCall {
     /// preserve backwards compatibility with previous major versions of the VM.
     ///
     /// # Parameters
-    /// | Name            | Type      | Description                                                                |
-    /// | ------          | ------    | -------------                                                              |
-    /// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.   |
-    /// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-    /// | `major`         | `u64`     | The `major` version of the VM to be used from this transaction on.         |
+    /// | Name            | Type     | Description                                                                |
+    /// | ------          | ------   | -------------                                                              |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.              |
+    /// | `sliding_nonce` | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+    /// | `major`         | `u64`    | The `major` version of the VM to be used from this transaction on.         |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                                  | Description                                                                                |
@@ -2747,11 +2762,11 @@ pub enum ScriptFunctionCall {
     /// `0xA550C18`. The amount is set in micro-XDX.
     ///
     /// # Parameters
-    /// | Name                  | Type      | Description                                                                                               |
-    /// | ------                | ------    | -------------                                                                                             |
-    /// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-    /// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-    /// | `new_micro_xdx_limit` | `u64`     | The new dual attestation limit to be used on-chain.                                                       |
+    /// | Name                  | Type     | Description                                                                                     |
+    /// | ------                | ------   | -------------                                                                                   |
+    /// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+    /// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+    /// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -2781,13 +2796,13 @@ pub enum ScriptFunctionCall {
     /// is given by `new_exchange_rate_numerator/new_exchange_rate_denominator`.
     ///
     /// # Parameters
-    /// | Name                            | Type      | Description                                                                                                                        |
-    /// | ------                          | ------    | -------------                                                                                                                      |
-    /// | `Currency`                      | Type      | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
-    /// | `tc_account`                    | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
-    /// | `sliding_nonce`                 | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
-    /// | `new_exchange_rate_numerator`   | `u64`     | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
-    /// | `new_exchange_rate_denominator` | `u64`     | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
+    /// | Name                            | Type     | Description                                                                                                                        |
+    /// | ------                          | ------   | -------------                                                                                                                      |
+    /// | `Currency`                      | Type     | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
+    /// | `tc_account`                    | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                    |
+    /// | `sliding_nonce`                 | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
+    /// | `new_exchange_rate_numerator`   | `u64`    | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
+    /// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -2824,11 +2839,11 @@ pub enum ScriptFunctionCall {
     /// This transaction needs to be sent by the Treasury Compliance account.
     ///
     /// # Parameters
-    /// | Name            | Type      | Description                                                                                                                          |
-    /// | ------          | ------    | -------------                                                                                                                        |
-    /// | `Currency`      | Type      | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
-    /// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.                                                             |
-    /// | `allow_minting` | `bool`    | Whether to allow minting of new coins in `Currency`.                                                                                 |
+    /// | Name            | Type     | Description                                                                                                                          |
+    /// | ------          | ------   | -------------                                                                                                                        |
+    /// | `Currency`      | Type     | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
+    /// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.                                                                        |
+    /// | `allow_minting` | `bool`   | Whether to allow minting of new coins in `Currency`.                                                                                 |
     ///
     /// # Common Abort Conditions
     /// | Error Category             | Error Reason                          | Description                                          |
@@ -3355,10 +3370,10 @@ impl ScriptFunctionCall {
 /// already have a `DiemAccount::Balance<Currency>` published under it.
 ///
 /// # Parameters
-/// | Name       | Type      | Description                                                                                                                                         |
-/// | ------     | ------    | -------------                                                                                                                                       |
-/// | `Currency` | Type      | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
-/// | `account`  | `&signer` | The signer of the sending account of the transaction.                                                                                               |
+/// | Name       | Type     | Description                                                                                                                                         |
+/// | ------     | ------   | -------------                                                                                                                                       |
+/// | `Currency` | Type     | The Move type for the `Currency` being added to the sending account of the transaction. `Currency` must be an already-registered currency on-chain. |
+/// | `account`  | `signer` | The signer of the sending account of the transaction.                                                                                               |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                             | Description                                                                |
@@ -3407,9 +3422,9 @@ pub fn encode_add_currency_to_account_script_function(currency: TypeTag) -> Tran
 /// resource stored under the account at `recovery_address`.
 ///
 /// # Parameters
-/// | Name                 | Type      | Description                                                                                                |
-/// | ------               | ------    | -------------                                                                                              |
-/// | `to_recover_account` | `&signer` | The signer reference of the sending account of this transaction.                                           |
+/// | Name                 | Type      | Description                                                                                               |
+/// | ------               | ------    | -------------                                                                                             |
+/// | `to_recover_account` | `signer`  | The signer of the sending account of this transaction.                                                    |
 /// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `DiemAccount::KeyRotationCapability` will be stored. |
 ///
 /// # Common Abort Conditions
@@ -3455,7 +3470,7 @@ pub fn encode_add_recovery_rotation_capability_script_function(
 /// # Parameters
 /// | Name                | Type         | Description                                                                                                                        |
 /// | ------              | ------       | -------------                                                                                                                      |
-/// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+/// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
 /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
 /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
 /// | `validator_address` | `address`    | The validator account address to be added to the validator set.                                                                    |
@@ -3523,10 +3538,10 @@ pub fn encode_add_validator_and_reconfigure_script_function(
 /// `0xA550C18`.
 ///
 /// # Parameters
-/// | Name         | Type      | Description                                                                                                                                         |
-/// | ------       | ------    | -------------                                                                                                                                       |
-/// | `CoinType`   | Type      | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
-/// | `tc_account` | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+/// | Name         | Type     | Description                                                                                                                                         |
+/// | ------       | ------   | -------------                                                                                                                                       |
+/// | `CoinType`   | Type     | The Move type for the `CoinType` being added to the sending account of the transaction. `CoinType` must be an already-registered currency on-chain. |
+/// | `tc_account` | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                          | Description                                                 |
@@ -3579,13 +3594,13 @@ pub fn encode_burn_txn_fees_script_function(coin_type: TypeTag) -> TransactionPa
 /// `0xA550C18`.
 ///
 /// # Parameters
-/// | Name              | Type      | Description                                                                                                                  |
-/// | ------            | ------    | -------------                                                                                                                |
-/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.                |
-/// | `tc_account`      | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it. |
-/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                   |
-/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                 |
-/// | `amount`          | `u64`     | The amount to be burned.                                                                                                     |
+/// | Name              | Type      | Description                                                                                                        |
+/// | ------            | ------    | -------------                                                                                                      |
+/// | `Token`           | Type      | The Move type for the `Token` currency being burned. `Token` must be an already-registered currency on-chain.      |
+/// | `tc_account`      | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it. |
+/// | `sliding_nonce`   | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                         |
+/// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                       |
+/// | `amount`          | `u64`     | The amount to be burned.                                                                                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category                | Error Reason                            | Description                                                                                                                         |
@@ -3653,7 +3668,7 @@ pub fn encode_burn_with_amount_script_function(
 /// | Name              | Type      | Description                                                                                                                          |
 /// | ------            | ------    | -------------                                                                                                                        |
 /// | `Token`           | Type      | The Move type for the `Token` currenty that burning is being cancelled for. `Token` must be an already-registered currency on-chain. |
-/// | `account`         | `&signer` | The signer reference of the sending account of this transaction, must have a burn capability for `Token` published under it.         |
+/// | `account`         | `signer`  | The signer of the sending account of this transaction, must have a burn capability for `Token` published under it.                   |
 /// | `preburn_address` | `address` | The address where the coins to-be-burned are currently held.                                                                         |
 /// | `amount`          | `u64`     | The amount to be cancelled.                                                                                                          |
 ///
@@ -3698,7 +3713,8 @@ pub fn encode_cancel_burn_with_amount_script_function(
 /// # Technical Description
 /// Creates a `ChildVASP` account for the sender `parent_vasp` at `child_address` with a balance of
 /// `child_initial_balance` in `CoinType` and an initial authentication key of
-/// `auth_key_prefix | child_address`.
+/// `auth_key_prefix | child_address`. Authentication key prefixes, and how to construct them from an ed25519 public key is described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
 /// If `add_all_currencies` is true, the child address will have a zero balance in all available
 /// currencies in the system.
@@ -3720,7 +3736,7 @@ pub fn encode_cancel_burn_with_amount_script_function(
 /// | Name                    | Type         | Description                                                                                                                                 |
 /// | ------                  | ------       | -------------                                                                                                                               |
 /// | `CoinType`              | Type         | The Move type for the `CoinType` that the child account should be created with. `CoinType` must be an already-registered currency on-chain. |
-/// | `parent_vasp`           | `&signer`    | The signer reference of the sending account. Must be a Parent VASP account.                                                                 |
+/// | `parent_vasp`           | `signer`     | The reference of the sending account. Must be a Parent VASP account.                                                                        |
 /// | `child_address`         | `address`    | Address of the to-be-created Child VASP account.                                                                                            |
 /// | `auth_key_prefix`       | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                    |
 /// | `add_all_currencies`    | `bool`       | Whether to publish balance resources for all known currencies when the account is created.                                                  |
@@ -3777,6 +3793,8 @@ pub fn encode_create_child_vasp_account_script_function(
 /// `auth_key_prefix` | `addr` and a 0 balance of type `Currency`. If `add_all_currencies` is true,
 /// 0 balances for all available currencies in the system will also be added. This can only be
 /// invoked by an account with the TreasuryCompliance role.
+/// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
 /// At the time of creation the account is also initialized with default mint tiers of (500_000,
 /// 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
@@ -3786,7 +3804,7 @@ pub fn encode_create_child_vasp_account_script_function(
 /// | Name                 | Type         | Description                                                                                                                                         |
 /// | ------               | ------       | -------------                                                                                                                                       |
 /// | `Currency`           | Type         | The Move type for the `Currency` that the Designated Dealer should be initialized with. `Currency` must be an already-registered currency on-chain. |
-/// | `tc_account`         | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+/// | `tc_account`         | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 /// | `sliding_nonce`      | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                          |
 /// | `addr`               | `address`    | Address of the to-be-created Designated Dealer account.                                                                                             |
 /// | `auth_key_prefix`    | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                            |
@@ -3844,12 +3862,14 @@ pub fn encode_create_designated_dealer_script_function(
 /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
 /// also be added. This can only be invoked by an TreasuryCompliance account.
 /// `sliding_nonce` is a unique nonce for operation, see `SlidingNonce` for details.
+/// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
 /// # Parameters
 /// | Name                  | Type         | Description                                                                                                                                                    |
 /// | ------                | ------       | -------------                                                                                                                                                  |
 /// | `CoinType`            | Type         | The Move type for the `CoinType` currency that the Parent VASP account should be initialized with. `CoinType` must be an already-registered currency on-chain. |
-/// | `tc_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                                      |
+/// | `tc_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                                |
 /// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                                                     |
 /// | `new_account_address` | `address`    | Address of the to-be-created Parent VASP account.                                                                                                              |
 /// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.                                                                       |
@@ -3902,7 +3922,8 @@ pub fn encode_create_parent_vasp_account_script_function(
 
 /// # Summary
 /// Initializes the sending account as a recovery address that may be used by
-/// the VASP that it belongs to. The sending account must be a VASP account.
+/// other accounts belonging to the same VASP as `account`.
+/// The sending account must be a VASP account, and can be either a child or parent VASP account.
 /// Multiple recovery addresses can exist for a single VASP, but accounts in
 /// each must be disjoint.
 ///
@@ -3914,9 +3935,9 @@ pub fn encode_create_parent_vasp_account_script_function(
 /// may be used as a recovery account for those accounts.
 ///
 /// # Parameters
-/// | Name      | Type      | Description                                           |
-/// | ------    | ------    | -------------                                         |
-/// | `account` | `&signer` | The signer of the sending account of the transaction. |
+/// | Name      | Type     | Description                                           |
+/// | ------    | ------   | -------------                                         |
+/// | `account` | `signer` | The signer of the sending account of the transaction. |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                                               | Description                                                                                   |
@@ -3953,15 +3974,17 @@ pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
 /// `ValidatorConfig::ValidatorConfig` is set to the passed in `human_name`.
 /// This script does not add the validator to the validator set or the system,
 /// but only creates the account.
+/// Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
 /// # Parameters
-/// | Name                  | Type         | Description                                                                                     |
-/// | ------                | ------       | -------------                                                                                   |
-/// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-/// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-/// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-/// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-/// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+/// | Name                  | Type         | Description                                                                              |
+/// | ------                | ------       | -------------                                                                            |
+/// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+/// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+/// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+/// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+/// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                            | Description                                                                                |
@@ -4013,15 +4036,17 @@ pub fn encode_create_validator_account_script_function(
 /// `auth_key_prefix` | `new_account_address`. It publishes a
 /// `ValidatorOperatorConfig::ValidatorOperatorConfig` resource with the specified `human_name`.
 /// This script does not assign the validator operator to any validator accounts but only creates the account.
+/// Authentication key prefixes, and how to construct them from an ed25519 public key are described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 ///
 /// # Parameters
-/// | Name                  | Type         | Description                                                                                     |
-/// | ------                | ------       | -------------                                                                                   |
-/// | `dr_account`          | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-/// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
-/// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                                 |
-/// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account.        |
-/// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                                     |
+/// | Name                  | Type         | Description                                                                              |
+/// | ------                | ------       | -------------                                                                            |
+/// | `dr_account`          | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+/// | `sliding_nonce`       | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.               |
+/// | `new_account_address` | `address`    | Address of the to-be-created Validator account.                                          |
+/// | `auth_key_prefix`     | `vector<u8>` | The authentication key prefix that will be used initially for the newly created account. |
+/// | `human_name`          | `vector<u8>` | ASCII-encoded human name for the validator.                                              |
 ///
 /// # Common Abort Conditions
 /// | Error Category              | Error Reason                            | Description                                                                                |
@@ -4087,11 +4112,11 @@ pub fn encode_create_validator_operator_account_script_function(
 /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
 ///
 /// # Parameters
-/// | Name                | Type      | Description                                                                                               |
-/// | ------              | ------    | -------------                                                                                             |
-/// | `tc_account`        | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-/// | `to_freeze_account` | `address` | The account address to be frozen.                                                                         |
+/// | Name                | Type      | Description                                                                                     |
+/// | ------              | ------    | -------------                                                                                   |
+/// | `tc_account`        | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `sliding_nonce`     | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+/// | `to_freeze_account` | `address` | The account address to be frozen.                                                               |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                 | Description                                                                                |
@@ -4136,8 +4161,11 @@ pub fn encode_freeze_account_script_function(
 /// # Technical Description
 ///
 /// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
-/// `metadata` and an (optional) `metadata_signature` on the message
-/// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
+/// `metadata` and an (optional) `metadata_signature` on the message of the form
+/// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`, that
+/// has been signed by the `payee`'s private key associated with the `compliance_public_key` held in
+/// the `payee`'s `DualAttestation::Credential`. Both the `Signer::address_of(payer)` and `amount` fields
+/// in the `metadata_signature` must be BCS-encoded bytes, and `|` denotes concatenation.
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
 /// `DualAttestation::get_cur_microdiem_limit` XDX and `payer` and `payee` are distinct VASPs.
 /// However, a transaction sender can opt in to dual attestation even when it is not required
@@ -4153,7 +4181,7 @@ pub fn encode_freeze_account_script_function(
 /// | Name                 | Type         | Description                                                                                                                  |
 /// | ------               | ------       | -------------                                                                                                                |
 /// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
-/// | `payer`              | `&signer`    | The signer reference of the sending account that coins are being transferred from.                                           |
+/// | `payer`              | `signer`     | The signer of the sending account that coins are being transferred from.                                                     |
 /// | `payee`              | `address`    | The address of the account the coins are being transferred to.                                                               |
 /// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
 /// | `metadata_signature` | `vector<u8>` | Optional signature over `metadata` and payment information. See                                                              |
@@ -4161,16 +4189,16 @@ pub fn encode_freeze_account_script_function(
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                     | Description                                                                                                                         |
 /// | ----------------           | --------------                                   | -------------                                                                                                                       |
-/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
-/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
-/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
-/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY`       | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EINSUFFICIENT_BALANCE`             | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::ECOIN_DEPOSIT_IS_ZERO`             | `amount` is zero.                                                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `DiemAccount::EPAYEE_DOES_NOT_EXIST`             | No account exists at the `payee` address.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`  | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
 /// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
 /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
 /// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
-/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
-/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS`        | `payer` has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `DiemAccount::EDEPOSIT_EXCEEDS_LIMITS`           | `payee` has exceeded its daily deposit limits for XDX.                                                                              |
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_child_vasp_account`
@@ -4220,11 +4248,11 @@ pub fn encode_peer_to_peer_with_metadata_script_function(
 /// `preburn_address` set to `account`'s address.
 ///
 /// # Parameters
-/// | Name      | Type      | Description                                                                                                                      |
-/// | ------    | ------    | -------------                                                                                                                    |
-/// | `Token`   | Type      | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
-/// | `account` | `&signer` | The signer reference of the sending account.                                                                                     |
-/// | `amount`  | `u64`     | The amount in `Token` to be moved to the preburn area.                                                                           |
+/// | Name      | Type     | Description                                                                                                                      |
+/// | ------    | ------   | -------------                                                                                                                    |
+/// | `Token`   | Type     | The Move type for the `Token` currency being moved to the preburn area. `Token` must be an already-registered currency on-chain. |
+/// | `account` | `signer` | The signer of the sending account.                                                                                               |
+/// | `amount`  | `u64`    | The amount in `Token` to be moved to the preburn area.                                                                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category           | Error Reason                                             | Description                                                                             |
@@ -4255,12 +4283,13 @@ pub fn encode_preburn_script_function(token: TypeTag, amount: u64) -> Transactio
 }
 
 /// # Summary
-/// Rotates the authentication key of the sending account to the
-/// newly-specified public key and publishes a new shared authentication key
-/// under the sender's account. Any account can send this transaction.
+/// Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
+/// publishes a new shared authentication key derived from that public key under the sender's account.
+/// Any account can send this transaction.
 ///
 /// # Technical Description
-/// Rotates the authentication key of the sending account to `public_key`,
+/// Rotates the authentication key of the sending account to the
+/// [authentication key derived from `public_key`](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
 /// and publishes a `SharedEd25519PublicKey::SharedEd25519PublicKey` resource
 /// containing the 32-byte ed25519 `public_key` and the `DiemAccount::KeyRotationCapability` for
 /// `account` under `account`.
@@ -4268,7 +4297,7 @@ pub fn encode_preburn_script_function(token: TypeTag, amount: u64) -> Transactio
 /// # Parameters
 /// | Name         | Type         | Description                                                                                        |
 /// | ------       | ------       | -------------                                                                                      |
-/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                                    |
+/// | `account`    | `signer`     | The signer of the sending account of the transaction.                                              |
 /// | `public_key` | `vector<u8>` | A valid 32-byte Ed25519 public key for `account`'s authentication key to be rotated to and stored. |
 ///
 /// # Common Abort Conditions
@@ -4307,13 +4336,13 @@ pub fn encode_publish_shared_ed25519_public_key_script_function(
 /// only "locally" under the `validator_account` account address.
 ///
 /// # Parameters
-/// | Name                          | Type         | Description                                                                                                                  |
-/// | ------                        | ------       | -------------                                                                                                                |
-/// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-/// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-/// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-/// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-/// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+/// | Name                          | Type         | Description                                                                                                        |
+/// | ------                        | ------       | -------------                                                                                                      |
+/// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+/// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+/// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+/// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+/// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -4367,7 +4396,7 @@ pub fn encode_register_validator_config_script_function(
 /// # Parameters
 /// | Name                | Type         | Description                                                                                                                        |
 /// | ------              | ------       | -------------                                                                                                                      |
-/// | `dr_account`        | `&signer`    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
+/// | `dr_account`        | `signer`     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
 /// | `sliding_nonce`     | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                                         |
 /// | `validator_name`    | `vector<u8>` | ASCII-encoded human name for the validator. Must match the human name in the `ValidatorConfig::ValidatorConfig` for the validator. |
 /// | `validator_address` | `address`    | The validator account address to be removed from the validator set.                                                                |
@@ -4415,20 +4444,19 @@ pub fn encode_remove_validator_and_reconfigure_script_function(
 }
 
 /// # Summary
-/// Rotates the transaction sender's authentication key to the supplied new authentication key. May
-/// be sent by any account.
+/// Rotates the `account`'s authentication key to the supplied new authentication key. May be sent by any account.
 ///
 /// # Technical Description
 /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key`
 /// field to `new_key`. `new_key` must be a valid authentication key that
-/// corresponds to an ed25519 public key, and `account` must not have previously
-/// delegated its `DiemAccount::KeyRotationCapability`.
+/// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+/// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name      | Type         | Description                                                 |
-/// | ------    | ------       | -------------                                               |
-/// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
-/// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.            |
+/// | Name      | Type         | Description                                       |
+/// | ------    | ------       | -------------                                     |
+/// | `account` | `signer`     | Signer of the sending account of the transaction. |
+/// | `new_key` | `vector<u8>` | New authentication key to be used for `account`.  |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                              | Description                                                                         |
@@ -4460,13 +4488,13 @@ pub fn encode_rotate_authentication_key_script_function(new_key: Vec<u8>) -> Tra
 /// # Technical Description
 /// Rotates the `account`'s `DiemAccount::DiemAccount` `authentication_key`
 /// field to `new_key`. `new_key` must be a valid authentication key that
-/// corresponds to an ed25519 public key, and `account` must not have previously
-/// delegated its `DiemAccount::KeyRotationCapability`.
+/// corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+/// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name            | Type         | Description                                                                |
 /// | ------          | ------       | -------------                                                              |
-/// | `account`       | `&signer`    | Signer reference of the sending account of the transaction.                |
+/// | `account`       | `signer`     | Signer of the sending account of the transaction.                          |
 /// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
 /// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                           |
 ///
@@ -4509,16 +4537,16 @@ pub fn encode_rotate_authentication_key_with_nonce_script_function(
 /// # Technical Description
 /// Rotate the `account`'s `DiemAccount::DiemAccount` `authentication_key` field to `new_key`.
 /// `new_key` must be a valid authentication key that corresponds to an ed25519
-/// public key, and `account` must not have previously delegated its
-/// `DiemAccount::KeyRotationCapability`.
+/// public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+/// and `account` must not have previously delegated its `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
-/// | Name            | Type         | Description                                                                                                 |
-/// | ------          | ------       | -------------                                                                                               |
-/// | `dr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.               |
-/// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                            |
+/// | Name            | Type         | Description                                                                                       |
+/// | ------          | ------       | -------------                                                                                     |
+/// | `dr_account`    | `signer`     | The signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+/// | `account`       | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.               |
+/// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.          |
+/// | `new_key`       | `vector<u8>` | New authentication key to be used for `account`.                                                  |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                              | Description                                                                                                |
@@ -4560,14 +4588,15 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script_function(
 /// # Technical Description
 /// Rotates the authentication key of the `to_recover` account to `new_key` using the
 /// `DiemAccount::KeyRotationCapability` stored in the `RecoveryAddress::RecoveryAddress` resource
-/// published under `recovery_address`. This transaction can be sent either by the `to_recover`
-/// account, or by the account where the `RecoveryAddress::RecoveryAddress` resource is published
-/// that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
+/// published under `recovery_address`. `new_key` must be a valide authentication key as described
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+/// This transaction can be sent either by the `to_recover` account, or by the account where the
+/// `RecoveryAddress::RecoveryAddress` resource is published that contains `to_recover`'s `DiemAccount::KeyRotationCapability`.
 ///
 /// # Parameters
 /// | Name               | Type         | Description                                                                                                                   |
 /// | ------             | ------       | -------------                                                                                                                 |
-/// | `account`          | `&signer`    | Signer reference of the sending account of the transaction.                                                                   |
+/// | `account`          | `signer`     | Signer of the sending account of the transaction.                                                                             |
 /// | `recovery_address` | `address`    | Address where `RecoveryAddress::RecoveryAddress` that holds `to_recover`'s `DiemAccount::KeyRotationCapability` is published. |
 /// | `to_recover`       | `address`    | The address of the account whose authentication key will be updated.                                                          |
 /// | `new_key`          | `vector<u8>` | New authentication key to be used for the account at the `to_recover` address.                                                |
@@ -4626,7 +4655,7 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script_function(
 /// # Parameters
 /// | Name      | Type         | Description                                                               |
 /// | ------    | ------       | -------------                                                             |
-/// | `account` | `&signer`    | Signer reference of the sending account of the transaction.               |
+/// | `account` | `signer`     | Signer of the sending account of the transaction.                         |
 /// | `new_url` | `vector<u8>` | ASCII-encoded url to be used for off-chain communication with `account`.  |
 /// | `new_key` | `vector<u8>` | New ed25519 public key to be used for on-chain dual attestation checking. |
 ///
@@ -4664,16 +4693,17 @@ pub fn encode_rotate_dual_attestation_info_script_function(
 /// `AccountAdministrationScripts::publish_shared_ed25519_public_key`.
 ///
 /// # Technical Description
-/// This first rotates the public key stored in `account`'s
+/// `public_key` must be a valid ed25519 public key.  This transaction first rotates the public key stored in `account`'s
 /// `SharedEd25519PublicKey::SharedEd25519PublicKey` resource to `public_key`, after which it
-/// rotates the authentication key using the capability stored in `account`'s
-/// `SharedEd25519PublicKey::SharedEd25519PublicKey` to a new value derived from `public_key`
+/// rotates the `account`'s authentication key to the new authentication key derived from `public_key` as defined
+/// [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
+/// using the `DiemAccount::KeyRotationCapability` stored in `account`'s `SharedEd25519PublicKey::SharedEd25519PublicKey`.
 ///
 /// # Parameters
-/// | Name         | Type         | Description                                                     |
-/// | ------       | ------       | -------------                                                   |
-/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction. |
-/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                                     |
+/// | Name         | Type         | Description                                           |
+/// | ------       | ------       | -------------                                         |
+/// | `account`    | `signer`     | The signer of the sending account of the transaction. |
+/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key.                           |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                    | Description                                                                                   |
@@ -4709,13 +4739,13 @@ pub fn encode_rotate_shared_ed25519_public_key_script_function(
 /// on-chain with the updated `ValidatorConfig::ValidatorConfig`.
 ///
 /// # Parameters
-/// | Name                          | Type         | Description                                                                                                                  |
-/// | ------                        | ------       | -------------                                                                                                                |
-/// | `validator_operator_account`  | `&signer`    | Signer reference of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
-/// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                                    |
-/// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                                         |
-/// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                       |
-/// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.                        |
+/// | Name                          | Type         | Description                                                                                                        |
+/// | ------                        | ------       | -------------                                                                                                      |
+/// | `validator_operator_account`  | `signer`     | Signer of the sending account. Must be the registered validator operator for the validator at `validator_address`. |
+/// | `validator_account`           | `address`    | The address of the validator's `ValidatorConfig::ValidatorConfig` resource being updated.                          |
+/// | `consensus_pubkey`            | `vector<u8>` | New Ed25519 public key to be used in the updated `ValidatorConfig::ValidatorConfig`.                               |
+/// | `validator_network_addresses` | `vector<u8>` | New set of `validator_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.             |
+/// | `fullnode_network_addresses`  | `vector<u8>` | New set of `fullnode_network_addresses` to be used in the updated `ValidatorConfig::ValidatorConfig`.              |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                   | Description                                                                                           |
@@ -4773,7 +4803,7 @@ pub fn encode_set_validator_config_and_reconfigure_script_function(
 /// # Parameters
 /// | Name               | Type         | Description                                                                                  |
 /// | ------             | ------       | -------------                                                                                |
-/// | `account`          | `&signer`    | The signer reference of the sending account of the transaction.                              |
+/// | `account`          | `signer`     | The signer of the sending account of the transaction.                                        |
 /// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                             |
 /// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator. |
 ///
@@ -4827,13 +4857,13 @@ pub fn encode_set_validator_operator_script_function(
 /// the system is initiated by this script.
 ///
 /// # Parameters
-/// | Name               | Type         | Description                                                                                                  |
-/// | ------             | ------       | -------------                                                                                                |
-/// | `dr_account`       | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-/// | `account`          | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
-/// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.                    |
-/// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                                             |
-/// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.                 |
+/// | Name               | Type         | Description                                                                                   |
+/// | ------             | ------       | -------------                                                                                 |
+/// | `dr_account`       | `signer`     | Signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+/// | `account`          | `signer`     | Signer of account specified in the `execute_as` field of the write set transaction.           |
+/// | `sliding_nonce`    | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Diem Root.      |
+/// | `operator_name`    | `vector<u8>` | Validator operator's human name.                                                              |
+/// | `operator_account` | `address`    | Address of the validator operator account to be added as the `account` validator's operator.  |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
@@ -4904,7 +4934,7 @@ pub fn encode_set_validator_operator_with_nonce_admin_script_function(
 /// | Name                        | Type      | Description                                                                                                |
 /// | ------                      | ------    | -------------                                                                                              |
 /// | `CoinType`                  | Type      | The Move type for the `CoinType` being minted. `CoinType` must be an already-registered currency on-chain. |
-/// | `tc_account`                | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.  |
+/// | `tc_account`                | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account.            |
 /// | `sliding_nonce`             | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                 |
 /// | `designated_dealer_address` | `address` | The address of the Designated Dealer account being minted to.                                              |
 /// | `mint_amount`               | `u64`     | The number of coins to be minted.                                                                          |
@@ -4968,11 +4998,11 @@ pub fn encode_tiered_mint_script_function(
 /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
 ///
 /// # Parameters
-/// | Name                  | Type      | Description                                                                                               |
-/// | ------                | ------    | -------------                                                                                             |
-/// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-/// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                                         |
+/// | Name                  | Type      | Description                                                                                     |
+/// | ------                | ------    | -------------                                                                                   |
+/// | `tc_account`          | `signer`  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+/// | `to_unfreeze_account` | `address` | The account address to be frozen.                                                               |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -5014,11 +5044,11 @@ pub fn encode_unfreeze_account_script_function(
 /// preserve backwards compatibility with previous major versions of the VM.
 ///
 /// # Parameters
-/// | Name            | Type      | Description                                                                |
-/// | ------          | ------    | -------------                                                              |
-/// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.   |
-/// | `sliding_nonce` | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
-/// | `major`         | `u64`     | The `major` version of the VM to be used from this transaction on.         |
+/// | Name            | Type     | Description                                                                |
+/// | ------          | ------   | -------------                                                              |
+/// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.              |
+/// | `sliding_nonce` | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction. |
+/// | `major`         | `u64`    | The `major` version of the VM to be used from this transaction on.         |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                                  | Description                                                                                |
@@ -5057,11 +5087,11 @@ pub fn encode_update_diem_version_script_function(
 /// `0xA550C18`. The amount is set in micro-XDX.
 ///
 /// # Parameters
-/// | Name                  | Type      | Description                                                                                               |
-/// | ------                | ------    | -------------                                                                                             |
-/// | `tc_account`          | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-/// | `sliding_nonce`       | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                                |
-/// | `new_micro_xdx_limit` | `u64`     | The new dual attestation limit to be used on-chain.                                                       |
+/// | Name                  | Type     | Description                                                                                     |
+/// | ------                | ------   | -------------                                                                                   |
+/// | `tc_account`          | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+/// | `sliding_nonce`       | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction.                      |
+/// | `new_micro_xdx_limit` | `u64`    | The new dual attestation limit to be used on-chain.                                             |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -5104,13 +5134,13 @@ pub fn encode_update_dual_attestation_limit_script_function(
 /// is given by `new_exchange_rate_numerator/new_exchange_rate_denominator`.
 ///
 /// # Parameters
-/// | Name                            | Type      | Description                                                                                                                        |
-/// | ------                          | ------    | -------------                                                                                                                      |
-/// | `Currency`                      | Type      | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
-/// | `tc_account`                    | `&signer` | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
-/// | `sliding_nonce`                 | `u64`     | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
-/// | `new_exchange_rate_numerator`   | `u64`     | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
-/// | `new_exchange_rate_denominator` | `u64`     | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
+/// | Name                            | Type     | Description                                                                                                                        |
+/// | ------                          | ------   | -------------                                                                                                                      |
+/// | `Currency`                      | Type     | The Move type for the `Currency` whose exchange rate is being updated. `Currency` must be an already-registered currency on-chain. |
+/// | `tc_account`                    | `signer` | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                    |
+/// | `sliding_nonce`                 | `u64`    | The `sliding_nonce` (see: `SlidingNonce`) to be used for the transaction.                                                          |
+/// | `new_exchange_rate_numerator`   | `u64`    | The numerator for the new to micro-XDX exchange rate for `Currency`.                                                               |
+/// | `new_exchange_rate_denominator` | `u64`    | The denominator for the new to micro-XDX exchange rate for `Currency`.                                                             |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                            | Description                                                                                |
@@ -5161,11 +5191,11 @@ pub fn encode_update_exchange_rate_script_function(
 /// This transaction needs to be sent by the Treasury Compliance account.
 ///
 /// # Parameters
-/// | Name            | Type      | Description                                                                                                                          |
-/// | ------          | ------    | -------------                                                                                                                        |
-/// | `Currency`      | Type      | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
-/// | `account`       | `&signer` | Signer reference of the sending account. Must be the Diem Root account.                                                             |
-/// | `allow_minting` | `bool`    | Whether to allow minting of new coins in `Currency`.                                                                                 |
+/// | Name            | Type     | Description                                                                                                                          |
+/// | ------          | ------   | -------------                                                                                                                        |
+/// | `Currency`      | Type     | The Move type for the `Currency` whose minting ability is being updated. `Currency` must be an already-registered currency on-chain. |
+/// | `account`       | `signer` | Signer of the sending account. Must be the Diem Root account.                                                                        |
+/// | `allow_minting` | `bool`   | Whether to allow minting of new coins in `Currency`.                                                                                 |
 ///
 /// # Common Abort Conditions
 /// | Error Category             | Error Reason                          | Description                                          |

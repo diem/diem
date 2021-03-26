@@ -141,7 +141,7 @@ being <code>preburn_address</code>.
 | Name              | Type      | Description                                                                                                                          |
 | ------            | ------    | -------------                                                                                                                        |
 | <code>Token</code>           | Type      | The Move type for the <code>Token</code> currenty that burning is being cancelled for. <code>Token</code> must be an already-registered currency on-chain. |
-| <code>account</code>         | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it.         |
+| <code>account</code>         | <code>signer</code>  | The signer of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it.                   |
 | <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                         |
 | <code>amount</code>          | <code>u64</code>     | The amount to be cancelled.                                                                                                          |
 
@@ -293,13 +293,13 @@ held in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>
 
 ### Parameters
 
-| Name              | Type      | Description                                                                                                                  |
-| ------            | ------    | -------------                                                                                                                |
-| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currency being burned. <code>Token</code> must be an already-registered currency on-chain.                |
-| <code>tc_account</code>      | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it. |
-| <code>sliding_nonce</code>   | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                   |
-| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                 |
-| <code>amount</code>          | <code>u64</code>     | The amount to be burned.                                                                                                     |
+| Name              | Type      | Description                                                                                                        |
+| ------            | ------    | -------------                                                                                                      |
+| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currency being burned. <code>Token</code> must be an already-registered currency on-chain.      |
+| <code>tc_account</code>      | <code>signer</code>  | The signer of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it. |
+| <code>sliding_nonce</code>   | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                         |
+| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                       |
+| <code>amount</code>          | <code>u64</code>     | The amount to be burned.                                                                                           |
 
 
 <a name="@Common_Abort_Conditions_10"></a>
@@ -418,11 +418,11 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 ### Parameters
 
-| Name      | Type      | Description                                                                                                                      |
-| ------    | ------    | -------------                                                                                                                    |
-| <code>Token</code>   | Type      | The Move type for the <code>Token</code> currency being moved to the preburn area. <code>Token</code> must be an already-registered currency on-chain. |
-| <code>account</code> | <code>&signer</code> | The signer reference of the sending account.                                                                                     |
-| <code>amount</code>  | <code>u64</code>     | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
+| Name      | Type     | Description                                                                                                                      |
+| ------    | ------   | -------------                                                                                                                    |
+| <code>Token</code>   | Type     | The Move type for the <code>Token</code> currency being moved to the preburn area. <code>Token</code> must be an already-registered currency on-chain. |
+| <code>account</code> | <code>signer</code> | The signer of the sending account.                                                                                               |
+| <code>amount</code>  | <code>u64</code>    | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
 
 
 <a name="@Common_Abort_Conditions_16"></a>
@@ -542,10 +542,10 @@ held in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>
 
 ### Parameters
 
-| Name         | Type      | Description                                                                                                                                         |
-| ------       | ------    | -------------                                                                                                                                       |
-| <code>CoinType</code>   | Type      | The Move type for the <code>CoinType</code> being added to the sending account of the transaction. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+| Name         | Type     | Description                                                                                                                                         |
+| ------       | ------   | -------------                                                                                                                                       |
+| <code>CoinType</code>   | Type     | The Move type for the <code>CoinType</code> being added to the sending account of the transaction. <code>CoinType</code> must be an already-registered currency on-chain. |
+| <code>tc_account</code> | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 
 
 <a name="@Common_Abort_Conditions_22"></a>
@@ -632,7 +632,7 @@ resource published under the <code>designated_dealer_address</code>.
 | Name                        | Type      | Description                                                                                                |
 | ------                      | ------    | -------------                                                                                              |
 | <code>CoinType</code>                  | Type      | The Move type for the <code>CoinType</code> being minted. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>                | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.  |
+| <code>tc_account</code>                | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account.            |
 | <code>sliding_nonce</code>             | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                 |
 | <code>designated_dealer_address</code> | <code>address</code> | The address of the Designated Dealer account being minted to.                                              |
 | <code>mint_amount</code>               | <code>u64</code>     | The number of coins to be minted.                                                                          |
@@ -768,11 +768,11 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 ### Parameters
 
-| Name                | Type      | Description                                                                                               |
-| ------              | ------    | -------------                                                                                             |
-| <code>tc_account</code>        | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>     | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
+| Name                | Type      | Description                                                                                     |
+| ------              | ------    | -------------                                                                                   |
+| <code>tc_account</code>        | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>     | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
 <a name="@Common_Abort_Conditions_34"></a>
@@ -853,11 +853,11 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 ### Parameters
 
-| Name                  | Type      | Description                                                                                               |
-| ------                | ------    | -------------                                                                                             |
-| <code>tc_account</code>          | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
+| Name                  | Type      | Description                                                                                     |
+| ------                | ------    | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
 <a name="@Common_Abort_Conditions_40"></a>
@@ -925,11 +925,11 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="DualAttesta
 
 ### Parameters
 
-| Name                  | Type      | Description                                                                                               |
-| ------                | ------    | -------------                                                                                             |
-| <code>tc_account</code>          | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>new_micro_xdx_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
+| Name                  | Type     | Description                                                                                     |
+| ------                | ------   | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>       | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
 
 
 <a name="@Common_Abort_Conditions_45"></a>
@@ -1003,13 +1003,13 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 ### Parameters
 
-| Name                            | Type      | Description                                                                                                                        |
-| ------                          | ------    | -------------                                                                                                                      |
-| <code>Currency</code>                      | Type      | The Move type for the <code>Currency</code> whose exchange rate is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>                    | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
-| <code>sliding_nonce</code>                 | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for the transaction.                                                          |
-| <code>new_exchange_rate_numerator</code>   | <code>u64</code>     | The numerator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                               |
-| <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
+| Name                            | Type     | Description                                                                                                                        |
+| ------                          | ------   | -------------                                                                                                                      |
+| <code>Currency</code>                      | Type     | The Move type for the <code>Currency</code> whose exchange rate is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>tc_account</code>                    | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                    |
+| <code>sliding_nonce</code>                 | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for the transaction.                                                          |
+| <code>new_exchange_rate_numerator</code>   | <code>u64</code>    | The numerator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                               |
+| <code>new_exchange_rate_denominator</code> | <code>u64</code>    | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
 
 
 <a name="@Common_Abort_Conditions_50"></a>
@@ -1132,11 +1132,11 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ### Parameters
 
-| Name            | Type      | Description                                                                                                                          |
-| ------          | ------    | -------------                                                                                                                        |
-| <code>Currency</code>      | Type      | The Move type for the <code>Currency</code> whose minting ability is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.                                                             |
-| <code>allow_minting</code> | <code>bool</code>    | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
+| Name            | Type     | Description                                                                                                                          |
+| ------          | ------   | -------------                                                                                                                        |
+| <code>Currency</code>      | Type     | The Move type for the <code>Currency</code> whose minting ability is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>account</code>       | <code>signer</code> | Signer of the sending account. Must be the Diem Root account.                                                                        |
+| <code>allow_minting</code> | <code>bool</code>   | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
 <a name="@Common_Abort_Conditions_55"></a>

@@ -37,8 +37,8 @@
         -  [Script set_validator_operator_with_nonce_admin](#@Script_set_validator_operator_with_nonce_admin_31)
     -  [Treasury and Compliance Operations](#@Treasury_and_Compliance_Operations_32)
         -  [Script preburn](#@Script_preburn_33)
-        -  [Script burn](#@Script_burn_34)
-        -  [Script cancel_burn](#@Script_cancel_burn_35)
+        -  [Script burn_with_amount](#@Script_burn_with_amount_34)
+        -  [Script cancel_burn_with_amount](#@Script_cancel_burn_with_amount_35)
         -  [Script burn_txn_fees](#@Script_burn_txn_fees_36)
         -  [Script tiered_mint](#@Script_tiered_mint_37)
         -  [Script freeze_account](#@Script_freeze_account_38)
@@ -204,7 +204,7 @@ transaction script categorized in the same manner as here can be found in the
 Creates a Child VASP account with its parent being the sending account of the transaction.
 The sender of the transaction must be a Parent VASP account.
 
-Script documentation: <code>create_child_vasp_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountCreationScripts_create_child_vasp_account">AccountCreationScripts::create_child_vasp_account</a></code>
 
 ---
 
@@ -216,7 +216,7 @@ Script documentation: <code>create_child_vasp_account</code>
 Creates a Validator Operator account. This transaction can only be sent by the Diem
 Root account.
 
-Script documentation: <code>create_validator_operator_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountCreationScripts_create_validator_operator_account">AccountCreationScripts::create_validator_operator_account</a></code>
 
 ---
 
@@ -228,7 +228,7 @@ Script documentation: <code>create_validator_operator_account</code>
 Creates a Validator account. This transaction can only be sent by the Diem
 Root account.
 
-Script documentation: <code>create_validator_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountCreationScripts_create_validator_account">AccountCreationScripts::create_validator_account</a></code>
 
 ---
 
@@ -239,7 +239,7 @@ Script documentation: <code>create_validator_account</code>
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
-Script documentation: <code>create_parent_vasp_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountCreationScripts_create_parent_vasp_account">AccountCreationScripts::create_parent_vasp_account</a></code>
 
 
 ---
@@ -252,7 +252,7 @@ Script documentation: <code>create_parent_vasp_account</code>
 Creates a Designated Dealer account with the provided information, and initializes it with
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
-Script documentation: <code>create_designated_dealer</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountCreationScripts_create_designated_dealer">AccountCreationScripts::create_designated_dealer</a></code>
 
 
 
@@ -273,7 +273,7 @@ send, receive, and hold <code><a href="../modules/doc/Diem.md#0x1_Diem_Diem">Die
 successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
-Script documentation: <code>add_currency_to_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
 
 
 ---
@@ -288,7 +288,7 @@ account. Both the sending and recovery accounts need to belong to the same VASP 
 both be VASP accounts. After this transaction both the sending account and the
 specified recovery account can rotate the sender account's authentication key.
 
-Script documentation: <code>add_recovery_rotation_capability</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code>
 
 
 ---
@@ -302,7 +302,7 @@ Rotates the authentication key of the sending account to the
 newly-specified public key and publishes a new shared authentication key
 under the sender's account. Any account can send this transaction.
 
-Script documentation: <code>publish_shared_ed25519_public_key</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_publish_shared_ed25519_public_key">AccountAdministrationScripts::publish_shared_ed25519_public_key</a></code>
 
 
 ---
@@ -315,7 +315,7 @@ Script documentation: <code>publish_shared_ed25519_public_key</code>
 Rotates the transaction sender's authentication key to the supplied new authentication key. May
 be sent by any account.
 
-Script documentation: <code>rotate_authentication_key</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
 
 
 ---
@@ -329,7 +329,7 @@ Rotates the sender's authentication key to the supplied new authentication key. 
 any account that has a sliding nonce resource published under it (usually this is Treasury
 Compliance or Diem Root accounts).
 
-Script documentation: <code>rotate_authentication_key_with_nonce</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">AccountAdministrationScripts::rotate_authentication_key_with_nonce</a></code>
 
 
 ---
@@ -343,7 +343,7 @@ Rotates the specified account's authentication key to the supplied new authentic
 only be sent by the Diem Root account as a write set transaction.
 
 
-Script documentation: <code>rotate_authentication_key_with_nonce_admin</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin</a></code>
 
 
 ---
@@ -355,9 +355,9 @@ Script documentation: <code>rotate_authentication_key_with_nonce_admin</code>
 
 Rotates the authentication key of a specified account that is part of a recovery address to a
 new authentication key. Only used for accounts that are part of a recovery address (see
-<code>Script::add_recovery_rotation_capability</code> for account restrictions).
+<code><a href="script_documentation.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code> for account restrictions).
 
-Script documentation: <code>rotate_authentication_key_with_recovery_address</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">AccountAdministrationScripts::rotate_authentication_key_with_recovery_address</a></code>
 
 
 ---
@@ -372,7 +372,7 @@ attestation on-chain. Transaction can be sent by any account that has dual attes
 information published under it. In practice the only such accounts are Designated Dealers and
 Parent VASPs.
 
-Script documentation: <code>rotate_dual_attestation_info</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 
 ---
@@ -384,9 +384,9 @@ Script documentation: <code>rotate_dual_attestation_info</code>
 
 Rotates the authentication key in a <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code>. This transaction can be sent by
 any account that has previously published a shared ed25519 public key using
-<code>Script::publish_shared_ed25519_public_key</code>.
+<code><a href="script_documentation.md#0x1_AccountAdministrationScripts_publish_shared_ed25519_public_key">AccountAdministrationScripts::publish_shared_ed25519_public_key</a></code>.
 
-Script documentation: <code>rotate_shared_ed25519_public_key</code>
+Script documentation: <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_shared_ed25519_public_key">AccountAdministrationScripts::rotate_shared_ed25519_public_key</a></code>
 
 
 <a name="@Payments_23"></a>
@@ -408,7 +408,7 @@ agreed to receive the coins.  This transaction can be sent by any account that c
 balance, and to any account that can hold a balance. Both accounts must hold balances in the
 currency being transacted.
 
-Script documentation: <code>peer_to_peer_with_metadata</code>
+Script documentation: <code><a href="script_documentation.md#0x1_PaymentScripts_peer_to_peer_with_metadata">PaymentScripts::peer_to_peer_with_metadata</a></code>
 
 
 
@@ -428,7 +428,7 @@ Adds a validator account to the validator set, and triggers a
 reconfiguration of the system to admit the account to the validator set for the system. This
 transaction can only be successfully called by the Diem Root account.
 
-Script documentation: <code>add_validator_and_reconfigure</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_add_validator_and_reconfigure">ValidatorAdministrationScripts::add_validator_and_reconfigure</a></code>
 
 
 ---
@@ -443,7 +443,7 @@ the configuration in the validator set that is seen by other validators in the n
 only be successfully sent by a Validator Operator account that is already registered with a
 validator.
 
-Script documentation: <code>register_validator_config</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_register_validator_config">ValidatorAdministrationScripts::register_validator_config</a></code>
 
 
 ---
@@ -457,7 +457,7 @@ This script removes a validator account from the validator set, and triggers a r
 of the system to remove the validator from the system. This transaction can only be
 successfully called by the Diem Root account.
 
-Script documentation: <code>remove_validator_and_reconfigure</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_remove_validator_and_reconfigure">ValidatorAdministrationScripts::remove_validator_and_reconfigure</a></code>
 
 
 ---
@@ -471,7 +471,7 @@ Updates a validator's configuration, and triggers a reconfiguration of the syste
 validator set with this new validator configuration.  Can only be successfully sent by a
 Validator Operator account that is already registered with a validator.
 
-Script documentation: <code>set_validator_config_and_reconfigure</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_set_validator_config_and_reconfigure">ValidatorAdministrationScripts::set_validator_config_and_reconfigure</a></code>
 
 
 ---
@@ -486,7 +486,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by an account with
 Validator role.
 
-Script documentation: <code>set_validator_operator</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_set_validator_operator">ValidatorAdministrationScripts::set_validator_operator</a></code>
 
 
 ---
@@ -501,7 +501,7 @@ and does not reconfigure the system. Changes from this transaction will not pick
 system until a reconfiguration of the system is triggered. May only be sent by the Diem Root
 account as a write set transaction.
 
-Script documentation: <code>set_validator_operator_with_nonce_admin</code>
+Script documentation: <code><a href="script_documentation.md#0x1_ValidatorAdministrationScripts_set_validator_operator_with_nonce_admin">ValidatorAdministrationScripts::set_validator_operator_with_nonce_admin</a></code>
 
 
 
@@ -522,37 +522,40 @@ balance to its preburn area after which the coins may be burned. This
 transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
-Script documentation: <code>preburn</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_preburn">TreasuryComplianceScripts::preburn</a></code>
 
 
 ---
 
-<a name="@Script_burn_34"></a>
+<a name="@Script_burn_with_amount_34"></a>
 
-#### Script burn
+#### Script burn_with_amount
 
 
-Burns all coins held in the preburn resource at the specified
-preburn address and removes them from the system. The sending account must
-be the Treasury Compliance account.
-The account that holds the preburn resource will normally be a Designated
+Burns the coins held in a preburn resource in the preburn queue at the
+specified preburn address, which are equal to the <code>amount</code> specified in the
+transaction. Finds the first relevant outstanding preburn request with
+matching amount and removes the contained coins from the system. The sending
+account must be the Treasury Compliance account.
+The account that holds the preburn queue resource will normally be a Designated
 Dealer, but there are no enforced requirements that it be one.
 
-Script documentation: <code>burn</code>
+Script documentation: <code>TreasuryComplianceScripts::burn</code>
 
 
 ---
 
-<a name="@Script_cancel_burn_35"></a>
+<a name="@Script_cancel_burn_with_amount_35"></a>
 
-#### Script cancel_burn
+#### Script cancel_burn_with_amount
 
 
-Cancels and returns all coins held in the preburn area under
-<code>preburn_address</code> and returns the funds to the <code>preburn_address</code>'s balance.
+Cancels and returns the coins held in the preburn area under
+<code>preburn_address</code>, which are equal to the <code>amount</code> specified in the transaction. Finds the first preburn
+resource with the matching amount and returns the funds to the <code>preburn_address</code>'s balance.
 Can only be successfully sent by an account with Treasury Compliance role.
 
-Script documentation: <code>cancel_burn</code>
+Script documentation: <code>TreasuryComplianceScripts::cancel_burn</code>
 
 
 ---
@@ -566,7 +569,7 @@ Burns the transaction fees collected in the <code>CoinType</code> currency so th
 Diem association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
-Script documentation: <code>burn_txn_fees</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_txn_fees">TreasuryComplianceScripts::burn_txn_fees</a></code>
 
 
 ---
@@ -580,7 +583,7 @@ Mints a specified number of coins in a currency to a Designated Dealer. The send
 must be the Treasury Compliance account, and coins can only be minted to a Designated Dealer
 account.
 
-Script documentation: <code>tiered_mint</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_tiered_mint">TreasuryComplianceScripts::tiered_mint</a></code>
 
 
 ---
@@ -596,7 +599,7 @@ the Diem Root or Treasury Compliance account. After the successful
 execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
-Script documentation: <code>freeze_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_freeze_account">TreasuryComplianceScripts::freeze_account</a></code>
 
 
 ---
@@ -610,7 +613,7 @@ Unfreezes the account at <code>address</code>. The sending account of this trans
 Treasury Compliance account. After the successful execution of this transaction transactions
 may be sent from the previously frozen account, and coins may be sent and received.
 
-Script documentation: <code>unfreeze_account</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_unfreeze_account">TreasuryComplianceScripts::unfreeze_account</a></code>
 
 
 ---
@@ -624,7 +627,7 @@ Update the dual attestation limit on-chain. Defined in terms of micro-XDX.  The 
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
-Script documentation: <code>update_dual_attestation_limit</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_dual_attestation_limit">TreasuryComplianceScripts::update_dual_attestation_limit</a></code>
 
 
 ---
@@ -639,7 +642,7 @@ to micro-XDX). The transaction can only be sent by the Treasury Compliance accou
 transaction the updated exchange rate will be used for normalization of gas prices, and for
 dual attestation checking.
 
-Script documentation: <code>update_exchange_rate</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_exchange_rate">TreasuryComplianceScripts::update_exchange_rate</a></code>
 
 
 ---
@@ -653,7 +656,7 @@ Script to allow or disallow minting of new coins in a specified currency.  This 
 only be sent by the Treasury Compliance account.  Turning minting off for a currency will have
 no effect on coins already in circulation, and coins may still be removed from the system.
 
-Script documentation: <code>update_minting_ability</code>
+Script documentation: <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_minting_ability">TreasuryComplianceScripts::update_minting_ability</a></code>
 
 
 
@@ -672,7 +675,7 @@ Script documentation: <code>update_minting_ability</code>
 Updates the Diem major version that is stored on-chain and is used by the VM.  This
 transaction can only be sent from the Diem Root account.
 
-Script documentation: <code>update_diem_version</code>
+Script documentation: <code><a href="script_documentation.md#0x1_SystemAdministrationScripts_update_diem_version">SystemAdministrationScripts::update_diem_version</a></code>
 
 
 
@@ -722,7 +725,8 @@ The sender of the transaction must be a Parent VASP account.
 
 Creates a <code>ChildVASP</code> account for the sender <code>parent_vasp</code> at <code>child_address</code> with a balance of
 <code>child_initial_balance</code> in <code>CoinType</code> and an initial authentication key of
-<code>auth_key_prefix | child_address</code>.
+<code>auth_key_prefix | child_address</code>. Authentication key prefixes, and how to construct them from an ed25519 public key is described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 If <code>add_all_currencies</code> is true, the child address will have a zero balance in all available
 currencies in the system.
@@ -752,7 +756,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | Name                    | Type         | Description                                                                                                                                 |
 | ------                  | ------       | -------------                                                                                                                               |
 | <code>CoinType</code>              | Type         | The Move type for the <code>CoinType</code> that the child account should be created with. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>parent_vasp</code>           | <code>&signer</code>    | The signer reference of the sending account. Must be a Parent VASP account.                                                                 |
+| <code>parent_vasp</code>           | <code>signer</code>     | The reference of the sending account. Must be a Parent VASP account.                                                                        |
 | <code>child_address</code>         | <code>address</code>    | Address of the to-be-created Child VASP account.                                                                                            |
 | <code>auth_key_prefix</code>       | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                    |
 | <code>add_all_currencies</code>    | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                  |
@@ -896,19 +900,21 @@ Creates an account with a Validator Operator role at <code>new_account_address</
 <code>auth_key_prefix</code> | <code>new_account_address</code>. It publishes a
 <code><a href="../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource with the specified <code>human_name</code>.
 This script does not assign the validator operator to any validator accounts but only creates the account.
+Authentication key prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_55"></a>
 
 ###### Parameters
 
-| Name                  | Type         | Description                                                                                     |
-| ------                | ------       | -------------                                                                                   |
-| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
-| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
-| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
+| Name                  | Type         | Description                                                                              |
+| ------                | ------       | -------------                                                                            |
+| <code>dr_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.               |
+| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                          |
+| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account. |
+| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
 <a name="@Common_Abort_Conditions_56"></a>
@@ -1030,19 +1036,21 @@ Creates an account with a Validator role at <code>new_account_address</code>, wi
 <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is set to the passed in <code>human_name</code>.
 This script does not add the validator to the validator set or the system,
 but only creates the account.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_60"></a>
 
 ###### Parameters
 
-| Name                  | Type         | Description                                                                                     |
-| ------                | ------       | -------------                                                                                   |
-| <code>dr_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer. |
-| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
-| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                                 |
-| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.        |
-| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
+| Name                  | Type         | Description                                                                              |
+| ------                | ------       | -------------                                                                            |
+| <code>dr_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.     |
+| <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.               |
+| <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Validator account.                                          |
+| <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account. |
+| <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                              |
 
 
 <a name="@Common_Abort_Conditions_61"></a>
@@ -1161,6 +1169,8 @@ Creates an account with the Parent VASP role at <code>address</code> with authen
 <code>add_all_currencies</code> is true, 0 balances for all available currencies in the system will
 also be added. This can only be invoked by an TreasuryCompliance account.
 <code>sliding_nonce</code> is a unique nonce for operation, see <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> for details.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 
 <a name="@Parameters_65"></a>
@@ -1170,7 +1180,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | Name                  | Type         | Description                                                                                                                                                    |
 | ------                | ------       | -------------                                                                                                                                                  |
 | <code>CoinType</code>            | Type         | The Move type for the <code>CoinType</code> currency that the Parent VASP account should be initialized with. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>          | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                                      |
+| <code>tc_account</code>          | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                                |
 | <code>sliding_nonce</code>       | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                                                     |
 | <code>new_account_address</code> | <code>address</code>    | Address of the to-be-created Parent VASP account.                                                                                                              |
 | <code>auth_key_prefix</code>     | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                                       |
@@ -1289,6 +1299,8 @@ Creates an account with the Designated Dealer role at <code>addr</code> with aut
 <code>auth_key_prefix</code> | <code>addr</code> and a 0 balance of type <code>Currency</code>. If <code>add_all_currencies</code> is true,
 0 balances for all available currencies in the system will also be added. This can only be
 invoked by an account with the TreasuryCompliance role.
+Authentication keys, prefixes, and how to construct them from an ed25519 public key are described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
 
 At the time of creation the account is also initialized with default mint tiers of (500_000,
 5000_000, 50_000_000, 500_000_000), and preburn areas for each currency that is added to the
@@ -1302,7 +1314,7 @@ account.
 | Name                 | Type         | Description                                                                                                                                         |
 | ------               | ------       | -------------                                                                                                                                       |
 | <code>Currency</code>           | Type         | The Move type for the <code>Currency</code> that the Designated Dealer should be initialized with. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>         | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+| <code>tc_account</code>         | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 | <code>sliding_nonce</code>      | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                                          |
 | <code>addr</code>               | <code>address</code>    | Address of the to-be-created Designated Dealer account.                                                                                             |
 | <code>auth_key_prefix</code>    | <code>vector&lt;u8&gt;</code> | The authentication key prefix that will be used initially for the newly created account.                                                            |
@@ -1452,10 +1464,10 @@ already have a <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_Bala
 
 ###### Parameters
 
-| Name       | Type      | Description                                                                                                                                         |
-| ------     | ------    | -------------                                                                                                                                       |
-| <code>Currency</code> | Type      | The Move type for the <code>Currency</code> being added to the sending account of the transaction. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>account</code>  | <code>&signer</code> | The signer of the sending account of the transaction.                                                                                               |
+| Name       | Type     | Description                                                                                                                                         |
+| ------     | ------   | -------------                                                                                                                                       |
+| <code>Currency</code> | Type     | The Move type for the <code>Currency</code> being added to the sending account of the transaction. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>account</code>  | <code>signer</code> | The signer of the sending account of the transaction.                                                                                               |
 
 
 <a name="@Common_Abort_Conditions_77"></a>
@@ -1563,9 +1575,9 @@ resource stored under the account at <code>recovery_address</code>.
 
 ###### Parameters
 
-| Name                 | Type      | Description                                                                                                |
-| ------               | ------    | -------------                                                                                              |
-| <code>to_recover_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction.                                           |
+| Name                 | Type      | Description                                                                                               |
+| ------               | ------    | -------------                                                                                             |
+| <code>to_recover_account</code> | <code>signer</code>  | The signer of the sending account of this transaction.                                                    |
 | <code>recovery_address</code>   | <code>address</code> | The account address where the <code>to_recover_account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> will be stored. |
 
 
@@ -1646,16 +1658,17 @@ resource stored under the account at <code>recovery_address</code>.
 
 ###### Summary
 
-Rotates the authentication key of the sending account to the
-newly-specified public key and publishes a new shared authentication key
-under the sender's account. Any account can send this transaction.
+Rotates the authentication key of the sending account to the newly-specified ed25519 public key and
+publishes a new shared authentication key derived from that public key under the sender's account.
+Any account can send this transaction.
 
 
 <a name="@Technical_Description_85"></a>
 
 ###### Technical Description
 
-Rotates the authentication key of the sending account to <code>public_key</code>,
+Rotates the authentication key of the sending account to the
+[authentication key derived from <code>public_key</code>](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
 and publishes a <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource
 containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> for
 <code>account</code> under <code>account</code>.
@@ -1667,7 +1680,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 | Name         | Type         | Description                                                                                        |
 | ------       | ------       | -------------                                                                                      |
-| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction.                                    |
+| <code>account</code>    | <code>signer</code>     | The signer of the sending account of the transaction.                                              |
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | A valid 32-byte Ed25519 public key for <code>account</code>'s authentication key to be rotated to and stored. |
 
 
@@ -1734,8 +1747,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 ###### Summary
 
-Rotates the transaction sender's authentication key to the supplied new authentication key. May
-be sent by any account.
+Rotates the <code>account</code>'s authentication key to the supplied new authentication key. May be sent by any account.
 
 
 <a name="@Technical_Description_90"></a>
@@ -1744,18 +1756,18 @@ be sent by any account.
 
 Rotate the <code>account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
 field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
-corresponds to an ed25519 public key, and <code>account</code> must not have previously
-delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_91"></a>
 
 ###### Parameters
 
-| Name      | Type         | Description                                                 |
-| ------    | ------       | -------------                                               |
-| <code>account</code> | <code>&signer</code>    | Signer reference of the sending account of the transaction. |
-| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.            |
+| Name      | Type         | Description                                       |
+| ------    | ------       | -------------                                     |
+| <code>account</code> | <code>signer</code>     | Signer of the sending account of the transaction. |
+| <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.  |
 
 
 <a name="@Common_Abort_Conditions_92"></a>
@@ -1854,8 +1866,8 @@ Compliance or Diem Root accounts).
 
 Rotates the <code>account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code>
 field to <code>new_key</code>. <code>new_key</code> must be a valid authentication key that
-corresponds to an ed25519 public key, and <code>account</code> must not have previously
-delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+corresponds to an ed25519 public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_96"></a>
@@ -1864,7 +1876,7 @@ delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRo
 
 | Name            | Type         | Description                                                                |
 | ------          | ------       | -------------                                                              |
-| <code>account</code>       | <code>&signer</code>    | Signer reference of the sending account of the transaction.                |
+| <code>account</code>       | <code>signer</code>     | Signer of the sending account of the transaction.                          |
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
 | <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                           |
 
@@ -1971,20 +1983,20 @@ only be sent by the Diem Root account as a write set transaction.
 
 Rotate the <code>account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>authentication_key</code> field to <code>new_key</code>.
 <code>new_key</code> must be a valid authentication key that corresponds to an ed25519
-public key, and <code>account</code> must not have previously delegated its
-<code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+public key as described [here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys),
+and <code>account</code> must not have previously delegated its <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_101"></a>
 
 ###### Parameters
 
-| Name            | Type         | Description                                                                                                 |
-| ------          | ------       | -------------                                                                                               |
-| <code>dr_account</code>    | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-| <code>account</code>       | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.               |
-| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
-| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                            |
+| Name            | Type         | Description                                                                                       |
+| ------          | ------       | -------------                                                                                     |
+| <code>dr_account</code>    | <code>signer</code>     | The signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+| <code>account</code>       | <code>signer</code>     | Signer of account specified in the <code>execute_as</code> field of the write set transaction.               |
+| <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.          |
+| <code>new_key</code>       | <code>vector&lt;u8&gt;</code> | New authentication key to be used for <code>account</code>.                                                  |
 
 
 <a name="@Common_Abort_Conditions_102"></a>
@@ -2098,9 +2110,10 @@ new authentication key. Only used for accounts that are part of a recovery addre
 
 Rotates the authentication key of the <code>to_recover</code> account to <code>new_key</code> using the
 <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in the <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource
-published under <code>recovery_address</code>. This transaction can be sent either by the <code>to_recover</code>
-account, or by the account where the <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published
-that contains <code>to_recover</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
+published under <code>recovery_address</code>. <code>new_key</code> must be a valide authentication key as described
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys).
+This transaction can be sent either by the <code>to_recover</code> account, or by the account where the
+<code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> resource is published that contains <code>to_recover</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code>.
 
 
 <a name="@Parameters_106"></a>
@@ -2109,7 +2122,7 @@ that contains <code>to_recover</code>'s <code><a href="../modules/doc/DiemAccoun
 
 | Name               | Type         | Description                                                                                                                   |
 | ------             | ------       | -------------                                                                                                                 |
-| <code>account</code>          | <code>&signer</code>    | Signer reference of the sending account of the transaction.                                                                   |
+| <code>account</code>          | <code>signer</code>     | Signer of the sending account of the transaction.                                                                             |
 | <code>recovery_address</code> | <code>address</code>    | Address where <code><a href="../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RecoveryAddress">RecoveryAddress::RecoveryAddress</a></code> that holds <code>to_recover</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> is published. |
 | <code>to_recover</code>       | <code>address</code>    | The address of the account whose authentication key will be updated.                                                          |
 | <code>new_key</code>          | <code>vector&lt;u8&gt;</code> | New authentication key to be used for the account at the <code>to_recover</code> address.                                                |
@@ -2233,7 +2246,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 | Name      | Type         | Description                                                               |
 | ------    | ------       | -------------                                                             |
-| <code>account</code> | <code>&signer</code>    | Signer reference of the sending account of the transaction.               |
+| <code>account</code> | <code>signer</code>     | Signer of the sending account of the transaction.                         |
 | <code>new_url</code> | <code>vector&lt;u8&gt;</code> | ASCII-encoded url to be used for off-chain communication with <code>account</code>.  |
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for on-chain dual attestation checking. |
 
@@ -2324,20 +2337,21 @@ any account that has previously published a shared ed25519 public key using
 
 ###### Technical Description
 
-This first rotates the public key stored in <code>account</code>'s
+<code>public_key</code> must be a valid ed25519 public key.  This transaction first rotates the public key stored in <code>account</code>'s
 <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource to <code>public_key</code>, after which it
-rotates the authentication key using the capability stored in <code>account</code>'s
-<code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> to a new value derived from <code>public_key</code>
+rotates the <code>account</code>'s authentication key to the new authentication key derived from <code>public_key</code> as defined
+[here](https://developers.diem.com/docs/core/accounts/#addresses-authentication-keys-and-cryptographic-keys)
+using the <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">DiemAccount::KeyRotationCapability</a></code> stored in <code>account</code>'s <code><a href="../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code>.
 
 
 <a name="@Parameters_117"></a>
 
 ###### Parameters
 
-| Name         | Type         | Description                                                     |
-| ------       | ------       | -------------                                                   |
-| <code>account</code>    | <code>&signer</code>    | The signer reference of the sending account of the transaction. |
-| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                                     |
+| Name         | Type         | Description                                           |
+| ------       | ------       | -------------                                         |
+| <code>account</code>    | <code>signer</code>     | The signer of the sending account of the transaction. |
+| <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key.                           |
 
 
 <a name="@Common_Abort_Conditions_118"></a>
@@ -2402,7 +2416,8 @@ rotates the authentication key using the capability stored in <code>account</cod
 ###### Summary
 
 Initializes the sending account as a recovery address that may be used by
-the VASP that it belongs to. The sending account must be a VASP account.
+other accounts belonging to the same VASP as <code>account</code>.
+The sending account must be a VASP account, and can be either a child or parent VASP account.
 Multiple recovery addresses can exist for a single VASP, but accounts in
 each must be disjoint.
 
@@ -2422,9 +2437,9 @@ may be used as a recovery account for those accounts.
 
 ###### Parameters
 
-| Name      | Type      | Description                                           |
-| ------    | ------    | -------------                                         |
-| <code>account</code> | <code>&signer</code> | The signer of the sending account of the transaction. |
+| Name      | Type     | Description                                           |
+| ------    | ------   | -------------                                         |
+| <code>account</code> | <code>signer</code> | The signer of the sending account of the transaction. |
 
 
 <a name="@Common_Abort_Conditions_123"></a>
@@ -2539,8 +2554,11 @@ currency being transacted.
 
 
 Transfers <code>amount</code> coins of type <code>Currency</code> from <code>payer</code> to <code>payee</code> with (optional) associated
-<code>metadata</code> and an (optional) <code>metadata_signature</code> on the message
-<code>metadata</code> | <code><a href="_address_of">Signer::address_of</a>(payer)</code> | <code>amount</code> | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DualAttestation::DOMAIN_SEPARATOR</a></code>.
+<code>metadata</code> and an (optional) <code>metadata_signature</code> on the message of the form
+<code>metadata</code> | <code><a href="_address_of">Signer::address_of</a>(payer)</code> | <code>amount</code> | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_DOMAIN_SEPARATOR">DualAttestation::DOMAIN_SEPARATOR</a></code>, that
+has been signed by the <code>payee</code>'s private key associated with the <code>compliance_public_key</code> held in
+the <code>payee</code>'s <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code>. Both the <code><a href="_address_of">Signer::address_of</a>(payer)</code> and <code>amount</code> fields
+in the <code>metadata_signature</code> must be BCS-encoded bytes, and <code>|</code> denotes concatenation.
 The <code>metadata</code> and <code>metadata_signature</code> parameters are only required if <code>amount</code> >=
 <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microdiem_limit">DualAttestation::get_cur_microdiem_limit</a></code> XDX and <code>payer</code> and <code>payee</code> are distinct VASPs.
 However, a transaction sender can opt in to dual attestation even when it is not required
@@ -2564,7 +2582,7 @@ Successful execution of this script emits two events:
 | Name                 | Type         | Description                                                                                                                  |
 | ------               | ------       | -------------                                                                                                                |
 | <code>Currency</code>           | Type         | The Move type for the <code>Currency</code> being sent in this transaction. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>payer</code>              | <code>&signer</code>    | The signer reference of the sending account that coins are being transferred from.                                           |
+| <code>payer</code>              | <code>signer</code>     | The signer of the sending account that coins are being transferred from.                                                     |
 | <code>payee</code>              | <code>address</code>    | The address of the account the coins are being transferred to.                                                               |
 | <code>metadata</code>           | <code>vector&lt;u8&gt;</code> | Optional metadata about this payment.                                                                                        |
 | <code>metadata_signature</code> | <code>vector&lt;u8&gt;</code> | Optional signature over <code>metadata</code> and payment information. See                                                              |
@@ -2576,16 +2594,16 @@ Successful execution of this script emits two events:
 
 | Error Category             | Error Reason                                     | Description                                                                                                                         |
 | ----------------           | --------------                                   | -------------                                                                                                                       |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>      | <code>payer</code> doesn't hold a balance in <code>Currency</code>.                                                                                       |
-| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>            | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>.                                                                           |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ECOIN_DEPOSIT_IS_ZERO">DiemAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>            | <code>amount</code> is zero.                                                                                                                   |
-| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_DOES_NOT_EXIST">DiemAccount::EPAYEE_DOES_NOT_EXIST</a></code>            | No account exists at the <code>payee</code> address.                                                                                           |
-| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | An account exists at <code>payee</code>, but it does not accept payments in <code>Currency</code>.                                                        |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYER_DOESNT_HOLD_CURRENCY">DiemAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>       | <code>payer</code> doesn't hold a balance in <code>Currency</code>.                                                                                       |
+| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EINSUFFICIENT_BALANCE">DiemAccount::EINSUFFICIENT_BALANCE</a></code>             | <code>amount</code> is greater than <code>payer</code>'s balance in <code>Currency</code>.                                                                           |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_ECOIN_DEPOSIT_IS_ZERO">DiemAccount::ECOIN_DEPOSIT_IS_ZERO</a></code>             | <code>amount</code> is zero.                                                                                                                   |
+| <code><a href="_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_DOES_NOT_EXIST">DiemAccount::EPAYEE_DOES_NOT_EXIST</a></code>             | No account exists at the <code>payee</code> address.                                                                                           |
+| <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">DiemAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code>  | An account exists at <code>payee</code>, but it does not accept payments in <code>Currency</code>.                                                        |
 | <code><a href="_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../modules/doc/AccountFreezing.md#0x1_AccountFreezing_EACCOUNT_FROZEN">AccountFreezing::EACCOUNT_FROZEN</a></code>               | The <code>payee</code> account is frozen.                                                                                                      |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE">DualAttestation::EMALFORMED_METADATA_SIGNATURE</a></code> | <code>metadata_signature</code> is not 64 bytes.                                                                                               |
 | <code><a href="_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE">DualAttestation::EINVALID_METADATA_SIGNATURE</a></code>   | <code>metadata_signature</code> does not verify on the against the <code>payee'</code>s <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code> <code>compliance_public_key</code> public key. |
-| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EWITHDRAWAL_EXCEEDS_LIMITS">DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS</a></code>       | <code>payer</code> has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
-| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | <code>payee</code> has exceeded its daily deposit limits for XDX.                                                                              |
+| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EWITHDRAWAL_EXCEEDS_LIMITS">DiemAccount::EWITHDRAWAL_EXCEEDS_LIMITS</a></code>        | <code>payer</code> has exceeded its daily withdrawal limits for the backing coins of XDX.                                                      |
+| <code><a href="_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_EDEPOSIT_EXCEEDS_LIMITS">DiemAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>           | <code>payee</code> has exceeded its daily deposit limits for XDX.                                                                              |
 
 
 <a name="@Related_Scripts_131"></a>
@@ -2730,7 +2748,7 @@ or does not have a <code><a href="../modules/doc/ValidatorConfig.md#0x1_Validato
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
-| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                     |
+| <code>dr_account</code>        | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
 | <code>sliding_nonce</code>     | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                         |
 | <code>validator_name</code>    | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator. Must match the human name in the <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> for the validator. |
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be added to the validator set.                                                                    |
@@ -2866,13 +2884,13 @@ only "locally" under the <code>validator_account</code> account address.
 
 ###### Parameters
 
-| Name                          | Type         | Description                                                                                                                  |
-| ------                        | ------       | -------------                                                                                                                |
-| <code>validator_operator_account</code>  | <code>&signer</code>    | Signer reference of the sending account. Must be the registered validator operator for the validator at <code>validator_address</code>. |
-| <code>validator_account</code>           | <code>address</code>    | The address of the validator's <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource being updated.                                    |
-| <code>consensus_pubkey</code>            | <code>vector&lt;u8&gt;</code> | New Ed25519 public key to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                                         |
-| <code>validator_network_addresses</code> | <code>vector&lt;u8&gt;</code> | New set of <code>validator_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                       |
-| <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                        |
+| Name                          | Type         | Description                                                                                                        |
+| ------                        | ------       | -------------                                                                                                      |
+| <code>validator_operator_account</code>  | <code>signer</code>     | Signer of the sending account. Must be the registered validator operator for the validator at <code>validator_address</code>. |
+| <code>validator_account</code>           | <code>address</code>    | The address of the validator's <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource being updated.                          |
+| <code>consensus_pubkey</code>            | <code>vector&lt;u8&gt;</code> | New Ed25519 public key to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                               |
+| <code>validator_network_addresses</code> | <code>vector&lt;u8&gt;</code> | New set of <code>validator_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.             |
+| <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.              |
 
 
 <a name="@Common_Abort_Conditions_141"></a>
@@ -2991,7 +3009,7 @@ is not in the validator set.
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
-| <code>dr_account</code>        | <code>&signer</code>    | The signer reference of the sending account of this transaction. Must be the Diem Root signer.                                    |
+| <code>dr_account</code>        | <code>signer</code>     | The signer of the sending account of this transaction. Must be the Diem Root signer.                                               |
 | <code>sliding_nonce</code>     | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                         |
 | <code>validator_name</code>    | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator. Must match the human name in the <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> for the validator. |
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be removed from the validator set.                                                                |
@@ -3125,13 +3143,13 @@ on-chain with the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_V
 
 ###### Parameters
 
-| Name                          | Type         | Description                                                                                                                  |
-| ------                        | ------       | -------------                                                                                                                |
-| <code>validator_operator_account</code>  | <code>&signer</code>    | Signer reference of the sending account. Must be the registered validator operator for the validator at <code>validator_address</code>. |
-| <code>validator_account</code>           | <code>address</code>    | The address of the validator's <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource being updated.                                    |
-| <code>consensus_pubkey</code>            | <code>vector&lt;u8&gt;</code> | New Ed25519 public key to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                                         |
-| <code>validator_network_addresses</code> | <code>vector&lt;u8&gt;</code> | New set of <code>validator_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                       |
-| <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                        |
+| Name                          | Type         | Description                                                                                                        |
+| ------                        | ------       | -------------                                                                                                      |
+| <code>validator_operator_account</code>  | <code>signer</code>     | Signer of the sending account. Must be the registered validator operator for the validator at <code>validator_address</code>. |
+| <code>validator_account</code>           | <code>address</code>    | The address of the validator's <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource being updated.                          |
+| <code>consensus_pubkey</code>            | <code>vector&lt;u8&gt;</code> | New Ed25519 public key to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                               |
+| <code>validator_network_addresses</code> | <code>vector&lt;u8&gt;</code> | New set of <code>validator_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.             |
+| <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.              |
 
 
 <a name="@Common_Abort_Conditions_151"></a>
@@ -3280,7 +3298,7 @@ resource published under it. The sending <code>account</code> must be a Validato
 
 | Name               | Type         | Description                                                                                  |
 | ------             | ------       | -------------                                                                                |
-| <code>account</code>          | <code>&signer</code>    | The signer reference of the sending account of the transaction.                              |
+| <code>account</code>          | <code>signer</code>     | The signer of the sending account of the transaction.                                        |
 | <code>operator_name</code>    | <code>vector&lt;u8&gt;</code> | Validator operator's human name.                                                             |
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator. |
 
@@ -3405,13 +3423,13 @@ the system is initiated by this script.
 
 ###### Parameters
 
-| Name               | Type         | Description                                                                                                  |
-| ------             | ------       | -------------                                                                                                |
-| <code>dr_account</code>       | <code>&signer</code>    | The signer reference of the sending account of the write set transaction. May only be the Diem Root signer. |
-| <code>account</code>          | <code>&signer</code>    | Signer reference of account specified in the <code>execute_as</code> field of the write set transaction.                |
-| <code>sliding_nonce</code>    | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.                    |
-| <code>operator_name</code>    | <code>vector&lt;u8&gt;</code> | Validator operator's human name.                                                                             |
-| <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.                 |
+| Name               | Type         | Description                                                                                   |
+| ------             | ------       | -------------                                                                                 |
+| <code>dr_account</code>       | <code>signer</code>     | Signer of the sending account of the write set transaction. May only be the Diem Root signer. |
+| <code>account</code>          | <code>signer</code>     | Signer of account specified in the <code>execute_as</code> field of the write set transaction.           |
+| <code>sliding_nonce</code>    | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction for Diem Root.      |
+| <code>operator_name</code>    | <code>vector&lt;u8&gt;</code> | Validator operator's human name.                                                              |
+| <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.  |
 
 
 <a name="@Common_Abort_Conditions_161"></a>
@@ -3595,7 +3613,7 @@ being <code>preburn_address</code>.
 | Name              | Type      | Description                                                                                                                          |
 | ------            | ------    | -------------                                                                                                                        |
 | <code>Token</code>           | Type      | The Move type for the <code>Token</code> currenty that burning is being cancelled for. <code>Token</code> must be an already-registered currency on-chain. |
-| <code>account</code>         | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it.         |
+| <code>account</code>         | <code>signer</code>  | The signer of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it.                   |
 | <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                         |
 | <code>amount</code>          | <code>u64</code>     | The amount to be cancelled.                                                                                                          |
 
@@ -3747,13 +3765,13 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 
 ###### Parameters
 
-| Name              | Type      | Description                                                                                                                  |
-| ------            | ------    | -------------                                                                                                                |
-| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currency being burned. <code>Token</code> must be an already-registered currency on-chain.                |
-| <code>tc_account</code>      | <code>&signer</code> | The signer reference of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it. |
-| <code>sliding_nonce</code>   | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                                   |
-| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                 |
-| <code>amount</code>          | <code>u64</code>     | The amount to be burned.                                                                                                     |
+| Name              | Type      | Description                                                                                                        |
+| ------            | ------    | -------------                                                                                                      |
+| <code>Token</code>           | Type      | The Move type for the <code>Token</code> currency being burned. <code>Token</code> must be an already-registered currency on-chain.      |
+| <code>tc_account</code>      | <code>signer</code>  | The signer of the sending account of this transaction, must have a burn capability for <code>Token</code> published under it. |
+| <code>sliding_nonce</code>   | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                         |
+| <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                       |
+| <code>amount</code>          | <code>u64</code>     | The amount to be burned.                                                                                           |
 
 
 <a name="@Common_Abort_Conditions_174"></a>
@@ -3872,11 +3890,11 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 ###### Parameters
 
-| Name      | Type      | Description                                                                                                                      |
-| ------    | ------    | -------------                                                                                                                    |
-| <code>Token</code>   | Type      | The Move type for the <code>Token</code> currency being moved to the preburn area. <code>Token</code> must be an already-registered currency on-chain. |
-| <code>account</code> | <code>&signer</code> | The signer reference of the sending account.                                                                                     |
-| <code>amount</code>  | <code>u64</code>     | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
+| Name      | Type     | Description                                                                                                                      |
+| ------    | ------   | -------------                                                                                                                    |
+| <code>Token</code>   | Type     | The Move type for the <code>Token</code> currency being moved to the preburn area. <code>Token</code> must be an already-registered currency on-chain. |
+| <code>account</code> | <code>signer</code> | The signer of the sending account.                                                                                               |
+| <code>amount</code>  | <code>u64</code>    | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
 
 
 <a name="@Common_Abort_Conditions_180"></a>
@@ -3996,10 +4014,10 @@ held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::C
 
 ###### Parameters
 
-| Name         | Type      | Description                                                                                                                                         |
-| ------       | ------    | -------------                                                                                                                                       |
-| <code>CoinType</code>   | Type      | The Move type for the <code>CoinType</code> being added to the sending account of the transaction. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
+| Name         | Type     | Description                                                                                                                                         |
+| ------       | ------   | -------------                                                                                                                                       |
+| <code>CoinType</code>   | Type     | The Move type for the <code>CoinType</code> being added to the sending account of the transaction. <code>CoinType</code> must be an already-registered currency on-chain. |
+| <code>tc_account</code> | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                                     |
 
 
 <a name="@Common_Abort_Conditions_186"></a>
@@ -4086,7 +4104,7 @@ resource published under the <code>designated_dealer_address</code>.
 | Name                        | Type      | Description                                                                                                |
 | ------                      | ------    | -------------                                                                                              |
 | <code>CoinType</code>                  | Type      | The Move type for the <code>CoinType</code> being minted. <code>CoinType</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>                | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.  |
+| <code>tc_account</code>                | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account.            |
 | <code>sliding_nonce</code>             | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                 |
 | <code>designated_dealer_address</code> | <code>address</code> | The address of the Designated Dealer account being minted to.                                              |
 | <code>mint_amount</code>               | <code>u64</code>     | The number of coins to be minted.                                                                          |
@@ -4222,11 +4240,11 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 
 ###### Parameters
 
-| Name                | Type      | Description                                                                                               |
-| ------              | ------    | -------------                                                                                             |
-| <code>tc_account</code>        | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>     | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
+| Name                | Type      | Description                                                                                     |
+| ------              | ------    | -------------                                                                                   |
+| <code>tc_account</code>        | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>     | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
 <a name="@Common_Abort_Conditions_198"></a>
@@ -4307,11 +4325,11 @@ the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s add
 
 ###### Parameters
 
-| Name                  | Type      | Description                                                                                               |
-| ------                | ------    | -------------                                                                                             |
-| <code>tc_account</code>          | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
+| Name                  | Type      | Description                                                                                     |
+| ------                | ------    | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code>  | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>to_unfreeze_account</code> | <code>address</code> | The account address to be frozen.                                                               |
 
 
 <a name="@Common_Abort_Conditions_204"></a>
@@ -4379,11 +4397,11 @@ Updates the <code>micro_xdx_limit</code> field of the <code><a href="../modules/
 
 ###### Parameters
 
-| Name                  | Type      | Description                                                                                               |
-| ------                | ------    | -------------                                                                                             |
-| <code>tc_account</code>          | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account. |
-| <code>sliding_nonce</code>       | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                                |
-| <code>new_micro_xdx_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
+| Name                  | Type     | Description                                                                                     |
+| ------                | ------   | -------------                                                                                   |
+| <code>tc_account</code>          | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account. |
+| <code>sliding_nonce</code>       | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
+| <code>new_micro_xdx_limit</code> | <code>u64</code>    | The new dual attestation limit to be used on-chain.                                             |
 
 
 <a name="@Common_Abort_Conditions_209"></a>
@@ -4457,13 +4475,13 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 
 ###### Parameters
 
-| Name                            | Type      | Description                                                                                                                        |
-| ------                          | ------    | -------------                                                                                                                      |
-| <code>Currency</code>                      | Type      | The Move type for the <code>Currency</code> whose exchange rate is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>tc_account</code>                    | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                          |
-| <code>sliding_nonce</code>                 | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for the transaction.                                                          |
-| <code>new_exchange_rate_numerator</code>   | <code>u64</code>     | The numerator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                               |
-| <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
+| Name                            | Type     | Description                                                                                                                        |
+| ------                          | ------   | -------------                                                                                                                      |
+| <code>Currency</code>                      | Type     | The Move type for the <code>Currency</code> whose exchange rate is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>tc_account</code>                    | <code>signer</code> | The signer of the sending account of this transaction. Must be the Treasury Compliance account.                                    |
+| <code>sliding_nonce</code>                 | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for the transaction.                                                          |
+| <code>new_exchange_rate_numerator</code>   | <code>u64</code>    | The numerator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                               |
+| <code>new_exchange_rate_denominator</code> | <code>u64</code>    | The denominator for the new to micro-XDX exchange rate for <code>Currency</code>.                                                             |
 
 
 <a name="@Common_Abort_Conditions_214"></a>
@@ -4586,11 +4604,11 @@ This transaction needs to be sent by the Treasury Compliance account.
 
 ###### Parameters
 
-| Name            | Type      | Description                                                                                                                          |
-| ------          | ------    | -------------                                                                                                                        |
-| <code>Currency</code>      | Type      | The Move type for the <code>Currency</code> whose minting ability is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.                                                             |
-| <code>allow_minting</code> | <code>bool</code>    | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
+| Name            | Type     | Description                                                                                                                          |
+| ------          | ------   | -------------                                                                                                                        |
+| <code>Currency</code>      | Type     | The Move type for the <code>Currency</code> whose minting ability is being updated. <code>Currency</code> must be an already-registered currency on-chain. |
+| <code>account</code>       | <code>signer</code> | Signer of the sending account. Must be the Diem Root account.                                                                        |
+| <code>allow_minting</code> | <code>bool</code>   | Whether to allow minting of new coins in <code>Currency</code>.                                                                                 |
 
 
 <a name="@Common_Abort_Conditions_219"></a>
@@ -4682,11 +4700,11 @@ preserve backwards compatibility with previous major versions of the VM.
 
 ###### Parameters
 
-| Name            | Type      | Description                                                                |
-| ------          | ------    | -------------                                                              |
-| <code>account</code>       | <code>&signer</code> | Signer reference of the sending account. Must be the Diem Root account.   |
-| <code>sliding_nonce</code> | <code>u64</code>     | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
-| <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
+| Name            | Type     | Description                                                                |
+| ------          | ------   | -------------                                                              |
+| <code>account</code>       | <code>signer</code> | Signer of the sending account. Must be the Diem Root account.              |
+| <code>sliding_nonce</code> | <code>u64</code>    | The <code>sliding_nonce</code> (see: <code><a href="../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction. |
+| <code>major</code>         | <code>u64</code>    | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
 <a name="@Common_Abort_Conditions_225"></a>
