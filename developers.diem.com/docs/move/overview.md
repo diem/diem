@@ -167,7 +167,7 @@ Move is a next generation language for secure, sandboxed, and formally verified 
   <SimpleTextCard
     icon="img/intro-to-global-storage.svg"
     iconDark="img/intro-to-global-storage-dark.svg"
-    overlay="The purpose of Move programs is to read from and write to a persistent global storage"
+    overlay="The purpose of Move programs is to read from and write to persistent global storage"
     title="Global Storage Structure"
     to="/docs/move/move-global-storage-structure"
   />
