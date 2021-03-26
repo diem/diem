@@ -64,7 +64,7 @@ executor = { path = "../execution/executor" }
 executor-types = { path = "../execution/executor-types" }
 scratchpad = { path = "../storage/scratchpad" }
 move-vm-types = { path = "../language/move-vm/types" }
-diem-transaction-builder = { path = "../client/transaction-builder" }
+diem-transaction-builder = { path = "../sdk/transaction-builder" }
 diem-node = { path = "../diem-node" }
 
 [features]

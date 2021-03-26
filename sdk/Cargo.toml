@@ -17,7 +17,7 @@ client = ["diem-client"]
 diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
 diem-types = { path = "../types", version = "0.0.1"}
 move-core-types = { path = "../language/move-core/types", version = "0.0.1" }
-diem-transaction-builder = { path = "../client/transaction-builder", version = "0.0.1" }
+diem-transaction-builder = { path = "./transaction-builder", version = "0.0.1" }
 
 # Optional Dependencies
 diem-client = { path = "./client", version = "0.0.1", optional = true }
