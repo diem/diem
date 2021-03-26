@@ -16,13 +16,13 @@ pub enum TargetType {
     TargetLedgerInfo(LedgerInfoWithSignatures),
     /// The response is built relative to the highest available LedgerInfo (or end of epoch).
     /// The value specifies the timeout in ms to wait for an available response.
-    /// This "long poll" approach allows an upstream node to add the request to the list of its
+    /// This "long poll" approach allows a responding node to add the request to the list of its
     /// subscriptions for the duration of a timeout until some new information becomes available.
     ///
     /// `target_li`: While asking for the highest available ledger info, this request also provides
     /// the option to the sync requester to specify a target LI.
-    /// This is to support the scenario where the sync requester is lagging too much behind the upstream node
-    /// in the sync process. If the highest ledger info version keeps advancing on the upstream node,
+    /// This is to support the scenario where the sync requester is lagging too much behind the responding node
+    /// in the sync process. If the highest ledger info version keeps advancing on the responding node,
     /// even though the sync requester continues to receive and sync txns, those txns will never be backed an LI,
     /// since a LI can only be committed once all the transactions up to the LI's version has been received.
     /// (It is important for a transaction to be backed by an LI, because transactions need to be backed by an LI
@@ -33,7 +33,7 @@ pub enum TargetType {
     /// to build the requested transactions w.r.t.. With (1), the sync requester can store the LI later to target-sync
     /// once it is ready for that LI after syncing to an earlier target LI via (2).
     ///
-    /// If `target_li` is not specified, the upstream node will build the responses against its highest LI
+    /// If `target_li` is not specified, the responding node will build the responses against its highest LI
     HighestAvailable {
         target_li: Option<LedgerInfoWithSignatures>,
         timeout_ms: u64,
