@@ -479,7 +479,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 **Access Control:**
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -597,7 +597,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 **Access Control:**
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -723,7 +723,7 @@ Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 This is ensured by DiemAccount::writeset_prologue.
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
@@ -832,7 +832,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 **Access Control:**
 The delegatee at the recovery address has to hold the key rotation capability for
 the address to recover. The address of the transaction signer has to be either
-the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].
+the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <a name="0x1_AccountAdministrationScripts_account_addr$18"></a>
@@ -952,7 +952,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 **Access Control:**
 Only the account having Credential can rotate the info.
-Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
+Credential is granted to either a Parent VASP or a designated dealer [[H17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">DualAttestation::AbortsIfNoCredential</a>{addr: <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)};

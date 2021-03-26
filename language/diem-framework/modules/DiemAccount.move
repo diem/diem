@@ -613,7 +613,7 @@ module DiemAccount {
     /// # Access Control
     spec schema WithdrawOnlyFromCapAddress<Token> {
         cap: WithdrawCapability;
-        /// Can only withdraw from the balances of cap.account_address [[H18]][PERMISSION].
+        /// Can only withdraw from the balances of cap.account_address [[H19]][PERMISSION].
         ensures forall addr: address where old(exists<Balance<Token>>(addr)) && addr != cap.account_address:
             balance<Token>(addr) == old(balance<Token>(addr));
     }
@@ -833,7 +833,7 @@ module DiemAccount {
     /// # Access Control
     spec schema RotateOnlyKeyOfCapAddress {
         cap: KeyRotationCapability;
-        /// Can only rotate the authentication_key of cap.account_address [[H17]][PERMISSION].
+        /// Can only rotate the authentication_key of cap.account_address [[H18]][PERMISSION].
         ensures forall addr: address where addr != cap.account_address && old(exists_at(addr)):
             global<DiemAccount>(addr).authentication_key == old(global<DiemAccount>(addr).authentication_key);
     }
@@ -1972,18 +1972,18 @@ module DiemAccount {
 
     /// ## Key Rotation Capability
     spec module {
-        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H17]][PERMISSION].
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H18]][PERMISSION].
         /// When an account is created, its KeyRotationCapability is granted to the account.
         apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
 
-        /// Only `make_account` creates KeyRotationCap [[H17]][PERMISSION][[I17]][PERMISSION]. `create_*_account` only calls
+        /// Only `make_account` creates KeyRotationCap [[H18]][PERMISSION][[I18]][PERMISSION]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
         apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account,
               restore_key_rotation_capability, initialize;
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
-        /// or the key rotation capability for addr itself [[H17]][PERMISSION].
+        /// or the key rotation capability for addr itself [[H18]][PERMISSION].
         invariant [global] forall addr: address where exists_at(addr):
             delegated_key_rotation_capability(addr) || spec_holds_own_key_rotation_cap(addr);
     }
@@ -2002,18 +2002,18 @@ module DiemAccount {
 
     /// ## Withdraw Capability
     spec module {
-        /// the permission "WithdrawCapability(addr)" is granted to the account at addr [[H18]][PERMISSION].
+        /// the permission "WithdrawCapability(addr)" is granted to the account at addr [[H19]][PERMISSION].
         /// When an account is created, its WithdrawCapability is granted to the account.
         apply EnsuresWithdrawCap{account: new_account} to make_account;
 
-        /// Only `make_account` creates WithdrawCap [[H18]][PERMISSION][[I18]][PERMISSION]. `create_*_account` only calls
+        /// Only `make_account` creates WithdrawCap [[H19]][PERMISSION][[I19]][PERMISSION]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
         apply PreserveWithdrawCapAbsence to * except make_account, create_*_account,
                 restore_withdraw_capability, initialize;
 
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
-        /// or the withdraw capability for addr itself [[H18]][PERMISSION].
+        /// or the withdraw capability for addr itself [[H19]][PERMISSION].
         invariant [global] forall addr: address where exists_at(addr):
             spec_holds_delegated_withdraw_capability(addr) || spec_holds_own_withdraw_cap(addr);
     }
@@ -2033,7 +2033,7 @@ module DiemAccount {
     /// ## Authentication Key
 
     spec module {
-        /// only `Self::rotate_authentication_key` can rotate authentication_key [[H17]][PERMISSION].
+        /// only `Self::rotate_authentication_key` can rotate authentication_key [[H18]][PERMISSION].
         apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
     }
 
@@ -2045,7 +2045,7 @@ module DiemAccount {
     /// ## Balance
 
     spec module {
-        /// only `Self::withdraw_from` and its helper and clients can withdraw [[H18]][PERMISSION].
+        /// only `Self::withdraw_from` and its helper and clients can withdraw [[H19]][PERMISSION].
         apply BalanceNotDecrease<Token> to *<Token>
             except withdraw_from, withdraw_from_balance, staple_xdx, unstaple_xdx,
                 preburn, pay_from, epilogue_common, epilogue, failure_epilogue, success_epilogue;

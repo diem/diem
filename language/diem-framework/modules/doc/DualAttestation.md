@@ -385,7 +385,7 @@ the <code>created</code> account must send a transaction that invokes <code>rota
 <summary>Specification</summary>
 
 
-The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H16]][PERMISSION].
+The permission "RotateDualAttestationInfo" is granted to ParentVASP and DesignatedDealer [[H17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created};
@@ -464,7 +464,7 @@ Rotate the base URL for <code>account</code> to <code>new_url</code>
 </code></pre>
 
 
-Must abort if the account does not have the resource Credential [[H16]][PERMISSION].
+Must abort if the account does not have the resource Credential [[H17]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">RotateBaseUrlAbortsIf</a> {
@@ -501,7 +501,7 @@ Must abort if the account does not have the resource Credential [[H16]][PERMISSI
 </code></pre>
 
 
-The sender can only rotate its own base url [[H16]][PERMISSION].
+The sender can only rotate its own base url [[H17]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
@@ -598,7 +598,7 @@ Rotate the compliance public key for <code>account</code> to <code>new_key</code
 </code></pre>
 
 
-Must abort if the account does not have the resource Credential [[H16]][PERMISSION].
+Must abort if the account does not have the resource Credential [[H17]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">RotateCompliancePublicKeyAbortsIf</a> {
@@ -624,7 +624,7 @@ Must abort if the account does not have the resource Credential [[H16]][PERMISSI
 </code></pre>
 
 
-The sender only rotates its own compliance_public_key [[H16]][PERMISSION].
+The sender only rotates its own compliance_public_key [[H17]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
@@ -1465,14 +1465,14 @@ The absence of Preburn is preserved.
 
 
 
-The permission "RotateDualAttestationInfo(addr)" is not transferred [[J16]][PERMISSION].
+The permission "RotateDualAttestationInfo(addr)" is not transferred [[J17]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialExistence">PreserveCredentialExistence</a> <b>to</b> *;
 </code></pre>
 
 
-The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP or DD [[H16]][PERMISSION].
+The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP or DD [[H17]][PERMISSION].
 "Credential" resources are only published under ParentVASP or DD accounts.
 
 
@@ -1506,7 +1506,7 @@ The DualAttestation limit stays constant.
 </code></pre>
 
 
-Only rotate_compliance_public_key can rotate the compliance public key [[H16]][PERMISSION].
+Only rotate_compliance_public_key can rotate the compliance public key [[H17]][PERMISSION].
 
 
 <a name="0x1_DualAttestation_CompliancePublicKeyRemainsSame"></a>
@@ -1527,7 +1527,7 @@ The compliance public key stays constant.
 </code></pre>
 
 
-Only rotate_base_url can rotate the base url [[H16]][PERMISSION].
+Only rotate_base_url can rotate the base url [[H17]][PERMISSION].
 
 
 <a name="0x1_DualAttestation_BaseURLRemainsSame"></a>

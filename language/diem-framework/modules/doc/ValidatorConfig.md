@@ -301,7 +301,7 @@ Note: Access control.  No one but the owner of the account may change .operator_
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
+Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
 
 
 <a name="0x1_ValidatorConfig_sender$15"></a>
@@ -351,7 +351,7 @@ Must abort if the signer does not have the Validator role [B24].
 </code></pre>
 
 
-The signer can only change its own operator account [[H15]][PERMISSION].
+The signer can only change its own operator account [[H16]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_SetOperatorEnsures">SetOperatorEnsures</a> {
@@ -398,7 +398,7 @@ The old config is preserved.
 <summary>Specification</summary>
 
 
-Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
+Must abort if the signer does not have the Validator role [[H16]][PERMISSION].
 
 
 <a name="0x1_ValidatorConfig_sender$16"></a>
@@ -411,7 +411,7 @@ Must abort if the signer does not have the Validator role [[H15]][PERMISSION].
 </code></pre>
 
 
-The signer can only change its own operator account [[H15]][PERMISSION].
+The signer can only change its own operator account [[H16]][PERMISSION].
 
 
 <pre><code><b>ensures</b> <b>forall</b> addr: address <b>where</b> addr != sender:
@@ -779,7 +779,7 @@ Never aborts
 
 
 Only <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_set_operator">Self::set_operator</a></code> and <code><a href="ValidatorConfig.md#0x1_ValidatorConfig_remove_operator">Self::remove_operator</a></code> may change the operator for a
-particular (validator owner) address [[H15]][PERMISSION].
+particular (validator owner) address [[H16]][PERMISSION].
 These two functions have a &signer argument for the validator account, so we know
 that the change has been authorized by the validator owner via signing the transaction.
 

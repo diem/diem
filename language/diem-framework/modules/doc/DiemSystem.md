@@ -718,7 +718,7 @@ and emits a reconfigurationevent.
 </code></pre>
 
 
-Must abort if the signer does not have the ValidatorOperator role [[H14]][PERMISSION].
+Must abort if the signer does not have the ValidatorOperator role [[H15]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DiemSystem.md#0x1_DiemSystem_UpdateConfigAndReconfigureAbortsIf">UpdateConfigAndReconfigureAbortsIf</a> {
@@ -1298,7 +1298,7 @@ Therefore, we must ensure that the information for other validators in the
 validator set are not changed, which is specified locally for
 <code>update_config_and_reconfigure</code>.
 
-The permission "{Add, Remove} Validator" is granted to DiemRoot [[H13]][PERMISSION].
+The permission "{Add, Remove} Validator" is granted to DiemRoot [[H14]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account} <b>to</b> add_validator, remove_validator;
@@ -1317,8 +1317,8 @@ The permission "{Add, Remove} Validator" is granted to DiemRoot [[H13]][PERMISSI
 
 
 
-Only {add, remove} validator [[H13]][PERMISSION] and update_config_and_reconfigure
-[[H14]][PERMISSION] may change the set of validators in the configuration.
+Only {add, remove} validator [[H14]][PERMISSION] and update_config_and_reconfigure
+[[H15]][PERMISSION] may change the set of validators in the configuration.
 <code>set_diem_system_config</code> is a private function which is only called by other
 functions in the "except" list. <code>initialize_validator_set</code> is only called in
 Genesis.

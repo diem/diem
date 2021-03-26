@@ -182,7 +182,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Diem Root account can add Validators [[H13]][PERMISSION].
+Only the Diem Root account can add Validators [[H14]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
@@ -303,7 +303,7 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 
 **Access Control:**
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H14]][PERMISSION].
+update the validator's configuration [[H15]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -442,7 +442,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Diem Root account can remove Validators [[H13]][PERMISSION].
+Only the Diem Root account can remove Validators [[H14]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
@@ -590,7 +590,7 @@ for which there is no useful recovery except to resubmit the transaction.
 
 **Access Control:**
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H14]][PERMISSION].
+update the validator's configuration [[H15]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="../../../move-stdlib/docs/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -719,7 +719,7 @@ because CapabilityHolder is published during initialization (Genesis).
 
 
 **Access Control:**
-Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
@@ -858,7 +858,7 @@ Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 
 This is ensured by DiemAccount::writeset_prologue.
-Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};

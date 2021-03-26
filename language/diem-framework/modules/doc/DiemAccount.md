@@ -1580,7 +1580,7 @@ Withdraw <code>amount</code> <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;Token&
 </code></pre>
 
 
-Can only withdraw from the balances of cap.account_address [[H18]][PERMISSION].
+Can only withdraw from the balances of cap.account_address [[H19]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawOnlyFromCapAddress">WithdrawOnlyFromCapAddress</a>&lt;Token&gt; {
@@ -2056,7 +2056,7 @@ Rotate the authentication key for the account under cap.account_address
 </code></pre>
 
 
-Can only rotate the authentication_key of cap.account_address [[H17]][PERMISSION].
+Can only rotate the authentication_key of cap.account_address [[H18]][PERMISSION].
 
 
 <pre><code><b>schema</b> <a href="DiemAccount.md#0x1_DiemAccount_RotateOnlyKeyOfCapAddress">RotateOnlyKeyOfCapAddress</a> {
@@ -4502,7 +4502,7 @@ Create a Validator Operator account
 #### Key Rotation Capability
 
 
-the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H17]][PERMISSION].
+the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [[H18]][PERMISSION].
 When an account is created, its KeyRotationCapability is granted to the account.
 
 
@@ -4510,7 +4510,7 @@ When an account is created, its KeyRotationCapability is granted to the account.
 </code></pre>
 
 
-Only <code>make_account</code> creates KeyRotationCap [[H17]][PERMISSION][[I17]][PERMISSION]. <code>create_*_account</code> only calls
+Only <code>make_account</code> creates KeyRotationCap [[H18]][PERMISSION][[I18]][PERMISSION]. <code>create_*_account</code> only calls
 <code>make_account</code>, and does not pack KeyRotationCap by itself.
 <code>restore_key_rotation_capability</code> restores KeyRotationCap, and does not create new one.
 
@@ -4521,7 +4521,7 @@ Only <code>make_account</code> creates KeyRotationCap [[H17]][PERMISSION][[I17]]
 
 
 Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
-or the key rotation capability for addr itself [[H17]][PERMISSION].
+or the key rotation capability for addr itself [[H18]][PERMISSION].
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(addr):
@@ -4564,7 +4564,7 @@ The absence of KeyRotationCap is preserved.
 #### Withdraw Capability
 
 
-the permission "WithdrawCapability(addr)" is granted to the account at addr [[H18]][PERMISSION].
+the permission "WithdrawCapability(addr)" is granted to the account at addr [[H19]][PERMISSION].
 When an account is created, its WithdrawCapability is granted to the account.
 
 
@@ -4572,7 +4572,7 @@ When an account is created, its WithdrawCapability is granted to the account.
 </code></pre>
 
 
-Only <code>make_account</code> creates WithdrawCap [[H18]][PERMISSION][[I18]][PERMISSION]. <code>create_*_account</code> only calls
+Only <code>make_account</code> creates WithdrawCap [[H19]][PERMISSION][[I19]][PERMISSION]. <code>create_*_account</code> only calls
 <code>make_account</code>, and does not pack KeyRotationCap by itself.
 <code>restore_withdraw_capability</code> restores WithdrawCap, and does not create new one.
 
@@ -4583,7 +4583,7 @@ Only <code>make_account</code> creates WithdrawCap [[H18]][PERMISSION][[I18]][PE
 
 
 Every account holds either no withdraw capability (because withdraw cap has been delegated)
-or the withdraw capability for addr itself [[H18]][PERMISSION].
+or the withdraw capability for addr itself [[H19]][PERMISSION].
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> addr: address <b>where</b> <a href="DiemAccount.md#0x1_DiemAccount_exists_at">exists_at</a>(addr):
@@ -4626,7 +4626,7 @@ The absence of WithdrawCap is preserved.
 #### Authentication Key
 
 
-only <code><a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">Self::rotate_authentication_key</a></code> can rotate authentication_key [[H17]][PERMISSION].
+only <code><a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">Self::rotate_authentication_key</a></code> can rotate authentication_key [[H18]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="DiemAccount.md#0x1_DiemAccount_AuthenticationKeyRemainsSame">AuthenticationKeyRemainsSame</a> <b>to</b> *, *&lt;T&gt; <b>except</b> rotate_authentication_key;
@@ -4651,7 +4651,7 @@ only <code><a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">Se
 #### Balance
 
 
-only <code><a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">Self::withdraw_from</a></code> and its helper and clients can withdraw [[H18]][PERMISSION].
+only <code><a href="DiemAccount.md#0x1_DiemAccount_withdraw_from">Self::withdraw_from</a></code> and its helper and clients can withdraw [[H19]][PERMISSION].
 
 
 <pre><code><b>apply</b> <a href="DiemAccount.md#0x1_DiemAccount_BalanceNotDecrease">BalanceNotDecrease</a>&lt;Token&gt; <b>to</b> *&lt;Token&gt;

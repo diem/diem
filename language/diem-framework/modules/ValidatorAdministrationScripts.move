@@ -96,7 +96,7 @@ module ValidatorAdministrationScripts {
         include DiemConfig::ReconfigureEmits;
 
         /// **Access Control:**
-        /// Only the Diem Root account can add Validators [[H13]][PERMISSION].
+        /// Only the Diem Root account can add Validators [[H14]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
     }
 
@@ -171,7 +171,7 @@ module ValidatorAdministrationScripts {
 
         /// **Access Control:**
         /// Only the Validator Operator account which has been registered with the validator can
-        /// update the validator's configuration [[H14]][PERMISSION].
+        /// update the validator's configuration [[H15]][PERMISSION].
         aborts_if Signer::address_of(validator_operator_account) !=
                     ValidatorConfig::get_operator(validator_account)
                         with Errors::INVALID_ARGUMENT;
@@ -263,7 +263,7 @@ module ValidatorAdministrationScripts {
         include DiemConfig::ReconfigureEmits;
 
         /// **Access Control:**
-        /// Only the Diem Root account can remove Validators [[H13]][PERMISSION].
+        /// Only the Diem Root account can remove Validators [[H14]][PERMISSION].
         include Roles::AbortsIfNotDiemRoot{account: dr_account};
     }
 
@@ -373,7 +373,7 @@ module ValidatorAdministrationScripts {
 
         /// **Access Control:**
         /// Only the Validator Operator account which has been registered with the validator can
-        /// update the validator's configuration [[H14]][PERMISSION].
+        /// update the validator's configuration [[H15]][PERMISSION].
         aborts_if Signer::address_of(validator_operator_account) !=
                     ValidatorConfig::get_operator(validator_account)
                         with Errors::INVALID_ARGUMENT;
@@ -451,7 +451,7 @@ module ValidatorAdministrationScripts {
             Errors::REQUIRES_ROLE;
 
         /// **Access Control:**
-        /// Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+        /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
         include Roles::AbortsIfNotValidator{validator_addr: account_addr};
     }
 
@@ -538,7 +538,7 @@ module ValidatorAdministrationScripts {
         /// **Access Control:**
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
         requires Roles::has_diem_root_role(dr_account); /// This is ensured by DiemAccount::writeset_prologue.
-        /// Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+        /// Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
         include Roles::AbortsIfNotValidator{validator_addr: account_addr};
     }
 }

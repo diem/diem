@@ -226,7 +226,7 @@ module AccountAdministrationScripts {
 
         /// **Access Control:**
         /// The account can rotate its own authentication key unless
-        /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+        /// it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
         include DiemAccount::AbortsIfDelegatedKeyRotationCapability;
     }
 
@@ -290,7 +290,7 @@ module AccountAdministrationScripts {
 
         /// **Access Control:**
         /// The account can rotate its own authentication key unless
-        /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+        /// it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
         include DiemAccount::AbortsIfDelegatedKeyRotationCapability;
     }
 
@@ -357,7 +357,7 @@ module AccountAdministrationScripts {
         /// Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
         requires Roles::has_diem_root_role(dr_account); /// This is ensured by DiemAccount::writeset_prologue.
         /// The account can rotate its own authentication key unless
-        /// it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+        /// it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
         include DiemAccount::AbortsIfDelegatedKeyRotationCapability{account: account};
     }
 
@@ -419,7 +419,7 @@ module AccountAdministrationScripts {
         /// **Access Control:**
         /// The delegatee at the recovery address has to hold the key rotation capability for
         /// the address to recover. The address of the transaction signer has to be either
-        /// the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].
+        /// the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
         let account_addr = Signer::spec_address_of(account);
         aborts_if !RecoveryAddress::spec_holds_key_rotation_cap_for(recovery_address, to_recover) with Errors::INVALID_ARGUMENT;
         aborts_if !(account_addr == recovery_address || account_addr == to_recover) with Errors::INVALID_ARGUMENT;
@@ -486,7 +486,7 @@ module AccountAdministrationScripts {
 
         /// **Access Control:**
         /// Only the account having Credential can rotate the info.
-        /// Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
+        /// Credential is granted to either a Parent VASP or a designated dealer [[H17]][PERMISSION].
         include DualAttestation::AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
     }
 

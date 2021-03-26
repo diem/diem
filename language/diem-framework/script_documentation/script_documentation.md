@@ -1836,7 +1836,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 **Access Control:**
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -1954,7 +1954,7 @@ This rotates the authentication key of <code>account</code> to <code>new_key</co
 
 **Access Control:**
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>;
@@ -2080,7 +2080,7 @@ Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 This is ensured by DiemAccount::writeset_prologue.
 The account can rotate its own authentication key unless
-it has delegrated the capability [[H17]][PERMISSION][[J17]][PERMISSION].
+it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_AbortsIfDelegatedKeyRotationCapability">DiemAccount::AbortsIfDelegatedKeyRotationCapability</a>{account: account};
@@ -2189,7 +2189,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 **Access Control:**
 The delegatee at the recovery address has to hold the key rotation capability for
 the address to recover. The address of the transaction signer has to be either
-the delegatee's address or the address to recover [[H17]][PERMISSION][[J17]][PERMISSION].
+the delegatee's address or the address to recover [[H18]][PERMISSION][[J18]][PERMISSION].
 
 
 <a name="0x1_AccountAdministrationScripts_account_addr$18"></a>
@@ -2309,7 +2309,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 **Access Control:**
 Only the account having Credential can rotate the info.
-Credential is granted to either a Parent VASP or a designated dealer [[H16]][PERMISSION].
+Credential is granted to either a Parent VASP or a designated dealer [[H17]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_AbortsIfNoCredential">DualAttestation::AbortsIfNoCredential</a>{addr: <a href="_spec_address_of">Signer::spec_address_of</a>(account)};
@@ -2845,7 +2845,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Diem Root account can add Validators [[H13]][PERMISSION].
+Only the Diem Root account can add Validators [[H14]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
@@ -2966,7 +2966,7 @@ call this, but there is an aborts_if in SetConfigAbortsIf that tests that direct
 
 **Access Control:**
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H14]][PERMISSION].
+update the validator's configuration [[H15]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -3105,7 +3105,7 @@ in practice because it aborts with NOT_PUBLISHED or REQUIRES_ADDRESS, first.
 
 
 **Access Control:**
-Only the Diem Root account can remove Validators [[H13]][PERMISSION].
+Only the Diem Root account can remove Validators [[H14]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/Roles.md#0x1_Roles_AbortsIfNotDiemRoot">Roles::AbortsIfNotDiemRoot</a>{account: dr_account};
@@ -3253,7 +3253,7 @@ for which there is no useful recovery except to resubmit the transaction.
 
 **Access Control:**
 Only the Validator Operator account which has been registered with the validator can
-update the validator's configuration [[H14]][PERMISSION].
+update the validator's configuration [[H15]][PERMISSION].
 
 
 <pre><code><b>aborts_if</b> <a href="_address_of">Signer::address_of</a>(validator_operator_account) !=
@@ -3382,7 +3382,7 @@ because CapabilityHolder is published during initialization (Genesis).
 
 
 **Access Control:**
-Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
@@ -3521,7 +3521,7 @@ Only the Diem Root account can process the admin scripts [[H9]][PERMISSION].
 
 
 This is ensured by DiemAccount::writeset_prologue.
-Only a Validator account can set its Validator Operator [[H15]][PERMISSION].
+Only a Validator account can set its Validator Operator [[H16]][PERMISSION].
 
 
 <pre><code><b>include</b> <a href="../modules/doc/Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>{validator_addr: account_addr};
