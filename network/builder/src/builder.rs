@@ -238,11 +238,17 @@ impl NetworkBuilder {
                 .seed_addrs
                 .iter()
                 .map(|(peer_id, addrs)| {
-                    (peer_id, Peer::from_addrs(PeerRole::Upstream, addrs.clone()))
+                    (
+                        peer_id,
+                        Peer::from_addrs(PeerRole::ValidatorFullNode, addrs.clone()),
+                    )
                 })
                 .for_each(|(peer_id, peer)| {
-                    let seed = seeds.entry(*peer_id).or_default();
-                    seed.extend(peer).unwrap();
+                    seeds
+                        .entry(*peer_id)
+                        // Sad clone due to Rust not realizing these are two distinct paths
+                        .and_modify(|seed| seed.extend(peer.clone()).unwrap())
+                        .or_insert(peer);
                 });
 
             network_builder.add_connectivity_manager(
