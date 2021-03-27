@@ -545,6 +545,16 @@ module AccountLimits {
                 exists<LimitsDefinition<coin_type>>(global<Window<coin_type>>(window_addr).limit_address);
     }
 
+    /// # Access Control
+
+    spec module {
+        /// Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
+        invariant [global]
+            forall addr: address, coin_type: type where exists<Window<coin_type>>(addr):
+                exists<Roles::RoleId>(addr) &&
+                (global<Roles::RoleId>(addr).role_id == Roles::PARENT_VASP_ROLE_ID ||
+                    global<Roles::RoleId>(addr).role_id == Roles::CHILD_VASP_ROLE_ID);
+    }
 
 }
 }

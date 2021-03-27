@@ -27,6 +27,7 @@ a given time period.
 -  [Function `has_window_published`](#0x1_AccountLimits_has_window_published)
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
 -  [Module Specification](#@Module_Specification_1)
+    -  [Access Control](#@Access_Control_2)
 
 
 <pre><code><b>use</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp">0x1::DiemTimestamp</a>;
@@ -1320,6 +1321,23 @@ Invariant that <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinitio
 <pre><code><b>invariant</b> [<b>global</b>]
    <b>forall</b> window_addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr):
         <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;coin_type&gt;&gt;(<b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(window_addr).limit_address);
+</code></pre>
+
+
+
+<a name="@Access_Control_2"></a>
+
+### Access Control
+
+
+Only ParentVASP and ChildVASP can have the account limits [[E1]][ROLE][[E2]][ROLE][[E3]][ROLE][[E4]][ROLE][[E5]][ROLE][[E6]][ROLE][[E7]][ROLE].
+
+
+<pre><code><b>invariant</b> [<b>global</b>]
+    <b>forall</b> addr: address, coin_type: type <b>where</b> <b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;coin_type&gt;&gt;(addr):
+        <b>exists</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr) &&
+        (<b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr).role_id == <a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a> ||
+            <b>global</b>&lt;<a href="Roles.md#0x1_Roles_RoleId">Roles::RoleId</a>&gt;(addr).role_id == <a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">Roles::CHILD_VASP_ROLE_ID</a>);
 </code></pre>
 
 
