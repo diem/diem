@@ -36,6 +36,23 @@ error: function does not abort under this condition
 
 error: unknown assertion failed
 
+     ┌── tests/sources/functional/loops.move:200:10 ───
+     │
+ 200 │         };
+     │          ^
+     │
+     =     at tests/sources/functional/loops.move:183: loop_with_two_back_edges_incorrect
+     =         x = <redacted>
+     =         y = <redacted>
+     =     at tests/sources/functional/loops.move:185: loop_with_two_back_edges_incorrect
+     =     at tests/sources/functional/loops.move:188: loop_with_two_back_edges_incorrect
+     =     at tests/sources/functional/loops.move:189: loop_with_two_back_edges_incorrect
+     =     at tests/sources/functional/loops.move:191: loop_with_two_back_edges_incorrect
+     =         x = <redacted>
+     =     at tests/sources/functional/loops.move:197: loop_with_two_back_edges_incorrect
+
+error: unknown assertion failed
+
      ┌── tests/sources/functional/loops.move:144:17 ───
      │
  144 │ ╭                 spec {

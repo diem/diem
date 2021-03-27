@@ -159,4 +159,47 @@ module VerifyLoops {
     spec fun nested_loop_inner_invariant_incorrect {
         aborts_if false;
     }
+
+    public fun loop_with_two_back_edges_correct(x: u64, y: u64) {
+        loop {
+            if (x > y) {
+                y = y + 1;
+                continue
+            };
+            if (y > x) {
+                x = x + 1;
+                continue
+            };
+            break
+        };
+        spec {
+            assert x == y;
+        };
+    }
+    spec fun loop_with_two_back_edges_correct {
+        aborts_if false;
+    }
+
+    public fun loop_with_two_back_edges_incorrect(x: u64, y: u64) {
+        spec {
+            assume x != y;
+        };
+        loop {
+            spec {
+                assert x != y;
+            };
+            if (x > y) {
+                y = y + 1;
+                continue
+            };
+            if (y > x) {
+                x = x + 1;
+                continue
+            };
+            break
+        };
+    }
+    spec fun loop_with_two_back_edges_incorrect {
+        aborts_if false;
+    }
 }
