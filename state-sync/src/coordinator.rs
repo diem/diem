@@ -32,7 +32,6 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
-use netcore::transport::ConnectionOrigin;
 use network::{protocols::network::Event, transport::ConnectionMetadata};
 use std::{
     cmp,
@@ -198,7 +197,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                             }
                         }
                         Event::LostPeer(metadata) => {
-                            if let Err(e) = self.process_lost_peer(network_id, metadata.remote_peer_id, metadata.origin) {
+                            if let Err(e) = self.process_lost_peer(network_id, metadata.remote_peer_id) {
                                 error!(LogSchema::new(LogEntry::LostPeer).error(&e));
                             }
                         }
@@ -238,10 +237,9 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         &mut self,
         network_id: NodeNetworkId,
         peer_id: PeerId,
-        origin: ConnectionOrigin,
     ) -> Result<(), Error> {
         let peer = PeerNetworkId(network_id, peer_id);
-        self.request_manager.disable_peer(&peer, origin)
+        self.request_manager.disable_peer(&peer)
     }
 
     pub(crate) async fn process_chunk_message(
@@ -1974,7 +1972,7 @@ mod tests {
 
         // Verify no error is returned when removing the node
         validator_coordinator
-            .process_lost_peer(node_network_id, peer_id, ConnectionOrigin::Outbound)
+            .process_lost_peer(node_network_id, peer_id)
             .unwrap();
     }
 
