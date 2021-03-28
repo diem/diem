@@ -28,7 +28,8 @@ use vm::file_format::CodeOffset;
 #[derive(Debug, Clone)]
 pub struct FatLoop {
     pub invariants: BTreeMap<CodeOffset, (AttrId, ast::Exp)>,
-    pub targets: BTreeSet<TempIndex>,
+    pub val_targets: BTreeSet<TempIndex>,
+    pub mut_targets: BTreeMap<TempIndex, bool>,
     pub back_edges: BTreeSet<CodeOffset>,
 }
 
@@ -115,7 +116,13 @@ impl LoopAnalysisProcessor {
                         }
 
                         // havoc all loop targets
-                        for idx in &loop_info.targets {
+                        let all_targets: BTreeSet<_> = loop_info
+                            .val_targets
+                            .iter()
+                            .chain(loop_info.mut_targets.keys())
+                            .copied()
+                            .collect();
+                        for idx in &all_targets {
                             builder.emit_with(|attr_id| {
                                 Bytecode::Call(attr_id, vec![], Operation::Havoc, vec![*idx], None)
                             });
@@ -125,7 +132,7 @@ impl LoopAnalysisProcessor {
                         let exp =
                             builder.mk_not(builder.mk_bool_call(ast::Operation::AbortFlag, vec![]));
                         builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assume, exp));
-                        for idx in &loop_info.targets {
+                        for idx in &all_targets {
                             let exp = builder.mk_bool_call(
                                 ast::Operation::WellFormed,
                                 vec![builder.mk_temporary(*idx)],
@@ -273,22 +280,32 @@ impl LoopAnalysisProcessor {
             }
 
             // collect fat loop targets
+            let mut val_targets = BTreeSet::new();
+            let mut mut_targets = BTreeMap::new();
             let fat_loop_body: BTreeSet<_> = sub_loops
                 .iter()
                 .map(|l| l.loop_body.iter())
                 .flatten()
                 .copied()
                 .collect();
-            let targets = fat_loop_body
-                .iter()
-                .map(|block_id| {
-                    cfg.instr_indexes(*block_id)
-                        .expect("A loop body should never contain a dummy block")
-                })
-                .flatten()
-                .map(|code_offset| Self::targets(&code[code_offset as usize]))
-                .flatten()
-                .collect();
+            for block_id in fat_loop_body {
+                for code_offset in cfg
+                    .instr_indexes(block_id)
+                    .expect("A loop body should never contain a dummy block")
+                {
+                    let (bc_val_targets, bc_mut_targets) =
+                        Self::targets(&func_target, &code[code_offset as usize]);
+                    val_targets.extend(bc_val_targets);
+                    for (idx, is_full_havoc) in bc_mut_targets {
+                        mut_targets
+                            .entry(idx)
+                            .and_modify(|v| {
+                                *v = *v || is_full_havoc;
+                            })
+                            .or_insert(is_full_havoc);
+                    }
+                }
+            }
 
             // collect back edge locations
             let back_edges = sub_loops
@@ -315,7 +332,8 @@ impl LoopAnalysisProcessor {
                 label,
                 FatLoop {
                     invariants,
-                    targets,
+                    val_targets,
+                    mut_targets,
                     back_edges,
                 },
             );
@@ -324,15 +342,44 @@ impl LoopAnalysisProcessor {
         LoopAnnotation { fat_loops }
     }
 
-    fn targets(bytecode: &Bytecode) -> Vec<TempIndex> {
+    fn targets(
+        func_target: &FunctionTarget<'_>,
+        bytecode: &Bytecode,
+    ) -> (Vec<TempIndex>, Vec<(TempIndex, bool)>) {
         use BorrowNode::*;
         match bytecode {
-            Bytecode::Assign(_, dest, _, _) => vec![*dest],
-            Bytecode::Load(_, dest, _) => vec![*dest],
-            Bytecode::Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), ..) => vec![*dest],
-            Bytecode::Call(_, _, Operation::WriteBack(Reference(dest), ..), ..) => vec![*dest],
-            Bytecode::Call(_, dests, ..) => dests.clone(),
-            _ => vec![],
+            Bytecode::Assign(_, dest, _, _) => {
+                if func_target.get_local_type(*dest).is_mutable_reference() {
+                    (vec![], vec![(*dest, true)])
+                } else {
+                    (vec![*dest], vec![])
+                }
+            }
+            Bytecode::Load(_, dest, _) => (vec![*dest], vec![]),
+            Bytecode::Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), ..) => {
+                (vec![*dest], vec![])
+            }
+            Bytecode::Call(_, _, Operation::WriteBack(Reference(dest), ..), ..) => {
+                // write-backs only distorts the value
+                (vec![], vec![(*dest, false)])
+            }
+            Bytecode::Call(_, _, Operation::WriteRef, srcs, ..) => {
+                // write-ref only distorts the value
+                (vec![], vec![(*srcs.get(0).unwrap(), false)])
+            }
+            Bytecode::Call(_, dests, ..) => {
+                let mut val_targets = vec![];
+                let mut mut_targets = vec![];
+                for dest in dests {
+                    if func_target.get_local_type(*dest).is_mutable_reference() {
+                        mut_targets.push((*dest, true));
+                    } else {
+                        val_targets.push(*dest);
+                    }
+                }
+                (val_targets, mut_targets)
+            }
+            _ => (vec![], vec![]),
         }
     }
 }
