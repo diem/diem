@@ -530,7 +530,7 @@ impl<'a> Instrumenter<'a> {
                 .collect_vec();
             for src in &mut_srcs {
                 self.builder
-                    .emit_with(|id| Call(id, vec![], Operation::Havoc, vec![*src], None));
+                    .emit_with(|id| Call(id, vec![], Operation::HavocRef(false), vec![*src], None));
             }
 
             // Emit placeholders for assuming well-formedness of return values and mutable ref
@@ -668,7 +668,7 @@ impl<'a> Instrumenter<'a> {
         } else {
             // Introduce a havoced temporary to hold an arbitrary value for the aborts
             // condition.
-            self.builder.emit_let_havoc(BOOL_TYPE.clone()).0
+            self.builder.emit_let_havoc_val(BOOL_TYPE.clone()).0
         };
         let aborts_code_cond = if spec.has_aborts_code_specs() {
             let actual_code = self.builder.mk_temporary(self.abort_local);

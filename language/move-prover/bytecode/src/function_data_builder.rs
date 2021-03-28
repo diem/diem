@@ -448,10 +448,10 @@ impl<'env> FunctionDataBuilder<'env> {
     }
 
     /// Emits a new temporary with a havoced value of given type.
-    pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
+    pub fn emit_let_havoc_val(&mut self, ty: Type) -> (TempIndex, Exp) {
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
-        self.emit_with(|id| Bytecode::Call(id, vec![], Operation::Havoc, vec![temp], None));
+        self.emit_with(|id| Bytecode::Call(id, vec![], Operation::HavocVal, vec![temp], None));
         (temp, temp_exp)
     }
 }

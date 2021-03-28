@@ -981,19 +981,32 @@ impl<'env> ModuleTranslator<'env> {
                             type_args,
                         );
                     }
-                    Havoc => {
+                    HavocVal => {
                         let temp_str = str_local(srcs[0]);
+                        emitln!(self.writer, "havoc {};", temp_str);
+                        // Insert a WellFormed check
                         let ty = fun_target.get_local_type(srcs[0]);
-                        if ty.is_mutable_reference() {
-                            emitln!(
-                                self.writer,
-                                "call {} := $HavocMutation({});",
-                                temp_str,
-                                temp_str
-                            );
-                        } else {
-                            emitln!(self.writer, "havoc {};", temp_str);
+                        let check = boogie_well_formed_check(self.module_env.env, &temp_str, ty);
+                        if !check.is_empty() {
+                            emitln!(self.writer, &check);
                         }
+                    }
+                    HavocRef(havoc_all) => {
+                        let havoc_procedure = if *havoc_all {
+                            "HavocMutationAll"
+                        } else {
+                            "HavocMutation"
+                        };
+                        let temp_str = str_local(srcs[0]);
+                        emitln!(
+                            self.writer,
+                            "call {} := ${}({});",
+                            temp_str,
+                            havoc_procedure,
+                            temp_str
+                        );
+                        // Insert a WellFormed check
+                        let ty = fun_target.get_local_type(srcs[0]);
                         let check = boogie_well_formed_check(self.module_env.env, &temp_str, ty);
                         if !check.is_empty() {
                             emitln!(self.writer, &check);

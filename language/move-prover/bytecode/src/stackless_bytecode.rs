@@ -111,7 +111,8 @@ pub enum Operation {
     ReadRef,
     WriteRef,
     FreezeRef,
-    Havoc,
+    HavocVal,
+    HavocRef(bool),
     Stop,
 
     // Memory model
@@ -178,7 +179,8 @@ impl Operation {
             Operation::ReadRef => false,
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
-            Operation::Havoc => false,
+            Operation::HavocVal => false,
+            Operation::HavocRef(_) => false,
             Operation::Stop => false,
             Operation::WriteBack(_, _) => false,
             Operation::Splice(_) => false,
@@ -850,8 +852,11 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                     .map(|(idx, local)| format!("{} -> $t{}", idx, *local))
                     .join(", ")
             )?,
-            Havoc => {
+            HavocVal => {
                 write!(f, "havoc")?;
+            }
+            HavocRef(all) => {
+                write!(f, "havoc_ref[{}]", all)?;
             }
             Stop => {
                 write!(f, "stop")?;

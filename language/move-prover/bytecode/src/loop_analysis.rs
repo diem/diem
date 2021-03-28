@@ -116,31 +116,33 @@ impl LoopAnalysisProcessor {
                         }
 
                         // havoc all loop targets
-                        let all_targets: BTreeSet<_> = loop_info
-                            .val_targets
-                            .iter()
-                            .chain(loop_info.mut_targets.keys())
-                            .copied()
-                            .collect();
-                        for idx in &all_targets {
+                        for idx in &loop_info.val_targets {
                             builder.emit_with(|attr_id| {
-                                Bytecode::Call(attr_id, vec![], Operation::Havoc, vec![*idx], None)
+                                Bytecode::Call(
+                                    attr_id,
+                                    vec![],
+                                    Operation::HavocVal,
+                                    vec![*idx],
+                                    None,
+                                )
+                            });
+                        }
+                        for (idx, havoc_all) in &loop_info.mut_targets {
+                            builder.emit_with(|attr_id| {
+                                Bytecode::Call(
+                                    attr_id,
+                                    vec![],
+                                    Operation::HavocRef(*havoc_all),
+                                    vec![*idx],
+                                    None,
+                                )
                             });
                         }
 
-                        // add additional assumptions
+                        // add an additional assumption that the loop did not abort
                         let exp =
                             builder.mk_not(builder.mk_bool_call(ast::Operation::AbortFlag, vec![]));
                         builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assume, exp));
-                        for idx in &all_targets {
-                            let exp = builder.mk_bool_call(
-                                ast::Operation::WellFormed,
-                                vec![builder.mk_temporary(*idx)],
-                            );
-                            builder.emit_with(|attr_id| {
-                                Bytecode::Prop(attr_id, PropKind::Assume, exp)
-                            });
-                        }
 
                         // re-assume loop invariants
                         for (attr_id, exp) in loop_info.invariants.values() {
