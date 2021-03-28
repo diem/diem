@@ -17,10 +17,16 @@ use move_model::{
     ty::{Type, BOOL_TYPE, NUM_TYPE},
 };
 
+#[derive(Default)]
+pub struct FunctionDataBuilderOption {
+    pub no_fallthrough_jump_removal: bool,
+}
+
 /// A builder for `FunctionData`.
 pub struct FunctionDataBuilder<'env> {
     pub fun_env: &'env FunctionEnv<'env>,
     pub data: FunctionData,
+    pub option: FunctionDataBuilderOption,
     next_free_attr_index: usize,
     next_free_label_index: usize,
     current_loc: Loc,
@@ -31,19 +37,29 @@ pub struct FunctionDataBuilder<'env> {
 impl<'env> FunctionDataBuilder<'env> {}
 
 impl<'env> FunctionDataBuilder<'env> {
-    /// Creates a new builder.
-    pub fn new(fun_env: &'env FunctionEnv<'env>, data: FunctionData) -> Self {
+    /// Creates a new builder with customized option.
+    pub fn new_with_option(
+        fun_env: &'env FunctionEnv<'env>,
+        data: FunctionData,
+        option: FunctionDataBuilderOption,
+    ) -> Self {
         let next_free_attr_index = data.next_free_attr_index();
         let next_free_label_index = data.next_free_label_index();
         FunctionDataBuilder {
             fun_env,
             data,
+            option,
             next_free_attr_index,
             next_free_label_index,
             current_loc: fun_env.get_loc(),
             next_vc_info: None,
             next_debug_comment: None,
         }
+    }
+
+    /// Creates a new builder with options set to default values
+    pub fn new(fun_env: &'env FunctionEnv<'env>, data: FunctionData) -> Self {
+        Self::new_with_option(fun_env, data, FunctionDataBuilderOption::default())
     }
 
     /// Gets the global env associated with this builder.
@@ -369,11 +385,14 @@ impl<'env> FunctionDataBuilder<'env> {
 
     /// Emits a bytecode.
     pub fn emit(&mut self, bc: Bytecode) {
-        // Perform some minimal peephole optimization
         use Bytecode::*;
+        let no_fallthrough_jump_removal = self.option.no_fallthrough_jump_removal;
+        // Perform some minimal peephole optimization
         match (self.data.code.last(), &bc) {
             // jump L; L: ..
-            (Some(Jump(_, label1)), Label(_, label2)) if label1 == label2 => {
+            (Some(Jump(_, label1)), Label(_, label2))
+                if !no_fallthrough_jump_removal && label1 == label2 =>
+            {
                 *self.data.code.last_mut().unwrap() = bc;
             }
             _ => {

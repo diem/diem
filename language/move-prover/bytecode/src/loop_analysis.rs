@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_data_builder::FunctionDataBuilder,
+    function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOption},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::Graph,
@@ -78,7 +78,13 @@ impl LoopAnalysisProcessor {
     ) -> FunctionData {
         let back_edge_locs = loop_annotation.back_edges_locations();
         let invariant_locs = loop_annotation.invariants_locations();
-        let mut builder = FunctionDataBuilder::new(func_env, data);
+        let mut builder = FunctionDataBuilder::new_with_option(
+            func_env,
+            data,
+            FunctionDataBuilderOption {
+                no_fallthrough_jump_removal: true,
+            },
+        );
         let mut goto_fixes = vec![];
         let code = std::mem::take(&mut builder.data.code);
         for (offset, bytecode) in code.into_iter().enumerate() {
