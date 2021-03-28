@@ -16,25 +16,39 @@ use move_model::{
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-#[derive(Debug, Default, Clone)]
-pub struct LoopInfo {
+/// A fat-loop captures the information of one or more natural loops that share the same loop
+/// header. This shared header is called the header of the fat-loop.
+///
+/// Conceptually, every back edge defines a unique natural loop and different back edges may points
+/// to the same loop header (e.g., when there are two "continue" statements in the loop body).
+///
+/// However, since these natural loops share the same loop header, they share the same loop
+/// invariants too and the fat-loop targets (i.e., variables that may be changed in any sub-loop)
+/// is the union of loop targets per each natural loop that share the header.
+#[derive(Debug, Clone)]
+pub struct FatLoop {
     pub invariants: BTreeMap<CodeOffset, (AttrId, ast::Exp)>,
     pub targets: BTreeSet<TempIndex>,
-    pub back_edge_location: CodeOffset,
+    pub back_edges: BTreeSet<CodeOffset>,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct LoopAnnotation {
-    pub loops: BTreeMap<Label, LoopInfo>,
+    pub fat_loops: BTreeMap<Label, FatLoop>,
 }
 
 impl LoopAnnotation {
     fn back_edges_locations(&self) -> BTreeSet<CodeOffset> {
-        self.loops.values().map(|l| l.back_edge_location).collect()
+        self.fat_loops
+            .values()
+            .map(|l| l.back_edges.iter())
+            .flatten()
+            .copied()
+            .collect()
     }
 
     fn invariants_locations(&self) -> BTreeSet<CodeOffset> {
-        self.loops
+        self.fat_loops
             .values()
             .map(|l| l.invariants.keys())
             .flatten()
@@ -92,7 +106,7 @@ impl LoopAnalysisProcessor {
                 Bytecode::Label(attr_id, label) => {
                     builder.emit(bytecode);
                     builder.set_loc_from_attr(attr_id);
-                    if let Some(loop_info) = loop_annotation.loops.get(&label) {
+                    if let Some(loop_info) = loop_annotation.fat_loops.get(&label) {
                         // assert loop invariants -> this is the base case
                         for (_, exp) in loop_info.invariants.values() {
                             builder.emit_with(|attr_id| {
@@ -143,14 +157,14 @@ impl LoopAnalysisProcessor {
             }
         }
 
-        // create one invariant-checking block for each loop
+        // create one invariant-checking block for each fat loop
         let invariant_checker_labels: BTreeMap<_, _> = loop_annotation
-            .loops
+            .fat_loops
             .keys()
             .map(|label| (*label, builder.new_label()))
             .collect();
 
-        for (label, loop_info) in &loop_annotation.loops {
+        for (label, loop_info) in &loop_annotation.fat_loops {
             let checker_label = invariant_checker_labels.get(label).unwrap();
             builder.set_next_debug_comment(format!(
                 "Loop invariant checking block for the loop started with header: L{}",
@@ -213,44 +227,29 @@ impl LoopAnalysisProcessor {
             "A well-formed Move function is expected to have a reducible control-flow graph",
         );
 
-        // collect labels where loop invariant instrumentations are expected to be placed at
-        let loop_header_to_label: BTreeMap<BlockId, Label> = natural_loops
-            .iter()
-            .filter_map(|l| match cfg.content(l.loop_header) {
-                BlockContent::Dummy => None,
-                BlockContent::Basic { lower, upper: _ } => {
-                    if let Bytecode::Label(_, label) = code[*lower as usize] {
-                        Some((l.loop_header, label))
-                    } else {
-                        None
-                    }
-                }
-            })
-            .collect();
-        if loop_header_to_label.len() != natural_loops.len() {
-            panic!(
-                "Natural loops in a well-formed Move function are expected to have unique headers \
-                and each loop header is expected to start with a Label bytecode"
-            );
+        // collect shared headers from loops
+        let mut fat_headers = BTreeMap::new();
+        for single_loop in natural_loops {
+            fat_headers
+                .entry(single_loop.loop_header)
+                .or_insert_with(Vec::new)
+                .push(single_loop);
         }
 
-        // find loop targets and invariants per loop (also means, per label)
-        let mut loops = BTreeMap::new();
-        for single_loop in &natural_loops {
-            let loop_label = loop_header_to_label[&single_loop.loop_header];
+        // build fat loops by label
+        let mut fat_loops = BTreeMap::new();
+        for (fat_root, sub_loops) in fat_headers {
+            // get the label of the scc root
+            let label = match cfg.content(fat_root) {
+                BlockContent::Dummy => panic!("A loop header should never be a dummy block"),
+                BlockContent::Basic { lower, upper: _ } => match code[*lower as usize] {
+                    Bytecode::Label(_, label) => label,
+                    _ => panic!("A loop header block is expected to start with a Label bytecode"),
+                },
+            };
 
-            let targets = single_loop
-                .loop_body
-                .iter()
-                .map(|block_id| {
-                    cfg.instr_indexes(*block_id)
-                        .expect("A loop body should never contain a dummy block")
-                })
-                .flatten()
-                .map(|code_offset| Self::targets(&code[code_offset as usize]))
-                .flatten()
-                .collect();
-
+            // collect invariants
+            //
             // Loop invariants are defined as the longest sequence of consecutive 'assert'
             // statements in the loop header block, immediately after the Label statement.
             //
@@ -259,11 +258,7 @@ impl LoopAnalysisProcessor {
             // - followed by N 'assert' statements, N >= 0
             // - and N + 1 must not be an 'assert' statement.
             let mut invariants = BTreeMap::new();
-            for (index, code_offset) in cfg
-                .instr_indexes(single_loop.loop_header)
-                .unwrap()
-                .enumerate()
-            {
+            for (index, code_offset) in cfg.instr_indexes(fat_root).unwrap().enumerate() {
                 let bytecode = &code[code_offset as usize];
                 if index == 0 {
                     assert!(matches!(bytecode, Bytecode::Label(_, _)));
@@ -277,28 +272,56 @@ impl LoopAnalysisProcessor {
                 }
             }
 
-            let back_edge_location = match cfg.content(single_loop.loop_latch) {
-                BlockContent::Dummy => panic!("A loop body should never contain a dummy block"),
-                BlockContent::Basic { upper, .. } => *upper,
-            };
-            match &code[back_edge_location as usize] {
-                Bytecode::Jump(_, goto_label) if *goto_label == loop_label => {}
-                Bytecode::Branch(_, if_label, else_label, _)
-                    if *if_label == loop_label || *else_label == loop_label => {}
-                _ => panic!("The latch bytecode of a loop does not branch into the header"),
-            }
+            // collect fat loop targets
+            let fat_loop_body: BTreeSet<_> = sub_loops
+                .iter()
+                .map(|l| l.loop_body.iter())
+                .flatten()
+                .copied()
+                .collect();
+            let targets = fat_loop_body
+                .iter()
+                .map(|block_id| {
+                    cfg.instr_indexes(*block_id)
+                        .expect("A loop body should never contain a dummy block")
+                })
+                .flatten()
+                .map(|code_offset| Self::targets(&code[code_offset as usize]))
+                .flatten()
+                .collect();
 
-            loops.insert(
-                loop_label,
-                LoopInfo {
+            // collect back edge locations
+            let back_edges = sub_loops
+                .iter()
+                .map(|l| {
+                    let code_offset = match cfg.content(l.loop_latch) {
+                        BlockContent::Dummy => {
+                            panic!("A loop body should never contain a dummy block")
+                        }
+                        BlockContent::Basic { upper, .. } => *upper,
+                    };
+                    match &code[code_offset as usize] {
+                        Bytecode::Jump(_, goto_label) if *goto_label == label => {}
+                        Bytecode::Branch(_, if_label, else_label, _)
+                            if *if_label == label || *else_label == label => {}
+                        _ => panic!("The latch bytecode of a loop does not branch into the header"),
+                    };
+                    code_offset
+                })
+                .collect();
+
+            // done with all information collection
+            fat_loops.insert(
+                label,
+                FatLoop {
                     invariants,
                     targets,
-                    back_edge_location,
+                    back_edges,
                 },
             );
         }
 
-        LoopAnnotation { loops }
+        LoopAnnotation { fat_loops }
     }
 
     fn targets(bytecode: &Bytecode) -> Vec<TempIndex> {
