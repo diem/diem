@@ -34,12 +34,44 @@ error: function does not abort under this condition
     =     at tests/sources/functional/loops.move:49: iter10_no_abort_incorrect
     =     at tests/sources/functional/loops.move:58
 
-error: unknown assertion failed
+error: base case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/loops.move:200:10 ───
+     ┌── tests/sources/functional/loops.move:210:17 ───
      │
- 200 │         };
-     │          ^
+ 210 │                 assert x != 0;
+     │                 ^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/loops.move:206: loop_invariant_base_invalid
+     =         n = <redacted>
+     =     at tests/sources/functional/loops.move:207: loop_invariant_base_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/loops.move:209: loop_invariant_base_invalid
+     =     at tests/sources/functional/loops.move:210: loop_invariant_base_invalid
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/loops.move:223:17 ───
+     │
+ 223 │                 assert x == 0;
+     │                 ^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/loops.move:219: loop_invariant_induction_invalid
+     =         n = <redacted>
+     =     at tests/sources/functional/loops.move:220: loop_invariant_induction_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/loops.move:222: loop_invariant_induction_invalid
+     =     at tests/sources/functional/loops.move:223: loop_invariant_induction_invalid
+     =     at tests/sources/functional/loops.move:225: loop_invariant_induction_invalid
+     =     at tests/sources/functional/loops.move:221: loop_invariant_induction_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/loops.move:223: loop_invariant_induction_invalid
+
+error: induction case of the loop invariant does not hold
+
+     ┌── tests/sources/functional/loops.move:189:17 ───
+     │
+ 189 │                 assert x != y;
+     │                 ^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/loops.move:183: loop_with_two_back_edges_incorrect
      =         x = <redacted>
@@ -50,15 +82,14 @@ error: unknown assertion failed
      =     at tests/sources/functional/loops.move:191: loop_with_two_back_edges_incorrect
      =         x = <redacted>
      =     at tests/sources/functional/loops.move:197: loop_with_two_back_edges_incorrect
+     =     at tests/sources/functional/loops.move:189: loop_with_two_back_edges_incorrect
 
-error: unknown assertion failed
+error: base case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/loops.move:144:17 ───
+     ┌── tests/sources/functional/loops.move:145:21 ───
      │
- 144 │ ╭                 spec {
- 145 │ │                     assert x != y;
- 146 │ │                 };
-     │ ╰─────────────────^
+ 145 │                     assert x != y;
+     │                     ^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
      =         x = <redacted>
@@ -66,13 +97,14 @@ error: unknown assertion failed
      =     at tests/sources/functional/loops.move:140: nested_loop_inner_invariant_incorrect
      =     at tests/sources/functional/loops.move:143: nested_loop_inner_invariant_incorrect
      =     at tests/sources/functional/loops.move:144: nested_loop_inner_invariant_incorrect
+     =     at tests/sources/functional/loops.move:145: nested_loop_inner_invariant_incorrect
 
-error: unknown assertion failed
+error: induction case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/loops.move:157:10 ───
+     ┌── tests/sources/functional/loops.move:145:21 ───
      │
- 157 │         };
-     │          ^
+ 145 │                     assert x != y;
+     │                     ^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/loops.move:138: nested_loop_inner_invariant_incorrect
      =         x = <redacted>
@@ -84,13 +116,14 @@ error: unknown assertion failed
      =     at tests/sources/functional/loops.move:147: nested_loop_inner_invariant_incorrect
      =     at tests/sources/functional/loops.move:150: nested_loop_inner_invariant_incorrect
      =         y = <redacted>
+     =     at tests/sources/functional/loops.move:145: nested_loop_inner_invariant_incorrect
 
-error: unknown assertion failed
+error: induction case of the loop invariant does not hold
 
-     ┌── tests/sources/functional/loops.move:132:10 ───
+     ┌── tests/sources/functional/loops.move:119:17 ───
      │
- 132 │         };
-     │          ^
+ 119 │                 assert x != y;
+     │                 ^^^^^^^^^^^^^^
      │
      =     at tests/sources/functional/loops.move:113: nested_loop_outer_invariant_incorrect
      =         x = <redacted>
@@ -100,3 +133,4 @@ error: unknown assertion failed
      =     at tests/sources/functional/loops.move:119: nested_loop_outer_invariant_incorrect
      =     at tests/sources/functional/loops.move:122: nested_loop_outer_invariant_incorrect
      =         x = <redacted>
+     =     at tests/sources/functional/loops.move:119: nested_loop_outer_invariant_incorrect

@@ -202,4 +202,30 @@ module VerifyLoops {
     spec fun loop_with_two_back_edges_incorrect {
         aborts_if false;
     }
+
+    public fun loop_invariant_base_invalid(n: u64): u64 {
+        let x = 0;
+        while ({
+            spec {
+                assert x != 0;
+            };
+            (x < n)
+        }) {
+            x = x + 1;
+        };
+        x
+    }
+
+    public fun loop_invariant_induction_invalid(n: u64): u64 {
+        let x = 0;
+        while ({
+            spec {
+                assert x == 0;
+            };
+            (x < n)
+        }) {
+            x = x + 1;
+        };
+        x
+    }
 }

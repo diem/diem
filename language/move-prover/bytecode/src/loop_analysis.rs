@@ -16,6 +16,9 @@ use move_model::{
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
+const LOOP_INVARIANT_BASE_FAILED: &str = "base case of the loop invariant does not hold";
+const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invariant does not hold";
+
 /// A fat-loop captures the information of one or more natural loops that share the same loop
 /// header. This shared header is called the header of the fat-loop.
 ///
@@ -109,7 +112,11 @@ impl LoopAnalysisProcessor {
                     builder.set_loc_from_attr(attr_id);
                     if let Some(loop_info) = loop_annotation.fat_loops.get(&label) {
                         // assert loop invariants -> this is the base case
-                        for (_, exp) in loop_info.invariants.values() {
+                        for (attr_id, exp) in loop_info.invariants.values() {
+                            builder.set_loc_and_vc_info(
+                                builder.get_loc(*attr_id),
+                                LOOP_INVARIANT_BASE_FAILED,
+                            );
                             builder.emit_with(|attr_id| {
                                 Bytecode::Prop(attr_id, PropKind::Assert, exp.clone())
                             });
@@ -183,7 +190,11 @@ impl LoopAnalysisProcessor {
             builder.clear_next_debug_comment();
 
             // add instrumentations to assert loop invariants -> this is the induction case
-            for (_, exp) in loop_info.invariants.values() {
+            for (attr_id, exp) in loop_info.invariants.values() {
+                builder.set_loc_and_vc_info(
+                    builder.get_loc(*attr_id),
+                    LOOP_INVARIANT_INDUCTION_FAILED,
+                );
                 builder.emit_with(|attr_id| Bytecode::Prop(attr_id, PropKind::Assert, exp.clone()));
             }
 
