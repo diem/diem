@@ -829,7 +829,7 @@ module Diem {
                 assert forall j in 0..index: preburn_queue[j].preburn.to_burn.value != amount;
             };
             (index < queue_length)
-            }) {
+        }) {
             let elem = Vector::borrow(preburn_queue, index);
             if (value(&elem.preburn.to_burn) == amount) {
                 let preburn = Vector::remove(preburn_queue, index);
@@ -841,15 +841,13 @@ module Diem {
 
         spec {
             assert index == queue_length;
-            assert forall j in 0..queue_length: preburn_queue[j].preburn != spec_make_preburn(amount);
+            assert forall j in 0..queue_length: preburn_queue[j].preburn.to_burn.value != amount;
         };
 
         // If we didn't return already, we couldn't find a preburn with a matching value.
         abort Errors::invalid_state(EPREBURN_NOT_FOUND)
     }
     spec fun remove_preburn_from_queue {
-        // TODO: re-enable once loop invariants are implemented
-        pragma verify = false;
         pragma opaque;
         modifies global<PreburnQueue<CoinType>>(preburn_address);
         include RemovePreburnFromQueueAbortsIf<CoinType>;
@@ -860,9 +858,8 @@ module Diem {
         preburn_address: address;
         amount: u64;
         let preburn_queue = global<PreburnQueue<CoinType>>(preburn_address).preburns;
-        let preburn = PreburnWithMetadata { preburn: Preburn { to_burn: Diem { value: amount } }, metadata: x"" };
         aborts_if !exists<PreburnQueue<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
-        aborts_if !Vector::spec_contains(preburn_queue, preburn) with Errors::INVALID_STATE;
+        aborts_if forall i in 0..len(preburn_queue): preburn_queue[i].preburn.to_burn.value != amount with Errors::INVALID_STATE;
     }
     /// > TODO: See this cannot currently be expressed in the MSL.
     /// > See https://github.com/diem/diem/issues/7615 for more information.
