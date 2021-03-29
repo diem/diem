@@ -344,7 +344,7 @@ module M {
 }
 ```
 
-Recall that you are only able to deconstruct a resource within the module in which it is defined. This can be leveraged to enforce certain invariants in a system, for eaxmple, conservation of money.
+Recall that you are only able to deconstruct a resource within the module in which it is defined. This can be leveraged to enforce certain invariants in a system, for example, conservation of money.
 
 ## Storing Resources in Global Storage
 
