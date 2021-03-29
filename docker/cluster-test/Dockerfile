@@ -12,9 +12,6 @@ WORKDIR /diem
 COPY rust-toolchain /diem/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 
-COPY cargo-toolchain /diem/cargo-toolchain
-RUN rustup install $(cat cargo-toolchain)
-
 FROM toolchain AS builder
 
 ARG ENABLE_FAILPOINTS

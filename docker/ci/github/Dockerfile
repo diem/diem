@@ -2,7 +2,6 @@ FROM debian:buster-20210326@sha256:ed28974b37a2ee07bc8d43249c7396eee05a210d92aa7
 
 RUN mkdir /diem
 COPY rust-toolchain /diem/rust-toolchain
-COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
 #this is the default home on docker images in gha, until it's not?
@@ -45,8 +44,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v go)" ] \
     && [ -x "$(command -v npm)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
 
 # should be a no-op
 # sccache builds fine, but is not executable ??? in alpine, ends up being recompiled.  Wierd.

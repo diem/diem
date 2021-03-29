@@ -4,10 +4,6 @@ version = "0.6.1"
 [system-tests]
 smoke-test = { path = "smoke-test" }
 
-[cargo]
-toolchain = "nightly-2020-10-09"
-flags = "-Zfeatures=all"
-
 [cargo.sccache]
 bucket = "ci-artifacts.diem.com"
 prefix = "sccache/diem/"

@@ -87,7 +87,7 @@ jobs:
         name: find changes that should trigger docker compose testing.
         uses: ./.github/actions/matches
         with:
-          pattern: '^documentation'
+          pattern: "^documentation"
           invert: "true"
       - id: website-changes
         name: find website changes.
@@ -676,8 +676,8 @@ jobs:
       - name: run crypto unit tests
         run: |
           cd /opt/git/diem/crypto/crypto
-          $CARGO $CARGOFLAGS test --features='u64' --no-default-features
-          $CARGO $CARGOFLAGS test --features='u32' --no-default-features
+          cargo test --features='u64' --no-default-features
+          cargo test --features='u32' --no-default-features
       - uses: ./.github/actions/build-teardown
 
   helm-test:

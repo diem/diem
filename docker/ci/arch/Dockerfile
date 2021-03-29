@@ -3,7 +3,6 @@ FROM archlinux:base-devel-20210321.0.17674@sha256:df08e319a62f5ae179ba6dcc1307b4
 
 WORKDIR /diem
 COPY rust-toolchain /diem/rust-toolchain
-COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
 # WORKAROUND for glibc 2.33 and old Docker
@@ -34,8 +33,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
 
 # should be a no-op
 RUN scripts/dev_setup.sh -b -p

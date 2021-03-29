@@ -184,8 +184,6 @@ pub struct Fix {}
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoConfig {
-    pub toolchain: String,
-    pub flags: Option<String>,
     pub sccache: Option<Sccache>,
 }
 

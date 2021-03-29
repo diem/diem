@@ -9,9 +9,6 @@ set -e
 export RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
 
 # We are using a pinned nightly cargo until feature resolver v2 is released (around 10/2020), but compiling with stable rustc
-export RUST_NIGHTLY=$(cat cargo-toolchain)
-export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
-export CARGOFLAGS=$(cat cargo-flags)
 export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO for release builds
 
 # Disable the workspace-hack package to prevent extra features and packages from being enabled.
@@ -21,7 +18,7 @@ export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO
 cargo x generate-workspace-hack --mode disable
 
 # Build release binaries (TODO: use x to run this?)
-${CARGO} ${CARGOFLAGS} build --release \
+cargo build --release \
          -p diem-genesis-tool \
          -p diem-operational-tool \
          -p diem-node \
@@ -36,11 +33,11 @@ ${CARGO} ${CARGOFLAGS} build --release \
 # Build and overwrite the diem-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
 if [ "$ENABLE_FAILPOINTS" = "1" ]; then
   echo "Building diem-node with failpoints feature"
-  (cd diem-node && ${CARGO} ${CARGOFLAGS} build --release --features failpoints "$@")
+  (cd diem-node && cargo build --release --features failpoints "$@")
 fi
 
 # These non-release binaries are built separately to avoid feature unification issues
-${CARGO} ${CARGOFLAGS} build --release \
+cargo build --release \
          -p cluster-test \
          -p cli \
          -p diem-faucet \

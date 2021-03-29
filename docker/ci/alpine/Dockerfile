@@ -3,7 +3,6 @@ FROM alpine:3.13.3@sha256:826f70e0ac33e99a72cf20fb0571245a8fee52d68cb26d8bc58e53
 
 WORKDIR /diem
 COPY rust-toolchain /diem/rust-toolchain
-COPY cargo-toolchain /diem/cargo-toolchain
 COPY scripts/dev_setup.sh /diem/scripts/dev_setup.sh
 
 RUN apk add bash=5.1.0-r0 --no-cache
@@ -29,8 +28,7 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v aws)" ] \
     && [ -x "$(command -v z3)" ] \
     && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ] \
-    && [ -x "$(xargs rustup which cargo --toolchain < /diem/cargo-toolchain)" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /diem/rust-toolchain )" ]
 
 # should be a no-op, but since sccache failes to execute, sccache is rebuilt.
 #RUN scripts/dev_setup.sh -b -p
