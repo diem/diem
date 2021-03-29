@@ -77,7 +77,7 @@ jobs:
         name: find helm changes
         uses: ./.github/actions/matches
         with:
-          pattern: '^.github\|^helm|^developers.diem.com'
+          pattern: '^.github\|^helm\|^developers.diem.com'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
