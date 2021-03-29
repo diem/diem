@@ -15,7 +15,9 @@ rust_log: info
 
 image:
   repo: diem/validator
-  tag: release-1.1_a1abfc34
+  # "devnet" tag is updated daily
+  # additional image tags can be found on DockerHub: https://hub.docker.com/r/diem/validator/tags
+  tag: devnet
   pullPolicy: IfNotPresent
 
 resources:
