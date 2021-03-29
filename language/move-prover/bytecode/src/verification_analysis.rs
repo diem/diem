@@ -40,6 +40,33 @@ impl VerificationAnalysisProcessor {
 }
 
 impl FunctionTargetProcessor for VerificationAnalysisProcessor {
+    fn initialize(&self, env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
+        let options = ProverOptions::get(env);
+
+        // If we are verifying only one function, check that this function indeed exists in one of
+        // the target module.
+        if let Some(target_name) = options.verify_scope.get_exclusive_verify_function_name() {
+            let mut function_target_exists = false;
+            let mut loc = env.unknown_loc();
+            for module in env.get_modules() {
+                if module.is_target() {
+                    loc = module.get_loc().at_start();
+                    function_target_exists |=
+                        module.get_functions().any(|f| f.matches_name(target_name));
+                }
+            }
+            if !function_target_exists {
+                env.error(
+                    &loc,
+                    &format!(
+                        "function target {} does not exist in target modules",
+                        target_name
+                    ),
+                )
+            }
+        }
+    }
+
     fn process(
         &self,
         targets: &mut FunctionTargetsHolder,
@@ -57,11 +84,12 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         check_friend_relation(fun_env);
 
         let options = ProverOptions::get(fun_env.module_env.env);
-        let is_verified =
-            if fun_env.module_env.is_target() && fun_env.should_verify(options.verify_scope) {
-                // This function needs to be verified because it is a user provided verification
-                // target.
-                true
+        let is_verified = {
+            // Whether this function is a verification target provided explicitly by the user.
+            let is_explicitly_verified =
+                fun_env.module_env.is_target() && fun_env.should_verify(&options.verify_scope);
+            if options.verify_scope.is_exclusive() {
+                is_explicitly_verified
             } else {
                 // Get all memory mentioned in the invariants in target modules
                 let target_memory = get_target_invariant_memory(fun_env.module_env.env);
@@ -70,9 +98,10 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
                 let fun_target = targets.get_target(fun_env, variant);
                 let modified_memory = usage_analysis::get_directly_modified_memory(&fun_target);
 
-                // This function needs to be verified if it touches target memory.
-                !modified_memory.is_disjoint(&target_memory)
-            };
+                // This function needs to be verified if it is a target or it touches target memory.
+                is_explicitly_verified || !modified_memory.is_disjoint(&target_memory)
+            }
+        };
         if is_verified {
             mark_verified(fun_env, variant, targets);
         }

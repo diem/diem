@@ -327,12 +327,14 @@ impl ModuleId {
 /// # Verification Scope
 
 /// Defines what functions to verify.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum VerificationScope {
     /// Verify only public functions.
     Public,
     /// Verify all functions.
     All,
+    /// Verify only one function.
+    Only(String),
     /// Verify no functions
     None,
 }
@@ -340,6 +342,21 @@ pub enum VerificationScope {
 impl Default for VerificationScope {
     fn default() -> Self {
         Self::Public
+    }
+}
+
+impl VerificationScope {
+    /// Whether verification is exclusive to only one function.
+    pub fn is_exclusive(&self) -> bool {
+        matches!(self, VerificationScope::Only(_))
+    }
+
+    /// Returns the target function if verification is exclusive to one function.
+    pub fn get_exclusive_verify_function_name(&self) -> Option<&String> {
+        match self {
+            VerificationScope::Only(s) => Some(s),
+            _ => None,
+        }
     }
 }
 
@@ -1247,6 +1264,11 @@ impl<'env> ModuleEnv<'env> {
     /// Returns the name of this module.
     pub fn get_name(&'env self) -> &'env ModuleName {
         &self.data.name
+    }
+
+    /// Returns the location of this module.
+    pub fn get_loc(&'env self) -> Loc {
+        self.data.loc.clone()
     }
 
     /// Returns full name as a string.
@@ -2683,7 +2705,7 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Determine whether the function is target of verification.
-    pub fn should_verify(&self, default_scope: VerificationScope) -> bool {
+    pub fn should_verify(&self, default_scope: &VerificationScope) -> bool {
         if !self.module_env.is_target() {
             // Don't generate verify method for functions from dependencies.
             return false;
@@ -2698,9 +2720,15 @@ impl<'env> FunctionEnv<'env> {
             // well for consistency.
             VerificationScope::Public => self.is_exposed(),
             VerificationScope::All => true,
+            VerificationScope::Only(function_name) => self.matches_name(function_name),
             VerificationScope::None => false,
         };
         self.is_pragma_true(VERIFY_PRAGMA, default)
+    }
+
+    /// Returns true if either the name or simple name of this function matches the given string
+    pub fn matches_name(&self, name: &str) -> bool {
+        name.eq(&*self.get_simple_name_string()) || name.eq(&*self.get_name_string())
     }
 
     /// Determine whether this function is explicitly deactivated for verification.

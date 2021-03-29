@@ -389,6 +389,14 @@ impl Options {
                     .long("check-inconsistency")
                     .help("checks whether there is any inconsistency")
             )
+            .arg(
+                Arg::with_name("verify-only")
+                    .long("verify-only")
+                    .takes_value(true)
+                    .value_name("FUNCTION_NAME")
+                    .help("only generate verification condition for one function. \
+                    This overrides verification scope and can be overriden by the pragma verify=false")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -541,6 +549,10 @@ impl Options {
         }
         if matches.is_present("check-inconsistency") {
             options.prover.check_inconsistency = true;
+        }
+        if matches.is_present("verify-only") {
+            options.prover.verify_scope =
+                VerificationScope::Only(matches.value_of("verify-only").unwrap().to_string());
         }
         if matches.is_present("print-config") {
             println!("{}", toml::to_string(&options).unwrap());
