@@ -103,14 +103,15 @@ impl RotateOperatorKey {
         let sequence_number = client.sequence_number(operator_account)?;
 
         // Build the operator rotation transaction
-        let rotate_key_script = transaction_builder::encode_rotate_authentication_key_script(
-            AuthenticationKey::ed25519(&new_storage_key).to_vec(),
-        );
+        let rotate_key_script =
+            transaction_builder::encode_rotate_authentication_key_script_function(
+                AuthenticationKey::ed25519(&new_storage_key).to_vec(),
+            );
         let rotate_key_txn = build_raw_transaction(
             config.chain_id,
             operator_account,
             sequence_number,
-            rotate_key_script,
+            rotate_key_script.into_script_function(),
         );
 
         // Sign the operator rotation transaction

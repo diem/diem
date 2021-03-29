@@ -354,6 +354,13 @@ impl TransactionPayload {
             Self::Script(_) | Self::ScriptFunction(_) | Self::Module(_) => false,
         }
     }
+
+    pub fn into_script_function(self) -> ScriptFunction {
+        match self {
+            Self::ScriptFunction(f) => f,
+            payload => panic!("Expected ScriptFunction(_) payload, found: {:#?}", payload),
+        }
+    }
 }
 
 /// Two different kinds of WriteSet transactions.

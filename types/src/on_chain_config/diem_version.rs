@@ -19,3 +19,6 @@ impl OnChainConfig for DiemVersion {
 //  - the ScriptFunction payload type
 // TODO: expand the list if more features are gated
 pub const DIEM_VERSION_2: DiemVersion = DiemVersion { major: 2 };
+
+// Maximum current known version
+pub const DIEM_MAX_KNOWN_VERSION: DiemVersion = DIEM_VERSION_2;

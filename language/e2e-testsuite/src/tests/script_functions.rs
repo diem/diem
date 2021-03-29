@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_types::{
-    on_chain_config::{VMPublishingOption, DIEM_VERSION_2},
+    on_chain_config::DIEM_VERSION_2,
     transaction::{ScriptFunction, TransactionStatus},
     vm_status::{DiscardedVMStatus, KeptVMStatus},
 };
 use language_e2e_tests::{
     account::Account, compile::compile_module_with_address, current_function_name,
-    executor::FakeExecutor, on_chain_configs::set_diem_version, transaction_status_eq,
+    executor::FakeExecutor, transaction_status_eq, utils,
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 
@@ -51,7 +51,8 @@ fn prepare_module(executor: &mut FakeExecutor, account: &Account, seq_num: u64) 
 
 #[test]
 fn script_fn_payload_invoke_private_fn() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    let (mut executor, dr_account, _, _) = utils::start_with_released_df();
+    let mut dr_seqno = 1;
     executor.set_golden_file(current_function_name!());
 
     let sequence_number = 2;
@@ -78,7 +79,12 @@ fn script_fn_payload_invoke_private_fn() {
     ));
 
     // enable the feature
-    set_diem_version(&mut executor, DIEM_VERSION_2);
+    utils::upgrade_df(
+        &mut executor,
+        &dr_account,
+        &mut dr_seqno,
+        Some(DIEM_VERSION_2.major),
+    );
 
     let output = executor.execute_transaction(txn);
     assert!(transaction_status_eq(
@@ -89,7 +95,8 @@ fn script_fn_payload_invoke_private_fn() {
 
 #[test]
 fn script_fn_payload_invoke_public_fn() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    let (mut executor, dr_account, _, _) = utils::start_with_released_df();
+    let mut dr_seqno = 1;
     executor.set_golden_file(current_function_name!());
 
     let sequence_number = 2;
@@ -116,7 +123,12 @@ fn script_fn_payload_invoke_public_fn() {
     ));
 
     // enable the feature
-    set_diem_version(&mut executor, DIEM_VERSION_2);
+    utils::upgrade_df(
+        &mut executor,
+        &dr_account,
+        &mut dr_seqno,
+        Some(DIEM_VERSION_2.major),
+    );
 
     let output = executor.execute_transaction(txn);
     assert!(transaction_status_eq(
@@ -127,7 +139,8 @@ fn script_fn_payload_invoke_public_fn() {
 
 #[test]
 fn script_fn_payload_invoke_script_fn() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    let (mut executor, dr_account, _, _) = utils::start_with_released_df();
+    let mut dr_seqno = 1;
     executor.set_golden_file(current_function_name!());
 
     let sequence_number = 2;
@@ -154,7 +167,12 @@ fn script_fn_payload_invoke_script_fn() {
     ));
 
     // enable the feature
-    set_diem_version(&mut executor, DIEM_VERSION_2);
+    utils::upgrade_df(
+        &mut executor,
+        &dr_account,
+        &mut dr_seqno,
+        Some(DIEM_VERSION_2.major),
+    );
 
     let output = executor.execute_transaction(txn);
     assert!(transaction_status_eq(

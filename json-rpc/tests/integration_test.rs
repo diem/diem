@@ -12,6 +12,7 @@ use diem_types::{
     contract_event::EventWithProof,
     epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::DIEM_MAX_KNOWN_VERSION,
     proof::TransactionAccumulatorRangeProof,
     transaction::{ChangeSet, Transaction, TransactionInfo, TransactionPayload, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -111,7 +112,7 @@ fn create_test_cases() -> Vec<Test> {
                 // for testing chain id, we init genesis with VMPublishingOption#open
                 assert_eq!(metadata["script_hash_allow_list"], json!([]));
                 assert_eq!(metadata["module_publishing_allowed"], true);
-                assert_eq!(metadata["diem_version"], 1);
+                assert_eq!(metadata["diem_version"], 2);
                 assert_eq!(metadata["dual_attestation_limit"], 1000000000);
                 assert_ne!(diem_ledger_timestampusec, 0);
                 assert_ne!(diem_ledger_version, 0);
@@ -625,7 +626,10 @@ fn create_test_cases() -> Vec<Test> {
         Test {
             name: "Upgrade diem version",
             run: |env: &mut testing::Env| {
-                let script = stdlib::encode_update_diem_version_script(0, 2);
+                let script = stdlib::encode_update_diem_version_script(
+                    0,
+                    DIEM_MAX_KNOWN_VERSION.major + 1,
+                );
                 let txn = env.create_txn(&env.root, script);
                 env.submit_and_wait(txn);
             },
@@ -686,7 +690,10 @@ fn create_test_cases() -> Vec<Test> {
                 let script = stdlib::encode_burn_with_amount_script_function(
                     xus_tag(), 0, env.dd.address, 100
                 );
-                let burn_txn = env.create_txn_by_payload(&env.tc, script);
+                let burn_txn = env.create_txn_by_payload(
+                    &env.tc,
+                    script,
+                );
                 let result = env.submit_and_wait(burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(
@@ -733,7 +740,10 @@ fn create_test_cases() -> Vec<Test> {
                 env.submit_and_wait(txn);
 
                 let script = stdlib::encode_cancel_burn_with_amount_script_function(xus_tag(), env.dd.address, 100);
-                let cancel_burn_txn = env.create_txn_by_payload(&env.tc, script);
+                let cancel_burn_txn = env.create_txn_by_payload(
+                    &env.tc,
+                    script,
+                );
                 let result = env.submit_and_wait(cancel_burn_txn);
                 let version = result["version"].as_u64().unwrap();
                 assert_eq!(

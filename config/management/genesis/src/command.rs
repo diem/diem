@@ -167,11 +167,7 @@ pub mod tests {
     use diem_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use diem_management::constants;
     use diem_secure_storage::KVStorage;
-    use diem_types::{
-        account_address,
-        chain_id::ChainId,
-        transaction::{TransactionArgument, TransactionPayload},
-    };
+    use diem_types::{account_address, chain_id::ChainId, transaction::TransactionPayload};
     use std::{
         fs::File,
         io::{Read, Write},
@@ -326,6 +322,8 @@ pub mod tests {
 
     #[test]
     fn test_validator_config() {
+        use diem_types::account_address::AccountAddress;
+
         let storage_helper = StorageHelper::new();
         let local_operator_ns = "local";
         let remote_operator_ns = "operator";
@@ -374,15 +372,15 @@ pub mod tests {
 
         // Verify the validator config in the transaction has the correct account address
         match uploaded_user_transaction.payload() {
-            TransactionPayload::Script(script) => {
-                assert_eq!(4, script.args().len());
+            TransactionPayload::ScriptFunction(script_function) => {
+                assert_eq!(4, script_function.args().len());
 
-                match script.args().get(0).unwrap() {
-                    TransactionArgument::Address(account_address) => {
-                        assert_eq!(&owner_account, account_address);
+                match bcs::from_bytes::<AccountAddress>(script_function.args().get(0).unwrap()) {
+                    Ok(account_address) => {
+                        assert_eq!(owner_account, account_address);
                     }
                     _ => panic!(
-                        "Found an invalid argument type for the validator-config transaction script!"
+                        "Found an invalid argument type for the validator-config transaction script function!"
                     ),
                 };
             }

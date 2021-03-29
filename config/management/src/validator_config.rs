@@ -84,16 +84,17 @@ impl ValidatorConfig {
 
         // Generate the validator config script
         let transaction_callback = if reconfigure {
-            transaction_builder::encode_set_validator_config_and_reconfigure_script
+            transaction_builder::encode_set_validator_config_and_reconfigure_script_function
         } else {
-            transaction_builder::encode_register_validator_config_script
+            transaction_builder::encode_register_validator_config_script_function
         };
         let validator_config_script = transaction_callback(
             owner_account,
             consensus_key.to_bytes().to_vec(),
             validator_addresses,
             bcs::to_bytes(&vec![fullnode_address]).unwrap(),
-        );
+        )
+        .into_script_function();
 
         // Create and sign the validator-config transaction
         let raw_txn = build_raw_transaction(
