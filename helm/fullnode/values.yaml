@@ -7,16 +7,18 @@ diem_chains:
   testnet:
     id: TESTNET
     waypoint: 0:3139c30efe6dbde4228efb9df32c137dc3a2490b97ab6a086897be1d0cb336f0
-    seed_addrs:
+    seeds:
       4223dd0eeb0b0d78720a8990700955e1:
-      - "/dns4/fn.testnet.diem.com/tcp/6182/ln-noise-ik/d29d01bed8ab6c30921b327823f7e92c63f8371456fb110256e8c0e8911f4938/ln-handshake/0"
+        addresses:
+        - "/dns4/fn.testnet.diem.com/tcp/6182/ln-noise-ik/d29d01bed8ab6c30921b327823f7e92c63f8371456fb110256e8c0e8911f4938/ln-handshake/0"
+        keys:
+        - "d29d01bed8ab6c30921b327823f7e92c63f8371456fb110256e8c0e8911f4938"
+        role: "Upstream"
 
 rust_log: info
 
 image:
   repo: diem/validator
-  # "devnet" tag is updated daily
-  # additional image tags can be found on DockerHub: https://hub.docker.com/r/diem/validator/tags
   tag: devnet
   pullPolicy: IfNotPresent
 
@@ -58,7 +60,7 @@ logging:
 backup:
   image:
     repo: diem/tools
-    tag: release-1.1_a1abfc34
+    tag: devnet
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -100,7 +102,7 @@ backup_verify:
 restore:
   image:
     repo: diem/tools
-    tag: release-1.1_a1abfc34
+    tag: devnet
     pullPolicy: IfNotPresent
   resources:
     limits:

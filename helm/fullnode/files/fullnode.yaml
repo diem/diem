@@ -9,8 +9,8 @@ execution:
 full_node_networks:
 - network_id: "public"
   discovery_method: "onchain"
-  seed_addrs:
-    {{- (get .Values.diem_chains .Values.chain.name).seed_addrs | default dict | toYaml | nindent 6 }}
+  seeds:
+    {{- (get .Values.diem_chains .Values.chain.name).seeds | default dict | toYaml | nindent 6 }}
 
 upstream:
   networks:
