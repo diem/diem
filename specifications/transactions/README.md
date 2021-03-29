@@ -58,6 +58,6 @@ There are two cases for refunds, those initiated by the recipient and those that
 The rest of this specification contains the following components:
 * [On-Chain Data and Transactions](onchain) including metadata and blockchain data
 * Off-Chain Identifiers including Account Addresses, Subaddresses, and PaymentURIs
-* Off-Chain API specifically the protocol and not any applications
+* [Off-Chain API](offchain-api) specifically the protocol and not any applications
 * Off-Chain PingCommand for validation of the API and health checks
 * Off-Chain Travel Rule Exchange for performing off-chain KYC exchanges
