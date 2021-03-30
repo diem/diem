@@ -36,3 +36,13 @@ macro_rules! cfg_async_or_blocking {
         )*
     }
 }
+
+macro_rules! cfg_faucet {
+    ($($item:item)*) => {
+        $(
+            #[cfg(feature = "faucet")]
+            #[cfg_attr(docsrs, doc(cfg(feature = "faucet")))]
+            $item
+        )*
+    }
+}

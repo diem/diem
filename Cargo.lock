@@ -2454,7 +2454,6 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-sink",
- "futures-task",
  "futures-util",
  "hyper",
  "indexmap",

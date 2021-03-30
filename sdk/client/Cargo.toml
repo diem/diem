@@ -10,9 +10,10 @@ publish = ["crates-io"]
 edition = "2018"
 
 [features]
-default = ["async", "blocking"]
+default = ["async", "blocking", "faucet"]
 blocking = ["ureq", "ipnet"]
 async = ["reqwest", "tokio"]
+faucet = ["reqwest", "reqwest/blocking", "blocking"]
 
 [dependencies]
 anyhow = "1.0.38"

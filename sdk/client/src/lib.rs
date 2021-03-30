@@ -17,6 +17,11 @@ cfg_async! {
     pub use client::Client;
 }
 
+cfg_faucet! {
+    mod faucet;
+    pub use faucet::FaucetClient;
+}
+
 mod request;
 pub use request::{JsonRpcRequest, MethodRequest};
 
