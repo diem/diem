@@ -32,7 +32,7 @@ module TreasuryComplianceScripts {
     /// `preburn_address` must already have a balance in the `Token` currency published
     /// before this script is called otherwise the transaction will fail.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit:
     /// * A `Diem::CancelBurnEvent` on the event handle held in the `Diem::CurrencyInfo<Token>`
     /// resource's `burn_events` published under `0xA550C18`.
@@ -132,7 +132,7 @@ module TreasuryComplianceScripts {
     /// under `preburn_address` immediately before this transaction, and the
     /// `to_burn` field of the preburn resource will have a zero value.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
     /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
     /// `0xA550C18`.
@@ -202,7 +202,7 @@ module TreasuryComplianceScripts {
     /// `account`. `account` must have both of these resources published under it at the start of this
     /// transaction in order for it to execute successfully.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script emits two events:
     /// * `DiemAccount::SentPaymentEvent ` on `account`'s `DiemAccount::DiemAccount` `sent_events`
     /// handle with the `payee` and `payer` fields being `account`'s address; and
@@ -279,7 +279,7 @@ module TreasuryComplianceScripts {
     /// `TransactionFee::TransactionFee<CoinType>` resource published under the `0xB1E55ED`
     /// account address will have a value of 0 after the successful execution of this script.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
     /// held in the `Diem::CurrencyInfo<CoinType>` resource's `burn_events` published under
     /// `0xA550C18`.
@@ -319,7 +319,7 @@ module TreasuryComplianceScripts {
     /// they support. The sending `tc_account` must be the Treasury Compliance account, and the
     /// receiver an authorized Designated Dealer account.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of the transaction will emit two events:
     /// * A `Diem::MintEvent` with the amount and currency code minted is emitted on the
     /// `mint_event_handle` in the stored `Diem::CurrencyInfo<CoinType>` resource stored under
@@ -413,7 +413,7 @@ module TreasuryComplianceScripts {
     /// accounts and vice versa.
     ///
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
     /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published
     /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
@@ -456,7 +456,7 @@ module TreasuryComplianceScripts {
     /// account. Note that this is a per-account property so unfreezing a Parent VASP will not effect
     /// the status any of its child accounts and vice versa.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script will emit a `AccountFreezing::UnFreezeAccountEvent` with
     /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
     ///

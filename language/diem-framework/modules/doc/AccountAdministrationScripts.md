@@ -51,7 +51,7 @@ This module holds transactions that can be used to administer accounts in the Di
 -  [Function `rotate_dual_attestation_info`](#0x1_AccountAdministrationScripts_rotate_dual_attestation_info)
     -  [Summary](#@Summary_35)
     -  [Technical Description](#@Technical_Description_36)
-        -  [Events](#@Events_37)
+    -  [Events](#@Events_37)
     -  [Parameters](#@Parameters_38)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_39)
     -  [Related Scripts](#@Related_Scripts_40)
@@ -872,7 +872,7 @@ resource published under <code>account</code>. The <code>new_key</code> must be 
 
 <a name="@Events_37"></a>
 
-#### Events
+### Events
 
 Successful execution of this transaction emits two events:
 * A <code><a href="DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">DualAttestation::ComplianceKeyRotationEvent</a></code> containing the new compliance public key, and

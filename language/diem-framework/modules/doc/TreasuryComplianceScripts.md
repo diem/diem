@@ -15,49 +15,49 @@ per-transaction basis.
 -  [Function `cancel_burn_with_amount`](#0x1_TreasuryComplianceScripts_cancel_burn_with_amount)
     -  [Summary](#@Summary_0)
     -  [Technical Description](#@Technical_Description_1)
-        -  [Events](#@Events_2)
+    -  [Events](#@Events_2)
     -  [Parameters](#@Parameters_3)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_4)
     -  [Related Scripts](#@Related_Scripts_5)
 -  [Function `burn_with_amount`](#0x1_TreasuryComplianceScripts_burn_with_amount)
     -  [Summary](#@Summary_6)
     -  [Technical Description](#@Technical_Description_7)
-        -  [Events](#@Events_8)
+    -  [Events](#@Events_8)
     -  [Parameters](#@Parameters_9)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_10)
     -  [Related Scripts](#@Related_Scripts_11)
 -  [Function `preburn`](#0x1_TreasuryComplianceScripts_preburn)
     -  [Summary](#@Summary_12)
     -  [Technical Description](#@Technical_Description_13)
-        -  [Events](#@Events_14)
+    -  [Events](#@Events_14)
     -  [Parameters](#@Parameters_15)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_16)
     -  [Related Scripts](#@Related_Scripts_17)
 -  [Function `burn_txn_fees`](#0x1_TreasuryComplianceScripts_burn_txn_fees)
     -  [Summary](#@Summary_18)
     -  [Technical Description](#@Technical_Description_19)
-        -  [Events](#@Events_20)
+    -  [Events](#@Events_20)
     -  [Parameters](#@Parameters_21)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_22)
     -  [Related Scripts](#@Related_Scripts_23)
 -  [Function `tiered_mint`](#0x1_TreasuryComplianceScripts_tiered_mint)
     -  [Summary](#@Summary_24)
     -  [Technical Description](#@Technical_Description_25)
-        -  [Events](#@Events_26)
+    -  [Events](#@Events_26)
     -  [Parameters](#@Parameters_27)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_28)
     -  [Related Scripts](#@Related_Scripts_29)
 -  [Function `freeze_account`](#0x1_TreasuryComplianceScripts_freeze_account)
     -  [Summary](#@Summary_30)
     -  [Technical Description](#@Technical_Description_31)
-        -  [Events](#@Events_32)
+    -  [Events](#@Events_32)
     -  [Parameters](#@Parameters_33)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_34)
     -  [Related Scripts](#@Related_Scripts_35)
 -  [Function `unfreeze_account`](#0x1_TreasuryComplianceScripts_unfreeze_account)
     -  [Summary](#@Summary_36)
     -  [Technical Description](#@Technical_Description_37)
-        -  [Events](#@Events_38)
+    -  [Events](#@Events_38)
     -  [Parameters](#@Parameters_39)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_40)
     -  [Related Scripts](#@Related_Scripts_41)
@@ -124,7 +124,7 @@ before this script is called otherwise the transaction will fail.
 
 <a name="@Events_2"></a>
 
-#### Events
+### Events
 
 The successful execution of this transaction will emit:
 * A <code><a href="Diem.md#0x1_Diem_CancelBurnEvent">Diem::CancelBurnEvent</a></code> on the event handle held in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code>
@@ -282,7 +282,7 @@ under <code>preburn_address</code> immediately before this transaction, and the
 
 <a name="@Events_8"></a>
 
-#### Events
+### Events
 
 The successful execution of this transaction will emit a <code><a href="Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
 held in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource's <code>burn_events</code> published under
@@ -403,7 +403,7 @@ transaction in order for it to execute successfully.
 
 <a name="@Events_14"></a>
 
-#### Events
+### Events
 
 Successful execution of this script emits two events:
 * <code><a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a> </code> on <code>account</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code>
@@ -531,7 +531,7 @@ account address will have a value of 0 after the successful execution of this sc
 
 <a name="@Events_20"></a>
 
-#### Events
+### Events
 
 The successful execution of this transaction will emit a <code><a href="Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
 held in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;</code> resource's <code>burn_events</code> published under
@@ -614,7 +614,7 @@ receiver an authorized Designated Dealer account.
 
 <a name="@Events_26"></a>
 
-#### Events
+### Events
 
 Successful execution of the transaction will emit two events:
 * A <code><a href="Diem.md#0x1_Diem_MintEvent">Diem::MintEvent</a></code> with the amount and currency code minted is emitted on the
@@ -758,7 +758,7 @@ accounts and vice versa.
 
 <a name="@Events_32"></a>
 
-#### Events
+### Events
 
 Successful execution of this transaction will emit a <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">AccountFreezing::FreezeAccountEvent</a></code> on
 the <code>freeze_event_handle</code> held in the <code><a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">AccountFreezing::FreezeEventsHolder</a></code> resource published
@@ -844,7 +844,7 @@ the status any of its child accounts and vice versa.
 
 <a name="@Events_38"></a>
 
-#### Events
+### Events
 
 Successful execution of this script will emit a <code>AccountFreezing::UnFreezeAccountEvent</code> with
 the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s address.

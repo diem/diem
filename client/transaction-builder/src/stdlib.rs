@@ -1580,7 +1580,7 @@ pub enum ScriptFunctionCall {
     /// `TransactionFee::TransactionFee<CoinType>` resource published under the `0xB1E55ED`
     /// account address will have a value of 0 after the successful execution of this script.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
     /// held in the `Diem::CurrencyInfo<CoinType>` resource's `burn_events` published under
     /// `0xA550C18`.
@@ -1626,7 +1626,7 @@ pub enum ScriptFunctionCall {
     /// under `preburn_address` immediately before this transaction, and the
     /// `to_burn` field of the preburn resource will have a zero value.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
     /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
     /// `0xA550C18`.
@@ -1680,7 +1680,7 @@ pub enum ScriptFunctionCall {
     /// `preburn_address` must already have a balance in the `Token` currency published
     /// before this script is called otherwise the transaction will fail.
     ///
-    /// ## Events
+    /// # Events
     /// The successful execution of this transaction will emit:
     /// * A `Diem::CancelBurnEvent` on the event handle held in the `Diem::CurrencyInfo<Token>`
     /// resource's `burn_events` published under `0xA550C18`.
@@ -2057,7 +2057,7 @@ pub enum ScriptFunctionCall {
     /// accounts and vice versa.
     ///
 
-    /// ## Events
+    /// # Events
     /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
     /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published
     /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
@@ -2110,7 +2110,7 @@ pub enum ScriptFunctionCall {
     /// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
     /// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script emits two events:
     /// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
     /// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
@@ -2162,7 +2162,7 @@ pub enum ScriptFunctionCall {
     /// `account`. `account` must have both of these resources published under it at the start of this
     /// transaction in order for it to execute successfully.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script emits two events:
     /// * `DiemAccount::SentPaymentEvent ` on `account`'s `DiemAccount::DiemAccount` `sent_events`
     /// handle with the `payee` and `payer` fields being `account`'s address; and
@@ -2459,7 +2459,7 @@ pub enum ScriptFunctionCall {
     /// Updates the `base_url` and `compliance_public_key` fields of the `DualAttestation::Credential`
     /// resource published under `account`. The `new_key` must be a valid ed25519 public key.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this transaction emits two events:
     /// * A `DualAttestation::ComplianceKeyRotationEvent` containing the new compliance public key, and
     /// the blockchain time at which the key was updated emitted on the `DualAttestation::Credential`
@@ -2667,7 +2667,7 @@ pub enum ScriptFunctionCall {
     /// they support. The sending `tc_account` must be the Treasury Compliance account, and the
     /// receiver an authorized Designated Dealer account.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of the transaction will emit two events:
     /// * A `Diem::MintEvent` with the amount and currency code minted is emitted on the
     /// `mint_event_handle` in the stored `Diem::CurrencyInfo<CoinType>` resource stored under
@@ -2724,7 +2724,7 @@ pub enum ScriptFunctionCall {
     /// account. Note that this is a per-account property so unfreezing a Parent VASP will not effect
     /// the status any of its child accounts and vice versa.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script will emit a `AccountFreezing::UnFreezeAccountEvent` with
     /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
     ///
@@ -3559,7 +3559,7 @@ pub fn encode_add_validator_and_reconfigure_script_function(
 /// `TransactionFee::TransactionFee<CoinType>` resource published under the `0xB1E55ED`
 /// account address will have a value of 0 after the successful execution of this script.
 ///
-/// ## Events
+/// # Events
 /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
 /// held in the `Diem::CurrencyInfo<CoinType>` resource's `burn_events` published under
 /// `0xA550C18`.
@@ -3615,7 +3615,7 @@ pub fn encode_burn_txn_fees_script_function(coin_type: TypeTag) -> TransactionPa
 /// under `preburn_address` immediately before this transaction, and the
 /// `to_burn` field of the preburn resource will have a zero value.
 ///
-/// ## Events
+/// # Events
 /// The successful execution of this transaction will emit a `Diem::BurnEvent` on the event handle
 /// held in the `Diem::CurrencyInfo<Token>` resource's `burn_events` published under
 /// `0xA550C18`.
@@ -3683,7 +3683,7 @@ pub fn encode_burn_with_amount_script_function(
 /// `preburn_address` must already have a balance in the `Token` currency published
 /// before this script is called otherwise the transaction will fail.
 ///
-/// ## Events
+/// # Events
 /// The successful execution of this transaction will emit:
 /// * A `Diem::CancelBurnEvent` on the event handle held in the `Diem::CurrencyInfo<Token>`
 /// resource's `burn_events` published under `0xA550C18`.
@@ -4160,7 +4160,7 @@ pub fn encode_create_validator_operator_account_script_function(
 /// accounts and vice versa.
 ///
 
-/// ## Events
+/// # Events
 /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
 /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published
 /// under `0xA550C18` with the `frozen_address` being the `to_freeze_account`.
@@ -4226,7 +4226,7 @@ pub fn encode_freeze_account_script_function(
 /// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
 /// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
 ///
-/// ## Events
+/// # Events
 /// Successful execution of this script emits two events:
 /// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
 /// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.
@@ -4293,7 +4293,7 @@ pub fn encode_peer_to_peer_with_metadata_script_function(
 /// `account`. `account` must have both of these resources published under it at the start of this
 /// transaction in order for it to execute successfully.
 ///
-/// ## Events
+/// # Events
 /// Successful execution of this script emits two events:
 /// * `DiemAccount::SentPaymentEvent ` on `account`'s `DiemAccount::DiemAccount` `sent_events`
 /// handle with the `payee` and `payer` fields being `account`'s address; and
@@ -4697,7 +4697,7 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script_function(
 /// Updates the `base_url` and `compliance_public_key` fields of the `DualAttestation::Credential`
 /// resource published under `account`. The `new_key` must be a valid ed25519 public key.
 ///
-/// ## Events
+/// # Events
 /// Successful execution of this transaction emits two events:
 /// * A `DualAttestation::ComplianceKeyRotationEvent` containing the new compliance public key, and
 /// the blockchain time at which the key was updated emitted on the `DualAttestation::Credential`
@@ -4975,7 +4975,7 @@ pub fn encode_set_validator_operator_with_nonce_admin_script_function(
 /// they support. The sending `tc_account` must be the Treasury Compliance account, and the
 /// receiver an authorized Designated Dealer account.
 ///
-/// ## Events
+/// # Events
 /// Successful execution of the transaction will emit two events:
 /// * A `Diem::MintEvent` with the amount and currency code minted is emitted on the
 /// `mint_event_handle` in the stored `Diem::CurrencyInfo<CoinType>` resource stored under
@@ -5047,7 +5047,7 @@ pub fn encode_tiered_mint_script_function(
 /// account. Note that this is a per-account property so unfreezing a Parent VASP will not effect
 /// the status any of its child accounts and vice versa.
 ///
-/// ## Events
+/// # Events
 /// Successful execution of this script will emit a `AccountFreezing::UnFreezeAccountEvent` with
 /// the `unfrozen_address` set the `to_unfreeze_account`'s address.
 ///

@@ -435,7 +435,7 @@ module AccountAdministrationScripts {
     /// Updates the `base_url` and `compliance_public_key` fields of the `DualAttestation::Credential`
     /// resource published under `account`. The `new_key` must be a valid ed25519 public key.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this transaction emits two events:
     /// * A `DualAttestation::ComplianceKeyRotationEvent` containing the new compliance public key, and
     /// the blockchain time at which the key was updated emitted on the `DualAttestation::Credential`

@@ -2281,7 +2281,7 @@ resource published under <code>account</code>. The <code>new_key</code> must be 
 
 <a name="@Events_115"></a>
 
-####### Events
+###### Events
 
 Successful execution of this transaction emits two events:
 * A <code><a href="../modules/doc/DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">DualAttestation::ComplianceKeyRotationEvent</a></code> containing the new compliance public key, and
@@ -2620,7 +2620,7 @@ Standardized <code>metadata</code> BCS format can be found in <code>diem_types::
 
 <a name="@Events_132"></a>
 
-####### Events
+###### Events
 
 Successful execution of this script emits two events:
 * A <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> on <code>payer</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle; and
@@ -3650,7 +3650,7 @@ before this script is called otherwise the transaction will fail.
 
 <a name="@Events_170"></a>
 
-####### Events
+###### Events
 
 The successful execution of this transaction will emit:
 * A <code><a href="../modules/doc/Diem.md#0x1_Diem_CancelBurnEvent">Diem::CancelBurnEvent</a></code> on the event handle held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code>
@@ -3808,7 +3808,7 @@ under <code>preburn_address</code> immediately before this transaction, and the
 
 <a name="@Events_176"></a>
 
-####### Events
+###### Events
 
 The successful execution of this transaction will emit a <code><a href="../modules/doc/Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
 held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;Token&gt;</code> resource's <code>burn_events</code> published under
@@ -3929,7 +3929,7 @@ transaction in order for it to execute successfully.
 
 <a name="@Events_182"></a>
 
-####### Events
+###### Events
 
 Successful execution of this script emits two events:
 * <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a> </code> on <code>account</code>'s <code><a href="../modules/doc/DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code>
@@ -4057,7 +4057,7 @@ account address will have a value of 0 after the successful execution of this sc
 
 <a name="@Events_188"></a>
 
-####### Events
+###### Events
 
 The successful execution of this transaction will emit a <code><a href="../modules/doc/Diem.md#0x1_Diem_BurnEvent">Diem::BurnEvent</a></code> on the event handle
 held in the <code><a href="../modules/doc/Diem.md#0x1_Diem_CurrencyInfo">Diem::CurrencyInfo</a>&lt;CoinType&gt;</code> resource's <code>burn_events</code> published under
@@ -4140,7 +4140,7 @@ receiver an authorized Designated Dealer account.
 
 <a name="@Events_194"></a>
 
-####### Events
+###### Events
 
 Successful execution of the transaction will emit two events:
 * A <code><a href="../modules/doc/Diem.md#0x1_Diem_MintEvent">Diem::MintEvent</a></code> with the amount and currency code minted is emitted on the
@@ -4284,7 +4284,7 @@ accounts and vice versa.
 
 <a name="@Events_200"></a>
 
-####### Events
+###### Events
 
 Successful execution of this transaction will emit a <code><a href="../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">AccountFreezing::FreezeAccountEvent</a></code> on
 the <code>freeze_event_handle</code> held in the <code><a href="../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">AccountFreezing::FreezeEventsHolder</a></code> resource published
@@ -4370,7 +4370,7 @@ the status any of its child accounts and vice versa.
 
 <a name="@Events_206"></a>
 
-####### Events
+###### Events
 
 Successful execution of this script will emit a <code>AccountFreezing::UnFreezeAccountEvent</code> with
 the <code>unfrozen_address</code> set the <code>to_unfreeze_account</code>'s address.

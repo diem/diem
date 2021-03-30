@@ -90,6 +90,9 @@ const WEAK_KEYWORDS: &[&str] = &[
     "where",
 ];
 
+/// The maximum number of subheadings that are allowed
+const MAX_SUBSECTIONS: usize = 6;
+
 /// Options passed into the documentation generator.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -1352,6 +1355,9 @@ impl<'env> Docgen<'env> {
     /// Creates a new section header and inserts a table-of-contents entry into the generator.
     fn section_header(&self, s: &str, label: &str) {
         let level = *self.section_nest.borrow();
+        if usize::saturating_add(self.options.section_level_start, level) > MAX_SUBSECTIONS {
+            panic!("Maximum number of subheadings exceeded with heading: {}", s)
+        }
         if !label.is_empty() {
             self.label(label);
             let entry = TocEntry {

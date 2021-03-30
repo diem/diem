@@ -26,7 +26,7 @@ module PaymentScripts {
     /// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
     /// Standardized `metadata` BCS format can be found in `diem_types::transaction::metadata::Metadata`.
     ///
-    /// ## Events
+    /// # Events
     /// Successful execution of this script emits two events:
     /// * A `DiemAccount::SentPaymentEvent` on `payer`'s `DiemAccount::DiemAccount` `sent_events` handle; and
     /// * A `DiemAccount::ReceivedPaymentEvent` on `payee`'s `DiemAccount::DiemAccount` `received_events` handle.

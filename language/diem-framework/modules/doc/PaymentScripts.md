@@ -10,7 +10,7 @@ Any account that can hold a balance can use the transaction scripts within this 
 -  [Function `peer_to_peer_with_metadata`](#0x1_PaymentScripts_peer_to_peer_with_metadata)
     -  [Summary](#@Summary_0)
     -  [Technical Description](#@Technical_Description_1)
-        -  [Events](#@Events_2)
+    -  [Events](#@Events_2)
     -  [Parameters](#@Parameters_3)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_4)
     -  [Related Scripts](#@Related_Scripts_5)
@@ -58,7 +58,7 @@ Standardized <code>metadata</code> BCS format can be found in <code>diem_types::
 
 <a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of this script emits two events:
 * A <code><a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">DiemAccount::SentPaymentEvent</a></code> on <code>payer</code>'s <code><a href="DiemAccount.md#0x1_DiemAccount_DiemAccount">DiemAccount::DiemAccount</a></code> <code>sent_events</code> handle; and
