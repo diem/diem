@@ -27,6 +27,11 @@ pub struct StateSyncConfig {
     pub sync_request_timeout_ms: u64,
     // interval used for checking state synchronization progress
     pub tick_interval_ms: u64,
+    // The number of speculative prefetches to send when making chunk requests. If
+    // `num_speculative_prefetches == 0`, no prefetching will occur: the node will simply wait
+    // for a correct chunk response before requesting the next one. If `num_speculative_prefetches > 0`
+    // the node will also execute `num_speculative_prefetches` every time it receives a response.
+    pub num_speculative_prefetches: Option<u64>,
 }
 
 impl Default for StateSyncConfig {
@@ -41,6 +46,7 @@ impl Default for StateSyncConfig {
             multicast_timeout_ms: 30_000,
             sync_request_timeout_ms: 60_000,
             tick_interval_ms: 100,
+            num_speculative_prefetches: Some(1),
         }
     }
 }

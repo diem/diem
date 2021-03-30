@@ -53,10 +53,22 @@ pub struct ChunkRequestInfo {
     multicast_level: NetworkId,
     multicast_start_time: SystemTime,
     last_request_peers: Vec<PeerNetworkId>,
+    // A chunk request may be a speculative prefetch if the requestor makes several chunk
+    // requests in a row, without waiting for responses. This means the requestor assumes
+    // nothing will go wrong (e.g., the responding nodes will respond with the correct
+    // number of transactions in each chunk and in the correct order). Responses to these
+    // requests should not be penalized if they are out-of-order or do not start at the
+    // correct version for state sync. They are "speculative", after all.
+    is_speculative_prefetch: bool,
 }
 
 impl ChunkRequestInfo {
-    pub fn new(version: u64, peers: Vec<PeerNetworkId>, multicast_level: NetworkId) -> Self {
+    pub fn new(
+        version: u64,
+        peers: Vec<PeerNetworkId>,
+        multicast_level: NetworkId,
+        is_speculative_prefetch: bool,
+    ) -> Self {
         let now = SystemTime::now();
         Self {
             version,
@@ -65,6 +77,7 @@ impl ChunkRequestInfo {
             multicast_level,
             multicast_start_time: now,
             last_request_peers: peers,
+            is_speculative_prefetch,
         }
     }
 }
@@ -268,7 +281,11 @@ impl RequestManager {
         chosen_peers
     }
 
-    pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<(), Error> {
+    pub fn send_chunk_request(
+        &mut self,
+        req: GetChunkRequest,
+        is_speculative_prefetch: bool,
+    ) -> Result<(), Error> {
         let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_request(req.clone());
 
         // update internal state
@@ -280,7 +297,7 @@ impl RequestManager {
             ));
         }
 
-        let req_info = self.add_request(req.known_version, peers.clone());
+        let req_info = self.add_request(req.known_version, peers.clone(), is_speculative_prefetch);
         debug!(log
             .clone()
             .event(LogEvent::ChunkRequestInfo)
@@ -342,7 +359,12 @@ impl RequestManager {
             .send_to(peer.peer_id(), message)
     }
 
-    pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) -> ChunkRequestInfo {
+    pub fn add_request(
+        &mut self,
+        version: u64,
+        peers: Vec<PeerNetworkId>,
+        is_speculative_prefetch: bool,
+    ) -> ChunkRequestInfo {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
             if self.multicast_network_level != prev_request.multicast_level {
@@ -354,8 +376,12 @@ impl RequestManager {
             prev_request.last_request_time = now;
             prev_request.clone()
         } else {
-            let chunk_request_info =
-                ChunkRequestInfo::new(version, peers, self.multicast_network_level.clone());
+            let chunk_request_info = ChunkRequestInfo::new(
+                version,
+                peers,
+                self.multicast_network_level.clone(),
+                is_speculative_prefetch,
+            );
             self.requests.insert(version, chunk_request_info.clone());
             chunk_request_info
         }
@@ -398,9 +424,13 @@ impl RequestManager {
         chunk_version: u64,
         synced_version: u64,
     ) -> Result<(), Error> {
-        if self.is_multicast_response(chunk_version, peer) {
+        if self.is_multicast_response(chunk_version, peer)
+            || self.is_speculative_response(chunk_version)
+        {
             // If the chunk is a stale multicast response (for a request that another peer sent
             // a response to earlier) don't penalize the peer (no mismatch occurred -- it's just slow).
+            // If it's a response for a speculative chunk request, don't penalize the peer either:
+            // speculative requests can be incorrect for a variety of reasons.
             Err(Error::ReceivedChunkForOutdatedRequest(
                 peer.to_string(),
                 synced_version.to_string(),
@@ -414,6 +444,12 @@ impl RequestManager {
                 chunk_version.to_string(),
             ))
         }
+    }
+
+    fn is_speculative_response(&self, version: u64) -> bool {
+        self.requests
+            .get(&version)
+            .map_or(false, |req| req.is_speculative_prefetch)
     }
 
     fn is_multicast_response(&self, version: u64, peer: &PeerNetworkId) -> bool {
@@ -554,6 +590,9 @@ fn pick_peer(
 ) -> Option<PeerNetworkId> {
     if let Some(weighted_index) = &weighted_index {
         let mut rng = thread_rng();
+        if let Some(peer) = peers.get(1) {
+            return Some(peer.clone());
+        }
         if let Some(peer) = peers.get(weighted_index.sample(&mut rng)) {
             return Some(peer.clone());
         }
@@ -639,7 +678,7 @@ mod tests {
 
         // Process multiple request timeouts from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
-            request_manager.add_request(1, validator_0.clone());
+            request_manager.add_request(1, validator_0.clone(), false);
             assert!(request_manager.has_request_timed_out(1).unwrap());
         }
 
@@ -655,7 +694,7 @@ mod tests {
 
         // Process multiple chunk version mismatches from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
-            request_manager.add_request(100, vec![validator_0.clone()]);
+            request_manager.add_request(100, vec![validator_0.clone()], false);
             request_manager
                 .process_chunk_version_mismatch(&validator_0, 100, 0)
                 .unwrap_err();
@@ -683,7 +722,34 @@ mod tests {
 
         // Process multiple multi-cast chunk version mismatches from validator 0
         for _ in 0..NUM_CHUNKS_TO_PROCESS {
-            request_manager.add_request(100, vec![validator_0.clone(), validator_1.clone()]);
+            request_manager.add_request(100, vec![validator_0.clone(), validator_1.clone()], false);
+            request_manager
+                .process_chunk_version_mismatch(&validator_0, 100, 0)
+                .unwrap_err();
+        }
+
+        // Verify validator 0 is chosen more often than the other validators
+        verify_validator_picked_most_often(&mut request_manager, &validators, 0);
+    }
+
+    #[test]
+    fn test_score_chunk_version_mismatch_prefetch() {
+        let num_validators = 4;
+        let (mut request_manager, validators) =
+            generate_request_manager_and_validators(0, num_validators);
+
+        let validator_0 = validators[0].clone();
+
+        // Process empty chunk responses from all validators except validator 0
+        for _ in 0..NUM_CHUNKS_TO_PROCESS {
+            for validator_index in 1..num_validators {
+                request_manager.process_empty_chunk(&validators[validator_index as usize]);
+            }
+        }
+
+        // Process multiple prefetch chunk version mismatches from validator 0
+        for _ in 0..NUM_CHUNKS_TO_PROCESS {
+            request_manager.add_request(100, vec![validator_0.clone()], true);
             request_manager
                 .process_chunk_version_mismatch(&validator_0, 100, 0)
                 .unwrap_err();
@@ -776,11 +842,11 @@ mod tests {
         let validator_1 = vec![validators[1].clone()];
 
         // Add version requests to request manager
-        request_manager.add_request(1, validator_0.clone());
-        request_manager.add_request(3, validator_1.clone());
-        request_manager.add_request(5, validator_0.clone());
-        request_manager.add_request(10, validator_0);
-        request_manager.add_request(12, validator_1);
+        request_manager.add_request(1, validator_0.clone(), false);
+        request_manager.add_request(3, validator_1.clone(), false);
+        request_manager.add_request(5, validator_0.clone(), false);
+        request_manager.add_request(10, validator_0, false);
+        request_manager.add_request(12, validator_1, false);
 
         // Remove all request versions below 5
         request_manager.remove_requests(5);
@@ -801,8 +867,8 @@ mod tests {
         assert!(request_manager.get_first_request_time(1).is_none());
 
         // Add version requests to request manager
-        request_manager.add_request(1, vec![validators[0].clone()]);
-        request_manager.add_request(1, vec![validators[1].clone()]);
+        request_manager.add_request(1, vec![validators[0].clone()], false);
+        request_manager.add_request(1, vec![validators[1].clone()], false);
 
         // Verify first request time is less than last request time
         assert!(

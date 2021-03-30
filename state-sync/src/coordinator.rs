@@ -41,6 +41,7 @@ use std::{
 };
 use tokio::time::{interval, timeout};
 use tokio_stream::wrappers::IntervalStream;
+use std::io::{self, Write};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {
@@ -394,6 +395,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             known_version,
             self.local_state.trusted_epoch(),
             self.create_sync_request_chunk_target(known_version)?,
+            false,
         )
     }
 
@@ -1214,26 +1216,36 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         counters::set_version(counters::VersionType::Highest, highest_version);
     }
 
+    /// Calculates the next version (assuming the given transaction list is applied successfully)
+    fn calculate_new_known_version(
+        &mut self,
+        current_version: u64,
+        txn_list_with_proof_len: u64,
+    ) -> Result<u64, Error> {
+        current_version
+            .checked_add(txn_list_with_proof_len)
+            .ok_or_else(|| {
+                Error::IntegerOverflow("Potential state sync version has overflown".into())
+            })
+    }
+
     /// Calculates the next version and epoch to request (assuming the given transaction list
     /// and ledger info will be applied successfully). Note: if no ledger info is specified,
     /// we assume the next chunk will be for our current epoch.
     fn calculate_new_known_version_and_epoch(
         &mut self,
-        txn_list_with_proof: TransactionListWithProof,
+        current_version: u64,
+        txn_list_with_proof_len: u64,
         ledger_info: Option<LedgerInfoWithSignatures>,
     ) -> Result<(u64, u64), Error> {
-        let new_version = self
-            .local_state
-            .synced_version()
-            .checked_add(txn_list_with_proof.len() as u64)
-            .ok_or_else(|| {
-                Error::IntegerOverflow("Potential state sync version has overflown".into())
-            })?;
+        let new_version =
+            self.calculate_new_known_version(current_version, txn_list_with_proof_len)?;
 
         let mut new_epoch = self.local_state.trusted_epoch();
         if let Some(ledger_info) = ledger_info {
-            if ledger_info.ledger_info().version() == new_version
-                && ledger_info.ledger_info().ends_epoch()
+            if (ledger_info.ledger_info().version() == new_version
+                && ledger_info.ledger_info().ends_epoch())
+                || ledger_info.ledger_info().version() < new_version
             {
                 // This chunk is going to finish the current epoch. Choose the next one.
                 new_epoch = new_epoch.checked_add(1).ok_or_else(|| {
@@ -1288,45 +1300,80 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         response_li: LedgerInfoWithSignatures,
         new_highest_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
-        // Optimistically calculate the new known version and epoch (assume the current chunk
-        // is applied successfully).
-        let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
-            txn_list_with_proof.clone(),
-            Some(response_li.clone()),
-        )?;
+        println!("HIGHEST SYNCING");
+        io::stdout().flush().unwrap();
 
-        // Send the next chunk request based on the sync mode (sync request or highest available).
-        if self.sync_request.is_some() {
-            match self.create_sync_request_chunk_target(known_version) {
-                Ok(chunk_target) => {
-                    // Send the chunk request and log any errors. If errors are logged
-                    // continue processing the chunk.
+        let num_speculative_prefetches = self.config.num_speculative_prefetches.unwrap_or(0);
+        let num_requests_to_make = num_speculative_prefetches + 1; // Always make at least 1 request
+
+        // Calculate the new known version and epoch (assume the current response is valid)
+        let num_transactions_in_response = txn_list_with_proof.len() as u64;
+        let mut current_known_version = self.local_state.synced_version();
+        let (mut new_known_version, mut new_known_epoch) = self
+            .calculate_new_known_version_and_epoch(
+                current_known_version,
+                num_transactions_in_response,
+                Some(response_li.clone()),
+            )?;
+
+        // Send the chunk requests assuming successful responses are returned (even to prefetches).
+        // The request to send depends on the sync mode (sync request or highest available).
+        for request_num in 0..num_requests_to_make {
+            // Don't re-request if we've already submitted one
+            if self.request_manager.get_first_request_time(new_known_version).is_none() {
+                if self.sync_request.is_some() {
+                    match self.create_sync_request_chunk_target(new_known_version) {
+                        Ok(chunk_target) => {
+                            // Send the chunk request and log any errors. If errors are logged, just continue.
+                            let _ = self.send_chunk_request_and_log_error(
+                                new_known_version,
+                                new_known_epoch,
+                                chunk_target,
+                                LogEntry::ProcessChunkResponse,
+                                request_num != 0,
+                            );
+                        }
+                        Err(Error::SyncedBeyondTarget(known, target)) => {
+                            // If we get this error when calculating the first chunk request to send,
+                            // it means the chunk response we received will take us past the sync point
+                            // if we apply it. Don't process the chunk and instead return an error!
+                            if request_num == 0 {
+                                return Err(Error::SyncedBeyondTarget(known, target));
+                            }
+                        }
+                        Err(error) => {
+                            return Err(error);
+                        }
+                    }
+                } else {
+                    let mut new_target_ledger_info = None;
+                    if let Some(target_ledger_info) = self.target_ledger_info.clone() {
+                        if new_known_version < target_ledger_info.ledger_info().version() {
+                            new_target_ledger_info = Some(target_ledger_info);
+                        }
+                    }
+                    // Send the chunk request and log any errors. If errors are logged, just continue.
                     let _ = self.send_chunk_request_and_log_error(
-                        known_version,
-                        known_epoch,
-                        chunk_target,
+                        new_known_version,
+                        new_known_epoch,
+                        self.create_highest_available_chunk_target(new_target_ledger_info),
                         LogEntry::ProcessChunkResponse,
+                        request_num != 0,
                     );
                 }
-                Err(error) => {
-                    error!(LogSchema::new(LogEntry::SendChunkRequest).error(&error));
-                }
             }
-        } else {
-            let mut new_target_ledger_info = None;
-            if let Some(target_ledger_info) = self.target_ledger_info.clone() {
-                if known_version < target_ledger_info.ledger_info().version() {
-                    new_target_ledger_info = Some(target_ledger_info);
-                }
-            }
-            // Send the chunk request and log any errors. If errors are logged
-            // continue processing the chunk.
-            let _ = self.send_chunk_request_and_log_error(
-                known_version,
-                known_epoch,
-                self.create_highest_available_chunk_target(new_target_ledger_info),
-                LogEntry::ProcessChunkResponse,
-            );
+
+            // Calculate the next chunk request. This is speculative because it assumes all responses
+            // have the same number of transactions (which is hopefully true in most cases).
+            current_known_version += num_transactions_in_response;
+            let (next_known_version, next_known_epoch) = self
+                .calculate_new_known_version_and_epoch(
+                    current_known_version,
+                    num_transactions_in_response,
+                    Some(response_li.clone()),
+                )?;
+            new_known_version = next_known_version;
+            new_known_epoch = next_known_epoch;
         }
 
         // Validate chunk ledger infos
@@ -1362,6 +1409,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             }
         }
 
+        println!("END HIGHEST SYNCING");
+        io::stdout().flush().unwrap();
         Ok(())
     }
 
@@ -1372,21 +1421,46 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         waypoint_li: LedgerInfoWithSignatures,
         end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<(), Error> {
-        // Optimistically calculate the new known version and epoch (assume the current chunk
-        // is applied successfully).
-        let (known_version, known_epoch) = self.calculate_new_known_version_and_epoch(
-            txn_list_with_proof.clone(),
-            end_of_epoch_li.clone(),
-        )?;
-        if known_version < self.waypoint.version() {
-            // Send the chunk request and log any errors. If errors are logged
-            // continue processing the chunk.
-            let _ = self.send_chunk_request_and_log_error(
-                known_version,
-                known_epoch,
-                self.create_waypoint_chunk_target(),
-                LogEntry::ProcessChunkResponse,
-            );
+        info!("WAYPOINT SYNCING");
+        let num_speculative_prefetches = self.config.num_speculative_prefetches.unwrap_or(0);
+        let num_requests_to_make = num_speculative_prefetches + 1; // Always make at least 1 request
+
+        // Calculate the new known version and epoch (assume the current response is valid)
+        let num_transactions_in_response = txn_list_with_proof.len() as u64;
+        let mut current_known_version = self.local_state.synced_version();
+        let (mut new_known_version, mut new_known_epoch) = self
+            .calculate_new_known_version_and_epoch(
+                current_known_version,
+                num_transactions_in_response,
+                end_of_epoch_li.clone(),
+            )?;
+
+        // Send the chunk requests assuming successful responses are returned (even to prefetches)
+        for request_num in 0..num_requests_to_make {
+            if self.request_manager.get_first_request_time(new_known_version).is_none() {
+                if new_known_version < self.waypoint.version() {
+                    // Send the chunk request and log any errors. If errors are logged, just continue.
+                    let _ = self.send_chunk_request_and_log_error(
+                        new_known_version,
+                        new_known_epoch,
+                        self.create_waypoint_chunk_target(),
+                        LogEntry::ProcessChunkResponse,
+                        request_num != 0,
+                    );
+                }
+
+                // Calculate the next chunk request. This is speculative because it assumes all responses
+                // have the same number of transactions (which is hopefully true in most cases).
+                current_known_version += num_transactions_in_response;
+                let (next_known_version, next_known_epoch) = self
+                    .calculate_new_known_version_and_epoch(
+                        current_known_version,
+                        num_transactions_in_response,
+                        end_of_epoch_li.clone(),
+                    )?;
+                new_known_version = next_known_version;
+                new_known_epoch = next_known_epoch;
+            }
         }
 
         // Verify the end_of_epoch_li against local state and ensure the version
@@ -1407,6 +1481,10 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             // If we're now at the end of epoch version (i.e., known_version is the same as the
             // end_of_epoch_li version), the end_of_epoch_li should be passed to storage so that we
             // can commit the end_of_epoch_li. If not, storage should only sync the given chunk.
+            let known_version = self.calculate_new_known_version(
+                self.local_state.synced_version(),
+                num_transactions_in_response,
+            )?;
             if ledger_info.version() == known_version {
                 Some(end_of_epoch_li)
             } else {
@@ -1524,6 +1602,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
                 trusted_epoch,
                 chunk_target,
                 LogEntry::Timeout,
+                false,
             )
         } else {
             Ok(())
@@ -1538,10 +1617,16 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         known_epoch: u64,
         chunk_target: TargetType,
         log_entry: LogEntry,
+        is_speculative_prefetch: bool,
     ) -> Result<(), Error> {
-        if let Err(error) =
-            self.send_chunk_request_with_target(known_version, known_epoch, chunk_target)
-        {
+        println!("SENDING REQUEST FOR KNOWN VERSION: {:?}, KNOWN EPOCH: {:?}",known_version, known_epoch);
+        io::stdout().flush().unwrap();
+        if let Err(error) = self.send_chunk_request_with_target(
+            known_version,
+            known_epoch,
+            chunk_target,
+            is_speculative_prefetch,
+        ) {
             error!(
                 LogSchema::event_log(log_entry, LogEvent::SendChunkRequestFail)
                     .version(known_version)
@@ -1560,6 +1645,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         known_version: u64,
         known_epoch: u64,
         target: TargetType,
+        is_speculative_prefetch: bool,
     ) -> Result<(), Error> {
         if self.request_manager.no_available_peers() {
             warn!(LogSchema::event_log(
@@ -1577,7 +1663,8 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         counters::set_version(counters::VersionType::Target, target_version);
 
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
-        self.request_manager.send_chunk_request(req)
+        self.request_manager
+            .send_chunk_request(req, is_speculative_prefetch)
     }
 
     fn deliver_subscription(

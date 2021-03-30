@@ -75,7 +75,7 @@ pub fn network_endpoint_config() -> (
     (
         vec![],
         vec![ProtocolId::StateSyncDirectSend],
-        QueueStyle::LIFO,
+        QueueStyle::FIFO,
         STATE_SYNC_MAX_BUFFER_SIZE,
         Some(&counters::PENDING_STATE_SYNC_NETWORK_EVENTS),
     )
