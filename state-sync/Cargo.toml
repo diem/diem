@@ -64,6 +64,7 @@ storage-service = { path = "../storage/storage-service" }
 subscription-service = { path = "../common/subscription-service" }
 transaction-builder = { path = "../language/transaction-builder" }
 diem-time-service = { path = "../common/time-service", features = ["testing"] }
+vm-genesis = { path = "../language/tools/vm-genesis", features = ["fuzzing"] }
 
 [features]
 default = []
