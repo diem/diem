@@ -343,10 +343,8 @@ fn create_and_initialize_testnet_minting(
         session,
         log_context,
         testnet_dd_account_address,
-        &transaction_builder::encode_rotate_authentication_key_script_function(
-            genesis_auth_key.to_vec(),
-        )
-        .into_script_function(),
+        &transaction_builder::encode_rotate_authkey_script_function(genesis_auth_key.to_vec())
+            .into_script_function(),
     );
 }
 
@@ -395,10 +393,8 @@ fn create_and_initialize_owners_operators(
             session,
             log_context,
             owner_address,
-            &transaction_builder::encode_rotate_authentication_key_script_function(
-                real_owner_auth_key,
-            )
-            .into_script_function(),
+            &transaction_builder::encode_rotate_authkey_script_function(real_owner_auth_key)
+                .into_script_function(),
         );
     }
 

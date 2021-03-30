@@ -41,10 +41,10 @@ def demo_p2p_script_function() -> None:
     )
     payee = diem.AccountAddress.from_bytes(b"\x22" * 16)
     amount = st.uint64(1_234_567)
-    payload = stdlib.encode_peer_to_peer_with_metadata_script_function(token, payee, amount, b"", b"")
+    payload = stdlib.encode_p2p_script_function(token, payee, amount, b"", b"")
 
     call = stdlib.decode_script_function_payload(payload)
-    assert isinstance(call, stdlib.ScriptFunctionCall__PeerToPeerWithMetadata)
+    assert isinstance(call, stdlib.ScriptFunctionCall__P2p)
     assert call.amount == amount;
     assert call.payee == payee;
 

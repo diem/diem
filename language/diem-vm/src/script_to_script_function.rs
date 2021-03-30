@@ -550,19 +550,19 @@ pub(crate) fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'sta
         )),
         ROTATE_AUTHENTICATION_KEY_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key").unwrap(),
+            IdentStr::new("rotate_authkey").unwrap(),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_nonce").unwrap(),
+            IdentStr::new("rotate_authkey_with_nonce").unwrap(),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_nonce_admin").unwrap(),
+            IdentStr::new("rotate_authkey_with_nonce_admin").unwrap(),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_recovery_address").unwrap(),
+            IdentStr::new("rotate_authkey_with_recovery_address").unwrap(),
         )),
         ROTATE_DUAL_ATTESTATION_INFO_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
@@ -596,10 +596,9 @@ pub(crate) fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'sta
         )),
 
         // PaymentScripts
-        PEER_TO_PEER_WITH_METADATA_BYTES!() => Some((
-            &*PAYMENT_SCRIPTS,
-            IdentStr::new("peer_to_peer_with_metadata").unwrap(),
-        )),
+        PEER_TO_PEER_WITH_METADATA_BYTES!() => {
+            Some((&*PAYMENT_SCRIPTS, IdentStr::new("p2p").unwrap()))
+        }
 
         // SystemAdministrationScripts
         UPDATE_DIEM_VERSION_BYTES!() => Some((

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use diem_framework::{encode_peer_to_peer_with_metadata_script, encode_peer_to_peer_with_metadata_script_function, ScriptCall, ScriptFunctionCall};
+use diem_framework::{encode_peer_to_peer_with_metadata_script, encode_p2p_script_function, ScriptCall, ScriptFunctionCall};
 use diem_types::{AccountAddress, Identifier, StructTag, TypeTag};
 use serde_bytes::ByteBuf as Bytes;
 
@@ -62,7 +62,7 @@ fn demo_p2p_script_function() {
     let amount = 1234567;
 
     // Now encode and decode a peer to peer transaction script function.
-    let payload = encode_peer_to_peer_with_metadata_script_function(
+    let payload = encode_p2p_script_function(
         token,
         payee.clone(),
         amount,
@@ -71,7 +71,7 @@ fn demo_p2p_script_function() {
     );
     let function_call = ScriptFunctionCall::decode(&payload);
     match function_call {
-        Some(ScriptFunctionCall::PeerToPeerWithMetadata {
+        Some(ScriptFunctionCall::P2p {
             amount: a,
             payee: p,
             ..

@@ -39,7 +39,7 @@ void demo_p2p_script_function() {
                                 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22};
     uint64_t amount = 1234567;
     auto payload =
-        encode_peer_to_peer_with_metadata_script_function(token, payee, amount, {}, {});
+        encode_p2p_script_function(token, payee, amount, {}, {});
 
     auto output = payload.bcsSerialize();
     for (uint8_t o : output) {

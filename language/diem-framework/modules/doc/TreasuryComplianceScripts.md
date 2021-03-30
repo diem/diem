@@ -663,7 +663,7 @@ resource published under the <code>designated_dealer_address</code>.
 ### Related Scripts
 
 * <code><a href="AccountCreationScripts.md#0x1_AccountCreationScripts_create_designated_dealer">AccountCreationScripts::create_designated_dealer</a></code>
-* <code><a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">PaymentScripts::peer_to_peer_with_metadata</a></code>
+* <code><a href="PaymentScripts.md#0x1_PaymentScripts_p2p">PaymentScripts::p2p</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 

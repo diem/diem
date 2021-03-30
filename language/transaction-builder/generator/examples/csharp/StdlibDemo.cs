@@ -60,7 +60,7 @@ public class StdlibDemo {
 
         ulong amount = 1234567;
         TransactionPayload payload =
-            Helpers.encode_peer_to_peer_with_metadata_script_function(
+            Helpers.encode_p2p_script_function(
                 token,
                 payee,
                 amount,
@@ -68,7 +68,7 @@ public class StdlibDemo {
                 new ValueArray<byte>(new List<byte>().ToArray())
         );
 
-        ScriptFunctionCall.PeerToPeerWithMetadata call = (ScriptFunctionCall.PeerToPeerWithMetadata)Helpers.DecodeScriptFunctionPayload(payload);
+        ScriptFunctionCall.P2p call = (ScriptFunctionCall.P2p)Helpers.DecodeScriptFunctionPayload(payload);
         Debug.Assert(call.amount.Equals(amount), string.Format("call.amount is {0}. Expecting {1}", call.amount, amount));
         Debug.Assert(call.payee.Equals(payee), string.Format("call.payee is {0}. Expecting {1}", call.payee, payee));
 

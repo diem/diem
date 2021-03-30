@@ -1511,7 +1511,7 @@ pub enum ScriptFunctionCall {
     ///
     /// # Related Scripts
     /// * `AccountAdministrationScripts::create_recovery_address`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
     AddRecoveryRotationCapability { recovery_address: AccountAddress },
 
     /// # Summary
@@ -1772,7 +1772,7 @@ pub enum ScriptFunctionCall {
     /// # Related Scripts
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
+    /// * `AccountAdministrationScripts::rotate_authkey`
     /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
     /// * `AccountAdministrationScripts::create_recovery_address`
     CreateChildVaspAccount {
@@ -1886,7 +1886,7 @@ pub enum ScriptFunctionCall {
     /// # Related Scripts
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
+    /// * `AccountAdministrationScripts::rotate_authkey`
     /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
@@ -1927,8 +1927,8 @@ pub enum ScriptFunctionCall {
     /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
     ///
     /// # Related Scripts
-    /// * `Script::add_recovery_rotation_capability`
-    /// * `Script::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
     CreateRecoveryAddress {},
 
     /// # Summary
@@ -2142,7 +2142,7 @@ pub enum ScriptFunctionCall {
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    PeerToPeerWithMetadata {
+    P2p {
         currency: TypeTag,
         payee: AccountAddress,
         amount: u64,
@@ -2337,10 +2337,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKey { new_key: Bytes },
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+    RotateAuthkey { new_key: Bytes },
 
     /// # Summary
     /// Rotates the sender's authentication key to the supplied new authentication key. May be sent by
@@ -2371,10 +2371,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                           |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKeyWithNonce { sliding_nonce: u64, new_key: Bytes },
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+    RotateAuthkeyWithNonce { sliding_nonce: u64, new_key: Bytes },
 
     /// # Summary
     /// Rotates the specified account's authentication key to the supplied new authentication key. May
@@ -2405,10 +2405,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-    RotateAuthenticationKeyWithNonceAdmin { sliding_nonce: u64, new_key: Bytes },
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+    RotateAuthkeyWithNonceAdmin { sliding_nonce: u64, new_key: Bytes },
 
     /// # Summary
     /// Rotates the authentication key of a specified account that is part of a recovery address to a
@@ -2440,10 +2440,10 @@ pub enum ScriptFunctionCall {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-    RotateAuthenticationKeyWithRecoveryAddress {
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+    RotateAuthkeyWithRecoveryAddress {
         recovery_address: AccountAddress,
         to_recover: AccountAddress,
         new_key: Bytes,
@@ -2703,7 +2703,7 @@ pub enum ScriptFunctionCall {
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_designated_dealer`
-    /// * `PaymentScripts::peer_to_peer_with_metadata`
+    /// * `PaymentScripts::p2p`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
     TieredMint {
         coin_type: TypeTag,
@@ -3229,19 +3229,13 @@ impl ScriptFunctionCall {
                 sliding_nonce,
                 to_freeze_account,
             } => encode_freeze_account_script_function(sliding_nonce, to_freeze_account),
-            PeerToPeerWithMetadata {
+            P2p {
                 currency,
                 payee,
                 amount,
                 metadata,
                 metadata_signature,
-            } => encode_peer_to_peer_with_metadata_script_function(
-                currency,
-                payee,
-                amount,
-                metadata,
-                metadata_signature,
-            ),
+            } => encode_p2p_script_function(currency, payee, amount, metadata, metadata_signature),
             Preburn { token, amount } => encode_preburn_script_function(token, amount),
             PublishSharedEd25519PublicKey { public_key } => {
                 encode_publish_shared_ed25519_public_key_script_function(public_key)
@@ -3266,27 +3260,20 @@ impl ScriptFunctionCall {
                 validator_name,
                 validator_address,
             ),
-            RotateAuthenticationKey { new_key } => {
-                encode_rotate_authentication_key_script_function(new_key)
-            }
-            RotateAuthenticationKeyWithNonce {
+            RotateAuthkey { new_key } => encode_rotate_authkey_script_function(new_key),
+            RotateAuthkeyWithNonce {
                 sliding_nonce,
                 new_key,
-            } => {
-                encode_rotate_authentication_key_with_nonce_script_function(sliding_nonce, new_key)
-            }
-            RotateAuthenticationKeyWithNonceAdmin {
+            } => encode_rotate_authkey_with_nonce_script_function(sliding_nonce, new_key),
+            RotateAuthkeyWithNonceAdmin {
                 sliding_nonce,
                 new_key,
-            } => encode_rotate_authentication_key_with_nonce_admin_script_function(
-                sliding_nonce,
-                new_key,
-            ),
-            RotateAuthenticationKeyWithRecoveryAddress {
+            } => encode_rotate_authkey_with_nonce_admin_script_function(sliding_nonce, new_key),
+            RotateAuthkeyWithRecoveryAddress {
                 recovery_address,
                 to_recover,
                 new_key,
-            } => encode_rotate_authentication_key_with_recovery_address_script_function(
+            } => encode_rotate_authkey_with_recovery_address_script_function(
                 recovery_address,
                 to_recover,
                 new_key,
@@ -3464,7 +3451,7 @@ pub fn encode_add_currency_to_account_script_function(currency: TypeTag) -> Tran
 ///
 /// # Related Scripts
 /// * `AccountAdministrationScripts::create_recovery_address`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+/// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 pub fn encode_add_recovery_rotation_capability_script_function(
     recovery_address: AccountAddress,
 ) -> TransactionPayload {
@@ -3788,7 +3775,7 @@ pub fn encode_cancel_burn_with_amount_script_function(
 /// # Related Scripts
 /// * `AccountCreationScripts::create_parent_vasp_account`
 /// * `AccountAdministrationScripts::add_currency_to_account`
-/// * `AccountAdministrationScripts::rotate_authentication_key`
+/// * `AccountAdministrationScripts::rotate_authkey`
 /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
 /// * `AccountAdministrationScripts::create_recovery_address`
 pub fn encode_create_child_vasp_account_script_function(
@@ -3933,7 +3920,7 @@ pub fn encode_create_designated_dealer_script_function(
 /// # Related Scripts
 /// * `AccountCreationScripts::create_child_vasp_account`
 /// * `AccountAdministrationScripts::add_currency_to_account`
-/// * `AccountAdministrationScripts::rotate_authentication_key`
+/// * `AccountAdministrationScripts::rotate_authkey`
 /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
 /// * `AccountAdministrationScripts::create_recovery_address`
 /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
@@ -3990,8 +3977,8 @@ pub fn encode_create_parent_vasp_account_script_function(
 /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
 ///
 /// # Related Scripts
-/// * `Script::add_recovery_rotation_capability`
-/// * `Script::rotate_authentication_key_with_recovery_address`
+/// * `AccountAdministrationScripts::add_recovery_rotation_capability`
+/// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 pub fn encode_create_recovery_address_script_function() -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
@@ -4258,7 +4245,7 @@ pub fn encode_freeze_account_script_function(
 /// * `AccountCreationScripts::create_child_vasp_account`
 /// * `AccountCreationScripts::create_parent_vasp_account`
 /// * `AccountAdministrationScripts::add_currency_to_account`
-pub fn encode_peer_to_peer_with_metadata_script_function(
+pub fn encode_p2p_script_function(
     currency: TypeTag,
     payee: AccountAddress,
     amount: u64,
@@ -4270,7 +4257,7 @@ pub fn encode_peer_to_peer_with_metadata_script_function(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("PaymentScripts").unwrap(),
         ),
-        Identifier::new("peer_to_peer_with_metadata").unwrap(),
+        Identifier::new("p2p").unwrap(),
         vec![currency],
         vec![
             bcs::to_bytes(&payee).unwrap(),
@@ -4519,16 +4506,16 @@ pub fn encode_remove_validator_and_reconfigure_script_function(
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
 ///
 /// # Related Scripts
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-pub fn encode_rotate_authentication_key_script_function(new_key: Vec<u8>) -> TransactionPayload {
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+/// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+pub fn encode_rotate_authkey_script_function(new_key: Vec<u8>) -> TransactionPayload {
     TransactionPayload::ScriptFunction(ScriptFunction::new(
         ModuleId::new(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("AccountAdministrationScripts").unwrap(),
         ),
-        Identifier::new("rotate_authentication_key").unwrap(),
+        Identifier::new("rotate_authkey").unwrap(),
         vec![],
         vec![bcs::to_bytes(&new_key).unwrap()],
     ))
@@ -4563,10 +4550,10 @@ pub fn encode_rotate_authentication_key_script_function(new_key: Vec<u8>) -> Tra
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                           |
 ///
 /// # Related Scripts
-/// * `AccountAdministrationScripts::rotate_authentication_key`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-pub fn encode_rotate_authentication_key_with_nonce_script_function(
+/// * `AccountAdministrationScripts::rotate_authkey`
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+/// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+pub fn encode_rotate_authkey_with_nonce_script_function(
     sliding_nonce: u64,
     new_key: Vec<u8>,
 ) -> TransactionPayload {
@@ -4575,7 +4562,7 @@ pub fn encode_rotate_authentication_key_with_nonce_script_function(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("AccountAdministrationScripts").unwrap(),
         ),
-        Identifier::new("rotate_authentication_key_with_nonce").unwrap(),
+        Identifier::new("rotate_authkey_with_nonce").unwrap(),
         vec![],
         vec![
             bcs::to_bytes(&sliding_nonce).unwrap(),
@@ -4613,10 +4600,10 @@ pub fn encode_rotate_authentication_key_with_nonce_script_function(
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
 ///
 /// # Related Scripts
-/// * `AccountAdministrationScripts::rotate_authentication_key`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
-pub fn encode_rotate_authentication_key_with_nonce_admin_script_function(
+/// * `AccountAdministrationScripts::rotate_authkey`
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+/// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
+pub fn encode_rotate_authkey_with_nonce_admin_script_function(
     sliding_nonce: u64,
     new_key: Vec<u8>,
 ) -> TransactionPayload {
@@ -4625,7 +4612,7 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script_function(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("AccountAdministrationScripts").unwrap(),
         ),
-        Identifier::new("rotate_authentication_key_with_nonce_admin").unwrap(),
+        Identifier::new("rotate_authkey_with_nonce_admin").unwrap(),
         vec![],
         vec![
             bcs::to_bytes(&sliding_nonce).unwrap(),
@@ -4664,10 +4651,10 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script_function(
 /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
 ///
 /// # Related Scripts
-/// * `AccountAdministrationScripts::rotate_authentication_key`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-/// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-pub fn encode_rotate_authentication_key_with_recovery_address_script_function(
+/// * `AccountAdministrationScripts::rotate_authkey`
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+/// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+pub fn encode_rotate_authkey_with_recovery_address_script_function(
     recovery_address: AccountAddress,
     to_recover: AccountAddress,
     new_key: Vec<u8>,
@@ -4677,7 +4664,7 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script_function(
             AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             Identifier::new("AccountAdministrationScripts").unwrap(),
         ),
-        Identifier::new("rotate_authentication_key_with_recovery_address").unwrap(),
+        Identifier::new("rotate_authkey_with_recovery_address").unwrap(),
         vec![],
         vec![
             bcs::to_bytes(&recovery_address).unwrap(),
@@ -5011,7 +4998,7 @@ pub fn encode_set_validator_operator_with_nonce_admin_script_function(
 ///
 /// # Related Scripts
 /// * `AccountCreationScripts::create_designated_dealer`
-/// * `PaymentScripts::peer_to_peer_with_metadata`
+/// * `PaymentScripts::p2p`
 /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 pub fn encode_tiered_mint_script_function(
     coin_type: TypeTag,
@@ -7135,11 +7122,9 @@ fn decode_freeze_account_script_function(
     }
 }
 
-fn decode_peer_to_peer_with_metadata_script_function(
-    payload: &TransactionPayload,
-) -> Option<ScriptFunctionCall> {
+fn decode_p2p_script_function(payload: &TransactionPayload) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::PeerToPeerWithMetadata {
+        Some(ScriptFunctionCall::P2p {
             currency: script.ty_args().get(0)?.clone(),
             payee: bcs::from_bytes(script.args().get(0)?).ok()?,
             amount: bcs::from_bytes(script.args().get(1)?).ok()?,
@@ -7203,11 +7188,11 @@ fn decode_remove_validator_and_reconfigure_script_function(
     }
 }
 
-fn decode_rotate_authentication_key_script_function(
+fn decode_rotate_authkey_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::RotateAuthenticationKey {
+        Some(ScriptFunctionCall::RotateAuthkey {
             new_key: bcs::from_bytes(script.args().get(0)?).ok()?,
         })
     } else {
@@ -7215,11 +7200,11 @@ fn decode_rotate_authentication_key_script_function(
     }
 }
 
-fn decode_rotate_authentication_key_with_nonce_script_function(
+fn decode_rotate_authkey_with_nonce_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::RotateAuthenticationKeyWithNonce {
+        Some(ScriptFunctionCall::RotateAuthkeyWithNonce {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
             new_key: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
@@ -7228,11 +7213,11 @@ fn decode_rotate_authentication_key_with_nonce_script_function(
     }
 }
 
-fn decode_rotate_authentication_key_with_nonce_admin_script_function(
+fn decode_rotate_authkey_with_nonce_admin_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(ScriptFunctionCall::RotateAuthenticationKeyWithNonceAdmin {
+        Some(ScriptFunctionCall::RotateAuthkeyWithNonceAdmin {
             sliding_nonce: bcs::from_bytes(script.args().get(0)?).ok()?,
             new_key: bcs::from_bytes(script.args().get(1)?).ok()?,
         })
@@ -7241,17 +7226,15 @@ fn decode_rotate_authentication_key_with_nonce_admin_script_function(
     }
 }
 
-fn decode_rotate_authentication_key_with_recovery_address_script_function(
+fn decode_rotate_authkey_with_recovery_address_script_function(
     payload: &TransactionPayload,
 ) -> Option<ScriptFunctionCall> {
     if let TransactionPayload::ScriptFunction(script) = payload {
-        Some(
-            ScriptFunctionCall::RotateAuthenticationKeyWithRecoveryAddress {
-                recovery_address: bcs::from_bytes(script.args().get(0)?).ok()?,
-                to_recover: bcs::from_bytes(script.args().get(1)?).ok()?,
-                new_key: bcs::from_bytes(script.args().get(2)?).ok()?,
-            },
-        )
+        Some(ScriptFunctionCall::RotateAuthkeyWithRecoveryAddress {
+            recovery_address: bcs::from_bytes(script.args().get(0)?).ok()?,
+            to_recover: bcs::from_bytes(script.args().get(1)?).ok()?,
+            new_key: bcs::from_bytes(script.args().get(2)?).ok()?,
+        })
     } else {
         None
     }
@@ -7863,8 +7846,8 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_freeze_account_script_function),
         );
         map.insert(
-            "PaymentScriptspeer_to_peer_with_metadata".to_string(),
-            Box::new(decode_peer_to_peer_with_metadata_script_function),
+            "PaymentScriptsp2p".to_string(),
+            Box::new(decode_p2p_script_function),
         );
         map.insert(
             "TreasuryComplianceScriptspreburn".to_string(),
@@ -7883,21 +7866,20 @@ static SCRIPT_FUNCTION_DECODER_MAP: once_cell::sync::Lazy<ScriptFunctionDecoderM
             Box::new(decode_remove_validator_and_reconfigure_script_function),
         );
         map.insert(
-            "AccountAdministrationScriptsrotate_authentication_key".to_string(),
-            Box::new(decode_rotate_authentication_key_script_function),
+            "AccountAdministrationScriptsrotate_authkey".to_string(),
+            Box::new(decode_rotate_authkey_script_function),
         );
         map.insert(
-            "AccountAdministrationScriptsrotate_authentication_key_with_nonce".to_string(),
-            Box::new(decode_rotate_authentication_key_with_nonce_script_function),
+            "AccountAdministrationScriptsrotate_authkey_with_nonce".to_string(),
+            Box::new(decode_rotate_authkey_with_nonce_script_function),
         );
         map.insert(
-            "AccountAdministrationScriptsrotate_authentication_key_with_nonce_admin".to_string(),
-            Box::new(decode_rotate_authentication_key_with_nonce_admin_script_function),
+            "AccountAdministrationScriptsrotate_authkey_with_nonce_admin".to_string(),
+            Box::new(decode_rotate_authkey_with_nonce_admin_script_function),
         );
         map.insert(
-            "AccountAdministrationScriptsrotate_authentication_key_with_recovery_address"
-                .to_string(),
-            Box::new(decode_rotate_authentication_key_with_recovery_address_script_function),
+            "AccountAdministrationScriptsrotate_authkey_with_recovery_address".to_string(),
+            Box::new(decode_rotate_authkey_with_recovery_address_script_function),
         );
         map.insert(
             "AccountAdministrationScriptsrotate_dual_attestation_info".to_string(),

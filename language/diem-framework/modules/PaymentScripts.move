@@ -58,7 +58,7 @@ module PaymentScripts {
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    public(script) fun peer_to_peer_with_metadata<Currency: store>(
+    public(script) fun p2p<Currency: store>(
         payer: signer,
         payee: address,
         amount: u64,
@@ -71,7 +71,7 @@ module PaymentScripts {
         );
         DiemAccount::restore_withdraw_capability(payer_withdrawal_cap);
     }
-    spec fun peer_to_peer_with_metadata {
+    spec fun p2p {
         use 0x1::Signer;
         use 0x1::Errors;
 

@@ -60,9 +60,9 @@ public class StdlibDemo {
 
         @Unsigned Long amount = Long.valueOf(1234567);
         TransactionPayload payload =
-            Helpers.encode_peer_to_peer_with_metadata_script_function(token, payee, amount, Bytes.empty(), Bytes.empty());
+            Helpers.encode_p2p_script_function(token, payee, amount, Bytes.empty(), Bytes.empty());
 
-        ScriptFunctionCall.PeerToPeerWithMetadata call = (ScriptFunctionCall.PeerToPeerWithMetadata)Helpers.decode_script_function_payload(payload);
+        ScriptFunctionCall.P2p call = (ScriptFunctionCall.P2p)Helpers.decode_script_function_payload(payload);
         assert(call.amount.equals(amount));
         assert(call.payee.equals(payee));
 

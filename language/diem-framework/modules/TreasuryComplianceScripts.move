@@ -355,7 +355,7 @@ module TreasuryComplianceScripts {
     ///
     /// # Related Scripts
     /// * `AccountCreationScripts::create_designated_dealer`
-    /// * `PaymentScripts::peer_to_peer_with_metadata`
+    /// * `PaymentScripts::p2p`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`
 
     public(script) fun tiered_mint<CoinType: store>(

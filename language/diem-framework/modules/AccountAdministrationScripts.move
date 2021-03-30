@@ -99,7 +99,7 @@ module AccountAdministrationScripts {
     ///
     /// # Related Scripts
     /// * `AccountAdministrationScripts::create_recovery_address`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 
     public(script) fun add_recovery_rotation_capability(to_recover_account: signer, recovery_address: address) {
         RecoveryAddress::add_rotation_capability(
@@ -198,16 +198,16 @@ module AccountAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                    |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 
-    public(script) fun rotate_authentication_key(account: signer, new_key: vector<u8>) {
+    public(script) fun rotate_authkey(account: signer, new_key: vector<u8>) {
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
-    spec fun rotate_authentication_key {
+    spec fun rotate_authkey {
         use 0x1::Signer;
         use 0x1::Errors;
 
@@ -259,17 +259,17 @@ module AccountAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                           |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce(account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+    public(script) fun rotate_authkey_with_nonce(account: signer, sliding_nonce: u64, new_key: vector<u8>) {
         SlidingNonce::record_nonce_or_abort(&account, sliding_nonce);
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
-    spec fun rotate_authentication_key_with_nonce {
+    spec fun rotate_authkey_with_nonce {
         use 0x1::Signer;
         use 0x1::Errors;
 
@@ -323,17 +323,17 @@ module AccountAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 
-    public(script) fun rotate_authentication_key_with_nonce_admin(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector<u8>) {
+    public(script) fun rotate_authkey_with_nonce_admin(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector<u8>) {
         SlidingNonce::record_nonce_or_abort(&dr_account, sliding_nonce);
         let key_rotation_capability = DiemAccount::extract_key_rotation_capability(&account);
         DiemAccount::rotate_authentication_key(&key_rotation_capability, new_key);
         DiemAccount::restore_key_rotation_capability(key_rotation_capability);
     }
-    spec fun rotate_authentication_key_with_nonce_admin {
+    spec fun rotate_authkey_with_nonce_admin {
         use 0x1::Signer;
         use 0x1::Errors;
         use 0x1::Roles;
@@ -391,11 +391,11 @@ module AccountAdministrationScripts {
     /// | `Errors::INVALID_ARGUMENT` | `DiemAccount::EMALFORMED_AUTHENTICATION_KEY` | `new_key` was an invalid length.                                                                                                                    |
     ///
     /// # Related Scripts
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce`
-    /// * `AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin`
+    /// * `AccountAdministrationScripts::rotate_authkey`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_nonce_admin`
 
-    public(script) fun rotate_authentication_key_with_recovery_address(
+    public(script) fun rotate_authkey_with_recovery_address(
             account: signer,
             recovery_address: address,
             to_recover: address,
@@ -403,7 +403,7 @@ module AccountAdministrationScripts {
             ) {
         RecoveryAddress::rotate_authentication_key(&account, recovery_address, to_recover, new_key)
     }
-    spec fun rotate_authentication_key_with_recovery_address {
+    spec fun rotate_authkey_with_recovery_address {
         use 0x1::Errors;
         use 0x1::DiemAccount;
         use 0x1::Signer;
@@ -561,8 +561,8 @@ module AccountAdministrationScripts {
     /// | `Errors::ALREADY_PUBLISHED` | `RecoveryAddress::ERECOVERY_ADDRESS`                       | A `RecoveryAddress::RecoveryAddress` resource has already been published under `account`.     |
     ///
     /// # Related Scripts
-    /// * `Script::add_recovery_rotation_capability`
-    /// * `Script::rotate_authentication_key_with_recovery_address`
+    /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
+    /// * `AccountAdministrationScripts::rotate_authkey_with_recovery_address`
 
     public(script) fun create_recovery_address(account: signer) {
         RecoveryAddress::publish(&account, DiemAccount::extract_key_rotation_capability(&account))

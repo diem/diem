@@ -131,7 +131,7 @@ This is emitted on the new Child VASPS's <code><a href="DiemAccount.md#0x1_DiemA
 
 * <code><a href="AccountCreationScripts.md#0x1_AccountCreationScripts_create_parent_vasp_account">AccountCreationScripts::create_parent_vasp_account</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">AccountAdministrationScripts::rotate_authkey</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">AccountAdministrationScripts::create_recovery_address</a></code>
 
@@ -593,7 +593,7 @@ and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_PAREN
 
 * <code><a href="AccountCreationScripts.md#0x1_AccountCreationScripts_create_child_vasp_account">AccountCreationScripts::create_child_vasp_account</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">AccountAdministrationScripts::rotate_authkey</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">AccountAdministrationScripts::create_recovery_address</a></code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
@@ -737,7 +737,7 @@ and the <code>rold_id</code> field being <code><a href="Roles.md#0x1_Roles_DESIG
 ### Related Scripts
 
 * <code><a href="TreasuryComplianceScripts.md#0x1_TreasuryComplianceScripts_tiered_mint">TreasuryComplianceScripts::tiered_mint</a></code>
-* <code><a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">PaymentScripts::peer_to_peer_with_metadata</a></code>
+* <code>PaymentScripts::peer_to_peer_with_metadata</code>
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 

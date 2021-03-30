@@ -58,7 +58,7 @@ module AccountCreationScripts {
     /// # Related Scripts
     /// * `AccountCreationScripts::create_parent_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
+    /// * `AccountAdministrationScripts::rotate_authkey`
     /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
     /// * `AccountAdministrationScripts::create_recovery_address`
 
@@ -369,7 +369,7 @@ module AccountCreationScripts {
     /// # Related Scripts
     /// * `AccountCreationScripts::create_child_vasp_account`
     /// * `AccountAdministrationScripts::add_currency_to_account`
-    /// * `AccountAdministrationScripts::rotate_authentication_key`
+    /// * `AccountAdministrationScripts::rotate_authkey`
     /// * `AccountAdministrationScripts::add_recovery_rotation_capability`
     /// * `AccountAdministrationScripts::create_recovery_address`
     /// * `AccountAdministrationScripts::rotate_dual_attestation_info`

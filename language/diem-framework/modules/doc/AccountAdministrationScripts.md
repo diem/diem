@@ -24,25 +24,25 @@ This module holds transactions that can be used to administer accounts in the Di
     -  [Parameters](#@Parameters_12)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_13)
     -  [Related Scripts](#@Related_Scripts_14)
--  [Function `rotate_authentication_key`](#0x1_AccountAdministrationScripts_rotate_authentication_key)
+-  [Function `rotate_authkey`](#0x1_AccountAdministrationScripts_rotate_authkey)
     -  [Summary](#@Summary_15)
     -  [Technical Description](#@Technical_Description_16)
     -  [Parameters](#@Parameters_17)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_18)
     -  [Related Scripts](#@Related_Scripts_19)
--  [Function `rotate_authentication_key_with_nonce`](#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce)
+-  [Function `rotate_authkey_with_nonce`](#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce)
     -  [Summary](#@Summary_20)
     -  [Technical Description](#@Technical_Description_21)
     -  [Parameters](#@Parameters_22)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_23)
     -  [Related Scripts](#@Related_Scripts_24)
--  [Function `rotate_authentication_key_with_nonce_admin`](#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin)
+-  [Function `rotate_authkey_with_nonce_admin`](#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin)
     -  [Summary](#@Summary_25)
     -  [Technical Description](#@Technical_Description_26)
     -  [Parameters](#@Parameters_27)
     -  [Common Abort Conditions](#@Common_Abort_Conditions_28)
     -  [Related Scripts](#@Related_Scripts_29)
--  [Function `rotate_authentication_key_with_recovery_address`](#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address)
+-  [Function `rotate_authkey_with_recovery_address`](#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address)
     -  [Summary](#@Summary_30)
     -  [Technical Description](#@Technical_Description_31)
     -  [Parameters](#@Parameters_32)
@@ -130,7 +130,7 @@ already have a <code><a href="DiemAccount.md#0x1_DiemAccount_Balance">DiemAccoun
 
 * <code><a href="AccountCreationScripts.md#0x1_AccountCreationScripts_create_child_vasp_account">AccountCreationScripts::create_child_vasp_account</a></code>
 * <code><a href="AccountCreationScripts.md#0x1_AccountCreationScripts_create_parent_vasp_account">AccountCreationScripts::create_parent_vasp_account</a></code>
-* <code><a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">PaymentScripts::peer_to_peer_with_metadata</a></code>
+* <code>PaymentScripts::peer_to_peer_with_metadata</code>
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: signer)
@@ -241,7 +241,7 @@ resource stored under the account at <code>recovery_address</code>.
 ### Related Scripts
 
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">AccountAdministrationScripts::create_recovery_address</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">AccountAdministrationScripts::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">AccountAdministrationScripts::rotate_authkey_with_recovery_address</a></code>
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: signer, recovery_address: address)
@@ -381,9 +381,9 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="Di
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_rotate_authentication_key"></a>
+<a name="0x1_AccountAdministrationScripts_rotate_authkey"></a>
 
-## Function `rotate_authentication_key`
+## Function `rotate_authkey`
 
 
 <a name="@Summary_15"></a>
@@ -427,12 +427,12 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 
 ### Related Scripts
 
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">AccountAdministrationScripts::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">AccountAdministrationScripts::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce">AccountAdministrationScripts::rotate_authkey_with_nonce</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin">AccountAdministrationScripts::rotate_authkey_with_nonce_admin</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">AccountAdministrationScripts::rotate_authkey_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">rotate_authentication_key</a>(account: signer, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">rotate_authkey</a>(account: signer, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -441,7 +441,7 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">rotate_authentication_key</a>(account: signer, new_key: vector&lt;u8&gt;) {
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">rotate_authkey</a>(account: signer, new_key: vector&lt;u8&gt;) {
     <b>let</b> key_rotation_capability = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(&account);
     <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
     <a href="DiemAccount.md#0x1_DiemAccount_restore_key_rotation_capability">DiemAccount::restore_key_rotation_capability</a>(key_rotation_capability);
@@ -489,9 +489,9 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce"></a>
+<a name="0x1_AccountAdministrationScripts_rotate_authkey_with_nonce"></a>
 
-## Function `rotate_authentication_key_with_nonce`
+## Function `rotate_authkey_with_nonce`
 
 
 <a name="@Summary_20"></a>
@@ -542,12 +542,12 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 
 ### Related Scripts
 
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">AccountAdministrationScripts::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">AccountAdministrationScripts::rotate_authkey</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin">AccountAdministrationScripts::rotate_authkey_with_nonce_admin</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">AccountAdministrationScripts::rotate_authkey_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce">rotate_authkey_with_nonce</a>(account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -556,7 +556,7 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce">rotate_authkey_with_nonce</a>(account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
     <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&account, sliding_nonce);
     <b>let</b> key_rotation_capability = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(&account);
     <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
@@ -607,9 +607,9 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin"></a>
+<a name="0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin"></a>
 
-## Function `rotate_authentication_key_with_nonce_admin`
+## Function `rotate_authkey_with_nonce_admin`
 
 
 <a name="@Summary_25"></a>
@@ -660,12 +660,12 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 
 ### Related Scripts
 
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">AccountAdministrationScripts::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">AccountAdministrationScripts::rotate_authentication_key_with_recovery_address</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">AccountAdministrationScripts::rotate_authkey</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce">AccountAdministrationScripts::rotate_authkey_with_nonce</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">AccountAdministrationScripts::rotate_authkey_with_recovery_address</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin">rotate_authkey_with_nonce_admin</a>(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -674,7 +674,7 @@ and <code>account</code> must not have previously delegated its <code><a href="D
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">rotate_authentication_key_with_nonce_admin</a>(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin">rotate_authkey_with_nonce_admin</a>(dr_account: signer, account: signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
     <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(&dr_account, sliding_nonce);
     <b>let</b> key_rotation_capability = <a href="DiemAccount.md#0x1_DiemAccount_extract_key_rotation_capability">DiemAccount::extract_key_rotation_capability</a>(&account);
     <a href="DiemAccount.md#0x1_DiemAccount_rotate_authentication_key">DiemAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
@@ -733,9 +733,9 @@ it has delegrated the capability [[H18]][PERMISSION][[J18]][PERMISSION].
 
 </details>
 
-<a name="0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address"></a>
+<a name="0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address"></a>
 
-## Function `rotate_authentication_key_with_recovery_address`
+## Function `rotate_authkey_with_recovery_address`
 
 
 <a name="@Summary_30"></a>
@@ -787,12 +787,12 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 
 ### Related Scripts
 
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key">AccountAdministrationScripts::rotate_authentication_key</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce">AccountAdministrationScripts::rotate_authentication_key_with_nonce</a></code>
-* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_nonce_admin">AccountAdministrationScripts::rotate_authentication_key_with_nonce_admin</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey">AccountAdministrationScripts::rotate_authkey</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce">AccountAdministrationScripts::rotate_authkey_with_nonce</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_nonce_admin">AccountAdministrationScripts::rotate_authkey_with_nonce_admin</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">rotate_authkey_with_recovery_address</a>(account: signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -801,7 +801,7 @@ This transaction can be sent either by the <code>to_recover</code> account, or b
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">rotate_authkey_with_recovery_address</a>(
         account: signer,
         recovery_address: address,
         to_recover: address,
@@ -1101,8 +1101,8 @@ may be used as a recovery account for those accounts.
 
 ### Related Scripts
 
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::rotate_authentication_key_with_recovery_address</code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_recovery_rotation_capability">AccountAdministrationScripts::add_recovery_rotation_capability</a></code>
+* <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_rotate_authkey_with_recovery_address">AccountAdministrationScripts::rotate_authkey_with_recovery_address</a></code>
 
 
 <pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_create_recovery_address">create_recovery_address</a>(account: signer)

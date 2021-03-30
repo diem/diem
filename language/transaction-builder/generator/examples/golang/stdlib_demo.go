@@ -60,13 +60,13 @@ func demo_p2p_script_function() {
 		[16]uint8{0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22},
 	)
 	amount := uint64(1_234_567)
-	payload := stdlib.EncodePeerToPeerWithMetadataScriptFunction(token, payee, amount, []uint8{}, []uint8{})
+	payload := stdlib.EncodeP2pScriptFunction(token, payee, amount, []uint8{}, []uint8{})
 
 	call, err := stdlib.DecodeScriptFunctionPayload(payload)
 	if err != nil {
 		panic(fmt.Sprintf("failed to decode script function: %v", err))
 	}
-	payment := call.(*stdlib.ScriptFunctionCall__PeerToPeerWithMetadata)
+	payment := call.(*stdlib.ScriptFunctionCall__P2p)
 	if payment.Amount != amount || payment.Payee != payee {
 		panic("wrong script content")
 	}

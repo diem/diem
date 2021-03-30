@@ -7,7 +7,7 @@ This module holds all payment related script entrypoints in the Diem Framework.
 Any account that can hold a balance can use the transaction scripts within this module.
 
 
--  [Function `peer_to_peer_with_metadata`](#0x1_PaymentScripts_peer_to_peer_with_metadata)
+-  [Function `p2p`](#0x1_PaymentScripts_p2p)
     -  [Summary](#@Summary_0)
     -  [Technical Description](#@Technical_Description_1)
     -  [Events](#@Events_2)
@@ -21,9 +21,9 @@ Any account that can hold a balance can use the transaction scripts within this 
 
 
 
-<a name="0x1_PaymentScripts_peer_to_peer_with_metadata"></a>
+<a name="0x1_PaymentScripts_p2p"></a>
 
-## Function `peer_to_peer_with_metadata`
+## Function `p2p`
 
 
 <a name="@Summary_0"></a>
@@ -105,7 +105,7 @@ Successful execution of this script emits two events:
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_p2p">p2p</a>&lt;Currency&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -114,7 +114,7 @@ Successful execution of this script emits two events:
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency: store&gt;(
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_p2p">p2p</a>&lt;Currency: store&gt;(
     payer: signer,
     payee: address,
     amount: u64,
