@@ -13,9 +13,7 @@ pub mod crypto {
 
 pub mod transaction_builder;
 
-pub mod types {
-    pub use diem_types::*;
-}
+pub mod types;
 
 pub mod move_types {
     pub use move_core_types::*;
