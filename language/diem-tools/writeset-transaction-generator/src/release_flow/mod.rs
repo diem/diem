@@ -8,7 +8,9 @@ pub mod artifacts;
 mod create;
 mod verify;
 
-pub use artifacts::{hash_for_modules, load_artifact, save_release_artifact, ReleaseArtifact};
+pub use artifacts::{
+    get_commit_hash, hash_for_modules, load_latest_artifact, save_release_artifact, ReleaseArtifact,
+};
 pub use create::create_release;
 pub use verify::verify_release;
 

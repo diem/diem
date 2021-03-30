@@ -11,4 +11,4 @@ pub use admin_script_builder::{
 };
 
 pub use release_flow::{create_release, verify_release};
-pub use writeset_builder::{build_changeset, build_stdlib_upgrade_changeset, GenesisSession};
+pub use writeset_builder::{build_changeset, GenesisSession};

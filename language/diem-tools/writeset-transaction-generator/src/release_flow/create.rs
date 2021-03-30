@@ -1,8 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::release_flow::{
-    hash_for_modules, load_artifact, save_release_artifact, verify::verify_payload_change,
-    ReleaseArtifact,
+use crate::{
+    release_flow::{
+        get_commit_hash, hash_for_modules, load_latest_artifact, save_release_artifact,
+        verify::verify_payload_change, ReleaseArtifact,
+    },
+    writeset_builder::build_changeset,
 };
 use anyhow::{bail, Result};
 use diem_types::{
@@ -11,8 +14,10 @@ use diem_types::{
     transaction::{ChangeSet, WriteSetPayload},
     write_set::{WriteOp, WriteSetMut},
 };
-use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
-use std::collections::{BTreeMap, BTreeSet};
+use diem_validator_interface::{
+    DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
+};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use vm::CompiledModule;
 
 pub fn create_release(
@@ -26,6 +31,8 @@ pub fn create_release(
     // Set the flag to true in the first release. This will manually create the first release artifact on disk.
     first_release: bool,
     release_modules: &[(Vec<u8>, CompiledModule)],
+    updated_diem_version: Option<u64>,
+    release_name: &str,
 ) -> Result<WriteSetPayload> {
     let release_artifact = ReleaseArtifact {
         chain_id,
@@ -35,29 +42,41 @@ pub fn create_release(
                 .iter()
                 .map(|(bytes, module)| (module.self_id(), bytes)),
         )?,
+        commit_hash: get_commit_hash()?,
+        diem_version: updated_diem_version,
+        release_name: release_name.to_string(),
     };
 
-    if first_release {
-        if load_artifact(&chain_id).is_ok() {
-            bail!("Previous release existed");
-        }
-        save_release_artifact(release_artifact.clone())?;
-    }
-    let artifact = load_artifact(&chain_id)?;
+    if !first_release {
+        let artifact = load_latest_artifact(&chain_id)?;
 
-    if artifact.chain_id != chain_id {
-        bail!("Artifact mismatch with on disk file");
-    }
-    if artifact.version > version {
-        bail!(
-            "Artifact version is ahead of the argument: old: {:?}, new: {:?}",
-            artifact.version,
-            version
-        );
+        if artifact.chain_id != chain_id {
+            bail!(
+                "Artifact chain id does not match input chain id. Artifact: {:?} Input {:?}",
+                artifact.chain_id,
+                chain_id
+            );
+        }
+        if artifact.version > version {
+            bail!(
+                "Artifact version is ahead of the argument: old: {:?}, new: {:?}",
+                artifact.version,
+                version
+            );
+        }
+
+        if let (Some(old_version), Some(new_version)) =
+            (artifact.diem_version, updated_diem_version)
+        {
+            if old_version >= new_version {
+                bail!("DiemVersion should be strictly increasing")
+            }
+        }
     }
 
     let remote = Box::new(JsonRpcDebuggerInterface::new(url.as_str())?);
     let payload = create_release_from_artifact(&release_artifact, url.as_str(), release_modules)?;
+
     verify_payload_change(
         remote,
         Some(version),
@@ -75,7 +94,46 @@ pub(crate) fn create_release_from_artifact(
 ) -> Result<WriteSetPayload> {
     let remote = JsonRpcDebuggerInterface::new(remote_url)?;
     let remote_modules = remote.get_diem_framework_modules_by_version(artifact.version)?;
-    create_release_writeset(&remote_modules, release_modules)
+    let modules_payload = create_release_writeset(&remote_modules, release_modules)?;
+
+    Ok(if let Some(updated_diem_version) = artifact.diem_version {
+        let state_view = DebuggerStateView::new(&remote, artifact.version);
+        let (updated_version_writeset, events) = build_changeset(&state_view, |session| {
+            session.set_diem_version(updated_diem_version);
+        })
+        .into_inner();
+
+        let (modules, _) = match modules_payload {
+            WriteSetPayload::Direct(cs) => cs,
+            payload => bail!(
+                "Unexpected payload; wanted WriteSetPayload::Direct, found {:?}",
+                payload
+            ),
+        }
+        .into_inner();
+
+        if !updated_version_writeset
+            .iter()
+            .map(|(ap, _)| ap)
+            .collect::<HashSet<_>>()
+            .is_disjoint(&modules.iter().map(|(ap, _)| ap).collect::<HashSet<_>>())
+        {
+            bail!("DiemVersion WriteSet collides with module upgrade WriteSet");
+        }
+
+        let write_set = WriteSetMut::new(
+            updated_version_writeset
+                .iter()
+                .chain(modules.iter())
+                .cloned()
+                .collect(),
+        )
+        .freeze()?;
+
+        WriteSetPayload::Direct(ChangeSet::new(write_set, events))
+    } else {
+        modules_payload
+    })
 }
 
 pub(crate) fn create_release_writeset(

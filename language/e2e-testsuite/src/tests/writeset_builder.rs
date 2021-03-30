@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 use compiler::Compiler;
 use diem_types::{
+    access_path::AccessPath,
     account_config,
     on_chain_config::DiemVersion,
-    transaction::{Script, TransactionStatus, WriteSetPayload},
+    transaction::{ChangeSet, Script, TransactionStatus, WriteSetPayload},
     vm_status::KeptVMStatus,
+    write_set::WriteOp,
 };
 use diem_vm::DiemVM;
 use diem_writeset_generator::build_changeset;
@@ -37,14 +39,17 @@ fn build_upgrade_writeset() {
             module.serialize(&mut v).unwrap();
             v
         };
-        let change_set = build_changeset(
-            executor.get_state_view(),
-            |session| {
-                session.set_diem_version(11);
-            },
-            &[module_bytes],
-            &[module.clone()],
-        );
+        let change_set = {
+            let (version_writes, events) = build_changeset(
+                executor.get_state_view(),
+                |session| {
+                    session.set_diem_version(11);
+                },
+            ).into_inner();
+            let mut writeset = version_writes.into_mut();
+            writeset.push((AccessPath::code_access_path(module.self_id()), WriteOp::Value(module_bytes)));
+            ChangeSet::new(writeset.freeze().unwrap(), events)
+        };
 
         let writeset_txn = genesis_account
             .transaction()
@@ -98,6 +103,6 @@ main(lr_account: signer) {
             output.status(),
             &TransactionStatus::Keep(KeptVMStatus::Executed)
         );
-    }
+        }
     }
 }
