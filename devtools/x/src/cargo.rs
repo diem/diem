@@ -304,7 +304,7 @@ impl<'a> CargoCommand<'a> {
             vec![]
         } else {
             let mut cargo = self.prepare_cargo(packages);
-            cargo.args(&["--message-format", "json"]);
+            cargo.args(&["--message-format", "json-render-diagnostics"]);
             cargo.run_with_output()?
         };
 
