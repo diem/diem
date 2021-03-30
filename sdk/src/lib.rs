@@ -11,9 +11,7 @@ pub mod crypto {
     pub use diem_crypto::*;
 }
 
-pub mod transaction_builder {
-    pub use diem_transaction_builder::stdlib::*;
-}
+pub mod transaction_builder;
 
 pub mod types {
     pub use diem_types::*;

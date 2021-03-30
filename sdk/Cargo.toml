@@ -14,6 +14,8 @@ default = ["client"]
 client = ["diem-client"]
 
 [dependencies]
+bcs = "0.1"
+
 diem-crypto = { path = "../crypto/crypto", version = "0.0.1" }
 diem-types = { path = "../types", version = "0.0.1"}
 move-core-types = { path = "../language/move-core/types", version = "0.0.1" }
