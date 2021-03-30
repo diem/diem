@@ -22,13 +22,13 @@ let a2 = 0x2;
 // ... and so on for every other possible address
 ```
 
-However, `signer` values are special because they cannot be created via literals or instructions--only by the Move VM. Before the VM runs a script with parameters of type `&signer`, it will automatically create `signer` values and pass references to these values into the script:
+However, `signer` values are special because they cannot be created via literals or instructions--only by the Move VM. Before the VM runs a script with parameters of type `signer`, it will automatically create `signer` values and them into the script:
 
 ```rust=
 script {
     use 0x1::Signer;
-    fun main(s: &signer) {
-        assert(Signer::address_of(s) == 0x42, 0);
+    fun main(s: signer) {
+        assert(Signer::address_of(&s) == 0x42, 0);
     }
 }
 ```
@@ -40,7 +40,7 @@ A transaction script can have an arbitrary number of `signer`s as long as the si
 ```rust=
 script {
     use 0x1::Signer;
-    fun main(s1: &signer, s2: &signer, x: u64, y: u8) {
+    fun main(s1: signer, s2: signer, x: u64, y: u8) {
         // ...
     }
 }

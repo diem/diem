@@ -68,7 +68,7 @@ Let's first start out with a simple script that prints its `signer`:
 ```rust
 script {
 use 0x1::Debug;
-fun main(account: &signer) {
+fun main(account: signer) {
     Debug::print(account)
 }
 }
@@ -111,7 +111,7 @@ address 0x2 {
 module Test {
     use 0x1::Signer;
 
-    resource struct Resource { i: u64 }
+    struct Resource { i: u64 } has key
 
     public fun publish(account: &signer) {
         move_to(account, Resource { i: 10 })
@@ -201,8 +201,8 @@ Let's exercise our new `Test` module by running the following script:
 ```rust
 script {
 use 0x2::Test;
-fun main(account: &signer) {
-    Test::publish(account)
+fun main(account: signer) {
+    Test::publish(&account)
 }
 }
 ```
@@ -393,8 +393,8 @@ content:
 ```rust
 script {
 use 0x2::Test;
-fun main(account: &signer) {
-    Test::unpublish(account)
+fun main(account: signer) {
+    Test::unpublish(&account)
 }
 }
 ```
@@ -502,7 +502,7 @@ module:
 ```
 address 0x2 {
 module M {
-  resource struct S { f: u64, g: u64 }
+    struct S { f: u64, g: u64 } has key
 }
 }
 ```
@@ -512,7 +512,7 @@ and then wish to upgrade it to the following:
 ```
 address 0x2 {
 module M {
-  resource struct S { f: u64 }
+    struct S { f: u64 } has key
 }
 }
 ```
