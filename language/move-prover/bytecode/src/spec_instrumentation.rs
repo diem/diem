@@ -470,9 +470,13 @@ impl<'a> Instrumenter<'a> {
             // to in aborts conditions, and must be initialized before evaluating those.
             self.emit_save_for_old(&callee_spec.saved_params);
 
+            let callee_aborts_if_is_partial =
+                callee_env.is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
+
             // Translate the abort condition. If the abort_cond_temp_opt is None, it indicates
             // that the abort condition is known to be false, so we can skip the abort handling.
-            let (abort_cond_temp_opt, code_cond) = self.generate_abort_opaque_cond(&callee_spec);
+            let (abort_cond_temp_opt, code_cond) =
+                self.generate_abort_opaque_cond(callee_aborts_if_is_partial, &callee_spec);
             if let Some(abort_cond_temp) = abort_cond_temp_opt {
                 let abort_local = self.abort_local;
                 let abort_label = self.abort_label;
@@ -647,12 +651,9 @@ impl<'a> Instrumenter<'a> {
     /// is known to be false.
     fn generate_abort_opaque_cond(
         &mut self,
+        is_partial: bool,
         spec: &TranslatedSpec,
     ) -> (Option<TempIndex>, Option<Exp>) {
-        let is_partial = self
-            .builder
-            .fun_env
-            .is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
         let aborts_cond = if is_partial {
             None
         } else {
