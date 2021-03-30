@@ -28,15 +28,15 @@ use move_model::{
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_debug_track_abort, boogie_debug_track_local,
-        boogie_debug_track_return, boogie_declare_temps, boogie_equality_for_type,
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_make_vec_from_strings,
-        boogie_modifies_memory_name, boogie_resource_memory_name, boogie_struct_name,
-        boogie_type_suffix, boogie_type_value, boogie_type_value_array, boogie_type_values,
-        boogie_well_formed_check,
+        boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel,
+        boogie_function_name, boogie_local_type, boogie_modifies_memory_name,
+        boogie_resource_memory_name, boogie_struct_name, boogie_temp, boogie_type_suffix,
+        boogie_type_suffix_for_struct, boogie_type_value, boogie_type_value_array,
+        boogie_type_values, boogie_well_formed_check,
     },
-    options::BoogieOptions,
     spec_translator::SpecTranslator,
 };
+use boogie_backend::options::BoogieOptions;
 use bytecode::{
     function_target_pipeline::FunctionVariant,
     stackless_bytecode::{AbortAction, PropKind},
@@ -82,6 +82,87 @@ impl<'env> BoogieTranslator<'env> {
         for module_env in self.env.get_modules() {
             ModuleTranslator::new(self, module_env).translate();
         }
+
+        // generate stratified equality
+        if !self.options.vector_theory.is_extensional() {
+            self.translate_stratified_equality();
+            self.translate_struct_equality();
+        }
+    }
+
+    pub fn translate_stratified_equality(&self) {
+        for depth in 0..self.options.stratification_depth {
+            emitln!(
+                self.writer,
+                "function $IsEqual_{}(v1: $Value, v2: $Value): bool {{",
+                if depth == 0 {
+                    "stratified".to_string()
+                } else {
+                    format!("level{}", depth)
+                }
+            );
+            self.writer.with_indent(|| {
+                emitln!(self.writer, "(v1 == v2)");
+                if depth == self.options.stratification_depth - 1 {
+                    return;
+                }
+                emitln!(
+                    self.writer,
+                    "\
+|| (is#$Vector(v1) && is#$Vector(v2) &&
+   (var vec1, vec2 := $Unbox_vec(v1), $Unbox_vec(v2);
+    LenVec(vec1) == LenVec(vec2) &&
+    (forall i: int :: 0 <= i && i < LenVec(vec1) ==>
+        $IsEqual_level{}(ReadVec(vec1,i), ReadVec(vec2,i)))))",
+                    depth + 1
+                );
+                emitln!(self.writer, "|| $IsEqual_some_struct(v1, v2)");
+            });
+            emitln!(self.writer, "}");
+        }
+    }
+
+    fn translate_struct_equality(&self) {
+        emitln!(
+            self.writer,
+            "function {:inline} $IsEqual_some_struct(v1: $Value, v2: $Value): bool {"
+        );
+        self.writer.with_indent(|| {
+            let mut sep = "";
+            for module_env in self.env.get_modules() {
+                for struct_env in module_env.get_structs() {
+                    if struct_env.is_native_or_intrinsic()
+                        || struct_has_native_equality(&struct_env, self.options)
+                    {
+                        continue;
+                    }
+                    emitln!(self.writer, "{} (", sep);
+                    self.writer.with_indent(|| {
+                        let suffix = boogie_type_suffix_for_struct(&struct_env);
+                        emitln!(
+                            self.writer,
+                            "$IsValidBox{}(v1) && $IsValidBox{}(v2) &&",
+                            suffix,
+                            suffix
+                        );
+                        emitln!(
+                            self.writer,
+                            "$IsEqual{}($Unbox{}(v1), $Unbox{}(v2))",
+                            suffix,
+                            suffix,
+                            suffix
+                        );
+                    });
+                    emitln!(self.writer, ")");
+                    sep = "|| ";
+                }
+            }
+            if sep.is_empty() {
+                // No struct in this compilation.
+                emitln!(self.writer, "false");
+            }
+        });
+        emitln!(self.writer, "}");
     }
 }
 
@@ -128,6 +209,9 @@ impl<'env> ModuleTranslator<'env> {
                 .display(self.module_env.symbol_pool())
         );
         for struct_env in self.module_env.get_structs() {
+            if struct_env.is_native_or_intrinsic() {
+                continue;
+            }
             // Set the location to internal so we don't see locations of pack/unpack
             // in execution traces.
             self.writer
@@ -138,21 +222,50 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Translates the given struct.
     fn translate_struct_type(&self, struct_env: &StructEnv<'_>) {
+        let env = struct_env.module_env.env;
         // Emit TypeName
         let struct_name = boogie_struct_name(&struct_env);
-        emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
+        emitln!(self.writer, "const unique {}_name: $TypeName;", struct_name);
 
-        // Emit FieldNames
-        for (i, field_env) in struct_env.get_fields().enumerate() {
-            let field_name = boogie_field_name(&field_env);
-            emitln!(
-                self.writer,
-                "const {}: $FieldName;\naxiom {} == {};",
-                field_name,
-                field_name,
-                i
-            );
-        }
+        // Emit data type
+        emitln!(self.writer, "type {{:datatype}} {};", struct_name);
+
+        // Emit constructor
+        let fields = struct_env
+            .get_fields()
+            .map(|field| {
+                format!(
+                    "{}: {}",
+                    field.get_name().display(env.symbol_pool()),
+                    boogie_local_type(env, &field.get_type())
+                )
+            })
+            .join(", ");
+        emitln!(
+            self.writer,
+            "function {{:constructor}} {}({}): {};",
+            struct_name,
+            fields,
+            struct_name
+        );
+
+        // Emit $Value embedding
+        let suffix = boogie_type_suffix_for_struct(struct_env);
+        emitln!(
+            self.writer,
+            "function {{:constructor}} $Box{}(s: {}): $Value;",
+            suffix,
+            struct_name
+        );
+        self.emit_function(
+            &format!("$Unbox{}(x: $Value): {}", suffix, struct_name),
+            || {
+                emitln!(self.writer, "s#$Box_{}(x)", struct_name);
+            },
+        );
+        self.emit_function(&format!("$IsValidBox{}(x: $Value): bool", suffix), || {
+            emitln!(self.writer, "is#$Box_{}(x)", struct_name);
+        });
 
         // Emit TypeValue constructor function.
         let type_params = struct_env
@@ -161,38 +274,320 @@ impl<'env> ModuleTranslator<'env> {
             .enumerate()
             .map(|(i, _)| format!("$tv{}: $TypeValue", i))
             .join(", ");
-        let type_args = struct_env
-            .get_type_parameters()
-            .iter()
-            .enumerate()
-            .map(|(i, _)| Type::TypeParameter(i as u16))
-            .collect_vec();
-        let type_args_array = boogie_type_value_array(struct_env.module_env.env, &type_args);
-        let type_value = format!("$StructType({}, {})", struct_name, type_args_array);
-        emitln!(
-            self.writer,
-            "function {}_type_value({}): $TypeValue {{\n    {}\n}}",
-            struct_name,
-            type_params,
-            type_value
+        self.emit_function(
+            &format!("{}_type_value({}): $TypeValue", struct_name, type_params),
+            || {
+                let type_args = struct_env
+                    .get_type_parameters()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| Type::TypeParameter(i as u16))
+                    .collect_vec();
+                emitln!(
+                    self.writer,
+                    "$StructType({}_name, {})",
+                    struct_name,
+                    boogie_type_value_array(env, &type_args)
+                );
+            },
         );
 
-        // Emit memory variable.
-        if struct_env.is_resource() {
-            let memory_name = boogie_resource_memory_name(
-                struct_env.module_env.env,
-                struct_env.get_qualified_id(),
-                &None,
+        // Emit $UpdateField functions.
+        let fields = struct_env.get_fields().collect_vec();
+        for (pos, field_env) in fields.iter().enumerate() {
+            let field_name = field_env.get_name().display(env.symbol_pool()).to_string();
+            self.emit_function(
+                &format!(
+                    "$Update{}_{}(s: {}, x: {}): {}",
+                    suffix,
+                    field_name,
+                    struct_name,
+                    boogie_local_type(env, &field_env.get_type()),
+                    struct_name
+                ),
+                || {
+                    let args = fields
+                        .iter()
+                        .enumerate()
+                        .map(|(p, f)| {
+                            if p == pos {
+                                "x".to_string()
+                            } else {
+                                format!("{}(s)", boogie_field_sel(f))
+                            }
+                        })
+                        .join(", ");
+                    emitln!(self.writer, "{}({})", struct_name, args);
+                },
             );
-            emitln!(self.writer, "var {}: $Memory;", memory_name);
         }
 
-        // Emit type tag predicate
-        emitln!(
-            self.writer,
-            "function {{:inline}} $Tag{}(x: Vec $Value): bool {{ true }}",
-            struct_name
+        // Emit equality
+        self.emit_function_with_attr(
+            "",
+            &format!(
+                "$IsEqual{}(s1: {}, s2: {}): bool",
+                suffix, struct_name, struct_name
+            ),
+            || {
+                if struct_has_native_equality(struct_env, self.options) {
+                    emitln!(self.writer, "s1 == s2")
+                } else {
+                    let mut sep = "";
+                    for field in &fields {
+                        let sel_fun = boogie_field_sel(field);
+                        let field_suffix = boogie_type_suffix(env, &field.get_type());
+                        emitln!(
+                            self.writer,
+                            "{}$IsEqual{}({}(s1), {}(s2))",
+                            sep,
+                            field_suffix,
+                            sel_fun,
+                            sel_fun
+                        );
+                        sep = "&& ";
+                    }
+                }
+            },
         );
+
+        // Emit WriteBackToValue
+        self.emit_procedure(
+            &format!(
+                "$WritebackToValue{}(src: $Mutation, idx: int, vdst: {}) returns (vdst': {})",
+                suffix, struct_name, struct_name
+            ),
+            || {
+                emitln!(self.writer, "if (l#$Mutation(src) == $Local(idx)) {");
+                self.writer.with_indent(|| {
+                    emitln!(self.writer, "vdst' := $Unbox{}($Dereference(src));", suffix);
+                });
+                emitln!(self.writer, "} else {");
+                self.writer
+                    .with_indent(|| emitln!(self.writer, "vdst' := vdst;"));
+                emitln!(self.writer, "}");
+            },
+        );
+
+        // Emit BorrowField/WritebackToField for each field
+        for field in &fields {
+            let field_name = field.get_name().display(env.symbol_pool()).to_string();
+            let field_type = field.get_type();
+            let field_type_suffix = boogie_type_suffix(env, &field_type);
+            self.emit_procedure(
+                &format!(
+                    "$BorrowField{}_{}(src: $Mutation) returns (dst: $Mutation)",
+                    suffix, field_name
+                ),
+                || {
+                    emitln!(self.writer, "var p: $Path;");
+                    emitln!(self.writer, "var size: int;");
+                    emitln!(
+                        self.writer,
+                        "var x: {};",
+                        boogie_local_type(env, &field_type)
+                    );
+                    emitln!(self.writer, "p := p#$Mutation(src);");
+                    emitln!(self.writer, "size := size#$Path(p);");
+                    emitln!(
+                        self.writer,
+                        "p := $Path(p#$Path(p)[size := {}], size + 1);",
+                        field.get_offset()
+                    );
+                    emitln!(
+                        self.writer,
+                        "x := {}($Unbox{}($Dereference(src)));",
+                        boogie_field_sel(field),
+                        suffix
+                    );
+                    emitln!(
+                        self.writer,
+                        "dst := $Mutation(l#$Mutation(src), p, $Box{}(x));",
+                        field_type_suffix
+                    );
+                },
+            );
+            self.emit_procedure(
+                &format!(
+                    "$WritebackToField{}_{}(src: $Mutation, dst: $Mutation) \
+                       returns (dst': $Mutation)",
+                    suffix, field_name
+                ),
+                || {
+                    emitln!(
+                        self.writer,
+                        "var s: {};\nvar x: {};",
+                        struct_name,
+                        boogie_local_type(env, &field_type)
+                    );
+                    emitln!(self.writer, "if (l#$Mutation(dst) == l#$Mutation(src)) {");
+                    self.writer.with_indent(|| {
+                        emitln!(self.writer, "s := $Unbox{}($Dereference(dst));", suffix);
+                        emitln!(
+                            self.writer,
+                            "x := $Unbox{}($Dereference(src));",
+                            field_type_suffix
+                        );
+                        emitln!(self.writer, "s := $Update{}_{}(s, x);", suffix, field_name);
+                        emitln!(
+                            self.writer,
+                            "dst' := $UpdateMutation(dst, $Box{}(s));",
+                            suffix
+                        );
+                    });
+                    emitln!(self.writer, "} else {");
+                    self.writer
+                        .with_indent(|| emitln!(self.writer, "dst' := dst;"));
+                    emitln!(self.writer, "}");
+                },
+            );
+        }
+
+        if struct_env.is_resource() {
+            // Emit memory variable.
+            let memory_name =
+                boogie_resource_memory_name(env, struct_env.get_qualified_id(), &None);
+            emitln!(self.writer, "var {}: $Memory {};", memory_name, struct_name);
+
+            // Emit modifies procedure.
+            self.emit_procedure(
+                &format!("$Modifies{}(ta: Vec $TypeValue, a: int)", suffix),
+                || {
+                    emitln!(self.writer, "var fresh: $Memory {};", struct_name);
+                    emitln!(
+                        self.writer,
+                        "{} := $ResourceCopy({}, fresh, ta, a);",
+                        memory_name,
+                        memory_name
+                    );
+                },
+            );
+
+            // Emit $MoveTo/$MoveFrom procedures
+            self.emit_procedure(
+                &format!(
+                    "$MoveTo{}(ta: Vec $TypeValue, a: int, v: {})",
+                    suffix, struct_name
+                ),
+                || {
+                    emitln!(
+                        self.writer,
+                        "if ($ResourceExists({}, ta, a)) {{ call $ExecFailureAbort(); return; }}",
+                        memory_name,
+                    );
+                    emitln!(
+                        self.writer,
+                        "{} := $ResourceUpdate({}, ta, a, v);",
+                        memory_name,
+                        memory_name
+                    );
+                },
+            );
+            self.emit_procedure(
+                &format!(
+                    "$MoveFrom{}(ta: Vec $TypeValue, a: int) returns (res: {})",
+                    suffix, struct_name
+                ),
+                || {
+                    emitln!(
+                        self.writer,
+                        "if (!$ResourceExists({}, ta, a)) {{ call $ExecFailureAbort(); return; }}",
+                        memory_name,
+                    );
+                    emitln!(
+                        self.writer,
+                        "res := $ResourceValue({}, ta, a);",
+                        memory_name
+                    );
+                    emitln!(
+                        self.writer,
+                        "{} := $ResourceRemove({}, ta, a);",
+                        memory_name,
+                        memory_name
+                    );
+                },
+            );
+
+            // Emit $BorrowGlobal/$GetGlobal/$WritebackToGlobal procedures
+            self.emit_procedure(
+                &format!(
+                    "$BorrowGlobal{}(a: int, ta: Vec $TypeValue) returns (dst: $Mutation)",
+                    suffix,
+                ),
+                || {
+                    emitln!(
+                        self.writer,
+                        "if (!$ResourceExists({}, ta, a)) {{ call $ExecFailureAbort(); return; }}",
+                        memory_name
+                    );
+                    emitln!(self.writer,
+                        "dst := $Mutation($Global(ta, a), $EmptyPath, $Box{}(contents#$Memory({})[ta, a]));",
+                        suffix, memory_name);
+                },
+            );
+            self.emit_procedure(
+                &format!(
+                    "$GetGlobal{}(a: int, ta: Vec $TypeValue) returns (dst: {})",
+                    suffix, struct_name
+                ),
+                || {
+                    emitln!(
+                        self.writer,
+                        "if (!$ResourceExists({}, ta, a)) {{ call $ExecFailureAbort(); return; }}",
+                        memory_name
+                    );
+                    emitln!(
+                        self.writer,
+                        "dst := $ResourceValue({}, ta, a);",
+                        memory_name
+                    );
+                },
+            );
+            self.emit_procedure(
+                &format!("$WritebackToGlobal{}(src: $Mutation)", suffix),
+                || {
+                    emitln!(self.writer, "var l: $Location;");
+                    emitln!(
+                        self.writer,
+                        "l := l#$Mutation(src);\n\
+                         if (is#$Global(l)) {"
+                    );
+                    self.writer.indent();
+                    emitln!(
+                        self.writer,
+                        "{} :=\n  $ResourceUpdate({}, ts#$Global(l), a#$Global(l),\
+                            \n    $Unbox{}($Dereference(src)));",
+                        memory_name,
+                        memory_name,
+                        suffix
+                    );
+                    self.writer.unindent();
+                    emitln!(self.writer, "}");
+                },
+            );
+        }
+
+        emitln!(self.writer);
+    }
+
+    fn emit_procedure(&self, signature: &str, body_fn: impl Fn()) {
+        emitln!(self.writer, "procedure {{:inline 1}} {} {{", signature);
+        self.writer.indent();
+        body_fn();
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+    }
+
+    fn emit_function(&self, signature: &str, body_fn: impl Fn()) {
+        self.emit_function_with_attr("{:inline} ", signature, body_fn)
+    }
+
+    fn emit_function_with_attr(&self, attr: &str, signature: &str, body_fn: impl Fn()) {
+        emitln!(self.writer, "function {}{} {{", attr, signature);
+        self.writer.indent();
+        body_fn();
+        self.writer.unindent();
+        emitln!(self.writer, "}");
     }
 
     /// Translates all functions in the module.
@@ -298,7 +693,12 @@ impl<'env> ModuleTranslator<'env> {
                 } else {
                     "$"
                 };
-                format!("{}t{}: {}", prefix, i, boogie_local_type(ty))
+                format!(
+                    "{}t{}: {}",
+                    prefix,
+                    i,
+                    boogie_local_type(fun_target.global_env(), ty)
+                )
             }))
             .join(", ");
         let mut_ref_count = (0..fun_target.get_parameter_count())
@@ -308,7 +708,13 @@ impl<'env> ModuleTranslator<'env> {
             .get_return_types()
             .iter()
             .enumerate()
-            .map(|(i, ref s)| format!("$ret{}: {}", i, boogie_local_type(s)))
+            .map(|(i, ref s)| {
+                format!(
+                    "$ret{}: {}",
+                    i,
+                    boogie_local_type(fun_target.global_env(), s)
+                )
+            })
             // Add implicit return parameters for &mut
             .chain((0..mut_ref_count).map(|i| {
                 format!(
@@ -337,14 +743,19 @@ impl<'env> ModuleTranslator<'env> {
                 self.writer,
                 "var $t{}: {}; // {}",
                 i,
-                boogie_local_type(local_type),
+                boogie_local_type(fun_target.global_env(), local_type),
                 boogie_type_value(self.module_env.env, local_type)
             );
         }
         // Generate declarations for renamed parameters.
         let proxied_parameters = self.get_mutable_parameters(fun_target);
         for (idx, ty) in &proxied_parameters {
-            emitln!(self.writer, "var $t{}: {};", idx, boogie_local_type(ty));
+            emitln!(
+                self.writer,
+                "var $t{}: {};",
+                idx,
+                boogie_local_type(self.module_env.env, ty)
+            );
         }
         // Generate declarations for modifies condition.
         fun_target.get_modify_targets().keys().for_each(|ty| {
@@ -356,11 +767,20 @@ impl<'env> ModuleTranslator<'env> {
             );
         });
 
-        // Declare temporaries for debug tracing.
-        emitln!(self.writer, &boogie_declare_temps());
+        // Declare temporaries for debug tracing and other purposes.
+        let code = fun_target.get_bytecode();
+        for (boogie_ty, cnt) in self.compute_needed_temps(fun_target) {
+            for i in 0..cnt {
+                emitln!(
+                    self.writer,
+                    "var {}: {};",
+                    boogie_temp(fun_target.global_env(), &boogie_ty, i),
+                    boogie_ty
+                );
+            }
+        }
 
         // Generate memory snapshot variable declarations.
-        let code = fun_target.get_bytecode();
         let labels = code
             .iter()
             .filter_map(|bc| {
@@ -374,7 +794,18 @@ impl<'env> ModuleTranslator<'env> {
             .collect::<BTreeMap<_, _>>();
         for (lab, mem) in labels {
             let name = boogie_resource_memory_name(self.module_env.env, *mem, &Some(*lab));
-            emitln!(self.writer, "var {}: $Memory;", name);
+            emitln!(
+                self.writer,
+                "var {}: $Memory {};",
+                name,
+                boogie_struct_name(
+                    &self
+                        .module_env
+                        .env
+                        .get_module(mem.module_id)
+                        .into_struct(mem.id)
+                )
+            );
         }
 
         // Initialize renamed parameters.
@@ -546,14 +977,13 @@ impl<'env> ModuleTranslator<'env> {
                 PropKind::Modifies => {
                     let ty = self.module_env.env.get_node_type(exp.node_id());
                     let (mid, sid, type_args) = ty.require_struct();
-                    let boogie_mem =
-                        boogie_resource_memory_name(self.module_env.env, mid.qualified(sid), &None);
+                    let struct_env = fun_target.global_env().get_module(mid).into_struct(sid);
+                    let suffix = boogie_type_suffix_for_struct(&struct_env);
                     let boogie_type_args = boogie_type_value_array(self.module_env.env, type_args);
                     emit!(
                         self.writer,
-                        "call {} := $Modifies({}, {}, ",
-                        boogie_mem,
-                        boogie_mem,
+                        "call $Modifies{}({}, ",
+                        suffix,
                         boogie_type_args
                     );
                     self.spec_translator.translate_unboxed(&exp.call_args()[0]);
@@ -638,42 +1068,42 @@ impl<'env> ModuleTranslator<'env> {
                         use BorrowNode::*;
                         let src = srcs[0];
                         match dest {
-                            GlobalRoot(struct_decl) => {
-                                let memory = struct_decl.module_id.qualified(struct_decl.id);
-                                let memory_name = boogie_resource_memory_name(
-                                    fun_target.global_env(),
-                                    memory,
-                                    &None,
-                                );
+                            GlobalRoot(memory) => {
                                 let func = match edge {
-                                    BorrowEdge::Weak => "WritebackToGlobalWeak",
-                                    BorrowEdge::Strong(StrongEdge::Direct) => {
-                                        "WritebackToGlobalStrong"
+                                    BorrowEdge::Weak => {
+                                        panic!("unexpected weak edge")
                                     }
+                                    BorrowEdge::Strong(StrongEdge::Direct) => "WritebackToGlobal",
                                     _ => {
                                         panic!("Strong global writeback cannot have field")
                                     }
                                 };
+                                let suffix = boogie_type_suffix_for_struct(
+                                    &fun_target.global_env().get_struct_qid(*memory),
+                                );
                                 emitln!(
                                     self.writer,
-                                    "call {} := ${}({}, {});",
-                                    memory_name,
+                                    "call ${}{}({});",
                                     func,
-                                    memory_name,
+                                    suffix,
                                     str_local(src),
                                 );
                             }
                             LocalRoot(idx) => {
                                 let func = match edge {
-                                    BorrowEdge::Weak => "WritebackToValueWeak",
-                                    BorrowEdge::Strong(StrongEdge::Direct) => {
-                                        "WritebackToValueStrong"
+                                    BorrowEdge::Weak => {
+                                        // DNS
+                                        panic!("unexpected weak edge")
                                     }
+                                    BorrowEdge::Strong(StrongEdge::Direct) => "WritebackToValue",
                                     _ => {
                                         panic!("Strong local writeback cannot have field")
                                     }
                                 };
-                                let suffix = boogie_type_suffix(fun_target.get_local_type(*idx));
+                                let suffix = boogie_type_suffix(
+                                    fun_target.global_env(),
+                                    fun_target.get_local_type(*idx),
+                                );
                                 emitln!(
                                     self.writer,
                                     "call {} := ${}{}({}, {}, {});",
@@ -686,28 +1116,34 @@ impl<'env> ModuleTranslator<'env> {
                                 );
                             }
                             Reference(idx) => {
-                                let (func, thirdarg): (&str, String) = match edge {
+                                let func = match edge {
                                     BorrowEdge::Weak => {
-                                        ("WritebackToReferenceWeak", "".to_string())
+                                        panic!("unexpected weak edge")
                                     }
                                     BorrowEdge::Strong(StrongEdge::Direct) => {
-                                        ("WritebackToReferenceStrongDirect", "".to_string())
+                                        "WritebackToReference".to_string()
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Field(_, field)) => {
-                                        ("WritebackToReferenceStrongField", format!(", {}", field))
+                                    BorrowEdge::Strong(StrongEdge::Field(memory, offset)) => {
+                                        let struct_env =
+                                            fun_target.global_env().get_struct_qid(*memory);
+                                        let field_env = struct_env.get_field_by_offset(*offset);
+                                        format!(
+                                            "WritebackToField{}_{}",
+                                            boogie_type_suffix_for_struct(&struct_env),
+                                            field_env.get_name().display(fun_target.symbol_pool())
+                                        )
                                     }
                                     BorrowEdge::Strong(StrongEdge::FieldUnknown) => {
-                                        ("WritebackToVec", "".to_string())
+                                        "WritebackToVec".to_string()
                                     }
                                 };
                                 emitln!(
                                     self.writer,
-                                    "call {} := ${}({}, {}{});",
+                                    "call {} := ${}({}, {});",
                                     str_local(*idx),
                                     func,
                                     str_local(src),
                                     str_local(*idx),
-                                    thirdarg
                                 );
                             }
                         }
@@ -729,7 +1165,10 @@ impl<'env> ModuleTranslator<'env> {
                     BorrowLoc => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let suffix = boogie_type_suffix(fun_target.get_local_type(src));
+                        let suffix = boogie_type_suffix(
+                            fun_target.global_env(),
+                            fun_target.get_local_type(src),
+                        );
                         emitln!(
                             self.writer,
                             "call {} := $BorrowLoc({}, $Box{}({}));",
@@ -742,7 +1181,10 @@ impl<'env> ModuleTranslator<'env> {
                     ReadRef => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let suffix = boogie_type_suffix(fun_target.get_local_type(dest));
+                        let suffix = boogie_type_suffix(
+                            fun_target.global_env(),
+                            fun_target.get_local_type(dest),
+                        );
                         emitln!(
                             self.writer,
                             "{} := $Unbox{}($Dereference({}));",
@@ -754,7 +1196,10 @@ impl<'env> ModuleTranslator<'env> {
                     WriteRef => {
                         let reference = srcs[0];
                         let value = srcs[1];
-                        let suffix = boogie_type_suffix(fun_target.get_local_type(value));
+                        let suffix = boogie_type_suffix(
+                            fun_target.global_env(),
+                            fun_target.get_local_type(value),
+                        );
                         emitln!(
                             self.writer,
                             "{} := $UpdateMutation({}, $Box{}({}));",
@@ -782,7 +1227,7 @@ impl<'env> ModuleTranslator<'env> {
                                 // need to box it before passing in.
                                 format!(
                                     "$Box{}({})",
-                                    boogie_type_suffix(&arg_type),
+                                    boogie_type_suffix(fun_target.global_env(), &arg_type),
                                     str_local(*arg_idx)
                                 )
                             } else {
@@ -801,8 +1246,13 @@ impl<'env> ModuleTranslator<'env> {
                                 let arg_type = fun_target.get_local_type(*idx);
                                 if return_type.is_type_parameter() {
                                     // Need to unbox after call
-                                    let value_temp = self.get_value_temp(pos);
-                                    let suffix = boogie_type_suffix(arg_type);
+                                    let value_temp = boogie_temp(
+                                        fun_target.global_env(),
+                                        &boogie_local_type(fun_target.global_env(), return_type),
+                                        unbox_assigns.len(),
+                                    );
+                                    let suffix =
+                                        boogie_type_suffix(fun_target.global_env(), arg_type);
                                     unbox_assigns.push(format!(
                                         "{} := $Unbox{}({});",
                                         str_local(*idx),
@@ -860,14 +1310,24 @@ impl<'env> ModuleTranslator<'env> {
                             .get_fields()
                             .enumerate()
                             .map(|(i, field_env)| {
-                                let suffix = boogie_type_suffix(
-                                    &field_env.get_type().instantiate(type_actuals),
-                                );
-                                format!("$Box{}({})", suffix, str_local(srcs[i]))
+                                if field_env.get_type().is_type_parameter() {
+                                    let suffix = boogie_type_suffix(
+                                        fun_target.global_env(),
+                                        &field_env.get_type().instantiate(type_actuals),
+                                    );
+                                    format!("$Box{}({})", suffix, str_local(srcs[i]))
+                                } else {
+                                    str_local(srcs[i])
+                                }
                             })
-                            .collect_vec();
-                        let make = boogie_make_vec_from_strings(&args);
-                        emitln!(self.writer, "{} := {};", str_local(dests[0]), make,);
+                            .join(", ");
+                        emitln!(
+                            self.writer,
+                            "{} := {}({});",
+                            str_local(dests[0]),
+                            boogie_struct_name(&struct_env),
+                            args
+                        );
                     }
                     Unpack(mid, sid, _type_actuals) => {
                         let struct_env = fun_target
@@ -877,67 +1337,60 @@ impl<'env> ModuleTranslator<'env> {
                             .get_module(*mid)
                             .into_struct(*sid);
                         for (i, field_env) in struct_env.get_fields().enumerate() {
-                            let suffix = boogie_type_suffix(fun_target.get_local_type(dests[i]));
-                            emitln!(
-                                self.writer,
-                                "{} := $Unbox{}(ReadVec({}, {}));",
-                                str_local(dests[i]),
-                                suffix,
-                                str_local(srcs[0]),
-                                boogie_field_name(&field_env)
-                            );
-                            let type_check = boogie_well_formed_check(
-                                self.module_env.env,
-                                &str_local(dests[i]),
-                                &field_env.get_type(),
-                            );
-                            emit!(self.writer, &type_check);
+                            let mut field_sel =
+                                format!("{}({})", boogie_field_sel(&field_env), str_local(srcs[0]));
+                            if field_env.get_type().is_type_parameter() {
+                                // Need to unbox the result of field selection
+                                let suffix = boogie_type_suffix(
+                                    fun_target.global_env(),
+                                    fun_target.get_local_type(dests[i]),
+                                );
+                                field_sel = format!("$Unbox{}({})", suffix, field_sel);
+                            }
+                            emitln!(self.writer, "{} := {};", str_local(dests[i]), field_sel,);
                         }
                     }
                     BorrowField(mid, sid, _, field_offset) => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let struct_env = fun_target
-                            .func_env
-                            .module_env
-                            .env
-                            .get_module(*mid)
-                            .into_struct(*sid);
+                        let struct_env = fun_target.global_env().get_module(*mid).into_struct(*sid);
+                        let suffix = boogie_type_suffix_for_struct(&struct_env);
                         let field_env = &struct_env.get_field_by_offset(*field_offset);
                         emitln!(
                             self.writer,
-                            "call {} := $BorrowField({}, {});",
+                            "call {} := $BorrowField{}_{}({});",
                             str_local(dest),
+                            suffix,
+                            field_env.get_name().display(fun_target.symbol_pool()),
                             str_local(src),
-                            boogie_field_name(field_env)
                         );
                     }
                     GetField(mid, sid, _, field_offset) => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let struct_env = fun_target
-                            .func_env
-                            .module_env
-                            .env
-                            .get_module(*mid)
-                            .into_struct(*sid);
+                        let struct_env = fun_target.global_env().get_module(*mid).into_struct(*sid);
+                        let suffix = boogie_type_suffix_for_struct(&struct_env);
                         let field_env = &struct_env.get_field_by_offset(*field_offset);
                         let src_ty = fun_target.get_local_type(src);
-                        let dest_ty = fun_target.get_local_type(dest);
                         let struct_arg = if src_ty.is_reference() {
-                            format!("$Unbox_vec($Dereference({}))", str_local(src))
+                            format!("$Unbox{}($Dereference({}))", suffix, str_local(src))
                         } else {
                             str_local(src)
                         };
-                        let suffix = boogie_type_suffix(dest_ty);
-                        emitln!(
-                            self.writer,
-                            "{} := $Unbox{}(ReadVec({}, {}));",
-                            str_local(dest),
-                            suffix,
-                            struct_arg,
-                            boogie_field_name(field_env)
-                        );
+                        let mut field_val =
+                            format!("{}({})", boogie_field_sel(field_env), struct_arg);
+                        if field_env.get_type().is_type_parameter() {
+                            // Need to unbox for type instantiation
+                            field_val = format!(
+                                "$Unbox{}({})",
+                                boogie_type_suffix(
+                                    fun_target.global_env(),
+                                    fun_target.get_local_type(dest)
+                                ),
+                                field_val
+                            );
+                        }
+                        emitln!(self.writer, "{} := {};", str_local(dest), field_val);
                     }
                     Exists(mid, sid, type_actuals) => {
                         let addr = srcs[0];
@@ -962,14 +1415,14 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
                         let addr_name = str_local(addr);
-                        let memory = mid.qualified(*sid);
-                        let memory_name =
-                            boogie_resource_memory_name(self.module_env.env, memory, &None);
+                        let suffix = boogie_type_suffix_for_struct(
+                            &fun_target.global_env().get_module(*mid).into_struct(*sid),
+                        );
                         emitln!(
                             self.writer,
-                            "call {} := $BorrowGlobal({}, {}, {});",
+                            "call {} := $BorrowGlobal{}({}, {});",
                             str_local(dest),
-                            memory_name,
+                            suffix,
                             addr_name,
                             type_args,
                         );
@@ -978,14 +1431,14 @@ impl<'env> ModuleTranslator<'env> {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = mid.qualified(*sid);
-                        let memory_name =
-                            boogie_resource_memory_name(self.module_env.env, memory, &None);
+                        let suffix = boogie_type_suffix_for_struct(
+                            &fun_target.global_env().get_module(*mid).into_struct(*sid),
+                        );
                         emitln!(
                             self.writer,
-                            "call {} := $GetGlobal({}, {}, {});",
+                            "call {} := $GetGlobal{}({}, {});",
                             str_local(dest),
-                            memory_name,
+                            suffix,
                             str_local(addr),
                             type_args,
                         );
@@ -995,14 +1448,13 @@ impl<'env> ModuleTranslator<'env> {
                         let signer = srcs[1];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
                         let signer_name = str_local(signer);
-                        let memory = mid.qualified(*sid);
-                        let memory_name =
-                            boogie_resource_memory_name(self.module_env.env, memory, &None);
+                        let suffix = boogie_type_suffix_for_struct(
+                            &fun_target.global_env().get_module(*mid).into_struct(*sid),
+                        );
                         emitln!(
                             self.writer,
-                            "call {} := $MoveTo({}, {}, {}, {});",
-                            memory_name,
-                            memory_name,
+                            "call $MoveTo{}({}, {}, {});",
+                            suffix,
                             type_args,
                             signer_name,
                             str_local(value),
@@ -1013,17 +1465,16 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
                         let src_name = str_local(src);
-                        let memory = mid.qualified(*sid);
-                        let memory_name =
-                            boogie_resource_memory_name(self.module_env.env, memory, &None);
+                        let suffix = boogie_type_suffix_for_struct(
+                            &fun_target.global_env().get_module(*mid).into_struct(*sid),
+                        );
                         emitln!(
                             self.writer,
-                            "call {}, {} := $MoveFrom({}, {}, {});",
-                            memory_name,
+                            "call {} := $MoveFrom{}({}, {});",
                             str_local(dest),
-                            memory_name,
-                            src_name,
+                            suffix,
                             type_args,
+                            src_name,
                         );
                     }
                     Havoc(HavocKind::Value) | Havoc(HavocKind::MutationAll) => {
@@ -1277,8 +1728,11 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
-                        let oper =
-                            boogie_equality_for_type(oper == &Eq, fun_target.get_local_type(op1));
+                        let oper = boogie_equality_for_type(
+                            fun_target.global_env(),
+                            oper == &Eq,
+                            fun_target.get_local_type(op1),
+                        );
                         emitln!(
                             self.writer,
                             "{} := {}({}, {});",
@@ -1308,8 +1762,13 @@ impl<'env> ModuleTranslator<'env> {
                         let msg = srcs[0];
                         let handle = srcs[1];
                         let translate_local = |idx: usize| {
-                            if fun_target.get_local_type(idx).is_mutable_reference() {
-                                format!("$Unbox_vec($Dereference({}))", str_local(idx))
+                            let ty = fun_target.get_local_type(idx);
+                            if ty.is_mutable_reference() {
+                                let suffix = boogie_type_suffix(
+                                    fun_target.global_env(),
+                                    ty.skip_reference(),
+                                );
+                                format!("$Unbox{}($Dereference({}))", suffix, str_local(idx))
                             } else {
                                 str_local(idx)
                             }
@@ -1319,10 +1778,13 @@ impl<'env> ModuleTranslator<'env> {
                             "$es := ${}ExtendEventStore($es, ",
                             if srcs.len() > 2 { "Cond" } else { "" }
                         );
-                        let suffix = boogie_type_suffix(fun_target.get_local_type(msg));
+                        let suffix = boogie_type_suffix(
+                            fun_target.global_env(),
+                            fun_target.get_local_type(msg),
+                        );
                         emit!(
                             self.writer,
-                            "$GetEventHandleGuid({}), $Box{}({})",
+                            "{}, $Box{}({})",
                             translate_local(handle),
                             suffix,
                             str_local(msg)
@@ -1355,14 +1817,6 @@ impl<'env> ModuleTranslator<'env> {
             Nop(..) => {}
         }
         emitln!(self.writer);
-    }
-
-    fn get_value_temp(&self, pos: usize) -> String {
-        if pos == 0 {
-            "$$t".to_string()
-        } else {
-            format!("$$t{}", pos)
-        }
     }
 
     /// Track location for execution trace, avoiding to track the same line multiple times.
@@ -1424,4 +1878,75 @@ impl<'env> ModuleTranslator<'env> {
         let file_idx = self.module_env.env.file_id_to_idx(loc.file_id());
         format!("({},{},{})", file_idx, loc.span().start(), loc.span().end())
     }
+
+    /// Compute temporaries needed for the compilation of given function.
+    fn compute_needed_temps(&self, fun_target: &FunctionTarget<'_>) -> BTreeMap<String, usize> {
+        use Bytecode::*;
+        use Operation::*;
+        let env = self.module_env.env;
+        let mut res: BTreeMap<String, usize> = BTreeMap::new();
+        let mut need = |boogie_ty: String, n: usize| {
+            let cnt = res.entry(boogie_ty).or_default();
+            *cnt = (*cnt).max(n);
+        };
+        for bc in &fun_target.data.code {
+            if let Call(_, _, oper, ..) = bc {
+                match oper {
+                    TraceExp(id) => need(boogie_local_type(env, &env.get_node_type(*id)), 1),
+                    TraceReturn(idx) => need(
+                        boogie_local_type(env, fun_target.get_return_type(*idx).skip_reference()),
+                        1,
+                    ),
+                    TraceLocal(idx) => need(
+                        boogie_local_type(env, fun_target.get_local_type(*idx).skip_reference()),
+                        1,
+                    ),
+                    Function(mid, fid, _) => {
+                        // We need as many temporaries as there are output parameters which
+                        // are of generic type, to handle unboxing after calls to such
+                        // generic functions.
+                        let fun_env = env.get_module(*mid).into_function(*fid);
+                        let num_of_generics = fun_env
+                            .get_return_types()
+                            .iter()
+                            .filter(|ty| ty.skip_reference().is_type_parameter())
+                            .count();
+                        need(
+                            boogie_local_type(env, &Type::TypeParameter(0)),
+                            num_of_generics,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+        }
+        res
+    }
+}
+
+fn struct_has_native_equality(struct_env: &StructEnv<'_>, options: &BoogieOptions) -> bool {
+    if options.native_equality {
+        // Everything has native equality
+    }
+    for field in struct_env.get_fields() {
+        match field.get_type() {
+            Type::Vector(..) => {
+                return false;
+            }
+            Type::Struct(mid, sid, _) => {
+                if !struct_has_native_equality(
+                    &struct_env.module_env.env.get_struct_qid(mid.qualified(sid)),
+                    options,
+                ) {
+                    return false;
+                }
+            }
+            Type::TypeParameter(..) => {
+                // Type parameter can be instantiated with something containing a vec
+                return false;
+            }
+            _ => {}
+        }
+    }
+    false
 }
