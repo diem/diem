@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::instance::{Instance, ValidatorGroup};
+use diem_backend::Cluster as BackendCluster;
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -272,5 +273,34 @@ impl Cluster {
                     .cloned()
             })
             .collect()
+    }
+
+    // TODO temp fn for local swarm
+    pub fn convert_to_cluster(cluster: BackendCluster) -> Cluster {
+        let mut validator_instances = vec![];
+        for n in cluster.validator_instances().to_vec() {
+            validator_instances.push(Instance::convert_to_instance(n));
+        }
+        let mut fullnode_instances = vec![];
+        for n in cluster.fullnode_instances().to_vec() {
+            fullnode_instances.push(Instance::convert_to_instance(n));
+        }
+        let mut lsr_instances = vec![];
+        for n in cluster.lsr_instances().to_vec() {
+            lsr_instances.push(Instance::convert_to_instance(n));
+        }
+        let mut vault_instances = vec![];
+        for n in cluster.vault_instances().to_vec() {
+            vault_instances.push(Instance::convert_to_instance(n));
+        }
+        Cluster {
+            validator_instances,
+            fullnode_instances,
+            lsr_instances,
+            vault_instances,
+            mint_key_pair: cluster.mint_key_pair().clone(),
+            waypoint: cluster.waypoint(),
+            chain_id: ChainId::test(),
+        }
     }
 }

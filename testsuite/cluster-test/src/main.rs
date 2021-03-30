@@ -29,6 +29,7 @@ use cluster_test::{
     suite::ExperimentSuite,
     tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter},
 };
+use diem_backend::{Cluster as BackendCluster, Swarm};
 use diem_config::config::DEFAULT_JSON_RPC_PORT;
 use futures::{
     future::{join_all, FutureExt},
@@ -128,12 +129,14 @@ pub async fn main() {
         return;
     } else if args.emit_tx && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
-        exit_on_error(emit_tx(&util.cluster, &args).await);
+        exit_on_error(emit_tx(&Cluster::convert_to_cluster(util.cluster.clone()), &args).await);
         return;
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
-        let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
-        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
+        // TODO temp convert for cluster
+        let cluster = Cluster::convert_to_cluster(util.cluster.clone());
+        let logs = DebugPortLogWorker::spawn_new(&cluster).0;
+        let mut health_check_runner = HealthCheckRunner::new_all(cluster);
         let duration = Duration::from_secs(args.duration);
         exit_on_error(run_health_check(&logs, &mut health_check_runner, duration).await);
         return;
@@ -261,7 +264,7 @@ fn setup_log() {
 }
 
 struct BasicSwarmUtil {
-    cluster: Cluster,
+    cluster: BackendCluster,
 }
 
 struct ClusterTestRunner {
@@ -366,14 +369,15 @@ impl BasicSwarmUtil {
             .collect();
 
         let cluster =
-            Cluster::from_host_port(parsed_peers, &args.mint_file, args.chain_id, args.vasp);
+            BackendCluster::new(parsed_peers, &args.mint_file, args.chain_id, args.vasp);
         Self { cluster }
     }
 
     pub async fn diag(&self, vasp: bool) -> Result<()> {
-        let emitter = TxEmitter::new(&self.cluster, vasp);
+        let cluster = Cluster::convert_to_cluster(self.cluster.clone());
+        let emitter = TxEmitter::new(&cluster, vasp);
         let mut faucet_account: Option<AccountData> = None;
-        let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
+        let instances: Vec<_> = cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
             let client = instance.json_rpc_client();
             print!("Getting faucet account sequence number on {}...", instance);

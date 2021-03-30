@@ -1,0 +1,29 @@
+[package]
+name = "diem-backend"
+version = "0.0.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Diem swarm"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+ctrlc = { version = "3.1.8", default-features = false }
+reqwest = { version = "0.11.2", features = ["blocking"], default-features = false }
+structopt = "0.3.21"
+thiserror = "1.0.24"
+diem-client = { path = "../../sdk/client"}
+diem-config = { path = "../../config", features = ["fuzzing"] }
+diem-crypto = { path = "../../crypto/crypto" }
+debug-interface = { path = "../../common/debug-interface" }
+diem-logger = { path = "../../common/logger" }
+diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }
+diem-temppath = { path = "../../common/temppath" }
+diem-types = { path = "../../types" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+generate-key = { path = "../../config/generate-key" }
+
+async-trait = "0.1.42"

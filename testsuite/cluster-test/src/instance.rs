@@ -6,6 +6,7 @@
 use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
 use debug_interface::AsyncNodeDebugClient;
+use diem_backend::Instance as BackendInstance;
 use diem_client::Client as JsonRpcClient;
 use diem_config::config::NodeConfig;
 use reqwest::{Client, Url};
@@ -397,6 +398,19 @@ impl Instance {
             self.debug_interface_port
                 .expect("debug_interface_port is not known on this instance") as u16,
         )
+    }
+
+    // TODO temp fn for local swarm
+    pub fn convert_to_instance(instance: BackendInstance) -> Instance {
+        let backend = InstanceBackend::Swarm;
+        Instance {
+            peer_name: instance.peer_name().to_string(),
+            ip: instance.ip().to_string(),
+            ac_port: instance.json_rpc_port(),
+            backend,
+            debug_interface_port: instance.debug_interface_port(),
+            http_client: instance.http_clinet(),
+        }
     }
 }
 
