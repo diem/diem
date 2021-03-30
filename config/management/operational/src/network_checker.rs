@@ -2,89 +2,85 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::json_rpc::JsonRpcClientWrapper;
-use diem_config::config::RoleType;
+use diem_config::{
+    config::{RoleType, HANDSHAKE_VERSION},
+    network_id::{NetworkContext, NetworkId},
+};
+use diem_crypto::{x25519, x25519::PRIVATE_KEY_SIZE};
 use diem_management::error::Error;
 use diem_network_address_encryption::Encryptor;
 use diem_secure_storage::{InMemoryStorage, Storage};
-use diem_types::network_address::{
-    encrypted::{Key, KeyVersion, KEY_LEN},
-    NetworkAddress,
+use diem_types::{
+    account_address,
+    chain_id::ChainId,
+    network_address::{
+        encrypted::{Key, KeyVersion, KEY_LEN},
+        NetworkAddress,
+    },
+    PeerId,
 };
 use fallible::copy_from_slice::copy_slice_to_vec;
-use std::{
-    io::{Read, Write},
-    net::{TcpStream, ToSocketAddrs},
-    time::Duration,
+use netcore::transport::tcp::{resolve_and_connect, TcpSocket};
+use network::{
+    noise::{HandshakeAuthMode, NoiseUpgrader},
+    protocols::wire::handshake::v1::SupportedProtocols,
+    transport::{upgrade_outbound, UpgradeContext, SUPPORTED_MESSAGING_PROTOCOL},
+    ProtocolId,
 };
+use std::{collections::BTreeMap, sync::Arc};
 use structopt::StructOpt;
+use tokio::{runtime::Runtime, time::Duration};
+
+const DEFAULT_TIMEOUT_SECONDS: u64 = 5;
 
 #[derive(Debug, StructOpt)]
 pub struct CheckEndpoint {
+    /// `NetworkAddress` of remote server interface
     #[structopt(long)]
     address: NetworkAddress,
+    /// `ChainId` of remote server
+    #[structopt(long)]
+    chain_id: ChainId,
+    /// `NetworkId` of remote server interface
+    #[structopt(long)]
+    network_id: NetworkId,
+    /// `PrivateKey` to connect to remote server
+    #[structopt(long, parse(try_from_str = parse_private_key_hex))]
+    private_key: x25519::PrivateKey,
+    /// Optional number of seconds to timeout attempting to connect to endpoint
+    #[structopt(long)]
+    timeout_seconds: Option<u64>,
 }
 
-// This will show up as an error in the logs as a bad key 07070707...
-// It allows us to ensure that both connections work, and that we can see them in the logs
-const INVALID_NOISE_HEADER: &[u8; 152] = &[7; 152];
+fn parse_private_key_hex(src: &str) -> Result<x25519::PrivateKey, Error> {
+    let input = src.trim();
+    if input.len() != 64 {
+        return Err(Error::CommandArgumentError(
+            "Invalid private key length, must be 64 hex characters".to_string(),
+        ));
+    }
+
+    let value_slice = hex::decode(src.trim())
+        .map_err(|_| Error::CommandArgumentError(format!("Not a valid private key: {}", src)))?;
+
+    let mut value = [0; PRIVATE_KEY_SIZE];
+    copy_slice_to_vec(&value_slice, &mut value)
+        .map_err(|e| Error::CommandArgumentError(format!("{}", e)))?;
+
+    Ok(x25519::PrivateKey::from(value))
+}
 
 impl CheckEndpoint {
     pub fn execute(self) -> Result<String, Error> {
-        let addrs = self.address.to_socket_addrs().map_err(|err| {
-            Error::IO(
-                "Failed to resolve address from NetworkAddress".to_string(),
-                err,
-            )
-        })?;
-
-        let mut last_error = std::io::Error::new(std::io::ErrorKind::Other, "");
-
-        // The problem here is the endpoint is not supposed to respond to garbage data.
-        // So, we check that we get nothing from the endpoint, and that it resolves & connects with TCP
-        for addr in addrs {
-            eprintln!("Trying address: {}", addr);
-            match TcpStream::connect_timeout(&addr, Duration::from_secs(5)) {
-                Ok(mut stream) => {
-                    // We should be able to write to the socket dummy data
-                    if let Err(error) = stream.write(INVALID_NOISE_HEADER) {
-                        eprintln!("Failed to write to address {}", error);
-                        last_error = error;
-                        continue;
-                    }
-                    let buf = &mut [0; 1];
-                    match stream.read(buf) {
-                        Ok(size) => {
-                            if size == 0 {
-                                // Connection is open, and doesn't return anything
-                                // This is the closest we can get to working
-                                return Ok(format!(
-                                    "Accepted write and responded with nothing at {}",
-                                    addr
-                                ));
-                            } else {
-                                eprintln!(
-                                    "Endpoint responded with data!  Shouldn't be a noise endpoint."
-                                );
-                                last_error = std::io::Error::new(
-                                    std::io::ErrorKind::Other,
-                                    "Responded with data when it shouldn't.",
-                                )
-                            }
-                        }
-                        Err(error) => {
-                            eprintln!("Failed to read from address {}", error);
-                            last_error = error
-                        }
-                    }
-                }
-                Err(error) => last_error = error,
-            }
-        }
-
-        Err(Error::IO(
-            "No addresses responded correctly".to_string(),
-            last_error,
-        ))
+        validate_address(&self.address)?;
+        let (peer_id, public_key) = private_key_to_public_info(&self.private_key);
+        check_endpoint(
+            build_upgrade_context(self.chain_id, self.network_id, peer_id, self.private_key),
+            self.address,
+            peer_id,
+            public_key,
+            timeout_duration(self.timeout_seconds),
+        )
     }
 }
 
@@ -97,14 +93,23 @@ pub struct CheckValidatorSetEndpoints {
     #[structopt(long)]
     role: RoleType,
     /// The expected on-chain key, only required for validator checks
-    #[structopt(long, required_if("role", "validator"), parse(try_from_str = parse_hex))]
-    key: Option<Key>,
+    #[structopt(long, required_if("role", "validator"), parse(try_from_str = parse_validator_key_hex))]
+    address_encryption_key: Option<Key>,
     /// The expected on-chain key version, only required for validator checks
     #[structopt(long, required_if("role", "validator"))]
     version: Option<KeyVersion>,
+    /// `ChainId` of remote server
+    #[structopt(long)]
+    chain_id: ChainId,
+    /// Private key to connect to remote server
+    #[structopt(long, parse(try_from_str = parse_private_key_hex))]
+    private_key: x25519::PrivateKey,
+    /// Optional number of seconds to timeout attempting to connect to endpoint
+    #[structopt(long)]
+    timeout_seconds: Option<u64>,
 }
 
-fn parse_hex(src: &str) -> Result<Key, Error> {
+fn parse_validator_key_hex(src: &str) -> Result<Key, Error> {
     let potential_err_msg = format!("Not a valid encryption key: {}", src);
     let value_slice =
         hex::decode(src.trim()).map_err(|_| Error::CommandArgumentError(potential_err_msg))?;
@@ -124,7 +129,7 @@ impl CheckValidatorSetEndpoints {
         encryptor.initialize().unwrap();
         let encryptor = if is_validator {
             encryptor
-                .add_key(self.version.unwrap(), self.key.unwrap())
+                .add_key(self.version.unwrap(), self.address_encryption_key.unwrap())
                 .unwrap();
             encryptor
                 .set_current_version(self.version.unwrap())
@@ -137,14 +142,34 @@ impl CheckValidatorSetEndpoints {
         let client = JsonRpcClientWrapper::new(self.json_server);
         let validator_set = crate::validator_set::decode_validator_set(encryptor, client, None)?;
 
+        // Build a single upgrade context to run all the checks
+        let network_id = if is_validator {
+            NetworkId::Validator
+        } else {
+            NetworkId::Public
+        };
+
+        let (peer_id, public_key) = private_key_to_public_info(&self.private_key);
+        let upgrade_context =
+            build_upgrade_context(self.chain_id, network_id, peer_id, self.private_key);
+
+        let timeout = timeout_duration(self.timeout_seconds);
+
+        // Check all the addresses accordingly
         for info in validator_set {
             let address = if is_validator {
-                info.fullnode_network_address.clone()
-            } else {
                 info.validator_network_address.clone()
+            } else {
+                info.fullnode_network_address.clone()
             };
-            let check_endpoint = CheckEndpoint { address };
-            match check_endpoint.execute() {
+
+            match check_endpoint(
+                upgrade_context.clone(),
+                address,
+                peer_id,
+                public_key,
+                timeout,
+            ) {
                 Ok(_) => println!("{} -- good", info.name),
                 Err(err) => println!("{} -- bad -- {}", info.name, err),
             };
@@ -154,26 +179,128 @@ impl CheckValidatorSetEndpoints {
     }
 }
 
-#[cfg(test)]
-pub mod tests {
-    use crate::test_helper::OperationalTool;
-    use diem_types::{chain_id::ChainId, network_address::NetworkAddress};
-    use std::str::FromStr;
+/// Builds a listener free noise connector
+fn build_upgrade_context(
+    chain_id: ChainId,
+    network_id: NetworkId,
+    peer_id: PeerId,
+    private_key: x25519::PrivateKey,
+) -> Arc<UpgradeContext> {
+    // RoleType doesn't matter, but the `NetworkId` and `PeerId` are used in handshakes
+    let network_context = Arc::new(NetworkContext::new(
+        RoleType::FullNode,
+        network_id.clone(),
+        peer_id,
+    ));
 
-    #[test]
-    fn test_check_endpoint() {
-        let op_tool = OperationalTool::new("unused-host".into(), ChainId::test());
+    // Let's make sure some protocol can be connected.  In the future we may want to allow for specifics
+    let mut supported_protocols = BTreeMap::new();
+    supported_protocols.insert(
+        SUPPORTED_MESSAGING_PROTOCOL,
+        SupportedProtocols::from(ProtocolId::all().iter()),
+    );
 
-        // Check invalid DNS
-        let addr = NetworkAddress::from_str("/dns4/diem/tcp/80").unwrap();
-        op_tool.check_endpoint(addr).unwrap_err();
+    // Build the noise and network handshake, without running a full Noise server with listener
+    Arc::new(UpgradeContext::new(
+        NoiseUpgrader::new(
+            network_context,
+            private_key,
+            // If we had an incoming message, auth mode would matter
+            HandshakeAuthMode::server_only(),
+        ),
+        HANDSHAKE_VERSION,
+        supported_protocols,
+        chain_id,
+        network_id,
+    ))
+}
 
-        // Check if endpoint responded with data
-        let addr = NetworkAddress::from_str("/dns4/diem.org/tcp/80").unwrap();
-        op_tool.check_endpoint(addr).unwrap_err();
+fn timeout_duration(maybe_secs: Option<u64>) -> Duration {
+    Duration::from_secs(if let Some(secs) = maybe_secs {
+        secs
+    } else {
+        DEFAULT_TIMEOUT_SECONDS
+    })
+}
 
-        // Check bad port
-        let addr = NetworkAddress::from_str("/dns4/diem.com/tcp/6180").unwrap();
-        op_tool.check_endpoint(addr).unwrap_err();
+fn validate_address(address: &NetworkAddress) -> Result<(), Error> {
+    if !address.is_diemnet_addr() {
+        Err(Error::CommandArgumentError(
+            "Address must have ip, tcp, noise key, and handshake".to_string(),
+        ))
+    } else {
+        Ok(())
     }
+}
+
+/// Wrapper for `check_endpoint_inner` to handle runtime
+fn check_endpoint(
+    upgrade_context: Arc<UpgradeContext>,
+    address: NetworkAddress,
+    peer_id: PeerId,
+    public_key: x25519::PublicKey,
+    timeout: Duration,
+) -> Result<String, Error> {
+    let runtime = Runtime::new().unwrap();
+    let remote_pubkey = address.find_noise_proto().unwrap();
+    println!(
+        "Connecting with peer_id {} and pubkey {} to {} with timeout: {:?}",
+        peer_id, public_key, address, timeout
+    );
+
+    let connect_future = async {
+        tokio::time::timeout(
+            timeout,
+            check_endpoint_inner(upgrade_context, address.clone(), remote_pubkey),
+        )
+        .await
+        .map_err(|_| Error::Timeout("CheckEndpoint", address.to_string()))
+    };
+
+    runtime.block_on(connect_future)?
+}
+
+/// Connects via Noise, and then drops the connection
+async fn check_endpoint_inner(
+    upgrade_context: Arc<UpgradeContext>,
+    address: NetworkAddress,
+    remote_pubkey: x25519::PublicKey,
+) -> Result<String, Error> {
+    // Connect to the address, this should handle DNS resolution
+    let fut_socket = async {
+        resolve_and_connect(address.clone())
+            .await
+            .map(TcpSocket::new)
+    };
+
+    // The peer id doesn't matter because we don't validate it
+    let remote_peer_id = account_address::from_identity_public_key(remote_pubkey);
+    match upgrade_outbound(
+        upgrade_context,
+        fut_socket,
+        address.clone(),
+        remote_peer_id,
+        remote_pubkey,
+    )
+    .await
+    {
+        Ok(conn) => {
+            let msg = format!("Successfully connected to {}", conn.metadata.addr);
+
+            // Disconnect
+            drop(conn);
+            Ok(msg)
+        }
+        Err(error) => Err(Error::UnexpectedError(format!(
+            "Failed to connect to {} due to {}",
+            address, error
+        ))),
+    }
+}
+
+/// Derive the peer id that we're using.  This is a convenience to only have to provide private key
+fn private_key_to_public_info(private_key: &x25519::PrivateKey) -> (PeerId, x25519::PublicKey) {
+    let public_key = private_key.public_key();
+    let peer_id = account_address::from_identity_public_key(public_key);
+    (peer_id, public_key)
 }

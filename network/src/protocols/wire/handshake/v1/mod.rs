@@ -53,6 +53,17 @@ impl ProtocolId {
             HealthCheckerRpc => "HealthCheckerRpc",
         }
     }
+
+    pub fn all() -> &'static [ProtocolId] {
+        &[
+            ProtocolId::ConsensusRpc,
+            ProtocolId::ConsensusDirectSend,
+            ProtocolId::MempoolDirectSend,
+            ProtocolId::StateSyncDirectSend,
+            ProtocolId::DiscoveryDirectSend,
+            ProtocolId::HealthCheckerRpc,
+        ]
+    }
 }
 
 impl fmt::Debug for ProtocolId {

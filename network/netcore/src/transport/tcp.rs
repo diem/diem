@@ -146,7 +146,7 @@ async fn resolve_with_filter(
 
 /// Note: we need to take ownership of this `NetworkAddress` (instead of just
 /// borrowing the `&[Protocol]` slice) so this future can be `Send + 'static`.
-async fn resolve_and_connect(addr: NetworkAddress) -> io::Result<TcpStream> {
+pub async fn resolve_and_connect(addr: NetworkAddress) -> io::Result<TcpStream> {
     let protos = addr.as_slice();
 
     if let Some(((ipaddr, port), _addr_suffix)) = parse_ip_tcp(protos) {
@@ -281,7 +281,7 @@ pub struct TcpSocket {
 }
 
 impl TcpSocket {
-    fn new(socket: TcpStream) -> Self {
+    pub fn new(socket: TcpStream) -> Self {
         use tokio_util::compat::TokioAsyncReadCompatExt;
 
         Self {

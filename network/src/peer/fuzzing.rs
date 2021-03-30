@@ -83,17 +83,7 @@ pub fn fuzz(data: &[u8]) {
         NetworkAddress::mock(),
         ConnectionOrigin::Inbound,
         MessagingProtocolVersion::V1,
-        SupportedProtocols::from(
-            [
-                ProtocolId::ConsensusRpc,
-                ProtocolId::ConsensusDirectSend,
-                ProtocolId::MempoolDirectSend,
-                ProtocolId::StateSyncDirectSend,
-                ProtocolId::DiscoveryDirectSend,
-                ProtocolId::HealthCheckerRpc,
-            ]
-            .iter(),
-        ),
+        SupportedProtocols::from(ProtocolId::all().iter()),
         PeerRole::Unknown,
     );
     let connection = Connection { socket, metadata };

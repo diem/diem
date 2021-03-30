@@ -4,7 +4,7 @@ use crate::config::{PeerRole, RoleType};
 use diem_types::PeerId;
 use serde::{Deserialize, Serialize, Serializer};
 use short_hex_str::AsShortHexStr;
-use std::{cmp::Ordering, fmt};
+use std::{cmp::Ordering, fmt, str::FromStr};
 
 /// A grouping of common information between all networking code for logging.
 /// This should greatly reduce the groupings between these given everywhere, and will allow
@@ -254,6 +254,18 @@ impl NetworkId {
         S: Serializer,
     {
         self.as_str().serialize(serializer)
+    }
+}
+
+impl FromStr for NetworkId {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "Validator" => NetworkId::Validator,
+            "Public" => NetworkId::Public,
+            other => NetworkId::Private(other.to_string()),
+        })
     }
 }
 

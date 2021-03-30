@@ -33,6 +33,8 @@ pub enum Error {
     StorageSigningError(&'static str, &'static str, &'static str, String),
     #[error("Failed to write '{1}' to {0} storage: {2}")]
     StorageWriteError(&'static str, &'static str, String),
+    #[error("{0} timed out: {1}")]
+    Timeout(&'static str, String),
     #[error("Unable to parse '{0}': error: {1}")]
     UnableToParse(&'static str, String),
     #[error("Unable to parse file '{0}', error: {1}")]

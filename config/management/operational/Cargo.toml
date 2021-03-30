@@ -11,11 +11,14 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
+futures = "0.3.12"
 hex = "0.4.3"
 serde = { version = "1.0.124", features = ["rc"], default-features = false }
 serde_json = "1.0.64"
 structopt = "0.3.21"
 thiserror = "1.0.24"
+tokio = { version = "1.3.0", features = ["full"] }
+tokio-util = { version = "0.6.4", features = ["compat"] }
 toml = { version = "0.5.8", default-features = false }
 
 bcs = "0.1.2"
@@ -23,6 +26,7 @@ diem-client = { path = "../../../sdk/client", features = ["blocking"], default-f
 diem-config = { path = "../.."}
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-global-constants = { path = "../../global-constants" }
+diem-infallible = { path = "../../../common/infallible" }
 diem-management = { path = ".." }
 diem-network-address-encryption = {path = "../network-address-encryption"}
 diem-secure-storage = { path = "../../../secure/storage" }
@@ -30,6 +34,8 @@ diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 diem-temppath = { path = "../../../common/temppath" }
 fallible = { path = "../../../common/fallible" }
+netcore = { path = "../../../network/netcore" }
+network = { path = "../../../network" }
 transaction-builder = { path = "../../../language/transaction-builder" }
 
 [features]

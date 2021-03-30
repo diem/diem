@@ -197,12 +197,30 @@ where
 }
 
 /// Common context for performing both inbound and outbound connection upgrades.
-struct UpgradeContext {
+pub struct UpgradeContext {
     noise: NoiseUpgrader,
     handshake_version: u8,
     supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
     chain_id: ChainId,
     network_id: NetworkId,
+}
+
+impl UpgradeContext {
+    pub fn new(
+        noise: NoiseUpgrader,
+        handshake_version: u8,
+        supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
+        chain_id: ChainId,
+        network_id: NetworkId,
+    ) -> Self {
+        UpgradeContext {
+            noise,
+            handshake_version,
+            supported_protocols,
+            chain_id,
+            network_id,
+        }
+    }
 }
 
 /// If we have proxy protocol enabled, then prepend the un-proxied address to the error.
@@ -313,7 +331,7 @@ async fn upgrade_inbound<T: TSocket>(
 
 /// Upgrade an inbound connection. This means we run a Noise IK handshake for
 /// authentication and then negotiate common supported protocols.
-async fn upgrade_outbound<T: TSocket>(
+pub async fn upgrade_outbound<T: TSocket>(
     ctxt: Arc<UpgradeContext>,
     fut_socket: impl Future<Output = io::Result<T>>,
     addr: NetworkAddress,
@@ -427,13 +445,13 @@ where
         let identity_pubkey = identity_key.public_key();
         let network_id = network_context.network_id().clone();
 
-        let upgrade_context = UpgradeContext {
-            noise: NoiseUpgrader::new(network_context, identity_key, auth_mode),
+        let upgrade_context = UpgradeContext::new(
+            NoiseUpgrader::new(network_context, identity_key, auth_mode),
             handshake_version,
             supported_protocols,
             chain_id,
             network_id,
-        };
+        );
 
         Self {
             base_transport,
