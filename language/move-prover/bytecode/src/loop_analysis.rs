@@ -5,7 +5,7 @@ use crate::{
     function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOptions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    graph::Graph,
+    graph::{Graph, NaturalLoop},
     stackless_bytecode::{AttrId, BorrowNode, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
@@ -89,6 +89,22 @@ impl FunctionTargetProcessor for LoopAnalysisProcessor {
 }
 
 impl LoopAnalysisProcessor {
+    /// Perform a loop transformation that eliminate back-edges in a loop and flatten the function
+    /// CFG into a directed acyclic graph (DAG).
+    ///
+    /// The general procedure works as following (assuming the loop invariant expression is L):
+    ///
+    /// - At the beginning of the loop header (identified by the label bytecode), insert the
+    ///   following statements:
+    ///     - assert L;
+    ///     - havoc T;
+    ///     - assume L;
+    /// - Create a new dummy block (say, block X) with only the following statements
+    ///     - assert L;
+    ///     - stop;
+    /// - For each backedge in this loop:
+    ///     - In the source block of the back edge, replace the last statement (must be a jump or
+    ///       branch) with the new label of X.
     fn transform(
         func_env: &FunctionEnv<'_>,
         data: FunctionData,
@@ -230,6 +246,110 @@ impl LoopAnalysisProcessor {
         builder.data
     }
 
+    /// Collect invariants in the given loop header block
+    ///
+    /// Loop invariants are defined as the longest sequence of consecutive 'assert'
+    /// statements in the loop header block, immediately after the Label statement.
+    ///
+    /// In other words, for the loop header block:
+    /// - the first statement must be a 'label',
+    /// - followed by N 'assert' statements, N >= 0
+    /// - and N + 1 must not be an 'assert' statement.
+    fn collect_loop_invariants(
+        code: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
+        loop_header: BlockId,
+    ) -> BTreeMap<CodeOffset, (AttrId, ast::Exp)> {
+        let mut invariants = BTreeMap::new();
+        for (index, code_offset) in cfg.instr_indexes(loop_header).unwrap().enumerate() {
+            let bytecode = &code[code_offset as usize];
+            if index == 0 {
+                assert!(matches!(bytecode, Bytecode::Label(_, _)));
+            } else {
+                match bytecode {
+                    Bytecode::Prop(attr_id, PropKind::Assert, exp) => {
+                        invariants.insert(code_offset, (*attr_id, exp.clone()));
+                    }
+                    _ => break,
+                }
+            }
+        }
+        invariants
+    }
+
+    /// Collect variables that may be changed during the loop execution.
+    ///
+    /// The input to this function should include all the sub loops that constitute a fat-loop.
+    /// This function will return two sets of variables that represents, respectively,
+    /// - the set of values to be havoc-ed, and
+    /// - the set of mutations to he havoc-ed and how they should be havoc-ed.
+    fn collect_loop_targets(
+        code: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
+        func_target: &FunctionTarget<'_>,
+        sub_loops: &[NaturalLoop<BlockId>],
+    ) -> (BTreeSet<TempIndex>, BTreeMap<TempIndex, bool>) {
+        let mut val_targets = BTreeSet::new();
+        let mut mut_targets = BTreeMap::new();
+        let fat_loop_body: BTreeSet<_> = sub_loops
+            .iter()
+            .map(|l| l.loop_body.iter())
+            .flatten()
+            .copied()
+            .collect();
+        for block_id in fat_loop_body {
+            for code_offset in cfg
+                .instr_indexes(block_id)
+                .expect("A loop body should never contain a dummy block")
+            {
+                let (bc_val_targets, bc_mut_targets) =
+                    Self::targets(func_target, &code[code_offset as usize]);
+                val_targets.extend(bc_val_targets);
+                for (idx, is_full_havoc) in bc_mut_targets {
+                    mut_targets
+                        .entry(idx)
+                        .and_modify(|v| {
+                            *v = *v || is_full_havoc;
+                        })
+                        .or_insert(is_full_havoc);
+                }
+            }
+        }
+        (val_targets, mut_targets)
+    }
+
+    /// Collect code offsets that are branch instructions forming loop back-edges
+    ///
+    /// The input to this function should include all the sub loops that constitute a fat-loop.
+    /// This function will return one back-edge location for each sub loop.
+    fn collect_loop_back_edges(
+        code: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
+        header_label: Label,
+        sub_loops: &[NaturalLoop<BlockId>],
+    ) -> BTreeSet<CodeOffset> {
+        sub_loops
+            .iter()
+            .map(|l| {
+                let code_offset = match cfg.content(l.loop_latch) {
+                    BlockContent::Dummy => {
+                        panic!("A loop body should never contain a dummy block")
+                    }
+                    BlockContent::Basic { upper, .. } => *upper,
+                };
+                match &code[code_offset as usize] {
+                    Bytecode::Jump(_, goto_label) if *goto_label == header_label => {}
+                    Bytecode::Branch(_, if_label, else_label, _)
+                        if *if_label == header_label || *else_label == header_label => {}
+                    _ => panic!("The latch bytecode of a loop does not branch into the header"),
+                };
+                code_offset
+            })
+            .collect()
+    }
+
+    /// Find all loops in the function and collect information needed for invariant instrumentation
+    /// and loop-to-DAG transformation.
     fn build_loop_annotation(func_env: &FunctionEnv<'_>, data: &FunctionData) -> LoopAnnotation {
         // build for natural loops
         let func_target = FunctionTarget::new(func_env, data);
@@ -273,77 +393,10 @@ impl LoopAnalysisProcessor {
                 },
             };
 
-            // collect invariants
-            //
-            // Loop invariants are defined as the longest sequence of consecutive 'assert'
-            // statements in the loop header block, immediately after the Label statement.
-            //
-            // In other words, for the loop header block:
-            // - the first statement must be a 'label',
-            // - followed by N 'assert' statements, N >= 0
-            // - and N + 1 must not be an 'assert' statement.
-            let mut invariants = BTreeMap::new();
-            for (index, code_offset) in cfg.instr_indexes(fat_root).unwrap().enumerate() {
-                let bytecode = &code[code_offset as usize];
-                if index == 0 {
-                    assert!(matches!(bytecode, Bytecode::Label(_, _)));
-                } else {
-                    match bytecode {
-                        Bytecode::Prop(attr_id, PropKind::Assert, exp) => {
-                            invariants.insert(code_offset, (*attr_id, exp.clone()));
-                        }
-                        _ => break,
-                    }
-                }
-            }
-
-            // collect fat loop targets
-            let mut val_targets = BTreeSet::new();
-            let mut mut_targets = BTreeMap::new();
-            let fat_loop_body: BTreeSet<_> = sub_loops
-                .iter()
-                .map(|l| l.loop_body.iter())
-                .flatten()
-                .copied()
-                .collect();
-            for block_id in fat_loop_body {
-                for code_offset in cfg
-                    .instr_indexes(block_id)
-                    .expect("A loop body should never contain a dummy block")
-                {
-                    let (bc_val_targets, bc_mut_targets) =
-                        Self::targets(&func_target, &code[code_offset as usize]);
-                    val_targets.extend(bc_val_targets);
-                    for (idx, is_full_havoc) in bc_mut_targets {
-                        mut_targets
-                            .entry(idx)
-                            .and_modify(|v| {
-                                *v = *v || is_full_havoc;
-                            })
-                            .or_insert(is_full_havoc);
-                    }
-                }
-            }
-
-            // collect back edge locations
-            let back_edges = sub_loops
-                .iter()
-                .map(|l| {
-                    let code_offset = match cfg.content(l.loop_latch) {
-                        BlockContent::Dummy => {
-                            panic!("A loop body should never contain a dummy block")
-                        }
-                        BlockContent::Basic { upper, .. } => *upper,
-                    };
-                    match &code[code_offset as usize] {
-                        Bytecode::Jump(_, goto_label) if *goto_label == label => {}
-                        Bytecode::Branch(_, if_label, else_label, _)
-                            if *if_label == label || *else_label == label => {}
-                        _ => panic!("The latch bytecode of a loop does not branch into the header"),
-                    };
-                    code_offset
-                })
-                .collect();
+            let invariants = Self::collect_loop_invariants(code, &cfg, fat_root);
+            let (val_targets, mut_targets) =
+                Self::collect_loop_targets(code, &cfg, &func_target, &sub_loops);
+            let back_edges = Self::collect_loop_back_edges(code, &cfg, label, &sub_loops);
 
             // done with all information collection
             fat_loops.insert(
