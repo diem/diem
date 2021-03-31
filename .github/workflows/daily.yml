@@ -32,7 +32,7 @@ jobs:
         # 1. RUSTSEC-2021-0020 - Not impacted, see #7723
         # 2. RUSTSEC-2020-0146 - Not impacted, see #7826
         run: |
-          $CARGO $CARGOFLAGS audit --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2020-0146 >> $MESSAGE_PAYLOAD_FILE
+          cargo audit --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2020-0146 >> $MESSAGE_PAYLOAD_FILE
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_AUDIT }}
