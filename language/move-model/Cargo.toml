@@ -15,6 +15,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 move-ir-types = { path = "../move-ir/types" }
 move-core-types = { path = "../move-core/types" }
+disassembler = { path = "../tools/disassembler" }
 
 # external dependencies
 codespan = "0.8.0"

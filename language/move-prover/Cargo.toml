@@ -19,9 +19,7 @@ bytecode = { path = "bytecode" }
 vm = { path = "../vm" }
 diem-temppath = { path = "../../common/temppath" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-bytecode-source-map = { path = "../compiler/bytecode-source-map" }
 move-ir-types = { path = "../move-ir/types" }
-disassembler = { path = "../tools/disassembler" }
 
 # external dependencies
 async-trait = "0.1.42"

@@ -17,9 +17,7 @@ use bytecode::{
     read_write_set_analysis::{self, ReadWriteSetProcessor},
     spec_instrumentation::SpecInstrumentationProcessor,
 };
-use bytecode_source_map::mapping::SourceMapping;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
-use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use docgen::Docgen;
 use errmapgen::ErrmapGen;
 use handlebars::Handlebars;
@@ -304,28 +302,14 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
     // Add function targets for all functions in the environment.
     for module_env in env.get_modules() {
         if options.prover.dump_bytecode {
-            let disas = Disassembler::new(
-                SourceMapping::new(
-                    module_env.get_source_map().clone(),
-                    module_env.get_verified_module().clone(),
-                ),
-                DisassemblerOptions {
-                    only_externally_visible: false,
-                    print_code: true,
-                    print_basic_blocks: true,
-                    print_locals: true,
-                },
-            );
-            let content = disas
-                .disassemble()
-                .expect("Failed to disassemble a verified module");
             let output_file = options
                 .move_sources
                 .get(0)
                 .cloned()
                 .unwrap_or_else(|| "bytecode".to_string())
                 .replace(".move", ".mv.disas");
-            fs::write(&output_file, &content).expect("dumping disassembled module");
+            fs::write(&output_file, &module_env.disassemble())
+                .expect("dumping disassembled module");
         }
         for func_env in module_env.get_functions() {
             targets.add_target(&func_env)

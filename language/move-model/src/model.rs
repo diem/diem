@@ -36,7 +36,8 @@ use log::{info, warn};
 use num::{BigUint, Num, One, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
-use bytecode_source_map::source_map::SourceMap;
+use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
+use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
 };
@@ -1433,11 +1434,6 @@ impl<'env> ModuleEnv<'env> {
         &self.data.module
     }
 
-    /// Gets the source map for the module
-    pub fn get_source_map(&'env self) -> &'env SourceMap<MoveIrLoc> {
-        &self.data.source_map
-    }
-
     /// Gets a `NamedConstantEnv` in this module by name
     pub fn find_named_constant(&'env self, name: Symbol) -> Option<NamedConstantEnv<'env>> {
         let id = NamedConstantId(name);
@@ -1782,6 +1778,25 @@ impl<'env> ModuleEnv<'env> {
             .spec_funs
             .iter()
             .filter(move |(_, decl)| decl.name == name)
+    }
+
+    /// Disassemble the module bytecode
+    pub fn disassemble(&self) -> String {
+        let disas = Disassembler::new(
+            SourceMapping::new(
+                self.data.source_map.clone(),
+                self.get_verified_module().clone(),
+            ),
+            DisassemblerOptions {
+                only_externally_visible: false,
+                print_code: true,
+                print_basic_blocks: true,
+                print_locals: true,
+            },
+        );
+        disas
+            .disassemble()
+            .expect("Failed to disassemble a verified module")
     }
 }
 
