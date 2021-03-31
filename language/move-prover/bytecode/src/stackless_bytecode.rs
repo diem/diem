@@ -514,9 +514,18 @@ impl Bytecode {
         ExpRewriter::new(func_target.global_env(), &mut replacer).rewrite(&exp)
     }
 
-    /// Return the temporaries this instruction modifies. This includes references where the
-    /// instruction can have effect on.
-    pub fn modifies(&self, fun_target: &FunctionTarget<'_>) -> Vec<TempIndex> {
+    /// Return the temporaries this instruction modifies and how the temporaries are modified.
+    ///
+    /// For a temporary with TempIndex $t, if $t is modified by the instruction and
+    /// 1) $t is a value or an immutable reference, it will show up in the first Vec
+    /// 2) $t is a mutable reference and only its value is modified, not the reference itself,
+    ///    it will show up in the second Vec as ($t, false).
+    /// 3) $t is a mutable reference and the reference itself is modified (i.e., the location and
+    ///    path it is pointing to), it will show up in the second Vec as ($t, true).
+    pub fn modifies(
+        &self,
+        func_target: &FunctionTarget<'_>,
+    ) -> (Vec<TempIndex>, Vec<(TempIndex, bool)>) {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
@@ -526,22 +535,68 @@ impl Bytecode {
             }
             res
         };
+
         match self {
-            Assign(_, dest, ..) | Load(_, dest, ..) => vec![*dest],
-            Call(_, _, WriteBack(LocalRoot(dest), _), _, aa)
-            | Call(_, _, WriteBack(Reference(dest), _), _, aa) => add_abort(vec![*dest], aa),
-            Call(_, _, WriteRef, srcs, aa) => add_abort(vec![srcs[0]], aa),
+            Assign(_, dest, _, _) => {
+                if func_target.get_local_type(*dest).is_mutable_reference() {
+                    // reference assignment completely distorts the reference (value + pointer)
+                    (vec![], vec![(*dest, true)])
+                } else {
+                    // value assignment
+                    (vec![*dest], vec![])
+                }
+            }
+            Load(_, dest, _) => {
+                // constants can only be values, hence no modifications on the reference
+                (vec![*dest], vec![])
+            }
+            Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), _, aa) => {
+                // write-back to a local variable distorts the value
+                (add_abort(vec![*dest], aa), vec![])
+            }
+            Call(_, _, Operation::WriteBack(Reference(dest), ..), _, aa) => {
+                // write-back to a reference only distorts the value, but not the pointer itself
+                (add_abort(vec![], aa), vec![(*dest, false)])
+            }
+            Call(_, _, Operation::WriteRef, srcs, aa) => {
+                // write-ref only distorts the value of the reference, but not the pointer itself
+                (add_abort(vec![], aa), vec![(srcs[0], false)])
+            }
             Call(_, dests, Function(..), srcs, aa) => {
-                let mut res = dests.clone();
+                let mut val_targets = vec![];
+                let mut mut_targets = vec![];
                 for src in srcs {
-                    if fun_target.get_local_type(*src).is_mutable_reference() {
-                        res.push(*src);
+                    if func_target.get_local_type(*src).is_mutable_reference() {
+                        // values in mutable references can be distorted, but pointer stays the same
+                        mut_targets.push((*src, false));
                     }
                 }
-                add_abort(res, aa)
+                for dest in dests {
+                    if func_target.get_local_type(*dest).is_mutable_reference() {
+                        // similar to reference assignment
+                        mut_targets.push((*dest, true));
+                    } else {
+                        // similar to value assignment
+                        val_targets.push(*dest);
+                    }
+                }
+                (add_abort(val_targets, aa), mut_targets)
             }
-            Call(_, dests, _, _, aa) => add_abort(dests.clone(), aa),
-            _ => vec![],
+            Call(_, dests, _, _, aa) => {
+                let mut val_targets = vec![];
+                let mut mut_targets = vec![];
+                for dest in dests {
+                    if func_target.get_local_type(*dest).is_mutable_reference() {
+                        // similar to reference assignment
+                        mut_targets.push((*dest, true));
+                    } else {
+                        // similar to value assignment
+                        val_targets.push(*dest);
+                    }
+                }
+                (add_abort(val_targets, aa), mut_targets)
+            }
+            _ => (vec![], vec![]),
         }
     }
 }

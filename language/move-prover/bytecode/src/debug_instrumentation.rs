@@ -17,6 +17,7 @@ use crate::{
 };
 
 use move_model::model::FunctionEnv;
+use std::collections::BTreeSet;
 
 pub struct DebugInstrumenter {}
 
@@ -83,7 +84,12 @@ impl FunctionTargetProcessor for DebugInstrumenter {
                     builder.set_loc_from_attr(bc.get_attr_id());
                     builder.emit(bc.clone());
                     // Emit trace instructions for modified values.
-                    for idx in bc.modifies(&builder.get_target()) {
+                    let (val_targets, mut_targets) = bc.modifies(&builder.get_target());
+                    let affected_variables: BTreeSet<_> = val_targets
+                        .into_iter()
+                        .chain(mut_targets.into_iter().map(|(idx, _)| idx))
+                        .collect();
+                    for idx in affected_variables {
                         // Only emit this for user declared locals, not for ones introduced
                         // by stack elimination.
                         if idx < fun_env.get_local_count() {

@@ -6,7 +6,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::{Graph, NaturalLoop},
-    stackless_bytecode::{AttrId, BorrowNode, Bytecode, HavocKind, Label, Operation, PropKind},
+    stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
 use move_model::{
@@ -302,8 +302,8 @@ impl LoopAnalysisProcessor {
                 .instr_indexes(block_id)
                 .expect("A loop body should never contain a dummy block")
             {
-                let (bc_val_targets, bc_mut_targets) =
-                    Self::targets(func_target, &code[code_offset as usize]);
+                let bytecode = &code[code_offset as usize];
+                let (bc_val_targets, bc_mut_targets) = bytecode.modifies(func_target);
                 val_targets.extend(bc_val_targets);
                 for (idx, is_full_havoc) in bc_mut_targets {
                     mut_targets
@@ -411,46 +411,5 @@ impl LoopAnalysisProcessor {
         }
 
         LoopAnnotation { fat_loops }
-    }
-
-    fn targets(
-        func_target: &FunctionTarget<'_>,
-        bytecode: &Bytecode,
-    ) -> (Vec<TempIndex>, Vec<(TempIndex, bool)>) {
-        use BorrowNode::*;
-        match bytecode {
-            Bytecode::Assign(_, dest, _, _) => {
-                if func_target.get_local_type(*dest).is_mutable_reference() {
-                    (vec![], vec![(*dest, true)])
-                } else {
-                    (vec![*dest], vec![])
-                }
-            }
-            Bytecode::Load(_, dest, _) => (vec![*dest], vec![]),
-            Bytecode::Call(_, _, Operation::WriteBack(LocalRoot(dest), ..), ..) => {
-                (vec![*dest], vec![])
-            }
-            Bytecode::Call(_, _, Operation::WriteBack(Reference(dest), ..), ..) => {
-                // write-backs only distorts the value
-                (vec![], vec![(*dest, false)])
-            }
-            Bytecode::Call(_, _, Operation::WriteRef, srcs, ..) => {
-                // write-ref only distorts the value
-                (vec![], vec![(*srcs.get(0).unwrap(), false)])
-            }
-            Bytecode::Call(_, dests, ..) => {
-                let mut val_targets = vec![];
-                let mut mut_targets = vec![];
-                for dest in dests {
-                    if func_target.get_local_type(*dest).is_mutable_reference() {
-                        mut_targets.push((*dest, true));
-                    } else {
-                        val_targets.push(*dest);
-                    }
-                }
-                (val_targets, mut_targets)
-            }
-            _ => (vec![], vec![]),
-        }
     }
 }
