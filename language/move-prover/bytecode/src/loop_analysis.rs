@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOption},
+    function_data_builder::{FunctionDataBuilder, FunctionDataBuilderOptions},
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::Graph,
@@ -96,10 +96,10 @@ impl LoopAnalysisProcessor {
     ) -> FunctionData {
         let back_edge_locs = loop_annotation.back_edges_locations();
         let invariant_locs = loop_annotation.invariants_locations();
-        let mut builder = FunctionDataBuilder::new_with_option(
+        let mut builder = FunctionDataBuilder::new_with_options(
             func_env,
             data,
-            FunctionDataBuilderOption {
+            FunctionDataBuilderOptions {
                 no_fallthrough_jump_removal: true,
             },
         );

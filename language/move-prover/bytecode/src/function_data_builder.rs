@@ -18,7 +18,7 @@ use move_model::{
 };
 
 #[derive(Default)]
-pub struct FunctionDataBuilderOption {
+pub struct FunctionDataBuilderOptions {
     pub no_fallthrough_jump_removal: bool,
 }
 
@@ -26,7 +26,7 @@ pub struct FunctionDataBuilderOption {
 pub struct FunctionDataBuilder<'env> {
     pub fun_env: &'env FunctionEnv<'env>,
     pub data: FunctionData,
-    pub option: FunctionDataBuilderOption,
+    pub options: FunctionDataBuilderOptions,
     next_free_attr_index: usize,
     next_free_label_index: usize,
     current_loc: Loc,
@@ -37,18 +37,18 @@ pub struct FunctionDataBuilder<'env> {
 impl<'env> FunctionDataBuilder<'env> {}
 
 impl<'env> FunctionDataBuilder<'env> {
-    /// Creates a new builder with customized option.
-    pub fn new_with_option(
+    /// Creates a new builder with customized options
+    pub fn new_with_options(
         fun_env: &'env FunctionEnv<'env>,
         data: FunctionData,
-        option: FunctionDataBuilderOption,
+        options: FunctionDataBuilderOptions,
     ) -> Self {
         let next_free_attr_index = data.next_free_attr_index();
         let next_free_label_index = data.next_free_label_index();
         FunctionDataBuilder {
             fun_env,
             data,
-            option,
+            options,
             next_free_attr_index,
             next_free_label_index,
             current_loc: fun_env.get_loc(),
@@ -59,7 +59,7 @@ impl<'env> FunctionDataBuilder<'env> {
 
     /// Creates a new builder with options set to default values
     pub fn new(fun_env: &'env FunctionEnv<'env>, data: FunctionData) -> Self {
-        Self::new_with_option(fun_env, data, FunctionDataBuilderOption::default())
+        Self::new_with_options(fun_env, data, FunctionDataBuilderOptions::default())
     }
 
     /// Gets the global env associated with this builder.
@@ -386,7 +386,7 @@ impl<'env> FunctionDataBuilder<'env> {
     /// Emits a bytecode.
     pub fn emit(&mut self, bc: Bytecode) {
         use Bytecode::*;
-        let no_fallthrough_jump_removal = self.option.no_fallthrough_jump_removal;
+        let no_fallthrough_jump_removal = self.options.no_fallthrough_jump_removal;
         // Perform some minimal peephole optimization
         match (self.data.code.last(), &bc) {
             // jump L; L: ..
