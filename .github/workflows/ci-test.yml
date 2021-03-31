@@ -185,6 +185,10 @@ jobs:
     outputs:
       prev-tag: ${{ steps.build-extra-images.outputs.prev-tag }}
     steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
       - name: Setup env
         run: |
           echo "BASE_GIT_REV=${{ needs.prepare.outputs.changes-base-git-rev }}" >> $GITHUB_ENV
