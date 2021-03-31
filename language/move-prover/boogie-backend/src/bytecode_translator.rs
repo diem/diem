@@ -1009,8 +1009,8 @@ impl<'env> ModuleTranslator<'env> {
                         }
                     }
                     Stop => {
+                        // the two statements combined terminate any execution trace that reaches it
                         emitln!(self.writer, "assume false;");
-                        // a return statement terminates any execution trace that reaches it
                         emitln!(self.writer, "return;");
                     }
                     CastU8 => {
