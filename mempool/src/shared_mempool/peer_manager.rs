@@ -11,7 +11,10 @@ use crate::{
         types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
 };
-use diem_config::config::{MempoolConfig, PeerNetworkId, PeerRole, RoleType};
+use diem_config::{
+    config::{MempoolConfig, PeerNetworkId, PeerRole, RoleType},
+    network_id::NetworkId,
+};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_types::transaction::SignedTransaction;
@@ -190,14 +193,14 @@ impl PeerManager {
         // When not a validator, only broadcast to `default_failovers`
         let mut transmission_filter = None;
 
-        if !self.role.is_validator() {
+        {
             let priority = self
                 .prioritized_peers
                 .lock()
                 .iter()
                 .find_position(|peer_network_id| *peer_network_id == &peer)
                 .map_or(usize::MAX, |(pos, _)| pos);
-            if priority > self.mempool_config.default_failovers {
+            if !self.role.is_validator() && priority > self.mempool_config.default_failovers {
                 return;
             }
 
@@ -477,10 +480,16 @@ impl PeerManager {
         }
     }
 
-    pub fn is_vfn(&self, peer: &PeerNetworkId) -> bool {
-        self.peer_states.lock().get(peer).map_or(false, |state| {
-            state.metadata.role == PeerRole::ValidatorFullNode
-        })
+    pub fn is_same_level(&self, peer: &PeerNetworkId) -> bool {
+        let expected = match peer.raw_network_id() {
+            NetworkId::Validator => PeerRole::Validator,
+            _ => PeerRole::ValidatorFullNode,
+        };
+
+        self.peer_states
+            .lock()
+            .get(peer)
+            .map_or(false, |state| state.metadata.role == expected)
     }
 }
 

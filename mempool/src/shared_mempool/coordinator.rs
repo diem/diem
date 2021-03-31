@@ -218,7 +218,7 @@ async fn handle_event<V>(
                     );
 
                     let transmission_state =
-                        TransmissionState::new(smp_clone.peer_manager.is_vfn(&peer));
+                        TransmissionState::new(smp_clone.peer_manager.is_same_level(&peer));
 
                     bounded_executor
                         .spawn(tasks::process_transaction_broadcast(

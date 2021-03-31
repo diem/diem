@@ -65,12 +65,12 @@ pub enum TimelineState {
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct TransmissionState {
-    pub from_vfn: bool,
+    pub from_same_level: bool,
 }
 
 impl TransmissionState {
-    pub fn new(from_vfn: bool) -> Self {
-        TransmissionState { from_vfn }
+    pub fn new(from_same_level: bool) -> Self {
+        TransmissionState { from_same_level }
     }
 
     pub fn mock() -> Self {
