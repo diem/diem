@@ -512,6 +512,11 @@ where
                                     self.network_context,
                                     conn.metadata
                                 );
+                                counters::connections_rejected(
+                                    &self.network_context,
+                                    conn.metadata.origin,
+                                )
+                                .inc();
                                 self.disconnect(conn);
                                 return;
                             }

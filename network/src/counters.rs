@@ -51,6 +51,27 @@ pub fn connections(network_context: &NetworkContext, origin: ConnectionOrigin) -
     ])
 }
 
+pub static DIEM_CONNECTIONS_REJECTED: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "diem_connections_rejected",
+        "Number of connections rejected per interface",
+        &["role_type", "network_id", "peer_id", "direction"]
+    )
+    .unwrap()
+});
+
+pub fn connections_rejected(
+    network_context: &NetworkContext,
+    origin: ConnectionOrigin,
+) -> IntCounter {
+    DIEM_CONNECTIONS_REJECTED.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        origin.as_str(),
+    ])
+}
+
 pub static DIEM_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "diem_network_peer_connected",
