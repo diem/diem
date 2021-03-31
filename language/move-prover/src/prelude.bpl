@@ -780,11 +780,6 @@ procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
   m' := $Mutation(l#$Mutation(m), p#$Mutation(m), v');
 }
 
-procedure {:inline 1} $HavocMutationAll(m: $Mutation) returns (m': $Mutation) {
-  var fresh: $Mutation;
-  m' := fresh;
-}
-
 // ============================================================================================
 // Instructions
 

@@ -6,7 +6,7 @@
 
 use crate::{
     function_target::{FunctionData, FunctionTarget},
-    stackless_bytecode::{AttrId, Bytecode, Label, Operation, PropKind},
+    stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
 };
 use itertools::Itertools;
 use move_model::{
@@ -448,10 +448,17 @@ impl<'env> FunctionDataBuilder<'env> {
     }
 
     /// Emits a new temporary with a havoced value of given type.
-    pub fn emit_let_havoc_val(&mut self, ty: Type) -> (TempIndex, Exp) {
+    pub fn emit_let_havoc(&mut self, ty: Type) -> (TempIndex, Exp) {
+        let havoc_kind = if ty.is_mutable_reference() {
+            HavocKind::MutationAll
+        } else {
+            HavocKind::Value
+        };
         let temp = self.new_temp(ty);
         let temp_exp = self.mk_temporary(temp);
-        self.emit_with(|id| Bytecode::Call(id, vec![], Operation::HavocVal, vec![temp], None));
+        self.emit_with(|id| {
+            Bytecode::Call(id, vec![], Operation::Havoc(havoc_kind), vec![temp], None)
+        });
         (temp, temp_exp)
     }
 }

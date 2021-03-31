@@ -24,7 +24,9 @@ use crate::{
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
     spec_translator::{SpecTranslator, TranslatedSpec},
-    stackless_bytecode::{AbortAction, AssignKind, AttrId, Bytecode, Label, Operation, PropKind},
+    stackless_bytecode::{
+        AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
+    },
     usage_analysis, verification_analysis,
 };
 use move_model::ast::QuantKind;
@@ -529,8 +531,15 @@ impl<'a> Instrumenter<'a> {
                 })
                 .collect_vec();
             for src in &mut_srcs {
-                self.builder
-                    .emit_with(|id| Call(id, vec![], Operation::HavocRef(false), vec![*src], None));
+                self.builder.emit_with(|id| {
+                    Call(
+                        id,
+                        vec![],
+                        Operation::Havoc(HavocKind::MutationValue),
+                        vec![*src],
+                        None,
+                    )
+                });
             }
 
             // Emit placeholders for assuming well-formedness of return values and mutable ref
@@ -668,7 +677,7 @@ impl<'a> Instrumenter<'a> {
         } else {
             // Introduce a havoced temporary to hold an arbitrary value for the aborts
             // condition.
-            self.builder.emit_let_havoc_val(BOOL_TYPE.clone()).0
+            self.builder.emit_let_havoc(BOOL_TYPE.clone()).0
         };
         let aborts_code_cond = if spec.has_aborts_code_specs() {
             let actual_code = self.builder.mk_temporary(self.abort_local);

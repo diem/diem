@@ -12,7 +12,9 @@ use log::{debug, info, log, warn, Level};
 use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
-    stackless_bytecode::{BorrowEdge, BorrowNode, Bytecode, Constant, Operation, StrongEdge},
+    stackless_bytecode::{
+        BorrowEdge, BorrowNode, Bytecode, Constant, HavocKind, Operation, StrongEdge,
+    },
     verification_analysis,
 };
 use move_model::{
@@ -981,7 +983,7 @@ impl<'env> ModuleTranslator<'env> {
                             type_args,
                         );
                     }
-                    HavocVal => {
+                    Havoc(HavocKind::Value) | Havoc(HavocKind::MutationAll) => {
                         let temp_str = str_local(srcs[0]);
                         emitln!(self.writer, "havoc {};", temp_str);
                         // Insert a WellFormed check
@@ -991,18 +993,12 @@ impl<'env> ModuleTranslator<'env> {
                             emitln!(self.writer, &check);
                         }
                     }
-                    HavocRef(havoc_all) => {
-                        let havoc_procedure = if *havoc_all {
-                            "HavocMutationAll"
-                        } else {
-                            "HavocMutation"
-                        };
+                    Havoc(HavocKind::MutationValue) => {
                         let temp_str = str_local(srcs[0]);
                         emitln!(
                             self.writer,
-                            "call {} := ${}({});",
+                            "call {} := $HavocMutation({});",
                             temp_str,
-                            havoc_procedure,
                             temp_str
                         );
                         // Insert a WellFormed check

@@ -6,7 +6,7 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     graph::Graph,
-    stackless_bytecode::{AttrId, BorrowNode, Bytecode, Label, Operation, PropKind},
+    stackless_bytecode::{AttrId, BorrowNode, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
 use move_model::{
@@ -128,18 +128,23 @@ impl LoopAnalysisProcessor {
                                 Bytecode::Call(
                                     attr_id,
                                     vec![],
-                                    Operation::HavocVal,
+                                    Operation::Havoc(HavocKind::Value),
                                     vec![*idx],
                                     None,
                                 )
                             });
                         }
                         for (idx, havoc_all) in &loop_info.mut_targets {
+                            let havoc_kind = if *havoc_all {
+                                HavocKind::MutationAll
+                            } else {
+                                HavocKind::MutationValue
+                            };
                             builder.emit_with(|attr_id| {
                                 Bytecode::Call(
                                     attr_id,
                                     vec![],
-                                    Operation::HavocRef(*havoc_all),
+                                    Operation::Havoc(havoc_kind),
                                     vec![*idx],
                                     None,
                                 )

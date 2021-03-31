@@ -70,6 +70,17 @@ pub enum AssignKind {
     Store,
 }
 
+/// The type of variable that is being havoc-ed
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum HavocKind {
+    /// Havoc a value
+    Value,
+    /// Havoc the value part in a mutation, but keep its pointer unchanged
+    MutationValue,
+    /// Havoc everything in a mutation
+    MutationAll,
+}
+
 /// A constant value.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Constant {
@@ -111,8 +122,7 @@ pub enum Operation {
     ReadRef,
     WriteRef,
     FreezeRef,
-    HavocVal,
-    HavocRef(bool),
+    Havoc(HavocKind),
     Stop,
 
     // Memory model
@@ -179,8 +189,7 @@ impl Operation {
             Operation::ReadRef => false,
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
-            Operation::HavocVal => false,
-            Operation::HavocRef(_) => false,
+            Operation::Havoc(_) => false,
             Operation::Stop => false,
             Operation::WriteBack(_, _) => false,
             Operation::Splice(_) => false,
@@ -852,11 +861,16 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                     .map(|(idx, local)| format!("{} -> $t{}", idx, *local))
                     .join(", ")
             )?,
-            HavocVal => {
-                write!(f, "havoc")?;
-            }
-            HavocRef(all) => {
-                write!(f, "havoc_ref[{}]", all)?;
+            Havoc(kind) => {
+                write!(
+                    f,
+                    "havoc[{}]",
+                    match kind {
+                        HavocKind::Value => "val",
+                        HavocKind::MutationValue => "mut",
+                        HavocKind::MutationAll => "mut_all",
+                    }
+                )?;
             }
             Stop => {
                 write!(f, "stop")?;

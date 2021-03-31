@@ -417,12 +417,6 @@ procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
   m' := $Mutation(l#$Mutation(m), p#$Mutation(m), v');
 }
 
-// Havoc everything in the mutation
-procedure {:inline 1} $HavocMutationAll(m: $Mutation) returns (m': $Mutation) {
-  var fresh: $Mutation;
-  m' := fresh;
-}
-
 // Tests whether resource exists.
 function {:inline} $ResourceExists(m: $Memory, args: Vec $TypeValue, addr: int): bool {
     domain#$Memory(m)[args, addr]
