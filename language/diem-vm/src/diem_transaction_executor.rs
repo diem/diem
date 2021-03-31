@@ -736,6 +736,7 @@ impl DiemVM {
                 let (vm_status, output) =
                     self.execute_user_transaction(data_cache, &txn, log_context);
 
+                info!("Executed: {:?}, got: {:?}, {:?}", txn, vm_status, output);
                 // Increment the counter for user transactions executed.
                 let counter_label = match output.status() {
                     TransactionStatus::Keep(_) => Some("success"),
@@ -767,7 +768,7 @@ impl DiemVM {
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let mut state_view_cache = StateViewCache::new(state_view);
         let vm = DiemVM::new(&state_view_cache);
-        vm.execute_block_impl(transactions, &mut state_view_cache)
+        Ok(vm.execute_block_impl(transactions, &mut state_view_cache).unwrap())
     }
 }
 
