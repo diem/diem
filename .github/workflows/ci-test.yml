@@ -82,7 +82,7 @@ jobs:
         name: find dev-setup.sh/base docker image changes
         uses: ./.github/actions/matches
         with:
-          pattern: '^.github\|docker/ci\|scripts/dev_setup.sh|^developers.diem.com'
+          pattern: 'docker/ci\|scripts/dev_setup.sh'
       - id: docker-compose-changes
         name: find changes that should trigger docker compose testing.
         uses: ./.github/actions/matches
