@@ -251,6 +251,9 @@ fn test_state_sync_multichunk_epoch() {
     let mut env = SmokeTestEnvironment::new_with_chunk_limit(4, 5);
     env.validator_swarm.launch();
     let mut client = env.get_validator_client(0, None);
+    client
+        .enable_custom_script(&["enable_custom_script"], false, true)
+        .unwrap();
     // we bring this validator back up with waypoint s.t. the waypoint sync spans multiple epochs,
     // and each epoch spanning multiple chunks
     env.validator_swarm.kill_node(3);
@@ -296,10 +299,10 @@ fn test_state_sync_multichunk_epoch() {
         .unwrap();
 
     // Bump epoch by trigger a reconfig for multiple epochs
-    for curr_epoch in 1..=2 {
+    for curr_epoch in 2..=3 {
         // bumps epoch from curr_epoch -> curr_epoch + 1
         client
-            .enable_custom_script(&["enable_custom_script"], true)
+            .enable_custom_script(&["enable_custom_script"], false, true)
             .unwrap();
         assert_eq!(
             client

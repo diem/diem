@@ -16,6 +16,9 @@ use std::{
 #[test]
 fn test_malformed_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
+    client
+        .enable_custom_script(&["enable_custom_script"], false, true)
+        .unwrap();
     client.create_next_account(false).unwrap();
     client
         .mint_coins(&["mintb", "0", "100", "XUS"], true)
@@ -55,6 +58,9 @@ fn test_malformed_script() {
 #[test]
 fn test_execute_custom_module_and_script() {
     let (_env, mut client) = setup_swarm_and_client_proxy(1, 0);
+    client
+        .enable_custom_script(&["enable_custom_script"], true, true)
+        .unwrap();
     client.create_next_account(false).unwrap();
     client
         .mint_coins(&["mintb", "0", "50", "XUS"], true)

@@ -109,9 +109,10 @@ fn create_test_cases() -> Vec<Test> {
                 assert_eq!(&metadata["timestamp"], diem_ledger_timestampusec);
                 assert_eq!(&metadata["version"], diem_ledger_version);
                 assert_eq!(metadata["chain_id"], 4);
-                // for testing chain id, we init genesis with VMPublishingOption#open
-                assert_eq!(metadata["script_hash_allow_list"], json!([]));
-                assert_eq!(metadata["module_publishing_allowed"], true);
+                // All genesis's start with closed publishing so this should be populated with a
+                // list of allowed scripts and publishing off
+                assert_ne!(metadata["script_hash_allow_list"], json!([]));
+                assert_eq!(metadata["module_publishing_allowed"], false);
                 assert_eq!(metadata["diem_version"], 2);
                 assert_eq!(metadata["dual_attestation_limit"], 1000000000);
                 assert_ne!(diem_ledger_timestampusec, 0);

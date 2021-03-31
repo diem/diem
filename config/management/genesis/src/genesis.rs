@@ -45,11 +45,8 @@ impl Genesis {
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let chain_id = self.config()?.chain_id;
-        let script_policy = if chain_id == ChainId::test() {
-            Some(diem_types::on_chain_config::VMPublishingOption::open())
-        } else {
-            None // allowlist containing only stdlib scripts
-        };
+        // Only have an allowlist of stdlib scripts
+        let script_policy = None;
 
         let genesis = vm_genesis::encode_genesis_transaction(
             diem_root_key,

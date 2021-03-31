@@ -554,6 +554,7 @@ impl ClientProxy {
     pub fn enable_custom_script(
         &mut self,
         space_delim_strings: &[&str],
+        open_module: bool,
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
@@ -566,15 +567,23 @@ impl ClientProxy {
             "Invalid number of arguments for setting publishing option"
         );
         let script_body = {
-            let code = "
+            let code = format!(
+                "
                 import 0x1.DiemTransactionPublishingOption;
 
-                main(account: signer) {
+                main(account: signer) {{
                     DiemTransactionPublishingOption.set_open_script(&account);
+                    {}
 
                     return;
+                }}
+            ",
+                if open_module {
+                    "DiemTransactionPublishingOption.set_open_module(&account, true);"
+                } else {
+                    ""
                 }
-            ";
+            );
 
             let compiler = Compiler {
                 address: diem_types::account_config::CORE_CODE_ADDRESS,
@@ -582,7 +591,7 @@ impl ClientProxy {
                 extra_deps: vec![],
             };
             compiler
-                .into_script_blob("file_name", code)
+                .into_script_blob("file_name", &code)
                 .expect("Failed to compile")
         };
         match self.diem_root_account {
