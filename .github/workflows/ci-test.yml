@@ -657,6 +657,14 @@ jobs:
         env:
           JSON_RPC_URL: "http://127.0.0.1:8080"
           FAUCET_URL: "http://127.0.0.1:8000"
+      - uses: actions/checkout@v2
+        with:
+          ref: diem-core-v1.2.0
+      - name: run sdk-compatability tests from release
+        run: cd sdk/compatability && cargo test -- --include-ignored
+        env:
+          JSON_RPC_URL: "http://127.0.0.1:8080"
+          FAUCET_URL: "http://127.0.0.1:8000"
 
   crypto-unit-test:
     runs-on: ubuntu-latest
