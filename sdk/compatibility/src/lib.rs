@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! A suite of client/sdk compatability tests
+//! A suite of client/sdk compatibility tests
 
 #![cfg(test)]
 

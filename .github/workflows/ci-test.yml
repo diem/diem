@@ -652,14 +652,15 @@ jobs:
         env:
           # this overrides the default docker tag of "testnet"
           IMAGE_TAG: "test"
-      - name: run sdk-compatability tests from main
-        run: cd sdk/compatability && cargo test -- --include-ignored
+      - name: run sdk-compatibility tests from main
+        run: cd sdk/compatibility && cargo test -- --include-ignored
         env:
           JSON_RPC_URL: "http://127.0.0.1:8080"
           FAUCET_URL: "http://127.0.0.1:8000"
       - uses: actions/checkout@v2
         with:
           ref: diem-core-v1.2.0
+      # Unfortunately this is spelled wrong in the release branch
       - name: run sdk-compatability tests from release
         run: cd sdk/compatability && cargo test -- --include-ignored
         env:
