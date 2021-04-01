@@ -499,7 +499,7 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       - name: run unit tests
         run: |
-          $pre_command && cargo nextest --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
@@ -513,6 +513,12 @@ jobs:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
           SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: unit-test-results
+          path: target/junit-reports/unit-test.xml
       - uses: ./.github/actions/build-teardown
 
   codegen-unit-test:
@@ -539,11 +545,17 @@ jobs:
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
       - name: run codegen unit tests
-        run: $pre_command && cargo nextest --jobs ${max_threads} -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only
+        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
           SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: upload codegen test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: codegen-unit-test-results
+          path: target/junit-reports/codegen-unit-test.xml
       - uses: ./.github/actions/build-teardown
 
   e2e-test:
