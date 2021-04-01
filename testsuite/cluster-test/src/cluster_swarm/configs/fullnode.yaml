@@ -35,6 +35,9 @@ full_node_networks:
 - network_id: "public"
   discovery_method: "onchain"
 
+mempool:
+  default_failovers: 1
+
 metrics:
   enabled: false
 
