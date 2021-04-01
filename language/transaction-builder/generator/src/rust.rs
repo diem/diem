@@ -100,7 +100,7 @@ where
 
 // This file was generated. Do not modify!
 //
-// To update this code, run: `cargo run --release -p diem-framework` and copy the re-generated file to deseired locations.
+// To update this code, run: `cargo run --release -p diem-framework`.
 "#
             )?;
         }

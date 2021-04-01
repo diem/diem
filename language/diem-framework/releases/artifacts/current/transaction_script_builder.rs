@@ -3,7 +3,7 @@
 
 // This file was generated. Do not modify!
 //
-// To update this code, run: `cargo run --release -p diem-framework` and copy the re-generated file to deseired locations.
+// To update this code, run: `cargo run --release -p diem-framework`.
 
 //! Conversion library between a structured representation of a Move script call (`ScriptCall`) and the
 //! standard BCS-compatible representation used in Diem transactions (`Script`).
