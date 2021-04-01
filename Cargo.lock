@@ -4305,7 +4305,6 @@ dependencies = [
  "bytecode-verifier",
  "codespan",
  "colored",
- "diem-types",
  "diem-workspace-hack",
  "move-core-types",
  "move-ir-types",

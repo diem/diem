@@ -19,7 +19,6 @@ codespan = { version = "0.8.0", features = ["serialization"] }
 colored = "2.0.0"
 
 bcs = "0.1.2"
-diem-types = { path = "../../../types" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
@@ -29,4 +28,3 @@ bytecode-verifier = { path = "../../bytecode-verifier" }
 
 [features]
 default = []
-fuzzing = ["diem-types/fuzzing"]

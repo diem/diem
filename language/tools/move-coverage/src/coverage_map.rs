@@ -4,8 +4,10 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{format_err, Result};
-use diem_types::account_address::AccountAddress;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,

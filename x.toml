@@ -273,7 +273,6 @@ existing_deps = [
     ["move-cli", "diem-framework"],
     ["move-cli", "diem-framework-releases"],
     ["move-cli", "datatest-stable"],
-    ["move-coverage", "diem-types"],
     ["resource-viewer", "diem-framework-releases"],
     ["resource-viewer", "diem-types"],
     ["resource-viewer", "diem-state-view"],
