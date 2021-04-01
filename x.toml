@@ -347,6 +347,11 @@ globs = ["diem.png", ".assets/diem.png", "storage/data.png"]
 mark-changed = []
 
 [[determinator.path-rule]]
+# Ignore *.md documentation
+globs = ["*.md"]
+mark-changed = []
+
+[[determinator.path-rule]]
 # Required by get_stdlib_script_abis in transaction-builder-generator.
 globs = ["language/diem-framework/releases/artifacts/current/script_abis/**/*"]
 mark-changed = ["transaction-builder-generator"]
