@@ -24,11 +24,11 @@ use thiserror::Error;
 
 pub struct DiemNode {
     process: Child,
-    pub(crate) node_id: String,
+    node_id: String,
     node_type: NodeType,
     peer_id: AccountAddress,
     debug_client: NodeDebugClient,
-    pub log_path: PathBuf,
+    log_path: PathBuf,
     config: NodeConfig,
 }
 
@@ -111,6 +111,10 @@ impl DiemNode {
             log_path,
             config,
         })
+    }
+
+    pub fn node_id(&self) -> &str {
+        &self.node_id
     }
 
     pub fn peer_id(&self) -> PeerId {
@@ -318,9 +322,9 @@ pub struct DiemSwarm {
     label: &'static str,
     diem_node_bin_path: PathBuf,
     // Output log, DiemNodes' config file, diemdb etc, into this dir.
-    pub dir: DiemSwarmDir,
+    dir: DiemSwarmDir,
     // Maps the node id of a node to the DiemNode struct
-    pub nodes: HashMap<String, DiemNode>,
+    nodes: HashMap<String, DiemNode>,
     pub config: SwarmConfig,
     pub node_type: NodeType,
 }
@@ -509,7 +513,7 @@ impl DiemSwarm {
                     HealthStatus::Crashed(status) => {
                         error!(
                             "Diem node '{}' has crashed with status '{}'. Log output: '''{}'''",
-                            node.node_id,
+                            node.node_id(),
                             status,
                             node.get_log_contents().unwrap()
                         );
@@ -544,13 +548,13 @@ impl DiemSwarm {
         for node in self.nodes.values_mut() {
             match node.get_metric(last_committed_round_str) {
                 Some(val) => {
-                    println!("\tNode {} last committed round = {}", node.node_id, val);
+                    println!("\tNode {} last committed round = {}", node.node_id(), val);
                     last_committed_round = last_committed_round.max(val);
                 }
                 None => {
                     println!(
                         "\tNode {} last committed round unknown, assuming 0.",
-                        node.node_id
+                        node.node_id()
                     );
                 }
             }
@@ -574,19 +578,21 @@ impl DiemSwarm {
                     if val >= last_committed_round {
                         println!(
                             "\tNode {} is caught up with last committed round {}",
-                            node.node_id, val
+                            node.node_id(),
+                            val
                         );
                         *done = true;
                     } else {
                         println!(
                             "\tNode {} is not caught up yet with last committed round {}",
-                            node.node_id, val
+                            node.node_id(),
+                            val
                         );
                     }
                 } else {
                     println!(
                         "\tNode {} last committed round unknown, assuming 0.",
-                        node.node_id
+                        node.node_id()
                     );
                 }
             }
@@ -611,6 +617,15 @@ impl DiemSwarm {
     pub fn get_node(&self, idx: usize) -> Option<&DiemNode> {
         let node_id = format!("{}", idx);
         self.nodes.get(&node_id)
+    }
+
+    pub fn mut_node(&mut self, idx: usize) -> Option<&mut DiemNode> {
+        let node_id = format!("{}", idx);
+        self.nodes.get_mut(&node_id)
+    }
+
+    pub fn nodes(&mut self) -> &mut HashMap<String, DiemNode> {
+        &mut self.nodes
     }
 
     pub fn kill_node(&mut self, idx: usize) {

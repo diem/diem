@@ -340,7 +340,7 @@ fn test_private_full_node() {
     // Ensure that User node is connected to private node and only the private node
     {
         let mut user_swarm = user_swarm.lock();
-        let user_node = user_swarm.nodes.get_mut("0").unwrap();
+        let user_node = user_swarm.mut_node(0).unwrap();
         assert_eq!(
             1,
             user_node

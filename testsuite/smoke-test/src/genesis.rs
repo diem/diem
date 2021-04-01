@@ -71,7 +71,7 @@ fn test_genesis_transaction_flow() {
     let mut known_round = None;
     for i in 0..5 {
         let last_committed_round_str = "diem_consensus_last_committed_round{}";
-        for (index, node) in &mut env.validator_swarm.nodes {
+        for (index, node) in env.validator_swarm.nodes() {
             if let Some(round) = node.get_metric(last_committed_round_str) {
                 match known_round {
                     Some(r) if r != round => panic!(
@@ -102,7 +102,7 @@ fn test_genesis_transaction_flow() {
         .unwrap();
     let name = config.name.as_bytes().to_vec();
 
-    for index in 0..env.validator_swarm.nodes.len() {
+    for index in 0..env.validator_swarm.nodes().len() {
         env.validator_swarm.kill_node(index);
     }
     let genesis_transaction = Transaction::GenesisTransaction(WriteSetPayload::Script {
