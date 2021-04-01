@@ -41,7 +41,7 @@ impl Prometheus {
 
     pub fn link_to_dashboard(&self, start: Duration, end: Duration) -> String {
         format!(
-            "{}d/overview10/overview?orgId=1&from={}&to={}",
+            "{}d/performance/performance?orgId=1&from={}&to={}",
             self.grafana_base_url,
             start.as_millis(),
             end.as_millis()
