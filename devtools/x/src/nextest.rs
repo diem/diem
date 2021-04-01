@@ -131,7 +131,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
         Coloring::Always => Color::Always,
         Coloring::Never => Color::Never,
     };
-    let reporter = TestReporter::new(&test_list, color, args.reporter_opts);
+    let mut reporter = TestReporter::new(&test_list, color, args.reporter_opts);
 
     let run_stats = runner.try_execute(|event| reporter.report_event(event))?;
     if !run_stats.is_success() {

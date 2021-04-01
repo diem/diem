@@ -148,9 +148,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.39"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81cddc5f91628367664cc7c69714ff08deee8a3efc54623011c772544d7b2767"
+checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
 name = "arbitrary"
@@ -5458,6 +5458,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 
 [[package]]
+name = "quick-junit"
+version = "0.1.0"
+source = "git+https://github.com/diem/diem-devtools?branch=main#2e349d96e88b662fab9dfe45222e1486513615e1"
+dependencies = [
+ "chrono",
+ "indexmap",
+ "quick-xml",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8533f14c8382aaad0d592c812ac3b826162128b65662331e1127b45c3d18536b"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "quote"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6338,9 +6357,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.124"
+version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd761ff957cb2a45fbb9ab3da6512de9de55872866160b23c25f1a841e99d29f"
+checksum = "558dc50e1a5a5fa7112ca2ce4effcb321b0300c0d4ccf0776a9f60cd89031171"
 dependencies = [
  "serde_derive",
 ]
@@ -6415,9 +6434,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.124"
+version = "1.0.125"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1800f7693e94e186f5e25a28291ae1570da908aff7d97a095dec1e56ff99069b"
+checksum = "b093b7a2bb58203b5da3056c05b4ec1fed827dcfdb37347a8841695263b3d06d"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.9",
@@ -7163,7 +7182,7 @@ dependencies = [
 [[package]]
 name = "testrunner"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?branch=main#3cc8015b05cf591a5a96801aee394f7df92d946c"
+source = "git+https://github.com/diem/diem-devtools?branch=main#2e349d96e88b662fab9dfe45222e1486513615e1"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -7173,6 +7192,7 @@ dependencies = [
  "duct",
  "num_cpus",
  "once_cell",
+ "quick-junit",
  "rayon",
  "serde",
  "serde_json",
