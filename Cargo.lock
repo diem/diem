@@ -2676,7 +2676,6 @@ dependencies = [
  "bytecode-source-map",
  "bytecode-verifier",
  "colored",
- "diem-types",
  "diem-workspace-hack",
  "move-core-types",
  "move-coverage",

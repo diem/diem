@@ -12,7 +12,6 @@ colored = "2.0.0"
 
 bytecode-verifier = { path = "../../bytecode-verifier" }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map" }
-diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }

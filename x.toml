@@ -265,7 +265,6 @@ existing_deps = [
     ["test-generation", "diem-state-view"],
     ["test-generation", "diem-logger"],
     ["test-generation", "diem-config"],
-    ["disassembler", "diem-types"],
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],
     ["move-cli", "diem-types"],
