@@ -59,7 +59,3 @@ runs:
         echo 'RUST_BACKTRACE=1' | tee -a $GITHUB_ENV
         echo 'DIEM_DUMP_LOGS=1' | tee -a $GITHUB_ENV
         echo 'CARGO_INCREMENTAL=0' | tee -a $GITHUB_ENV
-
-        # Turn on the experimental feature resolver in cargo. See:
-        # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
-        echo 'CARGOFLAGS='$(cat cargo-flags) | tee -a $GITHUB_ENV

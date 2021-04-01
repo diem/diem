@@ -333,7 +333,7 @@ mark-changed = "all"
 
 # Core devtools files.
 [[determinator.path-rule]]
-globs = ["cargo-toolchain", "cargo-flags", "scripts/dev_setup.sh", "x.toml"]
+globs = ["scripts/dev_setup.sh", "x.toml"]
 mark-changed = "all"
 
 [[determinator.path-rule]]

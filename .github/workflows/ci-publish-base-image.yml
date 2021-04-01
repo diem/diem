@@ -10,7 +10,6 @@ on:
         docker/ci/github/Dockerfile,
         scripts/dev_setup.sh,
         rust-toolchain,
-        cargo-toolchain,
       ]
 
 jobs:
