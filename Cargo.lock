@@ -606,7 +606,6 @@ dependencies = [
  "codespan-reporting",
  "datatest-stable",
  "diem-temppath",
- "diem-types",
  "diem-workspace-hack",
  "ir-to-bytecode",
  "itertools 0.10.0",

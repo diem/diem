@@ -10,7 +10,6 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
-use diem_types::account_config;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_model::{
     model::{FunctionEnv, GlobalEnv},
@@ -27,7 +26,11 @@ use vm::file_format::CodeOffset;
 ///   XDX. Passing any other values will lead to an aborted transaction.
 /// The first assumption is checked and will trigger an assert failure if violated. The second
 /// is unchecked, but would be a nice property for the prover.
-pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTreeSet<StructTag> {
+pub fn get_packed_types(
+    env: &GlobalEnv,
+    targets: &FunctionTargetsHolder,
+    coin_types: Vec<Type>,
+) -> BTreeSet<StructTag> {
     let mut packed_types = BTreeSet::new();
     for module_env in env.get_modules() {
         let module_name = module_env.get_identifier().to_string();
@@ -49,11 +52,6 @@ pub fn get_packed_types(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> BTr
                     assert!(num_type_parameters <= 1, "Assuming that transaction scripts have <= 1 type parameters for simplicity. If there can be >1 type parameter, the code here must account for all permutations of type params");
 
                     if num_type_parameters == 1 {
-                        let coin_types: Vec<Type> =
-                            vec![account_config::xus_tag(), account_config::xdx_type_tag()]
-                                .into_iter()
-                                .map(|t| Type::from_type_tag(t, env))
-                                .collect();
                         for open_ty in &annotation.open_types.0 {
                             for coin_ty in &coin_types {
                                 match open_ty.instantiate(vec![coin_ty.clone()].as_slice()).into_type_tag(env) {
