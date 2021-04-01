@@ -12,6 +12,7 @@ use crate::{
 use std::fmt;
 
 pub use diem_transaction_builder::stdlib;
+use diem_types::transaction::Script;
 
 pub struct TransactionBuilder {
     sender: Option<AccountAddress>,
@@ -75,12 +76,14 @@ impl TransactionBuilder {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct TransactionFactory {
     max_gas_amount: u64,
     gas_unit_price: u64,
-    gas_currency_code: Currency,
+    gas_currency: Currency,
     transaction_expiration_time: u64,
     chain_id: ChainId,
+    diem_version: u64,
 }
 
 impl TransactionFactory {
@@ -88,10 +91,128 @@ impl TransactionFactory {
         Self {
             max_gas_amount: 1_000_000,
             gas_unit_price: 0,
-            gas_currency_code: Currency::XUS,
+            gas_currency: Currency::XUS,
             transaction_expiration_time: 100,
             chain_id,
+            diem_version: 0,
         }
+    }
+
+    pub fn with_max_gas_amount(mut self, max_gas_amount: u64) -> Self {
+        self.max_gas_amount = max_gas_amount;
+        self
+    }
+
+    pub fn with_gas_unit_price(mut self, gas_unit_price: u64) -> Self {
+        self.gas_unit_price = gas_unit_price;
+        self
+    }
+
+    pub fn with_gas_currency(mut self, gas_currency: Currency) -> Self {
+        self.gas_currency = gas_currency;
+        self
+    }
+
+    pub fn with_chain_id(mut self, chain_id: ChainId) -> Self {
+        self.chain_id = chain_id;
+        self
+    }
+
+    pub fn with_diem_version(mut self, diem_version: u64) -> Self {
+        self.diem_version = diem_version;
+        self
+    }
+
+    pub fn payload(&self, payload: TransactionPayload) -> TransactionBuilder {
+        self.transaction_builder(payload)
+    }
+
+    pub fn add_currency_to_account(&self, currency: Currency) -> TransactionBuilder {
+        let currency = currency.type_tag();
+
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_add_currency_to_account_script_function(
+                currency,
+            ))
+        } else {
+            self.script(stdlib::encode_add_currency_to_account_script(currency))
+        }
+    }
+
+    pub fn add_recovery_rotation_capability(
+        &self,
+        recovery_address: AccountAddress,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_add_recovery_rotation_capability_script_function(recovery_address),
+            )
+        } else {
+            self.script(stdlib::encode_add_recovery_rotation_capability_script(
+                recovery_address,
+            ))
+        }
+    }
+
+    pub fn add_validator_and_reconfigure(
+        &self,
+        sliding_nonce: u64,
+        validator_name: Vec<u8>,
+        validator_address: AccountAddress,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_add_validator_and_reconfigure_script_function(
+                    sliding_nonce,
+                    validator_name,
+                    validator_address,
+                ),
+            )
+        } else {
+            self.script(stdlib::encode_add_validator_and_reconfigure_script(
+                sliding_nonce,
+                validator_name,
+                validator_address,
+            ))
+        }
+    }
+
+    pub fn burn_txn_fees(&self, coin_type: Currency) -> TransactionBuilder {
+        let coin_type = coin_type.type_tag();
+
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_burn_txn_fees_script_function(coin_type))
+        } else {
+            self.script(stdlib::encode_burn_txn_fees_script(coin_type))
+        }
+    }
+
+    pub fn burn_with_amount(
+        &self,
+        token: Currency,
+        sliding_nonce: u64,
+        preburn_address: AccountAddress,
+        amount: u64,
+    ) -> TransactionBuilder {
+        self.payload(stdlib::encode_burn_with_amount_script_function(
+            token.type_tag(),
+            sliding_nonce,
+            preburn_address,
+            amount,
+        ))
+    }
+
+    pub fn cancel_burn_with_amount(
+        &self,
+        token: Currency,
+        preburn_address: AccountAddress,
+        amount: u64,
+    ) -> TransactionBuilder {
+        self.payload(stdlib::encode_cancel_burn_with_amount_script_function(
+            token.type_tag(),
+            preburn_address,
+            amount,
+        ))
     }
 
     pub fn peer_to_peer(
@@ -111,30 +232,23 @@ impl TransactionFactory {
         metadata: Vec<u8>,
         metadata_signature: Vec<u8>,
     ) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_peer_to_peer_with_metadata_script(
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_peer_to_peer_with_metadata_script_function(
                 currency.type_tag(),
                 payee,
                 amount,
                 metadata,
                 metadata_signature,
-            ),
-        ))
-    }
-
-    pub fn add_currency_to_account(&self, currency: Currency) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_add_currency_to_account_script(currency.type_tag()),
-        ))
-    }
-
-    pub fn add_recovery_rotation_capability(
-        &self,
-        recovery_address: AccountAddress,
-    ) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_add_recovery_rotation_capability_script(recovery_address),
-        ))
+            ))
+        } else {
+            self.script(stdlib::encode_peer_to_peer_with_metadata_script(
+                currency.type_tag(),
+                payee,
+                amount,
+                metadata,
+                metadata_signature,
+            ))
+        }
     }
 
     pub fn create_child_vasp_account(
@@ -144,27 +258,72 @@ impl TransactionFactory {
         add_all_currencies: bool,
         child_initial_balance: u64,
     ) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_create_child_vasp_account_script(
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_create_child_vasp_account_script_function(
                 coin_type.type_tag(),
                 child_auth_key.derived_address(),
                 child_auth_key.prefix().to_vec(),
                 add_all_currencies,
                 child_initial_balance,
-            ),
-        ))
+            ))
+        } else {
+            self.script(stdlib::encode_create_child_vasp_account_script(
+                coin_type.type_tag(),
+                child_auth_key.derived_address(),
+                child_auth_key.prefix().to_vec(),
+                add_all_currencies,
+                child_initial_balance,
+            ))
+        }
+    }
+
+    pub fn create_parent_vasp_account(
+        &self,
+        coin_type: Currency,
+        sliding_nonce: u64,
+        parent_auth_key: AuthenticationKey,
+        human_name: &str,
+        add_all_currencies: bool,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_create_parent_vasp_account_script_function(
+                coin_type.type_tag(),
+                sliding_nonce,
+                parent_auth_key.derived_address(),
+                parent_auth_key.prefix().to_vec(),
+                human_name.as_bytes().into(),
+                add_all_currencies,
+            ))
+        } else {
+            self.script(stdlib::encode_create_parent_vasp_account_script(
+                coin_type.type_tag(),
+                sliding_nonce,
+                parent_auth_key.derived_address(),
+                parent_auth_key.prefix().to_vec(),
+                human_name.as_bytes().into(),
+                add_all_currencies,
+            ))
+        }
     }
 
     pub fn create_recovery_address(&self) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_create_recovery_address_script(),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_create_recovery_address_script_function())
+        } else {
+            self.script(stdlib::encode_create_recovery_address_script())
+        }
     }
 
     pub fn rotate_authentication_key(&self, new_key: AuthenticationKey) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_rotate_authentication_key_script(new_key.to_vec()),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_rotate_authentication_key_script_function(
+                new_key.to_vec(),
+            ))
+        } else {
+            self.script(stdlib::encode_rotate_authentication_key_script(
+                new_key.to_vec(),
+            ))
+        }
     }
 
     pub fn rotate_authentication_key_with_recovery_address(
@@ -173,13 +332,23 @@ impl TransactionFactory {
         to_recover: AccountAddress,
         new_key: AuthenticationKey,
     ) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_rotate_authentication_key_with_recovery_address_script(
-                recovery_address,
-                to_recover,
-                new_key.to_vec(),
-            ),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_rotate_authentication_key_with_recovery_address_script_function(
+                    recovery_address,
+                    to_recover,
+                    new_key.to_vec(),
+                ),
+            )
+        } else {
+            self.script(
+                stdlib::encode_rotate_authentication_key_with_recovery_address_script(
+                    recovery_address,
+                    to_recover,
+                    new_key.to_vec(),
+                ),
+            )
+        }
     }
 
     pub fn rotate_dual_attestation_info(
@@ -187,26 +356,48 @@ impl TransactionFactory {
         new_url: Vec<u8>,
         new_key: Vec<u8>,
     ) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_rotate_dual_attestation_info_script(new_url, new_key),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_rotate_dual_attestation_info_script_function(
+                new_url, new_key,
+            ))
+        } else {
+            self.script(stdlib::encode_rotate_dual_attestation_info_script(
+                new_url, new_key,
+            ))
+        }
     }
 
     pub fn publish_shared_ed25519_public_key(&self, public_key: Vec<u8>) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_publish_shared_ed25519_public_key_script(public_key),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_publish_shared_ed25519_public_key_script_function(public_key),
+            )
+        } else {
+            self.script(stdlib::encode_publish_shared_ed25519_public_key_script(
+                public_key,
+            ))
+        }
     }
 
     pub fn publish_rotate_ed25519_public_key(&self, public_key: Vec<u8>) -> TransactionBuilder {
-        self.transaction_builder(TransactionPayload::Script(
-            stdlib::encode_rotate_shared_ed25519_public_key_script(public_key),
-        ))
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_rotate_shared_ed25519_public_key_script_function(public_key),
+            )
+        } else {
+            self.script(stdlib::encode_rotate_shared_ed25519_public_key_script(
+                public_key,
+            ))
+        }
     }
 
     //
     // Internal Helpers
     //
+
+    fn script(&self, script: Script) -> TransactionBuilder {
+        self.payload(TransactionPayload::Script(script))
+    }
 
     fn transaction_builder(&self, payload: TransactionPayload) -> TransactionBuilder {
         TransactionBuilder {
@@ -215,7 +406,7 @@ impl TransactionFactory {
             payload,
             max_gas_amount: self.max_gas_amount,
             gas_unit_price: self.gas_unit_price,
-            gas_currency_code: self.gas_currency_code.into(),
+            gas_currency_code: self.gas_currency.into(),
             expiration_timestamp_secs: self.expiration_timestamp(),
             chain_id: self.chain_id,
         }
@@ -227,6 +418,10 @@ impl TransactionFactory {
             .unwrap()
             .as_secs()
             + self.transaction_expiration_time
+    }
+
+    fn is_script_function_enabled(&self) -> bool {
+        self.diem_version >= 2
     }
 }
 
