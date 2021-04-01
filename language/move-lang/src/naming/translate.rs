@@ -357,27 +357,34 @@ fn module(
     mdef: E::ModuleDefinition,
 ) -> N::ModuleDefinition {
     context.current_module = Some(ident);
-    let is_source_module = mdef.is_source_module;
-    let friends = mdef
-        .friends
-        .filter_map(|mident, f| friend(context, mident, f));
+    let E::ModuleDefinition {
+        loc: _loc,
+        is_source_module,
+        dependency_order,
+        friends: efriends,
+        structs: estructs,
+        functions: efunctions,
+        constants: econstants,
+        specs: _specs,
+    } = mdef;
+    let friends = efriends.filter_map(|mident, f| friend(context, mident, f));
     let unscoped = context.save_unscoped();
-    let structs = mdef.structs.map(|name, s| {
+    let structs = estructs.map(|name, s| {
         context.restore_unscoped(unscoped.clone());
         struct_def(context, name, s)
     });
-    let functions = mdef.functions.map(|name, f| {
+    let functions = efunctions.map(|name, f| {
         context.restore_unscoped(unscoped.clone());
         function(context, name, f)
     });
-    let constants = mdef.constants.map(|name, c| {
+    let constants = econstants.map(|name, c| {
         context.restore_unscoped(unscoped.clone());
         constant(context, name, c)
     });
     context.restore_unscoped(unscoped);
     N::ModuleDefinition {
         is_source_module,
-        dependency_order: mdef.dependency_order,
+        dependency_order,
         friends,
         structs,
         functions,

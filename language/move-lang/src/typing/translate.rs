@@ -62,14 +62,14 @@ fn module(
         dependency_order,
         friends,
         mut structs,
-        functions: n_functions,
+        functions: nfunctions,
         constants: nconstants,
     } = mdef;
     structs
         .iter_mut()
         .for_each(|(_, _, s)| struct_def(context, s));
     let constants = nconstants.map(|name, c| constant(context, name, c));
-    let functions = n_functions.map(|name, f| function(context, name, f, false));
+    let functions = nfunctions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
         is_source_module,
