@@ -4219,7 +4219,6 @@ name = "module-generation"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier",
- "diem-types",
  "diem-workspace-hack",
  "ir-to-bytecode",
  "move-core-types",

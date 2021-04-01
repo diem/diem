@@ -259,7 +259,6 @@ existing_deps = [
     ["move-vm-runtime", "diem-infallible"],
     ["move-vm-runtime", "diem-crypto"],
     ["move-vm-types", "diem-crypto"],
-    ["module-generation", "diem-types"],
     ["test-generation", "language-e2e-tests"],
     ["test-generation", "diem-vm"],
     ["test-generation", "diem-types"],

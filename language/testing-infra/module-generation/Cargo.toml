@@ -16,7 +16,6 @@ bytecode-verifier = { path = "../../bytecode-verifier" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
-diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 vm = { path = "../../vm" }
 

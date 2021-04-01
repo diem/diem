@@ -3,8 +3,8 @@
 
 use crate::{options::ModuleGeneratorOptions, padding::Pad, utils::random_string};
 use bytecode_verifier::verify_module;
-use diem_types::account_address::AccountAddress;
 use ir_to_bytecode::compiler::compile_module;
+use move_core_types::account_address::AccountAddress;
 use move_ir_types::{ast::*, location::*};
 use rand::{rngs::StdRng, Rng};
 use std::{
