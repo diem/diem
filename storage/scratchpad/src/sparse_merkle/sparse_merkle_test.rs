@@ -532,3 +532,20 @@ fn test_update() {
     assert_eq!(smt22.get(key3), AccountStatus::Unknown);
     assert_eq!(smt22.get(key4), AccountStatus::ExistsInScratchPad(value4));
 }
+
+#[test]
+fn test_drop() {
+    let mut smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
+    let proof_reader = ProofReader::default();
+    for _ in 0..100000 {
+        smt = smt
+            .update(
+                vec![(HashValue::zero(), AccountStateBlob::from(b"zero".to_vec()))],
+                &proof_reader,
+            )
+            .unwrap()
+    }
+
+    // smt with a lot of ancestors being dropped here. It's a stack overflow if a manual iterative
+    // `Drop` implementation is not in place.
+}

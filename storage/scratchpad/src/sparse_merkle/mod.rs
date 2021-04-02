@@ -129,6 +129,26 @@ impl<V: CryptoHash> Inner<V> {
     }
 }
 
+impl<V> Drop for Inner<V> {
+    fn drop(&mut self) {
+        let mut cur = self.base.swap(None);
+
+        loop {
+            if let Some(arc) = cur {
+                if Arc::strong_count(&arc) == 1 {
+                    // The only ref is the one we are now holding, so it'll be dropped after we free
+                    // `arc`, which results in the chain of `base`s being dropped recursively,
+                    // and that might trigger a stack overflow. To prevent that we follow the chain
+                    // further to disconnect things beforehand.
+                    cur = arc.base.swap(None);
+                    continue;
+                }
+            }
+            break;
+        }
+    }
+}
+
 /// The Sparse Merkle Tree implementation.
 #[derive(Clone, Debug)]
 pub struct SparseMerkleTree<V> {
