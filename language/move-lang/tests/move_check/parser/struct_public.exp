@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/struct_public.move:3:5 ───
+   │
+ 3 │     public struct Foo {}
+   │     ^^^^^^ Invalid struct declaration. Structs cannot have visibility modifiers as they are always 'public'
+   │
+

@@ -9,8 +9,7 @@ use crate::{
         Type, TypeName, TypeName_, Type_,
     },
     parser::ast::{
-        Ability_, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
-        Var,
+        Ability_, ConstantName, Field, FunctionName, ModuleIdent, StructName, Var, Visibility,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -46,7 +45,7 @@ pub type TParamSubst = HashMap<TParamID, Type>;
 
 pub struct FunctionInfo {
     pub defined_loc: Loc,
-    pub visibility: FunctionVisibility,
+    pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
 }
@@ -306,10 +305,8 @@ impl<'env> Context<'env> {
             (Some(current_m), Some(current_f)) => {
                 let current_finfo = self.function_info(current_m, current_f);
                 match &current_finfo.visibility {
-                    FunctionVisibility::Public(_)
-                    | FunctionVisibility::Friend(_)
-                    | FunctionVisibility::Internal => false,
-                    FunctionVisibility::Script(_) => true,
+                    Visibility::Public(_) | Visibility::Friend(_) | Visibility::Internal => false,
+                    Visibility::Script(_) => true,
                 }
             }
         }
@@ -819,35 +816,34 @@ pub fn make_function_type(
     };
     let defined_loc = finfo.defined_loc;
     match finfo.visibility {
-        FunctionVisibility::Internal if in_current_module => (),
-        FunctionVisibility::Internal => {
+        Visibility::Internal if in_current_module => (),
+        Visibility::Internal => {
             let internal_msg = format!(
                 "This function is internal to its module. Only '{}', '{}', and '{}' functions can \
                  be called outside of their module",
-                FunctionVisibility::PUBLIC,
-                FunctionVisibility::SCRIPT,
-                FunctionVisibility::FRIEND
+                Visibility::PUBLIC,
+                Visibility::SCRIPT,
+                Visibility::FRIEND
             );
             context.env.add_error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, internal_msg),
             ])
         }
-        FunctionVisibility::Script(_) if context.is_in_script_context() => (),
-        FunctionVisibility::Script(vis_loc) => {
+        Visibility::Script(_) if context.is_in_script_context() => (),
+        Visibility::Script(vis_loc) => {
             let internal_msg = format!(
                 "This function can only be called from a script context, i.e. a 'script' function \
                  or a '{}' function",
-                FunctionVisibility::SCRIPT
+                Visibility::SCRIPT
             );
             context.env.add_error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
             ])
         }
-        FunctionVisibility::Friend(_)
-            if in_current_module || context.current_module_is_a_friend_of(m) => {}
-        FunctionVisibility::Friend(vis_loc) => {
+        Visibility::Friend(_) if in_current_module || context.current_module_is_a_friend_of(m) => {}
+        Visibility::Friend(vis_loc) => {
             let internal_msg = format!(
                 "This function can only be called from a 'friend' of module '{}'",
                 m
@@ -857,7 +853,7 @@ pub fn make_function_type(
                 (vis_loc, internal_msg),
             ])
         }
-        FunctionVisibility::Public(_) => (),
+        Visibility::Public(_) => (),
     };
     (defined_loc, ty_args, params, acquires, return_ty)
 }

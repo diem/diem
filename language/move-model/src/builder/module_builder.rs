@@ -322,7 +322,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         et.enter_scope();
         let params = et.analyze_and_add_params(&def.signature.parameters, true);
         let result_type = et.translate_type(&def.signature.return_type);
-        let is_public = matches!(def.visibility, PA::FunctionVisibility::Public(..));
+        let is_public = matches!(def.visibility, PA::Visibility::Public(..));
         let loc = et.to_loc(&def.loc);
         et.parent.parent.define_fun(
             loc.clone(),
@@ -2404,21 +2404,21 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         }
         if let Some(v) = &pattern.value.visibility {
             match v {
-                PA::FunctionVisibility::Public(..) => {
+                PA::Visibility::Public(..) => {
                     if !is_public {
                         return false;
                     }
                 }
-                PA::FunctionVisibility::Internal => {
+                PA::Visibility::Internal => {
                     if is_public {
                         return false;
                     }
                 }
-                PA::FunctionVisibility::Script(..) => {
+                PA::Visibility::Script(..) => {
                     // TODO: model script visibility properly
                     unimplemented!("Script visibility not supported yet")
                 }
-                PA::FunctionVisibility::Friend(..) => {
+                PA::Visibility::Friend(..) => {
                     // TODO: model friend visibility properly
                     unimplemented!("Friend visibility not supported yet")
                 }

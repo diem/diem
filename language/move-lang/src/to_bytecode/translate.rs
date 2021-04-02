@@ -13,8 +13,8 @@ use crate::{
     },
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
-        Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, FunctionVisibility,
-        ModuleIdent, StructName, UnaryOp, UnaryOp_, Var,
+        Ability, Ability_, BinOp, BinOp_, ConstantName, Field, FunctionName, ModuleIdent,
+        StructName, UnaryOp, UnaryOp_, Var, Visibility,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -521,12 +521,12 @@ fn function(
     )
 }
 
-fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
+fn visibility(v: Visibility) -> IR::FunctionVisibility {
     match v {
-        FunctionVisibility::Public(_) => IR::FunctionVisibility::Public,
-        FunctionVisibility::Script(_) => IR::FunctionVisibility::Script,
-        FunctionVisibility::Friend(_) => IR::FunctionVisibility::Friend,
-        FunctionVisibility::Internal => IR::FunctionVisibility::Internal,
+        Visibility::Public(_) => IR::FunctionVisibility::Public,
+        Visibility::Script(_) => IR::FunctionVisibility::Script,
+        Visibility::Friend(_) => IR::FunctionVisibility::Friend,
+        Visibility::Internal => IR::FunctionVisibility::Internal,
     }
 }
 

@@ -160,7 +160,7 @@ pub struct FunctionSignature {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum FunctionVisibility {
+pub enum Visibility {
     Public(Loc),
     Script(Loc),
     Friend(Loc),
@@ -181,7 +181,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 // (public?) native foo<T1(: copyable?), ..., TN(: copyable?)>(x1: t1, ..., xn: tn): t1 * ... * tn;
 pub struct Function {
     pub loc: Loc,
-    pub visibility: FunctionVisibility,
+    pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
     pub name: FunctionName,
@@ -244,7 +244,7 @@ pub type PragmaProperty = Spanned<PragmaProperty_>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpecApplyPattern_ {
-    pub visibility: Option<FunctionVisibility>,
+    pub visibility: Option<Visibility>,
     pub name_pattern: Vec<SpecApplyFragment>,
     pub type_parameters: Vec<(Name, Vec<Ability>)>,
 }
@@ -810,11 +810,20 @@ impl BinOp_ {
     }
 }
 
-impl FunctionVisibility {
+impl Visibility {
     pub const PUBLIC: &'static str = "public";
     pub const SCRIPT: &'static str = "public(script)";
     pub const FRIEND: &'static str = "public(friend)";
     pub const INTERNAL: &'static str = "";
+
+    pub fn loc(&self) -> Option<Loc> {
+        match self {
+            Visibility::Public(loc) | Visibility::Script(loc) | Visibility::Friend(loc) => {
+                Some(*loc)
+            }
+            Visibility::Internal => None,
+        }
+    }
 }
 
 //**************************************************************************************************
@@ -849,16 +858,16 @@ impl fmt::Display for BinOp_ {
     }
 }
 
-impl fmt::Display for FunctionVisibility {
+impl fmt::Display for Visibility {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match &self {
-                FunctionVisibility::Public(_) => FunctionVisibility::PUBLIC,
-                FunctionVisibility::Script(_) => FunctionVisibility::SCRIPT,
-                FunctionVisibility::Friend(_) => FunctionVisibility::FRIEND,
-                FunctionVisibility::Internal => FunctionVisibility::INTERNAL,
+                Visibility::Public(_) => Visibility::PUBLIC,
+                Visibility::Script(_) => Visibility::SCRIPT,
+                Visibility::Friend(_) => Visibility::FRIEND,
+                Visibility::Internal => Visibility::INTERNAL,
             }
         )
     }
@@ -1258,7 +1267,7 @@ impl AstDebug for Function {
     }
 }
 
-impl AstDebug for FunctionVisibility {
+impl AstDebug for Visibility {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.write(&format!("{} ", self))
     }

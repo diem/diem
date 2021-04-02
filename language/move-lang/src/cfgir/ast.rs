@@ -5,7 +5,7 @@ use crate::{
     hlir::ast::{
         BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
     },
-    parser::ast::{ConstantName, FunctionName, FunctionVisibility, ModuleIdent, StructName, Var},
+    parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var, Visibility},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_core_types::value::MoveValue;
@@ -80,7 +80,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
-    pub visibility: FunctionVisibility,
+    pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,

@@ -5,8 +5,7 @@ use crate::{
     expansion::ast::{ability_modifiers_ast_debug, AbilitySet, SpecId, Value},
     naming::ast::{BuiltinTypeName, BuiltinTypeName_, TParam},
     parser::ast::{
-        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
-        UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp, Var, Visibility,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
@@ -103,7 +102,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
-    pub visibility: FunctionVisibility,
+    pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,

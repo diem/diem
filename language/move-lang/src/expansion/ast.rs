@@ -3,9 +3,8 @@
 
 use crate::{
     parser::ast::{
-        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, FunctionVisibility,
-        ModuleIdent, QuantKind, SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName,
-        UnaryOp, Var,
+        Ability, Ability_, BinOp, ConstantName, Field, FunctionName, ModuleIdent, QuantKind,
+        SpecApplyPattern, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Var, Visibility,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, unique_set::UniqueSet, *},
 };
@@ -100,7 +99,7 @@ pub struct SpecId(usize);
 #[derive(PartialEq, Clone, Debug)]
 pub struct Function {
     pub loc: Loc,
-    pub visibility: FunctionVisibility,
+    pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
     pub body: FunctionBody,

@@ -9,8 +9,8 @@ use crate::{
         byte_string, hex_string,
     },
     parser::ast::{
-        self as P, Ability, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent,
-        ModuleName, StructName, Var,
+        self as P, Ability, ConstantName, Field, FunctionName, ModuleIdent, ModuleName, StructName,
+        Var, Visibility,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,
@@ -377,17 +377,15 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     );
     let (function_name, function) = function_(context, pfunction);
     match &function.visibility {
-        FunctionVisibility::Public(loc)
-        | FunctionVisibility::Script(loc)
-        | FunctionVisibility::Friend(loc) => {
+        Visibility::Public(loc) | Visibility::Script(loc) | Visibility::Friend(loc) => {
             let msg = format!(
                 "Extraneous '{}' modifier. Script functions are always '{}'",
                 function.visibility,
-                FunctionVisibility::SCRIPT,
+                Visibility::SCRIPT,
             );
             context.env.add_error(vec![(*loc, msg)]);
         }
-        FunctionVisibility::Internal => (),
+        Visibility::Internal => (),
     }
     match &function.body {
         sp!(_, E::FunctionBody_::Defined(_)) => (),
