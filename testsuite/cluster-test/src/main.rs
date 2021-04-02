@@ -29,7 +29,7 @@ use cluster_test::{
     suite::ExperimentSuite,
     tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter},
 };
-use diem_backend::{Cluster as BackendCluster, Swarm};
+use diem_backend::Cluster as BackendCluster;
 use diem_config::config::DEFAULT_JSON_RPC_PORT;
 use futures::{
     future::{join_all, FutureExt},

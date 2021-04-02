@@ -16,6 +16,8 @@ use std::fmt;
 use std::str::FromStr;
 use diem_client::Client as JsonRpcClient;
 use diem_crypto::Uniform;
+use std::path::{PathBuf, Path};
+use diem_config::config::RoleType;
 
 #[derive(Clone)]
 enum InstanceBackend {
@@ -176,10 +178,26 @@ impl fmt::Debug for Instance {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ProcessNodeParam<'a> {
+    diem_node_bin_path: &'a Path,
+    node_id: String,
+    role: RoleType,
+    config_path: &'a Path,
+    log_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub enum NodeParam<'a> {
+    ProcessNode(ProcessNodeParam<'a>),
+    Other(),
+}
+
 #[async_trait]
 pub trait Swarm {
 }
 
 #[async_trait]
 pub trait Node {
+    fn launch(&self, config: NodeParam) -> anyhow::Result<Box<Self>>;
 }
