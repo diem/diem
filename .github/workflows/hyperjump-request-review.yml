@@ -12,7 +12,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: request review
-        uses: diem/actions/hyperjump-request-review@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/hyperjump-request-review@26629aba5897746c40697c786d71635767f87cda
         with:
           github-token: ${{ secrets.HYPERJUMP_TOKEN }}
           number: ${{ github.event.client_payload.number }}

@@ -15,7 +15,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: comment
-        uses: diem/actions/comment@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/comment@26629aba5897746c40697c786d71635767f87cda
         with:
           comment: |
             **This PR may have modified JSON-RPC server code.**

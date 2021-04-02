@@ -32,7 +32,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: fetch base ref
         id: fetch-base-ref
-        uses: diem/actions/pr-base-ref@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/pr-base-ref@26629aba5897746c40697c786d71635767f87cda
         if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -107,7 +107,7 @@ jobs:
   #   steps:
   #     - name: require dep-audit review if TCB deps changed
   #       if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.lec-summary-diff }}
-  #       uses: diem/actions/require-review@faa14430e68d54a269628f385e69a207e4e413d5
+  #       uses: diem/actions/require-review@26629aba5897746c40697c786d71635767f87cda
   #       with:
   #         github-token: ${{ secrets.GITHUB_TOKEN }}
   #         users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
@@ -120,7 +120,7 @@ jobs:
     steps:
       - name: annotate PR with LSR diff
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff }}
-        uses: diem/actions/comment@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/comment@26629aba5897746c40697c786d71635767f87cda
         with:
           comment: |
             **LSR dependency change summary**:
@@ -131,7 +131,7 @@ jobs:
           delete-older: true
       - name: annotate PR with LEC diff
         if: ${{ needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: diem/actions/comment@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/comment@26629aba5897746c40697c786d71635767f87cda
         with:
           comment: |
             **LEC dependency change summary**:
@@ -142,7 +142,7 @@ jobs:
           delete-older: true
       - name: annotate PR with release diff
         if: ${{ needs.calc-summaries.outputs.release-summary-diff }}
-        uses: diem/actions/comment@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/comment@26629aba5897746c40697c786d71635767f87cda
         with:
           comment: |
             **release binaries dependency change summary**:
@@ -153,26 +153,26 @@ jobs:
           delete-older: true
       - name: label PR if TCB changed
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: diem/actions/labels@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/labels@26629aba5897746c40697c786d71635767f87cda
         with:
           add: tcb-deps-changed
       - name: label PR if tracked deps changed
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff || needs.calc-summaries.outputs.release-summary-diff }}
-        uses: diem/actions/labels@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/labels@26629aba5897746c40697c786d71635767f87cda
         with:
           add: deps-changed
       - name: unlabel PR if TCB changed
         if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff }}
-        uses: diem/actions/labels@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/labels@26629aba5897746c40697c786d71635767f87cda
         with:
           remove: tcb-deps-changed
       - name: unlabel PR if tracked deps changed
         if: ${{ !needs.calc-summaries.outputs.lsr-summary-diff && !needs.calc-summaries.outputs.lec-summary-diff && !needs.calc-summaries.outputs.release-summary-diff }}
-        uses: diem/actions/labels@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/labels@26629aba5897746c40697c786d71635767f87cda
         with:
           remove: deps-changed
       - name: request dep-audit review if TCB deps changed
-        uses: diem/actions/request-review@faa14430e68d54a269628f385e69a207e4e413d5
+        uses: diem/actions/request-review@26629aba5897746c40697c786d71635767f87cda
         if: ${{ needs.calc-summaries.outputs.lsr-summary-diff || needs.calc-summaries.outputs.lec-summary-diff }}
         with:
           users: ${{ needs.calc-summaries.outputs.dep-auditors-list }}
