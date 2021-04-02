@@ -204,6 +204,14 @@ impl HashValue {
         hash
     }
 
+    /// Returns the `index`-th bit in the bytes.
+    pub fn bit(&self, index: usize) -> bool {
+        assume!(index < Self::LENGTH_IN_BITS); // assumed precondition
+        let pos = index / 8;
+        let bit = 7 - index % 8;
+        (self.hash[pos] >> bit) & 1 != 0
+    }
+
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
     pub fn iter_bits(&self) -> HashValueBitIterator<'_> {
         HashValueBitIterator::new(self)

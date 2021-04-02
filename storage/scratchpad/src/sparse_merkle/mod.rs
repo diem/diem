@@ -81,7 +81,7 @@ use diem_crypto::{
     HashValue,
 };
 use diem_types::proof::SparseMerkleProof;
-use std::{borrow::Borrow, sync::Arc};
+use std::{borrow::Borrow, collections::BTreeMap, sync::Arc};
 
 /// `AccountStatus` describes the result of querying an account from this SparseMerkleTree.
 #[derive(Debug, Eq, PartialEq)]
@@ -197,10 +197,11 @@ where
     /// the new one.
     pub fn update(
         &self,
-        updates: Vec<(HashValue, V)>,
+        updates: Vec<(HashValue, &V)>,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<Self, UpdateError> {
         updates
+            .clone()
             .into_iter()
             .try_fold(self.clone(), |prev, (key, value)| {
                 prev.update_one(key, value, proof_reader)
@@ -208,27 +209,20 @@ where
     }
 
     /// Constructs a new Sparse Merkle Tree as if we are updating the existing tree multiple times
-    /// with `update_batch`. The function will return the root hash of each individual update and
+    /// with `serial_update`. The function will return the root hash of each individual update and
     /// a Sparse Merkle Tree of the final state.
     ///
-    /// The `update_batch` will take in a reference of value instead of an owned instance. This is
+    /// The `serial_update` will take in a reference of value instead of an owned instance. This is
     /// because it would be nicer for future parallelism.
-    pub fn batch_update(
+    pub fn serial_update(
         &self,
         update_batch: Vec<Vec<(HashValue, &V)>>,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<(Vec<HashValue>, Self), UpdateError> {
         let mut current_state_tree = self.clone();
-
         let mut result_hashes = Vec::with_capacity(update_batch.len());
         for updates in update_batch {
-            current_state_tree = current_state_tree.update(
-                updates
-                    .into_iter()
-                    .map(|(hash, v_ref)| (hash, v_ref.clone()))
-                    .collect(),
-                proof_reader,
-            )?;
+            current_state_tree = current_state_tree.batch_update(updates, proof_reader)?;
             result_hashes.push(current_state_tree.root_hash());
         }
         Ok((result_hashes, current_state_tree))
@@ -237,7 +231,7 @@ where
     fn update_one(
         &self,
         key: HashValue,
-        new_value: V,
+        new_value: &V,
         proof_reader: &impl ProofRead<V>,
     ) -> Result<Self, UpdateError> {
         let mut current_subtree = self.root_weak();
@@ -278,7 +272,7 @@ where
         let new_node = Self::construct_subtree_at_bottom(
             &current_subtree,
             key,
-            new_value,
+            new_value.clone(),
             bits,
             proof_reader,
         )?;
@@ -526,6 +520,379 @@ where
             },
         };
         ret
+    }
+
+    /// The batch version of `serial_update`. The function will return a Sparse Merkle Tree of the final state.
+    /// This method is optmized to avoid repetitive common path updating and parallelize the processing as much
+    /// as possible.
+    pub fn batch_update(
+        &self,
+        updates: Vec<(HashValue, &V)>,
+        proof_reader: &impl ProofRead<V>,
+    ) -> Result<Self, UpdateError> {
+        // Flatten, dedup and sort the updates with a btree map since the updates between different
+        // versions may overlap on the same address in which case the latter always overwrites.
+        let kvs = updates
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let current_root = self.root_weak();
+        if kvs.is_empty() {
+            Ok(self.clone())
+        } else {
+            let root = Self::batch_update_subtree(
+                current_root,
+                &kvs[..],
+                /* depth = */ 0,
+                proof_reader,
+                /* is_generated_from_proofs = */ false,
+            )?;
+            Ok(Self::new_with_base(root, self))
+        }
+    }
+
+    /// Return the index of the first bit that is 1 at the given depth when kvs are lexicographically sorted.
+    fn partition<T>(kvs: &[(HashValue, &T)], depth: usize) -> usize {
+        // Binary search for the cut-off point where the bit at this depth turns from 0 to 1.
+        let (mut i, mut j) = (0, kvs.len());
+        // Find the first index that starts with bit 1.
+        while i < j {
+            let mid = i + (j - i) / 2;
+            if kvs[mid].0.bit(depth) {
+                j = mid;
+            } else {
+                i = mid + 1;
+            }
+        }
+        i
+    }
+
+    /// Given a current subtree node with its depth and a list of updates with key and value, update the
+    /// subtree according to the new k-v pairs.
+    fn batch_update_subtree(
+        mut current_subtree: SubTree<V>,
+        kvs: &[(HashValue, &V)],
+        mut depth: usize,
+        proof_reader: &impl ProofRead<V>,
+        is_generated_from_proofs: bool,
+    ) -> Result<SubTree<V>, UpdateError> {
+        let n = kvs.len();
+
+        // Starting from root, traverse the tree according to key until we find a non-internal
+        // node. Record all the bits and sibling nodes on the path.
+        let mut bits_on_path = vec![];
+        let mut siblings_on_path = vec![];
+        let new_node = loop {
+            assert!(
+                depth < HashValue::LENGTH_IN_BITS,
+                "depth {} cannot be deeper than {}",
+                depth,
+                HashValue::LENGTH_IN_BITS - 1,
+            );
+            match &current_subtree {
+                SubTree::NonEmpty { root, .. } => {
+                    if let Some(node) = root.get_node_if_in_mem() {
+                        match node.borrow() {
+                            Node::Internal(internal_node) => {
+                                let idx = Self::partition(kvs, depth);
+                                let (left, right) = if is_generated_from_proofs {
+                                    (internal_node.left.clone(), internal_node.right.clone())
+                                } else {
+                                    (internal_node.left.weak(), internal_node.right.weak())
+                                };
+                                depth += 1;
+                                if idx == 0 {
+                                    siblings_on_path.push(left);
+                                    current_subtree = right;
+                                    bits_on_path.push(true);
+                                } else if idx == n {
+                                    siblings_on_path.push(right);
+                                    current_subtree = left;
+                                    bits_on_path.push(false);
+                                } else {
+                                    let left_child = Self::batch_update_subtree(
+                                        left,
+                                        &kvs[..idx],
+                                        depth,
+                                        proof_reader,
+                                        is_generated_from_proofs,
+                                    )?;
+                                    let right_child = Self::batch_update_subtree(
+                                        right,
+                                        &kvs[idx..],
+                                        depth,
+                                        proof_reader,
+                                        is_generated_from_proofs,
+                                    )?;
+                                    break SubTree::new_internal(left_child, right_child);
+                                }
+                            }
+                            Node::Leaf(leaf_node) => {
+                                break Self::batch_construct_subtree_with_existing_leaf(
+                                    kvs,
+                                    if is_generated_from_proofs {
+                                        current_subtree.clone()
+                                    } else {
+                                        current_subtree.weak()
+                                    },
+                                    leaf_node.key,
+                                    depth,
+                                );
+                            }
+                        }
+                    } else {
+                        assert_eq!(is_generated_from_proofs, false);
+                        // When the search reaches an unknown subtree, we need proof to give us more
+                        // information about this part of the tree.
+                        let mut key_proof_pairs: Vec<(HashValue, &SparseMerkleProof<V>)> = vec![];
+                        for kv in kvs.iter() {
+                            if let Some((last_key, last_proof)) = key_proof_pairs.last() {
+                                let num_siblings = last_proof.siblings().len();
+                                if last_proof
+                                    .leaf()
+                                    .map_or(*last_key, |leaf| leaf.key())
+                                    .common_prefix_bits_len(kv.0)
+                                    >= num_siblings
+                                {
+                                    // This proof is also applicable to the current key
+                                    continue;
+                                }
+                            }
+                            let proof = proof_reader
+                                .get_proof(kv.0)
+                                .ok_or(UpdateError::MissingProof)?;
+                            key_proof_pairs.push((kv.0, proof));
+                        }
+
+                        let subtree_from_proofs = Self::batch_create_subtree_from_key_proof_pairs(
+                            key_proof_pairs.as_slice(),
+                            depth,
+                        );
+
+                        break Self::batch_update_subtree(
+                            subtree_from_proofs,
+                            kvs,
+                            depth,
+                            proof_reader,
+                            /* is_generated_from_proofs = */ true,
+                        )?;
+                    }
+                }
+                SubTree::Empty => break Self::batch_construct_subtree_from_empty(kvs, depth),
+            }
+        };
+
+        // Use the new node and all previous siblings on the path to construct the final tree.
+        Ok(Self::construct_subtree(
+            bits_on_path.into_iter().rev(),
+            siblings_on_path.into_iter().rev(),
+            new_node,
+        ))
+    }
+
+    /// This function is called when we are trying to write Vec<(key, new_value)> to the tree and have
+    /// traversed the existing tree using a common prefix of the keys. We should have reached the bottom
+    /// of the existing tree, so current_node cannot be an internal node. This function will
+    /// construct a subtree using current_node, all the new key-value pairs that share a common path above
+    /// current_node and potentially key-value pairs in the necessary proofs.
+    /// This function create a subtree at an empty node at `depth` with a list of k-v pairs.
+    fn batch_construct_subtree_from_empty(kvs: &[(HashValue, &V)], mut depth: usize) -> SubTree<V> {
+        let n = kvs.len();
+        assert!(
+            n != 0,
+            "There must be at least 1 KV-pair to create a subtree"
+        );
+        if n == 1 {
+            SubTree::new_leaf_with_value(kvs[0].0, kvs[0].1.clone())
+        } else {
+            let mut bits_on_path = vec![];
+            loop {
+                let idx = Self::partition(kvs, depth);
+                depth += 1;
+                if idx == 0 {
+                    bits_on_path.push(true);
+                } else if idx == n {
+                    bits_on_path.push(false);
+                } else {
+                    let left_child = Self::batch_construct_subtree_from_empty(&kvs[..idx], depth);
+                    let right_child = Self::batch_construct_subtree_from_empty(&kvs[idx..], depth);
+                    let fork_node = SubTree::new_internal(left_child, right_child);
+                    let siblings_num = bits_on_path.len();
+                    return Self::construct_subtree(
+                        bits_on_path.into_iter().rev(),
+                        std::iter::repeat(SubTree::new_empty()).take(siblings_num),
+                        fork_node,
+                    );
+                }
+            }
+        }
+    }
+
+    /// This function reconstruct a partial tree in memory from the proofs provided, which can be merged
+    /// later with k-v pairs matching the proofs. Usually this happens when trying to insert multple
+    /// k-v pairs at a unknown node. Instead of sequentially update the subtree node, in a batching way,
+    /// all the proofs can form a comprehensive view of the current subtree in storage.
+    fn batch_create_subtree_from_key_proof_pairs(
+        key_proof_pairs: &[(HashValue, &SparseMerkleProof<V>)],
+        mut depth: usize,
+    ) -> SubTree<V> {
+        let n = key_proof_pairs.len();
+        assert!(n != 0, "There must be at least 1 proof to create a subtree");
+        if n == 1 {
+            let (key, proof) = key_proof_pairs[0];
+            let end_node = match proof.leaf() {
+                Some(existing_leaf) => SubTree::new_leaf_with_value_hash(
+                    existing_leaf.key(),
+                    existing_leaf.value_hash(),
+                ),
+                None => SubTree::new_empty(),
+            };
+            let proof_length = proof.siblings().len();
+            assert!(
+                proof_length >= depth,
+                "proof length cannot be shorter than depth"
+            );
+            Self::construct_subtree(
+                key.iter_bits().skip(depth).rev().skip(
+                    HashValue::LENGTH_IN_BITS
+                        .checked_sub(proof_length)
+                        .expect("shouldn't overflow"),
+                ),
+                proof
+                    .siblings()
+                    .iter()
+                    .take(proof_length.checked_sub(depth).expect("shouldn't overflow"))
+                    .map(|sibling_hash| {
+                        if *sibling_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                            SubTree::new_unknown(*sibling_hash)
+                        } else {
+                            SubTree::new_empty()
+                        }
+                    }),
+                end_node,
+            )
+        } else {
+            let mut bits_on_path = vec![];
+            let mut siblings_on_path = vec![];
+            loop {
+                let idx = Self::partition(key_proof_pairs, depth);
+                let siblings = key_proof_pairs[0].1.siblings();
+                if idx == 0 || idx == n {
+                    let sibling_hash = siblings[siblings.len() - 1 - depth];
+                    siblings_on_path.push(if sibling_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                        SubTree::new_empty()
+                    } else {
+                        SubTree::new_unknown(sibling_hash)
+                    });
+                    bits_on_path.push(idx == 0);
+                } else {
+                    let left_child = Self::batch_create_subtree_from_key_proof_pairs(
+                        &key_proof_pairs[..idx],
+                        depth + 1,
+                    );
+                    let right_child = Self::batch_create_subtree_from_key_proof_pairs(
+                        &key_proof_pairs[idx..],
+                        depth + 1,
+                    );
+                    let fork_node = SubTree::new_internal(left_child, right_child);
+                    return Self::construct_subtree(
+                        bits_on_path.into_iter().rev(),
+                        siblings_on_path.into_iter().rev(),
+                        fork_node,
+                    );
+                }
+                depth += 1;
+            }
+        }
+    }
+
+    /// This function merge a leaf node with a list of k-v pairs.
+    fn batch_construct_subtree_with_existing_leaf(
+        kvs: &[(HashValue, &V)],
+        existing_leaf: SubTree<V>,
+        existing_leaf_key: HashValue,
+        mut depth: usize,
+    ) -> SubTree<V> {
+        let n = kvs.len();
+        assert!(
+            n != 0,
+            "There must be at least 1 KV-pair to create a subtree"
+        );
+        if n == 1 {
+            Self::construct_subtree_with_new_leaf(
+                kvs[0].0,
+                kvs[0].1.clone(),
+                existing_leaf,
+                existing_leaf_key,
+                depth,
+            )
+        } else {
+            let mut bits_on_path = vec![];
+            loop {
+                let idx = Self::partition(kvs, depth);
+                if idx == 0 {
+                    if existing_leaf_key.bit(depth) {
+                        bits_on_path.push(true);
+                    } else {
+                        let siblings_num = bits_on_path.len();
+                        return Self::construct_subtree(
+                            bits_on_path.into_iter().rev(),
+                            std::iter::repeat(SubTree::new_empty()).take(siblings_num),
+                            SubTree::new_internal(
+                                existing_leaf,
+                                Self::batch_construct_subtree_from_empty(kvs, depth + 1),
+                            ),
+                        );
+                    }
+                } else if idx == n {
+                    if !existing_leaf_key.bit(depth) {
+                        bits_on_path.push(false);
+                    } else {
+                        let siblings_num = bits_on_path.len();
+                        return Self::construct_subtree(
+                            bits_on_path.into_iter().rev(),
+                            std::iter::repeat(SubTree::new_empty()).take(siblings_num),
+                            SubTree::new_internal(
+                                Self::batch_construct_subtree_from_empty(kvs, depth + 1),
+                                existing_leaf,
+                            ),
+                        );
+                    }
+                } else {
+                    let (left_child, right_child) = if existing_leaf_key.bit(depth) {
+                        (
+                            Self::batch_construct_subtree_from_empty(&kvs[..idx], depth + 1),
+                            Self::batch_construct_subtree_with_existing_leaf(
+                                &kvs[idx..],
+                                existing_leaf,
+                                existing_leaf_key,
+                                depth + 1,
+                            ),
+                        )
+                    } else {
+                        (
+                            Self::batch_construct_subtree_with_existing_leaf(
+                                &kvs[..idx],
+                                existing_leaf,
+                                existing_leaf_key,
+                                depth + 1,
+                            ),
+                            Self::batch_construct_subtree_from_empty(&kvs[idx..], depth + 1),
+                        )
+                    };
+                    let fork_node = SubTree::new_internal(left_child, right_child);
+                    let siblings_num = bits_on_path.len();
+                    return Self::construct_subtree(
+                        bits_on_path.into_iter().rev(),
+                        std::iter::repeat(SubTree::new_empty()).take(siblings_num),
+                        fork_node,
+                    );
+                }
+                depth += 1;
+            }
+        }
     }
 
     /// Returns the root hash of this tree.

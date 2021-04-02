@@ -29,7 +29,7 @@ pub fn generate_genesis_state() -> (
         tree.update(
             blobs
                 .iter()
-                .map(|(addr, value)| (addr.hash(), value.clone()))
+                .map(|(addr, value)| (addr.hash(), value))
                 .collect(),
             &proof_reader,
         )

@@ -19,8 +19,12 @@ diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 
 [dev-dependencies]
+rand = "0.8.3"
 proptest = "1.0.0"
 
+diemdb = { path = "../diemdb", features = ["fuzzing"]}
+diem-temppath = { path = "../../common/temppath" }
+storage-interface = { path = "../storage-interface" }
+
 [features]
-default = []
-fuzzing = ["diem-types/fuzzing"]
+fuzzing = ["diemdb/fuzzing", "diem-types/fuzzing"]

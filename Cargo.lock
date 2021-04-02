@@ -6350,10 +6350,14 @@ dependencies = [
  "arc-swap",
  "diem-crypto",
  "diem-infallible",
+ "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
+ "diemdb",
  "itertools 0.10.0",
  "proptest",
+ "rand 0.8.3",
+ "storage-interface",
 ]
 
 [[package]]
