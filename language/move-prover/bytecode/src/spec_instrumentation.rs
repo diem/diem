@@ -199,7 +199,7 @@ impl<'a> Instrumenter<'a> {
             fun_env,
             &[],
             None,
-            &ret_locals,
+            Some(&ret_locals),
         );
 
         // Create and run the instrumenter.
@@ -403,7 +403,7 @@ impl<'a> Instrumenter<'a> {
             &callee_env,
             &targs,
             Some(&srcs),
-            &dests,
+            Some(&dests),
         );
 
         self.builder.set_loc_from_attr(id);

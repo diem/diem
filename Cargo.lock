@@ -4426,6 +4426,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "structopt 0.3.21",
  "vm",
 ]
 

@@ -1,0 +1,10 @@
+module 0x42::M {
+    #[]library module
+    dependency order #0
+    #[] fun foo(x: &mut (u64: copy+drop+store)): () {
+        *x = 0;
+        if (*x == 0) () else abort 0u64;
+        return ()
+    }
+
+}

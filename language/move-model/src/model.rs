@@ -672,6 +672,16 @@ impl GlobalEnv {
         }
     }
 
+    /// Convert a spec loc into the one recognizable by the move-lang compiler
+    pub fn to_move_loc(&self, loc: &Loc) -> MoveIrLoc {
+        // TODO replace with some sort of intern table
+        fn leak_str(s: &str) -> &'static str {
+            Box::leak(Box::new(s.to_owned()))
+        }
+        let file_name = self.source_files.name(loc.file_id).to_str().unwrap();
+        MoveIrLoc::new(leak_str(file_name), loc.span)
+    }
+
     /// Returns the file id for a file name, if defined.
     pub fn get_file_id(&self, fname: &str) -> Option<FileId> {
         self.file_name_map.get(fname).cloned()

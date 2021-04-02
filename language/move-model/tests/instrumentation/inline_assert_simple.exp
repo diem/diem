@@ -1,0 +1,11 @@
+module 0x42::M {
+    #[]library module
+    dependency order #0
+    #[] fun foo(): () {
+        let x = (0: (u64: copy+drop+store));
+        if (x == 0) () else abort 0u64;
+        spec #0uses [x];
+        /*()*/
+    }
+
+}

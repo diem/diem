@@ -1,6 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{
+    fs::File,
+    io::{self, Write},
+};
+
 /// Simple trait used for pretty printing the various AST
 ///
 /// Unfortunately, the trait implementation cannot be derived. The actual implementation should
@@ -43,6 +48,16 @@ pub fn print_verbose<T: AstDebug>(t: &T) {
     let mut writer = AstWriter::verbose();
     t.ast_debug(&mut writer);
     print!("{}", writer);
+}
+
+pub fn print_to_file<T: AstDebug>(t: &T, verbose: bool, file: &mut File) -> io::Result<()> {
+    let mut writer = if verbose {
+        AstWriter::verbose()
+    } else {
+        AstWriter::normal()
+    };
+    t.ast_debug(&mut writer);
+    write!(file, "{}", writer)
 }
 
 pub struct AstWriter {

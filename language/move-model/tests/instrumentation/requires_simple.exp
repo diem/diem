@@ -1,0 +1,9 @@
+module 0x42::M {
+    #[]library module
+    dependency order #0
+    #[] fun foo(x: (u64: copy+drop+store)): (u64: copy+drop+store) {
+        if (x == 0) () else abort 0u64;
+        x
+    }
+
+}

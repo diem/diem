@@ -178,6 +178,7 @@ default-members = [
     "execution/execution-correctness",
     "language/compiler",
     "language/diem-framework",
+    "language/move-model",
     "language/move-prover",
     "language/move-prover/lab",
     "language/move-lang",

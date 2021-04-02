@@ -38,7 +38,7 @@ pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
     /// Whether we translate the expression in a post state.
     in_post_state: bool,
     /// An optional substitution for return vales.
-    ret_locals: &'b [TempIndex],
+    ret_locals: Option<&'b [TempIndex]>,
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
     shadowed: Vec<BTreeSet<Symbol>>,
     /// The translated spec.
@@ -197,7 +197,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         fun_env: &'b FunctionEnv<'a>,
         type_args: &[Type],
         param_substitution: Option<&'b [TempIndex]>,
-        ret_locals: &'b [TempIndex],
+        ret_locals: Option<&'b [TempIndex]>,
     ) -> TranslatedSpec {
         let mut translator = SpecTranslator {
             builder,
@@ -435,7 +435,19 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             Call(_, Old, args) => self.translate_exp(&args[0], true),
             Call(node_id, Result(n), _) => {
                 self.builder.set_loc_from_node(*node_id);
-                self.builder.mk_temporary(self.ret_locals[*n])
+                let temp_idx = match self.ret_locals {
+                    None => {
+                        let global_env = self.builder.global_env();
+                        global_env.error(
+                            &global_env.get_node_loc(*node_id),
+                            "`Result(..)` function not expected in the spec translation context \
+                            for instrumentation",
+                        );
+                        0
+                    }
+                    Some(ret_locals) => ret_locals[*n],
+                };
+                self.builder.mk_temporary(temp_idx)
             }
             Call(id, Trace, args) => {
                 let mut has_local_var = false;

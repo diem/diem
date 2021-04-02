@@ -41,14 +41,15 @@ pub struct FunctionSourceMap<Location: Clone + Eq> {
     /// are treated as programs are synthesized and therefore have no valid source location.
     pub decl_location: Location,
 
-    /// Note that type parameters need to be added in the order of their declaration
+    /// Note that type parameters need to be added in the order of their declaration.
     pub type_parameters: Vec<SourceName<Location>>,
 
+    /// Source locations for the function parameters. The index into the vec is the index of the
+    /// parameter in function signature.
     pub parameters: Vec<SourceName<Location>>,
 
-    // pub parameters: Vec<SourceName<Location>>,
-    /// The index into the vector is the locals index. The corresponding `(Identifier, Location)` tuple
-    /// is the name and location of the local.
+    /// The index into the vector is the locals index. The corresponding `(Identifier, Location)`
+    /// tuple is the name and location of the local.
     pub locals: Vec<SourceName<Location>>,
 
     /// A map to the code offset for a corresponding nop. Nop's are used as markers for some
