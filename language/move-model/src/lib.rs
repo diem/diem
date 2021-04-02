@@ -7,16 +7,19 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
+use std::{fs, path::Path};
 
 use builder::module_builder::ModuleBuilder;
+use bytecode_source_map::mapping::SourceMapping;
+use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
-    errors::Errors,
+    errors::{Errors, FilesSourceText},
     expansion::ast::{ModuleDefinition, Program},
     move_continue_up_to, move_parse,
     parser::ast::ModuleIdent,
     shared::{unique_map::UniqueMap, Address},
-    Pass as MovePass, PassResult as MovePassResult,
+    Pass as MovePass, PassResult as MovePassResult, MOVE_COMPILED_EXTENSION,
 };
 use vm::{
     access::ModuleAccess,
@@ -45,45 +48,53 @@ pub fn run_model_builder(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
 ) -> anyhow::Result<GlobalEnv> {
-    // Construct all sources from targets and others, as we need bytecode for all of them.
-    let mut all_sources = target_sources;
-    all_sources.extend(other_sources.clone());
-    let mut env = GlobalEnv::new();
-    // Parse the program
-    let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], None)?;
-    for fname in files.keys().sorted() {
-        let fsrc = &files[fname];
-        env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));
-    }
-    // Add any documentation comments found by the Move compiler to the env.
-    let (comment_map, parsed_prog) = match pprog_and_comments_res {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
-            return Ok(env);
+    let (mut env, compilation_result) = compile_program(target_sources, other_sources)?;
+    match compilation_result {
+        None => Ok(env),
+        Some((verified_units, expansion_ast, _)) => {
+            // Run the spec checker on verified units plus expanded AST.
+            // This will populate the environment including any errors.
+            run_spec_checker(&mut env, verified_units, expansion_ast);
+            Ok(env)
         }
-        Ok(res) => res,
-    };
-    for (fname, documentation) in comment_map {
-        let file_id = env.get_file_id(fname).expect("file name defined");
-        env.add_documentation(file_id, documentation);
     }
-    // Run the compiler up to expansion and clone a copy of the expansion program ast
-    let (expansion_ast, expansion_result) = match move_continue_up_to(
+}
+
+pub fn run_spec_instrumenter(
+    target_sources: Vec<String>,
+    other_sources: Vec<String>,
+    output_dir: &str,
+    dump_bytecode: bool,
+) -> anyhow::Result<GlobalEnv> {
+    const SCRIPT_SUB_DIR: &str = "scripts";
+    const MODULE_SUB_DIR: &str = "modules";
+    const MOVE_DISASSEMBLY_EXTENSION: &str = "disas";
+
+    let (mut env, compilation_result) = compile_program(target_sources, other_sources)?;
+    if compilation_result.is_none() {
+        // it is probably a bad idea to continue spec instrumentation if the programs by themselves
+        // are already failing compilation
+        return Ok(env);
+    }
+
+    let (verified_units, expansion_ast, _) = compilation_result.unwrap();
+    // Run the spec checker on verified units plus expanded AST.
+    // This will populate the environment including any errors.
+    run_spec_checker(&mut env, verified_units, expansion_ast.clone());
+    if env.has_errors() {
+        // do not instrument specs if there are any errors in the spec population phase
+        return Ok(env);
+    }
+
+    // TODO (mengxu): add the spec instrumentation logic.
+    // Currently it just re-compiles the same AST again
+
+    // Run the compiler fully on the instrumented program
+    let units = match move_continue_up_to(
         None,
-        MovePassResult::Parser(parsed_prog),
-        MovePass::Expansion,
+        MovePassResult::Expansion(expansion_ast, vec![]),
+        MovePass::Compilation,
     ) {
-        Err(errors) => {
-            add_move_lang_errors(&mut env, errors);
-            return Ok(env);
-        }
-        Ok(MovePassResult::Expansion(eprog, eerrors)) => {
-            (eprog.clone(), MovePassResult::Expansion(eprog, eerrors))
-        }
-        Ok(_) => unreachable!(),
-    };
-    // Run the compiler fully to the compiled units
-    let units = match move_continue_up_to(None, expansion_result, MovePass::Compilation) {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
@@ -91,6 +102,7 @@ pub fn run_model_builder(
         Ok(MovePassResult::Compilation(units)) => units,
         Ok(_) => unreachable!(),
     };
+
     // Check for bytecode verifier errors (there should not be any)
     let (verified_units, errors) = compiled_unit::verify_units(units);
     if !errors.is_empty() {
@@ -98,9 +110,59 @@ pub fn run_model_builder(
         return Ok(env);
     }
 
-    // Now that it is known that the program has no errors, run the spec checker on verified units
-    // plus expanded AST. This will populate the environment including any errors.
-    run_spec_checker(&mut env, verified_units, expansion_ast);
+    // Output the instrumented compilation units
+    let output_base = Path::new(output_dir);
+    for unit in &verified_units {
+        let (module, source_map, file_path) = match unit.clone() {
+            CompiledUnit::Module {
+                module, source_map, ..
+            } => {
+                let module_id = module.self_id();
+                (
+                    module,
+                    source_map,
+                    output_base
+                        .join(MODULE_SUB_DIR)
+                        .join(module_id.address().short_str_lossless())
+                        .join(module_id.name().to_string()),
+                )
+            }
+            CompiledUnit::Script {
+                script,
+                source_map,
+                key,
+                ..
+            } => (
+                script.into_module().1,
+                source_map,
+                output_base.join(SCRIPT_SUB_DIR).join(key),
+            ),
+        };
+        // Dump the bytecode
+        fs::create_dir_all(file_path.parent().unwrap())?;
+        fs::write(
+            file_path.with_extension(MOVE_COMPILED_EXTENSION),
+            unit.serialize(),
+        )?;
+        // Disassemble the instrumented program if requested
+        if dump_bytecode {
+            let disas = Disassembler::new(
+                SourceMapping::new(source_map, module),
+                DisassemblerOptions {
+                    only_externally_visible: false,
+                    print_code: true,
+                    print_basic_blocks: true,
+                    print_locals: true,
+                },
+            );
+            fs::write(
+                file_path.with_extension(MOVE_DISASSEMBLY_EXTENSION),
+                disas.disassemble()?,
+            )?;
+        }
+    }
+
+    // Now we know that the compiled units have successfully compiled and passed the verification
     Ok(env)
 }
 
@@ -145,6 +207,69 @@ pub fn run_bytecode_model_builder(modules: Vec<CompiledModule>) -> anyhow::Resul
         env.module_data.push(module_data);
     }
     Ok(env)
+}
+
+fn compile_program(
+    target_sources: Vec<String>,
+    other_sources: Vec<String>,
+) -> anyhow::Result<(
+    GlobalEnv,
+    Option<(Vec<CompiledUnit>, Program, FilesSourceText)>,
+)> {
+    // Construct all sources from targets and others, as we need bytecode for all of them.
+    let mut all_sources = target_sources;
+    all_sources.extend(other_sources.clone());
+    let mut env = GlobalEnv::new();
+    // Parse the program
+    let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], None)?;
+    for fname in files.keys().sorted() {
+        let fsrc = &files[fname];
+        env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));
+    }
+    // Add any documentation comments found by the Move compiler to the env.
+    let (comment_map, parsed_prog) = match pprog_and_comments_res {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok((env, None));
+        }
+        Ok(res) => res,
+    };
+    for (fname, documentation) in comment_map {
+        let file_id = env.get_file_id(fname).expect("file name defined");
+        env.add_documentation(file_id, documentation);
+    }
+    // Run the compiler up to expansion and clone a copy of the expansion program ast
+    let (expansion_ast, expansion_result) = match move_continue_up_to(
+        None,
+        MovePassResult::Parser(parsed_prog),
+        MovePass::Expansion,
+    ) {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok((env, None));
+        }
+        Ok(MovePassResult::Expansion(eprog, eerrors)) => {
+            (eprog.clone(), MovePassResult::Expansion(eprog, eerrors))
+        }
+        Ok(_) => unreachable!(),
+    };
+    // Run the compiler fully to the compiled units
+    let units = match move_continue_up_to(None, expansion_result, MovePass::Compilation) {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok((env, None));
+        }
+        Ok(MovePassResult::Compilation(units)) => units,
+        Ok(_) => unreachable!(),
+    };
+    // Check for bytecode verifier errors (there should not be any)
+    let (verified_units, errors) = compiled_unit::verify_units(units);
+    if !errors.is_empty() {
+        add_move_lang_errors(&mut env, errors);
+        return Ok((env, None));
+    }
+    // Now that it is known that the program has no errors
+    Ok((env, Some((verified_units, expansion_ast, files))))
 }
 
 fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {

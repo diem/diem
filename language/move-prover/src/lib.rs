@@ -23,7 +23,9 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
-use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder};
+use move_model::{
+    code_writer::CodeWriter, model::GlobalEnv, run_model_builder, run_spec_instrumenter,
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
@@ -53,6 +55,22 @@ pub fn run_move_prover<W: WriteColor>(
         options.inv_v2,
     )?;
     let other_sources = remove_sources(&target_sources, all_sources);
+    if options.run_spec_instrument {
+        let env = run_spec_instrumenter(
+            target_sources,
+            other_sources,
+            &options.output_path,
+            options.prover.dump_bytecode,
+        )?;
+        if env.has_errors() {
+            env.report_errors(error_writer);
+            return Err(anyhow!("exiting with instrumentation errors"));
+        }
+        if options.prover.report_warnings && env.has_warnings() {
+            env.report_warnings(error_writer);
+        }
+        return Ok(());
+    }
     debug!("parsing and checking sources");
     let mut env: GlobalEnv = run_model_builder(target_sources, other_sources)?;
     if env.has_errors() {
