@@ -36,6 +36,7 @@ pub mod ast;
 mod builder;
 pub mod code_writer;
 pub mod exp_rewriter;
+mod instrumenter;
 pub mod model;
 pub mod pragmas;
 pub mod symbol;
@@ -86,13 +87,13 @@ pub fn run_spec_instrumenter(
         return Ok(env);
     }
 
-    // TODO (mengxu): add the spec instrumentation logic.
-    // Currently it just re-compiles the same AST again
+    // Entry point to the instrumentation logic
+    let instrumented_ast = instrumenter::run(&env, expansion_ast);
 
     // Run the compiler fully on the instrumented program
     let units = match move_continue_up_to(
         None,
-        MovePassResult::Expansion(expansion_ast, vec![]),
+        MovePassResult::Expansion(instrumented_ast, vec![]),
         MovePass::Compilation,
     ) {
         Err(errors) => {
