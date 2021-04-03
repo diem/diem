@@ -85,7 +85,6 @@ members = [
     "language/move-prover",
     "language/move-prover/abigen",
     "language/move-prover/boogie-backend",
-    "language/move-prover/boogie-backend-v2",
     "language/move-prover/bytecode",
     "language/move-prover/docgen",
     "language/move-prover/errmapgen",

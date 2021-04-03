@@ -3,11 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::cli::{Options, INLINE_PRELUDE};
+use crate::cli::Options;
 use abigen::Abigen;
 use anyhow::anyhow;
 use boogie_backend::{boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator};
-use boogie_backend_v2::prelude_template_helpers::StratificationHelper;
 use bytecode::{
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     debug_instrumentation::DebugInstrumenter,
@@ -20,12 +19,11 @@ use bytecode::{
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
 use errmapgen::ErrmapGen;
-use handlebars::Handlebars;
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
-use move_model::{code_writer::CodeWriter, emit, emitln, model::GlobalEnv, run_model_builder};
+use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
@@ -42,9 +40,6 @@ mod pipelines;
 
 // =================================================================================================
 // Entry Point
-
-/// Content of the default prelude.
-const DEFAULT_PRELUDE: &[u8] = include_bytes!("prelude.bpl");
 
 pub fn run_move_prover<W: WriteColor>(
     error_writer: &mut W,
@@ -106,20 +101,9 @@ pub fn run_move_prover<W: WriteColor>(
         return Err(anyhow!("exiting with analysis errors"));
     }
     let writer = CodeWriter::new(env.internal_loc());
-    if options.vnext {
-        boogie_backend_v2::add_prelude(&options.backend, &writer)?;
-        let mut translator = boogie_backend_v2::bytecode_translator::BoogieTranslator::new(
-            &env,
-            &options.backend,
-            &targets,
-            &writer,
-        );
-        translator.translate();
-    } else {
-        add_prelude(&options, &writer)?;
-        let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
-        translator.translate();
-    }
+    boogie_backend::add_prelude(&options.backend, &writer)?;
+    let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
+    translator.translate();
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
@@ -131,31 +115,14 @@ pub fn run_move_prover<W: WriteColor>(
     if !options.prover.generate_only {
         let boogie_file_id =
             writer.process_result(|result| env.add_source(&options.output_path, result, false));
-        if options.vnext {
-            let boogie = boogie_backend_v2::boogie_wrapper::BoogieWrapper {
-                env: &env,
-                targets: &targets,
-                writer: &writer,
-                options: &options.backend,
-                boogie_file_id,
-            };
-            boogie.call_boogie_and_verify_output(
-                options.backend.bench_repeat,
-                &options.output_path,
-            )?;
-        } else {
-            let boogie = BoogieWrapper {
-                env: &env,
-                targets: &targets,
-                writer: &writer,
-                options: &options.backend,
-                boogie_file_id,
-            };
-            boogie.call_boogie_and_verify_output(
-                options.backend.bench_repeat,
-                &options.output_path,
-            )?;
-        }
+        let boogie = BoogieWrapper {
+            env: &env,
+            targets: &targets,
+            writer: &writer,
+            options: &options.backend,
+            boogie_file_id,
+        };
+        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
         let boogie_elapsed = now.elapsed();
         if options.backend.bench_repeat <= 1 {
             info!(
@@ -269,30 +236,6 @@ fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
 
     let end = now.elapsed();
     info!("{:.3}s analyzing", (end - start).as_secs_f64());
-}
-
-/// Adds the prelude to the generated output.
-fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
-    // TOODO: move this to boogie-backend
-    emit!(writer, "\n// ** prelude from {}\n\n", &options.prelude_path);
-    let content = if options.prelude_path == INLINE_PRELUDE {
-        debug!("using inline prelude");
-        String::from_utf8_lossy(DEFAULT_PRELUDE).to_string()
-    } else {
-        debug!("using prelude at {}", &options.prelude_path);
-        fs::read_to_string(&options.prelude_path)?
-    };
-    let mut handlebars = Handlebars::new();
-    handlebars.set_strict_mode(true);
-    handlebars.register_helper(
-        "stratified",
-        Box::new(StratificationHelper::new(
-            options.backend.stratification_depth,
-        )),
-    );
-    let expanded_content = handlebars.render_template(&content, &options)?;
-    emitln!(writer, &expanded_content);
-    Ok(())
 }
 
 /// Create bytecode and process it.

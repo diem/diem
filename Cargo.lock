@@ -489,37 +489,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "boogie-backend-v2",
- "bytecode",
- "codespan",
- "codespan-reporting",
- "datatest-stable",
- "diem-temppath",
- "diem-workspace-hack",
- "futures",
- "handlebars",
- "itertools 0.10.0",
- "log",
- "move-core-types",
- "move-model",
- "move-prover-test-utils",
- "num 0.4.0",
- "once_cell",
- "pretty",
- "rand 0.8.3",
- "regex",
- "serde",
- "serde_json",
- "tokio",
- "vm",
-]
-
-[[package]]
-name = "boogie-backend-v2"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
  "bytecode",
  "codespan",
  "codespan-reporting",
@@ -4437,7 +4406,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "boogie-backend",
- "boogie-backend-v2",
  "bytecode",
  "clap",
  "codespan",
@@ -4448,7 +4416,6 @@ dependencies = [
  "docgen",
  "errmapgen",
  "futures",
- "handlebars",
  "hex",
  "itertools 0.10.0",
  "log",

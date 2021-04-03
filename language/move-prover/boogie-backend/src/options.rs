@@ -88,6 +88,8 @@ pub struct BoogieOptions {
     pub sequential_task: bool,
     /// What vector theory to use.
     pub vector_theory: VectorTheory,
+    /// Whether to generate a z3 trace file and where to put it.
+    pub z3_trace_file: Option<String>,
 }
 
 impl Default for BoogieOptions {
@@ -120,6 +122,7 @@ impl Default for BoogieOptions {
             num_instances: 1,
             sequential_task: false,
             vector_theory: VectorTheory::BoogieArray,
+            z3_trace_file: None,
         }
     }
 }
@@ -172,11 +175,19 @@ impl BoogieOptions {
                 self.proc_cores
             }
         )]);
+
         // TODO: see what we can make out of these flags.
         //add(&["-proverOpt:O:smt.QI.PROFILE=true"]);
         //add(&["-proverOpt:O:trace=true"]);
         //add(&["-proverOpt:VERBOSITY=3"]);
         //add(&["-proverOpt:C:-st"]);
+
+        if let Some(file) = &self.z3_trace_file {
+            add(&[
+                "-proverOpt:O:trace=true",
+                &format!("-proverOpt:O:trace_file_name={}", file),
+            ]);
+        }
         if self.generate_smt {
             add(&["-proverLog:@PROC@.smt"]);
         }

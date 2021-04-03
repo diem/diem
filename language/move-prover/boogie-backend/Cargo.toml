@@ -10,7 +10,6 @@ edition = "2018"
 [dependencies]
 async-trait = "0.1.42"
 bytecode = { path = "../bytecode" }
-boogie-backend-v2 = { path = "../boogie-backend-v2" }
 move-model = { path = "../../move-model" }
 vm = { path = "../../vm" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }

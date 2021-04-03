@@ -17,14 +17,11 @@ use simplelog::{
 };
 
 use abigen::AbigenOptions;
-use boogie_backend_v2::options::{BoogieOptions, VectorTheory};
+use boogie_backend::options::{BoogieOptions, VectorTheory};
 use bytecode::options::ProverOptions;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use move_model::model::VerificationScope;
-
-/// Represents the virtual path to the boogie prelude which is inlined into the binary.
-pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 
 /// Atomic used to prevent re-initialization of logging.
 static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
@@ -41,9 +38,6 @@ static TEST_MODE: AtomicBool = AtomicBool::new(false);
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Options {
-    /// Path to the boogie prelude. The special string `INLINE_PRELUDE` is used to refer to
-    /// a prelude build into this binary.
-    pub prelude_path: String,
     /// The path to the boogie output which represents the verification problem.
     pub output_path: String,
     /// Verbosity level for logging.
@@ -89,7 +83,6 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Self {
-            prelude_path: INLINE_PRELUDE.to_string(),
             output_path: "output.bpl".to_string(),
             run_docgen: false,
             run_abigen: false,
@@ -408,7 +401,16 @@ impl Options {
                     .takes_value(true)
                     .value_name("FUNCTION_NAME")
                     .help("only generate verification condition for one function. \
-                    This overrides verification scope and can be overriden by the pragma verify=false")
+                    This overrides verification scope and can be overridden by the pragma verify=false")
+            )
+            .arg(
+                Arg::with_name("z3-trace")
+                    .long("z3-trace")
+                    .takes_value(true)
+                    .value_name("FUNCTION_NAME")
+                    .help("only generate verification condition for given function, \
+                    and generate a z3 trace file for analysis. The file will be stored \
+                    at FUNCTION_NAME.z3log.")
             )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
@@ -578,6 +580,12 @@ impl Options {
         if matches.is_present("verify-only") {
             options.prover.verify_scope =
                 VerificationScope::Only(matches.value_of("verify-only").unwrap().to_string());
+        }
+
+        if matches.is_present("z3-trace") {
+            let fun_name = matches.value_of("z3-trace").unwrap().to_string();
+            options.prover.verify_scope = VerificationScope::Only(fun_name.clone());
+            options.backend.z3_trace_file = Some(format!("{}.z3log", fun_name));
         }
 
         options.backend.derive_options();

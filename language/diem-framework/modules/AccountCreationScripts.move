@@ -134,6 +134,9 @@ module AccountCreationScripts {
         /// **Access Control:**
         /// Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
         include Roles::AbortsIfNotParentVasp{account: parent_vasp};
+
+        /// TODO(timeout): this currently times out
+        pragma verify = false;
     }
 
     /// # Summary

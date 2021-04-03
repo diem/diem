@@ -887,6 +887,13 @@ Only Parent VASP accounts can create Child VASP accounts [[A7]][ROLE].
 </code></pre>
 
 
+TODO(timeout): this currently times out
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
+</code></pre>
+
+
 
 </details>
 
@@ -2741,6 +2748,13 @@ Parent VASPs, and Child VASPs can hold balances [[D1]][ROLE][[D2]][ROLE][[D3]][R
 </code></pre>
 
 
+TODO(timeout): this currently times out
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
+</code></pre>
+
+
 
 </details>
 
@@ -4022,6 +4036,13 @@ Only the account with a Preburn resource or PreburnQueue resource can preburn [[
 
 
 <pre><code><b>aborts_if</b> !(<b>exists</b>&lt;<a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;Token&gt;&gt;(account_addr) || <b>exists</b>&lt;<a href="../../../../../releases/artifacts/current/docs/modules/Diem.md#0x1_Diem_PreburnQueue">Diem::PreburnQueue</a>&lt;Token&gt;&gt;(account_addr));
+</code></pre>
+
+
+TODO(timeout): this currently times out
+
+
+<pre><code><b>pragma</b> verify = <b>false</b>;
 </code></pre>
 
 
