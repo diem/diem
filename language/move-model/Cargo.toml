@@ -35,3 +35,7 @@ move-prover-test-utils = { path = "../move-prover/test-utils" }
 [[test]]
 name = "testsuite"
 harness = false
+
+[[test]]
+name = "instrumentation"
+harness = false
