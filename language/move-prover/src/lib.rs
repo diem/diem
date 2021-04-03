@@ -301,6 +301,9 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 
     // Add function targets for all functions in the environment.
     for module_env in env.get_modules() {
+        // TODO: crashes at 'Unsupported ability set', language/tools/disassembler/src/disassembler.rs:1089:14
+        // on DiemAccount.move
+        /*
         if options.prover.dump_bytecode {
             let output_file = options
                 .move_sources
@@ -308,9 +311,11 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
                 .cloned()
                 .unwrap_or_else(|| "bytecode".to_string())
                 .replace(".move", ".mv.disas");
+
             fs::write(&output_file, &module_env.disassemble())
-                .expect("dumping disassembled module");
+            .expect("dumping disassembled module");
         }
+         */
         for func_env in module_env.get_functions() {
             targets.add_target(&func_env)
         }
