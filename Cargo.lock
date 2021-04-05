@@ -151,6 +151,9 @@ name = "anyhow"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
+dependencies = [
+ "backtrace",
+]
 
 [[package]]
 name = "arbitrary"
@@ -2385,6 +2388,8 @@ dependencies = [
 name = "diem-workspace-hack"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "backtrace",
  "byteorder",
  "bytes",
  "cc",
@@ -2993,6 +2998,20 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
+
+[[package]]
+name = "forge"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "diem-sdk",
+ "diem-swarm",
+ "diem-workspace-hack",
+ "generate-key",
+ "rand 0.8.3",
+ "structopt 0.3.21",
+ "termcolor",
+]
 
 [[package]]
 name = "form_urlencoded"

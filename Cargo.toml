@@ -149,6 +149,7 @@ members = [
     "testsuite/diem-fuzzer",
     "testsuite/diem-fuzzer/fuzz",
     "testsuite/diem-swarm",
+    "testsuite/forge",
     "testsuite/generate-format",
     "testsuite/smoke-test",
     "testsuite/smoke-test/attribute",

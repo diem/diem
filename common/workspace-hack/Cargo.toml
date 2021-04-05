@@ -11,6 +11,8 @@ edition = "2018"
 
 ### BEGIN HAKARI SECTION
 [target.x86_64-unknown-linux-gnu.dependencies]
+anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
+backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
@@ -56,6 +58,8 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-unknown-linux-gnu.build-dependencies]
+anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
+backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 cc = { version = "1.0.67", default-features = false, features = ["jobserver", "parallel"] }
@@ -106,6 +110,8 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-apple-darwin.dependencies]
+anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
+backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 chrono = { version = "0.4.19", features = ["clock", "default", "libc", "oldtime", "serde", "std", "time", "winapi"] }
@@ -151,6 +157,8 @@ warp = { version = "0.3.0", features = ["default", "multipart", "tls", "tokio-ru
 zeroize = { version = "1.2.0", features = ["alloc", "default", "zeroize_derive"] }
 
 [target.x86_64-apple-darwin.build-dependencies]
+anyhow = { version = "1.0.40", features = ["backtrace", "default", "std"] }
+backtrace = { version = "0.3.56", features = ["addr2line", "default", "gimli-symbolize", "miniz_oxide", "object", "serde", "std"] }
 byteorder = { version = "1.4.3", features = ["default", "i128", "std"] }
 bytes = { version = "1.0.1", features = ["default", "serde", "std"] }
 cc = { version = "1.0.67", default-features = false, features = ["jobserver", "parallel"] }

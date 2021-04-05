@@ -13,6 +13,7 @@ use crate::{
 
 pub use diem_types::*;
 
+#[derive(Debug)]
 pub struct LocalAccount {
     /// Address of the account.
     address: AccountAddress,
@@ -88,6 +89,7 @@ impl LocalAccount {
     }
 }
 
+#[derive(Debug)]
 pub struct AccountKey {
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,

@@ -173,6 +173,7 @@ members = [
     "diemdb-benchmark",
     "executor-benchmark",
     "executor-test-helpers",
+    "forge",
     "functional-tests",
     "generate-format",
     "invalid-mutations",

@@ -1,0 +1,25 @@
+[package]
+name = "forge"
+version = "0.0.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Forged in Fire"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = { version = "1.0", features = ["backtrace"] }
+rand = "0.8.3"
+structopt = "0.3.21"
+termcolor = "1.1.2"
+
+diem-sdk = { path = "../../sdk" }
+diem-swarm = { path = "../diem-swarm"}
+generate-key = { path = "../../config/generate-key" }
+diem-workspace-hack = { path = "../../common/workspace-hack" }
+
+[[test]]
+name = "fire"
+harness = false
