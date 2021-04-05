@@ -99,7 +99,7 @@ pub fn run_spec_instrumenter(
     }
 
     // Entry point to the instrumentation logic
-    let instrumented_ast = instrumenter::run(&env, &verified_units, expansion_ast);
+    let instrumented_ast = instrumenter::translate::run(&env, &verified_units, expansion_ast);
     if env.has_errors() {
         // do not compile the new program if there are any errors in the instrumentation phase
         return Ok(env);
