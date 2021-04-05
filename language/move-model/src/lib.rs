@@ -81,14 +81,14 @@ pub fn run_spec_instrumenter(
     let (verified_units, expansion_ast, _) = compilation_result.unwrap();
     // Run the spec checker on verified units plus expanded AST.
     // This will populate the environment including any errors.
-    run_spec_checker(&mut env, verified_units, expansion_ast.clone());
+    run_spec_checker(&mut env, verified_units.clone(), expansion_ast.clone());
     if env.has_errors() {
         // do not instrument specs if there are any errors in the spec population phase
         return Ok(env);
     }
 
     // Entry point to the instrumentation logic
-    let instrumented_ast = instrumenter::run(&env, expansion_ast);
+    let instrumented_ast = instrumenter::run(&env, &verified_units, expansion_ast);
 
     // Run the compiler fully on the instrumented program
     let units = match move_continue_up_to(
