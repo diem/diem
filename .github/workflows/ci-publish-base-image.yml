@@ -18,6 +18,9 @@ jobs:
     continue-on-error: false
     env:
       DOCKERHUB_ORG: diem
+    environment:
+      name: Docker
+      url: https://hub.docker.com/u/diem
     steps:
       - uses: actions/checkout@v2
         with:
@@ -37,11 +40,11 @@ jobs:
       - name: Sign in to dockerhub, install image signing cert.
         uses: ./.github/actions/dockerhub_login
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
-          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
-          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.ENV_DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.ENV_DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
       - name: Push to dockerhub.
         run: |
           if [[ "$DOCKERHUB_LOGGED_IN" == true ]]; then
@@ -52,4 +55,4 @@ jobs:
             docker push --disable-content-trust=${disable_content_trust} ${{ env.DOCKERHUB_ORG }}/build_environment:${{ steps.changes.outputs.changes-target-branch }}
           fi
         env:
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
