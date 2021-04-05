@@ -17,6 +17,7 @@ use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::{Errors, FilesSourceText},
     expansion::ast::{ModuleDefinition, Program},
+    hlir::ast::Program as IProgram,
     move_continue_up_to, move_parse, output_compiled_units,
     parser::ast::ModuleIdent,
     shared::{ast_debug, unique_map::UniqueMap, Address},
@@ -50,10 +51,14 @@ pub fn run_model_builder(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
 ) -> anyhow::Result<GlobalEnv> {
-    let (mut env, compilation_result) = compile_program(target_sources, other_sources)?;
+    let (mut env, compilation_result) = compile_program(
+        target_sources,
+        other_sources,
+        /* save_hlir_ast */ false,
+    )?;
     match compilation_result {
         None => Ok(env),
-        Some((verified_units, expansion_ast, _)) => {
+        Some((verified_units, expansion_ast, _, _)) => {
             // Run the spec checker on verified units plus expanded AST.
             // This will populate the environment including any errors.
             run_spec_checker(&mut env, verified_units, expansion_ast);
@@ -71,35 +76,37 @@ pub fn run_spec_instrumenter(
     const FILE_OLD_AST: &str = "program.ast.old";
     const FILE_NEW_AST: &str = "program.ast.new";
 
-    // Prepare output directory
-    let output_base = Path::new(output_dir);
-    fs::create_dir_all(output_base)?;
-
     // Compile the program and make sure that specs are built without error
-    let (mut env, compilation_result) = compile_program(target_sources, other_sources)?;
+    let (mut env, compilation_result) =
+        compile_program(target_sources, other_sources, /* save_hlir_ast */ true)?;
     if compilation_result.is_none() {
         // it is probably a bad idea to continue spec instrumentation if the programs by themselves
         // are already failing compilation
         return Ok(env);
     }
 
-    let (verified_units, expansion_ast, source_files) = compilation_result.unwrap();
+    let (verified_units, expansion_ast, hlir_ast_opt, source_files) = compilation_result.unwrap();
     // Run the spec checker on verified units plus expanded AST.
     // This will populate the environment including any errors.
-    run_spec_checker(&mut env, verified_units.clone(), expansion_ast.clone());
+    run_spec_checker(&mut env, verified_units.clone(), expansion_ast);
     if env.has_errors() {
         // do not instrument specs if there are any errors in the spec population phase
         return Ok(env);
     }
+    let hlir_ast = hlir_ast_opt.unwrap();
+
+    // Prepare output directory
+    let output_base = Path::new(output_dir);
+    fs::create_dir_all(output_base)?;
 
     // Dump the old program AST if requested
     if dump_asts {
         let mut file = File::create(output_base.join(FILE_OLD_AST))?;
-        ast_debug::print_to_file(&expansion_ast, true, &mut file)?;
+        ast_debug::print_to_file(&hlir_ast, true, &mut file)?;
     }
 
     // Entry point to the instrumentation logic
-    let instrumented_ast = instrumenter::translate::run(&env, &verified_units, expansion_ast);
+    let instrumented_ast = instrumenter::translate::run(&env, &verified_units, hlir_ast);
     if env.has_errors() {
         // do not compile the new program if there are any errors in the instrumentation phase
         return Ok(env);
@@ -114,7 +121,7 @@ pub fn run_spec_instrumenter(
     // Run the compiler fully on the instrumented program
     let units = match move_continue_up_to(
         None,
-        MovePassResult::Expansion(instrumented_ast, vec![]),
+        MovePassResult::HLIR(instrumented_ast, vec![]),
         MovePass::Compilation,
     ) {
         Err(errors) => {
@@ -185,9 +192,15 @@ pub fn run_bytecode_model_builder(modules: Vec<CompiledModule>) -> anyhow::Resul
 fn compile_program(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
+    save_hlir_ast: bool,
 ) -> anyhow::Result<(
     GlobalEnv,
-    Option<(Vec<CompiledUnit>, Program, FilesSourceText)>,
+    Option<(
+        Vec<CompiledUnit>,
+        Program,
+        Option<IProgram>,
+        FilesSourceText,
+    )>,
 )> {
     // Construct all sources from targets and others, as we need bytecode for all of them.
     let mut all_sources = target_sources;
@@ -226,8 +239,25 @@ fn compile_program(
         }
         Ok(_) => unreachable!(),
     };
+    // Run the compiler up to HLIR and clone a copy of the HLIR program ast, if requested
+    let (hlir_ast_opt, hlir_result) =
+        match move_continue_up_to(None, expansion_result, MovePass::HLIR) {
+            Err(errors) => {
+                add_move_lang_errors(&mut env, errors);
+                return Ok((env, None));
+            }
+            Ok(MovePassResult::HLIR(iprog, ierrors)) => {
+                let ast_opt = if save_hlir_ast {
+                    Some(iprog.clone())
+                } else {
+                    None
+                };
+                (ast_opt, MovePassResult::HLIR(iprog, ierrors))
+            }
+            Ok(_) => unreachable!(),
+        };
     // Run the compiler fully to the compiled units
-    let units = match move_continue_up_to(None, expansion_result, MovePass::Compilation) {
+    let units = match move_continue_up_to(None, hlir_result, MovePass::Compilation) {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok((env, None));
@@ -242,7 +272,10 @@ fn compile_program(
         return Ok((env, None));
     }
     // Now that it is known that the program has no errors
-    Ok((env, Some((verified_units, expansion_ast, files))))
+    Ok((
+        env,
+        Some((verified_units, expansion_ast, hlir_ast_opt, files)),
+    ))
 }
 
 fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {

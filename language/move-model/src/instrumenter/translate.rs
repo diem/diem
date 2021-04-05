@@ -6,11 +6,11 @@ use std::collections::BTreeMap;
 use move_ir_types::{location::sp, sp};
 use move_lang::{
     compiled_unit::{CompiledUnit, FunctionInfo},
-    expansion::ast::{
-        Exp_, Function, FunctionBody, FunctionBody_, ModuleDefinition, Program, Script, Sequence,
-        SequenceItem_,
+    hlir::ast::{
+        Block, Command, Command_, Exp, Function, FunctionBody, FunctionBody_, ModuleDefinition,
+        Program, Script, SingleType, Statement, Statement_, UnannotatedExp_,
     },
-    parser::ast::{FunctionName, ModuleIdent},
+    parser::ast::{FunctionName, ModuleIdent, Var},
     shared::{unique_map::UniqueMap, Address, Identifier},
 };
 
@@ -103,27 +103,23 @@ fn module_(
 ) -> ModuleDefinition {
     // construct the new module field by field
     let ModuleDefinition {
-        loc,
         is_source_module,
         dependency_order,
         friends,
         structs,
         functions: efunctions,
         constants,
-        specs,
     } = mdef;
     let functions = efunctions.map(|name, func| function(&menv, ctxt, name, func));
 
     // re-pack the module definition
     ModuleDefinition {
-        loc,
         is_source_module,
         dependency_order,
         friends,
         structs,
         functions,
         constants,
-        specs,
     }
 }
 
@@ -202,7 +198,6 @@ fn script_(menv: &ModuleEnv<'_>, ctxt: &CompilationContext, sdef: Script) -> Scr
         constants,
         function_name,
         function: efunction,
-        specs,
     } = sdef;
     let function = function(menv, ctxt, function_name.clone(), efunction);
 
@@ -212,7 +207,6 @@ fn script_(menv: &ModuleEnv<'_>, ctxt: &CompilationContext, sdef: Script) -> Scr
         constants,
         function_name,
         function,
-        specs,
     }
 }
 
@@ -258,23 +252,19 @@ fn function(
 fn function_(fenv: &FunctionEnv<'_>, info: &FunctionInfo, func: Function) -> Function {
     // construct the new function field by field
     let Function {
-        loc,
         visibility,
         signature,
         acquires,
         body: ebody,
-        specs,
     } = func;
     let body = function_body(&fenv, info, ebody);
 
     // re-pack the function definition
     Function {
-        loc,
         visibility,
         signature,
         acquires,
         body,
-        specs,
     }
 }
 
@@ -285,8 +275,15 @@ fn function_body(
 ) -> FunctionBody {
     match body {
         FunctionBody_::Native => sp(loc, FunctionBody_::Native),
-        FunctionBody_::Defined(seq) => {
-            sp(loc, FunctionBody_::Defined(sequence_move(fenv, info, seq)))
+        FunctionBody_::Defined { mut locals, body } => {
+            let new_body = statement_block(fenv, info, &mut locals, body);
+            sp(
+                loc,
+                FunctionBody_::Defined {
+                    locals,
+                    body: new_body,
+                },
+            )
         }
     }
 }
@@ -295,45 +292,157 @@ fn function_body(
 // Statement
 //
 
-fn sequence_move(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> Sequence {
-    let env = fenv.module_env.env;
-    let spec = fenv.get_spec();
-    let mut instrumented = Sequence::new();
-    for item in seq {
-        match &item.value {
-            SequenceItem_::Seq(exp) => match &exp.value {
-                Exp_::Spec(spec_id, _) => {
-                    match info.spec_info.get(spec_id) {
-                        None => env.error(
-                            &env.to_loc(&exp.loc),
-                            "Unable to find the CodeOffset in FunctionInfo for this spec block",
-                        ),
-                        Some(spec_info) => match spec.on_impl.get(&spec_info.offset) {
-                            None => env.error(
-                                &env.to_loc(&exp.loc),
-                                "Unable to find the Spec in FunctionEnv for this spec block",
-                            ),
-                            Some(inline_spec) => {
-                                // TODO (mengxu) replace with expr hanndler
-                                assert!(inline_spec.loc.is_some())
-                            }
-                        },
-                    }
-                }
-                Exp_::UnresolvedError => unreachable!(),
-                _ => {}
-            },
-            SequenceItem_::Bind(_, exp) => match &exp.value {
-                Exp_::Spec(spec_id, _) => {
-                    let offset = info.spec_info.get(spec_id).unwrap().offset;
-                    assert!(spec.on_impl.contains_key(&offset));
-                }
-                Exp_::UnresolvedError => unreachable!(),
-                _ => {}
-            },
-            SequenceItem_::Declare(..) => {}
-        }
-        instrumented.push_back(item);
+fn statement_block(
+    fenv: &FunctionEnv<'_>,
+    info: &FunctionInfo,
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: Block,
+) -> Block {
+    let mut instrumented = Block::new();
+    for stmt in block {
+        statement(fenv, info, stmt, locals, &mut instrumented);
     }
     instrumented
+}
+
+fn statement(
+    fenv: &FunctionEnv<'_>,
+    info: &FunctionInfo,
+    sp!(loc, stmt): Statement,
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
+) {
+    let new_stmt = match stmt {
+        Statement_::Command(cmd) => {
+            let new_cmd = command(fenv, info, cmd, locals, block);
+            Statement_::Command(new_cmd)
+        }
+        Statement_::IfElse {
+            cond,
+            if_block,
+            else_block,
+        } => {
+            let new_cond = expression(fenv, info, *cond, locals, block);
+            let new_if_block = statement_block(fenv, info, locals, if_block);
+            let new_else_block = statement_block(fenv, info, locals, else_block);
+            Statement_::IfElse {
+                cond: Box::new(new_cond),
+                if_block: new_if_block,
+                else_block: new_else_block,
+            }
+        }
+        Statement_::While {
+            cond: (cond_block, cond_exp),
+            block: loop_block,
+        } => {
+            let new_cond_exp = expression(fenv, info, *cond_exp, locals, block);
+            let new_cond_block = statement_block(fenv, info, locals, cond_block);
+            let new_loop_block = statement_block(fenv, info, locals, loop_block);
+            Statement_::While {
+                cond: (new_cond_block, Box::new(new_cond_exp)),
+                block: new_loop_block,
+            }
+        }
+        Statement_::Loop {
+            block: loop_block,
+            has_break,
+        } => {
+            let new_block = statement_block(fenv, info, locals, loop_block);
+            Statement_::Loop {
+                block: new_block,
+                has_break,
+            }
+        }
+    };
+    block.push_back(sp(loc, new_stmt));
+}
+
+fn command(
+    fenv: &FunctionEnv<'_>,
+    info: &FunctionInfo,
+    sp!(loc, cmd): Command,
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
+) -> Command {
+    let new_cmd = match cmd {
+        Command_::Assign(lhs, rhs) => {
+            let new_rhs = expression(fenv, info, *rhs, locals, block);
+            Command_::Assign(lhs, Box::new(new_rhs))
+        }
+        Command_::Mutate(eref, eval) => {
+            let new_eval = expression(fenv, info, *eval, locals, block);
+            let new_eref = expression(fenv, info, *eref, locals, block);
+            Command_::Mutate(Box::new(new_eref), Box::new(new_eval))
+        }
+        Command_::Abort(exp) => {
+            let new_exp = expression(fenv, info, exp, locals, block);
+            Command_::Abort(new_exp)
+        }
+        Command_::Return { from_user, exp } => {
+            let new_exp = expression(fenv, info, exp, locals, block);
+            Command_::Return {
+                from_user,
+                exp: new_exp,
+            }
+        }
+        Command_::Break => Command_::Break,
+        Command_::Continue => Command_::Continue,
+        Command_::IgnoreAndPop { pop_num, exp } => {
+            let new_exp = expression(fenv, info, exp, locals, block);
+            Command_::IgnoreAndPop {
+                pop_num,
+                exp: new_exp,
+            }
+        }
+        Command_::Jump { from_user, target } => Command_::Jump { from_user, target },
+        Command_::JumpIf {
+            cond,
+            if_true,
+            if_false,
+        } => {
+            let new_cond = expression(fenv, info, cond, locals, block);
+            Command_::JumpIf {
+                cond: new_cond,
+                if_true,
+                if_false,
+            }
+        }
+    };
+    sp(loc, new_cmd)
+}
+
+fn expression(
+    fenv: &FunctionEnv<'_>,
+    info: &FunctionInfo,
+    exp: Exp,
+    _locals: &mut UniqueMap<Var, SingleType>,
+    _block: &mut Block,
+) -> Exp {
+    let env = fenv.module_env.env;
+    let spec = fenv.get_spec();
+    let Exp { ty, exp } = exp;
+    match &exp.value {
+        UnannotatedExp_::Spec(spec_id, _) => {
+            match info.spec_info.get(spec_id) {
+                None => env.error(
+                    &env.to_loc(&exp.loc),
+                    "Unable to find the CodeOffset in FunctionInfo for this spec block",
+                ),
+                Some(spec_info) => match spec.on_impl.get(&spec_info.offset) {
+                    None => env.error(
+                        &env.to_loc(&exp.loc),
+                        "Unable to find the Spec in FunctionEnv for this spec block",
+                    ),
+                    Some(inline_spec) => {
+                        // TODO (mengxu) replace with expr hanndler
+                        assert!(inline_spec.loc.is_some())
+                    }
+                },
+            }
+        }
+        UnannotatedExp_::UnresolvedError => unreachable!(),
+        // TODO (mengxu), handle other expression types
+        _ => {}
+    }
+    Exp { ty, exp }
 }
