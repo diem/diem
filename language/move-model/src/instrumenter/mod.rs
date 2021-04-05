@@ -287,7 +287,9 @@ fn function_body(
 ) -> FunctionBody {
     match body {
         FunctionBody_::Native => sp(loc, FunctionBody_::Native),
-        FunctionBody_::Defined(seq) => sp(loc, FunctionBody_::Defined(sequence(fenv, info, seq))),
+        FunctionBody_::Defined(seq) => {
+            sp(loc, FunctionBody_::Defined(sequence_move(fenv, info, seq)))
+        }
     }
 }
 
@@ -295,7 +297,8 @@ fn function_body(
 // Statement
 //
 
-fn sequence(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> Sequence {
+fn sequence_move(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> Sequence {
+    let env = fenv.module_env.env;
     let spec = fenv.get_spec();
     let mut instrumented = Sequence::new();
     for (idx, item) in seq.into_iter().enumerate() {
@@ -307,8 +310,22 @@ fn sequence(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> Seque
         match &item.value {
             SequenceItem_::Seq(exp) => match &exp.value {
                 Exp_::Spec(spec_id, _) => {
-                    let offset = info.spec_info.get(spec_id).unwrap().offset;
-                    assert!(spec.on_impl.contains_key(&offset));
+                    match info.spec_info.get(spec_id) {
+                        None => env.error(
+                            &env.to_loc(&exp.loc),
+                            "Unable to find the CodeOffset in FunctionInfo for this spec block",
+                        ),
+                        Some(spec_info) => match spec.on_impl.get(&spec_info.offset) {
+                            None => env.error(
+                                &env.to_loc(&exp.loc),
+                                "Unable to find the Spec in FunctionEnv for this spec block",
+                            ),
+                            Some(inline_spec) => {
+                                // TODO (mengxu) replace with expr hanndler
+                                assert!(inline_spec.loc.is_some())
+                            }
+                        },
+                    }
                 }
                 Exp_::UnresolvedError => unreachable!(),
                 _ => {}
@@ -321,7 +338,7 @@ fn sequence(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> Seque
                 Exp_::UnresolvedError => unreachable!(),
                 _ => {}
             },
-            _ => {}
+            SequenceItem_::Declare(..) => {}
         }
         instrumented.push_back(item);
     }
