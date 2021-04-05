@@ -1106,7 +1106,7 @@ impl AstDebug for Exp_ {
             E::Spec(u, unbound_names) => {
                 w.write(&format!("spec #{}", u));
                 if !unbound_names.is_empty() {
-                    w.write("uses [");
+                    w.write(" uses [");
                     w.comma(unbound_names, |w, n| w.write(&format!("{}", n)));
                     w.write("]");
                 }
