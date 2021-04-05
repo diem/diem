@@ -13,7 +13,7 @@ use move_lang::{
         SequenceItem_,
     },
     parser::ast::{FunctionName, ModuleIdent},
-    shared::{ast_debug, unique_map::UniqueMap, Address, Identifier},
+    shared::{unique_map::UniqueMap, Address, Identifier},
 };
 
 use crate::{
@@ -301,12 +301,7 @@ fn sequence_move(fenv: &FunctionEnv<'_>, info: &FunctionInfo, seq: Sequence) -> 
     let env = fenv.module_env.env;
     let spec = fenv.get_spec();
     let mut instrumented = Sequence::new();
-    for (idx, item) in seq.into_iter().enumerate() {
-        // TODO (mengxu): remove debugging code
-        if cfg!(debug_assertions) {
-            print!("{}: ", idx);
-            ast_debug::print_verbose(&item);
-        }
+    for item in seq {
         match &item.value {
             SequenceItem_::Seq(exp) => match &exp.value {
                 Exp_::Spec(spec_id, _) => {

@@ -8,18 +8,17 @@ use std::{
     path::Path,
 };
 
-use move_lang::MOVE_COMPILED_EXTENSION;
 use move_model::run_spec_instrumenter;
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 
-const WORKDIR_SURFIX: &str = "workdir";
-const MODULE_SUB_DIR: &str = "modules";
-const MOVE_DISASSEMBLY_EXTENSION: &str = "disas";
+const WORKDIR_SUFFIX: &str = "workdir";
+const FILE_NEW_AST: &str = "program.ast.new";
+const EXP_EXTENSION: &str = "exp";
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];
     let deps = vec![];
-    let workdir = path.with_extension(WORKDIR_SURFIX);
+    let workdir = path.with_extension(WORKDIR_SUFFIX);
 
     let env = run_spec_instrumenter(
         targets,
@@ -37,44 +36,12 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         unreachable!()
     }
 
-    // find the instrumented bytecode disassembly
-    let addr_dirs = fs::read_dir(workdir.join(MODULE_SUB_DIR))?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-    assert_eq!(addr_dirs.len(), 1);
-    let entries = fs::read_dir(&addr_dirs[0])?
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, io::Error>>()?;
-    assert_eq!(entries.len(), 2);
-    let disas_path = if (&entries[0]).extension().unwrap() == MOVE_COMPILED_EXTENSION {
-        assert_eq!(
-            (&entries[1]).extension().unwrap(),
-            MOVE_DISASSEMBLY_EXTENSION
-        );
-        &entries[1]
-    } else {
-        assert_eq!(
-            (&entries[0]).extension().unwrap(),
-            MOVE_DISASSEMBLY_EXTENSION
-        );
-        assert_eq!((&entries[1]).extension().unwrap(), MOVE_COMPILED_EXTENSION);
-        &entries[0]
-    };
-
-    // read and compare the disassembly
-    //
-    // TODO (mengxu): it might not be a good idea to directly compare the disassembly, as any change
-    // to the 1) source compiler, 2) IR compiler, 3) file format, 4) disassembly will change the
-    // expected output, and none of the changes are in our control. But for now, lacking a better
-    // way of testing, and given all other components are relatively stable, we can tolerate this.
-    let disas_output = fs::read_to_string(disas_path)?;
-
-    // clean up the workdir before returning the diff result
+    // read the generated AST file and clean up the workdir before diffing
+    let generated_ast = fs::read_to_string(workdir.join(FILE_NEW_AST))?;
     fs::remove_dir_all(workdir)?;
-    verify_or_update_baseline(
-        path.with_extension(MOVE_DISASSEMBLY_EXTENSION).as_path(),
-        &disas_output,
-    )?;
+
+    // compare or update the AST of the instrumented program with the expected file
+    verify_or_update_baseline(path.with_extension(EXP_EXTENSION).as_path(), &generated_ast)?;
     Ok(())
 }
 

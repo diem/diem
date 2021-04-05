@@ -7,19 +7,20 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
-use std::{fs, path::Path};
+use std::{
+    fs::{self, File},
+    path::Path,
+};
 
 use builder::module_builder::ModuleBuilder;
-use bytecode_source_map::mapping::SourceMapping;
-use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::{Errors, FilesSourceText},
     expansion::ast::{ModuleDefinition, Program},
-    move_continue_up_to, move_parse,
+    move_continue_up_to, move_parse, output_compiled_units,
     parser::ast::ModuleIdent,
-    shared::{unique_map::UniqueMap, Address},
-    Pass as MovePass, PassResult as MovePassResult, MOVE_COMPILED_EXTENSION,
+    shared::{ast_debug, unique_map::UniqueMap, Address},
+    Pass as MovePass, PassResult as MovePassResult,
 };
 use vm::{
     access::ModuleAccess,
@@ -65,12 +66,16 @@ pub fn run_spec_instrumenter(
     target_sources: Vec<String>,
     other_sources: Vec<String>,
     output_dir: &str,
-    dump_bytecode: bool,
+    dump_asts: bool,
 ) -> anyhow::Result<GlobalEnv> {
-    const SCRIPT_SUB_DIR: &str = "scripts";
-    const MODULE_SUB_DIR: &str = "modules";
-    const MOVE_DISASSEMBLY_EXTENSION: &str = "disas";
+    const FILE_OLD_AST: &str = "program.ast.old";
+    const FILE_NEW_AST: &str = "program.ast.new";
 
+    // Prepare output directory
+    let output_base = Path::new(output_dir);
+    fs::create_dir_all(output_base)?;
+
+    // Compile the program and make sure that specs are built without error
     let (mut env, compilation_result) = compile_program(target_sources, other_sources)?;
     if compilation_result.is_none() {
         // it is probably a bad idea to continue spec instrumentation if the programs by themselves
@@ -78,7 +83,7 @@ pub fn run_spec_instrumenter(
         return Ok(env);
     }
 
-    let (verified_units, expansion_ast, _) = compilation_result.unwrap();
+    let (verified_units, expansion_ast, source_files) = compilation_result.unwrap();
     // Run the spec checker on verified units plus expanded AST.
     // This will populate the environment including any errors.
     run_spec_checker(&mut env, verified_units.clone(), expansion_ast.clone());
@@ -87,8 +92,24 @@ pub fn run_spec_instrumenter(
         return Ok(env);
     }
 
+    // Dump the old program AST if requested
+    if dump_asts {
+        let mut file = File::create(output_base.join(FILE_OLD_AST))?;
+        ast_debug::print_to_file(&expansion_ast, true, &mut file)?;
+    }
+
     // Entry point to the instrumentation logic
     let instrumented_ast = instrumenter::run(&env, &verified_units, expansion_ast);
+    if env.has_errors() {
+        // do not compile the new program if there are any errors in the instrumentation phase
+        return Ok(env);
+    }
+
+    // Dump the new program AST if requested
+    if dump_asts {
+        let mut file = File::create(output_base.join(FILE_NEW_AST))?;
+        ast_debug::print_to_file(&instrumented_ast, true, &mut file)?;
+    }
 
     // Run the compiler fully on the instrumented program
     let units = match move_continue_up_to(
@@ -112,56 +133,7 @@ pub fn run_spec_instrumenter(
     }
 
     // Output the instrumented compilation units
-    let output_base = Path::new(output_dir);
-    for unit in &verified_units {
-        let (module, source_map, file_path) = match unit.clone() {
-            CompiledUnit::Module {
-                module, source_map, ..
-            } => {
-                let module_id = module.self_id();
-                (
-                    module,
-                    source_map,
-                    output_base
-                        .join(MODULE_SUB_DIR)
-                        .join(module_id.address().short_str_lossless())
-                        .join(module_id.name().to_string()),
-                )
-            }
-            CompiledUnit::Script {
-                script,
-                source_map,
-                key,
-                ..
-            } => (
-                script.into_module().1,
-                source_map,
-                output_base.join(SCRIPT_SUB_DIR).join(key),
-            ),
-        };
-        // Dump the bytecode
-        fs::create_dir_all(file_path.parent().unwrap())?;
-        fs::write(
-            file_path.with_extension(MOVE_COMPILED_EXTENSION),
-            unit.serialize(),
-        )?;
-        // Disassemble the instrumented program if requested
-        if dump_bytecode {
-            let disas = Disassembler::new(
-                SourceMapping::new(source_map, module),
-                DisassemblerOptions {
-                    only_externally_visible: false,
-                    print_code: true,
-                    print_basic_blocks: true,
-                    print_locals: true,
-                },
-            );
-            fs::write(
-                file_path.with_extension(MOVE_DISASSEMBLY_EXTENSION),
-                disas.disassemble()?,
-            )?;
-        }
-    }
+    output_compiled_units(false, source_files, verified_units, output_dir)?;
 
     // Now we know that the compiled units have successfully compiled and passed the verification
     Ok(env)
