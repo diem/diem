@@ -17,7 +17,7 @@ jobs:
       matrix:
         #this is a painful solution since it doesn't pick up new branches, other option is lotsa shell in one job....
         #to test in canary add in canary here.....
-        target-branch: [main, release-1.1]
+        target-branch: [main, release-1.1, release-1.2]
     env:
       MESSAGE_PAYLOAD_FILE: /tmp/message
     steps:
@@ -182,17 +182,20 @@ jobs:
 
   prune-docker-images:
     runs-on: ubuntu-latest
+    environment:
+      name: Docker
+      url: https://hub.docker.com/u/diem
     steps:
       - uses: actions/checkout@v2
       - name: sign in to DockerHub; install image signing cert
         uses: ./.github/actions/dockerhub_login
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
-          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
-          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.ENV_DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.ENV_DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
       - name: prune Docker image
         if: ${{ github.ref != 'refs/heads/auto' }}
         run: |
-          scripts/dockerhub_prune.sh -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_PASSWORD }}" -x
+          scripts/dockerhub_prune.sh -u "${{ secrets.ENV_DOCKERHUB_USERNAME }}" -p "${{ secrets.ENV_DOCKERHUB_PASSWORD }}" -x

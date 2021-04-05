@@ -10,6 +10,9 @@ jobs:
     continue-on-error: false
     env:
       TAG: github-1
+    environment:
+      name: Docker
+      url: https://hub.docker.com/u/diem
     steps:
       - uses: actions/checkout@v2
         with:
@@ -21,24 +24,24 @@ jobs:
           workflow-file: docker-publish.yml
       - name: setup_aws_ecr_login
         run: |
-          echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.AWS_ECR_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
+          echo 'AWS_ECR_ACCOUNT_URL=${{ secrets.ENV_NOVI_ECR_AWS_ECR_ACCOUNT_NUM }}.dkr.ecr.${{ secrets.ENV_NOVI_ECR_AWS_REGION }}.amazonaws.com' >> $GITHUB_ENV
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.ENV_NOVI_ECR_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ENV_NOVI_ECR_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.ENV_NOVI_ECR_ECR_AWS_REGION }}
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
       - name: Sign in to dockerhub, install image signing cert.
         uses: ./.github/actions/dockerhub_login
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          key_material: ${{ secrets.DOCKERHUB_KEY_MATERIAL }}
-          key_name: ${{ secrets.DOCKERHUB_KEY_NAME }}
-          key_password: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          username: ${{ secrets.ENV_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.ENV_DOCKERHUB_PASSWORD }}
+          key_material: ${{ secrets.ENV_DOCKERHUB_KEY_MATERIAL }}
+          key_name: ${{ secrets.ENV_DOCKERHUB_KEY_NAME }}
+          key_password: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
       - name: should pre build docker images (targeting a release branch)?
         if: ${{ github.ref == 'refs/heads/auto' }}
         run: |
@@ -64,7 +67,7 @@ jobs:
           fi
           exit $success
         env:
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
       - name: pull pre images (or build if not pullable) and push release docker images if not on auto branch.
         if: ${{ github.ref != 'refs/heads/auto' }}
         run: |
@@ -85,13 +88,13 @@ jobs:
           fi
           exit $success
         env:
-          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.DOCKERHUB_KEY_PASSWORD }}
+          DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE: ${{ secrets.ENV_DOCKERHUB_KEY_PASSWORD }}
       - name: push to novi ecr
         if: ${{ always() && github.ref != 'refs/heads/auto' }}
         run: |
           #push to novi ecr with standard names
           BRANCH=$(echo "$GITHUB_REF" | sed 's|.*/||' )
           GIT_REV=$(git rev-parse --short=8 HEAD)
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+          aws ecr get-login-password --region ${{ secrets.ENV_NOVI_ECR_AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
           docker/docker_republish.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d

@@ -14,6 +14,8 @@ env:
 
 jobs:
   update-sccache-osx:
+    environment:
+      name: Sccache
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
@@ -48,7 +50,7 @@ jobs:
           echo stats:
           sccache -s
         env:
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
       - uses: ./.github/actions/build-teardown
         if: ${{ steps.rust-changes.outputs.changes-found == 'true' }}
