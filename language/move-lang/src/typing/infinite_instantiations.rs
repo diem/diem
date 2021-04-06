@@ -6,7 +6,7 @@ use crate::{
     errors::*,
     naming::ast::{self as N, TParam, Type, Type_},
     parser::ast::{FunctionName, ModuleIdent},
-    shared::unique_map::UniqueMap,
+    shared::{unique_map::UniqueMap, CompilationEnv},
     typing::ast as T,
 };
 use move_ir_types::location::*;
@@ -126,7 +126,10 @@ impl<'a> Context<'a> {
 // Modules
 //**************************************************************************************************
 
-pub fn modules(errors: &mut Errors, modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>) {
+pub fn modules(
+    compilation_env: &mut CompilationEnv,
+    modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>,
+) {
     let tparams = modules
         .key_cloned_iter()
         .map(|(mname, mdef)| {
@@ -140,7 +143,7 @@ pub fn modules(errors: &mut Errors, modules: &UniqueMap<ModuleIdent, T::ModuleDe
         .collect();
     modules
         .key_cloned_iter()
-        .for_each(|(mname, m)| module(errors, &tparams, mname, m))
+        .for_each(|(mname, m)| module(compilation_env, &tparams, mname, m))
 }
 
 macro_rules! scc_edges {
@@ -155,7 +158,7 @@ macro_rules! scc_edges {
 }
 
 fn module<'a>(
-    errors: &mut Errors,
+    compilation_env: &mut CompilationEnv,
     tparams: &'a BTreeMap<ModuleIdent, BTreeMap<FunctionName, &'a Vec<TParam>>>,
     mname: ModuleIdent,
     module: &T::ModuleDefinition,
@@ -172,7 +175,7 @@ fn module<'a>(
     petgraph_scc(&graph)
         .into_iter()
         .filter(|scc| scc_edges!(&graph, scc).any(|(_, e, _)| e == Edge::Nested))
-        .for_each(|scc| errors.push(cycle_error(context, &graph, scc)))
+        .for_each(|scc| compilation_env.add_error(cycle_error(context, &graph, scc)))
 }
 
 //**************************************************************************************************

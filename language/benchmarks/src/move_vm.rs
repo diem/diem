@@ -10,7 +10,10 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
-use move_lang::{compiled_unit::CompiledUnit, shared::Address};
+use move_lang::{
+    compiled_unit::CompiledUnit,
+    shared::{Address, Flags},
+};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
@@ -49,6 +52,7 @@ fn compile_modules() -> Vec<CompiledModule> {
         &[],
         None,
         false,
+        Flags::empty(),
     )
     .expect("Error compiling...");
     compiled_units

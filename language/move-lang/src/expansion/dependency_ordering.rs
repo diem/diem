@@ -15,7 +15,10 @@ use std::collections::BTreeMap;
 // Entry
 //**************************************************************************************************
 
-pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>) {
+pub fn verify(
+    compilation_env: &mut CompilationEnv,
+    modules: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
+) {
     let imm_modules = &modules;
     let mut context = Context::new(imm_modules);
     module_defs(&mut context, modules);
@@ -26,7 +29,7 @@ pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, E::Modul
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
             let error = cycle_error(&neighbors, cycle_ident);
-            errors.push(error);
+            compilation_env.add_error(error);
         }
         Ok(ordered_ids) => {
             let ordered_ids = ordered_ids.into_iter().cloned().collect::<Vec<_>>();

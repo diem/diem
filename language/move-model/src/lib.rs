@@ -15,7 +15,7 @@ use move_lang::{
     expansion::ast::{ModuleDefinition, Program},
     move_continue_up_to, move_parse,
     parser::ast::ModuleIdent,
-    shared::{unique_map::UniqueMap, Address},
+    shared::{unique_map::UniqueMap, Address, CompilationEnv, Flags},
     Pass as MovePass, PassResult as MovePassResult,
 };
 use vm::{
@@ -68,7 +68,9 @@ pub fn run_model_builder(
         env.add_documentation(file_id, documentation);
     }
     // Run the compiler up to expansion and clone a copy of the expansion program ast
+    let mut compilation_env = CompilationEnv::new(Flags::empty());
     let (expansion_ast, expansion_result) = match move_continue_up_to(
+        &mut compilation_env,
         None,
         MovePassResult::Parser(parsed_prog),
         MovePass::Expansion,
@@ -77,13 +79,16 @@ pub fn run_model_builder(
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
         }
-        Ok(MovePassResult::Expansion(eprog, eerrors)) => {
-            (eprog.clone(), MovePassResult::Expansion(eprog, eerrors))
-        }
+        Ok(MovePassResult::Expansion(eprog)) => (eprog.clone(), MovePassResult::Expansion(eprog)),
         Ok(_) => unreachable!(),
     };
     // Run the compiler fully to the compiled units
-    let units = match move_continue_up_to(None, expansion_result, MovePass::Compilation) {
+    let units = match move_continue_up_to(
+        &mut compilation_env,
+        None,
+        expansion_result,
+        MovePass::Compilation,
+    ) {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
             return Ok(env);

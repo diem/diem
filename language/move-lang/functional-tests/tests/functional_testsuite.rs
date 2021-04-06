@@ -8,7 +8,11 @@ use functional_tests::{
     testsuite,
 };
 use move_lang::{
-    self, command_line::read_bool_env_var, compiled_unit::CompiledUnit, errors,
+    self,
+    command_line::read_bool_env_var,
+    compiled_unit::CompiledUnit,
+    errors,
+    shared::{CompilationEnv, Flags},
     FullyCompiledProgram,
 };
 use once_cell::sync::Lazy;
@@ -46,7 +50,9 @@ impl<'a> MoveSourceCompiler<'a> {
             Ok(res) => res,
         };
 
+        let mut compilation_env = CompilationEnv::new(Flags::empty());
         let result = match move_lang::move_continue_up_to(
+            &mut compilation_env,
             Some(&self.pre_compiled_deps),
             move_lang::PassResult::Parser(pprog),
             move_lang::Pass::Compilation,
@@ -123,6 +129,7 @@ impl<'a> Compiler for MoveSourceCompiler<'a> {
 
 static DIEM_PRECOMPILED_STDLIB: Lazy<FullyCompiledProgram> = Lazy::new(|| {
     let (files, program_res) = move_lang::move_construct_pre_compiled_lib(
+        &mut CompilationEnv::new(Flags::empty()),
         &diem_framework::diem_stdlib_files(),
         None,
         false,

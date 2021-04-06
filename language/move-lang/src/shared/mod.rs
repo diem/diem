@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{command_line as cli, errors::Errors};
 use fallible::copy_from_slice::copy_slice_to_vec;
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
@@ -10,6 +11,7 @@ use std::{
     hash::Hash,
     sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
 };
+use structopt::*;
 
 pub mod ast_debug;
 pub mod remembering_unique_map;
@@ -198,6 +200,55 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 }
 
 //**************************************************************************************************
+// Compilation Env
+//**************************************************************************************************
+
+pub struct CompilationEnv {
+    flags: Flags,
+    errors: Errors,
+    // TODO(tzakian): Remove the global counter and use this counter instead
+    // pub counter: u64,
+}
+
+impl CompilationEnv {
+    pub fn new(flags: Flags) -> Self {
+        Self {
+            flags,
+            errors: Vec::new(),
+        }
+    }
+
+    pub fn add_error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
+        self.errors
+            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
+    }
+
+    pub fn add_errors(&mut self, es: Errors) {
+        self.errors.extend(es)
+    }
+
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    pub fn count_errors(&self) -> usize {
+        self.errors.len()
+    }
+
+    pub fn check_errors(&mut self) -> Result<(), Errors> {
+        if self.has_errors() {
+            Err(std::mem::take(&mut self.errors))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn flags(&self) -> &Flags {
+        &self.flags
+    }
+}
+
+//**************************************************************************************************
 // Counter
 //**************************************************************************************************
 
@@ -226,4 +277,24 @@ pub fn format_delim<T: fmt::Display, I: IntoIterator<Item = T>>(items: I, delim:
 
 pub fn format_comma<T: fmt::Display, I: IntoIterator<Item = T>>(items: I) -> String {
     format_delim(items, ", ")
+}
+
+//**************************************************************************************************
+// Flags
+//**************************************************************************************************
+
+#[derive(Debug, StructOpt, Clone)]
+pub struct Flags {
+    /// Compile in test mode
+    #[structopt(
+        short = cli::TEST_SHORT,
+        long = cli::TEST,
+    )]
+    test: bool,
+}
+
+impl Flags {
+    pub fn empty() -> Self {
+        Self { test: false }
+    }
 }

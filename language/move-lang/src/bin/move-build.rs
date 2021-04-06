@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::command_line::{self as cli};
+use move_lang::{
+    command_line::{self as cli},
+    shared::Flags,
+};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]
@@ -46,6 +49,9 @@ pub struct Options {
         long = cli::SOURCE_MAP,
     )]
     pub emit_source_map: bool,
+
+    #[structopt(subcommand)]
+    pub flags: Option<Flags>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -55,6 +61,7 @@ pub fn main() -> anyhow::Result<()> {
         out_dir,
         no_shadow,
         emit_source_map,
+        flags,
     } = Options::from_args();
 
     let interface_files_dir = format!("{}/generated_interface_files", out_dir);
@@ -63,6 +70,7 @@ pub fn main() -> anyhow::Result<()> {
         &dependencies,
         Some(interface_files_dir),
         !no_shadow,
+        flags.unwrap_or_else(Flags::empty),
     )?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

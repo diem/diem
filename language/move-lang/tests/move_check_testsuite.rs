@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_lang::{command_line::read_bool_env_var, move_compile};
+use move_lang::{command_line::read_bool_env_var, move_compile, shared::Flags};
 use move_lang_test_utils::*;
 use std::{fs, path::Path};
 
@@ -50,7 +50,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let exp_path = path.with_extension(EXP_EXT);
     let out_path = path.with_extension(OUT_EXT);
 
-    let (files, units_or_errors) = move_compile(&targets, &deps, None, false)?;
+    let (files, units_or_errors) = move_compile(&targets, &deps, None, false, Flags::empty())?;
     let errors = match units_or_errors {
         Err(errors) => errors,
         Ok(units) => move_lang::compiled_unit::verify_units(units).1,

@@ -8,7 +8,7 @@ use diem_types::{
     transaction::{Script, WriteSetPayload},
 };
 use handlebars::Handlebars;
-use move_lang::compiled_unit::CompiledUnit;
+use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
 use serde::Serialize;
 use std::{collections::HashMap, io::Write, path::PathBuf};
 use tempfile::NamedTempFile;
@@ -22,6 +22,7 @@ pub fn compile_script(source_file_str: String) -> Vec<u8> {
         &diem_framework::diem_stdlib_files(),
         None,
         false,
+        Flags::empty(),
     )
     .unwrap();
     let mut script_bytes = vec![];

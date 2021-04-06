@@ -17,7 +17,7 @@ use move_core_types::{
     transaction_argument::{convert_txn_args, TransactionArgument},
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_EXTENSION};
+use move_lang::{self, compiled_unit::CompiledUnit, shared::Flags, MOVE_COMPILED_EXTENSION};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
 use vm::{
@@ -234,7 +234,13 @@ fn check(state: OnDiskStateView, republish: bool, files: &[String], verbose: boo
     if verbose {
         println!("Checking Move files...");
     }
-    move_lang::move_check_and_report(files, &[state.interface_files_dir()?], None, republish)?;
+    move_lang::move_check_and_report(
+        files,
+        &[state.interface_files_dir()?],
+        None,
+        republish,
+        Flags::empty(),
+    )?;
     Ok(())
 }
 
@@ -254,6 +260,7 @@ fn publish(
         &[state.interface_files_dir()?],
         None,
         republish,
+        Flags::empty(),
     )?;
 
     let num_modules = compiled_units
@@ -355,6 +362,7 @@ fn run(
             &[state.interface_files_dir()?],
             None,
             false,
+            Flags::empty(),
         )?;
 
         let mut script_opt = None;

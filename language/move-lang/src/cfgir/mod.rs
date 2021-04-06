@@ -15,18 +15,17 @@ mod simplify_jumps;
 pub(crate) mod translate;
 
 use crate::{
-    errors::Errors,
     expansion::ast::AbilitySet,
     hlir::ast::*,
     parser::ast::{ModuleIdent, StructName, Var},
-    shared::unique_map::UniqueMap,
+    shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use cfg::*;
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn refine_inference_and_verify(
-    errors: &mut Errors,
+    compilation_env: &mut CompilationEnv,
     struct_declared_abilities: &UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     signature: &FunctionSignature,
     acquires: &BTreeMap<StructName, Loc>,
@@ -34,9 +33,9 @@ pub fn refine_inference_and_verify(
     cfg: &mut BlockCFG,
     infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    liveness::last_usage(errors, locals, cfg, infinite_loop_starts);
+    liveness::last_usage(compilation_env, locals, cfg, infinite_loop_starts);
     let locals_states = locals::verify(
-        errors,
+        compilation_env,
         struct_declared_abilities,
         signature,
         acquires,
@@ -45,7 +44,7 @@ pub fn refine_inference_and_verify(
     );
 
     liveness::release_dead_refs(&locals_states, locals, cfg, infinite_loop_starts);
-    borrows::verify(errors, signature, acquires, locals, cfg);
+    borrows::verify(compilation_env, signature, acquires, locals, cfg);
 }
 
 pub fn optimize(

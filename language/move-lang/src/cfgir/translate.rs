@@ -7,11 +7,10 @@ use crate::{
         ast::{self as G, BasicBlock, BasicBlocks, BlockInfo},
         cfg::BlockCFG,
     },
-    errors::Errors,
     expansion::ast::{AbilitySet, Value, Value_},
     hlir::ast::{self as H, Label},
     parser::ast::{ConstantName, FunctionName, ModuleIdent, StructName, Var},
-    shared::unique_map::UniqueMap,
+    shared::{unique_map::UniqueMap, CompilationEnv},
     FullyCompiledProgram,
 };
 use cfgir::ast::LoopInfo;
@@ -26,8 +25,8 @@ use std::{
 // Context
 //**************************************************************************************************
 
-struct Context {
-    errors: Errors,
+struct Context<'env> {
+    env: &'env mut CompilationEnv,
     struct_declared_abilities: UniqueMap<ModuleIdent, UniqueMap<StructName, AbilitySet>>,
     start: Option<Label>,
     loop_begin: Option<Label>,
@@ -41,11 +40,11 @@ struct Context {
     block_info: Vec<(Label, BlockInfo)>,
 }
 
-impl Context {
+impl<'env> Context<'env> {
     pub fn new(
+        env: &'env mut CompilationEnv,
         pre_compiled_lib: Option<&FullyCompiledProgram>,
         prog: &H::Program,
-        errors: Errors,
     ) -> Self {
         let all_modules = prog.modules.key_cloned_iter().chain(
             pre_compiled_lib
@@ -65,7 +64,7 @@ impl Context {
         )
         .unwrap();
         Context {
-            errors,
+            env,
             struct_declared_abilities,
             next_label: None,
             loop_begin: None,
@@ -77,15 +76,6 @@ impl Context {
             block_info: vec![],
             loop_bounds: BTreeMap::new(),
         }
-    }
-
-    pub fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
-        self.errors
-            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
-    }
-
-    pub fn get_errors(self) -> Errors {
-        self.errors
     }
 
     fn new_label(&mut self) -> Label {
@@ -160,11 +150,11 @@ impl Context {
 //**************************************************************************************************
 
 pub fn program(
+    compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
-    errors: Errors,
     prog: H::Program,
-) -> (G::Program, Errors) {
-    let mut context = Context::new(pre_compiled_lib, &prog, errors);
+) -> G::Program {
+    let mut context = Context::new(compilation_env, pre_compiled_lib, &prog);
     let H::Program {
         modules: hmodules,
         scripts: hscripts,
@@ -172,7 +162,7 @@ pub fn program(
     let modules = modules(&mut context, hmodules);
     let scripts = scripts(&mut context, hscripts);
 
-    (G::Program { modules, scripts }, context.get_errors())
+    G::Program { modules, scripts }
 }
 
 fn modules(
@@ -282,7 +272,7 @@ fn constant_(
     assert!(infinite_loop_starts.is_empty(), "{}", ICE_MSG);
     assert!(errors.is_empty(), "{}", ICE_MSG);
 
-    let mut fake_errors = vec![];
+    let num_previous_errors = context.env.count_errors();
     let fake_signature = H::FunctionSignature {
         type_parameters: vec![],
         parameters: vec![],
@@ -291,7 +281,7 @@ fn constant_(
     let fake_acquires = BTreeMap::new();
     let fake_infinite_loop_starts = BTreeSet::new();
     cfgir::refine_inference_and_verify(
-        &mut fake_errors,
+        context.env,
         &context.struct_declared_abilities,
         &fake_signature,
         &fake_acquires,
@@ -299,11 +289,15 @@ fn constant_(
         &mut cfg,
         &fake_infinite_loop_starts,
     );
-    assert!(fake_errors.is_empty(), "{}", ICE_MSG);
+    assert!(
+        num_previous_errors == context.env.count_errors(),
+        "{}",
+        ICE_MSG
+    );
     cfgir::optimize(&fake_signature, &locals, &mut cfg);
 
     if blocks.len() != 1 {
-        context.error(vec![(full_loc, CANNOT_FOLD)]);
+        context.env.add_error(vec![(full_loc, CANNOT_FOLD)]);
         return None;
     }
     let mut optimized_block = blocks.remove(&start).unwrap();
@@ -312,7 +306,7 @@ fn constant_(
         let e = match cmd_ {
             C::IgnoreAndPop { exp, .. } => exp,
             _ => {
-                context.error(vec![(*cloc, CANNOT_FOLD)]);
+                context.env.add_error(vec![(*cloc, CANNOT_FOLD)]);
                 continue;
             }
         };
@@ -331,7 +325,7 @@ fn check_constant_value(context: &mut Context, e: &H::Exp) {
     use H::UnannotatedExp_ as E;
     match &e.exp.value {
         E::Value(_) => (),
-        _ => context.error(vec![(e.exp.loc, CANNOT_FOLD)]),
+        _ => context.env.add_error(vec![(e.exp.loc, CANNOT_FOLD)]),
     }
 }
 
@@ -398,11 +392,11 @@ fn function_body(
             let (mut cfg, infinite_loop_starts, errors) =
                 BlockCFG::new(start, &mut blocks, &block_info);
             for e in errors {
-                context.error(e);
+                context.env.add_error(e);
             }
 
             cfgir::refine_inference_and_verify(
-                &mut context.errors,
+                context.env,
                 &context.struct_declared_abilities,
                 signature,
                 acquires,
@@ -410,7 +404,7 @@ fn function_body(
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            if context.errors.is_empty() {
+            if !context.env.has_errors() {
                 cfgir::optimize(signature, &locals, &mut cfg);
             }
 

@@ -50,13 +50,16 @@ impl Context {
 // Modules
 //**************************************************************************************************
 
-pub fn modules(errors: &mut Errors, modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>) {
+pub fn modules(
+    compilation_env: &mut CompilationEnv,
+    modules: &UniqueMap<ModuleIdent, T::ModuleDefinition>,
+) {
     modules
         .key_cloned_iter()
-        .for_each(|(mname, m)| module(errors, mname, m))
+        .for_each(|(mname, m)| module(compilation_env, mname, m))
 }
 
-fn module(errors: &mut Errors, mname: ModuleIdent, module: &T::ModuleDefinition) {
+fn module(compilation_env: &mut CompilationEnv, mname: ModuleIdent, module: &T::ModuleDefinition) {
     let context = &mut Context::new(mname);
     module
         .structs
@@ -69,7 +72,7 @@ fn module(errors: &mut Errors, mname: ModuleIdent, module: &T::ModuleDefinition)
     petgraph_scc(&graph)
         .into_iter()
         .filter(|scc| scc.len() > 1 || graph.contains_edge(scc[0], scc[0]))
-        .for_each(|scc| errors.push(cycle_error(context, &graph, scc[0])))
+        .for_each(|scc| compilation_env.add_error(cycle_error(context, &graph, scc[0])))
 }
 
 fn struct_def(context: &mut Context, sname: StructName, sdef: &N::StructDefinition) {

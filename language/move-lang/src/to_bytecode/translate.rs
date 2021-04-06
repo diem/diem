@@ -32,6 +32,7 @@ type CollectedInfo = (
 );
 
 fn extract_decls(
+    _compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: &G::Program,
 ) -> (
@@ -101,13 +102,13 @@ fn extract_decls(
 //**************************************************************************************************
 
 pub fn program(
+    compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     prog: G::Program,
-) -> Result<Vec<CompiledUnit>, Errors> {
+) -> Vec<CompiledUnit> {
     let mut units = vec![];
-    let mut errors = vec![];
 
-    let (orderings, sdecls, fdecls) = extract_decls(pre_compiled_lib, &prog);
+    let (orderings, sdecls, fdecls) = extract_decls(compilation_env, pre_compiled_lib, &prog);
     let G::Program {
         modules: gmodules,
         scripts: gscripts,
@@ -119,9 +120,9 @@ pub fn program(
         .collect::<Vec<_>>();
     source_modules.sort_by_key(|(_, mdef)| mdef.dependency_order);
     for (m, mdef) in source_modules {
-        match module(m, mdef, &orderings, &sdecls, &fdecls) {
+        match module(compilation_env, m, mdef, &orderings, &sdecls, &fdecls) {
             Ok(unit) => units.push(unit),
-            Err(err) => errors.push(err),
+            Err(err) => compilation_env.add_error(err),
         }
     }
     for (key, s) in gscripts {
@@ -132,6 +133,7 @@ pub fn program(
             function,
         } = s;
         match script(
+            compilation_env,
             key,
             constants,
             function_name,
@@ -141,14 +143,14 @@ pub fn program(
             &fdecls,
         ) {
             Ok(unit) => units.push(unit),
-            Err(err) => errors.push(err),
+            Err(err) => compilation_env.add_error(err),
         }
     }
-    check_errors(errors)?;
-    Ok(units)
+    units
 }
 
 fn module(
+    _compilation_env: &mut CompilationEnv,
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
@@ -223,6 +225,7 @@ fn module(
 }
 
 fn script(
+    _compilation_env: &mut CompilationEnv,
     key: String,
     constants: UniqueMap<ConstantName, G::Constant>,
     name: FunctionName,

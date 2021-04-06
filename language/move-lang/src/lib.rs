@@ -26,6 +26,7 @@ use compiled_unit::CompiledUnit;
 use errors::*;
 use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
+use shared::{CompilationEnv, Flags};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
@@ -72,10 +73,10 @@ pub enum Pass {
 
 pub enum PassResult {
     Parser(parser::ast::Program),
-    Expansion(expansion::ast::Program, Errors),
-    Naming(naming::ast::Program, Errors),
+    Expansion(expansion::ast::Program),
+    Naming(naming::ast::Program),
     Typing(typing::ast::Program),
-    HLIR(hlir::ast::Program, Errors),
+    HLIR(hlir::ast::Program),
     CFGIR(cfgir::ast::Program),
     Compilation(Vec<CompiledUnit>),
 }
@@ -105,7 +106,9 @@ pub fn move_check(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
+    flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
+    let mut compilation_env = CompilationEnv::new(flags);
     let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
@@ -118,7 +121,12 @@ pub fn move_check(
         pprog
     };
 
-    let result = match move_continue_up_to(None, PassResult::Parser(pprog), Pass::CFGIR) {
+    let result = match move_continue_up_to(
+        &mut compilation_env,
+        None,
+        PassResult::Parser(pprog),
+        Pass::CFGIR,
+    ) {
         Ok(PassResult::CFGIR(_)) => Ok(()),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -132,9 +140,15 @@ pub fn move_check_and_report(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
+    flags: Flags,
 ) -> anyhow::Result<FilesSourceText> {
-    let (files, errors_result) =
-        move_check(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
+    let (files, errors_result) = move_check(
+        targets,
+        deps,
+        interface_files_dir_opt,
+        sources_shadow_deps,
+        flags,
+    )?;
     unwrap_or_report_errors!(files, errors_result);
     Ok(files)
 }
@@ -152,7 +166,9 @@ pub fn move_compile(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
+    flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
+    let mut compilation_env = CompilationEnv::new(flags);
     let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
@@ -165,7 +181,12 @@ pub fn move_compile(
         pprog
     };
 
-    let result = match move_continue_up_to(None, PassResult::Parser(pprog), Pass::Compilation) {
+    let result = match move_continue_up_to(
+        &mut compilation_env,
+        None,
+        PassResult::Parser(pprog),
+        Pass::Compilation,
+    ) {
         Ok(PassResult::Compilation(units)) => Ok(units),
         Ok(_) => unreachable!(),
         Err(errors) => Err(errors),
@@ -179,9 +200,15 @@ pub fn move_compile_and_report(
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
+    flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, units_res) =
-        move_compile(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
+    let (files, units_res) = move_compile(
+        targets,
+        deps,
+        interface_files_dir_opt,
+        sources_shadow_deps,
+        flags,
+    )?;
     let units = unwrap_or_report_errors!(files, units_res);
     Ok((files, units))
 }
@@ -206,6 +233,7 @@ pub fn move_parse(
 /// Given a set of dependencies, precompile them and save the ASTs so that they can be used again
 /// to compile against without having to recompile these dependencies
 pub fn move_construct_pre_compiled_lib(
+    compilation_env: &mut CompilationEnv,
     deps: &[String],
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
@@ -231,20 +259,20 @@ pub fn move_construct_pre_compiled_lib(
     let mut cfgir = None;
     let mut compiled = None;
 
-    let save_result = |cur: &PassResult| match cur {
+    let save_result = |cur: &PassResult, env: &CompilationEnv| match cur {
         PassResult::Parser(prog) => {
             assert!(parser.is_none());
             parser = Some(prog.clone())
         }
-        PassResult::Expansion(eprog, errors) => {
-            if !errors.is_empty() {
+        PassResult::Expansion(eprog) => {
+            if env.has_errors() {
                 return;
             }
             assert!(expansion.is_none());
             expansion = Some(eprog.clone())
         }
-        PassResult::Naming(nprog, errors) => {
-            if !errors.is_empty() {
+        PassResult::Naming(nprog) => {
+            if env.has_errors() {
                 return;
             }
             assert!(naming.is_none());
@@ -254,8 +282,8 @@ pub fn move_construct_pre_compiled_lib(
             assert!(typing.is_none());
             typing = Some(tprog.clone())
         }
-        PassResult::HLIR(hprog, errors) => {
-            if !errors.is_empty() {
+        PassResult::HLIR(hprog) => {
+            if env.has_errors() {
                 return;
             }
             assert!(hlir.is_none());
@@ -270,14 +298,16 @@ pub fn move_construct_pre_compiled_lib(
             compiled = Some(units.clone())
         }
     };
-    let result = run(None, start, Pass::Compilation, save_result).map(|_| FullyCompiledProgram {
-        parser: parser.unwrap(),
-        expansion: expansion.unwrap(),
-        naming: naming.unwrap(),
-        typing: typing.unwrap(),
-        hlir: hlir.unwrap(),
-        cfgir: cfgir.unwrap(),
-        compiled: compiled.unwrap(),
+    let result = run(compilation_env, None, start, Pass::Compilation, save_result).map(|_| {
+        FullyCompiledProgram {
+            parser: parser.unwrap(),
+            expansion: expansion.unwrap(),
+            naming: naming.unwrap(),
+            typing: typing.unwrap(),
+            hlir: hlir.unwrap(),
+            cfgir: cfgir.unwrap(),
+            compiled: compiled.unwrap(),
+        }
     });
 
     Ok((files, result))
@@ -286,11 +316,12 @@ pub fn move_construct_pre_compiled_lib(
 /// Runs the compiler from a previous result until a stopping point.
 /// The stopping point is inclusive, meaning the pass specified by `until: Pass` will be run
 pub fn move_continue_up_to(
+    compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     pass: PassResult,
     until: Pass,
 ) -> Result<PassResult, Errors> {
-    run(pre_compiled_lib, pass, until, |_| ())
+    run(compilation_env, pre_compiled_lib, pass, until, |_, _| ())
 }
 
 //**************************************************************************************************
@@ -553,71 +584,54 @@ impl PassResult {
     pub fn equivalent_pass(&self) -> Pass {
         match self {
             PassResult::Parser(_) => Pass::Parser,
-            PassResult::Expansion(_, _) => Pass::Expansion,
-            PassResult::Naming(_, _) => Pass::Naming,
+            PassResult::Expansion(_) => Pass::Expansion,
+            PassResult::Naming(_) => Pass::Naming,
             PassResult::Typing(_) => Pass::Typing,
-            PassResult::HLIR(_, _) => Pass::HLIR,
+            PassResult::HLIR(_) => Pass::HLIR,
             PassResult::CFGIR(_) => Pass::CFGIR,
             PassResult::Compilation(_) => Pass::Compilation,
         }
     }
-
-    pub fn check_for_errors(self) -> Result<Self, Errors> {
-        Ok(match self {
-            result @ PassResult::Parser(_)
-            | result @ PassResult::Typing(_)
-            | result @ PassResult::CFGIR(_)
-            | result @ PassResult::Compilation(_) => result,
-            PassResult::Expansion(eprog, errors) => {
-                check_errors(errors)?;
-                PassResult::Expansion(eprog, Errors::new())
-            }
-            PassResult::Naming(nprog, errors) => {
-                check_errors(errors)?;
-                PassResult::Naming(nprog, Errors::new())
-            }
-            PassResult::HLIR(hprog, errors) => {
-                check_errors(errors)?;
-                PassResult::HLIR(hprog, Errors::new())
-            }
-        })
-    }
 }
 
 fn run(
+    compilation_env: &mut CompilationEnv,
     pre_compiled_lib: Option<&FullyCompiledProgram>,
     cur: PassResult,
     until: Pass,
-    mut result_check: impl FnMut(&PassResult),
+    mut result_check: impl FnMut(&PassResult, &CompilationEnv),
 ) -> Result<PassResult, Errors> {
-    result_check(&cur);
+    result_check(&cur, compilation_env);
     if cur.equivalent_pass() >= until {
         return Ok(cur);
     }
 
     match cur {
         PassResult::Parser(prog) => {
-            let (eprog, errors) = expansion::translate::program(pre_compiled_lib, prog);
+            let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
             run(
+                compilation_env,
                 pre_compiled_lib,
-                PassResult::Expansion(eprog, errors),
+                PassResult::Expansion(eprog),
                 until,
                 result_check,
             )
         }
-        PassResult::Expansion(eprog, errors) => {
-            let (nprog, errors) = naming::translate::program(pre_compiled_lib, eprog, errors);
+        PassResult::Expansion(eprog) => {
+            let nprog = naming::translate::program(compilation_env, pre_compiled_lib, eprog);
             run(
+                compilation_env,
                 pre_compiled_lib,
-                PassResult::Naming(nprog, errors),
+                PassResult::Naming(nprog),
                 until,
                 result_check,
             )
         }
-        PassResult::Naming(nprog, errors) => {
-            let (tprog, errors) = typing::translate::program(pre_compiled_lib, nprog, errors);
-            check_errors(errors)?;
+        PassResult::Naming(nprog) => {
+            let tprog = typing::translate::program(compilation_env, pre_compiled_lib, nprog);
+            compilation_env.check_errors()?;
             run(
+                compilation_env,
                 pre_compiled_lib,
                 PassResult::Typing(tprog),
                 until,
@@ -625,18 +639,20 @@ fn run(
             )
         }
         PassResult::Typing(tprog) => {
-            let (hprog, errors) = hlir::translate::program(pre_compiled_lib, tprog);
+            let hprog = hlir::translate::program(compilation_env, pre_compiled_lib, tprog);
             run(
+                compilation_env,
                 pre_compiled_lib,
-                PassResult::HLIR(hprog, errors),
+                PassResult::HLIR(hprog),
                 until,
                 result_check,
             )
         }
-        PassResult::HLIR(hprog, errors) => {
-            let (cprog, errors) = cfgir::translate::program(pre_compiled_lib, errors, hprog);
-            check_errors(errors)?;
+        PassResult::HLIR(hprog) => {
+            let cprog = cfgir::translate::program(compilation_env, pre_compiled_lib, hprog);
+            compilation_env.check_errors()?;
             run(
+                compilation_env,
                 pre_compiled_lib,
                 PassResult::CFGIR(cprog),
                 until,
@@ -644,9 +660,12 @@ fn run(
             )
         }
         PassResult::CFGIR(cprog) => {
-            let compiled_units = to_bytecode::translate::program(pre_compiled_lib, cprog)?;
+            let compiled_units =
+                to_bytecode::translate::program(compilation_env, pre_compiled_lib, cprog);
+            compilation_env.check_errors()?;
             assert!(until == Pass::Compilation);
             run(
+                compilation_env,
                 pre_compiled_lib,
                 PassResult::Compilation(compiled_units),
                 Pass::Compilation,

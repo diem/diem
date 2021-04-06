@@ -16,7 +16,7 @@ use diem_validator_interface::{
 use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
 use move_cli::OnDiskStateView;
 use move_core_types::effects::ChangeSet as MoveChanges;
-use move_lang::{compiled_unit::CompiledUnit, move_compile};
+use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};
 use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
@@ -358,8 +358,13 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
 fn compile_move_script(file_path: &str) -> Result<Vec<u8>> {
     let cur_path = file_path.to_owned();
     let targets = &vec![cur_path];
-    let (files, units_or_errors) =
-        move_compile(targets, &diem_framework::diem_stdlib_files(), None, false)?;
+    let (files, units_or_errors) = move_compile(
+        targets,
+        &diem_framework::diem_stdlib_files(),
+        None,
+        false,
+        Flags::empty(),
+    )?;
     let unit = match units_or_errors {
         Err(errors) => {
             let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);

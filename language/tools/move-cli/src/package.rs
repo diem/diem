@@ -14,7 +14,7 @@ use std::{
 use diem_framework::{COMPILED_EXTENSION, MOVE_EXTENSION};
 use move_lang::{
     compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
-    path_to_string,
+    path_to_string, shared::Flags,
 };
 use std::path::PathBuf;
 use vm::file_format::CompiledModule;
@@ -153,8 +153,13 @@ impl MovePackage {
             fs::create_dir_all(&pkg_bin_path)?;
 
             // compile the source files
-            let (_files, compiled_units) =
-                move_compile_and_report(&[path_to_string(&pkg_src_path)?], &src_dirs, None, false)?;
+            let (_files, compiled_units) = move_compile_and_report(
+                &[path_to_string(&pkg_src_path)?],
+                &src_dirs,
+                None,
+                false,
+                Flags::empty(),
+            )?;
 
             // save modules and ignore scripts
             for unit in compiled_units {

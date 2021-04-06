@@ -71,8 +71,9 @@ enum LoopInfo_ {
     BreakType(Box<Type>),
 }
 
-pub struct Context {
+pub struct Context<'env> {
     pub modules: UniqueMap<ModuleIdent, ModuleInfo>,
+    pub env: &'env mut CompilationEnv,
 
     pub current_module: Option<ModuleIdent>,
     pub current_function: Option<FunctionName>,
@@ -84,15 +85,13 @@ pub struct Context {
     pub constraints: Constraints,
 
     loop_info: LoopInfo,
-
-    errors: Errors,
 }
 
-impl Context {
+impl<'env> Context<'env> {
     pub fn new(
+        env: &'env mut CompilationEnv,
         pre_compiled_lib: Option<&FullyCompiledProgram>,
         prog: &N::Program,
-        errors: Errors,
     ) -> Self {
         let all_modules = prog.modules.key_cloned_iter().chain(
             pre_compiled_lib
@@ -134,10 +133,10 @@ impl Context {
             current_script_constants: None,
             return_type: None,
             constraints: vec![],
-            errors,
             locals: UniqueMap::new(),
             loop_info: LoopInfo(LoopInfo_::NotInLoop),
             modules,
+            env,
         }
     }
 
@@ -159,19 +158,6 @@ impl Context {
             defined_loc: cname.loc(),
             signature: cdef.signature.clone(),
         }));
-    }
-
-    pub fn error(&mut self, e: Vec<(Loc, impl Into<String>)>) {
-        self.errors
-            .push(e.into_iter().map(|(loc, msg)| (loc, msg.into())).collect())
-    }
-
-    pub fn get_errors(self) -> Errors {
-        self.errors
-    }
-
-    pub fn has_errors(&self) -> bool {
-        !self.errors.is_empty()
     }
 
     pub fn error_type(&mut self, loc: Loc) -> Type {
@@ -262,7 +248,7 @@ impl Context {
     pub fn get_local(&mut self, loc: Loc, verb: &str, var: &Var) -> Type {
         match self.get_local_(var) {
             None => {
-                self.error(vec![(
+                self.env.add_error(vec![(
                     loc,
                     format!("Invalid {}. Unbound local '{}'", verb, var),
                 )]);
@@ -711,7 +697,7 @@ pub fn make_field_type(
     let fields_map = match &sdef.fields {
         N::StructFields::Native(nloc) => {
             let nloc = *nloc;
-            context.error(vec![
+            context.env.add_error(vec![
                 (
                     loc,
                     format!("Unbound field '{}' for native struct '{}::{}'", field, m, n),
@@ -724,7 +710,7 @@ pub fn make_field_type(
     };
     match fields_map.get(field).cloned() {
         None => {
-            context.error(vec![(
+            context.env.add_error(vec![(
                 loc,
                 format!("Unbound field '{}' in '{}::{}'", field, m, n),
             )]);
@@ -763,7 +749,9 @@ pub fn make_constant_type(
         };
         let internal_msg = "Constants are internal to their module, and cannot can be accessed \
                             outside of their module";
-        context.error(vec![(loc, msg), (defined_loc, internal_msg.into())]);
+        context
+            .env
+            .add_error(vec![(loc, msg), (defined_loc, internal_msg.into())]);
     }
 
     signature
@@ -840,7 +828,7 @@ pub fn make_function_type(
                 FunctionVisibility::SCRIPT,
                 FunctionVisibility::FRIEND
             );
-            context.error(vec![
+            context.env.add_error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (defined_loc, internal_msg),
             ])
@@ -852,7 +840,7 @@ pub fn make_function_type(
                  or a '{}' function",
                 FunctionVisibility::SCRIPT
             );
-            context.error(vec![
+            context.env.add_error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
             ])
@@ -864,7 +852,7 @@ pub fn make_function_type(
                 "This function can only be called from a 'friend' of module '{}'",
                 m
             );
-            context.error(vec![
+            context.env.add_error(vec![
                 (loc, format!("Invalid call to '{}::{}'", m, f)),
                 (vis_loc, internal_msg),
             ])
@@ -966,7 +954,7 @@ fn solve_ability_constraint(
                 format!("'{}' constraint declared here", constraint),
             ));
         }
-        context.error(error)
+        context.env.add_error(error)
     }
 }
 
@@ -1064,7 +1052,7 @@ fn solve_implicitly_copyable_constraint(
     let tloc = ty.loc;
     if !is_implicitly_copyable(&context.subst, &ty) {
         let ty_str = error_format(&ty, &context.subst);
-        context.error(vec![
+        context.env.add_error(vec![
             (loc, format!("{} {}", msg, fix)),
             (
                 tloc,
@@ -1119,7 +1107,7 @@ fn solve_builtin_type_constraint(
                 (loc, format!("Invalid argument to '{}'", op)),
                 (tloc, tmsg()),
             ];
-            context.error(error)
+            context.env.add_error(error)
         }
     }
 }
@@ -1133,7 +1121,7 @@ fn solve_base_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: 
         Unit | Ref(_, _) | Apply(_, sp!(_, Multiple(_)), _) => {
             let tystr = error_format(ty, &context.subst);
             let tmsg = format!("Expected a single non-reference type, but found: {}", tystr);
-            context.error(vec![(loc, msg), (tyloc, tmsg)])
+            context.env.add_error(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Param(_) | Apply(_, _, _) => (),
     }
@@ -1151,7 +1139,7 @@ fn solve_single_type_constraint(context: &mut Context, loc: Loc, msg: String, ty
                 "Expected a single type, but found expression list type: {}",
                 tystr
             );
-            context.error(vec![(loc, msg), (tyloc, tmsg)])
+            context.env.add_error(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Ref(_, _) | Param(_) | Apply(_, _, _) => (),
     }
@@ -1334,7 +1322,7 @@ fn check_type_argument_arity<F: FnOnce() -> String>(
     let args_len = ty_args.len();
     let arity = tparam_constraints.len();
     if args_len != arity {
-        context.error(vec![(
+        context.env.add_error(vec![(
             loc,
             format!(
                 "Invalid instantiation of '{}'. Expected {} type argument(s) but got {}",

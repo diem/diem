@@ -38,7 +38,7 @@ pub fn function_body_(
                 N::BuiltinFunction_::BORROW_GLOBAL,
                 N::BuiltinFunction_::BORROW_GLOBAL_MUT
             );
-            context.error(vec![(*annotated_loc, msg)])
+            context.env.add_error(vec![(*annotated_loc, msg)])
         }
     }
 }
@@ -226,7 +226,9 @@ fn check_acquire_listed<F>(
             context.current_module.as_ref().unwrap(),
             global_type_name
         );
-        context.error(vec![(loc, msg()), (global_type_loc, tmsg)]);
+        context
+            .env
+            .add_error(vec![(loc, msg()), (global_type_loc, tmsg)]);
     }
 }
 
@@ -261,14 +263,14 @@ where
         }
         T::Ref(_, _) | T::Unit => {
             // Key ability is checked by constraints, and these types do not have Key
-            assert!(context.has_errors());
+            assert!(context.env.has_errors());
             return None;
         }
         T::Apply(Some(abilities), sp!(_, TN::Multiple(_)), _)
         | T::Apply(Some(abilities), sp!(_, TN::Builtin(_)), _) => {
             // Key ability is checked by constraints
             assert!(!abilities.has_ability_(Ability_::Key));
-            assert!(context.has_errors());
+            assert!(context.env.has_errors());
             return None;
         }
         T::Param(_) => {
@@ -279,7 +281,7 @@ where
                 ty_debug
             );
 
-            context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
+            context.env.add_error(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }
 
@@ -294,11 +296,11 @@ where
                  internal to the module'",
                 ty_debug
             );
-            context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
+            context.env.add_error(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }
         None => {
-            context.error(vec![(
+            context.env.add_error(vec![(
                 *loc,
                 "Global storage operator cannot be used from a 'script' function",
             )]);

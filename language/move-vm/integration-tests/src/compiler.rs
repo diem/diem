@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
-use move_lang::compiled_unit::CompiledUnit;
+use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
 use std::{fs::File, io::Write, path::Path};
 use tempfile::tempdir;
 use vm::file_format::{CompiledModule, CompiledScript};
@@ -21,6 +21,7 @@ pub fn compile_units(s: &str) -> Result<Vec<CompiledUnit>> {
         &[],
         None,
         false,
+        Flags::empty(),
     )?;
 
     dir.close()?;
@@ -43,6 +44,7 @@ pub fn compile_modules_in_file(path: &Path) -> Result<Vec<CompiledModule>> {
         &[],
         None,
         false,
+        Flags::empty(),
     )?;
 
     expect_modules(units).collect()

@@ -8,7 +8,7 @@ use crate::{
     errors::*,
     hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
-    shared::unique_map::UniqueMap,
+    shared::{unique_map::UniqueMap, CompilationEnv},
 };
 use move_ir_types::location::*;
 use state::*;
@@ -79,18 +79,19 @@ impl TransferFunctions for BorrowSafety {
 impl AbstractInterpreter for BorrowSafety {}
 
 pub fn verify(
-    errors: &mut Errors,
+    compilation_env: &mut CompilationEnv,
     signature: &FunctionSignature,
     acquires: &BTreeMap<StructName, Loc>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, BorrowState> {
-    let mut initial_state = BorrowState::initial(locals, acquires.clone(), !errors.is_empty());
+    let mut initial_state =
+        BorrowState::initial(locals, acquires.clone(), compilation_env.has_errors());
     initial_state.bind_arguments(&signature.parameters);
     let mut safety = BorrowSafety::new(locals);
     initial_state.canonicalize_locals(&safety.local_numbers);
-    let (final_state, mut es) = safety.analyze_function(cfg, initial_state);
-    errors.append(&mut es);
+    let (final_state, es) = safety.analyze_function(cfg, initial_state);
+    compilation_env.add_errors(es);
     final_state
 }
 

@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::command_line::{self as cli};
+use move_lang::{
+    command_line::{self as cli},
+    shared::Flags,
+};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]
@@ -41,6 +44,9 @@ pub struct Options {
         long = cli::NO_SHADOW,
     )]
     pub no_shadow: bool,
+
+    #[structopt(subcommand)]
+    pub flags: Option<Flags>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -49,9 +55,15 @@ pub fn main() -> anyhow::Result<()> {
         dependencies,
         out_dir,
         no_shadow,
+        flags,
     } = Options::from_args();
 
-    let _files =
-        move_lang::move_check_and_report(&source_files, &dependencies, out_dir, !no_shadow)?;
+    let _files = move_lang::move_check_and_report(
+        &source_files,
+        &dependencies,
+        out_dir,
+        !no_shadow,
+        flags.unwrap_or_else(Flags::empty),
+    )?;
     Ok(())
 }
