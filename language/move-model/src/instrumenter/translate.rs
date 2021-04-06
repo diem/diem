@@ -7,8 +7,9 @@ use move_ir_types::{location::sp, sp};
 use move_lang::{
     compiled_unit::{CompiledUnit, FunctionInfo},
     hlir::ast::{
-        Block, Command, Command_, Exp, Function, FunctionBody, FunctionBody_, ModuleDefinition,
-        Program, Script, SingleType, Statement, Statement_, UnannotatedExp_,
+        Block, Command, Command_, Exp, ExpListItem, Function, FunctionBody, FunctionBody_,
+        ModuleCall, ModuleDefinition, Program, Script, SingleType, Statement, Statement_,
+        UnannotatedExp_,
     },
     parser::ast::{FunctionName, ModuleIdent, Var},
     shared::{unique_map::UniqueMap, Address, Identifier},
@@ -415,22 +416,26 @@ fn expression(
     fenv: &FunctionEnv<'_>,
     info: &FunctionInfo,
     exp: Exp,
-    _locals: &mut UniqueMap<Var, SingleType>,
-    _block: &mut Block,
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
 ) -> Exp {
     let env = fenv.module_env.env;
     let spec = fenv.get_spec();
-    let Exp { ty, exp } = exp;
-    match &exp.value {
-        UnannotatedExp_::Spec(spec_id, _) => {
-            match info.spec_info.get(spec_id) {
+    let Exp {
+        ty,
+        exp: sp!(loc, exp_),
+    } = exp;
+    let new_exp = match exp_ {
+        // point of instrumentation
+        UnannotatedExp_::Spec(spec_id, vars) => {
+            match info.spec_info.get(&spec_id) {
                 None => env.error(
-                    &env.to_loc(&exp.loc),
+                    &env.to_loc(&loc),
                     "Unable to find the CodeOffset in FunctionInfo for this spec block",
                 ),
                 Some(spec_info) => match spec.on_impl.get(&spec_info.offset) {
                     None => env.error(
-                        &env.to_loc(&exp.loc),
+                        &env.to_loc(&loc),
                         "Unable to find the Spec in FunctionEnv for this spec block",
                     ),
                     Some(inline_spec) => {
@@ -439,10 +444,92 @@ fn expression(
                     }
                 },
             }
+            UnannotatedExp_::Spec(spec_id, vars)
         }
+        // propagate other cases
+        exp_ @ UnannotatedExp_::Unit { .. } => exp_,
+        exp_ @ UnannotatedExp_::Value(..) => exp_,
+        exp_ @ UnannotatedExp_::Move { .. } => exp_,
+        exp_ @ UnannotatedExp_::Copy { .. } => exp_,
+        exp_ @ UnannotatedExp_::Constant(..) => exp_,
+        UnannotatedExp_::ModuleCall(call) => {
+            let ModuleCall {
+                module,
+                name,
+                type_arguments,
+                arguments,
+                acquires,
+            } = *call;
+            let new_arguments = expression(fenv, info, *arguments, locals, block);
+            let new_call = ModuleCall {
+                module,
+                name,
+                type_arguments,
+                arguments: Box::new(new_arguments),
+                acquires,
+            };
+            UnannotatedExp_::ModuleCall(Box::new(new_call))
+        }
+        UnannotatedExp_::Builtin(func, arguments) => {
+            let new_arguments = expression(fenv, info, *arguments, locals, block);
+            UnannotatedExp_::Builtin(func, Box::new(new_arguments))
+        }
+        UnannotatedExp_::Freeze(ref_exp) => {
+            let new_ref_exp = expression(fenv, info, *ref_exp, locals, block);
+            UnannotatedExp_::Freeze(Box::new(new_ref_exp))
+        }
+        UnannotatedExp_::Dereference(ref_exp) => {
+            let new_ref_exp = expression(fenv, info, *ref_exp, locals, block);
+            UnannotatedExp_::Dereference(Box::new(new_ref_exp))
+        }
+        UnannotatedExp_::Cast(sub_exp, ty) => {
+            let new_sub_exp = expression(fenv, info, *sub_exp, locals, block);
+            UnannotatedExp_::Cast(Box::new(new_sub_exp), ty)
+        }
+        UnannotatedExp_::UnaryExp(op, sub_exp) => {
+            let new_sub_exp = expression(fenv, info, *sub_exp, locals, block);
+            UnannotatedExp_::UnaryExp(op, Box::new(new_sub_exp))
+        }
+        UnannotatedExp_::BinopExp(lhs, op, rhs) => {
+            let new_lhs = expression(fenv, info, *lhs, locals, block);
+            let new_rhs = expression(fenv, info, *rhs, locals, block);
+            UnannotatedExp_::BinopExp(Box::new(new_lhs), op, Box::new(new_rhs))
+        }
+        UnannotatedExp_::Pack(struct_name, base_type, fields) => {
+            let new_fields = fields
+                .into_iter()
+                .map(|(field, ty, field_exp)| {
+                    (field, ty, expression(fenv, info, field_exp, locals, block))
+                })
+                .collect();
+            UnannotatedExp_::Pack(struct_name, base_type, new_fields)
+        }
+        UnannotatedExp_::ExpList(items) => {
+            let new_items = items
+                .into_iter()
+                .map(|item| match item {
+                    ExpListItem::Single(sub_exp, ty) => {
+                        ExpListItem::Single(expression(fenv, info, sub_exp, locals, block), ty)
+                    }
+                    ExpListItem::Splat(sub_loc, sub_exp, tys) => ExpListItem::Splat(
+                        sub_loc,
+                        expression(fenv, info, sub_exp, locals, block),
+                        tys,
+                    ),
+                })
+                .collect();
+            UnannotatedExp_::ExpList(new_items)
+        }
+        UnannotatedExp_::Borrow(is_mut, sub_exp, field) => {
+            let new_sub_exp = expression(fenv, info, *sub_exp, locals, block);
+            UnannotatedExp_::Borrow(is_mut, Box::new(new_sub_exp), field)
+        }
+        exp_ @ UnannotatedExp_::BorrowLocal(..) => exp_,
+        exp_ @ UnannotatedExp_::Unreachable => exp_,
         UnannotatedExp_::UnresolvedError => unreachable!(),
-        // TODO (mengxu), handle other expression types
-        _ => {}
+    };
+    Exp {
+        ty,
+        exp: sp(loc, new_exp),
     }
-    Exp { ty, exp }
 }
