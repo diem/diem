@@ -123,7 +123,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        release-branch: [release-1.1]
+        release-branch: [release-1.1, release-1.2]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -154,7 +154,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-branch: [main, release-1.1]
+        target-branch: [main, release-1.1, release-1.2]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -170,9 +170,6 @@ jobs:
           cd /opt/git/diem/
           MVP_TEST_INCONSISTENCY=1 cargo test -p move-prover --release >> $MESSAGE_PAYLOAD_FILE
           sccache -s
-        env:
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
       - uses: ./.github/actions/slack-file
         with:
           webhook: ${{ secrets.WEBHOOK_MOVE_PROVER }}

@@ -24,6 +24,7 @@ jobs:
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
       build-images: ${{ steps.need-build-images.outputs.changes-found }}
       need-base-images: ${{ steps.need-base-images.outputs.need-extra }}
+      test-rust-environment: ${{ steps.environment.outputs.name }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
       test-helm: ${{ steps.helm-changes.outputs.changes-found }}
       test-dev-setup: ${{ steps.dev-setup-sh-changes.outputs.changes-found }}
@@ -62,6 +63,15 @@ jobs:
             echo "Will run land_blocking_compat suite"
           fi
           echo "::set-output name=need-extra::$(echo $res)";
+      - id: environment
+        name: Which environment should we use for secrets.
+        run: |
+          output=None
+          if ${{ github.event_name == 'push' }}; then
+            echo "will use sccache environment for rust builds";
+            output=Sccache
+          fi
+          echo "::set-output name=name::$(echo $output)";
       - id: rust-changes
         name: find rust/cargo changes.
         uses: ./.github/actions/matches
@@ -107,9 +117,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - name: build image with dev-setup.sh
         run: docker build -f docker/ci/${{ matrix.target_os }}/Dockerfile -t diem/build_environment:test .
 
@@ -431,9 +438,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - uses: ./.github/actions/build-setup
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - name: shell lints
         run: |
           shellcheck scripts/dev_setup.sh && \
@@ -457,9 +461,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.4
         with:
@@ -480,7 +481,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 50
     needs: prepare
-    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'pull_request' }}
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
@@ -490,9 +491,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.4
         with:
@@ -505,16 +503,58 @@ jobs:
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
       - name: run doctests
         run: |
           $pre_command && cargo xtest --doc --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: unit-test-results
+          path: target/junit-reports/unit-test.xml
+      - uses: ./.github/actions/build-teardown
+
+  unit-test-sccache:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 50
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'push' }}
+    environment:
+      name: Sccache
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run unit tests
+        run: |
+          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
+          sccache -s
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
+      - name: run doctests
+        run: |
+          $pre_command && cargo xtest --doc --jobs ${max_threads} --unit --changed-since "origin/$TARGET_BRANCH"
+          sccache -s
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
       - name: upload unit test results
         if: always()
         uses: actions/upload-artifact@v2
@@ -527,7 +567,7 @@ jobs:
     runs-on: ubuntu-latest-xl
     timeout-minutes: 60
     needs: prepare
-    if: ${{ needs.prepare.outputs.test-rust == 'true' }}
+    if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'pull_request' }}
     container:
       image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
       volumes:
@@ -537,9 +577,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 #get all the history!!!
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.4
         with:
@@ -550,8 +587,41 @@ jobs:
         run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
-          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      - name: upload codegen test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: codegen-unit-test-results
+          path: target/junit-reports/codegen-unit-test.xml
+      - uses: ./.github/actions/build-teardown
+
+  codegen-unit-test-sccache:
+    runs-on: ubuntu-latest-xl
+    timeout-minutes: 60
+    needs: prepare
+    if: ${{ needs.prepare.outputs.test-rust == 'true' && github.event_name == 'push' }}
+    environment: Sccache
+    container:
+      image: diem/build_environment:${{ needs.prepare.outputs.changes-target-branch }}
+      volumes:
+        - "/home/runner/work/diem/diem:/opt/git/diem"
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0 #get all the history!!!
+      - uses: ./.github/actions/build-setup
+      - uses: actions/cache@v2.1.4
+        with:
+          path: "/opt/cargo/git\n/opt/cargo/registry\n/opt/cargo/.package-cache"
+          key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: "crates-${{ runner.os }}"
+      - name: run codegen unit tests
+        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
+        env:
+          TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
+          SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
+          SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.ENV_DIEM_S3_AWS_SECRET_ACCESS_KEY }}
       - name: upload codegen test results
         if: always()
         uses: actions/upload-artifact@v2
@@ -648,9 +718,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: ./.github/actions/check-machine
-        with:
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - name: install expect
         run: |
           sudo apt --assume-yes update
@@ -694,11 +761,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: ./.github/actions/check-machine
-        with:
-          min-cpu: 2
-          min-ram: 7
-          webhook-gha-hardware: ${{ secrets.WEBHOOK_GHA_HARDWARE }}
       - uses: ./.github/actions/build-setup
       - uses: actions/cache@v2.1.4
         with:
