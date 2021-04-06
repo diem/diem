@@ -17,16 +17,16 @@ pub struct LocalAccount {
     /// Address of the account.
     address: AccountAddress,
     /// Authentication key of the account.
-    key_ring: KeyRing,
+    key: AccountKey,
     /// Latest known sequence number of the account, it can be different from validator.
     sequence_number: u64,
 }
 
 impl LocalAccount {
-    pub fn new<T: Into<KeyRing>>(address: AccountAddress, key_ring: T) -> Self {
+    pub fn new<T: Into<AccountKey>>(address: AccountAddress, key: T) -> Self {
         Self {
             address,
-            key_ring: key_ring.into(),
+            key: key.into(),
             sequence_number: 0,
         }
     }
@@ -35,10 +35,10 @@ impl LocalAccount {
     where
         R: ::rand_core::RngCore + ::rand_core::CryptoRng,
     {
-        let key_ring = KeyRing::generate(rng);
-        let address = key_ring.authentication_key().derived_address();
+        let key = AccountKey::generate(rng);
+        let address = key.authentication_key().derived_address();
 
-        Self::new(address, key_ring)
+        Self::new(address, key)
     }
 
     pub fn sign_transaction(&self, txn: RawTransaction) -> SignedTransaction {
@@ -64,15 +64,15 @@ impl LocalAccount {
     }
 
     pub fn private_key(&self) -> &Ed25519PrivateKey {
-        self.key_ring.private_key()
+        self.key.private_key()
     }
 
     pub fn public_key(&self) -> &Ed25519PublicKey {
-        self.key_ring.public_key()
+        self.key.public_key()
     }
 
     pub fn authentication_key(&self) -> AuthenticationKey {
-        self.key_ring.authentication_key()
+        self.key.authentication_key()
     }
 
     pub fn sequence_number(&self) -> u64 {
@@ -83,18 +83,18 @@ impl LocalAccount {
         &mut self.sequence_number
     }
 
-    pub fn rotate_key<T: Into<KeyRing>>(&mut self, new_key: T) -> KeyRing {
-        std::mem::replace(&mut self.key_ring, new_key.into())
+    pub fn rotate_key<T: Into<AccountKey>>(&mut self, new_key: T) -> AccountKey {
+        std::mem::replace(&mut self.key, new_key.into())
     }
 }
 
-pub struct KeyRing {
+pub struct AccountKey {
     private_key: Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     authentication_key: AuthenticationKey,
 }
 
-impl KeyRing {
+impl AccountKey {
     pub fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand_core::RngCore + ::rand_core::CryptoRng,
@@ -127,7 +127,7 @@ impl KeyRing {
     }
 }
 
-impl From<Ed25519PrivateKey> for KeyRing {
+impl From<Ed25519PrivateKey> for AccountKey {
     fn from(private_key: Ed25519PrivateKey) -> Self {
         Self::from_private_key(private_key)
     }

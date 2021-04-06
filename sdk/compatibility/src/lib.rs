@@ -12,7 +12,7 @@ use diem_sdk::{
         stdlib::{self, ScriptCall},
         Currency, DualAttestationMessage,
     },
-    types::{account_address::AccountAddress, transaction::Script, KeyRing},
+    types::{account_address::AccountAddress, transaction::Script, AccountKey},
 };
 
 mod env;
@@ -386,7 +386,7 @@ fn rotate_authentication_key() -> Result<()> {
     env.coffer()
         .fund(currency, account.authentication_key(), amount)?;
 
-    let rotated_key = KeyRing::generate(&mut rand::rngs::OsRng);
+    let rotated_key = AccountKey::generate(&mut rand::rngs::OsRng);
 
     // Submit txn to rotate the auth key
     let txn = account.sign_with_transaction_builder(
