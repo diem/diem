@@ -1,5 +1,5 @@
 # PingCommand
-Th `PingCommand` primarly provides a robust method for healthcheck for an off-chain service. In addition, its simplicity makes it an ideal candidate as the first milestone for validating a correctly implemented off-chain service. Upon receipt of a `PingCommand` the recipient responsds with an empty `CommandResponseObject` completing the exchange. Hence this protocol has no requirements for persistency, so long as the remote service is available and online, it is expected to respond.
+The `PingCommand` primarily provides a robust method for health-checking an off-chain service. In addition, its simplicity makes it an ideal candidate as the first milestone for validating a correctly implemented off-chain service. Upon receipt of a `PingCommand` the recipient responds with an empty `CommandResponseObject` completing the exchange. Hence this protocol has no requirements for persistency, so long as the remote service is available and online, it is expected to respond.
 
 `PingCommand` Object:
 ```
