@@ -477,9 +477,9 @@ pub static PENDING_PEER_NETWORK_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
 
 pub static NETWORK_RATE_LIMIT_METRICS: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
-        "diem_network_rate_limit_test",
+        "diem_network_rate_limit",
         "Network Rate Limiting Metrics",
-        &["direction", "key", "metric"]
+        &["direction", "metric"]
     )
     .unwrap()
 });
