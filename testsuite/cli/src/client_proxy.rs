@@ -219,7 +219,7 @@ impl ClientProxy {
         self.accounts.get(address_num)
     }
 
-    fn get_account_data(&self, address: &AccountAddress) -> Result<(usize, &AccountData)> {
+    fn get_account_data_and_id(&self, address: &AccountAddress) -> Result<(usize, &AccountData)> {
         for (index, acc) in self.accounts.iter().enumerate() {
             if &acc.address == address {
                 return Ok((index, acc));
@@ -230,6 +230,22 @@ impl ClientProxy {
                      accounts, run: 'account list'",
             address
         )
+    }
+
+    fn get_account_data(&self, address: &AccountAddress) -> Result<&AccountData> {
+        if let Some(account) = &self.diem_root_account {
+            if &account.address == address {
+                return Ok(account);
+            }
+        }
+
+        if let Some(account) = &self.tc_account {
+            if &account.address == address {
+                return Ok(account);
+            }
+        }
+
+        self.get_account_data_and_id(address).map(|(_, data)| data)
     }
 
     /// Returns the account index that should be used by user to reference this account
@@ -409,7 +425,7 @@ impl ClientProxy {
         let (sender_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
 
-        let (_, sender) = self.get_account_data(&sender_address)?;
+        let sender = self.get_account_data(&sender_address)?;
 
         let currency_to_add = space_delim_strings[2];
         let currency_code = from_currency_code_string(currency_to_add).map_err(|_| {
@@ -758,7 +774,7 @@ impl ClientProxy {
             .map_err(|_| format_err!("Invalid currency code {} specified", coin_currency))?;
         let gas_currency_code = gas_currency_code.or(Some(coin_currency));
 
-        let (sender_account_ref_id, sender) = self.get_account_data(sender_address)?;
+        let (sender_account_ref_id, sender) = self.get_account_data_and_id(sender_address)?;
         let program = transaction_builder::encode_peer_to_peer_with_metadata_script(
             type_tag_for_currency_code(currency_code),
             *receiver_address,
@@ -952,7 +968,7 @@ impl ClientProxy {
     ) -> Result<()> {
         let (sender_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let (_, sender) = self.get_account_data(&sender_address)?;
+        let sender = self.get_account_data(&sender_address)?;
         let txn = self.create_txn_to_submit(program, &sender, None, None, None)?;
 
         self.submit_and_wait(&txn, true)?;
@@ -1293,7 +1309,7 @@ impl ClientProxy {
                 testnet_dd_account.sequence_number = seq;
             }
         }
-        if let Ok((ref_id, _)) = self.get_account_data(address) {
+        if let Ok((ref_id, _)) = self.get_account_data_and_id(address) {
             // assumption follows from invariant
             let mut account_data: &mut AccountData = self.accounts.get_mut(ref_id).unwrap();
             account_data.status = AccountStatus::Persisted;
