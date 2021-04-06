@@ -39,3 +39,6 @@ harness = false
 [[test]]
 name = "instrumentation"
 harness = false
+
+[[test]]
+name = "instrument_diem"

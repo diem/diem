@@ -438,9 +438,8 @@ fn expression(
                         &env.to_loc(&loc),
                         "Unable to find the Spec in FunctionEnv for this spec block",
                     ),
-                    Some(inline_spec) => {
-                        // TODO (mengxu) replace with expr hanndler
-                        assert!(inline_spec.loc.is_some())
+                    Some(_inline_spec) => {
+                        // TODO (mengxu) replace with expr handler
                     }
                 },
             }
