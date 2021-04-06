@@ -23,7 +23,6 @@ use diem_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
 };
-use network::counters;
 use std::{
     cmp::min,
     convert::{TryFrom, TryInto},
@@ -368,11 +367,9 @@ pub fn get_currencies(
 }
 
 /// Returns the number of peers this node is connected to
-pub fn get_network_status(role: &str) -> Result<u64, JsonRpcError> {
-    let peers = counters::DIEM_NETWORK_PEERS
-        .get_metric_with_label_values(&[role, "connected"])
-        .map_err(|e| JsonRpcError::internal_error(e.to_string()))?;
-    Ok(peers.get() as u64)
+pub fn get_network_status(_role: &str) -> Result<u64, JsonRpcError> {
+    // TODO: The underlying metric is deprecated, and we need a different way of communicating this number that doesn't need the peer Id
+    Ok(0)
 }
 
 /// Returns proof of new state relative to version known to client

@@ -380,11 +380,6 @@ where
             .count();
         let outbound = total.saturating_sub(inbound);
 
-        // TODO: Work with PEs to update this to be a `NetworkId` rather than `RoleType`
-        counters::DIEM_NETWORK_PEERS
-            .with_label_values(&[self.network_context.role().as_str(), "connected"])
-            .set(total as i64);
-
         counters::connections(&self.network_context, ConnectionOrigin::Inbound).set(inbound as i64);
         counters::connections(&self.network_context, ConnectionOrigin::Outbound)
             .set(outbound as i64);

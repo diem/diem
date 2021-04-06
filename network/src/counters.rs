@@ -24,15 +24,6 @@ pub const SENT_LABEL: &str = "sent";
 pub const SUCCEEDED_LABEL: &str = "succeeded";
 pub const FAILED_LABEL: &str = "failed";
 
-pub static DIEM_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
-    register_int_gauge_vec!(
-        "diem_network_peers",
-        "Number of peers, and their associated state",
-        &["role_type", "state"]
-    )
-    .unwrap()
-});
-
 pub static DIEM_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "diem_connections",
