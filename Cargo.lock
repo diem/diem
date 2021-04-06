@@ -1427,6 +1427,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-backend"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "ctrlc",
+ "debug-interface",
+ "diem-client",
+ "diem-config",
+ "diem-crypto",
+ "diem-genesis-tool",
+ "diem-logger",
+ "diem-temppath",
+ "diem-types",
+ "diem-workspace-hack",
+ "generate-key",
+ "reqwest",
+ "structopt 0.3.21",
+ "thiserror",
+]
+
+[[package]]
 name = "diem-bitvec"
 version = "0.1.0"
 dependencies = [

@@ -145,6 +145,7 @@ members = [
     "testsuite/cli",
     "testsuite/cli/diem-wallet",
     "testsuite/cluster-test",
+    "testsuite/diem-backend",
     "testsuite/diem-fuzzer",
     "testsuite/diem-fuzzer/fuzz",
     "testsuite/diem-swarm",
