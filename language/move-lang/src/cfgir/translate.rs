@@ -181,6 +181,7 @@ fn module(
     mdef: H::ModuleDefinition,
 ) -> (ModuleIdent, G::ModuleDefinition) {
     let H::ModuleDefinition {
+        attributes,
         is_source_module,
         dependency_order,
         friends,
@@ -194,6 +195,7 @@ fn module(
     (
         module_ident,
         G::ModuleDefinition {
+            attributes,
             is_source_module,
             dependency_order,
             friends,
@@ -216,6 +218,7 @@ fn scripts(
 
 fn script(context: &mut Context, hscript: H::Script) -> G::Script {
     let H::Script {
+        attributes,
         loc,
         constants: hconstants,
         function_name,
@@ -224,6 +227,7 @@ fn script(context: &mut Context, hscript: H::Script) -> G::Script {
     let constants = hconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name.clone(), hfunction);
     G::Script {
+        attributes,
         loc,
         constants,
         function_name,
@@ -237,6 +241,7 @@ fn script(context: &mut Context, hscript: H::Script) -> G::Script {
 
 fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Constant {
     let H::Constant {
+        attributes,
         loc,
         signature,
         value: (locals, block),
@@ -246,6 +251,7 @@ fn constant(context: &mut Context, _name: ConstantName, c: H::Constant) -> G::Co
     let value = final_value.and_then(move_value_from_exp);
 
     G::Constant {
+        attributes,
         loc,
         signature,
         value,
@@ -355,11 +361,13 @@ fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
 //**************************************************************************************************
 
 fn function(context: &mut Context, _name: FunctionName, f: H::Function) -> G::Function {
+    let attributes = f.attributes;
     let visibility = f.visibility;
     let signature = f.signature;
     let acquires = f.acquires;
     let body = function_body(context, &signature, &acquires, f.body);
     G::Function {
+        attributes,
         visibility,
         signature,
         acquires,

@@ -495,7 +495,7 @@ fn shadow_lib_module_definitions(pprog: parser::ast::Program) -> parser::ast::Pr
     let mut modules_defined_in_src = BTreeSet::new();
     for def in &source_definitions {
         match def {
-            parser::ast::Definition::Address(_, addr, modules) => {
+            parser::ast::Definition::Address(_, _, addr, modules) => {
                 for module in modules {
                     modules_defined_in_src.insert((*addr, module.name.clone()));
                 }
@@ -517,7 +517,7 @@ fn shadow_lib_module_definitions(pprog: parser::ast::Program) -> parser::ast::Pr
     let lib_definitions = lib_definitions
         .into_iter()
         .filter(|def| match def {
-            parser::ast::Definition::Address(_, addr, modules) => !modules
+            parser::ast::Definition::Address(_, _, addr, modules) => !modules
                 .iter()
                 .any(|module| modules_defined_in_src.contains(&(*addr, module.name.clone()))),
             parser::ast::Definition::Module(module) => !modules_defined_in_src.contains(&(

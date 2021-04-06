@@ -56,6 +56,7 @@ fn module(
     assert!(context.current_script_constants.is_none());
     context.current_module = Some(ident);
     let N::ModuleDefinition {
+        attributes,
         is_source_module,
         dependency_order,
         friends,
@@ -70,6 +71,7 @@ fn module(
     let functions = nfunctions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
+        attributes,
         is_source_module,
         dependency_order,
         friends,
@@ -93,6 +95,7 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     assert!(context.current_script_constants.is_none());
     context.current_module = None;
     let N::Script {
+        attributes,
         loc,
         constants: nconstants,
         function_name,
@@ -103,6 +106,7 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     let function = function(context, function_name.clone(), nfunction, true);
     context.current_script_constants = None;
     T::Script {
+        attributes,
         loc,
         function_name,
         function,
@@ -164,6 +168,7 @@ fn function(
 ) -> T::Function {
     let loc = name.loc();
     let N::Function {
+        attributes,
         visibility,
         mut signature,
         body: n_body,
@@ -199,6 +204,7 @@ fn function(
     let body = function_body(context, &acquires, n_body);
     context.current_function = None;
     T::Function {
+        attributes,
         visibility,
         signature,
         acquires,
@@ -271,6 +277,7 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
     context.reset_for_module_item();
 
     let N::Constant {
+        attributes,
         loc,
         signature,
         value: nvalue,
@@ -303,6 +310,7 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
     check_valid_constant::exp(context, &value);
 
     T::Constant {
+        attributes,
         loc,
         signature,
         value,

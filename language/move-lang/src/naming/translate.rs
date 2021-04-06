@@ -349,6 +349,7 @@ fn module(
 ) -> N::ModuleDefinition {
     context.current_module = Some(ident);
     let E::ModuleDefinition {
+        attributes,
         loc: _loc,
         is_source_module,
         dependency_order,
@@ -374,6 +375,7 @@ fn module(
     });
     context.restore_unscoped(unscoped);
     N::ModuleDefinition {
+        attributes,
         is_source_module,
         dependency_order,
         friends,
@@ -395,6 +397,7 @@ fn scripts(
 
 fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let E::Script {
+        attributes,
         loc,
         constants: econstants,
         function_name,
@@ -414,6 +417,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let function = function(context, function_name.clone(), efunction);
     context.restore_unscoped(outer_unscoped);
     N::Script {
+        attributes,
         loc,
         constants,
         function_name,
@@ -424,7 +428,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
 //**************************************************************************************************
 // Friends
 //**************************************************************************************************
-fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
+fn friend(context: &mut Context, mident: ModuleIdent, friend: E::Friend) -> Option<E::Friend> {
     let current_mident = context.current_module.as_ref().unwrap();
     if mident.value.0 != current_mident.value.0 {
         // NOTE: in alignment with the bytecode verifier, this constraint is a policy decision
@@ -432,18 +436,18 @@ fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
         // rely on the assumption that friend modules must reside within the same account address.
         let msg = "Cannot declare modules out of the current address as a friend";
         context.env.add_error(vec![
-            (loc, "Invalid friend declaration"),
+            (friend.loc, "Invalid friend declaration"),
             (mident.loc(), msg),
         ]);
         None
     } else if &mident == current_mident {
         context.env.add_error(vec![
-            (loc, "Invalid friend declaration"),
+            (friend.loc, "Invalid friend declaration"),
             (mident.loc(), "Cannot declare the module itself as a friend"),
         ]);
         None
-    } else if context.resolve_module(loc, &mident) {
-        Some(loc)
+    } else if context.resolve_module(friend.loc, &mident) {
+        Some(friend)
     } else {
         assert!(context.env.has_errors());
         None
@@ -455,11 +459,13 @@ fn friend(context: &mut Context, mident: ModuleIdent, loc: Loc) -> Option<Loc> {
 //**************************************************************************************************
 
 fn function(context: &mut Context, _name: FunctionName, f: E::Function) -> N::Function {
+    let attributes = f.attributes;
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
     let acquires = function_acquires(context, f.acquires);
     let body = function_body(context, f.body);
     N::Function {
+        attributes,
         visibility,
         signature,
         acquires,
@@ -590,10 +596,12 @@ fn struct_def(
     _name: StructName,
     sdef: E::StructDefinition,
 ) -> N::StructDefinition {
+    let attributes = sdef.attributes;
     let abilities = sdef.abilities;
     let type_parameters = type_parameters(context, sdef.type_parameters);
     let fields = struct_fields(context, sdef.fields);
     N::StructDefinition {
+        attributes,
         abilities,
         type_parameters,
         fields,
@@ -615,6 +623,7 @@ fn struct_fields(context: &mut Context, efields: E::StructFields) -> N::StructFi
 
 fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) -> N::Constant {
     let E::Constant {
+        attributes,
         loc,
         signature: esignature,
         value: evalue,
@@ -622,6 +631,7 @@ fn constant(context: &mut Context, _name: ConstantName, econstant: E::Constant) 
     let signature = type_(context, esignature);
     let value = exp_(context, evalue);
     N::Constant {
+        attributes,
         loc,
         signature,
         value,

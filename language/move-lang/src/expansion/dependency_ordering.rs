@@ -179,7 +179,7 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition
     context.current_module = Some(mident);
     mdef.friends
         .key_cloned_iter()
-        .for_each(|(mident, loc)| context.add_friend(mident, *loc));
+        .for_each(|(mident, friend)| context.add_friend(mident, friend.loc));
     mdef.structs
         .iter()
         .for_each(|(_, _, sdef)| struct_def(context, sdef));

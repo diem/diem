@@ -77,6 +77,7 @@ pub enum Tok {
     Script,
     Const,
     Friend,
+    NumSign,
 }
 
 impl fmt::Display for Tok {
@@ -152,6 +153,7 @@ impl fmt::Display for Tok {
             Script => "script",
             Const => "const",
             Friend => "friend",
+            NumSign => "#",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -411,6 +413,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         '^' => (Tok::Caret, 1),
         '{' => (Tok::LBrace, 1),
         '}' => (Tok::RBrace, 1),
+        '#' => (Tok::NumSign, 1),
         _ => {
             let loc = make_loc(file, start_offset, start_offset);
             return Err(vec![(loc, format!("Invalid character: '{}'", c))]);

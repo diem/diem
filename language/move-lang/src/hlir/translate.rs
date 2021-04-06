@@ -168,6 +168,7 @@ fn module(
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
     let T::ModuleDefinition {
+        attributes,
         is_source_module,
         dependency_order,
         friends,
@@ -186,6 +187,7 @@ fn module(
     (
         module_ident,
         H::ModuleDefinition {
+            attributes,
             is_source_module,
             dependency_order,
             friends,
@@ -208,6 +210,7 @@ fn scripts(
 
 fn script(context: &mut Context, tscript: T::Script) -> H::Script {
     let T::Script {
+        attributes,
         loc,
         constants: tconstants,
         function_name,
@@ -216,6 +219,8 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
     let constants = tconstants.map(|name, c| constant(context, name, c));
     let function = function(context, function_name.clone(), tfunction);
     H::Script {
+        attributes,
+
         loc,
         constants,
         function_name,
@@ -229,11 +234,13 @@ fn script(context: &mut Context, tscript: T::Script) -> H::Script {
 
 fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Function {
     assert!(context.has_empty_locals());
+    let attributes = f.attributes;
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
     let acquires = f.acquires;
     let body = function_body(context, &signature, f.body);
     H::Function {
+        attributes,
         visibility,
         signature,
         acquires,
@@ -318,6 +325,7 @@ fn function_body_defined(
 
 fn constant(context: &mut Context, _name: ConstantName, cdef: T::Constant) -> H::Constant {
     let T::Constant {
+        attributes,
         loc,
         signature: tsignature,
         value: tvalue,
@@ -336,6 +344,7 @@ fn constant(context: &mut Context, _name: ConstantName, cdef: T::Constant) -> H:
     };
     let (locals, body) = function_body_defined(context, &function_signature, eloc, tseq);
     H::Constant {
+        attributes,
         loc,
         signature,
         value: (locals, body),
@@ -351,10 +360,12 @@ fn struct_def(
     _name: StructName,
     sdef: N::StructDefinition,
 ) -> H::StructDefinition {
+    let attributes = sdef.attributes;
     let abilities = sdef.abilities;
     let type_parameters = sdef.type_parameters;
     let fields = struct_fields(context, sdef.fields);
     H::StructDefinition {
+        attributes,
         abilities,
         type_parameters,
         fields,

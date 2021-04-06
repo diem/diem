@@ -392,6 +392,73 @@ fn parse_visibility(tokens: &mut Lexer) -> Result<Visibility, Error> {
         }
     })
 }
+// Parse an attribute value. Either a value literal or a module access
+//      AttributeValue =
+//          <Value>
+//          | <ModuleAccess>
+fn parse_attribute_value(tokens: &mut Lexer) -> Result<AttributeValue, Error> {
+    if tokens.peek() == Tok::NumValue {
+        let loc = current_token_loc(tokens);
+        return Ok(sp(loc, AttributeValue_::NumValue(parse_num(tokens)?)));
+    }
+
+    if let Some(v) = maybe_parse_value(tokens)? {
+        return Ok(sp(v.loc, AttributeValue_::Value(v)));
+    }
+
+    let ma = parse_module_access(tokens, || "attribute name value".to_string())?;
+    Ok(sp(ma.loc, AttributeValue_::ModuleAccess(ma)))
+}
+
+// Parse a single attribute
+//      Attribute =
+//          <Identifier>
+//          | <Identifier> "=" <AttributeValue>
+//          | <Identifier> "(" Comma<Attribute> ")"
+fn parse_attribute(tokens: &mut Lexer) -> Result<Attribute, Error> {
+    let start_loc = tokens.start_loc();
+    let n = parse_identifier(tokens)?;
+    let attr_ = match tokens.peek() {
+        Tok::Equal => {
+            tokens.advance()?;
+            Attribute_::Assigned(n, parse_attribute_value(tokens)?)
+        }
+        Tok::LParen => {
+            let args_ = parse_comma_list(
+                tokens,
+                Tok::LParen,
+                Tok::RParen,
+                parse_attribute,
+                "attribute",
+            )?;
+            let end_loc = tokens.previous_end_loc();
+            Attribute_::Parameterized(n, spanned(tokens.file_name(), start_loc, end_loc, args_))
+        }
+        _ => Attribute_::Name(n),
+    };
+    let end_loc = tokens.previous_end_loc();
+    Ok(spanned(tokens.file_name(), start_loc, end_loc, attr_))
+}
+
+// Parse attributes. Used to annotate a variety of AST nodes
+//      Attributes = ("#" "[" Comma<Attribute> "]")*
+fn parse_attributes(tokens: &mut Lexer) -> Result<Vec<Attributes>, Error> {
+    let mut attributes_vec = vec![];
+    while let Tok::NumSign = tokens.peek() {
+        let start_loc = tokens.start_loc();
+        tokens.advance()?;
+        let attributes_ = parse_comma_list(
+            tokens,
+            Tok::LBracket,
+            Tok::RBracket,
+            parse_attribute,
+            "attribute",
+        )?;
+        let end_loc = tokens.previous_end_loc();
+        attributes_vec.push(spanned(tokens.file_name(), start_loc, end_loc, attributes_))
+    }
+    Ok(attributes_vec)
+}
 
 //**************************************************************************************************
 // Fields and Bindings
@@ -545,7 +612,7 @@ fn num_too_big_error(tokens: &mut Lexer, type_description: &str) -> Error {
 //          | <U64Value>
 //          | <U128Value>
 //          | <ByteString>
-fn parse_value(tokens: &mut Lexer) -> Result<Value, Error> {
+fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
         Tok::AddressValue => {
@@ -603,10 +670,14 @@ fn parse_value(tokens: &mut Lexer) -> Result<Value, Error> {
             Value_::U128(i)
         }
         Tok::ByteStringValue => parse_byte_string(tokens)?,
-        _ => unreachable!("parse_value called with invalid token"),
+        _ => return Ok(None),
     };
     let end_loc = tokens.previous_end_loc();
-    Ok(spanned(tokens.file_name(), start_loc, end_loc, val))
+    Ok(Some(spanned(tokens.file_name(), start_loc, end_loc, val)))
+}
+
+fn parse_value(tokens: &mut Lexer) -> Result<Value, Error> {
+    Ok(maybe_parse_value(tokens)?.expect("parse_value called with invalid token"))
 }
 
 // Parse a num value:
@@ -660,7 +731,7 @@ fn parse_sequence_item(tokens: &mut Lexer) -> Result<SequenceItem, Error> {
 fn parse_sequence(tokens: &mut Lexer) -> Result<Sequence, Error> {
     let mut uses = vec![];
     while tokens.peek() == Tok::Use {
-        uses.push(parse_use_decl(tokens)?);
+        uses.push(parse_use_decl(vec![], tokens)?);
     }
 
     let mut seq: Vec<SequenceItem> = vec![];
@@ -787,7 +858,7 @@ fn parse_term(tokens: &mut Lexer) -> Result<Exp, Error> {
         }
 
         Tok::Spec => {
-            let spec_block = parse_spec_block(tokens)?;
+            let spec_block = parse_spec_block(vec![], tokens)?;
             Exp_::Spec(spec_block)
         }
 
@@ -1451,6 +1522,7 @@ fn parse_optional_type_parameters(tokens: &mut Lexer) -> Result<Vec<(Name, Vec<A
 //          ("{" <Sequence> "}" | ";")
 //
 fn parse_function_decl(
+    attributes: Vec<Attributes>,
     start_loc: usize,
     modifiers: Modifiers,
     tokens: &mut Lexer,
@@ -1521,6 +1593,7 @@ fn parse_function_decl(
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(Function {
+        attributes,
         loc,
         visibility: visibility.unwrap_or(Visibility::Internal),
         signature,
@@ -1550,6 +1623,7 @@ fn parse_parameter(tokens: &mut Lexer) -> Result<(Var, Type), Error> {
 //      StructDefName =
 //          <Identifier> <OptionalTypeParameters>
 fn parse_struct_decl(
+    attributes: Vec<Attributes>,
     start_loc: usize,
     modifiers: Modifiers,
     tokens: &mut Lexer,
@@ -1612,6 +1686,7 @@ fn parse_struct_decl(
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(StructDefinition {
+        attributes,
         loc,
         abilities,
         name,
@@ -1637,6 +1712,7 @@ fn parse_field_annot(tokens: &mut Lexer) -> Result<(Field, Type), Error> {
 // Parse a constant:
 //      ConstantDecl = "const" <Identifier> ":" <Type> "=" <Exp> ";"
 fn parse_constant_decl(
+    attributes: Vec<Attributes>,
     start_loc: usize,
     modifiers: Modifiers,
     tokens: &mut Lexer,
@@ -1662,6 +1738,7 @@ fn parse_constant_decl(
     consume_token(tokens, Tok::Semicolon)?;
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(Constant {
+        attributes,
         loc,
         name,
         signature,
@@ -1676,7 +1753,7 @@ fn parse_constant_decl(
 // Parse an address block:
 //      AddressBlock =
 //          "address" <Address> "{"
-//              <Module>*
+//              (<Attributes> <Module>)*
 //          "}"
 //
 // Note that "address" is not a token.
@@ -1706,7 +1783,8 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
     consume_token(tokens, Tok::LBrace)?;
     let mut modules = vec![];
     while tokens.peek() != Tok::RBrace {
-        modules.push(parse_module(tokens)?);
+        let attributes = parse_attributes(tokens)?;
+        modules.push(parse_module(attributes, tokens)?);
     }
     consume_token(tokens, Tok::RBrace)?;
 
@@ -1720,17 +1798,18 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
 // Parse a friend declaration:
 //      FriendDecl =
 //          "friend" <ModuleName> | <ModuleIdent> ";"
-fn parse_friend_decl(tokens: &mut Lexer) -> Result<Friend, Error> {
+fn parse_friend_decl(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<FriendDecl, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Friend)?;
-    let friend = if tokens.peek() == Tok::AddressValue {
+    let friend_ = if tokens.peek() == Tok::AddressValue {
         Friend_::QualifiedModule(parse_module_ident(tokens)?)
     } else {
         Friend_::Module(parse_module_name(tokens)?)
     };
     consume_token(tokens, Tok::Semicolon)?;
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
-    Ok(Friend { loc, value: friend })
+    let friend = sp(loc, friend_);
+    Ok(FriendDecl { attributes, friend })
 }
 
 //**************************************************************************************************
@@ -1742,7 +1821,7 @@ fn parse_friend_decl(tokens: &mut Lexer) -> Result<Friend, Error> {
 //          "use" <ModuleIdent> <UseAlias> ";" |
 //          "use" <ModuleIdent> :: <UseMember> ";" |
 //          "use" <ModuleIdent> :: "{" Comma<UseMember> "}" ";"
-fn parse_use_decl(tokens: &mut Lexer) -> Result<Use, Error> {
+fn parse_use_decl(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<UseDecl, Error> {
     consume_token(tokens, Tok::Use)?;
     let ident = parse_module_ident(tokens)?;
     let alias_opt = parse_use_alias(tokens)?;
@@ -1764,7 +1843,7 @@ fn parse_use_decl(tokens: &mut Lexer) -> Result<Use, Error> {
         _ => Use::Module(ident, alias_opt.map(ModuleName)),
     };
     consume_token(tokens, Tok::Semicolon)?;
-    Ok(use_)
+    Ok(UseDecl { attributes, use_ })
 }
 
 // Parse an alias for a module member:
@@ -1789,12 +1868,17 @@ fn parse_use_alias(tokens: &mut Lexer) -> Result<Option<Name>, Error> {
 // Parse a module:
 //      Module =
 //          <DocComments> "module" (<Address>::)?<ModuleName> "{"
-//              ( <UseDecl> | <FriendDecl> | <Spec> |
-//                <DocComments> <ModuleMemberModifiers>
-//                    (<ConstantDecl> | <StructDecl> | <FunctionDecl>)
+//              ( <Attributes>
+//                  ( <UseDecl> | <FriendDecl> | <SpecBlock> |
+//                    <DocComments> <ModuleMemberModifiers>
+//                        (<ConstantDecl> | <StructDecl> | <FunctionDecl>) )
+//                  )
 //              )*
 //          "}"
-fn parse_module(tokens: &mut Lexer) -> Result<ModuleDefinition, Error> {
+fn parse_module(
+    attributes: Vec<Attributes>,
+    tokens: &mut Lexer,
+) -> Result<ModuleDefinition, Error> {
     tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
 
@@ -1812,37 +1896,40 @@ fn parse_module(tokens: &mut Lexer) -> Result<ModuleDefinition, Error> {
 
     let mut members = vec![];
     while tokens.peek() != Tok::RBrace {
-        members.push(match tokens.peek() {
-            Tok::Spec => ModuleMember::Spec(parse_spec_block(tokens)?),
-            Tok::Use => ModuleMember::Use(parse_use_decl(tokens)?),
-            Tok::Friend => ModuleMember::Friend(parse_friend_decl(tokens)?),
-            _ => {
-                tokens.match_doc_comments();
-                let start_loc = tokens.start_loc();
-                let modifiers = parse_module_member_modifiers(tokens)?;
-                match tokens.peek() {
-                    Tok::Const => {
-                        ModuleMember::Constant(parse_constant_decl(start_loc, modifiers, tokens)?)
-                    }
-                    Tok::Fun => {
-                        ModuleMember::Function(parse_function_decl(start_loc, modifiers, tokens)?)
-                    }
-                    Tok::Struct => {
-                        ModuleMember::Struct(parse_struct_decl(start_loc, modifiers, tokens)?)
-                    }
-                    _ => {
-                        return Err(unexpected_token_error(
-                            tokens,
-                            &format!(
-                                "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
-                                Tok::Spec,
-                                Tok::Use,
-                                Tok::Friend,
-                                Tok::Const,
-                                Tok::Fun,
-                                Tok::Struct
-                            ),
-                        ))
+        members.push({
+            let attributes = parse_attributes(tokens)?;
+            match tokens.peek() {
+                Tok::Spec => ModuleMember::Spec(parse_spec_block(attributes, tokens)?),
+                Tok::Use => ModuleMember::Use(parse_use_decl(attributes, tokens)?),
+                Tok::Friend => ModuleMember::Friend(parse_friend_decl(attributes, tokens)?),
+                _ => {
+                    tokens.match_doc_comments();
+                    let start_loc = tokens.start_loc();
+                    let modifiers = parse_module_member_modifiers(tokens)?;
+                    match tokens.peek() {
+                        Tok::Const => ModuleMember::Constant(parse_constant_decl(
+                            attributes, start_loc, modifiers, tokens,
+                        )?),
+                        Tok::Fun => ModuleMember::Function(parse_function_decl(
+                            attributes, start_loc, modifiers, tokens,
+                        )?),
+                        Tok::Struct => ModuleMember::Struct(parse_struct_decl(
+                            attributes, start_loc, modifiers, tokens,
+                        )?),
+                        _ => {
+                            return Err(unexpected_token_error(
+                                tokens,
+                                &format!(
+                                    "a module member: '{}', '{}', '{}', '{}', '{}', or '{}'",
+                                    Tok::Spec,
+                                    Tok::Use,
+                                    Tok::Friend,
+                                    Tok::Const,
+                                    Tok::Fun,
+                                    Tok::Struct
+                                ),
+                            ))
+                        }
                     }
                 }
             }
@@ -1852,6 +1939,7 @@ fn parse_module(tokens: &mut Lexer) -> Result<ModuleDefinition, Error> {
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(ModuleDefinition {
+        attributes,
         loc,
         address,
         name,
@@ -1866,24 +1954,33 @@ fn parse_module(tokens: &mut Lexer) -> Result<ModuleDefinition, Error> {
 // Parse a script:
 //      Script =
 //          "script" "{"
-//              <UseDecl>*
-//              <ConstantDecl>*
-//              <DocComments> <ModuleMemberModifiers> <FunctionDecl>
+//              (<Attributes> <UseDecl>)*
+//              (<Attributes> <ConstantDecl>)*
+//              <Attributes> <DocComments> <ModuleMemberModifiers> <FunctionDecl>
+//              (<Attributes> <SpecBlock>)*
 //          "}"
-fn parse_script(tokens: &mut Lexer) -> Result<Script, Error> {
+fn parse_script(script_attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<Script, Error> {
     let start_loc = tokens.start_loc();
 
     consume_token(tokens, Tok::Script)?;
     consume_token(tokens, Tok::LBrace)?;
 
     let mut uses = vec![];
+    let mut next_item_attributes = parse_attributes(tokens)?;
     while tokens.peek() == Tok::Use {
-        uses.push(parse_use_decl(tokens)?);
+        uses.push(parse_use_decl(next_item_attributes, tokens)?);
+        next_item_attributes = parse_attributes(tokens)?;
     }
     let mut constants = vec![];
     while tokens.peek() == Tok::Const {
         let start_loc = tokens.start_loc();
-        constants.push(parse_constant_decl(start_loc, Modifiers::empty(), tokens)?);
+        constants.push(parse_constant_decl(
+            next_item_attributes,
+            start_loc,
+            Modifiers::empty(),
+            tokens,
+        )?);
+        next_item_attributes = parse_attributes(tokens)?;
     }
 
     tokens.match_doc_comments(); // match doc comments to script function
@@ -1895,11 +1992,13 @@ fn parse_script(tokens: &mut Lexer) -> Result<Script, Error> {
             "'native' functions can only be declared inside a module".to_string(),
         )]);
     }
-    let function = parse_function_decl(function_start_loc, modifiers, tokens)?;
+    let function =
+        parse_function_decl(next_item_attributes, function_start_loc, modifiers, tokens)?;
 
     let mut specs = vec![];
-    while tokens.peek() == Tok::Spec {
-        specs.push(parse_spec_block(tokens)?)
+    while tokens.peek() == Tok::NumSign || tokens.peek() == Tok::Spec {
+        let attributes = parse_attributes(tokens)?;
+        specs.push(parse_spec_block(attributes, tokens)?);
     }
 
     if tokens.peek() != Tok::RBrace {
@@ -1913,6 +2012,7 @@ fn parse_script(tokens: &mut Lexer) -> Result<Script, Error> {
 
     let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(Script {
+        attributes: script_attributes,
         loc,
         uses,
         constants,
@@ -1933,7 +2033,7 @@ fn parse_script(tokens: &mut Lexer) -> Result<Script, Error> {
 //        | <empty>
 //     SpecBlock =
 //        <DocComments> "spec" ( <SpecFunction> | <SpecBlockTarget> "{" SpecBlockMember* "}" )
-fn parse_spec_block(tokens: &mut Lexer) -> Result<SpecBlock, Error> {
+fn parse_spec_block(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<SpecBlock, Error> {
     tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Spec)?;
@@ -1948,6 +2048,7 @@ fn parse_spec_block(tokens: &mut Lexer) -> Result<SpecBlock, Error> {
             start_loc,
             tokens.previous_end_loc(),
             SpecBlock_ {
+                attributes,
                 target: spanned(
                     tokens.file_name(),
                     target_start_loc,
@@ -2001,7 +2102,7 @@ fn parse_spec_block(tokens: &mut Lexer) -> Result<SpecBlock, Error> {
     consume_token(tokens, Tok::LBrace)?;
     let mut uses = vec![];
     while tokens.peek() == Tok::Use {
-        uses.push(parse_use_decl(tokens)?);
+        uses.push(parse_use_decl(vec![], tokens)?);
     }
     let mut members = vec![];
     while tokens.peek() != Tok::RBrace {
@@ -2013,6 +2114,7 @@ fn parse_spec_block(tokens: &mut Lexer) -> Result<SpecBlock, Error> {
         start_loc,
         tokens.previous_end_loc(),
         SpecBlock_ {
+            attributes,
             target,
             uses,
             members,
@@ -2510,16 +2612,17 @@ fn parse_spec_property(tokens: &mut Lexer) -> Result<PragmaProperty, Error> {
 
 // Parse a file:
 //      File =
-//          (<AddressBlock> | <Module> | <Script>)*
+//          (<Attributes> (<AddressBlock> | <Module> | <Script>))*
 fn parse_file(tokens: &mut Lexer) -> Result<Vec<Definition>, Error> {
     let mut defs = vec![];
     while tokens.peek() != Tok::EOF {
+        let attributes = parse_attributes(tokens)?;
         defs.push(match tokens.peek() {
-            Tok::Module => Definition::Module(parse_module(tokens)?),
-            Tok::Script => Definition::Script(parse_script(tokens)?),
+            Tok::Module => Definition::Module(parse_module(attributes, tokens)?),
+            Tok::Script => Definition::Script(parse_script(attributes, tokens)?),
             _ => {
                 let (loc, addr, modules) = parse_address_block(tokens)?;
-                Definition::Address(loc, addr, modules)
+                Definition::Address(attributes, loc, addr, modules)
             }
         })
     }

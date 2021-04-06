@@ -127,7 +127,8 @@ pub fn program(
     }
     for (key, s) in gscripts {
         let G::Script {
-            loc: _,
+            attributes: _attributes,
+            loc: _loc,
             constants,
             function_name,
             function,
@@ -396,6 +397,7 @@ fn struct_def(
     sdef: H::StructDefinition,
 ) -> IR::StructDefinition {
     let H::StructDefinition {
+        attributes: _attributes,
         abilities: abs,
         type_parameters: tys,
         fields,
@@ -475,6 +477,7 @@ fn function(
     fdef: G::Function,
 ) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
+        attributes: _attributes,
         visibility: v,
         signature,
         acquires,

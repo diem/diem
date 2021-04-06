@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/attribute_num_sign_no_bracket.move:4:5 ───
+   │
+ 4 │     fun foo() {}
+   │     ^^^ Unexpected 'fun'
+   ·
+ 4 │     fun foo() {}
+   │     --- Expected '['
+   │
+

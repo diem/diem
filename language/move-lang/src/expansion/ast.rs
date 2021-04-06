@@ -25,11 +25,31 @@ pub struct Program {
 }
 
 //**************************************************************************************************
+// Attributes
+//**************************************************************************************************
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AttributeValue_ {
+    Value(Value),
+    ModuleAccess(ModuleAccess),
+}
+pub type AttributeValue = Spanned<AttributeValue_>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Attribute_ {
+    Name(Name),
+    Assigned(Name, AttributeValue),
+    Parameterized(Name, Vec<Attribute>),
+}
+pub type Attribute = Spanned<Attribute_>;
+
+//**************************************************************************************************
 // Scripts
 //**************************************************************************************************
 
 #[derive(Debug, Clone)]
 pub struct Script {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
@@ -43,16 +63,23 @@ pub struct Script {
 
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
-    pub friends: UniqueMap<ModuleIdent, Loc>,
+    pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub specs: Vec<SpecBlock>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Friend {
+    pub attributes: Vec<Attribute>,
+    pub loc: Loc,
 }
 
 //**************************************************************************************************
@@ -63,6 +90,7 @@ pub type Fields<T> = UniqueMap<Field, (usize, T)>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructDefinition {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub abilities: AbilitySet,
     pub type_parameters: Vec<(Name, AbilitySet)>,
@@ -98,6 +126,7 @@ pub struct SpecId(usize);
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Function {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
@@ -112,6 +141,7 @@ pub struct Function {
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Constant {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub signature: Type,
     pub value: Exp,
@@ -123,6 +153,7 @@ pub struct Constant {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SpecBlock_ {
+    pub attributes: Vec<Attribute>,
     pub target: SpecBlockTarget,
     pub members: Vec<SpecBlockMember>,
 }
@@ -188,7 +219,7 @@ pub enum PragmaValue {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AbilitySet(UniqueSet<Ability>);
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleAccess_ {
     Name(Name),
     ModuleAccess(ModuleIdent, Name),
@@ -233,7 +264,7 @@ pub enum ExpDotted_ {
 }
 pub type ExpDotted = Spanned<ExpDotted_>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
@@ -539,15 +570,59 @@ impl AstDebug for Program {
     }
 }
 
+impl AstDebug for AttributeValue_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            AttributeValue_::Value(v) => v.ast_debug(w),
+            AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
+        }
+    }
+}
+
+impl AstDebug for Attribute_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            Attribute_::Name(n) => w.write(&format!("{}", n)),
+            Attribute_::Assigned(n, v) => {
+                w.write(&format!("{}", n));
+                w.write(" = ");
+                v.ast_debug(w);
+            }
+            Attribute_::Parameterized(n, inners) => {
+                w.write(&format!("{}", n));
+                w.write("(");
+                w.list(inners, ", ", |w, inner| {
+                    inner.ast_debug(w);
+                    false
+                });
+                w.write(")");
+            }
+        }
+    }
+}
+
+impl AstDebug for Vec<Attribute> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write("#[");
+        w.list(self, ", ", |w, attr| {
+            attr.ast_debug(w);
+            false
+        });
+        w.write("]");
+    }
+}
+
 impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
+            attributes,
             loc: _loc,
             constants,
             function_name,
             function,
             specs,
         } = self;
+        attributes.ast_debug(w);
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
@@ -563,6 +638,7 @@ impl AstDebug for Script {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
+            attributes,
             loc: _loc,
             is_source_module,
             dependency_order,
@@ -572,6 +648,7 @@ impl AstDebug for ModuleDefinition {
             constants,
             specs,
         } = self;
+        attributes.ast_debug(w);
         w.writeln(if *is_source_module {
             "source module"
         } else {
@@ -616,12 +693,15 @@ impl AstDebug for (StructName, &StructDefinition) {
         let (
             name,
             StructDefinition {
+                attributes,
                 loc: _loc,
                 abilities,
                 type_parameters,
                 fields,
             },
         ) = self;
+
+        attributes.ast_debug(w);
 
         if let StructFields::Native(_) = fields {
             w.write("native ");
@@ -760,14 +840,16 @@ impl AstDebug for (FunctionName, &Function) {
         let (
             name,
             Function {
+                attributes,
                 loc: _loc,
                 visibility,
                 signature,
                 acquires,
                 body,
-                ..
+                specs: _specs,
             },
         ) = self;
+        attributes.ast_debug(w);
         visibility.ast_debug(w);
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
@@ -809,11 +891,13 @@ impl AstDebug for (ConstantName, &Constant) {
         let (
             name,
             Constant {
+                attributes,
                 loc: _loc,
                 signature,
                 value,
             },
         ) = self;
+        attributes.ast_debug(w);
         w.write(&format!("const {}:", name));
         signature.ast_debug(w);
         w.write(" = ");

@@ -3,8 +3,8 @@
 
 use crate::{
     expansion::ast::{
-        ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Fields, SpecId,
-        Value, Value_,
+        ability_constraints_ast_debug, ability_modifiers_ast_debug, AbilitySet, Attribute, Fields,
+        Friend, SpecId, Value, Value_,
     },
     parser::ast::{
         BinOp, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp, Var, Visibility,
@@ -34,6 +34,7 @@ pub struct Program {
 
 #[derive(Debug, Clone)]
 pub struct Script {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
@@ -46,11 +47,12 @@ pub struct Script {
 
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
+    pub attributes: Vec<Attribute>,
     pub is_source_module: bool,
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
-    pub friends: UniqueMap<ModuleIdent, Loc>,
+    pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -62,6 +64,7 @@ pub struct ModuleDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct StructDefinition {
+    pub attributes: Vec<Attribute>,
     pub abilities: AbilitySet,
     pub type_parameters: Vec<TParam>,
     pub fields: StructFields,
@@ -93,6 +96,7 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Function {
+    pub attributes: Vec<Attribute>,
     pub visibility: Visibility,
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
@@ -105,6 +109,7 @@ pub struct Function {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Constant {
+    pub attributes: Vec<Attribute>,
     pub loc: Loc,
     pub signature: Type,
     pub value: Exp,
@@ -564,11 +569,13 @@ impl AstDebug for Program {
 impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
+            attributes,
             loc: _loc,
             constants,
             function_name,
             function,
         } = self;
+        attributes.ast_debug(w);
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
@@ -580,6 +587,7 @@ impl AstDebug for Script {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
+            attributes,
             is_source_module,
             dependency_order,
             friends,
@@ -587,6 +595,7 @@ impl AstDebug for ModuleDefinition {
             constants,
             functions,
         } = self;
+        attributes.ast_debug(w);
         if *is_source_module {
             w.writeln("library module")
         } else {
@@ -617,11 +626,13 @@ impl AstDebug for (StructName, &StructDefinition) {
         let (
             name,
             StructDefinition {
+                attributes,
                 abilities,
                 type_parameters,
                 fields,
             },
         ) = self;
+        attributes.ast_debug(w);
         if let StructFields::Native(_) = fields {
             w.write("native ");
         }
@@ -646,12 +657,14 @@ impl AstDebug for (FunctionName, &Function) {
         let (
             name,
             Function {
+                attributes,
                 visibility,
                 signature,
                 acquires,
                 body,
             },
         ) = self;
+        attributes.ast_debug(w);
         visibility.ast_debug(w);
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
@@ -703,11 +716,13 @@ impl AstDebug for (ConstantName, &Constant) {
         let (
             name,
             Constant {
+                attributes,
                 loc: _loc,
                 signature,
                 value,
             },
         ) = self;
+        attributes.ast_debug(w);
         w.write(&format!("const {}:", name));
         signature.ast_debug(w);
         w.write(" = ");

@@ -117,7 +117,7 @@ impl<'env> Context<'env> {
                 signature: cdef.signature.clone(),
             });
             let minfo = ModuleInfo {
-                friends: mdef.friends.clone(),
+                friends: mdef.friends.ref_map(|_, friend| friend.loc),
                 structs,
                 functions,
                 constants,

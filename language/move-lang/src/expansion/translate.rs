@@ -121,7 +121,7 @@ pub fn program(
                     P::Definition::Module(_) => {
                         unimplemented!("top level modules not supported in pre compiled lib")
                     }
-                    P::Definition::Address(_, a, ms) => {
+                    P::Definition::Address(_, _, a, ms) => {
                         for m in ms {
                             if members.contains_key_(&(*a, m.name.value().to_owned())) {
                                 continue;
@@ -148,7 +148,7 @@ pub fn program(
     for def in lib_definitions {
         match def {
             P::Definition::Module(m) => module(&mut context, &mut module_map, m),
-            P::Definition::Address(loc, addr, ms) => {
+            P::Definition::Address(_attributes, loc, addr, ms) => {
                 for mut m in ms {
                     check_module_address(&mut context, loc, addr, &mut m);
                     module(&mut context, &mut module_map, m)
@@ -162,7 +162,7 @@ pub fn program(
     for def in source_definitions {
         match def {
             P::Definition::Module(m) => module(&mut context, &mut module_map, m),
-            P::Definition::Address(loc, addr, ms) => {
+            P::Definition::Address(_attributes, loc, addr, ms) => {
                 for mut m in ms {
                     check_module_address(&mut context, loc, addr, &mut m);
                     module(&mut context, &mut module_map, m)
@@ -267,11 +267,13 @@ fn set_sender_address(
 
 fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E::ModuleDefinition) {
     let P::ModuleDefinition {
+        attributes,
         loc,
         address,
         name,
         members,
     } = mdef;
+    let attributes = flatten_attributes(context, attributes);
     assert!(context.address == None);
     set_sender_address(context, loc, &name, address);
     let _ = check_restricted_self_name(context, "module", &name.0);
@@ -325,6 +327,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
     context.set_to_outer_scope(old_aliases);
 
     let def = E::ModuleDefinition {
+        attributes,
         loc,
         is_source_module: context.is_source_module,
         dependency_order: 0,
@@ -345,6 +348,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     assert!(context.address == None);
     assert!(context.is_source_module);
     let P::Script {
+        attributes,
         loc,
         uses,
         constants: pconstants,
@@ -352,9 +356,10 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
         specs: pspecs,
     } = pscript;
 
+    let attributes = flatten_attributes(context, attributes);
     let mut new_scope = AliasMap::new();
     for u in uses {
-        use_(context, &mut new_scope, u);
+        use_(context, &mut new_scope, u.use_);
     }
     let old_aliases = context.new_alias_scope(new_scope);
     assert!(
@@ -398,12 +403,57 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     context.set_to_outer_scope(old_aliases);
 
     E::Script {
+        attributes,
         loc,
         constants,
         function_name,
         function,
         specs,
     }
+}
+
+fn flatten_attributes(context: &mut Context, attributes: Vec<P::Attributes>) -> Vec<E::Attribute> {
+    attributes
+        .into_iter()
+        .map(|attrs| attrs.value)
+        .flatten()
+        .flat_map(|attr| attribute(context, attr))
+        .collect()
+}
+
+fn attribute(context: &mut Context, sp!(loc, attribute_): P::Attribute) -> Option<E::Attribute> {
+    use E::Attribute_ as EA;
+    use P::Attribute_ as PA;
+    Some(sp(
+        loc,
+        match attribute_ {
+            PA::Name(n) => EA::Name(n),
+            PA::Assigned(n, v) => EA::Assigned(n, attribute_value(context, v)?),
+            PA::Parameterized(n, sp!(_, attrs_)) => EA::Parameterized(
+                n,
+                attrs_
+                    .into_iter()
+                    .map(|a| attribute(context, a))
+                    .collect::<Option<Vec<_>>>()?,
+            ),
+        },
+    ))
+}
+
+fn attribute_value(
+    context: &mut Context,
+    sp!(loc, avalue_): P::AttributeValue,
+) -> Option<E::AttributeValue> {
+    use E::AttributeValue_ as EV;
+    use P::AttributeValue_ as PV;
+    Some(sp(
+        loc,
+        match avalue_ {
+            PV::Value(v) => EV::Value(value(context, v)?),
+            PV::NumValue(u) => EV::Value(sp(loc, E::Value_::U128(u))),
+            PV::ModuleAccess(ma) => EV::ModuleAccess(module_access(context, Access::Type, ma)?),
+        },
+    ))
 }
 
 //**************************************************************************************************
@@ -419,7 +469,7 @@ fn all_module_members<'a>(
             P::Definition::Module(m) => {
                 module_members(members, m.address.map(|a| a.value).unwrap_or_default(), m)
             }
-            P::Definition::Address(_, a, ms) => {
+            P::Definition::Address(_, _, a, ms) => {
                 for m in ms {
                     module_members(members, *a, m)
                 }
@@ -506,7 +556,7 @@ fn aliases_from_member(
 
     match member {
         P::ModuleMember::Use(u) => {
-            use_(context, acc, u);
+            use_(context, acc, u.use_);
             None
         }
         f @ P::ModuleMember::Friend(_) => {
@@ -691,17 +741,20 @@ fn struct_def_(
     pstruct: P::StructDefinition,
 ) -> (StructName, E::StructDefinition) {
     let P::StructDefinition {
+        attributes,
         loc,
         name,
         abilities: abilities_vec,
         type_parameters: pty_params,
         fields: pfields,
     } = pstruct;
+    let attributes = flatten_attributes(context, attributes);
     let old_aliases = context.new_alias_scope(AliasMap::new());
     let type_parameters = type_parameters(context, pty_params);
     let abilities = ability_set(context, "modifier", abilities_vec);
     let fields = struct_fields(context, &name, pfields);
     let sdef = E::StructDefinition {
+        attributes,
         loc,
         abilities,
         type_parameters,
@@ -743,44 +796,54 @@ fn struct_fields(
 // Friends
 //**************************************************************************************************
 
-fn friend(context: &mut Context, friends: &mut UniqueMap<ModuleIdent, Loc>, pfriend: P::Friend) {
+fn friend(
+    context: &mut Context,
+    friends: &mut UniqueMap<ModuleIdent, E::Friend>,
+    pfriend: P::FriendDecl,
+) {
     match friend_(context, pfriend) {
-        Some((mident, loc)) => {
-            if let Err((mident, (old_friend_loc, _))) = friends.add(mident, loc) {
+        Some((mident, friend)) => match friends.get(&mident) {
+            None => friends.add(mident, friend).unwrap(),
+            Some(old_friend) => {
                 let msg = format!(
                     "Duplicate friend declaration '{}'. Friend declarations in a module must be \
                      unique",
                     mident
                 );
                 context.env.add_error(vec![
-                    (loc, msg),
-                    (old_friend_loc, "Previously declared here".into()),
+                    (friend.loc, msg),
+                    (old_friend.loc, "Previously declared here".into()),
                 ]);
             }
-        }
+        },
         None => assert!(context.env.has_errors()),
     };
 }
 
-fn friend_(context: &mut Context, sp!(loc, pfriend): P::Friend) -> Option<(ModuleIdent, Loc)> {
+fn friend_(context: &mut Context, pfriend_decl: P::FriendDecl) -> Option<(ModuleIdent, E::Friend)> {
     assert!(context.exp_specs.is_empty());
-    let mident_opt = match pfriend {
+    let P::FriendDecl {
+        attributes: pattributes,
+        friend: sp!(loc, pfriend_),
+    } = pfriend_decl;
+    let mident = match pfriend_ {
         P::Friend_::Module(mname) => match context.aliases.module_alias_get(&mname.0).cloned() {
             None => {
                 context.env.add_error(vec![(
                     mname.loc(),
                     format!("Unbound module alias '{}'", mname),
                 )]);
-                None
+                return None;
             }
             Some(mident) => {
                 let (_, value) = mident.drop_loc();
-                Some(ModuleIdent::add_loc((mname.loc(), mname.loc()), value))
+                ModuleIdent::add_loc((mname.loc(), mname.loc()), value)
             }
         },
-        P::Friend_::QualifiedModule(mident) => Some(mident),
+        P::Friend_::QualifiedModule(mident) => mident,
     };
-    mident_opt.map(|mident| (mident, loc))
+    let attributes = flatten_attributes(context, pattributes);
+    Some((mident, E::Friend { attributes, loc }))
 }
 
 //**************************************************************************************************
@@ -801,15 +864,18 @@ fn constant(
 fn constant_(context: &mut Context, pconstant: P::Constant) -> (ConstantName, E::Constant) {
     assert!(context.exp_specs.is_empty());
     let P::Constant {
+        attributes: pattributes,
         loc,
         name,
         signature: psignature,
         value: pvalue,
     } = pconstant;
+    let attributes = flatten_attributes(context, pattributes);
     let signature = type_(context, psignature);
     let value = exp_(context, pvalue);
     let _specs = context.extract_exp_specs();
     let constant = E::Constant {
+        attributes,
         loc,
         signature,
         value,
@@ -834,6 +900,7 @@ fn function(
 
 fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E::Function) {
     let P::Function {
+        attributes: pattributes,
         loc,
         name,
         visibility,
@@ -842,6 +909,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
         acquires,
     } = pfunction;
     assert!(context.exp_specs.is_empty());
+    let attributes = flatten_attributes(context, pattributes);
     let old_aliases = context.new_alias_scope(AliasMap::new());
     let signature = function_signature(context, psignature);
     let acquires = acquires
@@ -851,6 +919,7 @@ fn function_(context: &mut Context, pfunction: P::Function) -> (FunctionName, E:
     let body = function_body(context, pbody);
     let specs = context.extract_exp_specs();
     let fdef = E::Function {
+        attributes,
         loc,
         visibility,
         signature,
@@ -908,15 +977,17 @@ fn specs(context: &mut Context, pspecs: Vec<P::SpecBlock>) -> Vec<E::SpecBlock> 
 
 fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     let P::SpecBlock_ {
+        attributes: pattributes,
         target,
         uses,
         members: pmembers,
     } = pspec;
 
+    let attributes = flatten_attributes(context, pattributes);
     context.in_spec_context = true;
     let mut new_scope = AliasMap::new();
     for u in uses {
-        use_(context, &mut new_scope, u);
+        use_(context, &mut new_scope, u.use_);
     }
     let old_aliases = context.new_alias_scope(new_scope);
 
@@ -928,7 +999,14 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     context.set_to_outer_scope(old_aliases);
     context.in_spec_context = false;
 
-    sp(loc, E::SpecBlock_ { target, members })
+    sp(
+        loc,
+        E::SpecBlock_ {
+            attributes,
+            target,
+            members,
+        },
+    )
 }
 
 fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {
@@ -1182,7 +1260,7 @@ fn sequence(context: &mut Context, loc: Loc, seq: P::Sequence) -> E::Sequence {
 
     let mut new_scope = AliasMap::new();
     for u in uses {
-        use_(context, &mut new_scope, u);
+        use_(context, &mut new_scope, u.use_);
     }
     let old_aliases = context.new_alias_scope(new_scope);
     let mut items: VecDeque<E::SequenceItem> = pitems

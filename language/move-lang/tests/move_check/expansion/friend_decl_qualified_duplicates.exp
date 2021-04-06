@@ -6,6 +6,6 @@ error:
    │     ^^^^^^^^^^^^^^^ Duplicate friend declaration '0x42::A'. Friend declarations in a module must be unique
    ·
  5 │     friend 0x42::A;
-   │            ------- Previously declared here
+   │     --------------- Previously declared here
    │
 
