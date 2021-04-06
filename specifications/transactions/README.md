@@ -60,4 +60,4 @@ The rest of this specification contains the following components:
 * [Off-Chain Identifiers](offchain-identity) currently only subaddresses
 * [Off-Chain API](offchain-api) specifically the protocol and not any applications
 * [Off-Chain PingCommand](ping-command) for validation of the API and health checks
-* Off-Chain Travel Rule Exchange for performing off-chain KYC exchanges
+* [Off-Chain Travel Rule Exchange](travel-rule) for performing off-chain KYC exchanges
