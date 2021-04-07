@@ -148,7 +148,7 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_is_coin_initialized">is_coin_initialized</a>&lt;CoinType&gt;(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_is_coin_initialized">is_coin_initialized</a>&lt;CoinType: store&gt;(): bool
 </code></pre>
 
 
@@ -199,7 +199,7 @@ Sets up the needed transaction fee state for a given <code>CoinType</code> curre
 (2) publishing a wrapper of the <code>Preburn&lt;CoinType&gt;</code> resource under <code>tc_account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType: store&gt;(tc_account: &signer)
 </code></pre>
 
 
@@ -235,7 +235,7 @@ Sets up the needed transaction fee state for a given <code>CoinType</code> curre
 Deposit <code>coin</code> into the transaction fees bucket
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_pay_fee">pay_fee</a>&lt;CoinType&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_pay_fee">pay_fee</a>&lt;CoinType: store&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -284,7 +284,7 @@ If the <code>CoinType</code> is XDX, it unpacks the coin and preburns the
 underlying fiat.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType: store&gt;(tc_account: &signer)
 </code></pre>
 
 

@@ -105,7 +105,7 @@ Successful execution of this script emits two events:
 * <code><a href="AccountAdministrationScripts.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="PaymentScripts.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency: store&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 

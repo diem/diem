@@ -1982,7 +1982,7 @@ impl<'env> StructEnv<'env> {
             .map(|(i, k)| {
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
-                    TypeConstraint::from(*k),
+                    AbilityConstraint(*k),
                 )
             })
             .collect_vec()
@@ -2009,7 +2009,7 @@ impl<'env> StructEnv<'env> {
                     .unwrap_or_else(|| format!("unknown#{}", i));
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&name),
-                    TypeConstraint::from(*k),
+                    AbilityConstraint(*k),
                 )
             })
             .collect_vec()
@@ -2177,27 +2177,10 @@ impl<'env> NamedConstantEnv<'env> {
 
 /// Represents a type parameter.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TypeParameter(pub Symbol, pub TypeConstraint);
+pub struct TypeParameter(pub Symbol, pub AbilityConstraint);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TypeConstraint {
-    None,
-    Copyable,
-    Resource,
-}
-
-impl TypeConstraint {
-    // TODO(tmn) migrate to abilities
-    fn from(abs: AbilitySet) -> Self {
-        if abs.has_key() {
-            TypeConstraint::Resource
-        } else if abs.has_copy() | abs.has_drop() {
-            TypeConstraint::Copyable
-        } else {
-            TypeConstraint::None
-        }
-    }
-}
+pub struct AbilityConstraint(pub AbilitySet);
 
 /// Represents a parameter.
 #[derive(Debug, Clone)]
@@ -2546,7 +2529,7 @@ impl<'env> FunctionEnv<'env> {
             .map(|(i, k)| {
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&format!("$tv{}", i)),
-                    TypeConstraint::from(*k),
+                    AbilityConstraint(*k),
                 )
             })
             .collect_vec()
@@ -2570,7 +2553,7 @@ impl<'env> FunctionEnv<'env> {
                     .unwrap_or_else(|| format!("unknown#{}", i));
                 TypeParameter(
                     self.module_env.env.symbol_pool.make(&name),
-                    TypeConstraint::from(*k),
+                    AbilityConstraint(*k),
                 )
             })
             .collect_vec()

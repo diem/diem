@@ -908,7 +908,7 @@ Return the address where the credentials for <code>addr</code> are stored
 Helper which returns true if dual attestion is required for a deposit.
 
 
-<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool
+<pre><code><b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token: store&gt;(payer: address, payee: address, deposit_value: u64): bool
 </code></pre>
 
 
@@ -1185,7 +1185,7 @@ It aborts with an appropriate error code if dual attestation is required, but on
 the conditions in (2) is not met.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency&gt;(payer: address, payee: address, value: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency: store&gt;(payer: address, payee: address, value: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 

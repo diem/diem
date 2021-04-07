@@ -223,7 +223,7 @@ Moreover, only the TreasuryCompliance role can create Preburn.
 Returns true if <code>CoinType</code> is <code><a href="XDX.md#0x1_XDX_XDX">XDX::XDX</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="XDX.md#0x1_XDX_is_xdx">is_xdx</a>&lt;CoinType&gt;(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="XDX.md#0x1_XDX_is_xdx">is_xdx</a>&lt;CoinType: store&gt;(): bool
 </code></pre>
 
 

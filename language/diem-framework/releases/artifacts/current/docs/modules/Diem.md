@@ -885,7 +885,7 @@ Publishes the <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>
 must be a registered currency type. The caller must pass a treasury compliance account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(tc_account: &signer, cap: <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_burn_capability">publish_burn_capability</a>&lt;CoinType: store&gt;(tc_account: &signer, cap: <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -968,7 +968,7 @@ Mints <code>amount</code> of currency. The <code>account</code> must hold a
 to be successful.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_mint">mint</a>&lt;CoinType&gt;(account: &signer, value: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_mint">mint</a>&lt;CoinType: store&gt;(account: &signer, value: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1026,7 +1026,7 @@ there is not a <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> reque
 equal <code>amount</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn">burn</a>&lt;CoinType&gt;(account: &signer, preburn_address: address, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn">burn</a>&lt;CoinType: store&gt;(account: &signer, preburn_address: address, amount: u64)
 </code></pre>
 
 
@@ -1127,7 +1127,7 @@ outstanding in the <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a
 a value equal to <code>amount</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_cancel_burn">cancel_burn</a>&lt;CoinType&gt;(account: &signer, preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_cancel_burn">cancel_burn</a>&lt;CoinType: store&gt;(account: &signer, preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1217,7 +1217,7 @@ the treasury compliance account or the <code><a href="XDX.md#0x1_XDX">0x1::XDX</
 reference.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_mint_with_capability">mint_with_capability</a>&lt;CoinType&gt;(value: u64, _capability: &<a href="Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_mint_with_capability">mint_with_capability</a>&lt;CoinType: store&gt;(value: u64, _capability: &<a href="Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1339,7 +1339,7 @@ being preburned is a synthetic currency (<code>is_synthetic = <b>true</b></code>
 <code><a href="Diem.md#0x1_Diem_PreburnEvent">PreburnEvent</a></code> will be emitted.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_preburn_with_resource">preburn_with_resource</a>&lt;CoinType&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_preburn_with_resource">preburn_with_resource</a>&lt;CoinType: store&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address)
 </code></pre>
 
 
@@ -1474,7 +1474,7 @@ This is useful for places where a module needs to be able to burn coins
 outside of a Designated Dealer, e.g., for transaction fees, or for the XDX reserve.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_account: &signer): <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_create_preburn">create_preburn</a>&lt;CoinType: store&gt;(tc_account: &signer): <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1529,7 +1529,7 @@ Publish an empty <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a><
 dealer account <code>account</code>.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue">publish_preburn_queue</a>&lt;CoinType&gt;(account: &signer)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue">publish_preburn_queue</a>&lt;CoinType: store&gt;(account: &signer)
 </code></pre>
 
 
@@ -1623,7 +1623,7 @@ time, and the association TC account <code>tc_account</code> (at <code><a href="
 this resource for the designated dealer <code>account</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_publish_preburn_queue_to_account">publish_preburn_queue_to_account</a>&lt;CoinType: store&gt;(account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -1693,7 +1693,7 @@ resource to using a <code><a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</
 requests can be outstanding in the same currency for a designated dealer.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_upgrade_preburn">upgrade_preburn</a>&lt;CoinType&gt;(account: &signer)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_upgrade_preburn">upgrade_preburn</a>&lt;CoinType: store&gt;(account: &signer)
 </code></pre>
 
 
@@ -1838,7 +1838,7 @@ Add the <code>preburn</code> request to the preburn queue of <code>account</code
 number of preburn requests does not exceed <code><a href="Diem.md#0x1_Diem_MAX_OUTSTANDING_PREBURNS">MAX_OUTSTANDING_PREBURNS</a></code>.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_add_preburn_to_queue">add_preburn_to_queue</a>&lt;CoinType: store&gt;(account: &signer, preburn: <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1916,7 +1916,7 @@ Calls to this function will fail if:
 * <code>coin</code> has a <code>value</code> field of zero.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_preburn_to">preburn_to</a>&lt;CoinType&gt;(account: &signer, coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_preburn_to">preburn_to</a>&lt;CoinType: store&gt;(account: &signer, coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2042,7 +2042,7 @@ Calls to this function will fail if:
 * a preburn request with the correct value for <code>amount</code> cannot be found in the preburn queue for <code>preburn_address</code>;
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_remove_preburn_from_queue">remove_preburn_from_queue</a>&lt;CoinType: store&gt;(preburn_address: address, amount: u64): <a href="Diem.md#0x1_Diem_PreburnWithMetadata">Diem::PreburnWithMetadata</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2151,7 +2151,7 @@ resource under <code>preburn_address</code>, or, if there is no preburn request 
 the preburn queue with a <code>to_burn</code> amount equal to <code>amount</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn_with_capability">burn_with_capability</a>&lt;CoinType: store&gt;(preburn_address: address, capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;, amount: u64)
 </code></pre>
 
 
@@ -2238,7 +2238,7 @@ This function can only be called by the holder of a <code><a href="Diem.md#0x1_D
 Calls to this function will fail if the preburn <code>to_burn</code> area for <code>CoinType</code> is empty.
 
 
-<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="Diem.md#0x1_Diem_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType: store&gt;(preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2366,7 +2366,7 @@ This function can only be called by the holder of a
 at <code>preburn_address</code> does not contain a preburn request of the right amount.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, _capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;CoinType: store&gt;(preburn_address: address, _capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2494,7 +2494,7 @@ A shortcut for immediately burning a coin. This calls preburn followed by a subs
 used for administrative burns, like unpacking an XDX coin or charging fees.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn_now">burn_now</a>&lt;CoinType&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address, capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_burn_now">burn_now</a>&lt;CoinType: store&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="Diem.md#0x1_Diem_Preburn">Diem::Preburn</a>&lt;CoinType&gt;, preburn_address: address, capability: &<a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2563,7 +2563,7 @@ Calls to this function will fail if <code>account</code> does  not have a
 published <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> resource at the top-level.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_remove_burn_capability">remove_burn_capability</a>&lt;CoinType&gt;(account: &signer): <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_remove_burn_capability">remove_burn_capability</a>&lt;CoinType: store&gt;(account: &signer): <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2618,7 +2618,7 @@ preburn requests across all preburn resources for the <code>CoinType</code>
 currency).
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_preburn_value">preburn_value</a>&lt;CoinType&gt;(): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_preburn_value">preburn_value</a>&lt;CoinType: store&gt;(): u64
 </code></pre>
 
 
@@ -2645,7 +2645,7 @@ Create a new <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;</code> wi
 this and it will be successful as long as <code>CoinType</code> is a registered currency.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_zero">zero</a>&lt;CoinType&gt;(): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_zero">zero</a>&lt;CoinType: store&gt;(): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2673,7 +2673,7 @@ represented in the base units for the currency represented by
 <code>CoinType</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_value">value</a>&lt;CoinType&gt;(coin: &<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_value">value</a>&lt;CoinType: store&gt;(coin: &<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): u64
 </code></pre>
 
 
@@ -2700,7 +2700,7 @@ remaining balance of the passed in <code>coin</code>, along with another coin
 with value equal to <code>amount</code>. Calls will fail if <code>amount &gt; <a href="Diem.md#0x1_Diem_value">Diem::value</a>(&coin)</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_split">split</a>&lt;CoinType&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, amount: u64): (<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_split">split</a>&lt;CoinType: store&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, amount: u64): (<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2744,7 +2744,7 @@ Calls will abort if the passed-in <code>amount</code> is greater than the
 value of the passed-in <code>coin</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_withdraw">withdraw</a>&lt;CoinType: store&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, amount: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2801,7 +2801,7 @@ Return a <code><a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;</code> worth 
 zero. Does not abort.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_withdraw_all">withdraw_all</a>&lt;CoinType: store&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2843,7 +2843,7 @@ Takes two coins as input, returns a single coin with the total value of both coi
 Destroys on of the input coins.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_join">join</a>&lt;CoinType&gt;(coin1: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, coin2: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_join">join</a>&lt;CoinType: store&gt;(coin1: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, coin2: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -2885,7 +2885,7 @@ The coin passed in by reference will have a value equal to the sum of the two co
 The <code>check</code> coin is consumed in the process
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, check: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_deposit">deposit</a>&lt;CoinType: store&gt;(coin: &<b>mut</b> <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;, check: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2941,7 +2941,7 @@ so it is impossible to "burn" any non-zero amount of <code><a href="Diem.md#0x1_
 a <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a></code> for the specific <code>CoinType</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_destroy_zero">destroy_zero</a>&lt;CoinType: store&gt;(coin: <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -2990,7 +2990,7 @@ adds the currency to the set of <code><a href="RegisteredCurrencies.md#0x1_Regis
 <code><a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> and <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> resources.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_register_currency">register_currency</a>&lt;CoinType&gt;(dr_account: &signer, to_xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;, <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_register_currency">register_currency</a>&lt;CoinType: store&gt;(dr_account: &signer, to_xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="Diem.md#0x1_Diem_MintCapability">Diem::MintCapability</a>&lt;CoinType&gt;, <a href="Diem.md#0x1_Diem_BurnCapability">Diem::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -3107,7 +3107,7 @@ This code allows different currencies to have different treasury compliance
 accounts.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;(dr_account: &signer, tc_account: &signer, to_xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_register_SCS_currency">register_SCS_currency</a>&lt;CoinType: store&gt;(dr_account: &signer, tc_account: &signer, to_xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3207,7 +3207,7 @@ Only a TreasuryCompliance account can have the BurnCapability [[H3]][PERMISSION]
 Returns the total amount of currency minted of type <code>CoinType</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_market_cap">market_cap</a>&lt;CoinType&gt;(): u128
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_market_cap">market_cap</a>&lt;CoinType: store&gt;(): u128
 </code></pre>
 
 
@@ -3236,7 +3236,7 @@ This should only be used where a _rough_ approximation of the exchange
 rate is needed.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_approx_xdx_for_value">approx_xdx_for_value</a>&lt;FromCoinType&gt;(from_value: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_approx_xdx_for_value">approx_xdx_for_value</a>&lt;FromCoinType: store&gt;(from_value: u64): u64
 </code></pre>
 
 
@@ -3294,7 +3294,7 @@ This should only be used where a rough approximation of the exchange
 rate is needed.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_approx_xdx_for_coin">approx_xdx_for_coin</a>&lt;FromCoinType&gt;(coin: &<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;FromCoinType&gt;): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_approx_xdx_for_coin">approx_xdx_for_coin</a>&lt;FromCoinType: store&gt;(coin: &<a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;FromCoinType&gt;): u64
 </code></pre>
 
 
@@ -3322,7 +3322,7 @@ Returns <code><b>true</b></code> if the type <code>CoinType</code> is a register
 Returns <code><b>false</b></code> otherwise.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_currency">is_currency</a>&lt;CoinType&gt;(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_currency">is_currency</a>&lt;CoinType: store&gt;(): bool
 </code></pre>
 
 
@@ -3346,7 +3346,7 @@ Returns <code><b>false</b></code> otherwise.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_SCS_currency">is_SCS_currency</a>&lt;CoinType: store&gt;(): bool
 </code></pre>
 
 
@@ -3373,7 +3373,7 @@ Returns <code><b>true</b></code> if <code>CoinType</code> is a synthetic currenc
 its <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code>. Returns <code><b>false</b></code> otherwise.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType: store&gt;(): bool
 </code></pre>
 
 
@@ -3402,7 +3402,7 @@ Returns the scaling factor for the <code>CoinType</code> currency as defined
 in its <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_scaling_factor">scaling_factor</a>&lt;CoinType&gt;(): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_scaling_factor">scaling_factor</a>&lt;CoinType: store&gt;(): u64
 </code></pre>
 
 
@@ -3430,7 +3430,7 @@ Returns the representable (i.e. real-world) fractional part for the
 <code>CoinType</code> currency as defined in its <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_fractional_part">fractional_part</a>&lt;CoinType&gt;(): u64
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_fractional_part">fractional_part</a>&lt;CoinType: store&gt;(): u64
 </code></pre>
 
 
@@ -3458,7 +3458,7 @@ Returns the currency code for the registered currency as defined in
 its <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code> resource.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_currency_code">currency_code</a>&lt;CoinType&gt;(): vector&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_currency_code">currency_code</a>&lt;CoinType: store&gt;(): vector&lt;u8&gt;
 </code></pre>
 
 
@@ -3511,7 +3511,7 @@ Updates the <code>to_xdx_exchange_rate</code> held in the <code><a href="Diem.md
 <code>FromCoinType</code> to the new passed-in <code>xdx_exchange_rate</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_update_xdx_exchange_rate">update_xdx_exchange_rate</a>&lt;FromCoinType&gt;(tc_account: &signer, xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_update_xdx_exchange_rate">update_xdx_exchange_rate</a>&lt;FromCoinType: store&gt;(tc_account: &signer, xdx_exchange_rate: <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
 </code></pre>
 
 
@@ -3615,7 +3615,7 @@ Must abort if the account does not have the TreasuryCompliance Role [[H5]][PERMI
 Returns the (rough) exchange rate between <code>CoinType</code> and <code><a href="XDX.md#0x1_XDX">XDX</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_xdx_exchange_rate">xdx_exchange_rate</a>&lt;CoinType&gt;(): <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_xdx_exchange_rate">xdx_exchange_rate</a>&lt;CoinType: store&gt;(): <a href="../../../../../../move-stdlib/docs/FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
 
@@ -3664,7 +3664,7 @@ disallowed until it is turned back on via this function. All coins
 start out in the default state of <code>can_mint = <b>true</b></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(tc_account: &signer, can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_update_minting_ability">update_minting_ability</a>&lt;CoinType: store&gt;(tc_account: &signer, can_mint: bool)
 </code></pre>
 
 
@@ -3743,7 +3743,7 @@ Only the TreasuryCompliance role can enable/disable minting [[H2]][PERMISSION].
 Asserts that <code>CoinType</code> is a registered currency.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_assert_is_currency">assert_is_currency</a>&lt;CoinType: store&gt;()
 </code></pre>
 
 
@@ -3791,7 +3791,7 @@ Asserts that <code>CoinType</code> is a registered currency.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="Diem.md#0x1_Diem_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType: store&gt;()
 </code></pre>
 
 

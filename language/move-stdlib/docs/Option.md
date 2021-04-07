@@ -424,7 +424,7 @@ Return the value inside <code>t</code> if it holds one
 Return <code>default</code> if <code>t</code> does not hold a value
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
+<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_get_with_default">get_with_default</a>&lt;Element: <b>copy</b>, drop&gt;(t: &<a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
 </code></pre>
 
 
@@ -640,7 +640,7 @@ Aborts if <code>t</code> does not hold a value
 Destroys <code>t.</code> If <code>t</code> holds a value, return it. Returns <code>default</code> otherwise
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
+<pre><code><b>public</b> <b>fun</b> <a href="Option.md#0x1_Option_destroy_with_default">destroy_with_default</a>&lt;Element: drop&gt;(t: <a href="Option.md#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
 </code></pre>
 
 

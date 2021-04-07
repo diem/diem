@@ -173,7 +173,7 @@ If <code>add_all_currencies = <b>true</b></code> this will add a <code>PreburnQu
 for each known currency at launch.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType: store&gt;(dd: &signer, tc_account: &signer, add_all_currencies: bool)
 </code></pre>
 
 
@@ -236,7 +236,7 @@ Public so that a currency can be added to a DD later on. Will require
 multi-signer transactions in order to add a new currency to an existing DD.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType: store&gt;(dd: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -297,7 +297,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, amount: u64, dd_addr: address, _tier_index: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType: store&gt;(tc_account: &signer, amount: u64, dd_addr: address, _tier_index: u64): <a href="Diem.md#0x1_Diem_Diem">Diem::Diem</a>&lt;CoinType&gt;
 </code></pre>
 
 

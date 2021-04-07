@@ -280,7 +280,7 @@ account at <code>addr</code> is amenable with their account limits.
 Returns false if this deposit violates the account limits.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType: store&gt;(amount: u64, addr: address, _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
 </code></pre>
 
 
@@ -367,7 +367,7 @@ the account at <code>addr</code> would violate the account limits for that accou
 Returns <code><b>false</b></code> if this withdrawal violates account limits.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType: store&gt;(amount: u64, addr: address, _cap: &<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
 </code></pre>
 
 
@@ -443,7 +443,7 @@ Root accounts for multi-account entities will hold this resource at
 their root/parent account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(dr_account: &signer, to_limit: &signer, limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType: store&gt;(dr_account: &signer, to_limit: &signer, limit_address: address)
 </code></pre>
 
 
@@ -530,7 +530,7 @@ window to it. Additionally, the TC controls the values held within this
 resource once it's published.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(publish_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType: store&gt;(publish_account: &signer)
 </code></pre>
 
 
@@ -613,7 +613,7 @@ If any of the field arguments is <code>0</code> the corresponding field is not u
 TODO: This should be specified.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>&lt;CoinType&gt;(tc_account: &signer, limit_address: address, new_max_inflow: u64, new_max_outflow: u64, new_max_holding_balance: u64, new_time_period: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>&lt;CoinType: store&gt;(tc_account: &signer, limit_address: address, new_max_inflow: u64, new_max_outflow: u64, new_max_holding_balance: u64, new_time_period: u64)
 </code></pre>
 
 
@@ -663,7 +663,7 @@ but the <code>limit_address</code> should remain the same, the current
 TODO(wrwg): specify
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_window_info">update_window_info</a>&lt;CoinType&gt;(tc_account: &signer, window_address: address, aggregate_balance: u64, new_limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_update_window_info">update_window_info</a>&lt;CoinType: store&gt;(tc_account: &signer, window_address: address, aggregate_balance: u64, new_limit_address: address)
 </code></pre>
 
 
@@ -699,7 +699,7 @@ If the time window starting at <code>window.window_start</code> and lasting for
 the inflow and outflow records.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType&gt;(window: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;, limits_definition: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType: store&gt;(window: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;, limits_definition: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -806,7 +806,7 @@ If the receipt of <code>amount</code> doesn't violate the limits <code>amount</c
 <code>CoinType</code> is recorded as received in the given <code>receiving</code> window.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_receive_and_update_window">can_receive_and_update_window</a>&lt;CoinType: store&gt;(amount: u64, receiving: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
 </code></pre>
 
 
@@ -986,7 +986,7 @@ If the withdrawal of <code>amount</code> doesn't violate the limits <code>amount
 <code>CoinType</code> is recorded as withdrawn in the given <code>sending</code> window.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_can_withdraw_and_update_window">can_withdraw_and_update_window</a>&lt;CoinType: store&gt;(amount: u64, sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
 </code></pre>
 
 
@@ -1121,7 +1121,7 @@ Update outflow.
 Determine whether the <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource has no restrictions.
 
 
-<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType&gt;(limits_def: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;): bool
+<pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType: store&gt;(limits_def: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;): bool
 </code></pre>
 
 
@@ -1178,7 +1178,7 @@ Checks whether the limits definition is unrestricted.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_limits_definition_address">limits_definition_address</a>&lt;CoinType&gt;(addr: address): address
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_limits_definition_address">limits_definition_address</a>&lt;CoinType: store&gt;(addr: address): address
 </code></pre>
 
 
@@ -1202,7 +1202,7 @@ Checks whether the limits definition is unrestricted.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_has_limits_published">has_limits_published</a>&lt;CoinType&gt;(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_has_limits_published">has_limits_published</a>&lt;CoinType: store&gt;(addr: address): bool
 </code></pre>
 
 
@@ -1226,7 +1226,7 @@ Checks whether the limits definition is unrestricted.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">has_window_published</a>&lt;CoinType&gt;(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">has_window_published</a>&lt;CoinType: store&gt;(addr: address): bool
 </code></pre>
 
 

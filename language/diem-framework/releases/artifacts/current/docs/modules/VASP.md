@@ -311,7 +311,7 @@ Return <code><b>true</b></code> if <code>addr</code> is a parent or child VASP w
 Aborts if <code>addr</code> is not a VASP
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="VASP.md#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType&gt;(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="VASP.md#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType: store&gt;(addr: address): bool
 </code></pre>
 
 

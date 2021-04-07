@@ -794,7 +794,7 @@ This is emitted on the new Child VASPS's <code><a href="../../../../../releases/
 * <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_create_recovery_address">AccountAdministrationScripts::create_recovery_address</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType: store&gt;(parent_vasp: signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
 </code></pre>
 
 
@@ -1264,7 +1264,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 * <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType: store&gt;(tc_account: signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1406,7 +1406,7 @@ and the <code>rold_id</code> field being <code><a href="../../../../../releases/
 * <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountCreationScripts_create_designated_dealer">create_designated_dealer</a>&lt;Currency: store&gt;(tc_account: signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1549,7 +1549,7 @@ already have a <code><a href="../../../../../releases/artifacts/current/docs/mod
 * <code><a href="script_documentation.md#0x1_PaymentScripts_peer_to_peer_with_metadata">PaymentScripts::peer_to_peer_with_metadata</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_AccountAdministrationScripts_add_currency_to_account">add_currency_to_account</a>&lt;Currency: store&gt;(account: signer)
 </code></pre>
 
 
@@ -2674,7 +2674,7 @@ Successful execution of this script emits two events:
 * <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_add_currency_to_account">AccountAdministrationScripts::add_currency_to_account</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_PaymentScripts_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Currency: store&gt;(payer: signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -3710,7 +3710,7 @@ being <code>preburn_address</code>.
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_preburn">TreasuryComplianceScripts::preburn</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token&gt;(account: signer, preburn_address: address, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_cancel_burn_with_amount">cancel_burn_with_amount</a>&lt;Token: store&gt;(account: signer, preburn_address: address, amount: u64)
 </code></pre>
 
 
@@ -3867,7 +3867,7 @@ held in the <code><a href="../../../../../releases/artifacts/current/docs/module
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_preburn">TreasuryComplianceScripts::preburn</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_with_amount">burn_with_amount</a>&lt;Token&gt;(account: signer, sliding_nonce: u64, preburn_address: address, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_with_amount">burn_with_amount</a>&lt;Token: store&gt;(account: signer, sliding_nonce: u64, preburn_address: address, amount: u64)
 </code></pre>
 
 
@@ -3989,7 +3989,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_txn_fees">TreasuryComplianceScripts::burn_txn_fees</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_preburn">preburn</a>&lt;Token&gt;(account: signer, amount: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_preburn">preburn</a>&lt;Token: store&gt;(account: signer, amount: u64)
 </code></pre>
 
 
@@ -4114,7 +4114,7 @@ held in the <code><a href="../../../../../releases/artifacts/current/docs/module
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_cancel_burn_with_amount">TreasuryComplianceScripts::cancel_burn_with_amount</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: signer)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_burn_txn_fees">burn_txn_fees</a>&lt;CoinType: store&gt;(tc_account: signer)
 </code></pre>
 
 
@@ -4214,7 +4214,7 @@ resource published under the <code>designated_dealer_address</code>.
 * <code><a href="script_documentation.md#0x1_AccountAdministrationScripts_rotate_dual_attestation_info">AccountAdministrationScripts::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_tiered_mint">tiered_mint</a>&lt;CoinType: store&gt;(tc_account: signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -4585,7 +4585,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_minting_ability">TreasuryComplianceScripts::update_minting_ability</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_exchange_rate">update_exchange_rate</a>&lt;Currency: store&gt;(tc_account: signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
 </code></pre>
 
 
@@ -4705,7 +4705,7 @@ This transaction needs to be sent by the Treasury Compliance account.
 * <code><a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_exchange_rate">TreasuryComplianceScripts::update_exchange_rate</a></code>
 
 
-<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(tc_account: signer, allow_minting: bool)
+<pre><code><b>public</b>(<b>script</b>) <b>fun</b> <a href="script_documentation.md#0x1_TreasuryComplianceScripts_update_minting_ability">update_minting_ability</a>&lt;Currency: store&gt;(tc_account: signer, allow_minting: bool)
 </code></pre>
 
 

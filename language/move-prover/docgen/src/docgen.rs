@@ -12,7 +12,7 @@ use move_model::{
     emit, emitln,
     model::{
         FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter,
-        QualifiedId, StructEnv, TypeConstraint, TypeParameter,
+        QualifiedId, StructEnv, TypeParameter,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -1741,15 +1741,29 @@ impl<'env> Docgen<'env> {
 
     /// Display a type parameter.
     fn type_parameter_display(&self, tp: &TypeParameter) -> String {
-        format!(
-            "{}{}",
-            self.name_string(tp.0),
-            match tp.1 {
-                TypeConstraint::None => "",
-                TypeConstraint::Resource => ": resource",
-                TypeConstraint::Copyable => ": copyable",
-            }
-        )
+        let mut ability_constraints = vec![];
+        let ability_set = tp.1 .0;
+        if ability_set.has_copy() {
+            ability_constraints.push("copy");
+        }
+        if ability_set.has_drop() {
+            ability_constraints.push("drop");
+        }
+        if ability_set.has_store() {
+            ability_constraints.push("store");
+        }
+        if ability_set.has_key() {
+            ability_constraints.push("key");
+        }
+        if ability_constraints.is_empty() {
+            self.name_string(tp.0).to_string()
+        } else {
+            format!(
+                "{}: {}",
+                self.name_string(tp.0),
+                ability_constraints.join(", ")
+            )
+        }
     }
 
     /// Display a type parameter list.

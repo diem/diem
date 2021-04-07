@@ -19,7 +19,7 @@ use move_lang::{
 };
 use vm::{
     access::ModuleAccess,
-    file_format::{Constant, FunctionDefinitionIndex, StructDefinitionIndex},
+    file_format::{AbilitySet, Constant, FunctionDefinitionIndex, StructDefinitionIndex},
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
@@ -36,9 +36,9 @@ use crate::{
     },
     exp_rewriter::{ExpRewriter, RewriteTarget},
     model::{
-        FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId,
-        NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
-        TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
+        AbilityConstraint, FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc,
+        NamedConstantData, NamedConstantId, NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId,
+        StructData, StructId, TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
     },
     pragmas::{
         is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_DEACTIVATED_PROP,
@@ -2669,7 +2669,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                         entry
                             .type_params
                             .iter()
-                            .map(|(name, _)| TypeParameter(*name, TypeConstraint::None))
+                            .map(|(name, _)| {
+                                TypeParameter(*name, AbilityConstraint(AbilitySet::EMPTY))
+                            })
                             .collect_vec(),
                     )
                 }
