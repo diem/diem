@@ -1,23 +1,31 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use num::ToPrimitive;
 use std::collections::BTreeMap;
 
-use move_ir_types::{location::sp, sp};
+use move_ir_types::{
+    location::{sp, Loc as MoveLoc},
+    sp,
+};
 use move_lang::{
     compiled_unit::{CompiledUnit, FunctionInfo},
+    expansion::ast::Value_ as MoveValue,
     hlir::ast::{
-        Block, Command, Command_, Exp, ExpListItem, Function, FunctionBody, FunctionBody_,
-        ModuleCall, ModuleDefinition, Program, Script, SingleType, Statement, Statement_,
-        UnannotatedExp_,
+        BaseType_, Block, Command, Command_, Exp as MoveExp, ExpListItem, Function, FunctionBody,
+        FunctionBody_, ModuleCall, ModuleDefinition, Program, Script, SingleType, SingleType_,
+        Statement, Statement_, Type_ as MoveType, UnannotatedExp_,
     },
+    naming::ast::BuiltinTypeName_,
     parser::ast::{FunctionName, ModuleIdent, Var},
     shared::{unique_map::UniqueMap, Address, Identifier},
 };
 
 use crate::{
+    ast::{ConditionKind, Exp as SpecExp, Spec, TempIndex, Value as SpecValue},
     instrumenter::context::CompilationContext,
-    model::{FunctionEnv, GlobalEnv, ModuleEnv},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId},
+    ty::{PrimitiveType as SpecPrimitiveType, Type as SpecType},
 };
 
 // =================================================================================================
@@ -415,13 +423,13 @@ fn command(
 fn expression(
     fenv: &FunctionEnv<'_>,
     info: &FunctionInfo,
-    exp: Exp,
+    exp: MoveExp,
     locals: &mut UniqueMap<Var, SingleType>,
     block: &mut Block,
-) -> Exp {
+) -> MoveExp {
     let env = fenv.module_env.env;
     let spec = fenv.get_spec();
-    let Exp {
+    let MoveExp {
         ty,
         exp: sp!(loc, exp_),
     } = exp;
@@ -438,8 +446,24 @@ fn expression(
                         &env.to_loc(&loc),
                         "Unable to find the Spec in FunctionEnv for this spec block",
                     ),
-                    Some(_inline_spec) => {
-                        // TODO (mengxu) replace with expr handler
+                    Some(inline_spec) => {
+                        // TODO (mengxu): remove these checking once we know that
+                        // `spec_info.used_locals` and `vars` are in fact the same thing
+                        assert_eq!(spec_info.used_locals.len(), vars.len());
+                        for v in vars.keys() {
+                            assert!(spec_info.used_locals.contains_key(v));
+                        }
+                        // build the TempIndex to Var mapping
+                        let vidx: BTreeMap<TempIndex, Var> = spec_info
+                            .used_locals
+                            .key_cloned_iter()
+                            .map(|(v, v_info)| {
+                                assert_eq!(locals.get(&v), Some(&v_info.type_));
+                                (v_info.index as TempIndex, v)
+                            })
+                            .collect();
+                        assert_eq!(vidx.len(), vars.len());
+                        instrument_inline_spec(fenv, &vidx, loc, inline_spec, locals, block);
                     }
                 },
             }
@@ -525,10 +549,175 @@ fn expression(
         }
         exp_ @ UnannotatedExp_::BorrowLocal(..) => exp_,
         exp_ @ UnannotatedExp_::Unreachable => exp_,
+        // a valid HLIR ast should not have unresolved expressions
         UnannotatedExp_::UnresolvedError => unreachable!(),
     };
-    Exp {
+    MoveExp {
         ty,
         exp: sp(loc, new_exp),
+    }
+}
+
+fn instrument_inline_spec(
+    fenv: &FunctionEnv<'_>,
+    vars: &BTreeMap<TempIndex, Var>,
+    loc: MoveLoc,
+    spec: &Spec,
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
+) {
+    // an inline spec should have no `on_impl` specs
+    assert!(spec.on_impl.is_empty());
+
+    // iterate and convert the conditions
+    for condition in &spec.conditions {
+        // only `assert` and `assume` are allowed for in-code spec blocks
+        assert!(matches!(
+            &condition.kind,
+            ConditionKind::Assert | ConditionKind::Assume
+        ));
+        // `assert` and `assume` expressions do not have other info attached
+        assert!(condition.properties.is_empty());
+        assert!(condition.additional_exps.is_empty());
+        // now the actual instrumentation
+        // TODO (mengxu): this just gets the condition expression, we still need
+        // to construct the if-else statement
+        convert_spec_expression(fenv, vars, loc, &condition.exp, locals, block);
+    }
+}
+
+fn convert_spec_expression(
+    fenv: &FunctionEnv<'_>,
+    vars: &BTreeMap<TempIndex, Var>,
+    loc: MoveLoc,
+    exp: &SpecExp,
+    locals: &mut UniqueMap<Var, SingleType>,
+    _block: &mut Block,
+) -> MoveExp {
+    let env = fenv.module_env.env;
+    match exp {
+        SpecExp::Value(node_id, val) => convert_spec_value(env, loc, *node_id, val),
+        SpecExp::Temporary(_, idx) => match vars.get(idx) {
+            None => {
+                env.error(
+                    &env.to_loc(&loc),
+                    "Unable to find TempIndex for this Temporary",
+                );
+                unresolved_move_expression(loc)
+            }
+            Some(var) => match locals.get(var) {
+                None => {
+                    env.error(
+                        &env.to_loc(&loc),
+                        "Unable to find move type for this temporary variable",
+                    );
+                    unresolved_move_expression(loc)
+                }
+                Some(move_ty) => MoveExp {
+                    ty: sp(loc, MoveType::Single(move_ty.clone())),
+                    exp: sp(
+                        loc,
+                        // TODO (mengxu): we might not actually able to copy it...
+                        UnannotatedExp_::Copy {
+                            from_user: false,
+                            var: var.clone(),
+                        },
+                    ),
+                },
+            },
+        },
+        // TODO (mengxu) handle these unimplemented cases
+        SpecExp::LocalVar(..) => unimplemented!("local variables (in quantifiers and lambda)"),
+        SpecExp::SpecVar(..) => unimplemented!("ghost variables"),
+        SpecExp::Lambda(..) => unimplemented!("lambda definition"),
+        SpecExp::Invoke(..) => unimplemented!("lambda invocation"),
+        SpecExp::Quant(..) => unimplemented!("quantifiers"),
+        SpecExp::Block(..) => unimplemented!("block"),
+        SpecExp::IfElse(..) => unimplemented!("if-else"),
+        SpecExp::Call(..) => unimplemented!("call"),
+        // a valid spec-lang ast should not have invalid spec expressions
+        SpecExp::Invalid(..) => unreachable!(),
+    }
+}
+
+fn convert_spec_value(env: &GlobalEnv, loc: MoveLoc, node: NodeId, value: &SpecValue) -> MoveExp {
+    let (move_val, move_ty, has_error) = match value {
+        SpecValue::Address(v) => {
+            let addr = Address::parse_str(&v.to_str_radix(16)).unwrap();
+            (
+                MoveValue::Address(addr),
+                MoveType::Single(sp(loc, SingleType_::Base(BaseType_::address(loc)))),
+                false,
+            )
+        }
+        SpecValue::Number(v) => {
+            let spec_ty = env.get_node_type(node);
+            match spec_ty {
+                SpecType::Primitive(SpecPrimitiveType::U8) => (
+                    MoveValue::U8(v.to_u8().unwrap()),
+                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u8(loc)))),
+                    false,
+                ),
+                SpecType::Primitive(SpecPrimitiveType::U64) => (
+                    MoveValue::U64(v.to_u64().unwrap()),
+                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u64(loc)))),
+                    false,
+                ),
+                SpecType::Primitive(SpecPrimitiveType::U128) => (
+                    MoveValue::U128(v.to_u128().unwrap()),
+                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u128(loc)))),
+                    false,
+                ),
+                _ => {
+                    env.error(
+                        &env.to_loc(&loc),
+                        "Invalid type for the Number variant in movel-model AST values",
+                    );
+                    (
+                        MoveValue::U64(v.to_u64().unwrap()),
+                        MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u64(loc)))),
+                        true,
+                    )
+                }
+            }
+        }
+        SpecValue::Bool(v) => (
+            MoveValue::Bool(*v),
+            MoveType::Single(sp(loc, SingleType_::Base(BaseType_::bool(loc)))),
+            false,
+        ),
+        SpecValue::ByteArray(v) => (
+            MoveValue::Bytearray(v.to_owned()),
+            MoveType::Single(sp(
+                loc,
+                SingleType_::Base(BaseType_::builtin(
+                    loc,
+                    BuiltinTypeName_::Vector,
+                    vec![BaseType_::u8(loc)],
+                )),
+            )),
+            false,
+        ),
+    };
+    if has_error {
+        unresolved_move_expression(loc)
+    } else {
+        MoveExp {
+            ty: sp(loc, move_ty),
+            exp: sp(loc, UnannotatedExp_::Value(sp(loc, move_val))),
+        }
+    }
+}
+
+fn unresolved_move_expression(loc: MoveLoc) -> MoveExp {
+    MoveExp {
+        ty: sp(
+            loc,
+            MoveType::Single(sp(
+                loc,
+                SingleType_::Base(sp(loc, BaseType_::UnresolvedError)),
+            )),
+        ),
+        exp: sp(loc, UnannotatedExp_::UnresolvedError),
     }
 }
