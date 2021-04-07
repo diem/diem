@@ -4,13 +4,6 @@
 #![forbid(unsafe_code)]
 
 use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
-use diem_transaction_builder::stdlib as transaction_builder;
-use std::{
-    env, fmt, slice,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-
 use anyhow::{format_err, Result};
 use diem_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -18,13 +11,13 @@ use diem_crypto::{
     traits::Uniform,
 };
 use diem_logger::*;
+use diem_sdk::transaction_builder::{Currency, TransactionBuilder, TransactionFactory};
+use diem_transaction_builder::stdlib as transaction_builder;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{self, testnet_dd_account_address, XUS_NAME},
     chain_id::ChainId,
-    transaction::{
-        authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
-    },
+    transaction::{authenticator::AuthenticationKey, helpers::create_user_txn, TransactionPayload},
 };
 use itertools::zip;
 use rand::{
@@ -33,12 +26,17 @@ use rand::{
     seq::{IteratorRandom, SliceRandom},
     Rng, SeedableRng,
 };
+use std::{
+    env, fmt, slice,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::runtime::Handle;
 
 use diem_client::{views::AmountView, Client as JsonRpcClient, MethodRequest};
 use diem_types::{
     account_config::{diem_root_address, treasury_compliance_account_address},
-    transaction::SignedTransaction,
+    transaction::{helpers::TransactionSigner, SignedTransaction},
 };
 use futures::future::{try_join_all, FutureExt};
 use once_cell::sync::Lazy;
@@ -135,6 +133,9 @@ pub struct EmitJobRequest {
 }
 
 pub static REUSE_ACC: Lazy<bool> = Lazy::new(|| env::var("REUSE_ACC").is_ok());
+// This can let CT has ability to switch between legacy tx script type and script fn tx type
+// with more types of tx need to be supported, this can be changed to an enum in the future
+pub static SCRIPT_FN: Lazy<bool> = Lazy::new(|| env::var("SCRIPT_FN").is_ok());
 
 impl EmitJobRequest {
     pub fn for_instances(
@@ -889,15 +890,26 @@ async fn retrieve_account_balance(
         .balances)
 }
 
+pub fn sign_with_transaction_builder(
+    builder: TransactionBuilder,
+    sender_account: &mut AccountData,
+) -> anyhow::Result<SignedTransaction> {
+    let raw_txn = builder
+        .sender(sender_account.address)
+        .sequence_number(sender_account.sequence_number)
+        .build();
+    sender_account.key_pair.sign_txn(raw_txn)
+}
+
 pub fn gen_submit_transaction_request(
-    script: Script,
+    payload: TransactionPayload,
     sender_account: &mut AccountData,
     chain_id: ChainId,
     gas_price: u64,
 ) -> SignedTransaction {
     let transaction = create_user_txn(
         &sender_account.key_pair,
-        TransactionPayload::Script(script),
+        payload,
         sender_account.address,
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
@@ -917,18 +929,19 @@ fn gen_mint_request(
     chain_id: ChainId,
 ) -> SignedTransaction {
     let receiver = faucet_account.address;
-    gen_submit_transaction_request(
-        transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::xus_tag(),
+    let transaction = sign_with_transaction_builder(
+        TransactionFactory::new(chain_id).peer_to_peer_with_metadata(
+            Currency::XUS,
             receiver,
             num_coins,
             vec![],
             vec![],
         ),
         faucet_account,
-        chain_id,
-        0,
     )
+    .expect("Failed to create signed transaction");
+    faucet_account.sequence_number += 1;
+    transaction
 }
 
 pub fn gen_transfer_txn_request(
@@ -938,40 +951,37 @@ pub fn gen_transfer_txn_request(
     chain_id: ChainId,
     gas_price: u64,
 ) -> SignedTransaction {
-    gen_submit_transaction_request(
-        transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::xus_tag(),
-            *receiver,
-            num_coins,
-            vec![],
-            vec![],
-        ),
+    let mut tx_factory = TransactionFactory::new(chain_id).with_gas_unit_price(gas_price);
+    if *SCRIPT_FN {
+        tx_factory = tx_factory.with_diem_version(2);
+    }
+    let transaction = sign_with_transaction_builder(
+        tx_factory.peer_to_peer_with_metadata(Currency::XUS, *receiver, num_coins, vec![], vec![]),
         sender,
-        chain_id,
-        gas_price,
     )
+    .expect("Failed to create signed transaction");
+    sender.sequence_number += 1;
+    transaction
 }
 
 fn gen_create_child_txn_request(
     sender: &mut AccountData,
-    receiver: &AccountAddress,
-    receiver_auth_key_prefix: Vec<u8>,
+    receiver_auth_key: AuthenticationKey,
     num_coins: u64,
     chain_id: ChainId,
 ) -> SignedTransaction {
-    let add_all_currencies = false;
-    gen_submit_transaction_request(
-        transaction_builder::encode_create_child_vasp_account_script(
-            account_config::xus_tag(),
-            *receiver,
-            receiver_auth_key_prefix,
-            add_all_currencies,
+    let transaction = sign_with_transaction_builder(
+        TransactionFactory::new(chain_id).create_child_vasp_account(
+            Currency::XUS,
+            receiver_auth_key,
+            false,
             num_coins,
         ),
         sender,
-        chain_id,
-        0,
     )
+    .expect("Failed to create signed transaction");
+    sender.sequence_number += 1;
+    transaction
 }
 
 fn gen_create_account_txn_request(
@@ -981,13 +991,15 @@ fn gen_create_account_txn_request(
     chain_id: ChainId,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_create_parent_vasp_account_script(
-            account_config::xus_tag(),
-            0,
-            *receiver,
-            auth_key_prefix,
-            vec![],
-            false,
+        TransactionPayload::Script(
+            transaction_builder::encode_create_parent_vasp_account_script(
+                account_config::xus_tag(),
+                0,
+                *receiver,
+                auth_key_prefix,
+                vec![],
+                false,
+            ),
         ),
         sender,
         chain_id,
@@ -1001,18 +1013,19 @@ fn gen_mint_txn_request(
     num_coins: u64,
     chain_id: ChainId,
 ) -> SignedTransaction {
-    gen_submit_transaction_request(
-        transaction_builder::encode_peer_to_peer_with_metadata_script(
-            account_config::xus_tag(),
+    let transaction = sign_with_transaction_builder(
+        TransactionFactory::new(chain_id).peer_to_peer_with_metadata(
+            Currency::XUS,
             *receiver,
             num_coins,
             vec![],
             vec![],
         ),
         sender,
-        chain_id,
-        0,
     )
+    .expect("Failed to create signed transaction");
+    sender.sequence_number += 1;
+    transaction
 }
 
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
@@ -1085,8 +1098,7 @@ fn gen_create_child_txn_requests(
         .map(|account| {
             gen_create_child_txn_request(
                 source_account,
-                &account.address,
-                account.auth_key_prefix(),
+                account.authentication_key(),
                 amount,
                 chain_id,
             )
@@ -1263,6 +1275,10 @@ impl AccountData {
         AuthenticationKey::ed25519(&self.key_pair.public_key)
             .prefix()
             .to_vec()
+    }
+
+    pub fn authentication_key(&self) -> AuthenticationKey {
+        AuthenticationKey::ed25519(&self.key_pair.public_key)
     }
 }
 

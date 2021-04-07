@@ -877,6 +877,7 @@ dependencies = [
  "diem-node",
  "diem-operational-tool",
  "diem-retrier",
+ "diem-sdk",
  "diem-secure-storage",
  "diem-swarm",
  "diem-time-service",

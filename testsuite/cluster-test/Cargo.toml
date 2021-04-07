@@ -60,6 +60,7 @@ network = { path = "../../network" }
 network-builder = { path = "../../network/builder" }
 seed-peer-generator = { path = "../../config/seed-peer-generator" }
 state-sync = { path = "../../state-sync" }
+diem-sdk = { path = "../../sdk" }
 diem-transaction-builder = { path = "../../sdk/transaction-builder" }
 
 futures = "0.3.12"

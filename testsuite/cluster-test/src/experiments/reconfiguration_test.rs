@@ -20,6 +20,7 @@ use diem_transaction_builder::stdlib::{
 };
 use diem_types::{
     account_address::AccountAddress, chain_id::ChainId, ledger_info::LedgerInfoWithSignatures,
+    transaction::TransactionPayload,
 };
 use std::{
     collections::HashSet,
@@ -134,11 +135,11 @@ impl Experiment for Reconfiguration {
         let timer = Instant::now();
         for i in 0..self.count / 2 {
             let remove_txn = gen_submit_transaction_request(
-                encode_remove_validator_and_reconfigure_script(
+                TransactionPayload::Script(encode_remove_validator_and_reconfigure_script(
                     allowed_nonce,
                     validator_name.clone(),
                     self.affected_peer_id,
-                ),
+                )),
                 &mut diem_root_account,
                 ChainId::test(),
                 0,
@@ -151,11 +152,11 @@ impl Experiment for Reconfiguration {
             .await?;
             version = expect_epoch(&full_node_client, version, (i + 1) * 2).await?;
             let add_txn = gen_submit_transaction_request(
-                encode_add_validator_and_reconfigure_script(
+                TransactionPayload::Script(encode_add_validator_and_reconfigure_script(
                     allowed_nonce,
                     validator_name.clone(),
                     self.affected_peer_id,
-                ),
+                )),
                 &mut diem_root_account,
                 ChainId::test(),
                 0,
@@ -173,7 +174,10 @@ impl Experiment for Reconfiguration {
             let magic_number = 42;
             info!("Bump DiemVersion to {}", magic_number);
             let update_txn = gen_submit_transaction_request(
-                encode_update_diem_version_script(allowed_nonce, magic_number),
+                TransactionPayload::Script(encode_update_diem_version_script(
+                    allowed_nonce,
+                    magic_number,
+                )),
                 &mut diem_root_account,
                 ChainId::test(),
                 0,
