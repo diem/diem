@@ -97,7 +97,7 @@ pub(crate) enum NodeHandle<V> {
 }
 
 impl<V> NodeHandle<V> {
-    pub fn new_unkonwn() -> Self {
+    pub fn new_unknown() -> Self {
         Self::Weak(Weak::new())
     }
 
@@ -137,7 +137,7 @@ impl<V: CryptoHash> SubTree<V> {
     pub fn new_unknown(hash: HashValue) -> Self {
         Self::NonEmpty {
             hash,
-            root: NodeHandle::new_unkonwn(),
+            root: NodeHandle::new_unknown(),
         }
     }
 
