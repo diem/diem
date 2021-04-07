@@ -20,7 +20,7 @@ check_command jq curl tr echo getopts git
 function usage() {
   echoerr -u github username \(only needed for private repos\).
   echoerr -p github password \(only needed for private repos\).
-  echoerr -w workflow file name, used to find old runs in pushed updates for git base revision comparison.
+  echoerr -w workflow file name, used to find old runs in [ pushed updates/branch creates ] for git base revision comparison.
   echoerr -b if we are using bors, bors-ng, etc, use pr commit messages to determine target branch for merge if in \'auto\' branch.
   echoerr -d print debug messages.
   echoerr -h this message.
@@ -88,7 +88,7 @@ $DEBUG && echo GITHUB_SLUG="$GITHUB_SLUG"
 BRANCH=
 TARGET_BRANCH=
 #Attempt to determine/normalize the branch.
-if  [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+if  [[ "$GITHUB_EVENT_NAME" == "push" || "${GITHUB_EVENT_NAME}" == "create" ]]; then
   BRANCH=${GITHUB_REF//*\/}
 fi
 if  [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
@@ -97,9 +97,9 @@ fi
 $DEBUG && echoerr BRANCH="$BRANCH"
 
 BASE_GITHASH=
-if [[ "${GITHUB_EVENT_NAME}" == "push" ]] && [[ "$BORS" == false || ( "$BRANCH" != "auto" && "$BRANCH" != "canary" ) ]]; then
-  $DEBUG && echoerr URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed&event=push"
-  QUERIED_GITHASH="$( curl "$LOGIN" -H 'Accept: application/vnd.github.v3+json' "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed&event=push" 2>/dev/null | jq '.workflow_runs[0].head_sha' | sed 's/"//g')"
+if [[ "${GITHUB_EVENT_NAME}" == "push" || "${GITHUB_EVENT_NAME}" == "create" ]] && [[ "$BORS" == false || ( "$BRANCH" != "auto" && "$BRANCH" != "canary" ) ]]; then
+  $DEBUG && echoerr URL="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed"
+  QUERIED_GITHASH="$( curl "$LOGIN" -H 'Accept: application/vnd.github.v3+json' "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?branch=${BRANCH}&status=completed" 2>/dev/null | jq '.workflow_runs[0].head_sha' | sed 's/"//g')"
   $DEBUG && echoerr QUERIED_GITHASH="$QUERIED_GITHASH"
   #If we have a git hash, and it exist in the history of the current HEAD, then use it as BASE_GITHASH
   if [[ -n "$QUERIED_GITHASH" ]] && [[ $(git merge-base --is-ancestor "$QUERIED_GITHASH" "$(git rev-parse HEAD)" 2>/dev/null; echo $?) == 0 ]]; then

@@ -1,6 +1,8 @@
 name: ci-update-sccache
 
 on:
+  create:
+    branches: [main, release-*, gha-test-*]
   push:
     branches: [main, release-*, gha-test-*]
 
