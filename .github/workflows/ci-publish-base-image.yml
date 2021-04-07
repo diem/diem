@@ -1,6 +1,8 @@
 name: Publish Base CI Image To Dockerhub
 
 on:
+  create:
+    branches: [main, release-*, gha-test-*]
   push:
     branches: [main, release-*, gha-test-*]
     paths:
