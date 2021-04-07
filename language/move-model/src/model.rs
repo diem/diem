@@ -1909,6 +1909,17 @@ impl<'env> StructEnv<'env> {
         name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
     }
 
+    /// Get the AbilitySet of the struct
+    pub fn get_abilities(&self) -> AbilitySet {
+        let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
+        let handle = self
+            .module_env
+            .data
+            .module
+            .struct_handle_at(def.struct_handle);
+        handle.abilities
+    }
+
     // TODO(tmn) migrate to abilities
     /// Determines whether this struct is a resource type.
     pub fn is_resource(&self) -> bool {

@@ -10,21 +10,21 @@ use move_ir_types::{
 };
 use move_lang::{
     compiled_unit::{CompiledUnit, FunctionInfo},
-    expansion::ast::Value_ as MoveValue,
+    expansion::ast::{AbilitySet, Value_ as MoveValue},
     hlir::ast::{
         BaseType_, Block, Command, Command_, Exp as MoveExp, ExpListItem, Function, FunctionBody,
         FunctionBody_, ModuleCall, ModuleDefinition, Program, Script, SingleType, SingleType_,
-        Statement, Statement_, Type_ as MoveType, UnannotatedExp_,
+        Statement, Statement_, TypeName_, Type_ as MoveType, UnannotatedExp_,
     },
-    naming::ast::BuiltinTypeName_,
-    parser::ast::{FunctionName, ModuleIdent, Var},
+    naming::ast::{BuiltinTypeName_, TParam, TParamID},
+    parser::ast::{Ability_, FunctionName, ModuleIdent, StructName, Var},
     shared::{unique_map::UniqueMap, Address, Identifier},
 };
 
 use crate::{
     ast::{ConditionKind, Exp as SpecExp, Spec, TempIndex, Value as SpecValue},
     instrumenter::context::CompilationContext,
-    model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId, StructEnv, TypeParameter},
     ty::{PrimitiveType as SpecPrimitiveType, Type as SpecType},
 };
 
@@ -586,6 +586,211 @@ fn instrument_inline_spec(
     }
 }
 
+enum TypeParamScopeEnv<'env> {
+    Function(&'env FunctionEnv<'env>),
+    Struct(&'env StructEnv<'env>),
+}
+
+impl TypeParamScopeEnv<'_> {
+    fn global_env(&self) -> &GlobalEnv {
+        match self {
+            TypeParamScopeEnv::Function(fenv) => fenv.module_env.env,
+            TypeParamScopeEnv::Struct(senv) => senv.module_env.env,
+        }
+    }
+
+    fn get_type_params(&self) -> Vec<TypeParameter> {
+        match self {
+            TypeParamScopeEnv::Function(fenv) => fenv.get_type_parameters(),
+            TypeParamScopeEnv::Struct(senv) => senv.get_type_parameters(),
+        }
+    }
+}
+
+fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecType) -> MoveType {
+    let env = scope_env.global_env();
+    match ty {
+        SpecType::Primitive(SpecPrimitiveType::Bool) => MoveType::Single(SingleType_::bool(loc)),
+        SpecType::Primitive(SpecPrimitiveType::U8) => MoveType::Single(SingleType_::u8(loc)),
+        SpecType::Primitive(SpecPrimitiveType::U64) => MoveType::Single(SingleType_::u64(loc)),
+        SpecType::Primitive(SpecPrimitiveType::U128) => MoveType::Single(SingleType_::u128(loc)),
+        SpecType::Primitive(SpecPrimitiveType::Address) => {
+            MoveType::Single(SingleType_::address(loc))
+        }
+        SpecType::Primitive(SpecPrimitiveType::Signer) => MoveType::Single(sp(
+            loc,
+            SingleType_::Base(BaseType_::builtin(loc, BuiltinTypeName_::Signer, vec![])),
+        )),
+        SpecType::Primitive(_) => {
+            env.error(&env.to_loc(&loc), "Unable to resolve a spec-specific type");
+            unresolved_move_type(loc)
+        }
+        SpecType::Tuple(components) => {
+            let converted_components = components
+                .iter()
+                .filter_map(|item| match convert_spec_type(scope_env, loc, item) {
+                    MoveType::Single(single_type) => Some(single_type),
+                    MoveType::Multiple(..) | MoveType::Unit => {
+                        env.error(&env.to_loc(&loc), "Only SingleType is allowed in a Tuple");
+                        None
+                    }
+                })
+                .collect();
+            MoveType::Multiple(converted_components)
+        }
+        SpecType::Vector(sub_type) => {
+            let converted_sub_type = match convert_spec_type(scope_env, loc, sub_type) {
+                MoveType::Single(single_type) => match single_type.value {
+                    SingleType_::Base(base_type) => base_type,
+                    SingleType_::Ref(..) => {
+                        env.error(
+                            &env.to_loc(&loc),
+                            "Reference types cannot be a type parameter for the vector type",
+                        );
+                        sp(loc, BaseType_::UnresolvedError)
+                    }
+                },
+                MoveType::Multiple(..) | MoveType::Unit => {
+                    env.error(
+                        &env.to_loc(&loc),
+                        "Only BaseType can be a type parameter for the vector type",
+                    );
+                    sp(loc, BaseType_::UnresolvedError)
+                }
+            };
+            MoveType::Single(sp(
+                loc,
+                SingleType_::Base(BaseType_::builtin(
+                    loc,
+                    BuiltinTypeName_::Vector,
+                    vec![converted_sub_type],
+                )),
+            ))
+        }
+        SpecType::Struct(module_id, struct_id, sub_types) => {
+            let module_env = env.get_module(*module_id);
+            let mid = module_env.get_verified_module().self_id();
+            let module_ident = ModuleIdent {
+                locs: (loc, loc),
+                value: (
+                    Address::new(mid.address().clone().to_u8()),
+                    mid.name().to_owned().into_string(),
+                ),
+            };
+            let struct_env = module_env.get_struct(*struct_id);
+            let struct_name = StructName(sp(loc, struct_env.get_identifier().into_string()));
+            let abilities = struct_env.get_abilities();
+            let mut ability_set = AbilitySet::empty();
+            if abilities.has_copy() {
+                ability_set.add(sp(loc, Ability_::Copy)).unwrap();
+            }
+            if abilities.has_drop() {
+                ability_set.add(sp(loc, Ability_::Drop)).unwrap();
+            }
+            if abilities.has_store() {
+                ability_set.add(sp(loc, Ability_::Store)).unwrap();
+            }
+            if abilities.has_key() {
+                ability_set.add(sp(loc, Ability_::Key)).unwrap();
+            }
+            let converted_sub_types = sub_types
+                .iter()
+                .map(|sub_type| {
+                    let converted = convert_spec_type(scope_env, loc, sub_type);
+                    match converted {
+                        MoveType::Single(single_type) => match single_type.value {
+                            SingleType_::Base(base_type) => base_type,
+                            SingleType_::Ref(..) => {
+                                env.error(
+                                    &env.to_loc(&loc),
+                                    "Reference types cannot be a type parameter for the struct type",
+                                );
+                                sp(loc, BaseType_::UnresolvedError)
+                            }
+                        },
+                        MoveType::Multiple(..) | MoveType::Unit => {
+                            env.error(
+                                &env.to_loc(&loc),
+                                "Only BaseType can be a type parameter for the struct type",
+                            );
+                            sp(loc, BaseType_::UnresolvedError)
+                        }
+                    }
+                })
+                .collect();
+            MoveType::Single(sp(
+                loc,
+                SingleType_::Base(sp(
+                    loc,
+                    BaseType_::Apply(
+                        ability_set,
+                        sp(loc, TypeName_::ModuleType(module_ident, struct_name)),
+                        converted_sub_types,
+                    ),
+                )),
+            ))
+        }
+        SpecType::TypeParameter(idx) => {
+            let type_params = scope_env.get_type_params();
+            let type_param = &type_params[*idx as usize];
+            let param_name = sp(loc, env.symbol_pool().string(type_param.0).to_string());
+            let abilities = &type_param.1 .0;
+            let mut ability_set = AbilitySet::empty();
+            if abilities.has_copy() {
+                ability_set.add(sp(loc, Ability_::Copy)).unwrap();
+            }
+            if abilities.has_drop() {
+                ability_set.add(sp(loc, Ability_::Drop)).unwrap();
+            }
+            if abilities.has_store() {
+                ability_set.add(sp(loc, Ability_::Store)).unwrap();
+            }
+            if abilities.has_key() {
+                ability_set.add(sp(loc, Ability_::Key)).unwrap();
+            }
+            let tparam = TParam {
+                id: TParamID::next(),
+                user_specified_name: param_name,
+                abilities: ability_set,
+            };
+            MoveType::Single(sp(
+                loc,
+                SingleType_::Base(sp(loc, BaseType_::Param(tparam))),
+            ))
+        }
+        SpecType::Reference(is_mut, sub_type) => {
+            let converted_sub_type = match convert_spec_type(scope_env, loc, sub_type) {
+                MoveType::Single(single_type) => match single_type.value {
+                    SingleType_::Base(base_type) => base_type,
+                    SingleType_::Ref(..) => {
+                        env.error(
+                            &env.to_loc(&loc),
+                            "Reference types cannot be the base type for the reference type",
+                        );
+                        sp(loc, BaseType_::UnresolvedError)
+                    }
+                },
+                MoveType::Multiple(..) | MoveType::Unit => {
+                    env.error(
+                        &env.to_loc(&loc),
+                        "Only BaseType can be a base type for the reference type",
+                    );
+                    sp(loc, BaseType_::UnresolvedError)
+                }
+            };
+            MoveType::Single(sp(loc, SingleType_::Ref(*is_mut, converted_sub_type)))
+        }
+        SpecType::Fun(..)
+        | SpecType::TypeDomain(..)
+        | SpecType::ResourceDomain(..)
+        | SpecType::TypeLocal(..) => {
+            env.error(&env.to_loc(&loc), "Unable to resolve a spec-specific type");
+            unresolved_move_type(loc)
+        }
+        SpecType::Var(..) | SpecType::Error => unreachable!(),
+    }
+}
+
 fn convert_spec_expression(
     fenv: &FunctionEnv<'_>,
     vars: &BTreeMap<TempIndex, Var>,
@@ -597,35 +802,7 @@ fn convert_spec_expression(
     let env = fenv.module_env.env;
     match exp {
         SpecExp::Value(node_id, val) => convert_spec_value(env, loc, *node_id, val),
-        SpecExp::Temporary(_, idx) => match vars.get(idx) {
-            None => {
-                env.error(
-                    &env.to_loc(&loc),
-                    "Unable to find TempIndex for this Temporary",
-                );
-                unresolved_move_expression(loc)
-            }
-            Some(var) => match locals.get(var) {
-                None => {
-                    env.error(
-                        &env.to_loc(&loc),
-                        "Unable to find move type for this temporary variable",
-                    );
-                    unresolved_move_expression(loc)
-                }
-                Some(move_ty) => MoveExp {
-                    ty: sp(loc, MoveType::Single(move_ty.clone())),
-                    exp: sp(
-                        loc,
-                        // TODO (mengxu): we might not actually able to copy it...
-                        UnannotatedExp_::Copy {
-                            from_user: false,
-                            var: var.clone(),
-                        },
-                    ),
-                },
-            },
-        },
+        SpecExp::Temporary(_, idx) => convert_spec_var_temporary(env, vars, locals, loc, *idx),
         // TODO (mengxu) handle these unimplemented cases
         SpecExp::LocalVar(..) => unimplemented!("local variables (in quantifiers and lambda)"),
         SpecExp::SpecVar(..) => unimplemented!("ghost variables"),
@@ -655,17 +832,17 @@ fn convert_spec_value(env: &GlobalEnv, loc: MoveLoc, node: NodeId, value: &SpecV
             match spec_ty {
                 SpecType::Primitive(SpecPrimitiveType::U8) => (
                     MoveValue::U8(v.to_u8().unwrap()),
-                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u8(loc)))),
+                    MoveType::Single(SingleType_::u8(loc)),
                     false,
                 ),
                 SpecType::Primitive(SpecPrimitiveType::U64) => (
                     MoveValue::U64(v.to_u64().unwrap()),
-                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u64(loc)))),
+                    MoveType::Single(SingleType_::u64(loc)),
                     false,
                 ),
                 SpecType::Primitive(SpecPrimitiveType::U128) => (
                     MoveValue::U128(v.to_u128().unwrap()),
-                    MoveType::Single(sp(loc, SingleType_::Base(BaseType_::u128(loc)))),
+                    MoveType::Single(SingleType_::u128(loc)),
                     false,
                 ),
                 _ => {
@@ -709,15 +886,75 @@ fn convert_spec_value(env: &GlobalEnv, loc: MoveLoc, node: NodeId, value: &SpecV
     }
 }
 
+fn convert_spec_var_temporary(
+    env: &GlobalEnv,
+    vars: &BTreeMap<TempIndex, Var>,
+    locals: &UniqueMap<Var, SingleType>,
+    loc: MoveLoc,
+    idx: TempIndex,
+) -> MoveExp {
+    match vars.get(&idx) {
+        None => {
+            env.error(
+                &env.to_loc(&loc),
+                "Unable to find TempIndex for this Temporary variable",
+            );
+            unresolved_move_expression(loc)
+        }
+        Some(var) => match locals.get(var) {
+            None => {
+                env.error(
+                    &env.to_loc(&loc),
+                    "Unable to find move type for this temporary variable",
+                );
+                unresolved_move_expression(loc)
+            }
+            Some(move_ty) => {
+                // if the var is a base type:
+                // - copy the var if the type has a Copy ability
+                // - move the var otherwise
+                // otherwise, the var is a reference type,
+                // - always copy the var in this case
+                // TODO (mengxu) I don't have much confidence in this logic, revisit
+                let move_exp = match &move_ty.value {
+                    SingleType_::Base(base_type) => {
+                        let abilities = base_type.value.abilities(base_type.loc);
+                        if abilities.has_ability_(Ability_::Copy) {
+                            UnannotatedExp_::Copy {
+                                from_user: false,
+                                var: var.clone(),
+                            }
+                        } else {
+                            UnannotatedExp_::Move {
+                                from_user: false,
+                                var: var.clone(),
+                            }
+                        }
+                    }
+                    SingleType_::Ref(..) => UnannotatedExp_::Copy {
+                        from_user: false,
+                        var: var.clone(),
+                    },
+                };
+                MoveExp {
+                    ty: sp(loc, MoveType::Single(move_ty.clone())),
+                    exp: sp(loc, move_exp),
+                }
+            }
+        },
+    }
+}
+
+fn unresolved_move_type(loc: MoveLoc) -> MoveType {
+    MoveType::Single(sp(
+        loc,
+        SingleType_::Base(sp(loc, BaseType_::UnresolvedError)),
+    ))
+}
+
 fn unresolved_move_expression(loc: MoveLoc) -> MoveExp {
     MoveExp {
-        ty: sp(
-            loc,
-            MoveType::Single(sp(
-                loc,
-                SingleType_::Base(sp(loc, BaseType_::UnresolvedError)),
-            )),
-        ),
+        ty: sp(loc, unresolved_move_type(loc)),
         exp: sp(loc, UnannotatedExp_::UnresolvedError),
     }
 }
