@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 arc-swap = "1.2.0"
 itertools = "0.10.0"
+rayon = "1.5.0"
 
 diem-crypto = { path = "../../crypto/crypto" }
 diem-infallible = { path = "../../common/infallible" }

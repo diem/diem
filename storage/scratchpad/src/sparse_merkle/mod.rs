@@ -157,7 +157,7 @@ pub struct SparseMerkleTree<V> {
 
 impl<V> SparseMerkleTree<V>
 where
-    V: Clone + CryptoHash,
+    V: Clone + CryptoHash + Send + Sync,
 {
     /// Constructs a Sparse Merkle Tree with a root hash. This is often used when we restart and
     /// the scratch pad and the storage have identical state, so we use a single root hash to
@@ -716,8 +716,10 @@ where
                 } else if idx == n {
                     bits_on_path.push(false);
                 } else {
-                    let left_child = Self::batch_construct_subtree_from_empty(&kvs[..idx], depth);
-                    let right_child = Self::batch_construct_subtree_from_empty(&kvs[idx..], depth);
+                    let (left_child, right_child) = rayon::join(
+                        || Self::batch_construct_subtree_from_empty(&kvs[..idx], depth),
+                        || Self::batch_construct_subtree_from_empty(&kvs[idx..], depth),
+                    );
                     let fork_node = SubTree::new_internal(left_child, right_child);
                     let siblings_num = bits_on_path.len();
                     return Self::construct_subtree(
@@ -788,13 +790,19 @@ where
                     });
                     bits_on_path.push(idx == 0);
                 } else {
-                    let left_child = Self::batch_create_subtree_from_key_proof_pairs(
-                        &key_proof_pairs[..idx],
-                        depth + 1,
-                    );
-                    let right_child = Self::batch_create_subtree_from_key_proof_pairs(
-                        &key_proof_pairs[idx..],
-                        depth + 1,
+                    let (left_child, right_child) = rayon::join(
+                        || {
+                            Self::batch_create_subtree_from_key_proof_pairs(
+                                &key_proof_pairs[..idx],
+                                depth + 1,
+                            )
+                        },
+                        || {
+                            Self::batch_create_subtree_from_key_proof_pairs(
+                                &key_proof_pairs[idx..],
+                                depth + 1,
+                            )
+                        },
                     );
                     let fork_node = SubTree::new_internal(left_child, right_child);
                     return Self::construct_subtree(
@@ -862,24 +870,28 @@ where
                     }
                 } else {
                     let (left_child, right_child) = if existing_leaf_key.bit(depth) {
-                        (
-                            Self::batch_construct_subtree_from_empty(&kvs[..idx], depth + 1),
-                            Self::batch_construct_subtree_with_existing_leaf(
-                                &kvs[idx..],
-                                existing_leaf,
-                                existing_leaf_key,
-                                depth + 1,
-                            ),
+                        rayon::join(
+                            || Self::batch_construct_subtree_from_empty(&kvs[..idx], depth + 1),
+                            || {
+                                Self::batch_construct_subtree_with_existing_leaf(
+                                    &kvs[idx..],
+                                    existing_leaf,
+                                    existing_leaf_key,
+                                    depth + 1,
+                                )
+                            },
                         )
                     } else {
-                        (
-                            Self::batch_construct_subtree_with_existing_leaf(
-                                &kvs[..idx],
-                                existing_leaf,
-                                existing_leaf_key,
-                                depth + 1,
-                            ),
-                            Self::batch_construct_subtree_from_empty(&kvs[idx..], depth + 1),
+                        rayon::join(
+                            || {
+                                Self::batch_construct_subtree_with_existing_leaf(
+                                    &kvs[..idx],
+                                    existing_leaf,
+                                    existing_leaf_key,
+                                    depth + 1,
+                                )
+                            },
+                            || Self::batch_construct_subtree_from_empty(&kvs[idx..], depth + 1),
                         )
                     };
                     let fork_node = SubTree::new_internal(left_child, right_child);
@@ -908,7 +920,7 @@ where
 
 impl<V> Default for SparseMerkleTree<V>
 where
-    V: Clone + CryptoHash,
+    V: Clone + CryptoHash + Send + Sync,
 {
     fn default() -> Self {
         SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH)
@@ -916,7 +928,7 @@ where
 }
 
 /// A type that implements `ProofRead` can provide proof for keys in persistent storage.
-pub trait ProofRead<V> {
+pub trait ProofRead<V>: Sync {
     /// Gets verified proof for this key in persistent storage.
     fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof<V>>;
 }

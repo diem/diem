@@ -6358,6 +6358,7 @@ dependencies = [
  "itertools 0.10.0",
  "proptest",
  "rand 0.8.3",
+ "rayon",
  "storage-interface",
 ]
 

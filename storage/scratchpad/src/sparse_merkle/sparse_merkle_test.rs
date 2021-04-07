@@ -34,19 +34,19 @@ fn hash_leaf(key: HashValue, value_hash: HashValue) -> HashValue {
 
 struct ProofReader<V>(HashMap<HashValue, SparseMerkleProof<V>>);
 
-impl<V> ProofReader<V> {
+impl<V: Sync> ProofReader<V> {
     fn new(key_with_proof: Vec<(HashValue, SparseMerkleProof<V>)>) -> Self {
         ProofReader(key_with_proof.into_iter().collect())
     }
 }
 
-impl<V> Default for ProofReader<V> {
+impl<V: Sync> Default for ProofReader<V> {
     fn default() -> Self {
         Self(HashMap::new())
     }
 }
 
-impl<V> ProofRead<V> for ProofReader<V> {
+impl<V: Sync> ProofRead<V> for ProofReader<V> {
     fn get_proof(&self, key: HashValue) -> Option<&SparseMerkleProof<V>> {
         self.0.get(&key)
     }
