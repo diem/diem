@@ -12,14 +12,14 @@ use std::collections::HashMap;
 
 /// Ordering only proxy, upon commit it passes ordered blocks to next phase.
 pub struct OrderProxy {
-    commit_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>,
+    notify_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>,
     pending_blocks: Mutex<HashMap<HashValue, Block>>,
 }
 
 impl OrderProxy {
-    pub fn new(commit_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>) -> Self {
+    pub fn new(notify_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>) -> Self {
         Self {
-            commit_channel,
+            notify_channel,
             pending_blocks: Mutex::new(HashMap::new()),
         }
     }
@@ -55,7 +55,7 @@ impl StateComputer for OrderProxy {
             let mut map = self.pending_blocks.lock();
             block_ids.iter().map(|id| map.remove(id).unwrap()).collect()
         };
-        self.commit_channel
+        self.notify_channel
             .clone()
             .send((blocks, finality_proof))
             .await

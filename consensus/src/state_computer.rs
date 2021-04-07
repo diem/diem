@@ -59,7 +59,7 @@ impl StateComputer for ExecutionProxy {
             "execute_block",
             self.execution_correctness_client
                 .lock()
-                .execute_block(block.clone(), parent_block_id)
+                .execute_block(block.clone(), block.parent_id())
         )
     }
 
