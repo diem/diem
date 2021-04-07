@@ -3,5 +3,6 @@
 
 #![allow(dead_code)]
 
+pub mod commit_phase;
 pub mod execution_phase;
 pub mod order_state_computer;

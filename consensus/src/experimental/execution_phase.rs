@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::state_replication::StateComputer;
-use consensus_types::block::Block;
-use consensus_types::executed_block::ExecutedBlock;
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
