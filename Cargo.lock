@@ -912,6 +912,7 @@ dependencies = [
  "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
+ "diem-writeset-generator",
  "flate2",
  "futures",
  "generate-key",

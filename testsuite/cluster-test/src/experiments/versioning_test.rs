@@ -21,6 +21,7 @@ use diem_types::{
     chain_id::ChainId,
     transaction::{helpers::create_user_txn, ScriptFunction, TransactionPayload},
 };
+use diem_writeset_generator::old_releases::release_1_2_0_writeset;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
@@ -202,7 +203,7 @@ impl Experiment for ValidatorVersioning {
         let allowed_nonce = 0;
         let update_txn = create_user_txn(
             &diem_root_account.key_pair,
-            TransactionPayload::Script(encode_update_diem_version_script(allowed_nonce, 11)),
+            release_1_2_0_writeset(),
             diem_root_account.address,
             diem_root_account.sequence_number,
             123456,
