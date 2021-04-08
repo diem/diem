@@ -3,12 +3,12 @@ id: run-local-network
 title: Run a Local Network
 ---
 
-You can run a local test validator network to test and debug services you are developing for the Diem Blockchain and to build and test Move module code changes. This local test network is not part of the Diem Ecosystem and is only meant for testing and development purposes.
+You can run a local test validator network to test and develop against a Diem Blockchain, including Move changes. This network is not part of the Diem Ecosystem and is only for testing and development purposes.
 
-You can use the Diem CLI command dev to compile, publish, and execute Move Intermediate Representation (IR) programs on your local test validator network.
+You can also use the Diem CLI command dev to compile, publish, and execute Move programs on your local test validator network.
 
 >
->Note: Your local test network of validator nodes will not be connected to the testnet, and will not be using the actual validator nodes on the Diem Blockchain.
+>Note: Your local test network will not be connected to testnet or mainnet of the Diem Blockchain.
 >
 
 ## Getting Started
@@ -27,10 +27,9 @@ You can run a local test validator network in two ways: using the Diem Core sour
     ./scripts/dev_setup.sh
     source ~/.cargo/env
     ```
-2. Run the process: `cargo run -p diem-node -- --test`. Note, after starting this process, the config path: `/distinct/tmp/path/0/node.yaml`.
+2. Run the process: `cargo run -p diem-node -- --test`. After starting up, the process should print its config path (e.g., `/private/var/folders/36/w0v54r116ls44q29wh8db0mh0000gn/T/f62a72f87940e3892a860c21b55b529b/0/node.yaml`) and other metadata.
 
-> You can later restore the ledger state by running `diem-node` with a previously used configuration path: `cargo run -p diem-node -- --test --config /distinct/tmp/path`.
-
+Note: this command runs `diem-node` from a genesis-only ledger state. If you want to reuse the ledger state produced by a previous run of `diem-node`, use `cargo run -p diem-node -- --test --config <config-path>`.
 
 ### Using Docker
 
@@ -50,7 +49,7 @@ You can run a local test validator network in two ways: using the Diem Core sour
     ```
 
 ## Interacting with the local test validator network
-After starting your local test validator network, the following will be output on your terminal:
+After starting your local test validator network, you should see the following:
 
 ```
 
@@ -65,30 +64,17 @@ validator_1  | 	FullNode network: /ip4/0.0.0.0/tcp/7180
 validator_1  | 	ChainId: TESTING
 
 ```
-This will output a lot of information that will be required for starting the Diem CLI tool:
-* ChainId - For testing
-* Diem root key path - Available in the docker compose folder under `diem_root_key`.
-* Waypoint - Printed on screen and available in the docker compose folder under waypoint.txt
-* JSON-RPC Endpoint - `http://127.0.0.1:8080`.
+This output contains information required for starting the Diem CLI tool:
+* Diem root key path - The root (also known as a mint or faucet) key controls the account that can mint. Available in the docker compose folder under `diem_root_key`.
+* Waypoint - a verifiable checkpoint into the blockchain (available in the docker compose folder under waypoint.txt)
+* JSON-RPC endpoint - `http://127.0.0.1:8080`.
+* ChainId - uniquely distinguishes this chain from other chains.
 
-
-In another terminal, start a `diem-client` using data from the output above:
+Use the output from above to start a `diem-client` in another terminal:
 
 ```
 $ cd ~/diem
 $ cargo run -p cli -- -c $CHAIN_ID -m $ROOT_KEY -u http://127.0.0.1:8080 --waypoint $WAYPOINT
 ```
-
-At the end of this tutorial you will have:
-* A single local validator test network
-* A Diem CLI client connected to that network
-
-The configuration management of the validator network generates:
-* A genesis transaction.
-* A waypoint that serves as a verifiable checkpoint into the blockchain.
-* A chain id to uniquely distinguish this chain from other chains.
-* Diem root key (also known as a mint or faucet key) for the account that's allowed to perform the mint operation.
-
-
 
 ###### tags: `core`, `node`
