@@ -196,7 +196,7 @@ impl Experiment for CompatibilityTest {
         info!("{}", msg);
         context.report.report_text(msg);
         let all_full_nodes_request = EmitJobRequest::for_instances(
-            context.cluster.validator_instances().to_vec(),
+            context.cluster.fullnode_instances().to_vec(),
             context.global_emit_job_request,
             0,
             0,
