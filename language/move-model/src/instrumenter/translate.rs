@@ -24,7 +24,7 @@ use move_lang::{
 use crate::{
     ast::{ConditionKind, Exp as SpecExp, Spec, TempIndex, Value as SpecValue},
     instrumenter::context::CompilationContext,
-    model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId, StructEnv, TypeParameter},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId},
     ty::{PrimitiveType as SpecPrimitiveType, Type as SpecType},
 };
 
@@ -586,29 +586,8 @@ fn instrument_inline_spec(
     }
 }
 
-enum TypeParamScopeEnv<'env> {
-    Function(&'env FunctionEnv<'env>),
-    Struct(&'env StructEnv<'env>),
-}
-
-impl TypeParamScopeEnv<'_> {
-    fn global_env(&self) -> &GlobalEnv {
-        match self {
-            TypeParamScopeEnv::Function(fenv) => fenv.module_env.env,
-            TypeParamScopeEnv::Struct(senv) => senv.module_env.env,
-        }
-    }
-
-    fn get_type_params(&self) -> Vec<TypeParameter> {
-        match self {
-            TypeParamScopeEnv::Function(fenv) => fenv.get_type_parameters(),
-            TypeParamScopeEnv::Struct(senv) => senv.get_type_parameters(),
-        }
-    }
-}
-
-fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecType) -> MoveType {
-    let env = scope_env.global_env();
+fn convert_spec_type(fenv: &FunctionEnv<'_>, loc: MoveLoc, ty: &SpecType) -> MoveType {
+    let env = fenv.module_env.env;
     match ty {
         SpecType::Primitive(SpecPrimitiveType::Bool) => MoveType::Single(SingleType_::bool(loc)),
         SpecType::Primitive(SpecPrimitiveType::U8) => MoveType::Single(SingleType_::u8(loc)),
@@ -628,7 +607,7 @@ fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecT
         SpecType::Tuple(components) => {
             let converted_components = components
                 .iter()
-                .filter_map(|item| match convert_spec_type(scope_env, loc, item) {
+                .filter_map(|item| match convert_spec_type(fenv, loc, item) {
                     MoveType::Single(single_type) => Some(single_type),
                     MoveType::Multiple(..) | MoveType::Unit => {
                         env.error(&env.to_loc(&loc), "Only SingleType is allowed in a Tuple");
@@ -639,7 +618,7 @@ fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecT
             MoveType::Multiple(converted_components)
         }
         SpecType::Vector(sub_type) => {
-            let converted_sub_type = match convert_spec_type(scope_env, loc, sub_type) {
+            let converted_sub_type = match convert_spec_type(fenv, loc, sub_type) {
                 MoveType::Single(single_type) => match single_type.value {
                     SingleType_::Base(base_type) => base_type,
                     SingleType_::Ref(..) => {
@@ -696,7 +675,7 @@ fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecT
             let converted_sub_types = sub_types
                 .iter()
                 .map(|sub_type| {
-                    let converted = convert_spec_type(scope_env, loc, sub_type);
+                    let converted = convert_spec_type(fenv, loc, sub_type);
                     match converted {
                         MoveType::Single(single_type) => match single_type.value {
                             SingleType_::Base(base_type) => base_type,
@@ -731,7 +710,7 @@ fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecT
             ))
         }
         SpecType::TypeParameter(idx) => {
-            let type_params = scope_env.get_type_params();
+            let type_params = fenv.get_type_parameters();
             let type_param = &type_params[*idx as usize];
             let param_name = sp(loc, env.symbol_pool().string(type_param.0).to_string());
             let abilities = &type_param.1 .0;
@@ -759,7 +738,7 @@ fn convert_spec_type(scope_env: &TypeParamScopeEnv<'_>, loc: MoveLoc, ty: &SpecT
             ))
         }
         SpecType::Reference(is_mut, sub_type) => {
-            let converted_sub_type = match convert_spec_type(scope_env, loc, sub_type) {
+            let converted_sub_type = match convert_spec_type(fenv, loc, sub_type) {
                 MoveType::Single(single_type) => match single_type.value {
                     SingleType_::Base(base_type) => base_type,
                     SingleType_::Ref(..) => {
