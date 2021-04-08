@@ -733,7 +733,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
         target_li: Option<LedgerInfoWithSignatures>,
         timeout_ms: Option<u64>,
     ) -> Result<(), Error> {
-        let chunk_limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
+        let chunk_limit = std::cmp::min(request.limit, 3000);
         let timeout = if let Some(timeout_ms) = timeout_ms {
             std::cmp::min(timeout_ms, self.config.max_timeout_ms)
         } else {
@@ -1574,7 +1574,7 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             .unwrap_or_else(|| known_version.wrapping_add(1));
         counters::set_version(counters::VersionType::Target, target_version);
 
-        let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
+        let req = GetChunkRequest::new(known_version, known_epoch, 3000, target);
         self.request_manager.send_chunk_request(req)
     }
 
