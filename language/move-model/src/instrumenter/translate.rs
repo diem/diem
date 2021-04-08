@@ -580,10 +580,34 @@ fn instrument_inline_spec(
         assert!(condition.properties.is_empty());
         assert!(condition.additional_exps.is_empty());
         // now the actual instrumentation
-        // TODO (mengxu): this just gets the condition expression, we still need
-        // to construct the if-else statement
-        convert_spec_expression(fenv, vars, loc, &condition.exp, locals, block);
+        // an "assert <expr>" will be translated into
+        // if (expr) {} else { abort 0 }
+        let cond = convert_spec_expression(fenv, vars, loc, &condition.exp, locals, block);
+        let mut else_block = Block::new();
+        else_block.push_back(get_abort_statement(loc));
+        let checker = sp(
+            loc,
+            Statement_::IfElse {
+                cond: Box::new(cond),
+                if_block: Block::new(),
+                else_block,
+            },
+        );
+        block.push_back(checker);
     }
+}
+
+fn get_abort_statement(loc: MoveLoc) -> Statement {
+    let abort_code_ty = sp(loc, MoveType::Single(SingleType_::u64(loc)));
+    let abort_code_exp = sp(loc, UnannotatedExp_::Value(sp(loc, MoveValue::U64(0))));
+    let abort_code = MoveExp {
+        ty: abort_code_ty,
+        exp: abort_code_exp,
+    };
+    sp(
+        loc,
+        Statement_::Command(sp(loc, Command_::Abort(abort_code))),
+    )
 }
 
 fn convert_spec_type(fenv: &FunctionEnv<'_>, loc: MoveLoc, ty: &SpecType) -> MoveType {
