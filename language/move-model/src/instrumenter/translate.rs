@@ -14,7 +14,7 @@ use move_lang::{
     hlir::ast::{
         BaseType_, Block, Command, Command_, Exp as MoveExp, ExpListItem, Function, FunctionBody,
         FunctionBody_, ModuleCall, ModuleDefinition, Program, Script, SingleType, SingleType_,
-        Statement, Statement_, TypeName_, Type_ as MoveType, UnannotatedExp_,
+        Statement, Statement_, TypeName_, Type_ as MoveType, UnannotatedExp_, UnitCase,
     },
     naming::ast::{BuiltinTypeName_, TParam, TParamID},
     parser::ast::{Ability_, BinOp_, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
@@ -581,15 +581,17 @@ fn instrument_inline_spec(
         assert!(condition.additional_exps.is_empty());
         // now the actual instrumentation
         // an "assert <expr>" will be translated into
-        // if (expr) {} else { abort 0 }
+        // if (expr) { //no-op } else { abort 0 }
         let cond = convert_spec_expression(fenv, vars, loc, &condition.exp, locals, block);
+        let mut if_block = Block::new();
+        if_block.push_back(get_no_op_statement(loc));
         let mut else_block = Block::new();
         else_block.push_back(get_abort_statement(loc));
         let checker = sp(
             loc,
             Statement_::IfElse {
                 cond: Box::new(cond),
-                if_block: Block::new(),
+                if_block,
                 else_block,
             },
         );
@@ -607,6 +609,26 @@ fn get_abort_statement(loc: MoveLoc) -> Statement {
     sp(
         loc,
         Statement_::Command(sp(loc, Command_::Abort(abort_code))),
+    )
+}
+
+fn get_no_op_statement(loc: MoveLoc) -> Statement {
+    let unit_type = sp(loc, MoveType::Unit);
+    let unit_exp = UnannotatedExp_::Unit {
+        case: UnitCase::Implicit,
+    };
+    sp(
+        loc,
+        Statement_::Command(sp(
+            loc,
+            Command_::IgnoreAndPop {
+                pop_num: 0,
+                exp: MoveExp {
+                    ty: unit_type,
+                    exp: sp(loc, unit_exp),
+                },
+            },
+        )),
     )
 }
 
