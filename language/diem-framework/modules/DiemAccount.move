@@ -1049,7 +1049,6 @@ module DiemAccount {
                 sequence_number: 0,
             }
         );
-        destroy_signer(new_account);
     }
     spec fun make_account {
         pragma opaque;
@@ -1419,7 +1418,6 @@ module DiemAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     native fun create_signer(addr: address): signer;
-    native fun destroy_signer(sig: signer);
 
     /// Helper to return the u64 value of the `balance` for `account`
     fun balance_for<Token: store>(balance: &Balance<Token>): u64 {

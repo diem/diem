@@ -1248,12 +1248,6 @@ procedure {:inline 1} $DiemAccount_create_signer(
     signer := addr;
 }
 
-procedure {:inline 1} $DiemAccount_destroy_signer(
-  signer: int
-) {
-  return;
-}
-
 // ==================================================================================
 // Native Signer
 

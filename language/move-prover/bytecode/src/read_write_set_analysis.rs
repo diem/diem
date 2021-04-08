@@ -517,7 +517,6 @@ fn call_native_function(
         ("Event", "write_to_event_store") => (),
         ("Hash", "sha3_256") | ("Hash", "sha2_256") => (),
         ("Signature", "ed25519_validate_pubkey") | ("Signature", "ed25519_verify") => (),
-        ("DiemAccount", "destroy_signer") => (),
         (m, f) => {
             unimplemented!("Unsupported native function {:?}::{:?}", m, f)
         }
