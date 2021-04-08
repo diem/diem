@@ -1,17 +1,23 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_storage::tracing::{observe_block, BlockStage};
-use crate::counters;
-use crate::state_replication::StateComputer;
+use crate::{
+    block_storage::tracing::{observe_block, BlockStage},
+    counters,
+    state_replication::StateComputer,
+};
 use consensus_types::{block::Block, executed_block::ExecutedBlock};
 use diem_crypto::HashValue;
+use diem_infallible::Mutex;
 use diem_logger::prelude::*;
-use diem_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
-use diem_types::transaction::TransactionStatus;
+use diem_mempool::TransactionExclusion;
+use diem_types::{
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    transaction::TransactionStatus,
+};
 use futures::{SinkExt, StreamExt};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -55,6 +61,7 @@ pub struct ExecutionPhase {
     receive_channel: channel::Receiver<(Vec<Block>, LedgerInfoWithSignatures)>,
     notify_channel: channel::Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
     back_pressure: Arc<AtomicU64>,
+    pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
 }
 
 impl ExecutionPhase {
@@ -63,12 +70,14 @@ impl ExecutionPhase {
         receive_channel: channel::Receiver<(Vec<Block>, LedgerInfoWithSignatures)>,
         notify_channel: channel::Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
         back_pressure: Arc<AtomicU64>,
+        pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
     ) -> Self {
         Self {
             executor,
             receive_channel,
             notify_channel,
             back_pressure,
+            pending_txns,
         }
     }
 
@@ -98,6 +107,19 @@ impl ExecutionPhase {
             let ids = executed_blocks.iter().map(|b| b.id()).collect();
             self.executor.commit(ids, commit_li).await.unwrap();
             update_counters_for_committed_blocks(&executed_blocks);
+            {
+                let mut pending_txns = self.pending_txns.lock();
+                for block in &executed_blocks {
+                    if let Some(payload) = block.payload() {
+                        for txn in payload {
+                            pending_txns.remove(&TransactionExclusion {
+                                sender: txn.sender(),
+                                sequence_number: txn.sequence_number(),
+                            });
+                        }
+                    }
+                }
+            }
             self.back_pressure.store(commit_round, Ordering::SeqCst);
 
             if let Err(e) = self.notify_channel.send((executed_blocks, li)).await {

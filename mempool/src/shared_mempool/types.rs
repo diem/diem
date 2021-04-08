@@ -223,7 +223,7 @@ impl fmt::Display for CommittedTransaction {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub struct TransactionExclusion {
     pub sender: AccountAddress,
     pub sequence_number: u64,

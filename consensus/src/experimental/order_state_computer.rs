@@ -6,22 +6,31 @@ use consensus_types::block::Block;
 use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
+use diem_mempool::TransactionExclusion;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use futures::SinkExt;
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 /// Ordering only proxy, upon commit it passes ordered blocks to next phase.
 pub struct OrderProxy {
     notify_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>,
     pending_blocks: Mutex<HashMap<HashValue, Block>>,
+    pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
 }
 
 impl OrderProxy {
-    pub fn new(notify_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>) -> Self {
+    pub fn new(
+        notify_channel: channel::Sender<(Vec<Block>, LedgerInfoWithSignatures)>,
+        pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
+    ) -> Self {
         Self {
             notify_channel,
             pending_blocks: Mutex::new(HashMap::new()),
+            pending_txns,
         }
     }
 }
@@ -52,10 +61,23 @@ impl StateComputer for OrderProxy {
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
     ) -> Result<(), ExecutionError> {
-        let blocks = {
+        let blocks: Vec<Block> = {
             let mut map = self.pending_blocks.lock();
             block_ids.iter().map(|id| map.remove(id).unwrap()).collect()
         };
+        {
+            let mut pending_txns = self.pending_txns.lock();
+            for block in &blocks {
+                if let Some(payload) = block.payload() {
+                    for txn in payload {
+                        pending_txns.insert(TransactionExclusion {
+                            sender: txn.sender(),
+                            sequence_number: txn.sequence_number(),
+                        });
+                    }
+                }
+            }
+        }
         self.notify_channel
             .clone()
             .send((blocks, finality_proof))

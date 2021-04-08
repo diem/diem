@@ -4,6 +4,7 @@
 use crate::{error::MempoolError, state_replication::TxnManager};
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
+use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
@@ -14,7 +15,7 @@ use executor_types::StateComputeResult;
 use fail::fail_point;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
-use std::time::Duration;
+use std::{collections::HashSet, sync::Arc, time::Duration};
 use tokio::time::{sleep, timeout};
 
 const NO_TXN_DELAY: u64 = 30;
@@ -28,6 +29,7 @@ pub struct MempoolProxy {
     mempool_executed_txn_timeout_ms: u64,
     /// Timeout for consensus to pull transactions from mempool and get a response (in milliseconds)
     mempool_txn_pull_timeout_ms: u64,
+    pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
 }
 
 impl MempoolProxy {
@@ -36,6 +38,7 @@ impl MempoolProxy {
         poll_count: u64,
         mempool_txn_pull_timeout_ms: u64,
         mempool_executed_txn_timeout_ms: u64,
+        pending_txns: Arc<Mutex<HashSet<TransactionExclusion>>>,
     ) -> Self {
         assert!(
             poll_count > 0,
@@ -46,16 +49,19 @@ impl MempoolProxy {
             poll_count,
             mempool_txn_pull_timeout_ms,
             mempool_executed_txn_timeout_ms,
+            pending_txns,
         }
     }
 
     async fn pull_internal(
         &self,
         max_size: u64,
-        exclude_txns: Vec<TransactionExclusion>,
+        mut exclude_txns: Vec<TransactionExclusion>,
     ) -> Result<Payload, MempoolError> {
         let (callback, callback_rcv) = oneshot::channel();
-        let req = ConsensusRequest::GetBlockRequest(max_size, exclude_txns.clone(), callback);
+        let mut pending_exclude = self.pending_txns.lock().iter().cloned().collect();
+        exclude_txns.append(&mut pending_exclude);
+        let req = ConsensusRequest::GetBlockRequest(max_size, exclude_txns, callback);
         // send to shared mempool
         self.consensus_to_mempool_sender
             .clone()
@@ -81,6 +87,18 @@ impl MempoolProxy {
             },
         }
     }
+    //
+    // pub fn add_exclude_txn(&self, payloads: Vec<&Payload>) {
+    //     let mut exclude_txns = self.pending_txns.lock();
+    //     for payload in payloads {
+    //         for transaction in payload {
+    //             exclude_txns.insert(TransactionExclusion {
+    //                 sender: transaction.sender(),
+    //                 sequence_number: transaction.sequence_number(),
+    //             });
+    //         }
+    //     }
+    // }
 }
 
 #[async_trait::async_trait]

@@ -7,6 +7,7 @@ use consensus_types::{
     block::{block_test_utils::random_payload, Block},
     common::Payload,
 };
+use diem_infallible::Mutex;
 use diem_mempool::ConsensusRequest;
 use diem_types::{
     transaction::TransactionStatus,
@@ -15,6 +16,7 @@ use diem_types::{
 use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use rand::Rng;
+use std::{collections::HashSet, sync::Arc};
 
 #[derive(Clone)]
 pub struct MockTransactionManager {
@@ -25,7 +27,8 @@ pub struct MockTransactionManager {
 
 impl MockTransactionManager {
     pub fn new(consensus_to_mempool_sender: Option<mpsc::Sender<ConsensusRequest>>) -> Self {
-        let mempool_proxy = consensus_to_mempool_sender.map(|s| MempoolProxy::new(s, 1, 1, 1));
+        let mempool_proxy = consensus_to_mempool_sender
+            .map(|s| MempoolProxy::new(s, 1, 1, 1, Arc::new(Mutex::new(HashSet::new()))));
         Self {
             rejected_txns: vec![],
             mempool_proxy,
