@@ -24,6 +24,7 @@ jobs:
       changes-pull-request-number: ${{ steps.changes.outputs.changes-pull-request-number }}
       build-images: ${{ steps.need-build-images.outputs.changes-found }}
       need-base-images: ${{ steps.need-base-images.outputs.need-extra }}
+      test-land-blocking: ${{ steps.need-land-blocking-test.outputs.need-lbt }}
       test-rust-environment: ${{ steps.environment.outputs.name }}
       test-rust: ${{ steps.rust-changes.outputs.changes-found }}
       test-helm: ${{ steps.helm-changes.outputs.changes-found }}
@@ -51,12 +52,24 @@ jobs:
         with:
           pattern: '^documentation\|^developers.diem.com'
           invert: "true"
+      - id: need-land-blocking-test
+        name: check KS if LBT should be run
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          res=true
+          ks="${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }}"
+          if ! [[ -z "${ks}" ]] && [[ "${ks}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]]; then
+            echo "killswitch activated! Will skip land-blocking-test";
+            res=false
+          fi
+          echo "::set-output name=need-lbt::$(echo $res)";
       - id: need-base-images
         name: build extra images if it is needed by LBT
         if: ${{ github.event_name == 'push' }}
         run: |
           res=true
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
+          ks="${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}"
+          if ! [[ -z "${ks}" ]] && [[ "${ks}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]] || ${{ steps.need-land-blocking-test.outputs.need-lbt != 'true' }}; then
             echo "Compat killswitch activated! Will run land_blocking suite";
             res=false
           else
@@ -255,7 +268,7 @@ jobs:
     name: Run land blocking test
     runs-on: self-hosted
     needs: [prepare, build-images, need-base-images]
-    if: ${{ always() && needs.build-images.result=='success' }}
+    if: ${{ always() && needs.build-images.result=='success' && needs.prepare.outputs.test-land-blocking == 'true' }}
     timeout-minutes: 45
     steps:
       - name: Launch cluster test
