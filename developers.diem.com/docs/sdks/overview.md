@@ -39,3 +39,10 @@ Select a language to access its approved Diem resource package on GitHub:
     to="https://diem.github.io/diem"
   />
 </CardsWrapper>
+
+## Warning
+
+Notice that the SDKs are assuming that you have a trusted fullnode providing you with the required JSON-RPC API. The JSON-RPC responses are not providing any proofs that would allow you to verify they contain data that can be trusted.
+
+If you are connecting to a public fullnode that you do not own, it is not providing you the same security guarantees as if you were running your own, allowing it to easily feed you with fake data.
+We strongly recommend running your own fullnode as soon as you depend on the JSON-RPC API or the SDKs for any critical operation.

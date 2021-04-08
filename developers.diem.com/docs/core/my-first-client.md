@@ -13,7 +13,6 @@ const syntax = [
 
 _An introduction to client development on testnet using the official SDKs._
 
-
 ## Getting Started
 
 In this tutorial, we demonstrate the key elements of a basic client using the official SDKs to interact with the Blockchain. The code for the tutorial is available here: [my-first-client](https://github.com/diem/my-first-client). The code in this project can be run from the root of the project directory by issuing the `make` command.
@@ -22,21 +21,27 @@ The example code uses the official Client SDKs. Currently, Go, Java, and Python 
 
 To see advanced usage, refer to the Reference Wallet project.
 
+## Warning
+
+Notice that this guide is relying on the SDK who are assuming that you're connected to a trusted fullnode providing you with the required JSON-RPC interface. The JSON-RPC responses are not providing any proofs that would allow you to verify they contain data actually stored in the Diem ledger.
+
+If you are connecting to a public fullnode that you do not own, it is not providing you the same security guarantees as if you were running your own, allowing it to easily feed you with fake data.
+We strongly recommend running your own fullnode as soon as you depend on the JSON-RPC API or the SDKs for any critical operation.
 
 ## Setup
 
 All code examples are shared in the [my-first-client](https://github.com/diem/my-first-client) repo on GitHub.
 
-### Clone the repo:
+### Clone the repo
 
 _git clone [https://github.com/diem/my-first-client.git](https://github.com/diem/my-first-client.git)_
 
 Each SDK has the following system requirements:
 
-*   Java: Java 8+
-*   Python: Python v3.7+, pipenv
+* Java: Java 8+
+* Python: Python v3.7+, pipenv
 
-### Run the examples:
+### Run the examples
 
 `make`
 
@@ -63,6 +68,7 @@ client = testnet.create_client();
 ```java
 client = Testnet.createClient();
 ```
+
 </TabItem>
 </Tabs>
 
@@ -117,7 +123,6 @@ Testnet.mintCoins(client, 10000000, senderAuthKey.hex(), "XUS");
 </TabItem>
 </Tabs>
 
-
 ## Getting a balance
 
 In the previous step we requested 100 XUS from the faucet. We can verify that our test wallet now has the expected balance.
@@ -170,7 +175,6 @@ System.out.println(account);
 
 </TabItem>
 </Tabs>
-
 
 ## Sending Coins
 
@@ -309,9 +313,7 @@ System.out.println(transaction);
 </TabItem>
 </Tabs>
 
-
 We can verify that 10 XUS was sent by verifying the sender’s wallet balance is 90 and receiver’s balance is 10.
-
 
 ## Transaction Intent (DIP-5)
 
@@ -522,6 +524,7 @@ public class GetEventsExample {
    }
 }
 ```
+
 </TabItem>
 </Tabs>
 
