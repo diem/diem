@@ -44,11 +44,10 @@ impl SetValidatorOperator {
             config.chain_id,
             owner_address,
             client.sequence_number(owner_address)?,
-            transaction_builder::encode_set_validator_operator_script_function(
+            transaction_builder::encode_set_validator_operator_script(
                 self.name.as_bytes().to_vec(),
                 self.account_address,
-            )
-            .into_script_function(),
+            ),
         );
 
         let signed_txn = storage.sign(diem_global_constants::OWNER_KEY, "set-operator", txn)?;

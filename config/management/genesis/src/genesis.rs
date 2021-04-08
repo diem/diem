@@ -103,12 +103,10 @@ impl Genesis {
             let operator_key = operator_storage.ed25519_key(OPERATOR_KEY)?;
             let operator_account = account_address::from_public_key(&operator_key);
 
-            let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script_function(
-                    operator_name.as_bytes().to_vec(),
-                    operator_account,
-                )
-                .into_script_function();
+            let set_operator_script = transaction_builder::encode_set_validator_operator_script(
+                operator_name.as_bytes().to_vec(),
+                operator_account,
+            );
 
             let owner_name_vec = owner.as_bytes().to_vec();
             operator_assignments.push((owner_key, owner_name_vec, set_operator_script));
@@ -131,8 +129,8 @@ impl Genesis {
             let validator_config_tx = operator_storage.transaction(constants::VALIDATOR_CONFIG)?;
             let validator_config_tx = validator_config_tx.as_signed_user_txn().unwrap().payload();
             let validator_config_tx =
-                if let TransactionPayload::ScriptFunction(script_function) = validator_config_tx {
-                    script_function.clone()
+                if let TransactionPayload::Script(script) = validator_config_tx {
+                    script.clone()
                 } else {
                     return Err(Error::UnexpectedError("Found invalid registration".into()));
                 };

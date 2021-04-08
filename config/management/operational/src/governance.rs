@@ -14,7 +14,7 @@ use diem_types::{
     account_address::AccountAddress,
     account_config::diem_root_address,
     chain_id::ChainId,
-    transaction::{authenticator::AuthenticationKey, ScriptFunction, TransactionPayload},
+    transaction::{authenticator::AuthenticationKey, Script},
 };
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -45,7 +45,7 @@ impl CreateAccount {
             account_address: AccountAddress,
             auth_key_prefix: Vec<u8>,
             name: Vec<u8>,
-        ) -> TransactionPayload,
+        ) -> Script,
         action: &'static str,
     ) -> Result<(TransactionContext, AccountAddress), Error> {
         let config = self
@@ -67,8 +67,7 @@ impl CreateAccount {
             account_address,
             auth_key.prefix().to_vec(),
             self.name.as_bytes().to_vec(),
-        )
-        .into_script_function();
+        );
         let mut transaction_context =
             build_and_submit_diem_root_transaction(&config, seq_num, script, action)?;
 
@@ -90,7 +89,7 @@ pub struct CreateValidator {
 impl CreateValidator {
     pub fn execute(self) -> Result<(TransactionContext, AccountAddress), Error> {
         self.input.execute(
-            transaction_builder::encode_create_validator_account_script_function,
+            transaction_builder::encode_create_validator_account_script,
             "create-validator",
         )
     }
@@ -105,7 +104,7 @@ pub struct CreateValidatorOperator {
 impl CreateValidatorOperator {
     pub fn execute(self) -> Result<(TransactionContext, AccountAddress), Error> {
         self.input.execute(
-            transaction_builder::encode_create_validator_operator_account_script_function,
+            transaction_builder::encode_create_validator_operator_account_script,
             "create-validator-operator",
         )
     }
@@ -151,12 +150,11 @@ impl AddValidator {
             .human_name;
 
         let seq_num = client.sequence_number(diem_root_address())?;
-        let script = transaction_builder::encode_add_validator_and_reconfigure_script_function(
+        let script = transaction_builder::encode_add_validator_and_reconfigure_script(
             seq_num,
             name,
             self.input.account_address,
-        )
-        .into_script_function();
+        );
         let mut transaction_context =
             build_and_submit_diem_root_transaction(&config, seq_num, script, "add-validator")?;
 
@@ -188,12 +186,11 @@ impl RemoveValidator {
             .human_name;
 
         let seq_num = client.sequence_number(diem_root_address())?;
-        let script = transaction_builder::encode_remove_validator_and_reconfigure_script_function(
+        let script = transaction_builder::encode_remove_validator_and_reconfigure_script(
             seq_num,
             name,
             self.input.account_address,
-        )
-        .into_script_function();
+        );
 
         let mut transaction_context =
             build_and_submit_diem_root_transaction(&config, seq_num, script, "remove-validator")?;
@@ -211,15 +208,10 @@ impl RemoveValidator {
 fn build_and_submit_diem_root_transaction(
     config: &Config,
     seq_num: u64,
-    script_function: ScriptFunction,
+    script: Script,
     action: &'static str,
 ) -> Result<TransactionContext, Error> {
-    let txn = build_raw_transaction(
-        config.chain_id,
-        diem_root_address(),
-        seq_num,
-        script_function,
-    );
+    let txn = build_raw_transaction(config.chain_id, diem_root_address(), seq_num, script);
 
     let mut storage = config.validator_backend();
     let signed_txn = storage.sign(DIEM_ROOT_KEY, action, txn)?;
