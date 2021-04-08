@@ -32,7 +32,6 @@ hex = "0.4.3"
 proptest = "1.0.0"
 
 compiler = { path = "../../compiler" }
-diem-state-view = { path = "../../../storage/state-view" }
 move-lang = { path = "../../move-lang" }
 
 [features]

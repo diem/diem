@@ -4501,7 +4501,6 @@ dependencies = [
  "diem-crypto",
  "diem-infallible",
  "diem-logger",
- "diem-state-view",
  "diem-workspace-hack",
  "fail",
  "hex",
