@@ -4,9 +4,9 @@
 use anyhow::{bail, Result};
 use diem_types::transaction::ScriptFunction;
 use include_dir::{include_dir, Dir};
+use move_binary_format::file_format::CompiledModule;
 use once_cell::sync::Lazy;
 use std::{convert::TryFrom, path::PathBuf};
-use vm::file_format::CompiledModule;
 
 pub mod legacy;
 

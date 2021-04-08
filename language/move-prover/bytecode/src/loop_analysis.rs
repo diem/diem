@@ -9,13 +9,13 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, HavocKind, Label, Operation, PropKind},
     stackless_control_flow_graph::{BlockContent, BlockId, StacklessControlFlowGraph},
 };
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{self, TempIndex},
     exp_generator::ExpGenerator,
     model::FunctionEnv,
 };
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::CodeOffset;
 
 const LOOP_INVARIANT_BASE_FAILED: &str = "base case of the loop invariant does not hold";
 const LOOP_INVARIANT_INDUCTION_FAILED: &str = "induction case of the loop invariant does not hold";

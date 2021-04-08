@@ -5,11 +5,11 @@
 
 use crate::absint::{AbstractDomain, JoinResult};
 use mirai_annotations::{checked_precondition, checked_verify};
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     errors::PartialVMError,
     file_format::{AbilitySet, CodeOffset, FunctionDefinitionIndex, LocalIndex},
 };
+use move_core_types::vm_status::StatusCode;
 
 /// LocalState represents the current assignment state of a local
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -37,7 +37,7 @@ use move_model::{
     },
     ty::{PrimitiveType, Type},
 };
-use vm::file_format::CodeOffset;
+use move_binary_format::file_format::CodeOffset;
 
 use crate::{
     boogie_helpers::{

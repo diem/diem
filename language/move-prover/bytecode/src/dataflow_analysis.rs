@@ -8,12 +8,12 @@ use crate::{
     stackless_bytecode::Bytecode,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
+use move_binary_format::file_format::CodeOffset;
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::Debug,
     ops::{Deref, DerefMut},
 };
-use vm::file_format::CodeOffset;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JoinResult {

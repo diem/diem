@@ -18,7 +18,7 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 invalid-mutations = { path = "../invalid-mutations" }
 move-core-types = { path = "../../move-core/types" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
-vm = { path = "../../vm", features = ["fuzzing"] }
+move-binary-format = { path = "../../move-binary-format", features = ["fuzzing"] }
 
 [features]
-fuzzing = ["vm/fuzzing"]
+fuzzing = ["move-binary-format/fuzzing"]

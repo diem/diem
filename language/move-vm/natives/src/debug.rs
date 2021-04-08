@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_binary_format::errors::PartialVMResult;
 use move_core_types::gas_schedule::ONE_GAS_UNIT;
 #[allow(unused_imports)]
 use move_vm_types::values::{values_impl::debug::print_reference, Reference};
@@ -11,7 +12,6 @@ use move_vm_types::{
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
-use vm::errors::PartialVMResult;
 
 #[allow(unused_mut)]
 #[allow(unused_variables)]

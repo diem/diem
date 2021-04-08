@@ -17,7 +17,7 @@ use diem_types::{
     on_chain_config::ValidatorSet,
     transaction::{Transaction, Version},
 };
-use vm::file_format::CompiledModule;
+use move_binary_format::file_format::CompiledModule;
 
 pub trait DiemValidatorInterface: Sync {
     fn get_account_state_by_version(

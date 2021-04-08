@@ -8,7 +8,7 @@ use crate::{
     instantiation_loops::InstantiationLoopChecker, instruction_consistency::InstructionConsistency,
     script_signature, signature::SignatureChecker, struct_defs::RecursiveStructDefChecker,
 };
-use vm::{
+use move_binary_format::{
     errors::VMResult,
     file_format::{CompiledModule, CompiledScript},
 };

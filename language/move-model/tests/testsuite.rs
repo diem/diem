@@ -5,12 +5,12 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use move_model::{run_bytecode_model_builder, run_model_builder};
-use move_prover_test_utils::baseline_test::verify_or_update_baseline;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
 };
+use move_model::{run_bytecode_model_builder, run_model_builder};
+use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];

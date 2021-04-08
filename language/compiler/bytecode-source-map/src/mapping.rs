@@ -3,7 +3,7 @@
 
 use crate::{marking::MarkedSourceMapping, source_map::SourceMap};
 use anyhow::Result;
-use vm::file_format::{CompiledModule, CompiledScript};
+use move_binary_format::file_format::{CompiledModule, CompiledScript};
 
 /// An object that associates source code with compiled bytecode and source map.
 #[derive(Debug)]

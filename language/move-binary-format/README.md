@@ -1,7 +1,7 @@
 ---
 id: vm
 title: Virtual Machine
-custom_edit_url: https://github.com/diem/diem/edit/main/language/vm/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/move-binary-format/README.md
 ---
 
 
@@ -29,7 +29,7 @@ are private, and types carry no functions or methods.
 The MoveVM core crate provides the definition of the file format and all
 utilities related to the file format:
 * A simple Rust abstraction over the file format
-  (`diem/language/vm/src/file_format.rs`) and the bytecodes. These Rust
+  (`diem/language/move-binary-format/src/file_format.rs`) and the bytecodes. These Rust
   structures are widely used in the code base.
 * Serialization and deserialization of the file format. These define the
   on-chain binary representation of the code.
@@ -37,10 +37,10 @@ utilities related to the file format:
 * A proptest infrastructure for the file format.
 
 The `CompiledModule` and `CompiledScript` definitions in
-`diem/language/vm/src/file_format.rs` are the top-level structs for a Move
+`diem/language/move-binary-format/src/file_format.rs` are the top-level structs for a Move
 *Module* or *Transaction Script*, respectively. These structs provide a
 simple abstraction over the file format. Additionally, a set of
-[*Views*](https://github.com/diem/diem/blob/main/language/vm/src/views.rs) are defined to easily navigate and inspect
+[*Views*](https://github.com/diem/diem/blob/main/language/move-binary-format/src/views.rs) are defined to easily navigate and inspect
 `CompiledModule`s and `CompiledScript`s.
 
 ## Folder Structure

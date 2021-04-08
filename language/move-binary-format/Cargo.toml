@@ -1,8 +1,8 @@
 [package]
-name = "vm"
+name = "move-binary-format"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Diem vm"
+description = "Move Binary Format"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"

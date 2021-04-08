@@ -10,8 +10,8 @@ use move_core_types::{
 };
 use move_vm_runtime::data_cache::RemoteCache;
 // use move_vm_txn_effect_converter::convert_txn_effects_to_move_changeset_and_events;
+use move_binary_format::errors::{PartialVMResult, VMResult};
 use std::collections::{btree_map, BTreeMap};
-use vm::errors::{PartialVMResult, VMResult};
 
 /// A dummy storage containing no modules or resources.
 #[derive(Debug, Clone)]

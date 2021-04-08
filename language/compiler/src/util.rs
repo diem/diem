@@ -4,10 +4,10 @@
 use anyhow::Context;
 use bytecode_source_map::source_map::SourceMap;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
+use move_binary_format::file_format::CompiledModule;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use std::{fs, path::Path};
-use vm::file_format::CompiledModule;
 
 pub fn do_compile_module(
     source_path: &Path,

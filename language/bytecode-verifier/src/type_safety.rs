@@ -9,8 +9,7 @@ use crate::{
     control_flow_graph::ControlFlowGraph,
 };
 use mirai_annotations::*;
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{
         AbilitySet, Bytecode, CodeOffset, FieldHandleIndex, FunctionDefinitionIndex,
@@ -18,6 +17,7 @@ use vm::{
         StructDefinition, StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
 };
+use move_core_types::vm_status::StatusCode;
 
 struct Locals<'a> {
     param_count: usize,

@@ -11,9 +11,9 @@ use crate::{
     stackless_bytecode::{Bytecode, Operation},
 };
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId};
 use std::{collections::BTreeSet, fmt, fmt::Formatter, prelude::v1::Result::Ok};
-use vm::file_format::CodeOffset;
 
 // Legacy API, no representation of type instantiations.
 

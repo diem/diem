@@ -7,12 +7,12 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
-use move_core_types::account_address::AccountAddress;
-use vm::{
+use move_binary_format::{
     access::ScriptAccess,
     errors::{Location, VMError},
     file_format::{CompiledModule, CompiledScript},
 };
+use move_core_types::account_address::AccountAddress;
 
 #[allow(unused_macros)]
 macro_rules! instr_count {

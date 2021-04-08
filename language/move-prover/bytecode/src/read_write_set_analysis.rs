@@ -18,13 +18,13 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Constant, Operation},
 };
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, ModuleId, StructId},
     ty::Type,
 };
 use std::{cmp::Ordering, fmt, fmt::Formatter};
-use vm::file_format::CodeOffset;
 
 // =================================================================================================
 // Data Model

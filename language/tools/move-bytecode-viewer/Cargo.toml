@@ -17,7 +17,7 @@ codespan = { version = "0.8.0", features = ["serialization"] }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-ir-types = { path = "../../move-ir/types" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 disassembler = { path = "../disassembler" }
 
 

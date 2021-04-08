@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::{BTreeMap, HashMap};
-use vm::file_format::{
+use move_binary_format::file_format::{
     CodeOffset, FunctionDefinitionIndex, MemberCount, StructDefinitionIndex, TableIndex,
 };
+use std::collections::{BTreeMap, HashMap};
 
 /// A data structure used to track any markings or extra information that is desired to be exposed
 /// in the disassembled function definition. Every marking can have multiple messages associated with it.

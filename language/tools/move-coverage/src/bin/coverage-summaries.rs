@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use move_binary_format::file_format::CompiledModule;
 use move_coverage::{
     coverage_map::{CoverageMap, TraceMap},
     summary::{self, ModuleSummary},
@@ -13,7 +14,6 @@ use std::{
     path::Path,
 };
 use structopt::StructOpt;
-use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(

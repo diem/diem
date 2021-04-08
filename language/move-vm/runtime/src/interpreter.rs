@@ -9,6 +9,11 @@ use crate::{
 };
 use diem_logger::prelude::*;
 use fail::fail_point;
+use move_binary_format::{
+    errors::*,
+    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
+    file_format_common::Opcodes,
+};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
@@ -23,11 +28,6 @@ use move_vm_types::{
     },
 };
 use std::{cmp::min, collections::VecDeque, fmt::Write, mem, sync::Arc};
-use vm::{
-    errors::*,
-    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex},
-    file_format_common::Opcodes,
-};
 
 macro_rules! debug_write {
     ($($toks: tt)*) => {

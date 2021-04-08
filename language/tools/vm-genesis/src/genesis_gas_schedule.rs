@@ -3,10 +3,7 @@
 
 //! This file contains the starting gas schedule published at genesis.
 
-use move_core_types::gas_schedule::{CostTable, GasCost};
-use move_vm_types::gas_schedule::{self, NativeCostIndex as N};
-use once_cell::sync::Lazy;
-use vm::{
+use move_binary_format::{
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
@@ -14,6 +11,9 @@ use vm::{
     },
     file_format_common::instruction_key,
 };
+use move_core_types::gas_schedule::{CostTable, GasCost};
+use move_vm_types::gas_schedule::{self, NativeCostIndex as N};
+use once_cell::sync::Lazy;
 
 pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
     use Bytecode::*;

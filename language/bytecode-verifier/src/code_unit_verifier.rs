@@ -11,8 +11,7 @@ use crate::{
     stack_usage_verifier::StackUsageVerifier,
     type_safety,
 };
-use std::collections::HashMap;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{Location, PartialVMResult, VMResult},
     file_format::{
@@ -21,6 +20,7 @@ use vm::{
     },
     IndexKind,
 };
+use std::collections::HashMap;
 
 pub struct CodeUnitVerifier<'a> {
     resolver: BinaryIndexedView<'a>,

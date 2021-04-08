@@ -27,7 +27,7 @@ move-vm-types = { path = "../../move-vm/types" }
 diem-framework = { path = "../../diem-framework" }
 diem-framework-releases = { path = "../../diem-framework/releases" }
 diem-transaction-builder = { path = "../../../sdk/transaction-builder"}
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 diem-vm = { path = "../../diem-vm" }
 
 [dev-dependencies]

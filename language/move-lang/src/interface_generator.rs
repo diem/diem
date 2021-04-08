@@ -3,8 +3,7 @@
 
 use crate::shared::Address;
 use anyhow::{anyhow, Result};
-use move_core_types::language_storage::ModuleId;
-use move_vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         Ability, AbilitySet, CompiledModule, FunctionDefinition, ModuleHandle, SignatureToken,
@@ -12,6 +11,7 @@ use move_vm::{
         Visibility,
     },
 };
+use move_core_types::language_storage::ModuleId;
 use std::{collections::BTreeMap, fs};
 
 macro_rules! push_line {

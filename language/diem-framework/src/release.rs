@@ -3,6 +3,7 @@
 
 use crate::{path_in_crate, save_binary};
 use log::LevelFilter;
+use move_binary_format::{compatibility::Compatibility, normalized::Module, CompiledModule};
 use move_core_types::language_storage::ModuleId;
 use std::{
     collections::BTreeMap,
@@ -10,7 +11,6 @@ use std::{
     io::Read,
     path::Path,
 };
-use vm::{compatibility::Compatibility, normalized::Module, CompiledModule};
 
 fn recreate_dir(dir_path: impl AsRef<Path>) {
     let dir_path = dir_path.as_ref();

@@ -12,9 +12,9 @@ use crate::{
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::CodeOffset;
 
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used

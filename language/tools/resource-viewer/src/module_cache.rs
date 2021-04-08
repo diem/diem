@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 use std::{cell::RefCell, collections::hash_map::HashMap, hash::Hash, rc::Rc};
-use vm::CompiledModule;
 
 pub struct ModuleCacheImpl<K, V> {
     id_map: RefCell<HashMap<K, usize>>,

@@ -5,8 +5,8 @@ use crate::{
     binary_views::FunctionView,
     control_flow_graph::{BlockId, ControlFlowGraph},
 };
+use move_binary_format::file_format::{Bytecode, CodeOffset};
 use std::collections::HashMap;
-use vm::file_format::{Bytecode, CodeOffset};
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
 /// trait with widening and a partial order.

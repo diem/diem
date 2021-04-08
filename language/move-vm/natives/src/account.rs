@@ -1,6 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_binary_format::errors::PartialVMResult;
 use move_core_types::account_address::AccountAddress;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
@@ -10,7 +11,6 @@ use move_vm_types::{
 };
 use smallvec::smallvec;
 use std::collections::VecDeque;
-use vm::errors::PartialVMResult;
 
 pub fn native_create_signer(
     context: &mut impl NativeContext,

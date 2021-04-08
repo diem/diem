@@ -3,6 +3,7 @@
 
 use crate::function_target::FunctionTarget;
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{Exp, MemoryLabel, TempIndex},
     exp_rewriter::{ExpRewriter, RewriteTarget},
@@ -11,7 +12,6 @@ use move_model::{
 };
 use num::BigUint;
 use std::{collections::BTreeMap, fmt, fmt::Formatter};
-use vm::file_format::CodeOffset;
 
 /// A label for a branch destination.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

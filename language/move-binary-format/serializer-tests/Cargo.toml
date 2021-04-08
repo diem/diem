@@ -13,7 +13,7 @@ edition = "2018"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
-vm = { path = "../", features = ["fuzzing"] }
+move-binary-format = { path = "../", features = ["fuzzing"] }
 
 [features]
-fuzzing = ["vm/fuzzing"]
+fuzzing = ["move-binary-format/fuzzing"]

@@ -23,7 +23,7 @@ use crate::{
     transitions::*,
     unpack_instantiation_for_state, with_ty_param,
 };
-use vm::file_format::{
+use move_binary_format::file_format::{
     Ability, Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, SignatureToken,
     StructDefInstantiationIndex, StructDefinitionIndex,
 };

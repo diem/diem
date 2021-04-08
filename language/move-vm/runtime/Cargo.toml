@@ -24,7 +24,7 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-natives = { path = "../natives" }
 move-vm-types = { path = "../types" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 
 [dev-dependencies]
 anyhow = "1.0.38"

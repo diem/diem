@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_proptest_helpers::pick_slice_idxs;
-use move_core_types::vm_status::StatusCode;
-use proptest::{prelude::*, sample::Index as PropIndex};
-use std::collections::BTreeMap;
-use vm::{
+use move_binary_format::{
     errors::{offset_out_of_bounds, PartialVMError},
     file_format::{
         Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
@@ -16,6 +13,9 @@ use vm::{
     internals::ModuleIndex,
     IndexKind,
 };
+use move_core_types::vm_status::StatusCode;
+use proptest::{prelude::*, sample::Index as PropIndex};
+use std::collections::BTreeMap;
 
 /// Represents a single mutation onto a code unit to make it out of bounds.
 #[derive(Debug)]

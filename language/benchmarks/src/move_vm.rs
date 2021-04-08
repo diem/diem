@@ -6,6 +6,7 @@ use criterion::{measurement::Measurement, Criterion};
 use diem_state_view::StateView;
 use diem_types::{access_path::AccessPath, account_address::AccountAddress};
 use diem_vm::data_cache::StateViewCache;
+use move_binary_format::CompiledModule;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
@@ -18,7 +19,6 @@ use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
-use vm::CompiledModule;
 
 static MOVE_BENCH_SRC_PATH: Lazy<PathBuf> = Lazy::new(|| {
     vec![env!("CARGO_MANIFEST_DIR"), "src", "bench.move"]

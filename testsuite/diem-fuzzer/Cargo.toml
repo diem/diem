@@ -48,7 +48,7 @@ network = { path = "../../network", features = ["fuzzing"] }
 safety-rules = { path = "../../consensus/safety-rules", features = ["fuzzing", "testing"]  }
 state-sync = { path = "../../state-sync", features = ["fuzzing", "diemdb"]  }
 storage-interface = { path = "../../storage/storage-interface" }
-vm = { path = "../../language/vm", features = ["fuzzing"] }
+move-binary-format = { path = "../../language/move-binary-format", features = ["fuzzing"] }
 
 [dev-dependencies]
 rusty-fork = "0.3.0"

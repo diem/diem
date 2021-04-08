@@ -19,7 +19,7 @@ diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
 diem-framework-releases = { path = "../diem-framework/releases" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 move-core-types = { path = "../move-core/types" }
 
 

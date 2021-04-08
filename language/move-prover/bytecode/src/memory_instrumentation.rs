@@ -11,13 +11,13 @@ use crate::{
         Operation,
     },
 };
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{ConditionKind, TempIndex},
     model::{FunctionEnv, Loc, StructEnv},
     ty::Type,
 };
 use std::collections::BTreeMap;
-use vm::file_format::CodeOffset;
 
 pub struct MemoryInstrumentationProcessor {}
 

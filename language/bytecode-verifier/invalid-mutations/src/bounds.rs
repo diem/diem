@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_proptest_helpers::pick_slice_idxs;
-use move_core_types::vm_status::StatusCode;
-use proptest::{
-    prelude::*,
-    sample::{self, Index as PropIndex},
-};
-use std::collections::BTreeMap;
-use vm::{
+use move_binary_format::{
     errors::{bounds_error, PartialVMError},
     file_format::{
         AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex,
@@ -19,10 +13,16 @@ use vm::{
     views::{ModuleView, SignatureTokenView},
     IndexKind,
 };
+use move_core_types::vm_status::StatusCode;
+use proptest::{
+    prelude::*,
+    sample::{self, Index as PropIndex},
+};
+use std::collections::BTreeMap;
 
 mod code_unit;
 pub use code_unit::{ApplyCodeUnitBoundsContext, CodeUnitBoundsMutation};
-use vm::file_format::SignatureToken;
+use move_binary_format::file_format::SignatureToken;
 
 /// Represents the number of pointers that exist out from a node of a particular kind.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

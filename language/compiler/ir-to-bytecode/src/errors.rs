@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_binary_format::errors::VMError;
 use thiserror::Error;
-use vm::errors::VMError;
 
 #[derive(Clone, Debug, Eq, Error, Ord, PartialEq, PartialOrd)]
 pub enum InternalCompilerError {

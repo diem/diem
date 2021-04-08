@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_crypto::{ed25519, traits::*};
+use move_binary_format::errors::PartialVMResult;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -10,7 +11,6 @@ use move_vm_types::{
 };
 use smallvec::smallvec;
 use std::{collections::VecDeque, convert::TryFrom};
-use vm::errors::PartialVMResult;
 
 pub fn native_ed25519_publickey_validation(
     context: &impl NativeContext,

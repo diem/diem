@@ -16,7 +16,7 @@ pub use verify::verify_release;
 
 pub mod test_utils {
     use diem_types::account_config::CORE_CODE_ADDRESS;
-    use vm::{file_format::empty_module, CompiledModule};
+    use move_binary_format::{file_format::empty_module, CompiledModule};
 
     pub fn release_modules() -> Vec<(Vec<u8>, CompiledModule)> {
         let mut modules: Vec<_> = diem_framework_releases::current_modules_with_blobs()

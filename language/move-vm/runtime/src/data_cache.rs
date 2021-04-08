@@ -3,6 +3,7 @@
 
 use crate::loader::Loader;
 
+use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{AccountChangeSet, ChangeSet, Event},
@@ -17,7 +18,6 @@ use move_vm_types::{
     values::{GlobalValue, GlobalValueEffect, Value},
 };
 use std::collections::btree_map::BTreeMap;
-use vm::errors::*;
 
 /// Trait for the Move VM to abstract storage operations.
 ///

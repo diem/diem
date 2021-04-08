@@ -14,6 +14,7 @@ use diem_validator_interface::{
     DBDebuggerInterface, DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
 use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
+use move_binary_format::{errors::VMResult, file_format::CompiledModule};
 use move_cli::on_disk_state_view::OnDiskStateView;
 use move_core_types::effects::ChangeSet as MoveChanges;
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Flags};
@@ -22,7 +23,6 @@ use move_vm_test_utils::DeltaStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::path::{Path, PathBuf};
-use vm::{errors::VMResult, file_format::CompiledModule};
 
 #[cfg(test)]
 mod unit_tests;

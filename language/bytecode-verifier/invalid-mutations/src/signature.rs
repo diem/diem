@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use proptest::sample::Index as PropIndex;
-use vm::file_format::{
+use move_binary_format::file_format::{
     CompiledModuleMut, Signature, SignatureToken, StructFieldInformation, TypeSignature,
 };
+use proptest::sample::Index as PropIndex;
 
 pub struct SignatureRefMutation<'a> {
     module: &'a mut CompiledModuleMut,

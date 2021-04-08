@@ -14,10 +14,10 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
+use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use std::mem;
-use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug)]

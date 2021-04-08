@@ -6,6 +6,7 @@ use crate::{
     logging::LogContext,
     runtime::VMRuntime,
 };
+use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
@@ -13,7 +14,6 @@ use move_core_types::{
     language_storage::{ModuleId, TypeTag},
 };
 use move_vm_types::gas_schedule::GasStatus;
-use vm::errors::*;
 
 pub struct Session<'r, 'l, R> {
     pub(crate) runtime: &'l VMRuntime,

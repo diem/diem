@@ -13,7 +13,7 @@ edition = "2018"
 bcs = "0.1.2"
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 resource-viewer = { path = "../resource-viewer"}
 vm-genesis = { path = "../vm-genesis" }
 diem-framework-releases = { path = "../../diem-framework/releases" }

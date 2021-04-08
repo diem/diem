@@ -3,9 +3,7 @@
 
 //! This module contains verification of usage of dependencies for modules and scripts.
 use crate::binary_views::BinaryIndexedView;
-use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use vm::{
+use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -15,6 +13,8 @@ use vm::{
     },
     IndexKind,
 };
+use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 struct Context<'a, 'b> {
     resolver: BinaryIndexedView<'a>,

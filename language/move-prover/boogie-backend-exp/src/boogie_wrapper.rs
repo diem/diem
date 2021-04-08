@@ -29,13 +29,13 @@ use boogie_backend::{
     prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
 };
 use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
+use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_model::{
     ast::TempIndex,
     model::{NodeId, QualifiedId},
 };
 use once_cell::sync::Lazy;
 use std::num::ParseIntError;
-use vm::file_format::FunctionDefinitionIndex;
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.

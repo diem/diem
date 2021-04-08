@@ -39,10 +39,7 @@ use serde::{Deserialize, Serialize};
 
 use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
-use move_core_types::{
-    account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
-};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
@@ -54,6 +51,9 @@ use vm::{
         StructDefinitionView, StructHandleView,
     },
     CompiledModule,
+};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
 };
 
 use crate::{
@@ -70,7 +70,7 @@ use crate::{
 };
 
 // import and re-expose symbols
-pub use vm::file_format::{AbilitySet, Visibility as FunctionVisibility};
+pub use move_binary_format::file_format::{AbilitySet, Visibility as FunctionVisibility};
 
 // =================================================================================================
 /// # Constants

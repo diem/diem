@@ -8,9 +8,7 @@ use bytecode_source_map::{
 };
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use colored::*;
-use move_core_types::identifier::IdentStr;
-use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         Ability, AbilitySet, Bytecode, CompiledModule, CompiledScript, FieldHandleIndex,
@@ -19,6 +17,8 @@ use vm::{
         Visibility,
     },
 };
+use move_core_types::identifier::IdentStr;
+use move_coverage::coverage_map::{ExecCoverageMap, FunctionCoverage};
 
 /// Holds the various options that we support while disassembling code.
 #[derive(Debug, Default)]

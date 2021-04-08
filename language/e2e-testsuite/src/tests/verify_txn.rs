@@ -22,13 +22,13 @@ use language_e2e_tests::{
     keygen::KeyGen, test_with_different_versions, transaction_status_eq,
     versioning::CURRENT_RELEASE_VERSIONS,
 };
+use move_binary_format::file_format::CompiledModule;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants, MAX_TRANSACTION_SIZE_IN_BYTES},
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     value::{serialize_values, MoveValue},
 };
-use vm::file_format::CompiledModule;
 
 #[test]
 fn verify_signature() {

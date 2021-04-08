@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_crypto::HashValue;
+use move_binary_format::errors::PartialVMResult;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -11,7 +12,6 @@ use move_vm_types::{
 use sha2::{Digest, Sha256};
 use smallvec::smallvec;
 use std::collections::VecDeque;
-use vm::errors::PartialVMResult;
 
 pub fn native_sha2_256(
     context: &impl NativeContext,

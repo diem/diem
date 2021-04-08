@@ -19,7 +19,7 @@ move-prover = { path = "../move-prover" }
 diem-crypto = { path = "../../crypto/crypto" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 transaction-builder-generator = { path = "../transaction-builder/generator" }
 move-stdlib = { path = "../move-stdlib" }
 move-core-types = { path = "../move-core/types" }

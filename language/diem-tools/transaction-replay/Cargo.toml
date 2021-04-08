@@ -18,7 +18,7 @@ diem-state-view = { path = "../../../storage/state-view" }
 diem-validator-interface = { path = "../diem-validator-interface" }
 diemdb = { path = "../../../storage/diemdb" }
 diem-vm = { path = "../../diem-vm" }
-vm = { path = "../../vm"}
+move-binary-format = { path = "../../move-binary-format"}
 move-cli = { path = "../../tools/move-cli" }
 move-vm-types = { path = "../../move-vm/types" }
 move-core-types = { path = "../../move-core/types" }

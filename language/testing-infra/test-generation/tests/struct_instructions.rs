@@ -2,13 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
-use move_core_types::identifier::Identifier;
-use std::collections::HashMap;
-use test_generation::{
-    abilities,
-    abstract_state::{AbstractState, AbstractValue, CallGraph},
-};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         empty_module, Ability, AbilitySet, Bytecode, CompiledModule, CompiledModuleMut,
@@ -17,6 +11,12 @@ use vm::{
         StructHandle, StructHandleIndex, TableIndex, TypeSignature,
     },
     views::{StructDefinitionView, ViewInternals},
+};
+use move_core_types::identifier::Identifier;
+use std::collections::HashMap;
+use test_generation::{
+    abilities,
+    abstract_state::{AbstractState, AbstractValue, CallGraph},
 };
 
 mod common;

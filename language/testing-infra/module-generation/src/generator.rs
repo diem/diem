@@ -4,6 +4,7 @@
 use crate::{options::ModuleGeneratorOptions, padding::Pad, utils::random_string};
 use bytecode_verifier::verify_module;
 use ir_to_bytecode::compiler::compile_module;
+use move_binary_format::file_format::CompiledModule;
 use move_core_types::account_address::AccountAddress;
 use move_ir_types::{ast::*, location::*};
 use rand::{rngs::StdRng, Rng};
@@ -11,7 +12,6 @@ use std::{
     collections::{BTreeSet, VecDeque},
     iter::FromIterator,
 };
-use vm::file_format::CompiledModule;
 
 type Set<K> = BTreeSet<K>;
 

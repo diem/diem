@@ -366,7 +366,7 @@ tests](https://doc.rust-lang.org/rust-by-example/testing/integration_testing.htm
 can neither rely on the `test` flag nor do they have a proper `Cargo.toml` for
 feature activation. In the Diem codebase, we therefore recommend that
 *integration tests which depend on test-only code in their tested crate* be
-extracted to their own test-only crate. See `language/vm/serializer_tests`
+extracted to their own test-only crate. See `language/move-binary-format/serializer_tests`
 for an example of such an extracted integration test.
 
 *Note for developers*: The reason we use a feature re-export (in the `[features]` section of the `Cargo.toml` is that a profile is not enough to activate the `"fuzzing"` feature flag. See [cargo-issue #291](https://github.com/rust-lang/cargo/issues/2911) for details).

@@ -3,7 +3,7 @@
 
 use crate::unit_tests::testutils::compile_script_string;
 use bytecode_verifier::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
-use vm::access::ScriptAccess;
+use move_binary_format::access::ScriptAccess;
 
 #[test]
 fn cfg_compile_script_ret() {

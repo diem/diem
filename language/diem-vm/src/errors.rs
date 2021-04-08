@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_logger::prelude::*;
+use move_binary_format::errors::VMError;
 use move_core_types::vm_status::{known_locations, StatusCode, VMStatus};
 use move_vm_runtime::logging::LogContext;
-use vm::errors::VMError;
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
 /// they are raised during the prologue.

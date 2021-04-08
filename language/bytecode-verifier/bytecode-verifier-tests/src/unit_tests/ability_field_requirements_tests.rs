@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::ability_field_requirements;
+use move_binary_format::file_format::CompiledModule;
 use proptest::prelude::*;
-use vm::file_format::CompiledModule;
 
 proptest! {
     #[test]

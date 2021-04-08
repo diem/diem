@@ -10,6 +10,10 @@ use log::warn;
 use std::collections::BTreeSet;
 
 use builder::module_builder::ModuleBuilder;
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{CompiledModule, FunctionDefinitionIndex, StructDefinitionIndex},
+};
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
@@ -18,10 +22,6 @@ use move_lang::{
     parser::ast::ModuleIdent,
     shared::{unique_map::UniqueMap, Address, CompilationEnv, Flags},
     Pass as MovePass, PassResult as MovePassResult,
-};
-use vm::{
-    access::ModuleAccess,
-    file_format::{CompiledModule, FunctionDefinitionIndex, StructDefinitionIndex},
 };
 
 use crate::{

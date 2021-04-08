@@ -4,13 +4,13 @@
 //! This module implements a checker for verifying that
 //! - a constant's type only refers to primitive types
 //! - a constant's data serializes correctly for that type
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{verification_error, Location, PartialVMResult, VMResult},
     file_format::{CompiledModule, CompiledScript, Constant, SignatureToken, TableIndex},
     IndexKind,
 };
+use move_core_types::vm_status::StatusCode;
 
 pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))

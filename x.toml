@@ -264,9 +264,9 @@ existing_deps = [
     ["resource-viewer", "diem-framework-releases"],
     ["resource-viewer", "diem-types"],
     ["resource-viewer", "diem-state-view"],
-    ["vm", "num-variants"],
-    ["vm", "diem-proptest-helpers"],
-    ["vm", "diem-crypto"],
+    ["move-binary-format", "num-variants"],
+    ["move-binary-format", "diem-proptest-helpers"],
+    ["move-binary-format", "diem-crypto"],
 ]
 
 # Interesting subsets of the workspace, These are used for generating and

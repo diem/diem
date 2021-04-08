@@ -20,9 +20,9 @@ use crate::{
     FullyCompiledProgram,
 };
 use bytecode_source_map::source_map::SourceMap;
+use move_binary_format::file_format as F;
 use move_core_types::account_address::AccountAddress as MoveAddress;
 use move_ir_types::{ast as IR, location::*};
-use move_vm::file_format as F;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;

@@ -1,7 +1,7 @@
 ---
 id: vm-runtime
 title: MoveVM Runtime
-custom_edit_url: https://github.com/diem/diem/edit/main/language/vm/vm-runtime/README.md
+custom_edit_url: https://github.com/diem/diem/edit/main/language/move-binary-format/vm-runtime/README.md
 ---
 
 # MoveVM Runtime

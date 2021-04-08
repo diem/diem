@@ -1,9 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use bytecode_verifier::constants;
+use move_binary_format::file_format::{empty_module, CompiledModule, Constant, SignatureToken};
 use move_core_types::vm_status::StatusCode;
 use proptest::prelude::*;
-use vm::file_format::{empty_module, CompiledModule, Constant, SignatureToken};
 
 proptest! {
     #[test]

@@ -66,8 +66,8 @@ impl std::ops::Deref for TestValidator {
 // * INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE -- This is tested in verify_txn.rs.
 // * SENDING_ACCOUNT_FROZEN: Tested in functional-tests/tests/diem_account/freezing.move.
 // * Errors arising from deserializing the code -- these are tested in
-//   - diem/language/vm/src/unit_tests/deserializer_tests.rs
-//   - diem/language/vm/tests/serializer_tests.rs
+//   - diem/language/move-binary-format/src/unit_tests/deserializer_tests.rs
+//   - diem/language/move-binary-format/tests/serializer_tests.rs
 // * Errors arising from calls to `static_verify_program` -- this is tested separately in tests for
 //   the bytecode verifier.
 // * Testing for invalid genesis write sets -- this is tested in

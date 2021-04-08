@@ -12,12 +12,12 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::Type,
 };
+use move_binary_format::file_format::CodeOffset;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
     fmt::{Error, Formatter},
 };
-use vm::file_format::CodeOffset;
 
 use crate::{
     model::{FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},

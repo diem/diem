@@ -5,6 +5,11 @@ use crate::{BCS_EXTENSION, DEFAULT_BUILD_DIR, DEFAULT_STORAGE_DIR};
 use disassembler::disassembler::Disassembler;
 // TODO: do we want to make these Move core types or allow this to be customizable?
 use diem_types::{contract_event::ContractEvent, event::EventKey};
+use move_binary_format::{
+    access::ModuleAccess,
+    errors::*,
+    file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -15,11 +20,6 @@ use move_core_types::{
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
-use vm::{
-    access::ModuleAccess,
-    errors::*,
-    file_format::{CompiledModule, CompiledScript, FunctionDefinitionIndex},
-};
 
 use anyhow::{anyhow, bail, Result};
 use std::{

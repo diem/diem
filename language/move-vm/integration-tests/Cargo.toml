@@ -17,7 +17,7 @@ tempfile = "3.2.0"
 
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = {path = "../../move-core/types" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 move-lang = { path = "../../move-lang" }
 move-vm-runtime = { path = "../runtime" }
 move-vm-types = { path = "../types" }

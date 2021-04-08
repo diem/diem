@@ -5,8 +5,7 @@
 //! parameters, locals, and fields of structs are well-formed. References can only occur at the
 //! top-level in all tokens.  Additionally, references cannot occur at all in field types.
 use crate::binary_views::BinaryIndexedView;
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -16,6 +15,7 @@ use vm::{
     },
     IndexKind,
 };
+use move_core_types::vm_status::StatusCode;
 
 pub struct SignatureChecker<'a> {
     resolver: BinaryIndexedView<'a>,

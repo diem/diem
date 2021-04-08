@@ -4,6 +4,13 @@
 use errmapgen::ErrorMapping;
 
 use crate::on_disk_state_view::OnDiskStateView;
+use move_binary_format::{
+    access::ModuleAccess,
+    compatibility::Compatibility,
+    errors::{PartialVMError, VMError},
+    file_format::{AbilitySet, CompiledModule, CompiledScript, SignatureToken},
+    normalized,
+};
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
@@ -16,13 +23,6 @@ use move_core_types::{
 use move_lang::{self, compiled_unit::CompiledUnit, shared::Flags, MOVE_COMPILED_EXTENSION};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::GasStatus;
-use vm::{
-    access::ModuleAccess,
-    compatibility::Compatibility,
-    errors::{PartialVMError, VMError},
-    file_format::{AbilitySet, CompiledModule, CompiledScript, SignatureToken},
-    normalized,
-};
 
 use anyhow::{anyhow, bail, Result};
 use std::{collections::BTreeMap, ffi::OsStr, fs, path::Path};

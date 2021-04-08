@@ -14,9 +14,9 @@ use crate::{
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::{ast::TempIndex, model::FunctionEnv};
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::CodeOffset;
 
 /// The reaching definitions we are capturing. Currently we only capture
 /// aliases (assignment).

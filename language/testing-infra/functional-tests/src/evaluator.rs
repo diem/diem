@@ -25,6 +25,12 @@ use diem_types::{
 };
 use language_e2e_tests::{data_store::FakeDataStore, executor::FakeExecutor};
 use mirai_annotations::checked_verify;
+use move_binary_format::{
+    access::ModuleAccess,
+    errors::{Location, PartialVMError, VMError},
+    file_format::{CompiledModule, CompiledScript},
+    views::ModuleView,
+};
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasConstants},
     identifier::Identifier,
@@ -36,12 +42,6 @@ use regex::{Captures, Regex};
 use std::{
     fmt::{self, Debug},
     str::FromStr,
-};
-use vm::{
-    access::ModuleAccess,
-    errors::{Location, PartialVMError, VMError},
-    file_format::{CompiledModule, CompiledScript},
-    views::ModuleView,
 };
 
 /// A transaction to be evaluated by the testing infra.

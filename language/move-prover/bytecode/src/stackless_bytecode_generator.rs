@@ -10,6 +10,13 @@ use crate::{
     },
 };
 use itertools::Itertools;
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{
+        Bytecode as MoveBytecode, CodeOffset, CompiledModule, FieldHandleIndex, SignatureIndex,
+    },
+    views::{FunctionHandleView, ViewInternals},
+};
 use move_core_types::value::MoveValue;
 use move_model::{
     ast::{ConditionKind, TempIndex},
@@ -17,13 +24,6 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 use std::{collections::BTreeMap, matches};
-use vm::{
-    access::ModuleAccess,
-    file_format::{
-        Bytecode as MoveBytecode, CodeOffset, CompiledModule, FieldHandleIndex, SignatureIndex,
-    },
-    views::{FunctionHandleView, ViewInternals},
-};
 
 pub struct StacklessBytecodeGenerator<'a> {
     func_env: &'a FunctionEnv<'a>,

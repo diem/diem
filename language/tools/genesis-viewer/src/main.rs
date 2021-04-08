@@ -8,10 +8,10 @@ use diem_types::{
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
+use move_binary_format::CompiledModule;
 use resource_viewer::{MoveValueAnnotator, NullStateView};
 use std::collections::{BTreeMap, BTreeSet};
 use structopt::StructOpt;
-use vm::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "Genesis Viewer")]

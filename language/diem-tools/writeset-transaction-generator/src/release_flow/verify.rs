@@ -12,9 +12,9 @@ use diem_types::{
     write_set::WriteOp,
 };
 use diem_validator_interface::{DiemValidatorInterface, JsonRpcDebuggerInterface};
+use move_binary_format::CompiledModule;
 use move_core_types::vm_status::KeptVMStatus;
 use std::collections::BTreeMap;
-use vm::CompiledModule;
 
 pub fn verify_release(
     // ChainID to distinguish the diem network. e.g: PREMAINNET

@@ -3,9 +3,9 @@
 
 use crate::abstract_state::{AbstractValue, BorrowState};
 use diem_logger::debug;
+use move_binary_format::file_format::{AbilitySet, Bytecode, Signature, SignatureToken};
 use rand::{rngs::StdRng, Rng};
 use std::collections::{HashMap, VecDeque};
-use vm::file_format::{AbilitySet, Bytecode, Signature, SignatureToken};
 
 /// This type holds basic block identifiers
 type BlockIDSize = u16;

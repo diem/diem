@@ -29,7 +29,7 @@ move-lang = { path = "../../move-lang" }
 move-vm-types = { path = "../../move-vm/types" }
 move-vm-runtime = { path = "../../move-vm/runtime", features = ["debug_module"] }
 resource-viewer = { path = "../resource-viewer" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 vm-genesis = { path = "../vm-genesis" }
 walkdir = "2.3.1"
 

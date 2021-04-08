@@ -18,7 +18,7 @@ diem-framework-releases = { path = "../diem-framework/releases" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
 move-core-types = { path = "../move-core/types" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 bcs = "0.1.2"
 structopt = "0.3.21"
 serde_json = "1.0.64"

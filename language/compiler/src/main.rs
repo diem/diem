@@ -7,6 +7,7 @@ use anyhow::Context;
 use bytecode_verifier::{dependencies, verify_module, verify_script};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
+use move_binary_format::{errors::VMError, file_format::CompiledModule};
 use move_core_types::account_address::AccountAddress;
 use std::{
     fs,
@@ -14,7 +15,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
-use vm::{errors::VMError, file_format::CompiledModule};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]

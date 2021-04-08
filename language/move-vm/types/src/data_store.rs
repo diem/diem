@@ -5,8 +5,8 @@ use crate::{
     loaded_data::runtime_types::Type,
     values::{GlobalValue, Value},
 };
+use move_binary_format::errors::{PartialVMResult, VMResult};
 use move_core_types::{account_address::AccountAddress, language_storage::ModuleId};
-use vm::errors::{PartialVMResult, VMResult};
 
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::DuplicationChecker;
+use move_binary_format::file_format::*;
 use proptest::prelude::*;
-use vm::file_format::*;
 
 #[test]
 fn duplicated_friend_decls() {

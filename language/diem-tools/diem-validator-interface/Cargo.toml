@@ -19,5 +19,5 @@ diem-workspace-hack = { path = "../../../common/workspace-hack" }
 storage-interface = { path = "../../../storage/storage-interface" }
 scratchpad = { path = "../../../storage/scratchpad" }
 diem-state-view = { path = "../../../storage/state-view" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 bcs = "0.1.2"

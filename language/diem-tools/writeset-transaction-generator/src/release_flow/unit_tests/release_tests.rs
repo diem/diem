@@ -7,8 +7,8 @@ use diem_types::{
     transaction::{ChangeSet, WriteSetPayload},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
+use move_binary_format::file_format::{basic_test_module, empty_module};
 use move_core_types::identifier::Identifier;
-use vm::file_format::{basic_test_module, empty_module};
 
 #[test]
 fn release_test() {

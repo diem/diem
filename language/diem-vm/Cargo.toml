@@ -26,7 +26,7 @@ diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
 move-vm-runtime = { path = "../move-vm/runtime" }
 move-vm-types = { path = "../move-vm/types" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 serde_json = "1.0.64"
 serde = { version = "1.0.124", default-features = false }
 
@@ -39,5 +39,5 @@ diem-framework-releases = { path = "../diem-framework/releases" }
 [features]
 default = []
 mirai-contracts = []
-fuzzing = ["vm/fuzzing","move-vm-types/fuzzing"]
+fuzzing = ["move-binary-format/fuzzing","move-vm-types/fuzzing"]
 failpoints = ["fail/failpoints", "move-vm-runtime/failpoints"]

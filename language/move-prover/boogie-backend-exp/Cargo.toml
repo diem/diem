@@ -12,7 +12,7 @@ async-trait = "0.1.42"
 bytecode = { path = "../bytecode" }
 move-model = { path = "../../move-model" }
 boogie-backend = { path = "../boogie-backend" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 num = "0.4.0"
 itertools = "0.10.0"

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::compiler::compile_modules_in_file;
+use move_binary_format::CompiledModule;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -11,7 +12,6 @@ use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::GasStatus;
 use std::{path::PathBuf, sync::Arc, thread};
-use vm::CompiledModule;
 
 const WORKING_ACCOUNT: AccountAddress =
     AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);

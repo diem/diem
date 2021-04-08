@@ -8,15 +8,15 @@ use crate::{
 };
 use borrow_graph::references::RefID;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
-use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeMap, BTreeSet};
-use vm::{
+use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{
         CodeOffset, FieldHandleIndex, FunctionDefinitionIndex, LocalIndex, Signature,
         SignatureToken, StructDefinitionIndex,
     },
 };
+use move_core_types::vm_status::StatusCode;
+use std::collections::{BTreeMap, BTreeSet};
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<(), Label>;
 

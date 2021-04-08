@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::values::*;
-use vm::errors::*;
+use move_binary_format::errors::*;
 
 #[test]
 fn locals() -> PartialVMResult<()> {

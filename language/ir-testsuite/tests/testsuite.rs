@@ -11,10 +11,10 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::parse_script_or_module,
 };
+use move_binary_format::CompiledModule;
 use move_core_types::language_storage::ModuleId;
 use move_ir_types::ast;
 use std::{collections::HashMap, path::Path};
-use vm::CompiledModule;
 
 struct IRCompiler {
     deps: HashMap<ModuleId, CompiledModule>,

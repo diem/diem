@@ -9,13 +9,13 @@ use diem_types::{
     vm_status::KeptVMStatus,
 };
 use language_e2e_tests::{account, current_function_name, executor::FakeExecutor};
+use move_binary_format::file_format::{
+    empty_script, AbilitySet, AddressIdentifierIndex, Bytecode, FunctionHandle,
+    FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
+};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
-};
-use vm::file_format::{
-    empty_script, AbilitySet, AddressIdentifierIndex, Bytecode, FunctionHandle,
-    FunctionHandleIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]

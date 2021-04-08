@@ -16,7 +16,7 @@ docgen = { path = "docgen" }
 abigen = { path = "abigen" }
 errmapgen = { path = "errmapgen" }
 bytecode = { path = "bytecode" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 diem-temppath = { path = "../../common/temppath" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }

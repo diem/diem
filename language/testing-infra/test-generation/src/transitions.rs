@@ -8,7 +8,7 @@ use crate::{
     error::VMError,
     get_struct_handle_from_reference, get_type_actuals_from_reference, substitute,
 };
-use vm::{
+use move_binary_format::{
     access::*,
     file_format::{
         Ability, AbilitySet, FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex,
@@ -18,8 +18,8 @@ use vm::{
     views::{FunctionHandleView, StructDefinitionView, ViewInternals},
 };
 
+use move_binary_format::file_format::TableIndex;
 use std::collections::HashMap;
-use vm::file_format::TableIndex;
 
 //---------------------------------------------------------------------------
 // Type Instantiations from Unification with the Abstract Stack
@@ -1176,7 +1176,12 @@ macro_rules! state_stack_unpack_struct_inst {
 macro_rules! state_struct_has_key {
     ($e: expr) => {
         Box::new(move |state| {
-            struct_abilities(state, $e, &vm::file_format::Signature(vec![])).has_key()
+            struct_abilities(
+                state,
+                $e,
+                &move_binary_format::file_format::Signature(vec![]),
+            )
+            .has_key()
         })
     };
 }

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
-use move_core_types::identifier::Identifier;
-use std::collections::HashMap;
-use test_generation::abstract_state::{AbstractState, AbstractValue, CallGraph};
-use vm::file_format::{
+use move_binary_format::file_format::{
     empty_module, Bytecode, CompiledModuleMut, FunctionHandle, FunctionHandleIndex,
     IdentifierIndex, ModuleHandleIndex, Signature, SignatureIndex, SignatureToken,
 };
+use move_core_types::identifier::Identifier;
+use std::collections::HashMap;
+use test_generation::abstract_state::{AbstractState, AbstractValue, CallGraph};
 
 mod common;
 

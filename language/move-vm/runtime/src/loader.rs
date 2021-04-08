@@ -9,18 +9,7 @@ use bytecode_verifier::{self, cyclic_dependencies, dependencies, script_signatur
 use diem_crypto::HashValue;
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
-use move_core_types::{
-    identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, StructTag, TypeTag},
-    value::{MoveStructLayout, MoveTypeLayout},
-    vm_status::StatusCode,
-};
-use move_vm_types::{
-    data_store::DataStore,
-    loaded_data::runtime_types::{StructType, Type},
-};
-use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
-use vm::{
+use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -32,6 +21,17 @@ use vm::{
     },
     IndexKind,
 };
+use move_core_types::{
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, StructTag, TypeTag},
+    value::{MoveStructLayout, MoveTypeLayout},
+    vm_status::StatusCode,
+};
+use move_vm_types::{
+    data_store::DataStore,
+    loaded_data::runtime_types::{StructType, Type},
+};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
 
 // A simple cache that offers both a HashMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.

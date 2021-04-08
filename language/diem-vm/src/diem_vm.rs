@@ -21,6 +21,7 @@ use diem_types::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use fail::fail_point;
+use move_binary_format::errors::Location;
 use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet as MoveChangeSet, Event as MoveEvent},
@@ -37,7 +38,6 @@ use move_vm_runtime::{
 };
 use move_vm_types::gas_schedule::{calculate_intrinsic_gas, GasStatus};
 use std::{convert::TryFrom, sync::Arc};
-use vm::errors::Location;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.

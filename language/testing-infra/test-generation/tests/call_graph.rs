@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
+use move_binary_format::file_format::FunctionHandleIndex;
 use test_generation::abstract_state::CallGraph;
-use vm::file_format::FunctionHandleIndex;
 
 #[test]
 fn call_graph_no_self_call_recursive() {

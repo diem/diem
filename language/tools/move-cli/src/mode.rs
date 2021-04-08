@@ -8,9 +8,9 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use include_dir::{include_dir, Dir};
+use move_binary_format::file_format::CompiledModule;
 use once_cell::sync::Lazy;
 use std::{collections::HashSet, path::Path, str::FromStr};
-use vm::file_format::CompiledModule;
 
 /// Content for the move stdlib directory
 const DIR_MOVE_STDLIB: Dir = include_dir!("../../move-stdlib/modules");

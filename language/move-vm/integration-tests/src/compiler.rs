@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, Result};
+use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_lang::{compiled_unit::CompiledUnit, shared::Flags};
 use std::{fs::File, io::Write, path::Path};
 use tempfile::tempdir;
-use vm::file_format::{CompiledModule, CompiledScript};
 
 pub fn compile_units(s: &str) -> Result<Vec<CompiledUnit>> {
     let dir = tempdir()?;

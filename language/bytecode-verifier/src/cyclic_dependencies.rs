@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules
-use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
-use std::collections::BTreeSet;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::CompiledModule,
 };
+use move_core_types::{language_storage::ModuleId, vm_status::StatusCode};
+use std::collections::BTreeSet;
 
 // This function performs a DFS in the module graph starting from each node in `items_to_explore`
 // and explores the neighbors of a node using the `immediate_nexts` closure.

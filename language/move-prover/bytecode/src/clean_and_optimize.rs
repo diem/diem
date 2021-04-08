@@ -10,9 +10,9 @@ use crate::{
     stackless_bytecode::{BorrowNode, Bytecode, Operation},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use move_binary_format::file_format::CodeOffset;
 use move_model::model::FunctionEnv;
 use std::collections::BTreeSet;
-use vm::file_format::CodeOffset;
 
 pub struct CleanAndOptimizeProcessor();
 

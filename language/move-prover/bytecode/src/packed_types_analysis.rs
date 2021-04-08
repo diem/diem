@@ -10,13 +10,13 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
+use move_binary_format::file_format::CodeOffset;
 use move_core_types::language_storage::{StructTag, TypeTag};
 use move_model::{
     model::{FunctionEnv, GlobalEnv},
     ty::Type,
 };
 use std::collections::BTreeSet;
-use vm::file_format::CodeOffset;
 
 /// Get all closed types that may be packed by (1) genesis and (2) all transaction scripts.
 /// This makes some simplifying assumptions that are not correct in general, but hold for the

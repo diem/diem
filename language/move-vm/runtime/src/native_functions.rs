@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
+use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     account_address::AccountAddress, gas_schedule::CostTable, language_storage::CORE_CODE_ADDRESS,
     value::MoveTypeLayout, vm_status::StatusType,
@@ -15,7 +16,6 @@ use move_vm_types::{
     values::Value,
 };
 use std::{collections::VecDeque, fmt::Write};
-use vm::errors::PartialVMResult;
 
 // The set of native functions the VM supports.
 // The functions can line in any crate linked in but the VM declares them here.

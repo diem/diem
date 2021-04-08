@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::natives::function::NativeResult;
+use move_binary_format::{
+    errors::*,
+    file_format::{Constant, SignatureToken},
+};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{
@@ -19,10 +23,6 @@ use std::{
     mem::size_of,
     ops::Add,
     rc::Rc,
-};
-use vm::{
-    errors::*,
-    file_format::{Constant, SignatureToken},
 };
 
 /***************************************************************************************

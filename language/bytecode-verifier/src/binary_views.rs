@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::control_flow_graph::VMControlFlowGraph;
-use move_core_types::{
-    account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    vm_status::StatusCode,
-};
-use vm::{
+use move_binary_format::{
     access::{ModuleAccess, ScriptAccess},
     errors::{PartialVMError, PartialVMResult},
     file_format::{
@@ -19,6 +15,10 @@ use vm::{
         StructHandleIndex,
     },
     CompiledModule,
+};
+use move_core_types::{
+    account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
+    vm_status::StatusCode,
 };
 
 // A `BinaryIndexedView` provides table indexed access for both `CompiledModule` and

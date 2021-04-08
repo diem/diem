@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{format_err, Result};
+use move_binary_format::file_format::{CodeOffset, CompiledModule};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
@@ -15,7 +16,6 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     path::Path,
 };
-use vm::file_format::{CodeOffset, CompiledModule};
 
 pub type FunctionCoverage = BTreeMap<u64, u64>;
 

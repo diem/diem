@@ -26,18 +26,18 @@ use diem_vm::DiemVM;
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use module_generation::generate_module;
-use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
-use move_vm_runtime::logging::NoContextLog;
-use move_vm_types::gas_schedule::GasStatus;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{fs, io::Write, panic, thread};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         AbilitySet, CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken,
         StructHandleIndex,
     },
 };
+use move_core_types::{language_storage::TypeTag, value::MoveValue, vm_status::VMStatus};
+use move_vm_runtime::logging::NoContextLog;
+use move_vm_types::gas_schedule::GasStatus;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use std::{fs, io::Write, panic, thread};
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {

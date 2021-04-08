@@ -10,9 +10,7 @@
 //! - No missing resources (any resource acquired must be present)
 //! - No additional resources (no extraneous resources not actually acquired)
 
-use move_core_types::vm_status::StatusCode;
-use std::collections::{BTreeSet, HashMap};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{PartialVMError, PartialVMResult},
     file_format::{
@@ -20,6 +18,8 @@ use vm::{
         FunctionHandle, FunctionHandleIndex, StructDefinitionIndex,
     },
 };
+use move_core_types::vm_status::StatusCode;
+use std::collections::{BTreeSet, HashMap};
 
 pub(crate) struct AcquiresVerifier<'a> {
     module: &'a CompiledModule,

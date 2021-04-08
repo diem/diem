@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 move-model = { path = "../../move-model" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 bytecode-verifier = { path = "../../bytecode-verifier" }
 borrow-graph = { path = "../../borrow-graph" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode" }

@@ -9,6 +9,13 @@ use crate::{
     session::Session,
 };
 use diem_logger::prelude::*;
+use move_binary_format::{
+    access::ModuleAccess,
+    compatibility::Compatibility,
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
+    file_format_common::VERSION_1,
+    normalized, CompiledModule, IndexKind,
+};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -18,13 +25,6 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore, gas_schedule::GasStatus, loaded_data::runtime_types::Type, values::Value,
-};
-use vm::{
-    access::ModuleAccess,
-    compatibility::Compatibility,
-    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
-    file_format_common::VERSION_1,
-    normalized, CompiledModule, IndexKind,
 };
 
 /// An instantiation of the MoveVM.

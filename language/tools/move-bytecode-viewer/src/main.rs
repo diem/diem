@@ -9,9 +9,9 @@ use move_bytecode_viewer::{
     tui::tui_interface::start_tui_with_interface, viewer::Viewer,
 };
 
+use move_binary_format::file_format::CompiledModule;
 use std::{fs, path::Path};
 use structopt::StructOpt;
-use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(

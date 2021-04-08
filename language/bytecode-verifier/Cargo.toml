@@ -15,7 +15,7 @@ mirai-annotations = "1.10.1"
 petgraph = "0.5.1"
 
 borrow-graph = { path = "../borrow-graph" }
-vm = { path = "../vm" }
+move-binary-format = { path = "../move-binary-format" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
 

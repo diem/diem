@@ -5,13 +5,13 @@
 use crate::interfaces::LeftScreen;
 use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
-use move_ir_types::location::Loc;
-use regex::Regex;
-use std::collections::HashMap;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{CodeOffset, CompiledModule, FunctionDefinitionIndex},
 };
+use move_ir_types::location::Loc;
+use regex::Regex;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 pub struct BytecodeInfo {

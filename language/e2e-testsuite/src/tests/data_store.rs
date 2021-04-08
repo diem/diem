@@ -11,7 +11,7 @@ use language_e2e_tests::{
     account::AccountData, compile::compile_script_with_address, current_function_name,
     executor::FakeExecutor,
 };
-use vm::CompiledModule;
+use move_binary_format::CompiledModule;
 
 #[test]
 fn move_from_across_blocks() {

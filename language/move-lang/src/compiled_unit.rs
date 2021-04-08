@@ -9,8 +9,8 @@ use crate::{
     shared::unique_map::UniqueMap,
 };
 use bytecode_source_map::source_map::SourceMap;
+use move_binary_format::file_format as F;
 use move_ir_types::location::*;
-use move_vm::file_format as F;
 use std::collections::BTreeMap;
 
 //**************************************************************************************************

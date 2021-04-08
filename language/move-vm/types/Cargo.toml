@@ -21,11 +21,11 @@ bcs = "0.1.2"
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 
 [dev-dependencies]
 proptest = "1.0.0"
 
 [features]
 default = []
-fuzzing = ["proptest", "vm/fuzzing"]
+fuzzing = ["proptest", "move-binary-format/fuzzing"]

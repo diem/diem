@@ -17,8 +17,8 @@ use diem_types::{
 use diem_validator_interface::{
     DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
+use move_binary_format::CompiledModule;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
-use vm::CompiledModule;
 
 pub fn create_release(
     // ChainID to distinguish the diem network. e.g: PREMAINNET

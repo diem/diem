@@ -11,8 +11,7 @@ use crate::{
     substitute, summaries,
 };
 use diem_logger::{debug, error, warn};
-use rand::{rngs::StdRng, Rng};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
@@ -21,6 +20,7 @@ use vm::{
         StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation, TableIndex,
     },
 };
+use rand::{rngs::StdRng, Rng};
 
 /// This type represents bytecode instructions that take a `LocalIndex`
 type LocalIndexToBytecode = fn(LocalIndex) -> Bytecode;

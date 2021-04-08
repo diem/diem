@@ -14,6 +14,7 @@ use crate::{
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, QualifiedInstId},
@@ -22,7 +23,6 @@ use std::{
     borrow::BorrowMut,
     collections::{BTreeMap, BTreeSet},
 };
-use vm::file_format::CodeOffset;
 
 /// Borrow graph edge abstract domain.
 /// `Top` corresponds to a weak edge existing.

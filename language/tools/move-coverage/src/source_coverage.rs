@@ -7,6 +7,11 @@ use crate::coverage_map::CoverageMap;
 use bytecode_source_map::source_map::SourceMap;
 use codespan::{Files, Span};
 use colored::*;
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{CodeOffset, FunctionDefinitionIndex},
+    CompiledModule,
+};
 use move_core_types::identifier::Identifier;
 use move_ir_types::location::Loc;
 use serde::Serialize;
@@ -15,11 +20,6 @@ use std::{
     fs,
     io::{self, Write},
     path::Path,
-};
-use vm::{
-    access::ModuleAccess,
-    file_format::{CodeOffset, FunctionDefinitionIndex},
-    CompiledModule,
 };
 
 #[derive(Clone, Debug, Serialize)]

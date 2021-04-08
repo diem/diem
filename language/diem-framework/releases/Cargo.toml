@@ -14,7 +14,7 @@ publish = false
 diem-crypto = { path = "../../../crypto/crypto" }
 diem-types = { path = "../../../types" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 
 anyhow = "1.0.38"
 include_dir = "0.6.0"

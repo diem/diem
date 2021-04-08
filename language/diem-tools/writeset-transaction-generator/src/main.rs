@@ -12,9 +12,9 @@ use diem_writeset_generator::{
     create_release, encode_custom_script, encode_halt_network_payload,
     encode_remove_validators_payload, verify_release,
 };
+use move_binary_format::CompiledModule;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use vm::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 struct Opt {

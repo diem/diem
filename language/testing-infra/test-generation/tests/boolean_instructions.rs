@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
+use move_binary_format::file_format::{Bytecode, SignatureToken};
 use test_generation::abstract_state::{AbstractState, AbstractValue};
-use vm::file_format::{Bytecode, SignatureToken};
 
 mod common;
 

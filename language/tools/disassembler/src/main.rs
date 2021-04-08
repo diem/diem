@@ -8,11 +8,11 @@ use bytecode_source_map::{
     utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
+use move_binary_format::file_format::{CompiledModule, CompiledScript};
 use move_coverage::coverage_map::CoverageMap;
 use move_ir_types::location::Spanned;
 use std::{fs, path::Path};
 use structopt::StructOpt;
-use vm::file_format::{CompiledModule, CompiledScript};
 
 #[derive(Debug, StructOpt)]
 #[structopt(

@@ -29,6 +29,7 @@ use diem_types::{
     },
 };
 use diem_vm::{convert_changeset_and_events, data_cache::StateViewCache};
+use move_binary_format::CompiledModule;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -44,7 +45,6 @@ use move_vm_types::gas_schedule::GasStatus;
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use transaction_builder::encode_create_designated_dealer_script_function;
-use vm::CompiledModule;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_logger::{prelude::error, Schema};
+use move_binary_format::errors::{PartialVMError, VMError};
 use move_core_types::vm_status::{StatusCode, StatusType};
-use vm::errors::{PartialVMError, VMError};
 
 // Trait used by the VM to log interesting data.
 // Clients are responsible for the implementation of alert.

@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use diem_types::account_address::AccountAddress;
-use vm::file_format::{CompiledModule, CompiledScript};
+use move_binary_format::file_format::{CompiledModule, CompiledScript};
 
 pub trait Compiler {
     /// Compile a transaction script or module.

@@ -9,7 +9,7 @@ use diem_types::{
     account_address::AccountAddress,
     transaction::{Module, Script},
 };
-use vm::CompiledModule;
+use move_binary_format::CompiledModule;
 
 /// Compile the provided Move code into a blob which can be used as the code to be published
 /// (a Module).

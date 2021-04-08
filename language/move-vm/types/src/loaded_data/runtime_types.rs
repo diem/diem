@@ -1,11 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
-use vm::{
+use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{AbilitySet, StructDefinitionIndex},
 };
+use move_core_types::{identifier::Identifier, language_storage::ModuleId, vm_status::StatusCode};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 

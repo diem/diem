@@ -33,7 +33,7 @@ diem-validator-interface = { path = "../diem-validator-interface" }
 diem-transaction-replay = { path = "../transaction-replay" }
 diemdb = { path = "../../../storage/diemdb" }
 diem-vm = { path = "../../diem-vm" }
-vm = { path = "../../vm"}
+move-binary-format = { path = "../../move-binary-format"}
 move-vm-types = { path = "../../move-vm/types" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-runtime = { path = "../../move-vm/runtime" }

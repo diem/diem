@@ -15,7 +15,7 @@ ir-to-bytecode-syntax = { path = "syntax" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 move-core-types = { path = "../../move-core/types" }
 move-ir-types = { path = "../../move-ir/types" }
-vm = { path = "../../vm" }
+move-binary-format = { path = "../../move-binary-format" }
 bytecode-source-map = { path = "../bytecode-source-map" }
 log = "0.4.14"
 codespan = "0.8.0"

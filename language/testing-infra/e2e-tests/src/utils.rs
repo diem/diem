@@ -8,8 +8,8 @@ use crate::{
     executor::{self, FakeExecutor},
 };
 use diem_transaction_builder::stdlib as transaction_builder;
+use move_binary_format::file_format::CompiledModule;
 use transaction_builder::*;
-use vm::file_format::CompiledModule;
 
 pub fn close_module_publishing(
     executor: &mut FakeExecutor,

@@ -7,17 +7,17 @@ use crate::coverage_map::{
     ExecCoverageMap, ExecCoverageMapWithModules, ModuleCoverageMap, TraceMap,
 };
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
+use move_binary_format::{
+    access::ModuleAccess,
+    file_format::{Bytecode, CodeOffset},
+    CompiledModule,
+};
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use petgraph::{algo::tarjan_scc, Graph};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::{self, Write},
-};
-use vm::{
-    access::ModuleAccess,
-    file_format::{Bytecode, CodeOffset},
-    CompiledModule,
 };
 
 #[derive(Debug, Serialize, Deserialize)]

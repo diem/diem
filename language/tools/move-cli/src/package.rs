@@ -3,6 +3,7 @@
 
 use anyhow::{anyhow, Result};
 use include_dir::Dir;
+use move_binary_format::file_format::CompiledModule;
 use move_lang::{
     compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
     path_to_string, shared::Flags, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
@@ -14,7 +15,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use vm::file_format::CompiledModule;
 
 /// Directory name for the package source files under package/<name>
 const PKG_SOURCE_DIR: &str = "source_files";

@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{borrow_graph::BorrowGraph, error::VMError};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     file_format::{
         empty_module, Ability, AbilitySet, CompiledModule, CompiledModuleMut, FieldInstantiation,
@@ -14,6 +10,10 @@ use vm::{
         FunctionInstantiationIndex, Signature, SignatureIndex, SignatureToken,
         StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
     },
+};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
 };
 
 /// The BorrowState denotes whether a local is `Available` or

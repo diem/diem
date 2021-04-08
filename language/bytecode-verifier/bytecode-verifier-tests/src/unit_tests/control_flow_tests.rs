@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::control_flow;
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::PartialVMResult,
     file_format::{self, Bytecode, CompiledModule, FunctionDefinitionIndex, TableIndex},
 };
+use move_core_types::vm_status::StatusCode;
 
 fn verify_module(module: &CompiledModule) -> PartialVMResult<()> {
     for (idx, function_definition) in module

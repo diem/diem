@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module contains verification of usage of dependencies for modules
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::CompiledModule,
 };
+use move_core_types::vm_status::StatusCode;
 
 pub fn verify_module(module: &CompiledModule) -> VMResult<()> {
     verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))

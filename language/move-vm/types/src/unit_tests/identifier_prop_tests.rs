@@ -1,8 +1,8 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use move_binary_format::file_format::CompiledModule;
 use proptest::prelude::*;
-use vm::file_format::CompiledModule;
 
 proptest! {
     #[test]

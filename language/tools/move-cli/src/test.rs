@@ -3,6 +3,7 @@
 
 use crate::{DEFAULT_BUILD_DIR, DEFAULT_PACKAGE_DIR, DEFAULT_SOURCE_DIR, DEFAULT_STORAGE_DIR};
 use anyhow::anyhow;
+use move_binary_format::file_format::CompiledModule;
 use move_coverage::coverage_map::{CoverageMap, ExecCoverageMapWithModules};
 use move_lang::{
     command_line::{read_bool_env_var, COLOR_MODE_ENV_VAR},
@@ -16,7 +17,6 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
 };
-use vm::file_format::CompiledModule;
 
 /// Basic datatest testing framework for the CLI. The `run_one` entrypoint expects
 /// an `args.txt` file with arguments that the `move` binary understands (one set

@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use vm::CompiledModule;
+use move_binary_format::CompiledModule;
 
 #[test]
 fn can_deserialize_and_verify_modules_from_all_versions() {

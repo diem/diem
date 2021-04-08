@@ -191,7 +191,7 @@ It is important to understand that executing a transaction is different from upd
 
 When mempool receives a transaction from other validators via shared mempool or from the JSON-RPC service, mempool invokes <code>[VM::ValidateTransaction()](https://developers.diem.com/docs/life-of-a-transaction#action-b-1)</code> on the VM to validate the transaction.
 
-For implementation details refer to the [Virtual Machine README](https://github.com/diem/diem/tree/main/language/vm).
+For implementation details refer to the [Virtual Machine README](https://github.com/diem/diem/tree/main/language/move-binary-format).
 
 ### Mempool
 

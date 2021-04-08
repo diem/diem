@@ -14,7 +14,7 @@ The Move IR compiler compiles the Move IR down to its bytecode representation.
 The Move IR compiler compiles modules and scripts written in Move down to
 their respective bytecode representations. The two data types used to
 represent these outputs are `CompiledModule` and `CompiledScript`. These
-data types are defined in [file_format.rs](https://github.com/diem/diem/blob/main/language/vm/src/file_format.rs).
+data types are defined in [file_format.rs](https://github.com/diem/diem/blob/main/language/move-binary-format/src/file_format.rs).
 
 Beyond translating Move IR to Move bytecode, the compiler's purpose is as a
 testing tool for the bytecode verifier. Because of this, its job is to

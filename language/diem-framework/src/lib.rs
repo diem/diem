@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use bytecode_verifier::{cyclic_dependencies, dependencies, verify_module};
+use move_binary_format::{access::ModuleAccess, file_format::CompiledModule};
 use move_lang::{compiled_unit::CompiledUnit, move_compile_and_report, shared::Flags};
 use once_cell::sync::Lazy;
 use sha2::{Digest, Sha256};
@@ -13,7 +14,6 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
-use vm::{access::ModuleAccess, file_format::CompiledModule};
 
 pub use move_stdlib::{COMPILED_EXTENSION, ERROR_DESC_EXTENSION, MOVE_EXTENSION};
 

@@ -13,6 +13,7 @@ use diem_types::{
     write_set::{WriteOp, WriteSet},
 };
 use diem_vm::data_cache::RemoteStorage;
+use move_binary_format::errors::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag},
@@ -20,7 +21,6 @@ use move_core_types::{
 use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use vm::errors::*;
 use vm_genesis::{generate_genesis_change_set_for_testing, GenesisOptions};
 
 /// Dummy genesis ChangeSet for testing

@@ -5,8 +5,7 @@
 //! It does not utilize control flow, but does check each block independently
 
 use crate::binary_views::BinaryIndexedView;
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -14,6 +13,7 @@ use vm::{
         FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, TableIndex,
     },
 };
+use move_core_types::vm_status::StatusCode;
 
 pub struct InstructionConsistency<'a> {
     resolver: BinaryIndexedView<'a>,

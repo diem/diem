@@ -3,8 +3,8 @@
 
 use crate::FuzzTargetImpl;
 use diem_proptest_helpers::ValueGenerator;
+use move_binary_format::file_format::{CompiledModule, CompiledModuleMut};
 use proptest::prelude::*;
-use vm::file_format::{CompiledModule, CompiledModuleMut};
 
 #[derive(Clone, Debug, Default)]
 pub struct CompiledModuleTarget;

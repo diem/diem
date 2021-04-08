@@ -17,16 +17,16 @@
 //! function.
 
 use crate::{gas_schedule::NativeCostIndex, loaded_data::runtime_types::Type, values::Value};
+use move_binary_format::errors::PartialVMResult;
 use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, InternalGasUnits},
     value::MoveTypeLayout,
 };
 use smallvec::SmallVec;
 use std::fmt::Write;
-use vm::errors::PartialVMResult;
 
+pub use move_binary_format::errors::PartialVMError;
 pub use move_core_types::vm_status::StatusCode;
-pub use vm::errors::PartialVMError;
 
 /// `NativeContext` - Native function context.
 ///

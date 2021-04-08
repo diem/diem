@@ -7,6 +7,7 @@ use crate::{
     stackless_bytecode::{AttrId, Bytecode, Label},
 };
 use itertools::Itertools;
+use move_binary_format::file_format::CodeOffset;
 use move_model::{
     ast::{Exp, Spec},
     model::{
@@ -20,7 +21,6 @@ use move_model::{
 use crate::function_target_pipeline::FunctionVariant;
 use move_model::{ast::TempIndex, model::QualifiedInstId};
 use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Range};
-use vm::file_format::CodeOffset;
 
 /// A FunctionTarget is a drop-in replacement for a FunctionEnv which allows to rewrite
 /// and analyze bytecode and parameter/local types. It encapsulates a FunctionEnv and information

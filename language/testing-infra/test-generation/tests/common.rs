@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
+use move_binary_format::file_format::{Bytecode, FunctionInstantiation, StructDefInstantiation};
 use test_generation::{
     abstract_state::AbstractState,
     config::ALLOW_MEMORY_UNSAFE,
     summaries::{instruction_summary, Effects},
 };
-use vm::file_format::{Bytecode, FunctionInstantiation, StructDefInstantiation};
 
 pub fn run_instruction(
     instruction: Bytecode,

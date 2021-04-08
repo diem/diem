@@ -8,9 +8,9 @@ use crate::{
     function_target::FunctionTarget,
     stackless_bytecode::{Bytecode, Label},
 };
+use move_binary_format::file_format::CodeOffset;
 use petgraph::{dot::Dot, graph::Graph};
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::CodeOffset;
 
 type Map<K, V> = BTreeMap<K, V>;
 type Set<V> = BTreeSet<V>;

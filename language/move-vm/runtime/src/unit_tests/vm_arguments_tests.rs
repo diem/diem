@@ -4,15 +4,7 @@
 use std::collections::HashMap;
 
 use crate::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
-use move_core_types::{
-    account_address::AccountAddress,
-    identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, StructTag, TypeTag},
-    value::{serialize_values, MoveValue},
-    vm_status::{StatusCode, StatusType},
-};
-use move_vm_types::gas_schedule::GasStatus;
-use vm::{
+use move_binary_format::{
     errors::{PartialVMResult, VMResult},
     file_format::{
         empty_module, AbilitySet, AddressIdentifierIndex, Bytecode, CodeUnit, CompiledModuleMut,
@@ -23,6 +15,14 @@ use vm::{
     },
     CompiledModule,
 };
+use move_core_types::{
+    account_address::AccountAddress,
+    identifier::{IdentStr, Identifier},
+    language_storage::{ModuleId, StructTag, TypeTag},
+    value::{serialize_values, MoveValue},
+    vm_status::{StatusCode, StatusType},
+};
+use move_vm_types::gas_schedule::GasStatus;
 
 // make a script with a given signature for main.
 fn make_script(parameters: Signature) -> Vec<u8> {
@@ -40,7 +40,7 @@ fn make_script(parameters: Signature) -> Vec<u8> {
         }
     };
     CompiledScriptMut {
-        version: vm::file_format_common::VERSION_MAX,
+        version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![],
         struct_handles: vec![],
         function_handles: vec![],
@@ -85,7 +85,7 @@ fn make_script_with_non_linking_structs(parameters: Signature) -> Vec<u8> {
         }
     };
     CompiledScriptMut {
-        version: vm::file_format_common::VERSION_MAX,
+        version: move_binary_format::file_format_common::VERSION_MAX,
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
@@ -155,7 +155,7 @@ fn make_module_with_function(
         }
     };
     let module = CompiledModuleMut {
-        version: vm::file_format_common::VERSION_MAX,
+        version: move_binary_format::file_format_common::VERSION_MAX,
         self_module_handle_idx: ModuleHandleIndex(0),
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),

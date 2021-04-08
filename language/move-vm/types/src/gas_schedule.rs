@@ -7,15 +7,7 @@
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
 use mirai_annotations::*;
-use move_core_types::{
-    gas_schedule::{
-        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
-        InternalGasUnits, MAX_TRANSACTION_SIZE_IN_BYTES,
-    },
-    vm_status::StatusCode,
-};
-use once_cell::sync::Lazy;
-use vm::{
+use move_binary_format::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
@@ -24,6 +16,14 @@ use vm::{
     },
     file_format_common::{instruction_key, Opcodes},
 };
+use move_core_types::{
+    gas_schedule::{
+        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
+        InternalGasUnits, MAX_TRANSACTION_SIZE_IN_BYTES,
+    },
+    vm_status::StatusCode,
+};
+use once_cell::sync::Lazy;
 
 static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 

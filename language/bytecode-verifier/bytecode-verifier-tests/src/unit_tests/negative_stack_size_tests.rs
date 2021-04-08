@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::CodeUnitVerifier;
+use move_binary_format::file_format::{self, Bytecode};
 use move_core_types::vm_status::StatusCode;
-use vm::file_format::{self, Bytecode};
 
 #[test]
 fn one_pop_no_push() {

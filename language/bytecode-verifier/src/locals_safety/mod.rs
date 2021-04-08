@@ -14,11 +14,11 @@ use crate::{
 };
 use abstract_state::{AbstractState, LocalState};
 use mirai_annotations::*;
-use move_core_types::vm_status::StatusCode;
-use vm::{
+use move_binary_format::{
     errors::{PartialVMError, PartialVMResult},
     file_format::{Bytecode, CodeOffset},
 };
+use move_core_types::vm_status::StatusCode;
 
 pub(crate) fn verify<'a>(
     resolver: &BinaryIndexedView,

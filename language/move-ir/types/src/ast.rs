@@ -159,7 +159,7 @@ pub type TypeVar = Spanned<TypeVar_>;
 // Abilities
 //**************************************************************************************************
 
-/// The abilities of a type. Analogous to `vm::file_format::Ability`.
+/// The abilities of a type. Analogous to `move_binary_format::file_format::Ability`.
 #[derive(Debug, Clone, Eq, Copy, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Ability {
     /// Allows values of types with this ability to be copied

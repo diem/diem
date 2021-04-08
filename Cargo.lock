@@ -500,6 +500,7 @@ dependencies = [
  "handlebars",
  "itertools 0.10.0",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-model",
  "num 0.4.0",
@@ -510,7 +511,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "vm",
 ]
 
 [[package]]
@@ -528,6 +528,7 @@ dependencies = [
  "handlebars",
  "itertools 0.10.0",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-model",
  "num 0.4.0",
@@ -538,7 +539,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "vm",
 ]
 
 [[package]]
@@ -607,6 +607,7 @@ dependencies = [
  "ir-to-bytecode",
  "itertools 0.10.0",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-model",
  "move-prover-test-utils",
@@ -615,7 +616,6 @@ dependencies = [
  "petgraph",
  "serde",
  "serde_json",
- "vm",
 ]
 
 [[package]]
@@ -627,10 +627,10 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "serde",
- "vm",
 ]
 
 [[package]]
@@ -642,9 +642,9 @@ dependencies = [
  "diem-workspace-hack",
  "invalid-mutations",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "petgraph",
- "vm",
 ]
 
 [[package]]
@@ -655,10 +655,10 @@ dependencies = [
  "diem-framework-releases",
  "diem-workspace-hack",
  "invalid-mutations",
+ "move-binary-format",
  "move-core-types",
  "petgraph",
  "proptest",
- "vm",
 ]
 
 [[package]]
@@ -996,11 +996,11 @@ dependencies = [
  "diem-framework-releases",
  "diem-workspace-hack",
  "ir-to-bytecode",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "serde_json",
  "structopt 0.3.21",
- "vm",
 ]
 
 [[package]]
@@ -1595,6 +1595,7 @@ dependencies = [
  "docgen",
  "errmapgen",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-prover",
@@ -1604,7 +1605,6 @@ dependencies = [
  "sha2",
  "tempfile",
  "transaction-builder-generator",
- "vm",
  "walkdir",
 ]
 
@@ -1619,8 +1619,8 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "include_dir",
+ "move-binary-format",
  "once_cell",
- "vm",
 ]
 
 [[package]]
@@ -1657,6 +1657,7 @@ dependencies = [
  "executor-types",
  "hex",
  "language-e2e-tests",
+ "move-binary-format",
  "move-core-types",
  "move-vm-types",
  "network",
@@ -1673,7 +1674,6 @@ dependencies = [
  "storage-interface",
  "structopt 0.3.21",
  "ureq",
- "vm",
 ]
 
 [[package]]
@@ -2288,6 +2288,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "difference",
+ "move-binary-format",
  "move-cli",
  "move-core-types",
  "move-lang",
@@ -2296,7 +2297,6 @@ dependencies = [
  "move-vm-types",
  "resource-viewer",
  "structopt 0.3.21",
- "vm",
  "vm-genesis",
 ]
 
@@ -2340,9 +2340,9 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "diemdb",
+ "move-binary-format",
  "scratchpad",
  "storage-interface",
- "vm",
 ]
 
 [[package]]
@@ -2379,6 +2379,7 @@ dependencies = [
  "diem-workspace-hack",
  "fail",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -2387,7 +2388,6 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "vm",
 ]
 
 [[package]]
@@ -2485,6 +2485,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "handlebars",
+ "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
@@ -2495,7 +2496,6 @@ dependencies = [
  "serde_json",
  "structopt 0.3.21",
  "tempfile",
- "vm",
 ]
 
 [[package]]
@@ -2658,11 +2658,11 @@ dependencies = [
  "bytecode-verifier",
  "colored",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-coverage",
  "move-ir-types",
  "structopt 0.3.21",
- "vm",
 ]
 
 [[package]]
@@ -3102,13 +3102,13 @@ dependencies = [
  "itertools 0.10.0",
  "language-e2e-tests",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "once_cell",
  "regex",
  "term_size",
  "termcolor",
  "thiserror",
- "vm",
  "vm-genesis",
 ]
 
@@ -3278,9 +3278,9 @@ dependencies = [
  "diem-framework-releases",
  "diem-types",
  "diem-workspace-hack",
+ "move-binary-format",
  "resource-viewer",
  "structopt 0.3.21",
- "vm",
  "vm-genesis",
 ]
 
@@ -3741,9 +3741,9 @@ version = "0.1.0"
 dependencies = [
  "diem-proptest-helpers",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "proptest",
- "vm",
 ]
 
 [[package]]
@@ -3764,9 +3764,9 @@ dependencies = [
  "diem-workspace-hack",
  "functional-tests",
  "ir-to-bytecode",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
- "vm",
 ]
 
 [[package]]
@@ -3780,11 +3780,11 @@ dependencies = [
  "diem-workspace-hack",
  "ir-to-bytecode-syntax",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "rental",
  "thiserror",
- "vm",
 ]
 
 [[package]]
@@ -3962,6 +3962,7 @@ dependencies = [
  "diem-vm",
  "diem-workspace-hack",
  "language-e2e-tests",
+ "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-stdlib",
@@ -3969,7 +3970,6 @@ dependencies = [
  "move-vm-types",
  "once_cell",
  "proptest",
- "vm",
 ]
 
 [[package]]
@@ -3990,6 +3990,7 @@ dependencies = [
  "diem-workspace-hack",
  "goldenfile",
  "hex",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -3997,7 +3998,6 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.8.3",
- "vm",
  "vm-genesis",
 ]
 
@@ -4017,12 +4017,12 @@ dependencies = [
  "diem-workspace-hack",
  "diem-writeset-generator",
  "language-e2e-tests",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
  "proptest",
  "serde_json",
- "vm",
 ]
 
 [[package]]
@@ -4222,10 +4222,28 @@ dependencies = [
  "bytecode-verifier",
  "diem-workspace-hack",
  "ir-to-bytecode",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "rand 0.8.3",
- "vm",
+]
+
+[[package]]
+name = "move-binary-format"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-crypto",
+ "diem-proptest-helpers",
+ "diem-workspace-hack",
+ "mirai-annotations",
+ "move-core-types",
+ "num-variants",
+ "once_cell",
+ "proptest",
+ "proptest-derive",
+ "ref-cast",
+ "serde_json",
 ]
 
 [[package]]
@@ -4237,12 +4255,12 @@ dependencies = [
  "codespan",
  "diem-workspace-hack",
  "disassembler",
+ "move-binary-format",
  "move-ir-types",
  "regex",
  "structopt 0.3.21",
  "termion",
  "tui",
- "vm",
 ]
 
 [[package]]
@@ -4260,6 +4278,7 @@ dependencies = [
  "disassembler",
  "errmapgen",
  "include_dir",
+ "move-binary-format",
  "move-core-types",
  "move-coverage",
  "move-lang",
@@ -4268,7 +4287,6 @@ dependencies = [
  "once_cell",
  "resource-viewer",
  "structopt 0.3.21",
- "vm",
  "vm-genesis",
  "walkdir",
 ]
@@ -4304,13 +4322,13 @@ dependencies = [
  "codespan",
  "colored",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "once_cell",
  "petgraph",
  "serde",
  "structopt 0.3.21",
- "vm",
 ]
 
 [[package]]
@@ -4356,6 +4374,7 @@ dependencies = [
  "fallible",
  "hex",
  "ir-to-bytecode",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "move-lang-test-utils",
@@ -4365,7 +4384,6 @@ dependencies = [
  "regex",
  "structopt 0.3.21",
  "tempfile",
- "vm",
  "walkdir",
 ]
 
@@ -4418,6 +4436,7 @@ dependencies = [
  "disassembler",
  "itertools 0.10.0",
  "log",
+ "move-binary-format",
  "move-core-types",
  "move-ir-types",
  "move-lang",
@@ -4426,7 +4445,6 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
- "vm",
 ]
 
 [[package]]
@@ -4451,6 +4469,7 @@ dependencies = [
  "hex",
  "itertools 0.10.0",
  "log",
+ "move-binary-format",
  "move-ir-types",
  "move-lang",
  "move-model",
@@ -4465,7 +4484,6 @@ dependencies = [
  "simplelog",
  "tokio",
  "toml",
- "vm",
  "walkdir",
 ]
 
@@ -4498,13 +4516,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-vm-runtime",
  "move-vm-test-utils",
  "move-vm-types",
  "tempfile",
- "vm",
 ]
 
 [[package]]
@@ -4514,12 +4532,12 @@ dependencies = [
  "diem-crypto",
  "diem-workspace-hack",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "move-vm-types",
  "once_cell",
  "sha2",
  "smallvec",
- "vm",
 ]
 
 [[package]]
@@ -4536,13 +4554,13 @@ dependencies = [
  "fail",
  "hex",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "move-lang",
  "move-vm-natives",
  "move-vm-types",
  "once_cell",
  "proptest",
- "vm",
 ]
 
 [[package]]
@@ -4551,9 +4569,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
- "vm",
 ]
 
 [[package]]
@@ -4564,13 +4582,13 @@ dependencies = [
  "diem-crypto",
  "diem-workspace-hack",
  "mirai-annotations",
+ "move-binary-format",
  "move-core-types",
  "once_cell",
  "proptest",
  "serde",
  "sha2",
  "smallvec",
- "vm",
 ]
 
 [[package]]
@@ -6010,13 +6028,13 @@ dependencies = [
  "diem-types",
  "diem-workspace-hack",
  "hex",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
  "serde",
  "serde_json",
- "vm",
 ]
 
 [[package]]
@@ -6659,9 +6677,9 @@ name = "serializer-tests"
 version = "0.1.0"
 dependencies = [
  "diem-workspace-hack",
+ "move-binary-format",
  "proptest",
  "proptest-derive",
- "vm",
 ]
 
 [[package]]
@@ -7322,13 +7340,13 @@ dependencies = [
  "language-e2e-tests",
  "mirai-annotations",
  "module-generation",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
  "num_cpus",
  "rand 0.8.3",
  "structopt 0.3.21",
- "vm",
 ]
 
 [[package]]
@@ -7940,24 +7958,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5a972e5669d67ba988ce3dc826706fb0a8b01471c088cb0b6110b805cc36aed"
 
 [[package]]
-name = "vm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "diem-crypto",
- "diem-proptest-helpers",
- "diem-workspace-hack",
- "mirai-annotations",
- "move-core-types",
- "num-variants",
- "once_cell",
- "proptest",
- "proptest-derive",
- "ref-cast",
- "serde_json",
-]
-
-[[package]]
 name = "vm-genesis"
 version = "0.1.0"
 dependencies = [
@@ -7974,6 +7974,7 @@ dependencies = [
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
+ "move-binary-format",
  "move-core-types",
  "move-vm-runtime",
  "move-vm-types",
@@ -7981,7 +7982,6 @@ dependencies = [
  "proptest",
  "proptest-derive",
  "rand 0.8.3",
- "vm",
 ]
 
 [[package]]

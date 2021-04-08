@@ -7,8 +7,7 @@
 //! - All types non-signer arguments have a type that is valid for constants
 //! - Has an empty return type
 use crate::binary_views::BinaryIndexedView;
-use move_core_types::{identifier::IdentStr, vm_status::StatusCode};
-use vm::{
+use move_binary_format::{
     access::ModuleAccess,
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
@@ -17,6 +16,7 @@ use vm::{
     file_format_common::VERSION_1,
     IndexKind,
 };
+use move_core_types::{identifier::IdentStr, vm_status::StatusCode};
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_script(script: &CompiledScript) -> VMResult<()> {

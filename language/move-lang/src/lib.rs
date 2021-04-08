@@ -535,7 +535,7 @@ fn shadow_lib_module_definitions(pprog: parser::ast::Program) -> parser::ast::Pr
 }
 
 fn has_compiled_module_magic_number(path: &str) -> bool {
-    use move_vm::file_format_common::BinaryConstants;
+    use move_binary_format::file_format_common::BinaryConstants;
     let mut file = match File::open(path) {
         Err(_) => return false,
         Ok(f) => f,

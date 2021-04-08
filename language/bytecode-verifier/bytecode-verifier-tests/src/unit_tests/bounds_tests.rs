@@ -5,11 +5,13 @@ use invalid_mutations::bounds::{
     ApplyCodeUnitBoundsContext, ApplyOutOfBoundsContext, CodeUnitBoundsMutation,
     OutOfBoundsMutation,
 };
+use move_binary_format::{
+    check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen,
+};
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, vm_status::StatusCode,
 };
 use proptest::{collection::vec, prelude::*};
-use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};
 
 #[test]
 fn empty_module_no_errors() {
