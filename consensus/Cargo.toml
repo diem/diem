@@ -54,6 +54,7 @@ state-sync = { path = "../state-sync" }
 schemadb = { path = "../storage/schemadb" }
 storage-interface = { path = "../storage/storage-interface" }
 subscription-service = { path = "../common/subscription-service" }
+diemdb = { path = "../storage/diemdb" }
 
 [dev-dependencies]
 proptest = "1.0.0"

@@ -1007,6 +1007,7 @@ dependencies = [
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
+ "diemdb",
  "execution-correctness",
  "executor",
  "executor-test-helpers",
@@ -2838,6 +2839,7 @@ dependencies = [
  "rand 0.8.3",
  "serde",
  "storage-client",
+ "storage-interface",
  "thiserror",
 ]
 

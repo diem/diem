@@ -21,6 +21,7 @@ use diem_infallible::Mutex;
 use diem_logger::prelude::*;
 use diem_mempool::ConsensusRequest;
 use diem_types::on_chain_config::OnChainConfigPayload;
+use diemdb::DiemDB;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
 use state_sync::client::StateSyncClient;
@@ -28,7 +29,7 @@ use std::{
     collections::HashSet,
     sync::{atomic::AtomicU64, Arc},
 };
-use storage_interface::DbReader;
+use storage_interface::{DbReader, DbReaderWriter, DbWriter};
 use tokio::runtime::{self, Runtime};
 
 /// Helper function to start consensus based on configuration and return the runtime
@@ -38,7 +39,7 @@ pub fn start_consensus(
     network_events: ConsensusNetworkEvents,
     state_sync_client: StateSyncClient,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
-    diem_db: Arc<dyn DbReader>,
+    diem_db: Arc<DiemDB>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = runtime::Builder::new_multi_thread()
@@ -46,7 +47,7 @@ pub fn start_consensus(
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!");
-    let storage = Arc::new(StorageWriteProxy::new(node_config, diem_db));
+    let storage = Arc::new(StorageWriteProxy::new(node_config, diem_db.clone()));
     let pending_txns = Arc::new(Mutex::new(HashSet::new()));
     let txn_manager = Arc::new(MempoolProxy::new(
         consensus_to_mempool_sender,
@@ -55,7 +56,8 @@ pub fn start_consensus(
         node_config.consensus.mempool_executed_txn_timeout_ms,
         pending_txns.clone(),
     ));
-    let execution_correctness_manager = ExecutionCorrectnessManager::new(node_config);
+    let execution_correctness_manager =
+        ExecutionCorrectnessManager::new(node_config, Some(DbReaderWriter::from_arc(diem_db)));
     let state_computer = Arc::new(ExecutionProxy::new(
         execution_correctness_manager.client(),
         state_sync_client,

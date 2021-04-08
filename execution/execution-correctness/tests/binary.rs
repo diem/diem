@@ -30,7 +30,9 @@ fn test_rest() {
     let mut child = command.spawn().unwrap();
 
     // Run a command as a client to verify the service is running
-    let res = ExecutionCorrectnessManager::new(&config).client().reset();
+    let res = ExecutionCorrectnessManager::new(&config, None)
+        .client()
+        .reset();
 
     // Ensure the safety-rules subprocess is killed whether the test passes or fails.
     // Not doing this would result in a zombie process.

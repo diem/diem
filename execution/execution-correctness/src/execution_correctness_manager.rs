@@ -18,6 +18,7 @@ use diem_vm::DiemVM;
 use executor::Executor;
 use std::{convert::TryInto, net::SocketAddr, sync::Arc};
 use storage_client::StorageClient;
+use storage_interface::DbReaderWriter;
 
 pub fn extract_execution_prikey(config: &NodeConfig) -> Option<Ed25519PrivateKey> {
     let backend = &config.execution.backend;
@@ -56,7 +57,7 @@ pub struct ExecutionCorrectnessManager {
 }
 
 impl ExecutionCorrectnessManager {
-    pub fn new(config: &NodeConfig) -> Self {
+    pub fn new(config: &NodeConfig, local_db: Option<DbReaderWriter>) -> Self {
         if let ExecutionCorrectnessService::Process(remote_service) = &config.execution.service {
             return Self::new_process(
                 remote_service.server_address,
@@ -69,7 +70,9 @@ impl ExecutionCorrectnessManager {
         let timeout_ms = config.storage.timeout_ms;
         match &config.execution.service {
             ExecutionCorrectnessService::Local => {
-                Self::new_local(storage_address, execution_prikey, timeout_ms)
+                let db_rw =
+                    local_db.unwrap_or(StorageClient::new(&storage_address, timeout_ms).into());
+                Self::new_local(db_rw, execution_prikey)
             }
             ExecutionCorrectnessService::Serializer => {
                 Self::new_serializer(storage_address, execution_prikey, timeout_ms)
@@ -84,14 +87,8 @@ impl ExecutionCorrectnessManager {
         }
     }
 
-    pub fn new_local(
-        storage_address: SocketAddr,
-        execution_prikey: Option<Ed25519PrivateKey>,
-        timeout: u64,
-    ) -> Self {
-        let block_executor = Box::new(Executor::<DiemVM>::new(
-            StorageClient::new(&storage_address, timeout).into(),
-        ));
+    pub fn new_local(db_rw: DbReaderWriter, execution_prikey: Option<Ed25519PrivateKey>) -> Self {
+        let block_executor = Box::new(Executor::<DiemVM>::new(db_rw));
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Local(Arc::new(
                 Mutex::new(LocalService::new(block_executor, execution_prikey)),

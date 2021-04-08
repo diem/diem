@@ -90,7 +90,7 @@ fn build_inserter(
 fn test_executor_restart() {
     // Start storage service
     let (config, _handle, db) = start_storage_service();
-    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config, None);
 
     let (initial_data, qc) = get_initial_data_and_qc(&*db);
 
@@ -117,7 +117,7 @@ fn test_executor_restart() {
     drop(execution_correctness_manager);
 
     // Restart LEC and make sure we can continue to append to the current tree.
-    let _execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
+    let _execution_correctness_manager = ExecutionCorrectnessManager::new(&config, None);
 
     //       ╭--> A1--> A2--> A3
     // Genesis--> B1--> B2
@@ -132,7 +132,7 @@ fn test_block_store_restart() {
     // Start storage service
     let (config, _handle, db) = start_storage_service();
 
-    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config, None);
 
     {
         let (initial_data, qc) = get_initial_data_and_qc(&*db);

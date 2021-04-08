@@ -27,6 +27,7 @@ diem-vm = { path = "../../language/diem-vm" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 serde = { version = "1.0.124", default-features = false }
 storage-client = { path = "../../storage/storage-client" }
+storage-interface = { path = "../../storage/storage-interface" }
 thiserror = "1.0.24"
 # this is actually a dev-dependency (see "Conditional compilation of tests" in coding_guidelines.md)
 executor-test-helpers = { path = "../executor-test-helpers", optional = true }

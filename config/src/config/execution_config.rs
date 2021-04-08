@@ -52,7 +52,7 @@ impl Default for ExecutionConfig {
         ExecutionConfig {
             genesis: None,
             genesis_file_location: PathBuf::new(),
-            service: ExecutionCorrectnessService::Thread,
+            service: ExecutionCorrectnessService::Local,
             backend: SecureBackend::InMemoryStorage,
             sign_vote_proposal: true,
             // Default value of 30 seconds for the network timeout.
