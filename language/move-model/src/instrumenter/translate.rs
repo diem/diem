@@ -17,12 +17,12 @@ use move_lang::{
         Statement, Statement_, TypeName_, Type_ as MoveType, UnannotatedExp_,
     },
     naming::ast::{BuiltinTypeName_, TParam, TParamID},
-    parser::ast::{Ability_, FunctionName, ModuleIdent, StructName, Var},
+    parser::ast::{Ability_, BinOp_, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, Address, Identifier},
 };
 
 use crate::{
-    ast::{ConditionKind, Exp as SpecExp, Spec, TempIndex, Value as SpecValue},
+    ast::{ConditionKind, Exp as SpecExp, Operation, Spec, TempIndex, Value as SpecValue},
     instrumenter::context::CompilationContext,
     model::{FunctionEnv, GlobalEnv, ModuleEnv, NodeId},
     ty::{PrimitiveType as SpecPrimitiveType, Type as SpecType},
@@ -776,12 +776,92 @@ fn convert_spec_expression(
     loc: MoveLoc,
     exp: &SpecExp,
     locals: &mut UniqueMap<Var, SingleType>,
-    _block: &mut Block,
+    block: &mut Block,
 ) -> MoveExp {
     let env = fenv.module_env.env;
     match exp {
         SpecExp::Value(node_id, val) => convert_spec_value(env, loc, *node_id, val),
         SpecExp::Temporary(_, idx) => convert_spec_var_temporary(env, vars, locals, loc, *idx),
+        SpecExp::Call(node_id, Operation::Not, args) => convert_spec_op_unary(
+            fenv,
+            vars,
+            loc,
+            *node_id,
+            UnaryOp_::Not,
+            args,
+            locals,
+            block,
+        ),
+        SpecExp::Call(node_id, Operation::Add, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Add, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Sub, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Sub, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Mul, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Mul, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Mod, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Mod, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Div, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Div, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::BitOr, args) => convert_spec_op_binary(
+            fenv,
+            vars,
+            loc,
+            *node_id,
+            BinOp_::BitOr,
+            args,
+            locals,
+            block,
+        ),
+        SpecExp::Call(node_id, Operation::BitAnd, args) => convert_spec_op_binary(
+            fenv,
+            vars,
+            loc,
+            *node_id,
+            BinOp_::BitAnd,
+            args,
+            locals,
+            block,
+        ),
+        SpecExp::Call(node_id, Operation::Xor, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Xor, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Shl, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Shl, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Shr, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Shr, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::And, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::And, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Or, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Or, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Eq, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Eq, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Neq, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Neq, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Lt, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Lt, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Gt, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Gt, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Le, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Le, args, locals, block)
+        }
+        SpecExp::Call(node_id, Operation::Ge, args) => {
+            convert_spec_op_binary(fenv, vars, loc, *node_id, BinOp_::Ge, args, locals, block)
+        }
+        // TODO (mengxu) implement rest of operations for call
+        SpecExp::Call(_, _, _) => unimplemented!("call"),
         // TODO (mengxu) handle these unimplemented cases
         SpecExp::LocalVar(..) => unimplemented!("local variables (in quantifiers and lambda)"),
         SpecExp::SpecVar(..) => unimplemented!("ghost variables"),
@@ -790,9 +870,75 @@ fn convert_spec_expression(
         SpecExp::Quant(..) => unimplemented!("quantifiers"),
         SpecExp::Block(..) => unimplemented!("block"),
         SpecExp::IfElse(..) => unimplemented!("if-else"),
-        SpecExp::Call(..) => unimplemented!("call"),
         // a valid spec-lang ast should not have invalid spec expressions
         SpecExp::Invalid(..) => unreachable!(),
+    }
+}
+
+fn convert_spec_op_unary(
+    fenv: &FunctionEnv<'_>,
+    vars: &BTreeMap<TempIndex, Var>,
+    loc: MoveLoc,
+    node: NodeId,
+    op: UnaryOp_,
+    args: &[SpecExp],
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
+) -> MoveExp {
+    let env = fenv.module_env.env;
+    if args.len() != 1 {
+        env.error(
+            &env.to_loc(&loc),
+            &format!("Expect 1 operand for UnaryOp, got: {}", args.len()),
+        );
+        return unresolved_move_expression(loc);
+    }
+    let move_ty = convert_spec_type(fenv, loc, &env.get_node_type(node));
+    let mut converted_args: Vec<_> = args
+        .iter()
+        .map(|arg| convert_spec_expression(fenv, vars, loc, arg, locals, block))
+        .collect();
+    let operand = converted_args.pop().unwrap();
+    MoveExp {
+        ty: sp(loc, move_ty),
+        exp: sp(
+            loc,
+            UnannotatedExp_::UnaryExp(sp(loc, op), Box::new(operand)),
+        ),
+    }
+}
+
+fn convert_spec_op_binary(
+    fenv: &FunctionEnv<'_>,
+    vars: &BTreeMap<TempIndex, Var>,
+    loc: MoveLoc,
+    node: NodeId,
+    op: BinOp_,
+    args: &[SpecExp],
+    locals: &mut UniqueMap<Var, SingleType>,
+    block: &mut Block,
+) -> MoveExp {
+    let env = fenv.module_env.env;
+    if args.len() != 2 {
+        env.error(
+            &env.to_loc(&loc),
+            &format!("Expect 2 operands for BinOp, got: {}", args.len()),
+        );
+        return unresolved_move_expression(loc);
+    }
+    let move_ty = convert_spec_type(fenv, loc, &env.get_node_type(node));
+    let mut converted_args: Vec<_> = args
+        .iter()
+        .map(|arg| convert_spec_expression(fenv, vars, loc, arg, locals, block))
+        .collect();
+    let rhs = converted_args.pop().unwrap();
+    let lhs = converted_args.pop().unwrap();
+    MoveExp {
+        ty: sp(loc, move_ty),
+        exp: sp(
+            loc,
+            UnannotatedExp_::BinopExp(Box::new(lhs), sp(loc, op), Box::new(rhs)),
+        ),
     }
 }
 
