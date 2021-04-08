@@ -782,6 +782,15 @@ fn convert_spec_expression(
     match exp {
         SpecExp::Value(node_id, val) => convert_spec_value(env, loc, *node_id, val),
         SpecExp::Temporary(_, idx) => convert_spec_var_temporary(env, vars, locals, loc, *idx),
+        SpecExp::Call(node_id, Operation::MaxU8, args) => {
+            convert_spec_op_const_val(fenv, loc, *node_id, MoveValue::U8(u8::MAX), args)
+        }
+        SpecExp::Call(node_id, Operation::MaxU64, args) => {
+            convert_spec_op_const_val(fenv, loc, *node_id, MoveValue::U64(u64::MAX), args)
+        }
+        SpecExp::Call(node_id, Operation::MaxU128, args) => {
+            convert_spec_op_const_val(fenv, loc, *node_id, MoveValue::U128(u128::MAX), args)
+        }
         SpecExp::Call(node_id, Operation::Not, args) => convert_spec_op_unary(
             fenv,
             vars,
@@ -872,6 +881,28 @@ fn convert_spec_expression(
         SpecExp::IfElse(..) => unimplemented!("if-else"),
         // a valid spec-lang ast should not have invalid spec expressions
         SpecExp::Invalid(..) => unreachable!(),
+    }
+}
+
+fn convert_spec_op_const_val(
+    fenv: &FunctionEnv<'_>,
+    loc: MoveLoc,
+    node: NodeId,
+    val: MoveValue,
+    args: &[SpecExp],
+) -> MoveExp {
+    let env = fenv.module_env.env;
+    if !args.is_empty() {
+        env.error(
+            &env.to_loc(&loc),
+            &format!("Expect no operands for ConstantOp, got: {}", args.len()),
+        );
+        return unresolved_move_expression(loc);
+    }
+    let move_ty = convert_spec_type(fenv, loc, &env.get_node_type(node));
+    MoveExp {
+        ty: sp(loc, move_ty),
+        exp: sp(loc, UnannotatedExp_::Value(sp(loc, val))),
     }
 }
 
