@@ -41,7 +41,11 @@ use diem_types::{
 use futures::{select, StreamExt};
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
-use std::{cmp::Ordering, sync::Arc, time::Duration};
+use std::{
+    cmp::Ordering,
+    sync::{atomic::AtomicU64, Arc},
+    time::Duration,
+};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// RoundManager is used for normal event handling.
@@ -82,6 +86,7 @@ pub struct EpochManager {
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
     reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+    back_pressure: Arc<AtomicU64>,
 }
 
 impl EpochManager {
@@ -95,6 +100,7 @@ impl EpochManager {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
         reconfig_events: diem_channel::Receiver<(), OnChainConfigPayload>,
+        back_pressure: Arc<AtomicU64>,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
@@ -113,6 +119,7 @@ impl EpochManager {
             safety_rules_manager,
             processor: None,
             reconfig_events,
+            back_pressure,
         }
     }
 
@@ -345,6 +352,7 @@ impl EpochManager {
             self.txn_manager.clone(),
             self.storage.clone(),
             self.config.sync_only,
+            self.back_pressure.clone(),
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));

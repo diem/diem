@@ -31,7 +31,10 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{atomic::AtomicU64, Arc},
+};
 use tokio::runtime::{Builder, Runtime};
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -115,6 +118,7 @@ impl SMRNode {
             state_computer,
             storage.clone(),
             reconfig_events,
+            Arc::new(AtomicU64::new(0)),
         );
         let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);
 

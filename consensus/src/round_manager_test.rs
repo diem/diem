@@ -55,7 +55,10 @@ use network::{
     protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
 use safety_rules::{PersistentSafetyStorage, SafetyRulesManager};
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{atomic::AtomicU64, Arc},
+    time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -202,6 +205,7 @@ impl NodeSetup {
             Arc::new(MockTransactionManager::new(None)),
             storage.clone(),
             false,
+            Arc::new(AtomicU64::new(0)),
         );
         block_on(round_manager.start(last_vote_sent));
         Self {

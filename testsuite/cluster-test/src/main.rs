@@ -757,7 +757,7 @@ impl ClusterTestRunner {
             let events = self.logs.recv_all_until_deadline(deadline);
             if let Ok(failed_instances) = self
                 .health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::None)
+                .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
                 .await
             {
                 if failed_instances.is_empty() {

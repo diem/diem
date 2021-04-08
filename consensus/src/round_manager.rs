@@ -41,7 +41,13 @@ use fail::fail_point;
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
 use serde::Serialize;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use termion::color::*;
 
 #[derive(Serialize, Clone)]
@@ -190,6 +196,7 @@ pub struct RoundManager {
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
     sync_only: bool,
+    back_pressure: Arc<AtomicU64>,
 }
 
 impl RoundManager {
@@ -204,6 +211,7 @@ impl RoundManager {
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
+        back_pressure: Arc<AtomicU64>,
     ) -> Self {
         counters::OP_COUNTERS
             .gauge("sync_only")
@@ -219,6 +227,7 @@ impl RoundManager {
             network,
             storage,
             sync_only,
+            back_pressure,
         }
     }
 
@@ -418,6 +427,12 @@ impl RoundManager {
         Ok(())
     }
 
+    fn sync_only(&self) -> bool {
+        let back_pressure = self.back_pressure.load(Ordering::SeqCst);
+        let root_round = self.block_store.root().round();
+        self.sync_only || root_round - back_pressure > 10
+    }
+
     /// The replica broadcasts a "timeout vote message", which includes the round signature, which
     /// can be aggregated to a TimeoutCertificate.
     /// The timeout vote message can be one of the following three options:
@@ -431,7 +446,7 @@ impl RoundManager {
             return Ok(());
         }
 
-        if self.sync_only {
+        if self.sync_only() {
             self.network
                 .broadcast(ConsensusMsg::SyncInfo(Box::new(
                     self.block_store.sync_info(),
@@ -571,7 +586,7 @@ impl RoundManager {
         );
 
         ensure!(
-            !self.sync_only,
+            !self.sync_only(),
             "[RoundManager] sync_only flag is set, stop voting"
         );
 

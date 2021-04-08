@@ -1,12 +1,13 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::experimental::commit_phase::CommitPhase;
-use crate::experimental::execution_phase::ExecutionPhase;
-use crate::experimental::order_state_computer::OrderProxy;
 use crate::{
     counters,
     epoch_manager::EpochManager,
+    experimental::{
+        commit_phase::CommitPhase, execution_phase::ExecutionPhase,
+        order_state_computer::OrderProxy,
+    },
     network::NetworkTask,
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     persistent_liveness_storage::StorageWriteProxy,
@@ -22,7 +23,7 @@ use diem_types::on_chain_config::OnChainConfigPayload;
 use execution_correctness::ExecutionCorrectnessManager;
 use futures::channel::mpsc;
 use state_sync::client::StateSyncClient;
-use std::sync::Arc;
+use std::sync::{atomic::AtomicU64, Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
 
@@ -58,10 +59,16 @@ pub fn start_consensus(
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
+    let back_pressure = Arc::new(AtomicU64::new(0));
     let (execute_tx, execute_rx) = channel::new_test(1000);
     let (commit_tx, commit_rx) = channel::new_test(1000);
     let order_only_computer = Arc::new(OrderProxy::new(execute_tx));
-    let execution_phase = ExecutionPhase::new(state_computer.clone(), execute_rx, commit_tx);
+    let execution_phase = ExecutionPhase::new(
+        state_computer.clone(),
+        execute_rx,
+        commit_tx,
+        back_pressure.clone(),
+    );
     let commit_phase = CommitPhase::new(state_computer.clone(), commit_rx);
 
     let epoch_mgr = EpochManager::new(
@@ -74,6 +81,7 @@ pub fn start_consensus(
         order_only_computer,
         storage,
         reconfig_events,
+        back_pressure,
     );
 
     let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);

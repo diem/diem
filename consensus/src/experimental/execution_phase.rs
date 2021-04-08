@@ -10,9 +10,14 @@ use diem_logger::prelude::*;
 use diem_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
 use diem_types::transaction::TransactionStatus;
 use futures::{SinkExt, StreamExt};
-use std::collections::BTreeMap;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 
 fn update_counters_for_committed_blocks(blocks_to_commit: &[ExecutedBlock]) {
     for block in blocks_to_commit {
@@ -49,6 +54,7 @@ pub struct ExecutionPhase {
     executor: Arc<dyn StateComputer>,
     receive_channel: channel::Receiver<(Vec<Block>, LedgerInfoWithSignatures)>,
     notify_channel: channel::Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
+    back_pressure: Arc<AtomicU64>,
 }
 
 impl ExecutionPhase {
@@ -56,11 +62,13 @@ impl ExecutionPhase {
         executor: Arc<dyn StateComputer>,
         receive_channel: channel::Receiver<(Vec<Block>, LedgerInfoWithSignatures)>,
         notify_channel: channel::Sender<(Vec<ExecutedBlock>, LedgerInfoWithSignatures)>,
+        back_pressure: Arc<AtomicU64>,
     ) -> Self {
         Self {
             executor,
             receive_channel,
             notify_channel,
+            back_pressure,
         }
     }
 
@@ -86,6 +94,7 @@ impl ExecutionPhase {
                 ),
                 BTreeMap::new(),
             );
+            let commit_round = commit_li.ledger_info().commit_info().round();
             let ids = executed_blocks.iter().map(|b| b.id()).collect();
             self.executor.commit(ids, commit_li).await.unwrap();
             update_counters_for_committed_blocks(&executed_blocks);

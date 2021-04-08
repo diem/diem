@@ -34,7 +34,11 @@ use network::{
 };
 use once_cell::sync::Lazy;
 use safety_rules::{test_utils, SafetyRules, TSafetyRules};
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use std::{
+    collections::BTreeMap,
+    sync::{atomic::AtomicU64, Arc},
+    time::Duration,
+};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
@@ -163,6 +167,7 @@ fn create_node_for_fuzzing() -> RoundManager {
         Arc::new(MockTransactionManager::new(None)),
         storage,
         false,
+        Arc::new(AtomicU64::new(0)),
     )
 }
 
