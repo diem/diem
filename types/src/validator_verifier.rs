@@ -84,11 +84,7 @@ impl ValidatorVerifier {
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
     ) -> Self {
         let total_voting_power = sum_voting_power(&address_to_validator_info);
-        let quorum_voting_power = if address_to_validator_info.is_empty() {
-            0
-        } else {
-            total_voting_power * 2 / 3 + 1
-        };
+        let quorum_voting_power = total_voting_power;
         ValidatorVerifier {
             address_to_validator_info,
             quorum_voting_power,
