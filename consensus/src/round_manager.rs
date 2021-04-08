@@ -552,16 +552,16 @@ impl RoundManager {
             .execute_and_insert_block(proposed_block)
             .context("[RoundManager] Failed to execute_and_insert the block")?;
         // notify mempool about failed txn
-        let compute_result = executed_block.compute_result();
-        if let Err(e) = self
-            .txn_manager
-            .notify(executed_block.block(), compute_result)
-            .await
-        {
-            error!(
-                error = ?e, "[RoundManager] Failed to notify mempool of rejected txns",
-            );
-        }
+        // let compute_result = executed_block.compute_result();
+        // if let Err(e) = self
+        //     .txn_manager
+        //     .notify(executed_block.block(), compute_result)
+        //     .await
+        // {
+        //     error!(
+        //         error = ?e, "[RoundManager] Failed to notify mempool of rejected txns",
+        //     );
+        // }
 
         // Short circuit if already voted.
         ensure!(

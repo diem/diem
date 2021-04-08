@@ -1,6 +1,9 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::experimental::commit_phase::CommitPhase;
+use crate::experimental::execution_phase::ExecutionPhase;
+use crate::experimental::order_state_computer::OrderProxy;
 use crate::{
     counters,
     epoch_manager::EpochManager,
@@ -55,6 +58,12 @@ pub fn start_consensus(
     let (timeout_sender, timeout_receiver) = channel::new(1_024, &counters::PENDING_ROUND_TIMEOUTS);
     let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
+    let (execute_tx, execute_rx) = channel::new_test(1000);
+    let (commit_tx, commit_rx) = channel::new_test(1000);
+    let order_only_computer = Arc::new(OrderProxy::new(execute_tx));
+    let execution_phase = ExecutionPhase::new(state_computer.clone(), execute_rx, commit_tx);
+    let commit_phase = CommitPhase::new(state_computer.clone(), commit_rx);
+
     let epoch_mgr = EpochManager::new(
         node_config,
         time_service,
@@ -62,7 +71,7 @@ pub fn start_consensus(
         network_sender,
         timeout_sender,
         txn_manager,
-        state_computer,
+        order_only_computer,
         storage,
         reconfig_events,
     );
@@ -71,6 +80,8 @@ pub fn start_consensus(
 
     runtime.spawn(network_task.start());
     runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
+    runtime.spawn(execution_phase.start());
+    runtime.spawn(commit_phase.start());
 
     debug!("Consensus started.");
     runtime

@@ -5,6 +5,7 @@ use crate::{error::StateSyncError, state_replication::StateComputer};
 use consensus_types::block::Block;
 use diem_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use diem_infallible::Mutex;
+use diem_logger::prelude::*;
 use diem_types::ledger_info::LedgerInfoWithSignatures;
 use executor_types::{Error as ExecutionError, StateComputeResult};
 use futures::SinkExt;
@@ -34,7 +35,7 @@ impl StateComputer for OrderProxy {
     ) -> Result<StateComputeResult, ExecutionError> {
         self.pending_blocks.lock().insert(block.id(), block.clone());
         let result = StateComputeResult::new(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
+            HashValue::zero(),
             vec![],
             0,
             vec![],

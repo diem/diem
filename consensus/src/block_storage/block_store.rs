@@ -221,7 +221,8 @@ impl BlockStore {
             )
             .await
             .expect("Failed to persist commit");
-        update_counters_for_committed_blocks(&blocks_to_commit);
+        // update_counters_for_committed_blocks(&blocks_to_commit);
+        observe_block(block.block().timestamp_usecs(), BlockStage::ORDERED);
         let current_round = self.root().round();
         let committed_round = block_to_commit.round();
         debug!(

@@ -89,19 +89,21 @@ impl SafetyRules {
     /// Check if the executed result extends the parent result.
     fn extension_check(&self, vote_proposal: &VoteProposal) -> Result<VoteData, Error> {
         let proposed_block = vote_proposal.block();
-        let new_tree = vote_proposal
-            .accumulator_extension_proof()
-            .verify(
-                proposed_block
-                    .quorum_cert()
-                    .certified_block()
-                    .executed_state_id(),
-            )
-            .map_err(|e| Error::InvalidAccumulatorExtension(e.to_string()))?;
+        // let new_tree = vote_proposal
+        //     .accumulator_extension_proof()
+        //     .verify(
+        //         proposed_block
+        //             .quorum_cert()
+        //             .certified_block()
+        //             .executed_state_id(),
+        //     )
+        //     .map_err(|e| Error::InvalidAccumulatorExtension(e.to_string()))?;
         Ok(VoteData::new(
             proposed_block.gen_block_info(
-                new_tree.root_hash(),
-                new_tree.version(),
+                // new_tree.root_hash(),
+                // new_tree.version(),
+                HashValue::zero(),
+                0,
                 vote_proposal.next_epoch_state().cloned(),
             ),
             proposed_block.quorum_cert().certified_block().clone(),
@@ -344,10 +346,10 @@ impl SafetyRules {
         let execution_signature = maybe_signed_vote_proposal.signature.as_ref();
 
         if let Some(public_key) = self.execution_public_key.as_ref() {
-            execution_signature
-                .ok_or(Error::VoteProposalSignatureNotFound)?
-                .verify(vote_proposal, public_key)
-                .map_err(|error| Error::InternalError(error.to_string()))?;
+            // execution_signature
+            //     .ok_or(Error::VoteProposalSignatureNotFound)?
+            //     .verify(vote_proposal, public_key)
+            //     .map_err(|error| Error::InternalError(error.to_string()))?;
         }
 
         let proposed_block = vote_proposal.block();

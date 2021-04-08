@@ -15,6 +15,7 @@ impl BlockStage {
     pub const VOTED: &'static str = "voted";
     pub const QC_AGGREGATED: &'static str = "qc_aggregated";
     pub const QC_ADDED: &'static str = "qc_added";
+    pub const ORDERED: &'static str = "ordered";
     pub const COMMITTED: &'static str = "committed";
 }
 
