@@ -226,7 +226,7 @@ impl EncNetworkAddress {
         let nonce_slice = GenericArray::from_slice(nonce_slice);
 
         // the key_version is in-the-clear, so we include it in the integrity check
-        // using the "additonal data"
+        // using the "additional data"
         let ad_buf = key_version.to_be_bytes();
         let ad_slice = &ad_buf[..];
 

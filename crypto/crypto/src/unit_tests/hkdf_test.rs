@@ -48,9 +48,9 @@ fn test_extract_then_expand() {
 fn test_sha256_output_length() {
     // According to rfc, max_sha256_length <= 255 * HashLen bytes
     let max_hash_length: usize = 255 * 32; // = 8160
-
+    let ikm = [0u8; 32];
     // We extract once, then we reuse it.
-    let hkdf_extract = Hkdf::<Sha256>::extract(None, &[]).unwrap();
+    let hkdf_extract = Hkdf::<Sha256>::extract(None, &ikm).unwrap();
 
     // Test for max allowed (expected to pass)
     let hkdf_expand = Hkdf::<Sha256>::expand(&hkdf_extract, None, max_hash_length);
@@ -89,8 +89,8 @@ fn test_sha256_output_length() {
 #[test]
 fn test_sha3_256_output_length() {
     let max_hash_length: usize = 255 * 32; // = 8160
-
-    let hkdf_extract = Hkdf::<Sha3_256>::extract(None, &[]).unwrap();
+    let ikm = [0u8; 32];
+    let hkdf_extract = Hkdf::<Sha3_256>::extract(None, &ikm).unwrap();
 
     // Test for max allowed (expected to pass)
     let hkdf_expand = Hkdf::<Sha3_256>::expand(&hkdf_extract, None, max_hash_length);
@@ -122,8 +122,8 @@ fn test_sha3_256_output_length() {
 #[test]
 fn test_sha512_output_length() {
     let max_hash_length: usize = 255 * 64; // = 16320
-
-    let hkdf_extract = Hkdf::<Sha512>::extract(None, &[]).unwrap();
+    let ikm = [0u8; 32];
+    let hkdf_extract = Hkdf::<Sha512>::extract(None, &ikm).unwrap();
 
     // Test for max allowed (expected to pass)
     let hkdf_expand = Hkdf::<Sha512>::expand(&hkdf_extract, None, max_hash_length);
@@ -156,6 +156,31 @@ fn test_sha512_output_length() {
 fn unsupported_digest() {
     let t = trybuild::TestCases::new();
     t.compile_fail("src/unit_tests/compilation/small_kdf.rs");
+}
+
+#[test]
+fn test_ikm_size() {
+    // Test for 16 bytes seed.
+    let ikm16 = [0u8; 16];
+    assert!(Hkdf::<Sha256>::extract(None, &ikm16).is_ok());
+
+    // Test for 32 bytes seed.
+    let ikm32 = [0u8; 32];
+    assert!(Hkdf::<Sha256>::extract(None, &ikm32).is_ok());
+
+    // Test for 15 bytes seed.
+    let ikm15 = [0u8; 15];
+    assert_eq!(
+        Hkdf::<Sha256>::extract(None, &ikm15),
+        Err(HkdfError::InvalidSeedLengthError)
+    );
+
+    // Test for empty seed.
+    let ikm0 = [];
+    assert_eq!(
+        Hkdf::<Sha256>::extract(None, &ikm0),
+        Err(HkdfError::InvalidSeedLengthError)
+    );
 }
 
 // Test Vectors for sha256 from https://tools.ietf.org/html/rfc5869.
