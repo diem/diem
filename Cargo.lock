@@ -4053,7 +4053,6 @@ dependencies = [
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
- "diem-writeset-generator",
  "goldenfile",
  "hex",
  "move-binary-format",

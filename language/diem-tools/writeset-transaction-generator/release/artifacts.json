@@ -1,0 +1,10 @@
+[
+  {
+    "chain_id": 1,
+    "version": 15408203,
+    "commit_hash": "b99b027e142f6169fd25b2e946d553d98f3e9359",
+    "stdlib_hash": "ab590b216554b9eadca01e86ff630e760d3729c84463b650a51c3bcbe668e985",
+    "diem_version": 2,
+    "release_name": "release-1.2.0-rc0"
+  }
+]
