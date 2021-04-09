@@ -9,7 +9,8 @@ use crate::{
     options::ProverOptions,
     usage_analysis,
 };
-use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, StructId};
+use log::debug;
+use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, StructId, VerificationScope};
 use std::collections::BTreeSet;
 
 /// The annotation for information about verification.
@@ -43,27 +44,35 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
     fn initialize(&self, env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
         let options = ProverOptions::get(env);
 
-        // If we are verifying only one function, check that this function indeed exists in one of
-        // the target module.
-        if let Some(target_name) = options.verify_scope.get_exclusive_verify_function_name() {
-            let mut function_target_exists = false;
-            let mut loc = env.unknown_loc();
-            for module in env.get_modules() {
-                if module.is_target() {
-                    loc = module.get_loc().at_start();
-                    function_target_exists |=
-                        module.get_functions().any(|f| f.matches_name(target_name));
+        // If we are verifying only one function or module, check that this indeed exists.
+        match &options.verify_scope {
+            VerificationScope::Only(name) | VerificationScope::OnlyModule(name) => {
+                let for_module = matches!(&options.verify_scope, VerificationScope::OnlyModule(_));
+                let mut target_exists = false;
+                for module in env.get_modules() {
+                    if module.is_target() {
+                        if for_module {
+                            target_exists = module.matches_name(name)
+                        } else {
+                            target_exists = module.get_functions().any(|f| f.matches_name(name));
+                        }
+                        if target_exists {
+                            break;
+                        }
+                    }
+                }
+                if !target_exists {
+                    env.error(
+                        &env.unknown_loc(),
+                        &format!(
+                            "{} target {} does not exist in target modules",
+                            if for_module { "module" } else { "function" },
+                            name
+                        ),
+                    )
                 }
             }
-            if !function_target_exists {
-                env.error(
-                    &loc,
-                    &format!(
-                        "function target {} does not exist in target modules",
-                        target_name
-                    ),
-                )
-            }
+            _ => {}
         }
     }
 
@@ -103,7 +112,8 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
             }
         };
         if is_verified {
-            mark_verified(fun_env, variant, targets);
+            debug!("marking `{}` to be verified", fun_env.get_full_name_str());
+            mark_verified(fun_env, variant, targets, &options);
         }
 
         targets.remove_target_data(&fid, variant)
@@ -167,6 +177,7 @@ fn mark_verified(
     fun_env: &FunctionEnv<'_>,
     variant: FunctionVariant,
     targets: &mut FunctionTargetsHolder,
+    options: &ProverOptions,
 ) {
     let actual_env = fun_env.get_transitive_friend();
     if actual_env.get_qualified_id() != fun_env.get_qualified_id() {
@@ -174,8 +185,10 @@ fn mark_verified(
         // and this function as inlined.
         mark_inlined(fun_env, variant, targets);
     }
-    // The user can override with `pragma verify = false`, so respect this.
-    if !actual_env.is_explicitly_not_verified() {
+    // The user can override with `pragma verify = false` to verify the friend, so respect this.
+    // However, if this is not a friend, the caller has already made the decision whether to
+    // verify or not.
+    if !actual_env.is_explicitly_not_verified(&options.verify_scope) {
         let mut info = targets
             .get_data_mut(&actual_env.get_qualified_id(), variant)
             .expect("function data available")

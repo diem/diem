@@ -241,6 +241,7 @@ existing_deps = [
     ["move-model", "datatest-stable"],
     ["move-prover", "diem-temppath"],
     ["move-prover", "datatest-stable"],
+    ["prover-lab", "datatest-stable"],
     ["abigen", "diem-types"],
     ["abigen", "diem-temppath"],
     ["abigen", "datatest-stable"],

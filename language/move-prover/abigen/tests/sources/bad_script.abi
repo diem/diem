@@ -1,4 +1,4 @@
-Move prover abigen returns: exiting with checking errors
+Move prover abigen returns: exiting with model building errors
 error:
 
    ┌── tests/sources/bad_script.move:2:20 ───

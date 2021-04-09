@@ -196,17 +196,24 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         self.parent.parent.env.get_node_instantiation_opt(node_id)
     }
 
-    /// Shortcut to set node type.
-    pub fn set_node_type(&self, node_id: NodeId, ty: Type) {
-        self.parent.parent.env.set_node_type(node_id, ty);
+    /// Shortcut to update node type.
+    pub fn update_node_type(&self, node_id: NodeId, ty: Type) {
+        self.parent.parent.env.update_node_type(node_id, ty);
     }
 
-    /// Shortcut to set instantiation for the given node id.
+    /// Shortcut to set/update instantiation for the given node id.
     fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
         self.parent
             .parent
             .env
             .set_node_instantiation(node_id, instantiation);
+    }
+
+    fn update_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
+        self.parent
+            .parent
+            .env
+            .update_node_instantiation(node_id, instantiation);
     }
 
     /// Finalizes types in this build, producing errors if some could not be inferred
@@ -222,14 +229,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
             if let Some(ty) = self.get_node_type_opt(node_id) {
                 let ty = self.finalize_type(node_id, &ty);
-                self.set_node_type(node_id, ty);
+                self.update_node_type(node_id, ty);
             }
             if let Some(inst) = self.get_node_instantiation_opt(node_id) {
                 let inst = inst
                     .iter()
                     .map(|ty| self.finalize_type(node_id, ty))
                     .collect_vec();
-                self.set_node_instantiation(node_id, inst);
+                self.update_node_instantiation(node_id, inst);
             }
         }
     }
@@ -262,14 +269,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
             if let Some(ty) = self.get_node_type_opt(node_id) {
                 let ty = self.fix_type(generated_params, &ty);
-                self.set_node_type(node_id, ty);
+                self.update_node_type(node_id, ty);
             }
             if let Some(inst) = self.get_node_instantiation_opt(node_id) {
                 let inst = inst
                     .iter()
                     .map(|ty| self.fix_type(generated_params, ty))
                     .collect_vec();
-                self.set_node_instantiation(node_id, inst);
+                self.update_node_instantiation(node_id, inst);
             }
         }
     }
@@ -886,7 +893,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
         // Ignore assert statement.
         if name == self.parent.parent.assert_symbol() {
-            return Exp::Call(self.new_node_id(), Operation::NoOp, vec![]);
+            return Exp::Call(
+                self.new_node_id_with_type_loc(expected_type, &self.to_loc(&maccess.loc)),
+                Operation::NoOp,
+                vec![],
+            );
         }
 
         let is_old = module_name.is_none() && name == self.parent.parent.old_symbol();

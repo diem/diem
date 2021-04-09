@@ -202,7 +202,7 @@ pub struct SpecVarId(RawIndex);
 /// Identifier for a node in the AST, relative to a module. This is used to associate attributes
 /// with the node, like source location and type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct NodeId(RawIndex);
+pub struct NodeId(usize);
 
 /// A global id. Instances of this type represent unique identifiers relative to `GlobalEnv`.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -287,7 +287,7 @@ impl SpecVarId {
 
 impl NodeId {
     pub fn new(idx: usize) -> Self {
-        Self(idx as RawIndex)
+        Self(idx)
     }
 
     pub fn as_usize(self) -> usize {
@@ -336,6 +336,8 @@ pub enum VerificationScope {
     All,
     /// Verify only one function.
     Only(String),
+    /// Verify only functions from the given module.
+    OnlyModule(String),
     /// Verify no functions
     None,
 }
@@ -347,9 +349,13 @@ impl Default for VerificationScope {
 }
 
 impl VerificationScope {
-    /// Whether verification is exclusive to only one function.
+    /// Whether verification is exclusive to only one function or module. If set, this overrides
+    /// all implicitly included verification targets via invariants and friends.
     pub fn is_exclusive(&self) -> bool {
-        matches!(self, VerificationScope::Only(_))
+        matches!(
+            self,
+            VerificationScope::Only(_) | VerificationScope::OnlyModule(_)
+        )
     }
 
     /// Returns the target function if verification is exclusive to one function.
@@ -548,6 +554,19 @@ impl GlobalEnv {
         self.add_diag(diag);
     }
 
+    /// Checks whether any of the diagnostics contains string.
+    pub fn has_diag(&self, pattern: &str) -> bool {
+        self.diags
+            .borrow()
+            .iter()
+            .any(|d| d.message.contains(pattern))
+    }
+
+    /// Clear all accumulated diagnosis.
+    pub fn clear_diag(&self) {
+        self.diags.borrow_mut().clear();
+    }
+
     /// Returns the unknown location.
     pub fn unknown_loc(&self) -> Loc {
         self.unknown_loc.clone()
@@ -645,6 +664,20 @@ impl GlobalEnv {
             .borrow()
             .iter()
             .any(|d| d.severity >= Severity::Error)
+    }
+
+    /// Returns the number of diagnostics.
+    pub fn diag_count(&self) -> usize {
+        self.diags.borrow().len()
+    }
+
+    /// Returns the number of errors.
+    pub fn error_count(&self) -> usize {
+        self.diags
+            .borrow()
+            .iter()
+            .filter(|d| d.severity >= Severity::Error)
+            .count()
     }
 
     /// Returns true if diagnostics have warning severity or worse.
@@ -1096,7 +1129,7 @@ impl GlobalEnv {
             .borrow()
             .get(&node_id)
             .cloned()
-            .unwrap_or(Type::Error)
+            .expect("node type defined")
     }
 
     /// Converts an index into a node id.
@@ -1122,7 +1155,8 @@ impl GlobalEnv {
     /// Allocates a new node id.
     pub fn new_node_id(&self) -> NodeId {
         let id = NodeId::new(*self.next_free_node_id.borrow());
-        *self.next_free_node_id.borrow_mut() += 1;
+        let mut r = self.next_free_node_id.borrow_mut();
+        *r = r.checked_add(1).expect("NodeId overflow");
         id
     }
 
@@ -1134,16 +1168,32 @@ impl GlobalEnv {
         id
     }
 
-    /// Sets type for the given node id.
+    /// Sets type for the given node id. Must not have been set before.
     pub fn set_node_type(&self, node_id: NodeId, ty: Type) {
-        self.type_map.borrow_mut().insert(node_id, ty);
+        assert!(self.type_map.borrow_mut().insert(node_id, ty).is_none());
     }
 
-    /// Sets instantiation for the given node id.
+    /// Sets instantiation for the given node id. Must not have been set before.
     pub fn set_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
-        self.instantiation_map
+        assert!(self
+            .instantiation_map
             .borrow_mut()
-            .insert(node_id, instantiation);
+            .insert(node_id, instantiation)
+            .is_none());
+    }
+
+    /// Updates type for the given node id. Must have been set before.
+    pub fn update_node_type(&self, node_id: NodeId, ty: Type) {
+        assert!(self.type_map.borrow_mut().insert(node_id, ty).is_some());
+    }
+
+    /// Updates instantiation for the given node id. Must have been set before.
+    pub fn update_node_instantiation(&self, node_id: NodeId, instantiation: Vec<Type>) {
+        assert!(self
+            .instantiation_map
+            .borrow_mut()
+            .insert(node_id, instantiation)
+            .is_some());
     }
 
     /// Gets the type parameter instantiation associated with the given node.
@@ -1265,6 +1315,12 @@ impl<'env> ModuleEnv<'env> {
     /// Returns the name of this module.
     pub fn get_name(&'env self) -> &'env ModuleName {
         &self.data.name
+    }
+
+    /// Returns true if either the full name or simple name of this module matches the given string
+    pub fn matches_name(&self, name: &str) -> bool {
+        self.get_full_name_str() == name
+            || self.get_name().display(self.symbol_pool()).to_string() == name
     }
 
     /// Returns the location of this module.
@@ -2710,6 +2766,10 @@ impl<'env> FunctionEnv<'env> {
 
     /// Determine whether the function is target of verification.
     pub fn should_verify(&self, default_scope: &VerificationScope) -> bool {
+        if let VerificationScope::Only(function_name) = default_scope {
+            // Overrides pragmas.
+            return self.matches_name(function_name);
+        }
         if !self.module_env.is_target() {
             // Don't generate verify method for functions from dependencies.
             return false;
@@ -2724,7 +2784,8 @@ impl<'env> FunctionEnv<'env> {
             // well for consistency.
             VerificationScope::Public => self.is_exposed(),
             VerificationScope::All => true,
-            VerificationScope::Only(function_name) => self.matches_name(function_name),
+            VerificationScope::Only(_) => unreachable!(),
+            VerificationScope::OnlyModule(module_name) => self.module_env.matches_name(module_name),
             VerificationScope::None => false,
         };
         self.is_pragma_true(VERIFY_PRAGMA, default)
@@ -2736,8 +2797,8 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Determine whether this function is explicitly deactivated for verification.
-    pub fn is_explicitly_not_verified(&self) -> bool {
-        self.is_pragma_false(VERIFY_PRAGMA)
+    pub fn is_explicitly_not_verified(&self, scope: &VerificationScope) -> bool {
+        !matches!(scope, VerificationScope::Only(..)) && self.is_pragma_false(VERIFY_PRAGMA)
     }
 
     /// Get the functions that call this one

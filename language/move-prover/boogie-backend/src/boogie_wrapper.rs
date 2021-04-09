@@ -7,7 +7,7 @@ use anyhow::anyhow;
 
 use std::{collections::BTreeMap, fs, option::Option::None};
 
-use codespan::{ByteIndex, ColumnIndex, FileId, LineIndex, Location, Span};
+use codespan::{ByteIndex, ColumnIndex, LineIndex, Location, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
 use itertools::Itertools;
 use log::{debug, info, warn};
@@ -47,7 +47,6 @@ pub struct BoogieWrapper<'env> {
     pub targets: &'env FunctionTargetsHolder,
     pub writer: &'env CodeWriter,
     pub options: &'env BoogieOptions,
-    pub boogie_file_id: FileId,
 }
 
 /// Output of a boogie run.

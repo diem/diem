@@ -729,7 +729,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 // Rewrite all type annotations in expressions to skip references.
                 for node_id in translated.node_ids() {
                     let ty = et.get_node_type(node_id);
-                    et.set_node_type(node_id, ty.skip_reference().clone());
+                    et.update_node_type(node_id, ty.skip_reference().clone());
                 }
                 et.called_spec_funs.iter().for_each(|(mid, fid)| {
                     self.parent.add_edge_to_move_fun_call_graph(
@@ -914,7 +914,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         // In the body of a spec function, references do not appear.
         for node_id in def.node_ids() {
             let ty = et.get_node_type(node_id);
-            et.set_node_type(node_id, ty.skip_reference().clone());
+            et.update_node_type(node_id, ty.skip_reference().clone());
         }
 
         // Prepare the type_params field for SpecFunDecl.

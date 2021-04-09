@@ -80,4 +80,8 @@ impl ProverOptions {
         }
         env.get_extension::<ProverOptions>().unwrap()
     }
+
+    pub fn set(env: &GlobalEnv, options: ProverOptions) {
+        env.set_extension::<ProverOptions>(options);
+    }
 }

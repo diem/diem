@@ -440,14 +440,12 @@ impl<'env> SpecTranslator<'env> {
     // Translate the expression.
     pub(crate) fn translate(&self, exp: &Exp) {
         let exp1 = self.box_unbox(exp.clone());
-        // DEBUG: emitln!(self.writer, "// {}", exp1.display(self.env));
         self.translate_exp(&exp1)
     }
 
     // Translate the expression and deliver an unboxed (Boogie native) result.
     pub(crate) fn translate_unboxed(&self, exp: &Exp) {
         let exp1 = self.unbox_value(self.box_unbox(exp.clone()));
-        // DEBUG: emitln!(self.writer, "// {}", exp1.display(self.env));
         self.translate_exp(&exp1)
     }
 

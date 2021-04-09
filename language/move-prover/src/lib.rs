@@ -39,26 +39,23 @@ pub mod cli;
 mod pipelines;
 
 // =================================================================================================
-// Entry Point
+// Prover API
+
+pub fn run_move_prover_errors_to_stderr(options: Options) -> anyhow::Result<()> {
+    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
+    run_move_prover(&mut error_writer, options)
+}
 
 pub fn run_move_prover<W: WriteColor>(
     error_writer: &mut W,
     options: Options,
 ) -> anyhow::Result<()> {
     let now = Instant::now();
-    let target_sources = find_move_filenames(&options.move_sources, true)?;
-    let all_sources = collect_all_sources(
-        &target_sources,
-        &find_move_filenames(&options.move_deps, true)?,
-        options.inv_v2,
-    )?;
-    let other_sources = remove_sources(&target_sources, all_sources);
-    debug!("parsing and checking sources");
-    let mut env: GlobalEnv = run_model_builder(target_sources, other_sources)?;
-    if env.has_errors() {
-        env.report_errors(error_writer);
-        return Err(anyhow!("exiting with checking errors"));
-    }
+
+    // Run the model builder.
+    let env = build_move_model(&options.move_sources, &options.move_deps, options.inv_v2)?;
+    let build_duration = now.elapsed();
+    check_errors(&env, error_writer, "exiting with model building errors")?;
     if options.prover.report_warnings && env.has_warnings() {
         env.report_warnings(error_writer);
     }
@@ -84,161 +81,91 @@ pub fn run_move_prover<W: WriteColor>(
         return Ok(run_read_write_set(&env, &options, now));
     }
 
+    // Create and process bytecode
+    let now = Instant::now();
     let targets = create_and_process_bytecode(&options, &env);
-    if env.has_errors() {
-        env.report_errors(error_writer);
-        return Err(anyhow!("exiting with transformation errors"));
-    }
+    let trafo_duration = now.elapsed();
+    check_errors(
+        &env,
+        error_writer,
+        "exiting with bytecode transformation errors",
+    )?;
 
-    if env.has_errors() {
-        env.report_errors(error_writer);
-        return Err(anyhow!("exiting with modifies checking errors"));
-    }
-    // Analyze and find out the set of modules/functions to be translated and/or verified.
-    if env.has_errors() {
-        env.report_errors(error_writer);
-        return Err(anyhow!("exiting with analysis errors"));
-    }
-    let writer = CodeWriter::new(env.internal_loc());
-    boogie_backend::add_prelude(&options.backend, &writer)?;
-    let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
-    translator.translate();
-    if env.has_errors() {
-        env.report_errors(error_writer);
-        return Err(anyhow!("exiting with boogie generation errors"));
-    }
-    let output_existed = std::path::Path::new(&options.output_path).exists();
-    debug!("writing boogie to `{}`", &options.output_path);
-    writer.process_result(|result| fs::write(&options.output_path, result))?;
-    let translator_elapsed = now.elapsed();
-    if !options.prover.generate_only {
-        let boogie_file_id =
-            writer.process_result(|result| env.add_source(&options.output_path, result, false));
-        let boogie = BoogieWrapper {
-            env: &env,
-            targets: &targets,
-            writer: &writer,
-            options: &options.backend,
-            boogie_file_id,
-        };
-        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
-        let boogie_elapsed = now.elapsed();
-        if options.backend.bench_repeat <= 1 {
-            info!(
-                "{:.3}s translator, {:.3}s solver",
-                translator_elapsed.as_secs_f64(),
-                (boogie_elapsed - translator_elapsed).as_secs_f64()
-            );
-        } else {
-            info!(
-                "{:.3}s translator, {:.3}s solver (average over {} solver runs)",
-                translator_elapsed.as_secs_f64(),
-                (boogie_elapsed - translator_elapsed).as_secs_f64()
-                    / (options.backend.bench_repeat as f64),
-                options.backend.bench_repeat
-            );
-        }
-        if env.has_errors() {
-            env.report_errors(error_writer);
-            return Err(anyhow!("exiting with boogie verification errors"));
-        }
-    }
-    if !output_existed && !options.backend.keep_artifacts {
-        std::fs::remove_file(&options.output_path).unwrap_or_default();
-    }
+    // Generate boogie code
+    let now = Instant::now();
+    let code_writer = generate_boogie(&env, &options, &targets)?;
+    let gen_duration = now.elapsed();
+    check_errors(&env, error_writer, "exiting with boogie generation errors")?;
 
-    Ok(())
-}
+    // Verify boogie code.
+    let now = Instant::now();
+    verify_boogie(&env, &options, &targets, code_writer)?;
+    let verify_duration = now.elapsed();
 
-pub fn run_move_prover_errors_to_stderr(options: Options) -> anyhow::Result<()> {
-    let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
-    run_move_prover(&mut error_writer, options)
-}
-
-fn run_docgen<W: WriteColor>(
-    env: &GlobalEnv,
-    options: &Options,
-    error_writer: &mut W,
-    now: Instant,
-) -> anyhow::Result<()> {
-    let generator = Docgen::new(env, &options.docgen);
-    let checking_elapsed = now.elapsed();
-    info!("generating documentation");
-    for (file, content) in generator.gen() {
-        let path = PathBuf::from(&file);
-        fs::create_dir_all(path.parent().unwrap())?;
-        fs::write(path.as_path(), content)?;
-    }
-    let generating_elapsed = now.elapsed();
+    // Report durations.
     info!(
-        "{:.3}s checking, {:.3}s generating",
-        checking_elapsed.as_secs_f64(),
-        (generating_elapsed - checking_elapsed).as_secs_f64()
+        "{:.3}s build, {:.3}s trafo, {:.3}s gen, {:.3}s verify",
+        build_duration.as_secs_f64(),
+        trafo_duration.as_secs_f64(),
+        gen_duration.as_secs_f64(),
+        verify_duration.as_secs_f64()
     );
+    check_errors(
+        &env,
+        error_writer,
+        "exiting with boogie verification errors",
+    )
+}
+
+pub fn check_errors<W: WriteColor>(
+    env: &GlobalEnv,
+    error_writer: &mut W,
+    msg: &'static str,
+) -> anyhow::Result<()> {
     if env.has_errors() {
         env.report_errors(error_writer);
-        Err(anyhow!("exiting with documentation generation errors"))
+        Err(anyhow!(msg))
     } else {
         Ok(())
     }
 }
 
-fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
-    let mut generator = Abigen::new(env, &options.abigen);
-    let checking_elapsed = now.elapsed();
-    info!("generating ABI files");
-    generator.gen();
-    for (file, content) in generator.into_result() {
-        let path = PathBuf::from(&file);
-        fs::create_dir_all(path.parent().unwrap())?;
-        fs::write(path.as_path(), content)?;
+pub fn generate_boogie(
+    env: &GlobalEnv,
+    options: &Options,
+    targets: &FunctionTargetsHolder,
+) -> anyhow::Result<CodeWriter> {
+    let writer = CodeWriter::new(env.internal_loc());
+    boogie_backend::add_prelude(&options.backend, &writer)?;
+    let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
+    translator.translate();
+    Ok(writer)
+}
+
+pub fn verify_boogie(
+    env: &GlobalEnv,
+    options: &Options,
+    targets: &FunctionTargetsHolder,
+    writer: CodeWriter,
+) -> anyhow::Result<()> {
+    let output_existed = std::path::Path::new(&options.output_path).exists();
+    debug!("writing boogie to `{}`", &options.output_path);
+    writer.process_result(|result| fs::write(&options.output_path, result))?;
+    let boogie = BoogieWrapper {
+        env: &env,
+        targets: &targets,
+        writer: &writer,
+        options: &options.backend,
+    };
+    boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
+    if !output_existed && !options.backend.keep_artifacts {
+        std::fs::remove_file(&options.output_path).unwrap_or_default();
     }
-    let generating_elapsed = now.elapsed();
-    info!(
-        "{:.3}s checking, {:.3}s generating",
-        checking_elapsed.as_secs_f64(),
-        (generating_elapsed - checking_elapsed).as_secs_f64()
-    );
     Ok(())
 }
 
-fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) {
-    let mut generator = ErrmapGen::new(env, &options.errmapgen);
-    let checking_elapsed = now.elapsed();
-    info!("generating error map");
-    generator.gen();
-    generator.save_result();
-    let generating_elapsed = now.elapsed();
-    info!(
-        "{:.3}s checking, {:.3}s generating",
-        checking_elapsed.as_secs_f64(),
-        (generating_elapsed - checking_elapsed).as_secs_f64()
-    );
-}
-
-fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
-    let mut targets = FunctionTargetsHolder::default();
-
-    for module_env in env.get_modules() {
-        for func_env in module_env.get_functions() {
-            targets.add_target(&func_env)
-        }
-    }
-    let mut pipeline = FunctionTargetPipeline::default();
-    pipeline.add_processor(ReadWriteSetProcessor::new());
-
-    let start = now.elapsed();
-    info!("generating read/write set");
-    pipeline.run(env, &mut targets, None, /* dump_cfg */ false);
-    read_write_set_analysis::get_read_write_set(env, &targets);
-    println!("generated for {:?}", options.move_sources);
-
-    let end = now.elapsed();
-    info!("{:.3}s analyzing", (end - start).as_secs_f64());
-}
-
 /// Create bytecode and process it.
-fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTargetsHolder {
+pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTargetsHolder {
     let mut targets = FunctionTargetsHolder::default();
 
     // Add function targets for all functions in the environment.
@@ -295,6 +222,32 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         res.add_processor(GlobalInvariantInstrumentationProcessor::new());
     }
     res
+}
+
+// Model Building
+// ==============
+
+// TODO: move this and related logic for determining sources into move-model crate. Also
+//   when doing this refactoring use the Move parser to analyze dependencies instead of
+//   scanning files with regular expressions.
+
+/// Build the move model. This collects transitive dependencies for move sources
+/// from the provided directory list.
+pub fn build_move_model(
+    move_sources: &[String],
+    dep_dirs: &[String],
+    use_inv_v2: bool,
+) -> anyhow::Result<GlobalEnv> {
+    let target_sources = find_move_filenames(move_sources, true)?;
+    let all_sources = collect_all_sources(
+        &target_sources,
+        &find_move_filenames(dep_dirs, true)?,
+        use_inv_v2,
+    )?;
+    let other_sources = remove_sources(&target_sources, all_sources);
+    debug!("parsing and checking sources");
+    let env: GlobalEnv = run_model_builder(target_sources, other_sources)?;
+    Ok(env)
 }
 
 /// Remove the target Move files from the list of files.
@@ -437,4 +390,92 @@ fn extract_matches(path: &Path, rex: &Regex) -> anyhow::Result<Vec<String>> {
         at += cap.get(0).unwrap().end();
     }
     Ok(res)
+}
+
+// Tools using the Move prover top-level driver
+// ============================================
+
+// TODO: make those tools independent. Need to first address the todo to
+// move the model builder into the move-model crate.
+
+fn run_docgen<W: WriteColor>(
+    env: &GlobalEnv,
+    options: &Options,
+    error_writer: &mut W,
+    now: Instant,
+) -> anyhow::Result<()> {
+    let generator = Docgen::new(env, &options.docgen);
+    let checking_elapsed = now.elapsed();
+    info!("generating documentation");
+    for (file, content) in generator.gen() {
+        let path = PathBuf::from(&file);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path.as_path(), content)?;
+    }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    if env.has_errors() {
+        env.report_errors(error_writer);
+        Err(anyhow!("exiting with documentation generation errors"))
+    } else {
+        Ok(())
+    }
+}
+
+fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
+    let mut generator = Abigen::new(env, &options.abigen);
+    let checking_elapsed = now.elapsed();
+    info!("generating ABI files");
+    generator.gen();
+    for (file, content) in generator.into_result() {
+        let path = PathBuf::from(&file);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path.as_path(), content)?;
+    }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    Ok(())
+}
+
+fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) {
+    let mut generator = ErrmapGen::new(env, &options.errmapgen);
+    let checking_elapsed = now.elapsed();
+    info!("generating error map");
+    generator.gen();
+    generator.save_result();
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+}
+
+fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
+    let mut targets = FunctionTargetsHolder::default();
+
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            targets.add_target(&func_env)
+        }
+    }
+    let mut pipeline = FunctionTargetPipeline::default();
+    pipeline.add_processor(ReadWriteSetProcessor::new());
+
+    let start = now.elapsed();
+    info!("generating read/write set");
+    pipeline.run(env, &mut targets, None, /* dump_cfg */ false);
+    read_write_set_analysis::get_read_write_set(env, &targets);
+    println!("generated for {:?}", options.move_sources);
+
+    let end = now.elapsed();
+    info!("{:.3}s analyzing", (end - start).as_secs_f64());
 }

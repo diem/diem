@@ -580,8 +580,11 @@ impl Options {
         }
 
         if matches.is_present("z3-trace") {
-            let fun_name = matches.value_of("z3-trace").unwrap().to_string();
-            options.prover.verify_scope = VerificationScope::Only(fun_name.clone());
+            let mut fun_name = matches.value_of("z3-trace").unwrap();
+            options.prover.verify_scope = VerificationScope::Only(fun_name.to_string());
+            if let Some(i) = fun_name.find("::") {
+                fun_name = &fun_name[i + 2..];
+            }
             options.backend.z3_trace_file = Some(format!("{}.z3log", fun_name));
         }
 

@@ -1,4 +1,4 @@
-Move prover returns: exiting with checking errors
+Move prover returns: exiting with model building errors
 error: calling impure function `TestPureFun::init` is not allowed
 
     ┌── tests/sources/functional/pure_function_call_incorrect.move:33:20 ───
