@@ -10,11 +10,14 @@ use diem_types::{
 
 use diem_writeset_generator::{
     create_release, encode_custom_script, encode_halt_network_payload,
-    encode_remove_validators_payload, verify_release,
+    encode_remove_validators_payload, release_flow::artifacts::load_latest_artifact,
+    verify_release,
 };
 use move_binary_format::CompiledModule;
 use std::path::PathBuf;
 use structopt::StructOpt;
+
+const GENESIS_MODULE_NAME: &str = "Genesis";
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -75,15 +78,27 @@ enum Command {
 
 fn save_bytes(bytes: Vec<u8>, path: PathBuf) -> Result<()> {
     std::fs::write(path.as_path(), bytes.as_slice())
-        .map_err(|_| format_err!("Unable to write to path"))
+        .map_err(|err| format_err!("Unable to write to path: {:?}", err))
 }
 
-fn diem_framework_modules() -> Vec<(Vec<u8>, CompiledModule)> {
+fn diem_framework_modules(release_name: &str) -> Vec<(Vec<u8>, CompiledModule)> {
     // Need to filter out Genesis module similiar to what is done in vmgenesis to make sure Genesis
     // module isn't published on-chain.
-    diem_framework_releases::current_modules_with_blobs()
+    diem_framework_releases::load_modules_from_release(release_name)
+        .unwrap_or_else(|_| {
+            panic!(
+                "Failed to load modules from given release name: {:?}",
+                release_name
+            )
+        })
         .into_iter()
-        .map(|(bytes, modules)| (bytes.clone(), modules.clone()))
+        .map(|bytes| {
+            (
+                bytes.clone(),
+                CompiledModule::deserialize(&bytes).expect("Failed to deserialize compiled module"),
+            )
+        })
+        .filter(|module| module.1.self_id().name().as_str() != GENESIS_MODULE_NAME)
         .collect()
 }
 
@@ -108,7 +123,17 @@ fn main() -> Result<()> {
             first_release,
             diem_version,
         } => {
-            let release_modules = diem_framework_modules();
+            let release_name = opt
+                .output
+                .clone()
+                .expect("Empty output path provided")
+                .file_stem()
+                .expect("Path should be a file")
+                .to_str()
+                .expect("Path name should be able to convert to string")
+                .to_owned();
+
+            let release_modules = diem_framework_modules(release_name.as_str());
             create_release(
                 chain_id,
                 url,
@@ -116,13 +141,7 @@ fn main() -> Result<()> {
                 first_release,
                 &release_modules,
                 diem_version,
-                opt.output
-                    .clone()
-                    .expect("Empty output path provided")
-                    .file_stem()
-                    .expect("Path should be a file")
-                    .to_str()
-                    .expect("Path name should be able to convert to string"),
+                release_name.as_str(),
             )?
         }
         Command::VerifyDiemFrameworkRelease {
@@ -130,6 +149,7 @@ fn main() -> Result<()> {
             chain_id,
             writeset_path,
         } => {
+            let release_name = load_latest_artifact(&chain_id)?.release_name;
             let writeset_payload = {
                 let raw_bytes = std::fs::read(writeset_path.as_path()).unwrap();
                 bcs::from_bytes::<WriteSetPayload>(raw_bytes.as_slice()).or_else(|_| {
@@ -140,7 +160,7 @@ fn main() -> Result<()> {
                     }
                 })?
             };
-            let release_modules = diem_framework_modules();
+            let release_modules = diem_framework_modules(release_name.as_str());
             verify_release(chain_id, url, &writeset_payload, &release_modules)?;
             return Ok(());
         }

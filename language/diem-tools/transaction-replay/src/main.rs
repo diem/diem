@@ -1,9 +1,12 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use diem_transaction_replay::DiemDebugger;
-use diem_types::{account_address::AccountAddress, transaction::Version};
+use diem_types::{
+    account_address::AccountAddress,
+    transaction::{TransactionPayload, Version},
+};
 use difference::Changeset;
 use move_core_types::effects::ChangeSet;
 use std::{fs, path::PathBuf};
@@ -122,7 +125,12 @@ fn main() -> Result<()> {
             write_set_blob_path: path,
             version,
         } => {
-            let writeset_payload = bcs::from_bytes(&fs::read(path.as_path())?)?;
+            let transaction_payload = bcs::from_bytes(&fs::read(path.as_path())?)?;
+            let writeset_payload = if let TransactionPayload::WriteSet(ws) = transaction_payload {
+                ws
+            } else {
+                bail!("Unexpected transaction payload: {:?}", transaction_payload);
+            };
             println!(
                 "{:?}",
                 debugger.execute_writeset_at_version(
