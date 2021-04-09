@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 mod admin_script_builder;
+pub mod old_releases;
 pub mod release_flow;
 
 mod writeset_builder;

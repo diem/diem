@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 use crate::{account::Account, executor::FakeExecutor, utils};
+use diem_writeset_generator::old_releases::release_1_2_0_writeset;
 
 /// The current version numbers that e2e tests should be run against.
 pub const CURRENT_RELEASE_VERSIONS: &[u64] = &[1, 2];
@@ -33,7 +34,14 @@ impl VersionedTestEnv {
         }
 
         if version_number > 1 {
-            utils::upgrade_df(&mut executor, &dr_account, &mut dr_sequence_number, Some(2));
+            executor.execute_and_apply(
+                dr_account
+                    .transaction()
+                    .sequence_number(1)
+                    .payload(release_1_2_0_writeset())
+                    .sign(),
+            );
+            dr_sequence_number = 2;
         }
 
         // Add other future version cases and upgrade paths here.

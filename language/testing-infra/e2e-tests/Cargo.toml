@@ -19,6 +19,7 @@ diem-crypto = { path = "../../../crypto/crypto", features = ["fuzzing"] }
 rand = "0.8.3"
 diem-state-view = { path = "../../../storage/state-view" }
 diem-types = { path = "../../../types", features = ["fuzzing"] }
+diem-writeset-generator = { path = "../../diem-tools/writeset-transaction-generator" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-runtime = { path = "../../move-vm/runtime", features = ["debug_module"] }
 move-vm-types = { path = "../../move-vm/types" }
