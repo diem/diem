@@ -267,9 +267,9 @@ jobs:
           echo "CTI_OUTPUT_LOG=$CTI_OUTPUT_LOG" >> $GITHUB_ENV
           cmd=""
           if ${{ needs.need-base-images.result!='success' }}; then
-            cmd="./scripts/cti --tag ${{ needs.build-images.outputs.head-tag }} -E RUST_LOG=debug --report report.json --suite land_blocking"
+            cmd="./scripts/cti --tag ${{ needs.build-images.outputs.head-tag }} --report report.json --suite land_blocking"
           else
-            cmd="./scripts/cti --tag ${{ needs.need-base-images.outputs.prev-tag }} --cluster-test-tag ${{ needs.build-images.outputs.head-tag }} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${{ needs.build-images.outputs.head-tag }} --report report.json --suite land_blocking_compat"
+            cmd="./scripts/cti --tag ${{ needs.need-base-images.outputs.prev-tag }} --cluster-test-tag ${{ needs.build-images.outputs.head-tag }} -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${{ needs.build-images.outputs.head-tag }} --report report.json --suite land_blocking_compat"
           fi
           eval $cmd
           ret=$?
