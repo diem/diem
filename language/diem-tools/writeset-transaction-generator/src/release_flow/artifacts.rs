@@ -59,7 +59,7 @@ impl ReleaseArtifacts {
             artifact_path().as_path(),
             serde_json::to_vec_pretty(&existing_artifacts)?.as_slice(),
         )
-        .map_err(|_| format_err!("Unable to write to path"))
+        .map_err(|err| format_err!("Unable to write to path: {:?}", err))
     }
 
     pub fn load_latest_artifact() -> Result<ReleaseArtifact> {
