@@ -64,6 +64,7 @@ pub enum BoogieErrorKind {
     Assertion,
     Inconclusive,
     Inconsistency,
+    Internal,
 }
 
 impl BoogieErrorKind {
@@ -136,6 +137,26 @@ impl<'env> BoogieWrapper<'env> {
                 }
                 debug!("analyzing boogie output");
                 let out = String::from_utf8_lossy(&output.stdout).to_string();
+                // Boogie prints a few ad-hoc error messages (with exit code 0!), so we have
+                // no chance to catch an error until we recognize one of those patterns.
+                if out
+                    .trim()
+                    .starts_with("Fatal Error: ProverException: Cannot find specified prover")
+                {
+                    return Err(anyhow!(
+                        "The configured prover `{}` could not be found{}",
+                        if self.options.use_cvc4 {
+                            &self.options.cvc4_exe
+                        } else {
+                            &self.options.z3_exe
+                        },
+                        if self.options.use_cvc4 {
+                            " (--use-cvc4 is set)"
+                        } else {
+                            ""
+                        }
+                    ));
+                }
                 // Boogie output contains the string "errors detected in" whenever parsing,
                 // resolution, or type checking errors are discovered.
                 if out.contains("errors detected in") {
@@ -320,12 +341,35 @@ impl<'env> BoogieWrapper<'env> {
 
     /// Extracts verification errors from Boogie output.
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
+        // Need to add any diag which is not processed by this function (like
+        // inconclusive) to this list so its not reported as unexpected boogie
+        // output.
+        const OTHER_DIAG_START: &[&str] = &[
+            "inconclusive",
+            "out of resource",
+            "timed out",
+            "inconsistency_detected",
+        ];
         static VERIFICATION_DIAG_STARTS: Lazy<Regex> = Lazy::new(|| {
             Regex::new(r"(?m)^assert_failed\((?P<args>[^)]*)\): (?P<msg>.*)$").unwrap()
         });
         let mut errors = vec![];
         let mut at = 0;
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
+            let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
+            if !inbetween.is_empty() && !OTHER_DIAG_START.iter().any(|s| inbetween.starts_with(s)) {
+                // This is unexpected text and we report it as an internal error
+                errors.push(BoogieError {
+                    kind: BoogieErrorKind::Internal,
+                    loc: self.env.unknown_loc(),
+                    message: format!(
+                        "unexpected boogie output: `{} ..`",
+                        &inbetween[0..inbetween.len().min(70)]
+                    ),
+                    execution_trace: vec![],
+                    model: None,
+                })
+            }
             at = usize::saturating_add(at, cap.get(0).unwrap().end());
             let msg = cap.name("msg").unwrap().as_str();
             if msg == "expected to fail" {

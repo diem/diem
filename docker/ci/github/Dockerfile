@@ -20,6 +20,7 @@ RUN mkdir -p /github/home \
 ENV PATH "/opt/cargo/bin:/usr/lib/golang/bin:/github/home/bin:$PATH"
 ENV DOTNET_ROOT "/github/home/.dotnet"
 ENV Z3_EXE "/github/home/bin/z3"
+ENV CVC4_EXE "/github/home/bin/cvc4"
 ENV BOOGIE_EXE "/github/home/.dotnet/tools/boogie"
 
 FROM setup_ci as tested_ci

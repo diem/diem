@@ -45,6 +45,7 @@ toml = "0.5.8"
 datatest-stable = { path = "../../common/datatest-stable" }
 move-prover-test-utils = { path = "test-utils" }
 shell-words = "1.0.0"
+walkdir = "2.3.1"
 
 [[test]]
 name = "testsuite"

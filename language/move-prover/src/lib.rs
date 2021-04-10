@@ -81,6 +81,9 @@ pub fn run_move_prover<W: WriteColor>(
         return Ok(run_read_write_set(&env, &options, now));
     }
 
+    // Check correct backend versions.
+    options.backend.check_tool_versions()?;
+
     // Create and process bytecode
     let now = Instant::now();
     let targets = create_and_process_bytecode(&options, &env);

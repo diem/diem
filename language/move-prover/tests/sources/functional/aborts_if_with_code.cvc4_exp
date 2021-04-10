@@ -1,0 +1,129 @@
+Move prover returns: exiting with boogie verification errors
+error: unexpected boogie output: `Prover error: Unexpected prover response getting model: (() (define-fu ..`
+
+   ┌── <unknown>:1:1 ───
+   │
+ 1 │ <unknown>
+   │ ^^^^^^^^^
+   │
+
+error: abort code not covered by any of the `aborts_if` or `aborts_with` clauses
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:77:5 ───
+    │
+ 77 │ ╭     spec fun aborts_if_with_code_mixed_invalid {
+ 78 │ │         aborts_if x == 1;
+ 79 │ │         aborts_if x == 2 with 1;
+ 80 │ │     }
+    │ ╰─────^
+    ·
+ 74 │             abort(2)
+    │             -------- abort happened here with code 0x2
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:69: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:70: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:74: aborts_if_with_code_mixed_invalid
+    =         ABORTED
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:85:5 ───
+    │
+ 85 │ ╭     fun aborts_with(x: u64) {
+ 86 │ │         if (x == 1) {
+ 87 │ │             abort(1)
+ 88 │ │         };
+ 89 │ │         if (x == 2) {
+ 90 │ │             abort(2)
+ 91 │ │         };
+ 92 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if_with_code.move:97:5 ───
+     │
+  97 │ ╭     fun aborts_with_invalid(x: u64) {
+  98 │ │         if (x == 1) {
+  99 │ │             abort(1)
+ 100 │ │         };
+ 101 │ │         if (x == 2) {
+ 102 │ │             abort(2)
+ 103 │ │         };
+ 104 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if_with_code.move:109:5 ───
+     │
+ 109 │ ╭     fun aborts_with_mixed(x: u64) {
+ 110 │ │         if (x == 1) {
+ 111 │ │             abort(1)
+ 112 │ │         };
+ 113 │ │         if (x == 2) {
+ 114 │ │             abort(2)
+ 115 │ │         };
+ 116 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if_with_code.move:123:5 ───
+     │
+ 123 │ ╭     fun aborts_with_mixed_invalid(x: u64) {
+ 124 │ │         if (x == 1) {
+ 125 │ │             abort(1)
+ 126 │ │         };
+ 127 │ │         if (x == 2) {
+ 128 │ │             abort(1)
+ 129 │ │         };
+ 130 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:11:5 ───
+    │
+ 11 │ ╭     fun conditional_abort(x: u64, y: u64): u64 {
+ 12 │ │         if (x == 1) {
+ 13 │ │             abort 2
+ 14 │ │         };
+ 15 │ │         if (y == 2) {
+ 16 │ │             abort 3
+ 17 │ │         };
+ 18 │ │         // This one can also abort on overflow, with execution failure (code = -1).
+ 19 │ │         x + y
+ 20 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:29:5 ───
+    │
+ 29 │ ╭     fun conditional_abort_invalid(x: u64, y: u64): u64 {
+ 30 │ │         if (x == 1) {
+ 31 │ │             abort 2
+ 32 │ │         };
+ 33 │ │         if (y == 2) {
+ 34 │ │             abort 3
+ 35 │ │         };
+ 36 │ │         x
+ 37 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:45:5 ───
+    │
+ 45 │ ╭     fun exec_failure_invalid(x: u64): u64 {
+ 46 │ │         10 / x
+ 47 │ │     }
+    │ ╰─────^
+    │

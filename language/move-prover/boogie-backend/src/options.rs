@@ -1,7 +1,11 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
+use itertools::Itertools;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 
 /// Default flags passed to boogie. Additional flags will be added to this via the -B option.
 const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
@@ -11,6 +15,10 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-enhancedErrorMessages:1",
     "-monomorphize",
 ];
+
+const MIN_BOOGIE_VERSION: &str = "2.8.29";
+const MIN_Z3_VERSION: &str = "4.8.9";
+const EXPECTED_CVC4_VERSION: &str = "aac53f51";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum VectorTheory {
@@ -205,11 +213,92 @@ impl BoogieOptions {
 
     /// Adjust a timeout value, given in seconds, for the runtime environment.
     pub fn adjust_timeout(&self, time: usize) -> usize {
-        // If running on a Linux flavor as in Ci, add 100% to the timeout for added
+        // If env var MVP_TEST_ON_CI is set, add 100% to the timeout for added
         // robustness against flakiness.
-        match std::env::consts::OS {
-            "linux" | "freebsd" | "openbsd" => usize::saturating_add(time, time),
-            _ => time,
+        if std::env::var("MVP_TEST_ON_CI").unwrap_or_else(|_| "".into()) == "1" {
+            usize::saturating_add(time, time)
+        } else {
+            time
         }
+    }
+
+    /// Checks whether the expected tool versions are installed in the environment.
+    pub fn check_tool_versions(&self) -> anyhow::Result<()> {
+        if !self.boogie_exe.is_empty() {
+            let version = Self::get_version(
+                "boogie",
+                &self.boogie_exe,
+                &["-version"],
+                r"version ([0-9.]*)",
+            )?;
+            Self::check_version_is_greater("boogie", &version, MIN_BOOGIE_VERSION)?;
+        }
+        if !self.z3_exe.is_empty() && !self.use_cvc4 {
+            let version =
+                Self::get_version("z3", &self.z3_exe, &["--version"], r"version ([0-9.]*)")?;
+            Self::check_version_is_greater("z3", &version, MIN_Z3_VERSION)?;
+        }
+        if !self.cvc4_exe.is_empty() && self.use_cvc4 {
+            // Currently there is no metric version but a github hash we need to check
+            let version = Self::get_version(
+                "cvc4",
+                &self.cvc4_exe,
+                &["--version"],
+                r"git master ([0-9a-f]*)",
+            )?;
+            if version != EXPECTED_CVC4_VERSION {
+                return Err(anyhow!(
+                    "expected git hash {} but found {} for `cvc4`",
+                    EXPECTED_CVC4_VERSION,
+                    version
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn get_version(tool: &str, prog: &str, args: &[&str], regex: &str) -> anyhow::Result<String> {
+        let out = match Command::new(prog).args(args).output() {
+            Ok(out) => String::from_utf8_lossy(&out.stdout).to_string(),
+            Err(msg) => {
+                return Err(anyhow!(
+                    "cannot execute `{}` to obtain version of `{}`: {}",
+                    prog,
+                    tool,
+                    msg.to_string()
+                ))
+            }
+        };
+        if let Some(cap) = Regex::new(regex).unwrap().captures(&out) {
+            Ok(cap[1].to_string())
+        } else {
+            Err(anyhow!("cannot extract version from `{}`", prog))
+        }
+    }
+
+    fn check_version_is_greater(tool: &str, given: &str, expected: &str) -> anyhow::Result<()> {
+        let given_parts = given.split('.').collect_vec();
+        let expected_parts = expected.split('.').collect_vec();
+        if given_parts.len() < expected_parts.len() {
+            return Err(anyhow!(
+                "version strings {} and {} for `{}` cannot be compared",
+                given,
+                expected,
+                tool,
+            ));
+        }
+        for (g, e) in given_parts.into_iter().zip(expected_parts.into_iter()) {
+            let gn = g.parse::<usize>()?;
+            let en = e.parse::<usize>()?;
+            if gn < en {
+                return Err(anyhow!(
+                    "expected at least version {} but found {} for `{}`",
+                    expected,
+                    given,
+                    tool
+                ));
+            }
+        }
+        Ok(())
     }
 }

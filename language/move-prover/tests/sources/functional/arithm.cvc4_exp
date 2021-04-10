@@ -1,0 +1,200 @@
+Move prover returns: exiting with boogie verification errors
+error: unexpected boogie output: `Prover error: Unexpected prover response getting model: (() (define-fu ..`
+
+   ┌── <unknown>:1:1 ───
+   │
+ 1 │ <unknown>
+   │ ^^^^^^^^^
+   │
+
+error: abort not covered by any of the `aborts_if` clauses
+
+     ┌── tests/sources/functional/arithm.move:128:5 ───
+     │
+ 128 │ ╭     spec fun div_by_zero_u64_incorrect {
+ 129 │ │         aborts_if false;
+ 130 │ │     }
+     │ ╰─────^
+     ·
+ 126 │         x / y
+     │           - abort happened here
+     │
+     =     at tests/sources/functional/arithm.move:125: div_by_zero_u64_incorrect
+     =     at tests/sources/functional/arithm.move:126: div_by_zero_u64_incorrect
+     =         ABORTED
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/arithm.move:69:5 ───
+    │
+ 69 │ ╭     fun f(x: u64) : u64 {
+ 70 │ │         x+1
+ 71 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/arithm.move:77:5 ───
+    │
+ 77 │ ╭     fun g(x: u64) : u64 {
+ 78 │ │         x+2
+ 79 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/arithm.move:85:5 ───
+    │
+ 85 │ ╭     fun h(b: bool): u64 {
+ 86 │ │         let x: u64 = 3;
+ 87 │ │         let y: u64;
+ 88 │ │         if (b) y=f(x) else y=g(x);
+ 89 │ │         if (b && y != 4) abort 4;
+ 90 │ │         if (!b && y != 5) abort 5;
+ 91 │ │         y
+ 92 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/arithm.move:36:2 ───
+    │
+ 36 │ ╭     fun multiple_ops(x: u64, y: u64, z: u64): u64 {
+ 37 │ │ 		x + y * z
+ 38 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:185:5 ───
+     │
+ 185 │ ╭     fun overflow_u128_add(x: u128, y: u128): u128 {
+ 186 │ │         x + y
+ 187 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:177:5 ───
+     │
+ 177 │ ╭     fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
+ 178 │ │         x + y
+ 179 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:236:5 ───
+     │
+ 236 │ ╭     fun overflow_u128_mul(x: u128, y: u128): u128 {
+ 237 │ │         x * y
+ 238 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:229:5 ───
+     │
+ 229 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
+ 230 │ │         x * y
+ 231 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:169:5 ───
+     │
+ 169 │ ╭     fun overflow_u64_add(x: u64, y: u64): u64 {
+ 170 │ │         x + y
+ 171 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:161:5 ───
+     │
+ 161 │ ╭     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
+ 162 │ │         x + y
+ 163 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:221:5 ───
+     │
+ 221 │ ╭     fun overflow_u64_mul(x: u64, y: u64): u64 {
+ 222 │ │         x * y
+ 223 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:214:5 ───
+     │
+ 214 │ ╭     fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
+ 215 │ │         x * y
+ 216 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:153:5 ───
+     │
+ 153 │ ╭     fun overflow_u8_add(x: u8, y: u8): u8 {
+ 154 │ │         x + y
+ 155 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:145:5 ───
+     │
+ 145 │ ╭     fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
+ 146 │ │         x + y
+ 147 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:206:5 ───
+     │
+ 206 │ ╭     fun overflow_u8_mul(x: u8, y: u8): u8 {
+ 207 │ │         x * y
+ 208 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:198:5 ───
+     │
+ 198 │ ╭     fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
+ 199 │ │         x * y
+ 200 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/arithm.move:103:5 ───
+     │
+ 103 │ ╭     fun underflow(): u64 {
+ 104 │ │         let x = 0;
+ 105 │ │         x - 1
+ 106 │ │     }
+     │ ╰─────^
+     │

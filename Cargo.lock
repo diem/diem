@@ -4443,6 +4443,7 @@ dependencies = [
  "tokio",
  "toml",
  "vm",
+ "walkdir",
 ]
 
 [[package]]

@@ -1,0 +1,181 @@
+Move prover returns: exiting with boogie verification errors
+error: unexpected boogie output: `Prover error: Unexpected prover response getting model: (() (define-fu ..`
+
+   ┌── <unknown>:1:1 ───
+   │
+ 1 │ <unknown>
+   │ ^^^^^^^^^
+   │
+
+error: function does not abort under this condition
+
+    ┌── tests/sources/functional/aborts_if.move:35:9 ───
+    │
+ 35 │         aborts_if _x <= _y;
+    │         ^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/aborts_if.move:32: abort2_incorrect
+    =     at tests/sources/functional/aborts_if.move:33: abort2_incorrect
+    =     at tests/sources/functional/aborts_if.move:35
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:39:5 ───
+    │
+ 39 │ ╭     fun abort3(_x: u64, _y: u64) {
+ 40 │ │         abort 1
+ 41 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:47:5 ───
+    │
+ 47 │ ╭     fun abort4_incorrect(x: u64, y: u64) {
+ 48 │ │         if (x > y) abort 1
+ 49 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:56:5 ───
+    │
+ 56 │ ╭     fun abort5_incorrect(x: u64, y: u64) {
+ 57 │ │         if (x <= y) abort 1
+ 58 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:64:5 ───
+    │
+ 64 │ ╭     fun abort6_incorrect(x: u64, y: u64) {
+ 65 │ │         if (x < y) abort 1
+ 66 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:162:5 ───
+     │
+ 162 │ ╭     fun abort_1() {
+ 163 │ │         abort 1
+ 164 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:127:5 ───
+     │
+ 127 │ ╭     fun abort_at_2_or_3(x: u64) {
+ 128 │ │         if (x == 2 || x == 3) abort 1;
+ 129 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:145:5 ───
+     │
+ 145 │ ╭     fun abort_at_2_or_3_spec_incorrect(x: u64) {
+ 146 │ │         if (x == 2 || x == 3) abort 1;
+ 147 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:154:5 ───
+     │
+ 154 │ ╭     fun abort_at_2_or_3_strict_incorrect(x: u64) {
+ 155 │ │         if (x == 2 || x == 3) abort 1;
+ 156 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:136:5 ───
+     │
+ 136 │ ╭     fun abort_at_2_or_3_total_incorrect(x: u64) {
+ 137 │ │         if (x == 2 || x == 3) abort 1;
+ 138 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:170:5 ───
+     │
+ 170 │ ╭     fun aborts_if_with_code(x: u64) {
+ 171 │ │         if (x == 2 || x == 3) abort_1();
+ 172 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:77:5 ───
+    │
+ 77 │ ╭     fun multi_abort1(x: u64, y: u64) {
+ 78 │ │         if (x <= y) abort 1
+ 79 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:86:5 ───
+    │
+ 86 │ ╭     fun multi_abort2_incorrect(x: u64, y: u64) {
+ 87 │ │         if (x < y) abort 1
+ 88 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:95:5 ───
+    │
+ 95 │ ╭     fun multi_abort3_incorrect(_x: u64, _y: u64) {
+ 96 │ │         abort 1
+ 97 │ │     }
+    │ ╰─────^
+    │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:104:5 ───
+     │
+ 104 │ ╭     fun multi_abort4(_x: u64, _y: u64) {
+ 105 │ │         abort 1
+ 106 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+     ┌── tests/sources/functional/aborts_if.move:113:5 ───
+     │
+ 113 │ ╭     fun multi_abort5_incorrect(x: u64) {
+ 114 │ │         if (x == 0) {
+ 115 │ │             abort 1
+ 116 │ │         };
+ 117 │ │     }
+     │ ╰─────^
+     │
+
+error: verification inconclusive
+
+    ┌── tests/sources/functional/aborts_if.move:12:5 ───
+    │
+ 12 │ ╭     fun no_aborts_if(_x: u64, _y: u64) {
+ 13 │ │         abort 1
+ 14 │ │     }
+    │ ╰─────^
+    │
