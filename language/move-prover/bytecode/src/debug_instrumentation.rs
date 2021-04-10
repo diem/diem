@@ -16,7 +16,7 @@ use crate::{
     stackless_bytecode::{Bytecode, Operation},
 };
 
-use move_model::model::FunctionEnv;
+use move_model::{exp_generator::ExpGenerator, model::FunctionEnv};
 use std::collections::BTreeSet;
 
 pub struct DebugInstrumenter {}

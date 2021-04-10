@@ -11,6 +11,7 @@ use crate::{
 };
 use move_model::{
     ast::{self, TempIndex},
+    exp_generator::ExpGenerator,
     model::FunctionEnv,
 };
 use std::collections::{BTreeMap, BTreeSet};

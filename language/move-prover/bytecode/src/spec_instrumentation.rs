@@ -23,13 +23,16 @@ use crate::{
     livevar_analysis::LiveVarAnalysisProcessor,
     options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
-    spec_translator::{SpecTranslator, TranslatedSpec},
     stackless_bytecode::{
         AbortAction, AssignKind, AttrId, Bytecode, HavocKind, Label, Operation, PropKind,
     },
     usage_analysis, verification_analysis,
 };
-use move_model::ast::QuantKind;
+use move_model::{
+    ast::QuantKind,
+    exp_generator::ExpGenerator,
+    spec_translator::{SpecTranslator, TranslatedSpec},
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
@@ -146,7 +149,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
 }
 
 struct Instrumenter<'a> {
-    options: &'a ProverOptions,
+    _options: &'a ProverOptions,
     builder: FunctionDataBuilder<'a>,
     spec: TranslatedSpec,
     ret_locals: Vec<TempIndex>,
@@ -187,7 +190,6 @@ impl<'a> Instrumenter<'a> {
         // Translate the specification. This deals with elimination of `old(..)` expressions,
         // as well as replaces `result_n` references with `ret_locals`.
         let spec = SpecTranslator::translate_fun_spec(
-            options,
             false,
             &mut builder,
             fun_env,
@@ -198,7 +200,7 @@ impl<'a> Instrumenter<'a> {
 
         // Create and run the instrumenter.
         let mut instrumenter = Instrumenter {
-            options,
+            _options: options,
             builder,
             spec,
             ret_locals,
@@ -386,7 +388,6 @@ impl<'a> Instrumenter<'a> {
         let callee_env = env.get_module(mid).into_function(fid);
         let callee_opaque = callee_env.is_opaque();
         let mut callee_spec = SpecTranslator::translate_fun_spec(
-            self.options,
             true,
             &mut self.builder,
             &callee_env,

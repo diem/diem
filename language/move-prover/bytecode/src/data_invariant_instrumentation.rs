@@ -21,6 +21,7 @@ use crate::{
 use move_model::{
     ast,
     ast::{ConditionKind, Exp, QuantKind, TempIndex},
+    exp_generator::ExpGenerator,
     exp_rewriter::ExpRewriter,
     model::{FunctionEnv, Loc, StructEnv},
     ty::Type,

@@ -8,38 +8,36 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 
-use move_model::{
-    ast,
-    ast::{Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, TempIndex},
-    model::{FunctionEnv, Loc, NodeId, QualifiedId, SpecVarId, StructId},
-    pragmas::{ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP},
+use crate::{
+    ast::{
+        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, MemoryLabel, Operation,
+        TempIndex,
+    },
+    exp_generator::ExpGenerator,
+    model::{FunctionEnv, GlobalId, Loc, NodeId, QualifiedId, SpecVarId, StructId},
+    pragmas::{
+        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
+        CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
+    },
     symbol::Symbol,
-    ty::Type,
-};
-
-use crate::{function_data_builder::FunctionDataBuilder, options::ProverOptions};
-use move_model::{
-    model::GlobalId,
-    pragmas::{CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP},
-    ty::PrimitiveType,
+    ty::{PrimitiveType, Type},
 };
 
 /// A helper which reduces specification conditions to assume/assert statements.
-pub struct SpecTranslator<'a, 'b> {
-    pub options: &'b ProverOptions,
-    /// The builder for the function we are currently translating. Note this is not
-    /// necessarily the same as the function for which we translate specs.
-    pub builder: &'b mut FunctionDataBuilder<'a>,
+pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
+    /// The builder for the function we are currently translating.
+    /// Note this is not necessarily the same as the function for which we translate specs.
+    /// The builder must implement the expression generation trait.
+    builder: &'b mut T,
     /// The function for which we translate specifications.
-    pub fun_env: &'b FunctionEnv<'a>,
+    fun_env: &'b FunctionEnv<'a>,
     /// The type instantiation of the function.
     type_args: &'b [Type],
     /// An optional substitution for parameters of the above function.
     param_substitution: Option<&'b [TempIndex]>,
     /// Whether we translate the expression in a post state.
     in_post_state: bool,
-    /// An optional substitution for parameters
-    /// A substitution for return vales.
+    /// An optional substitution for return vales.
     ret_locals: &'b [TempIndex],
     /// A set of locals which are declared by outer block, lambda, or quant expressions.
     shadowed: Vec<BTreeSet<Symbol>>,
@@ -66,11 +64,8 @@ pub struct TranslatedSpec {
 impl TranslatedSpec {
     /// Creates a boolean expression which describes the overall abort condition. This is
     /// a disjunction of the individual abort conditions.
-    pub fn aborts_condition(&self, builder: &FunctionDataBuilder<'_>) -> Option<Exp> {
-        builder.mk_join_bool(
-            ast::Operation::Or,
-            self.aborts.iter().map(|(_, e, _)| e.clone()),
-        )
+    pub fn aborts_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Option<Exp> {
+        builder.mk_join_bool(Operation::Or, self.aborts.iter().map(|(_, e, _)| e.clone()))
     }
 
     /// Creates a boolean expression which describes the overall condition which constraints
@@ -90,20 +85,20 @@ impl TranslatedSpec {
     /// that still allows any other member of the disjunction to make the overall condition true.
     /// Specifically, if someone specifies `aborts_if P with C1; aborts_with C2`, then even if
     /// P is true, C2 is allowed as an abort code.
-    pub fn aborts_code_condition(
+    pub fn aborts_code_condition<'a, T: ExpGenerator<'a>>(
         &self,
-        builder: &FunctionDataBuilder<'_>,
+        builder: &T,
         actual_code: &Exp,
     ) -> Option<Exp> {
         let eq_code = |e: &Exp| builder.mk_eq(e.clone(), actual_code.clone());
         builder.mk_join_bool(
-            ast::Operation::Or,
+            Operation::Or,
             self.aborts
                 .iter()
                 .map(|(_, exp, code)| {
                     builder
                         .mk_join_opt_bool(
-                            ast::Operation::And,
+                            Operation::And,
                             Some(exp.clone()),
                             code.as_ref().map(|c| eq_code(c)),
                         )
@@ -125,9 +120,9 @@ impl TranslatedSpec {
     }
 
     /// Return an iterator of effective pre conditions.
-    pub fn pre_conditions(
+    pub fn pre_conditions<'a, T: ExpGenerator<'a>>(
         &self,
-        _builder: &FunctionDataBuilder<'_>,
+        _builder: &T,
     ) -> impl Iterator<Item = (Loc, Exp)> + '_ {
         self.pre.iter().cloned()
     }
@@ -137,37 +132,37 @@ impl TranslatedSpec {
     /// error reporting we construct incrementally multiple EventStoreIncludes expressions with some
     /// redundancy for each individual `emits, so we the see the exact failure at the right
     /// emit condition.
-    pub fn emits_conditions(&self, builder: &FunctionDataBuilder<'_>) -> Vec<(Loc, Exp)> {
+    pub fn emits_conditions<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Vec<(Loc, Exp)> {
         let es_ty = Type::Primitive(PrimitiveType::EventStore);
         let mut result = vec![];
         for i in 0..self.emits.len() {
             let loc = self.emits[i].0.clone();
             let es = self.build_event_store(
                 builder,
-                builder.mk_call(&es_ty, ast::Operation::EmptyEventStore, vec![]),
+                builder.mk_call(&es_ty, Operation::EmptyEventStore, vec![]),
                 &self.emits[0..i + 1],
             );
             result.push((
                 loc,
-                builder.mk_bool_call(ast::Operation::EventStoreIncludes, vec![es]),
+                builder.mk_bool_call(Operation::EventStoreIncludes, vec![es]),
             ));
         }
         result
     }
 
-    pub fn emits_completeness_condition(&self, builder: &FunctionDataBuilder<'_>) -> Exp {
+    pub fn emits_completeness_condition<'a, T: ExpGenerator<'a>>(&self, builder: &T) -> Exp {
         let es_ty = Type::Primitive(PrimitiveType::EventStore);
         let es = self.build_event_store(
             builder,
-            builder.mk_call(&es_ty, ast::Operation::EmptyEventStore, vec![]),
+            builder.mk_call(&es_ty, Operation::EmptyEventStore, vec![]),
             &self.emits,
         );
-        builder.mk_bool_call(ast::Operation::EventStoreIncludedIn, vec![es])
+        builder.mk_bool_call(Operation::EventStoreIncludedIn, vec![es])
     }
 
-    fn build_event_store(
+    fn build_event_store<'a, T: ExpGenerator<'a>>(
         &self,
-        builder: &FunctionDataBuilder<'_>,
+        builder: &T,
         es: Exp,
         emits: &[(Loc, Exp, Exp, Option<Exp>)],
     ) -> Exp {
@@ -180,13 +175,13 @@ impl TranslatedSpec {
                 args.push(c.clone())
             }
             let es_ty = Type::Primitive(PrimitiveType::EventStore);
-            let extend_exp = builder.mk_call(&es_ty, ast::Operation::ExtendEventStore, args);
+            let extend_exp = builder.mk_call(&es_ty, Operation::ExtendEventStore, args);
             self.build_event_store(builder, extend_exp, &emits[1..])
         }
     }
 }
 
-impl<'a, 'b> SpecTranslator<'a, 'b> {
+impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
     /// Translates the specification of function `fun_env`. This can happen for a call of the
     /// function or for its definition (parameter `for_call`). This will process all the
     /// conditions found in the spec block of the function, dealing with references to `old(..)`,
@@ -197,16 +192,14 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
     /// The later two parameters are used to instantiate a function specification for a given
     /// call context.
     pub fn translate_fun_spec(
-        options: &'b ProverOptions,
         for_call: bool,
-        builder: &'b mut FunctionDataBuilder<'a>,
+        builder: &'b mut T,
         fun_env: &'b FunctionEnv<'a>,
         type_args: &[Type],
         param_substitution: Option<&'b [TempIndex]>,
         ret_locals: &'b [TempIndex],
     ) -> TranslatedSpec {
         let mut translator = SpecTranslator {
-            options,
             builder,
             fun_env,
             type_args,
@@ -223,15 +216,13 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
     /// Translates a set of invariants. If there are any references to `old(...)` they
     /// will be rewritten and respective memory/spec var saves will be generated.
     pub fn translate_invariants(
-        options: &'b ProverOptions,
-        builder: &'b mut FunctionDataBuilder<'a>,
+        builder: &'b mut T,
         invariants: impl Iterator<Item = &'b GlobalInvariant>,
     ) -> TranslatedSpec {
-        let fun_env = builder.fun_env;
+        let fun_env = builder.function_env().clone();
         let mut translator = SpecTranslator {
-            options,
             builder,
-            fun_env,
+            fun_env: &fun_env,
             type_args: &[],
             param_substitution: Default::default(),
             ret_locals: Default::default(),
@@ -365,7 +356,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
     }
 
     fn translate_exp(&mut self, exp: &Exp, in_old: bool) -> Exp {
-        use move_model::ast::{Exp::*, Operation::*};
+        use crate::ast::{Exp::*, Operation::*};
         match exp {
             Temporary(node_id, idx) => {
                 // Compute the effective index.
@@ -384,17 +375,9 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                 };
                 // The type of this temporary might be different than the node's type w.r.t.
                 // references. Create a new node id with the effective type.
-                let effective_type = self
-                    .builder
-                    .data
-                    .local_types
-                    .get(effective_idx)
-                    .expect("type expected");
+                let effective_type = self.builder.get_local_type(effective_idx);
                 let loc = self.builder.global_env().get_node_loc(*node_id);
-                let node_id = self
-                    .builder
-                    .global_env()
-                    .new_node(loc, effective_type.clone());
+                let node_id = self.builder.global_env().new_node(loc, effective_type);
                 Temporary(self.instantiate(node_id), effective_idx)
             }
             SpecVar(node_id, mid, vid, None) if in_old => SpecVar(
@@ -455,8 +438,9 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
                     has_local_var = has_local_var || matches!(e, Exp::LocalVar(..))
                 });
                 if has_local_var {
-                    self.builder.global_env().error(
-                        &self.builder.global_env().get_node_loc(*id),
+                    let global_env = self.builder.global_env();
+                    global_env.error(
+                        &global_env.get_node_loc(*id),
                         "`TRACE(..)` function cannot be used for expressions depending\
                              on quantified variables or spec function parameters",
                     )
@@ -624,7 +608,7 @@ impl<'a, 'b> SpecTranslator<'a, 'b> {
         } else {
             let saved = self
                 .builder
-                .new_temp(self.builder.data.local_types[idx].skip_reference().clone());
+                .new_temp(self.builder.get_local_type(idx).skip_reference().clone());
             self.result.saved_params.insert(idx, saved);
             saved
         }
