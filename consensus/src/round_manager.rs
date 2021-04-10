@@ -35,7 +35,6 @@ use consensus_types::{
 };
 use diem_infallible::checked;
 use diem_logger::prelude::*;
-use diem_trace::prelude::*;
 use diem_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 use fail::fail_point;
 #[cfg(test)]
@@ -281,9 +280,6 @@ impl RoundManager {
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
         observe_block(signed_proposal.timestamp_usecs(), BlockStage::SIGNED);
-        self.txn_manager.trace_transactions(&signed_proposal);
-        trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
-        trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
         debug!(self.new_log(LogEvent::Propose), "{}", signed_proposal);
         // return proposal
         Ok(ProposalMsg::new(
@@ -299,7 +295,6 @@ impl RoundManager {
         fail_point!("consensus::process_proposal_msg", |_| {
             Err(anyhow::anyhow!("Injected error in process_proposal_msg"))
         });
-        trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
 
         observe_block(
             proposal_msg.proposal().timestamp_usecs(),
@@ -552,7 +547,6 @@ impl RoundManager {
     /// * save the updated state to consensus DB
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     async fn execute_and_vote(&mut self, proposed_block: Block) -> anyhow::Result<Vote> {
-        trace_code_block!("round_manager::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
@@ -610,7 +604,6 @@ impl RoundManager {
         fail_point!("consensus::process_vote_msg", |_| {
             Err(anyhow::anyhow!("Injected error in process_vote_msg"))
         });
-        trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if self
             .ensure_round_and_sync_up(

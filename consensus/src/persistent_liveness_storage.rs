@@ -9,7 +9,6 @@ use consensus_types::{
 use diem_config::config::NodeConfig;
 use diem_crypto::HashValue;
 use diem_logger::prelude::*;
-use diem_trace::prelude::*;
 use diem_types::{
     block_info::Round, epoch_change::EpochChangeProof, ledger_info::LedgerInfo,
     transaction::Version,
@@ -285,10 +284,6 @@ impl StorageWriteProxy {
 
 impl PersistentLivenessStorage for StorageWriteProxy {
     fn save_tree(&self, blocks: Vec<Block>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
-        let mut trace_batch = vec![];
-        for block in blocks.iter() {
-            trace_code_block!("consensusdb::save_tree", {"block", block.id()}, trace_batch);
-        }
         Ok(self
             .db
             .save_blocks_and_quorum_certificates(blocks, quorum_certs)?)

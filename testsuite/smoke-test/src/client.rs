@@ -7,11 +7,7 @@ use crate::test_utils::{
     setup_swarm_and_client_proxy,
 };
 use cli::client_proxy::ClientProxy;
-use debug_interface::NodeDebugClient;
-use diem_trace::trace::trace_node;
-use diem_types::{
-    account_config::testnet_dd_account_address, ledger_info::LedgerInfo, waypoint::Waypoint,
-};
+use diem_types::{ledger_info::LedgerInfo, waypoint::Waypoint};
 
 #[test]
 fn test_create_mint_transfer_block_metadata() {
@@ -177,33 +173,6 @@ fn test_concurrent_transfers_single_node() {
         vec![(31.0, "XUS".to_string())],
         client.get_balances(&["b", "1"]).unwrap(),
     ));
-}
-
-#[test]
-fn test_trace() {
-    let (env, mut client) = setup_swarm_and_client_proxy(1, 0);
-
-    let port = env.validator_swarm.get_node(0).unwrap().debug_port();
-    let mut debug_client = NodeDebugClient::new("localhost", port);
-
-    client.create_next_account(false).unwrap();
-    client
-        .mint_coins(&["mintb", "0", "100", "XUS"], true)
-        .unwrap();
-
-    client.create_next_account(false).unwrap();
-    client
-        .mint_coins(&["mintb", "1", "10", "XUS"], true)
-        .unwrap();
-    client
-        .transfer_coins(&["t", "0", "1", "1", "XUS"], false)
-        .unwrap();
-
-    let events = debug_client.get_events().expect("Failed to get events");
-    let txn_node = format!("txn::{}::{}", testnet_dd_account_address(), 1);
-    println!("Tracing {}", txn_node);
-
-    trace_node(&events[..], &txn_node);
 }
 
 /// This helper function creates 3 new accounts, mints funds, transfers funds

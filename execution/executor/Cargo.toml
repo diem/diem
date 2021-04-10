@@ -26,7 +26,6 @@ diem-metrics = { path = "../../common/metrics" }
 diem-infallible = { path = "../../common/infallible" }
 diem-secure-net = { path = "../../secure/net" }
 diem-state-view = { path = "../../storage/state-view" }
-diem-trace = { path = "../../common/trace" }
 diem-types = { path = "../../types" }
 move-core-types = { path = "../../language/move-core/types" }
 diem-vm = { path = "../../language/diem-vm" }

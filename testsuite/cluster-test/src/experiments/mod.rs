@@ -48,10 +48,7 @@ use crate::{
     tx_emitter::{EmitJobRequest, TxEmitter},
 };
 
-use crate::{
-    cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
-    health::TraceTail,
-};
+use crate::cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm};
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use structopt::{clap::AppSettings, StructOpt};
@@ -72,7 +69,6 @@ pub trait ExperimentParam {
 
 pub struct Context<'a> {
     pub tx_emitter: &'a mut TxEmitter,
-    pub trace_tail: &'a mut TraceTail,
     pub prometheus: &'a Prometheus,
     pub cluster_builder: &'a mut ClusterBuilder,
     pub cluster_builder_params: &'a ClusterBuilderParams,
@@ -88,7 +84,6 @@ pub struct Context<'a> {
 impl<'a> Context<'a> {
     pub fn new(
         tx_emitter: &'a mut TxEmitter,
-        trace_tail: &'a mut TraceTail,
         prometheus: &'a Prometheus,
         cluster_builder: &'a mut ClusterBuilder,
         cluster_builder_params: &'a ClusterBuilderParams,
@@ -101,7 +96,6 @@ impl<'a> Context<'a> {
     ) -> Self {
         Context {
             tx_emitter,
-            trace_tail,
             prometheus,
             cluster_builder,
             cluster_builder_params,

@@ -16,7 +16,6 @@ use core::future::Future;
 use diem_config::config::RoleType;
 use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_mempool::MempoolClientSender;
-use diem_trace::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
     account_config::{
@@ -227,8 +226,6 @@ impl JsonRpcRequest {
 /// Submits transaction to full node
 async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<()> {
     let transaction = request.parse_signed_transaction(0, "data")?;
-
-    trace_code_block!("json-rpc::submit", {"txn", transaction.sender(), transaction.sequence_number()});
 
     let (req_sender, callback) = oneshot::channel();
 

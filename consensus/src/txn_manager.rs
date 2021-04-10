@@ -9,7 +9,6 @@ use diem_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
 use diem_metrics::monitor;
-use diem_trace::prelude::*;
 use diem_types::transaction::TransactionStatus;
 use executor_types::StateComputeResult;
 use fail::fail_point;
@@ -171,13 +170,5 @@ impl TxnManager for MempoolProxy {
         } else {
             Ok(())
         }
-    }
-
-    fn trace_transactions(&self, block: &Block) {
-        if let Some(txns) = block.payload() {
-            for txn in txns.iter() {
-                trace_edge!("pull_txns", {"txn", txn.sender(), txn.sequence_number()}, {"block", block.id()});
-            }
-        };
     }
 }

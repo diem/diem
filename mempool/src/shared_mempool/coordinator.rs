@@ -21,7 +21,6 @@ use channel::diem_channel;
 use diem_config::{config::PeerNetworkId, network_id::NodeNetworkId};
 use diem_infallible::Mutex;
 use diem_logger::prelude::*;
-use diem_trace::prelude::*;
 use diem_types::{
     mempool_status::MempoolStatus, on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction, vm_status::DiscardedVMStatus,
@@ -108,7 +107,6 @@ async fn handle_client_event<V>(
 ) where
     V: TransactionValidation,
 {
-    trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
     // This timer measures how long it took for the bounded executor to *schedule* the
     // task.
     let _timer =

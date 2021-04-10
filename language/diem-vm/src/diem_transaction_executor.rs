@@ -18,7 +18,6 @@ use crate::{
 };
 use diem_logger::prelude::*;
 use diem_state_view::StateView;
-use diem_trace::prelude::*;
 use diem_types::{
     account_config,
     block_metadata::BlockMetadata,
@@ -629,8 +628,6 @@ impl DiemVM {
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
-        let mut current_block_id;
-        let mut execute_block_trace_guard = vec![];
         let mut should_restart = false;
 
         info!(
@@ -662,11 +659,6 @@ impl DiemVM {
                 result.push((VMStatus::Error(StatusCode::UNKNOWN_STATUS), txn_output));
                 debug!(log_context, "Retry after reconfiguration");
                 continue;
-            };
-            if let PreprocessedTransaction::BlockMetadata(block_metadata) = &txn {
-                execute_block_trace_guard.clear();
-                current_block_id = block_metadata.id();
-                trace_code_block!("diem_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
             };
             let (vm_status, output, sender) =
                 self.execute_single_transaction(txn, data_cache, &log_context)?;

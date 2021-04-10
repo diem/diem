@@ -15,7 +15,6 @@ use crate::{
 };
 use diem_config::config::NodeConfig;
 use diem_logger::prelude::*;
-use diem_trace::prelude::*;
 use diem_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},
@@ -58,7 +57,6 @@ impl Mempool {
         sequence_number: u64,
         is_rejected: bool,
     ) {
-        trace_event!("mempool:remove_transaction", {"txn", sender, sequence_number});
         trace!(
             LogSchema::new(LogEntry::RemoveTxn).txns(TxnsLog::new_txn(*sender, sequence_number)),
             is_rejected = is_rejected
@@ -111,7 +109,6 @@ impl Mempool {
         timeline_state: TimelineState,
         governance_role: GovernanceRole,
     ) -> MempoolStatus {
-        trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
             LogSchema::new(LogEntry::AddTxn)
                 .txns(TxnsLog::new_txn(txn.sender(), txn.sequence_number())),
@@ -185,7 +182,6 @@ impl Mempool {
             if seen_previous || account_sequence_number == Some(&seq) {
                 let ptr = TxnPointer::from(txn);
                 seen.insert(ptr);
-                trace_event!("mempool::get_block", {"txn", txn.address, txn.sequence_number});
                 result.push(ptr);
                 if (result.len() as u64) == batch_size {
                     break;

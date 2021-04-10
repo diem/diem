@@ -21,7 +21,6 @@ diem-crypto = { path = "../../crypto/crypto" }
 diem-logger = { path = "../../common/logger" }
 diem-metrics = { path = "../../common/metrics" }
 diem-state-view = { path = "../../storage/state-view" }
-diem-trace = { path = "../../common/trace" }
 diem-types = { path = "../../types" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }

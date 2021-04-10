@@ -34,7 +34,6 @@ use diem_crypto::{
 };
 use diem_logger::prelude::*;
 use diem_state_view::StateViewId;
-use diem_trace::prelude::*;
 use diem_types::{
     account_address::{AccountAddress, HashAccountAddress},
     account_state::AccountState,
@@ -770,7 +769,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             );
 
             let vm_outputs = {
-                trace_code_block!("executor::execute_block", {"block", block_id});
                 let _timer = DIEM_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
                 fail_point!("executor::vm_execute_block", |_| {
                     Err(Error::from(anyhow::anyhow!(
@@ -780,7 +778,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
 
-            trace_code_block!("executor::process_vm_outputs", {"block", block_id});
             let status: Vec<_> = vm_outputs
                 .iter()
                 .map(TransactionOutput::status)

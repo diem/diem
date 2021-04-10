@@ -44,7 +44,6 @@ diem-metrics = { path = "../common/metrics" }
 diem-infallible = { path = "../common/infallible" }
 diem-secure-storage = { path = "../secure/storage" }
 diem-temppath = { path = "../common/temppath" }
-diem-trace = { path = "../common/trace" }
 diem-types = { path = "../types" }
 diem-vm = { path = "../language/diem-vm" }
 diem-workspace-hack = { path = "../common/workspace-hack" }

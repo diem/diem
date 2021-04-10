@@ -17,7 +17,7 @@ pub use debug_interface_log_tail::DebugPortLogWorker;
 pub use fullnode_check::FullNodeHealthCheck;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
-pub use log_tail::{LogTail, TraceTail};
+pub use log_tail::LogTail;
 use std::{
     collections::{HashMap, HashSet},
     env, fmt,

@@ -30,7 +30,6 @@ members = [
     "common/subscription-service",
     "common/temppath",
     "common/time-service",
-    "common/trace",
     "common/workspace-hack",
     "config",
     "config/generate-key",
@@ -163,7 +162,6 @@ members = [
 #
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 default-members = [
-    "common/trace",
     "common/rate-limiter",
     "config/generate-key",
     "config/management/genesis",

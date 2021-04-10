@@ -881,7 +881,6 @@ dependencies = [
  "diem-secure-storage",
  "diem-swarm",
  "diem-time-service",
- "diem-trace",
  "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
@@ -995,7 +994,6 @@ dependencies = [
  "diem-metrics",
  "diem-secure-storage",
  "diem-temppath",
- "diem-trace",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -1745,7 +1743,6 @@ dependencies = [
  "diem-node",
  "diem-proptest-helpers",
  "diem-temppath",
- "diem-trace",
  "diem-transaction-builder",
  "diem-types",
  "diem-workspace-hack",
@@ -1916,7 +1913,6 @@ dependencies = [
  "diem-logger",
  "diem-metrics",
  "diem-proptest-helpers",
- "diem-trace",
  "diem-types",
  "diem-workspace-hack",
  "enum_dispatch",
@@ -2011,7 +2007,6 @@ dependencies = [
  "diem-secure-storage",
  "diem-temppath",
  "diem-time-service",
- "diem-trace",
  "diem-types",
  "diem-vm",
  "diem-workspace-hack",
@@ -2235,23 +2230,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diem-trace"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "diem-logger",
- "diem-metrics",
- "diem-workspace-hack",
- "once_cell",
- "reqwest",
- "serde",
- "serde_json",
- "structopt 0.3.21",
- "tokio",
-]
-
-[[package]]
 name = "diem-transaction-builder"
 version = "0.0.1"
 dependencies = [
@@ -2367,7 +2345,6 @@ dependencies = [
  "diem-logger",
  "diem-metrics",
  "diem-state-view",
- "diem-trace",
  "diem-types",
  "diem-workspace-hack",
  "fail",
@@ -2863,7 +2840,6 @@ dependencies = [
  "diem-secure-net",
  "diem-state-view",
  "diem-temppath",
- "diem-trace",
  "diem-transaction-builder",
  "diem-types",
  "diem-vm",
@@ -6786,7 +6762,6 @@ dependencies = [
  "diem-swarm",
  "diem-temppath",
  "diem-time-service",
- "diem-trace",
  "diem-transaction-builder",
  "diem-transaction-replay",
  "diem-types",

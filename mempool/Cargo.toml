@@ -30,7 +30,6 @@ diem-logger = { path = "../common/logger" }
 diem-metrics = { path = "../common/metrics" }
 diem-infallible = { path = "../common/infallible" }
 diem-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
-diem-trace = { path = "../common/trace" }
 diem-types = { path = "../types" }
 diem-workspace-hack = { path = "../common/workspace-hack" }
 mirai-annotations = "1.10.1"

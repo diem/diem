@@ -203,9 +203,6 @@ fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> No
     .next()
     .unwrap();
 
-    diem_trace::set_diem_trace(&config.debug_interface.diem_trace.sampling)
-        .expect("Failed to set diem trace sampling rate.");
-
     NodeDebugService::new(addr, logger)
 }
 

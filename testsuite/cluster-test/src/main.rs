@@ -21,7 +21,7 @@ use cluster_test::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
-    health::{DebugPortLogWorker, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
+    health::{DebugPortLogWorker, HealthCheckRunner, LogTail, PrintFailures},
     instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
@@ -132,7 +132,7 @@ pub async fn main() {
         return;
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
-        let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
+        let logs = DebugPortLogWorker::spawn_new(&util.cluster);
         let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
         let duration = Duration::from_secs(args.duration);
         exit_on_error(run_health_check(&logs, &mut health_check_runner, duration).await);
@@ -266,7 +266,6 @@ struct BasicSwarmUtil {
 
 struct ClusterTestRunner {
     logs: LogTail,
-    trace_tail: TraceTail,
     cluster_builder: ClusterBuilder,
     cluster_builder_params: ClusterBuilderParams,
     cluster: Cluster,
@@ -493,7 +492,7 @@ impl ClusterTestRunner {
             .await
             .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
         let log_tail_started = Instant::now();
-        let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster);
+        let logs = DebugPortLogWorker::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
         info!(
             "Log tail thread started in {} ms",
@@ -528,7 +527,6 @@ impl ClusterTestRunner {
             };
         Ok(Self {
             logs,
-            trace_tail,
             cluster_builder,
             cluster_builder_params,
             cluster,
@@ -706,7 +704,6 @@ impl ClusterTestRunner {
         let affected_validators = experiment.affected_validators();
         let mut context = Context::new(
             &mut self.tx_emitter,
-            &mut self.trace_tail,
             &self.prometheus,
             &mut self.cluster_builder,
             &self.cluster_builder_params,

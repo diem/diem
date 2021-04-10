@@ -44,7 +44,6 @@ diem-secure-storage = { path = "../../secure/storage", features = ["testing"] }
 diem-smoke-test-attribute = { path = "../smoke-test/attribute" }
 diem-swarm = { path = "../diem-swarm"}
 diem-temppath = { path = "../../common/temppath" }
-diem-trace = { path = "../../common/trace" }
 diem-events-fetcher = { path = "../../language/diem-tools/diem-events-fetcher" }
 diem-time-service = { path = "../../common/time-service", features = ["testing"] }
 diem-transaction-replay = { path = "../../language/diem-tools/transaction-replay" }
