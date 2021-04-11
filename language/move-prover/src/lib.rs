@@ -19,21 +19,10 @@ use bytecode::{
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
 use errmapgen::ErrmapGen;
-use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
-use move_lang::find_move_filenames;
 use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder};
-use once_cell::sync::Lazy;
-use regex::Regex;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs,
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use std::{fs, path::PathBuf, time::Instant};
 
 pub mod cli;
 mod pipelines;
@@ -53,7 +42,7 @@ pub fn run_move_prover<W: WriteColor>(
     let now = Instant::now();
 
     // Run the model builder.
-    let env = build_move_model(&options.move_sources, &options.move_deps, options.inv_v2)?;
+    let env = run_model_builder(&options.move_sources, &options.move_deps)?;
     let build_duration = now.elapsed();
     check_errors(&env, error_writer, "exiting with model building errors")?;
     if options.prover.report_warnings && env.has_warnings() {
@@ -225,174 +214,6 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
         res.add_processor(GlobalInvariantInstrumentationProcessor::new());
     }
     res
-}
-
-// Model Building
-// ==============
-
-// TODO: move this and related logic for determining sources into move-model crate. Also
-//   when doing this refactoring use the Move parser to analyze dependencies instead of
-//   scanning files with regular expressions.
-
-/// Build the move model. This collects transitive dependencies for move sources
-/// from the provided directory list.
-pub fn build_move_model(
-    move_sources: &[String],
-    dep_dirs: &[String],
-    use_inv_v2: bool,
-) -> anyhow::Result<GlobalEnv> {
-    let target_sources = find_move_filenames(move_sources, true)?;
-    let all_sources = collect_all_sources(
-        &target_sources,
-        &find_move_filenames(dep_dirs, true)?,
-        use_inv_v2,
-    )?;
-    let other_sources = remove_sources(&target_sources, all_sources);
-    debug!("parsing and checking sources");
-    let env: GlobalEnv = run_model_builder(target_sources, other_sources)?;
-    Ok(env)
-}
-
-/// Remove the target Move files from the list of files.
-fn remove_sources(sources: &[String], all_files: Vec<String>) -> Vec<String> {
-    let canonical_sources = sources
-        .iter()
-        .map(|s| canonicalize(s))
-        .collect::<BTreeSet<_>>();
-    all_files
-        .into_iter()
-        .filter(|d| !canonical_sources.contains(&canonicalize(d)))
-        .collect_vec()
-}
-
-/// Collect all the relevant Move sources among sources represented by `input deps`
-/// parameter. The resulting vector of sources includes target sources, dependencies
-/// of target sources, (recursive)friends of targets and dependencies, and
-/// dependencies of friends.
-fn collect_all_sources(
-    target_sources: &[String],
-    input_deps: &[String],
-    use_inv_v2: bool,
-) -> anyhow::Result<Vec<String>> {
-    let mut all_sources = target_sources.to_vec();
-    static DEP_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(?m)use\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
-    static NEW_FRIEND_REGEX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(?m)friend\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
-    static FRIEND_REGEX: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"(?m)pragma\s*friend\s*=\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap()
-    });
-
-    let target_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;
-    all_sources.extend(target_deps);
-
-    let friend_sources = calculate_deps(
-        &all_sources,
-        input_deps,
-        if use_inv_v2 {
-            &NEW_FRIEND_REGEX
-        } else {
-            &FRIEND_REGEX
-        },
-    )?;
-
-    all_sources.extend(friend_sources);
-
-    let friend_deps = calculate_deps(&all_sources, input_deps, &DEP_REGEX)?;
-    all_sources.extend(friend_deps);
-
-    Ok(all_sources)
-}
-
-/// Calculates transitive dependencies of the given Move sources. This function
-/// is also used to calculate transitive friends depending on the regex provided
-/// for extracting matches.
-fn calculate_deps(
-    sources: &[String],
-    input_deps: &[String],
-    regex: &Regex,
-) -> anyhow::Result<Vec<String>> {
-    let file_map = calculate_file_map(input_deps)?;
-    let mut deps = vec![];
-    let mut visited = BTreeSet::new();
-    for src in sources.iter() {
-        calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps, regex)?;
-    }
-    // Remove input sources from deps. They can end here because our dep analysis is an
-    // over-approximation and for example cannot distinguish between references inside
-    // and outside comments.
-    let mut deps = remove_sources(sources, deps);
-    // Sort deps by simple file name. Sorting is important because different orders
-    // caused by platform dependent ways how `calculate_deps_recursively` may return values, can
-    // cause different behavior of the SMT solver (butterfly effect). By using the simple file
-    // name we abstract from places where the sources live in the file system. Since Move has
-    // no namespaces and file names can be expected to be unique matching module/script names,
-    // this should work in most cases.
-    deps.sort_by(|a, b| {
-        let fa = PathBuf::from(a);
-        let fb = PathBuf::from(b);
-        Ord::cmp(fa.file_name().unwrap(), fb.file_name().unwrap())
-    });
-    Ok(deps)
-}
-
-fn canonicalize(s: &str) -> String {
-    match fs::canonicalize(s) {
-        Ok(p) => p.to_string_lossy().to_string(),
-        Err(_) => s.to_string(),
-    }
-}
-
-/// Recursively calculate dependencies.
-fn calculate_deps_recursively(
-    path: &Path,
-    file_map: &BTreeMap<String, PathBuf>,
-    visited: &mut BTreeSet<String>,
-    deps: &mut Vec<String>,
-    regex: &Regex,
-) -> anyhow::Result<()> {
-    if !visited.insert(path.to_string_lossy().to_string()) {
-        return Ok(());
-    }
-    debug!("including `{}`", path.display());
-    for dep in extract_matches(path, regex)? {
-        if let Some(dep_path) = file_map.get(&dep) {
-            let dep_str = dep_path.to_string_lossy().to_string();
-            if !deps.contains(&dep_str) {
-                deps.push(dep_str);
-                calculate_deps_recursively(dep_path.as_path(), file_map, visited, deps, regex)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Calculate a map of module names to files which define those modules.
-fn calculate_file_map(deps: &[String]) -> anyhow::Result<BTreeMap<String, PathBuf>> {
-    static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)module\s+(\w+)\s*\{").unwrap());
-    let mut module_to_file = BTreeMap::new();
-    for dep in deps {
-        let dep_path = PathBuf::from(dep);
-        for module in extract_matches(dep_path.as_path(), &*REX)? {
-            module_to_file.insert(module, dep_path.clone());
-        }
-    }
-    Ok(module_to_file)
-}
-
-/// Extracts matches out of some text file. `rex` must be a regular expression with one anonymous
-/// group.
-fn extract_matches(path: &Path, rex: &Regex) -> anyhow::Result<Vec<String>> {
-    let mut content = String::new();
-    let mut file = File::open(path)?;
-    file.read_to_string(&mut content)?;
-    let mut at = 0;
-    let mut res = vec![];
-    while let Some(cap) = rex.captures(&content[at..]) {
-        res.push(cap.get(1).unwrap().as_str().to_string());
-        at += cap.get(0).unwrap().end();
-    }
-    Ok(res)
 }
 
 // Tools using the Move prover top-level driver

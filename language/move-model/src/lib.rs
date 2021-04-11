@@ -7,6 +7,7 @@ use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::warn;
+use std::collections::BTreeSet;
 
 use builder::module_builder::ModuleBuilder;
 use move_lang::{
@@ -43,26 +44,21 @@ pub mod ty;
 // =================================================================================================
 // Entry Point
 
+/// Build the move model. This collects transitive dependencies for move sources
+/// from the provided directory list.
 pub fn run_model_builder(
-    target_sources: Vec<String>,
-    other_sources: Vec<String>,
+    move_sources: &[String],
+    deps_dir: &[String],
 ) -> anyhow::Result<GlobalEnv> {
-    // Construct all sources from targets and others, as we need bytecode for all of them.
-    let mut all_sources = target_sources;
-    all_sources.extend(other_sources.clone());
     let mut env = GlobalEnv::new();
-    // Parse the program
+
+    // Step 1: parse the program to get comments and a separation of targets and dependencies.
     let (files, pprog_and_comments_res) = move_parse(
-        &all_sources,
-        &[],
+        move_sources,
+        deps_dir,
         None,
-        /* sources_shadow_deps */ false,
+        /* sources_shadow_deps */ true,
     )?;
-    for fname in files.keys().sorted() {
-        let fsrc = &files[fname];
-        env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));
-    }
-    // Add any documentation comments found by the Move compiler to the env.
     let (comment_map, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
@@ -70,11 +66,36 @@ pub fn run_model_builder(
         }
         Ok(res) => res,
     };
+    // Add source files for targets and dependencies
+    let dep_sources: BTreeSet<_> = parsed_prog
+        .lib_definitions
+        .iter()
+        .map(|def| def.file())
+        .collect();
+    for fname in files.keys().sorted() {
+        let fsrc = &files[fname];
+        env.add_source(fname, fsrc, dep_sources.contains(fname));
+    }
+    // Add any documentation comments found by the Move compiler to the env.
     for (fname, documentation) in comment_map {
         let file_id = env.get_file_id(fname).expect("file name defined");
         env.add_documentation(file_id, documentation);
     }
+
+    // Step 2: compile all sources in targets and dependencies, as we need bytecode for all of them.
+    let all_sources: Vec<_> = files
+        .into_iter()
+        .map(|(fname, _)| fname.to_owned())
+        .collect();
     // Run the compiler up to expansion and clone a copy of the expansion program ast
+    let (_, pprog_and_comments_res) = move_parse(&all_sources, &[], None, false)?;
+    let (_, parsed_prog) = match pprog_and_comments_res {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok(env);
+        }
+        Ok(res) => res,
+    };
     let mut compilation_env = CompilationEnv::new(Flags::empty());
     let (expansion_ast, expansion_result) = match move_continue_up_to(
         &mut compilation_env,

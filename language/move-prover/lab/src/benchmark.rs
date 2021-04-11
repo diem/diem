@@ -10,10 +10,12 @@ use clap::{App, Arg};
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 use itertools::Itertools;
 use log::LevelFilter;
-use move_model::model::{FunctionEnv, GlobalEnv, ModuleEnv, VerificationScope};
+use move_model::{
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, VerificationScope},
+    run_model_builder,
+};
 use move_prover::{
-    build_move_model, check_errors, cli::Options, create_and_process_bytecode, generate_boogie,
-    verify_boogie,
+    check_errors, cli::Options, create_and_process_bytecode, generate_boogie, verify_boogie,
 };
 use plotters::{
     coord::types::RangedCoordu32,
@@ -129,7 +131,7 @@ fn run_benchmark(
     per_function: bool,
 ) -> anyhow::Result<()> {
     println!("building model");
-    let env = build_move_model(modules, dep_dirs, false)?;
+    let env = run_model_builder(modules, dep_dirs)?;
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
     check_errors(&env, &mut error_writer, "unexpected build errors")?;
     let mut options = if let Some(config_file) = config_file_opt {

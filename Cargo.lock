@@ -4411,7 +4411,6 @@ dependencies = [
  "once_cell",
  "pretty",
  "rand 0.8.3",
- "regex",
  "serde",
  "serde_json",
  "shell-words",
