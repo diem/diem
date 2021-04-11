@@ -52,7 +52,12 @@ pub fn run_model_builder(
     all_sources.extend(other_sources.clone());
     let mut env = GlobalEnv::new();
     // Parse the program
-    let (files, pprog_and_comments_res) = move_parse(&all_sources, &[], None)?;
+    let (files, pprog_and_comments_res) = move_parse(
+        &all_sources,
+        &[],
+        None,
+        /* sources_shadow_deps */ false,
+    )?;
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
         env.add_source(fname, fsrc, other_sources.contains(&fname.to_string()));

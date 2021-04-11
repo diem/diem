@@ -44,7 +44,9 @@ impl<'a> MoveSourceCompiler<'a> {
         errors::FilesSourceText,
         Result<Vec<CompiledUnit>, errors::Errors>,
     )> {
-        let (files, pprog_and_comments_res) = move_lang::move_parse(targets, &self.deps, None)?;
+        let (files, pprog_and_comments_res) = move_lang::move_parse(
+            targets, &self.deps, None, /* sources_shadow_deps */ false,
+        )?;
         let (_comments, pprog) = match pprog_and_comments_res {
             Err(errors) => return Ok((files, Err(errors))),
             Ok(res) => res,

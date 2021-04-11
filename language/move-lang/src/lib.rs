@@ -109,16 +109,11 @@ pub fn move_check(
     flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<(), Errors>)> {
     let mut compilation_env = CompilationEnv::new(flags);
-    let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) =
+        move_parse(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
-    };
-
-    let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog)
-    } else {
-        pprog
     };
 
     let result = match move_continue_up_to(
@@ -169,16 +164,11 @@ pub fn move_compile(
     flags: Flags,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
     let mut compilation_env = CompilationEnv::new(flags);
-    let (files, pprog_and_comments_res) = move_parse(targets, deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) =
+        move_parse(targets, deps, interface_files_dir_opt, sources_shadow_deps)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
-    };
-
-    let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog)
-    } else {
-        pprog
     };
 
     let result = match move_continue_up_to(
@@ -219,13 +209,14 @@ pub fn move_parse(
     targets: &[String],
     deps: &[String],
     interface_files_dir_opt: Option<String>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(CommentMap, parser::ast::Program), Errors>,
 )> {
     let mut deps = deps.to_vec();
     generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
-    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, &deps, sources_shadow_deps)?;
     let result = pprog_and_comments_res.map(|(pprog, comments)| (comments, pprog));
     Ok((files, result))
 }
@@ -238,16 +229,11 @@ pub fn move_construct_pre_compiled_lib(
     interface_files_dir_opt: Option<String>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<(FilesSourceText, Result<FullyCompiledProgram, Errors>)> {
-    let (files, pprog_and_comments_res) = move_parse(&[], deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) =
+        move_parse(&[], deps, interface_files_dir_opt, sources_shadow_deps)?;
     let (_comments, pprog) = match pprog_and_comments_res {
         Err(errors) => return Ok((files, Err(errors))),
         Ok(res) => res,
-    };
-
-    let pprog = if sources_shadow_deps {
-        shadow_lib_module_definitions(pprog)
-    } else {
-        pprog
     };
 
     let start = PassResult::Parser(pprog);
@@ -683,6 +669,7 @@ fn run(
 fn parse_program(
     targets: &[String],
     deps: &[String],
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
@@ -691,11 +678,11 @@ fn parse_program(
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
-    let deps = find_move_filenames(deps, true)?
+    let mut deps = find_move_filenames(deps, true)?
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
-    check_targets_deps_dont_intersect(&targets, &deps)?;
+    ensure_targets_deps_dont_intersect(&targets, &mut deps, sources_shadow_deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut source_comments = CommentMap::new();
@@ -716,30 +703,41 @@ fn parse_program(
     }
 
     let res = if errors.is_empty() {
-        Ok((
-            parser::ast::Program {
-                source_definitions,
-                lib_definitions,
-            },
-            source_comments,
-        ))
+        let pprog = parser::ast::Program {
+            source_definitions,
+            lib_definitions,
+        };
+        let pprog = if sources_shadow_deps {
+            shadow_lib_module_definitions(pprog)
+        } else {
+            pprog
+        };
+        Ok((pprog, source_comments))
     } else {
         Err(errors)
     };
     Ok((files, res))
 }
 
-fn check_targets_deps_dont_intersect(
+fn ensure_targets_deps_dont_intersect(
     targets: &[&'static str],
-    deps: &[&'static str],
+    deps: &mut Vec<&'static str>,
+    sources_shadow_deps: bool,
 ) -> anyhow::Result<()> {
     let target_set = targets.iter().collect::<BTreeSet<_>>();
     let dep_set = deps.iter().collect::<BTreeSet<_>>();
-    let intersection = target_set.intersection(&dep_set).collect::<Vec<_>>();
+    let intersection = target_set
+        .intersection(&dep_set)
+        .cloned()
+        .cloned()
+        .collect::<Vec<_>>();
     if intersection.is_empty() {
         return Ok(());
     }
-
+    if sources_shadow_deps {
+        deps.retain(|fname| !intersection.contains(fname));
+        return Ok(());
+    }
     let all_files = intersection
         .into_iter()
         .map(|s| format!("    {}", s))
