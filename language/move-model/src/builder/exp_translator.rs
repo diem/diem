@@ -23,7 +23,7 @@ use crate::{
     },
     model::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
 
 #[derive(Debug)]
@@ -1723,11 +1723,21 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     let struct_ty = Type::Struct(entry.module_id, entry.struct_id, instantiation);
                     let struct_ty =
                         self.check_type(loc, &struct_ty, expected_type, "in pack expression");
-                    let args = args
+                    let mut args = args
                         .into_iter()
                         .sorted_by_key(|(i, _)| *i)
                         .map(|(_, e)| e)
                         .collect_vec();
+                    if args.is_empty() {
+                        // The move compiler inserts a dummy field with the value of false
+                        // for structs with no fields. This is also what we find in the
+                        // Model metadata (i.e. a field `dummy_field`). We simulate this here
+                        // for now, though it would be better to remove it everywhere as it
+                        // can be confusing to users. However, its currently hard to do this,
+                        // because a user could also have defined the `dummy_field`.
+                        let id = self.new_node_id_with_type_loc(&BOOL_TYPE, loc);
+                        args.push(Exp::Value(id, Value::Bool(false)));
+                    }
                     let id = self.new_node_id_with_type_loc(&struct_ty, loc);
                     Exp::Call(id, Operation::Pack(entry.module_id, entry.struct_id), args)
                 }
