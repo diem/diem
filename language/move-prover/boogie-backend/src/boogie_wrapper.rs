@@ -21,10 +21,13 @@ use move_model::{
     ty::{PrimitiveType, Type},
 };
 
-use crate::prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds};
 // DEBUG
 // use backtrace::Backtrace;
-use crate::options::{BoogieOptions, VectorTheory};
+use crate::boogie_helpers::boogie_struct_name;
+use boogie_backend::{
+    options::{BoogieOptions, VectorTheory},
+    prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
+};
 use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 use move_model::{
     ast::TempIndex,
@@ -64,7 +67,6 @@ pub enum BoogieErrorKind {
     Assertion,
     Inconclusive,
     Inconsistency,
-    Internal,
 }
 
 impl BoogieErrorKind {
@@ -137,26 +139,6 @@ impl<'env> BoogieWrapper<'env> {
                 }
                 debug!("analyzing boogie output");
                 let out = String::from_utf8_lossy(&output.stdout).to_string();
-                // Boogie prints a few ad-hoc error messages (with exit code 0!), so we have
-                // no chance to catch an error until we recognize one of those patterns.
-                if out
-                    .trim()
-                    .starts_with("Fatal Error: ProverException: Cannot find specified prover")
-                {
-                    return Err(anyhow!(
-                        "The configured prover `{}` could not be found{}",
-                        if self.options.use_cvc4 {
-                            &self.options.cvc4_exe
-                        } else {
-                            &self.options.z3_exe
-                        },
-                        if self.options.use_cvc4 {
-                            " (--use-cvc4 is set)"
-                        } else {
-                            ""
-                        }
-                    ));
-                }
                 // Boogie output contains the string "errors detected in" whenever parsing,
                 // resolution, or type checking errors are discovered.
                 if out.contains("errors detected in") {
@@ -341,35 +323,12 @@ impl<'env> BoogieWrapper<'env> {
 
     /// Extracts verification errors from Boogie output.
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
-        // Need to add any diag which is not processed by this function (like
-        // inconclusive) to this list so its not reported as unexpected boogie
-        // output.
-        const OTHER_DIAG_START: &[&str] = &[
-            "inconclusive",
-            "out of resource",
-            "timed out",
-            "inconsistency_detected",
-        ];
         static VERIFICATION_DIAG_STARTS: Lazy<Regex> = Lazy::new(|| {
             Regex::new(r"(?m)^assert_failed\((?P<args>[^)]*)\): (?P<msg>.*)$").unwrap()
         });
         let mut errors = vec![];
         let mut at = 0;
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
-            let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
-            if !inbetween.is_empty() && !OTHER_DIAG_START.iter().any(|s| inbetween.starts_with(s)) {
-                // This is unexpected text and we report it as an internal error
-                errors.push(BoogieError {
-                    kind: BoogieErrorKind::Internal,
-                    loc: self.env.unknown_loc(),
-                    message: format!(
-                        "unexpected boogie output: `{} ..`",
-                        &inbetween[0..inbetween.len().min(70)]
-                    ),
-                    execution_trace: vec![],
-                    model: None,
-                })
-            }
             at = usize::saturating_add(at, cap.get(0).unwrap().end());
             let msg = cap.name("msg").unwrap().as_str();
             if msg == "expected to fail" {
@@ -640,13 +599,6 @@ fn make_position(line_str: &str, col_str: &str) -> Location {
 
 // -----------------------------------------------
 // # Boogie Model Analysis
-
-/// Represents whether the Vector type is implemented at the SMT level using integer maps or sequences
-#[derive(Debug, PartialEq, Eq)]
-pub enum ValueArrayRep {
-    ValueArrayIsMap,
-    ValueArrayIsSeq,
-}
 
 /// Represents a boogie model.
 #[derive(Debug)]
@@ -1004,28 +956,35 @@ impl ModelValue {
     ) -> Option<PrettyDoc> {
         let module_env = wrapper.env.get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
-        let values = self.extract_vector(model)?;
-        let entries = struct_env
-            .get_fields()
-            .enumerate()
-            .map(|(i, f)| {
-                let ty = f.get_type().instantiate(params);
-                let v = values
-                    .values
-                    .get(&i)
-                    .unwrap_or(&values.default)
-                    .extract_box();
-                let vp = v
-                    .pretty(wrapper, model, &ty)
-                    .unwrap_or_else(|| values.default.pretty_or_raw(wrapper, model, &ty));
-                PrettyDoc::text(format!(
-                    "{}",
-                    f.get_name().display(struct_env.symbol_pool())
-                ))
-                .append(PrettyDoc::text(" ="))
-                .append(PrettyDoc::line().append(vp).nest(2).group())
-            })
-            .collect_vec();
+        let entries = if struct_env.is_native_or_intrinsic() {
+            let mut rep = self.extract_literal()?.to_string();
+            if rep.starts_with("T@") {
+                if let Some(i) = rep.rfind('!') {
+                    rep = format!("#{}", &rep[i + 1..])
+                }
+            }
+            vec![PrettyDoc::text(rep)]
+        } else {
+            let values = self.extract_list(&boogie_struct_name(&struct_env))?;
+            struct_env
+                .get_fields()
+                .enumerate()
+                .map(|(i, f)| {
+                    let ty = f.get_type().instantiate(params);
+                    let default = ModelValue::error();
+                    let v = values.get(i).unwrap_or(&default);
+                    let vp = v
+                        .pretty(wrapper, model, &ty)
+                        .unwrap_or_else(|| default.pretty_or_raw(wrapper, model, &ty));
+                    PrettyDoc::text(format!(
+                        "{}",
+                        f.get_name().display(struct_env.symbol_pool())
+                    ))
+                    .append(PrettyDoc::text(" ="))
+                    .append(PrettyDoc::line().append(vp).nest(2).group())
+                })
+                .collect_vec()
+        };
         Some(
             PrettyDoc::text(format!(
                 "{}.{}",

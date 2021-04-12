@@ -208,6 +208,11 @@ function {:inline} $InRangeVec(v: Vec $Value, i: int): bool {
     InRangeVec(v, i)
 }
 
+// This funtion is used to avoid type inference ambiguity for expressions
+// like `LenVec(EmptyVec())`. Boogie cannot infer this and also does no allow
+// type annotations.
+function {:inline} $EmptyValueVec(): Vec $Value { EmptyVec() }
+
 // ================================================================================
 // Path type
 
@@ -305,21 +310,6 @@ function {:inline} $IsEqual_vec(x: Vec $Value, y: Vec $Value): bool {
 
 // Generate a stratified version of IsEqual for depth of {{options.stratification_depth}}.
 
-{{#stratified}}
-function {{options.aggressive_func_inline}} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
-    (v1 == v2) ||
-    (is#$Vector(v1) &&
-     is#$Vector(v2) &&
-     (var vec1, vec2 := $Unbox_vec(v1), $Unbox_vec(v2);
-      LenVec(vec1) == LenVec(vec2) &&
-      (forall i: int :: 0 <= i && i < LenVec(vec1) ==> $IsEqual_{{@next_suffix}}(ReadVec(vec1,i), ReadVec(vec2,i)))))
-}
-{{else}}
-function {:inline} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
-    v1 == v2
-}
-{{/stratified}}
-
 function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
     $IsEqual_stratified(v1, v2)
 }
@@ -376,30 +366,14 @@ type {:datatype} $Mutation;
 function {:constructor} $Mutation(l: $Location, p: $Path, v: $Value): $Mutation;
 
 // Representation of memory for a given type. The maps take the content of a Global location.
-type {:datatype} $Memory;
-function {:constructor} $Memory(domain: [Vec $TypeValue, int]bool, contents: [Vec $TypeValue, int]Vec $Value): $Memory;
-
-function {:inline} $Memory__is_well_formed(m: $Memory): bool {
-    true
-}
+type {:datatype} $Memory _;
+function {:constructor} $Memory<T>(domain: [Vec $TypeValue, int]bool, contents: [Vec $TypeValue, int]T): $Memory T;
 
 function {:builtin "MapConst"} $ConstMemoryDomain(v: bool): [Vec $TypeValue, int]bool;
-function {:builtin "MapConst"} $ConstMemoryContent(v: Vec $Value): [Vec $TypeValue, int]Vec $Value;
+function {:builtin "MapConst"} $ConstMemoryContent<T>(v: T): [Vec $TypeValue, int]T;
 axiom $ConstMemoryDomain(false) == (lambda ta: Vec $TypeValue, i: int :: false);
 axiom $ConstMemoryDomain(true) == (lambda ta: Vec $TypeValue, i: int :: true);
 
-const $EmptyMemory: $Memory;
-axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
-axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent(EmptyVec());
-
-// Returns a new memory which is identical than the given memory except at (type_args, addr) which
-// is arbitrary.
-procedure {:inline 1} $Modifies(m: $Memory, type_args: Vec $TypeValue, addr: int) returns (m': $Memory) {
-    m' := $Memory(
-        domain#$Memory(m)[type_args, addr := domain#$Memory(m')[type_args, addr]],
-        contents#$Memory(m)[type_args, addr := contents#$Memory(m')[type_args, addr]]
-    );
-}
 
 // Dereferences a mutation.
 function {:inline} $Dereference(ref: $Mutation): $Value {
@@ -418,109 +392,32 @@ procedure {:inline 1} $HavocMutation(m: $Mutation) returns (m': $Mutation) {
 }
 
 // Tests whether resource exists.
-function {:inline} $ResourceExists(m: $Memory, args: Vec $TypeValue, addr: int): bool {
+function {:inline} $ResourceExists<T>(m: $Memory T, args: Vec $TypeValue, addr: int): bool {
     domain#$Memory(m)[args, addr]
 }
 
 // Obtains Value of given resource.
-function {:inline} $ResourceValue(m: $Memory, args: Vec $TypeValue, addr: int): Vec $Value {
+function {:inline} $ResourceValue<T>(m: $Memory T, args: Vec $TypeValue, addr: int): T {
     contents#$Memory(m)[args, addr]
 }
 
-// ============================================================================================
-// EventStore
-
-{{#if options.native_equality}}
-
-// TODO: like to have this as aliases, but currently blocked by boogie issue #364
-type {:datatype} $EventRep;
-type {:datatype} $GuidRep;
-function {:constructor} $ToEventRep(event: $Value): $EventRep;
-function {:constructor} $ToGuidRep(guid: Vec $Value): $GuidRep;
-
-{{else}}
-
-// Because we do not have extensional equality we need to encode events and guids
-// in abstract types which have equality, so they can be used as indices for Boogie arrays.
-
-type $EventRep;
-type $GuidRep;
-
-function $ToEventRep(event: $Value): $EventRep;
-function $ToGuidRep(guid: Vec $Value): $GuidRep;
-
-axiom (forall v1, v2: $Value :: {$ToEventRep(v1), $ToEventRep(v2)}
-    $IsEqual(v1, v2) <==> $ToEventRep(v1) == $ToEventRep(v2));
-
-axiom (forall v1, v2: Vec $Value :: {$ToGuidRep(v1), $ToGuidRep(v2)}
-    $IsEqual_vec(v1, v2) <==> $ToGuidRep(v1) == $ToGuidRep(v2));
-
-
-{{/if}}
-
-// The well-known field index of the event handle guid.
-const $EventHandle_$guid: $FieldName;
-axiom $EventHandle_$guid == 1;
-
-// Representation of EventStore that consists of event streams.
-type {:datatype} $EventStore;
-function {:constructor} $EventStore(counter: int, streams: [$GuidRep]Multiset $EventRep): $EventStore;
-
-function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
-    true
+// Update resource.
+function {:inline} $ResourceUpdate<T>(m: $Memory T, ta: Vec $TypeValue, a: int, v: T): $Memory T {
+    $Memory(domain#$Memory(m)[ta, a := true], contents#$Memory(m)[ta, a := v])
 }
 
-function {:inline} $EventStore__is_empty(es: $EventStore): bool {
-    (counter#$EventStore(es) == 0) &&
-    (forall guid: $GuidRep ::
-        (var stream := streams#$EventStore(es)[guid];
-        IsEmptyMultiset(stream)))
+// Remove resource.
+function {:inline} $ResourceRemove<T>(m: $Memory T, ta: Vec $TypeValue, a: int): $Memory T {
+    $Memory(domain#$Memory(m)[ta, a := false], contents#$Memory(m))
 }
 
-// This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
-function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
-    $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
-        (lambda guid: $GuidRep ::
-        SubtractMultiset(
-            streams#$EventStore(es1)[guid],
-            streams#$EventStore(es2)[guid])))
+// Copies resource from memory s to m.
+function {:inline} $ResourceCopy<T>(m: $Memory T, s: $Memory T, ta: Vec $TypeValue, a: int): $Memory T {
+    $Memory(domain#$Memory(m)[ta, a := domain#$Memory(s)[ta,a]],
+            contents#$Memory(m)[ta, a := contents#$Memory(s)[ta,a]])
 }
 
-function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
-    (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
-    (forall guid: $GuidRep ::
-        IsSubsetMultiset(
-            streams#$EventStore(es1)[guid],
-            streams#$EventStore(es2)[guid]
-        )
-    )
-}
 
-procedure {:inline 1} $EventStore__diverge(es: $EventStore) returns (es': $EventStore) {
-    assume $EventStore__is_subset(es, es');
-}
-
-const $EmptyEventStore: $EventStore;
-axiom $EventStore__is_empty($EmptyEventStore);
-
-function {:inline} $ExtendEventStore(es: $EventStore, guid: Vec $Value, msg: $Value): $EventStore {
-    (var stream := streams#$EventStore(es)[$ToGuidRep(guid)];
-    (var stream_new := ExtendMultiset(stream, $ToEventRep(msg));
-    $EventStore(counter#$EventStore(es)+1, streams#$EventStore(es)[$ToGuidRep(guid) := stream_new])))
-}
-
-function {:inline} $CondExtendEventStore(es: $EventStore, guid: Vec $Value, msg: $Value, cond: bool): $EventStore {
-    if cond then
-        $ExtendEventStore(es, guid, msg)
-    else
-        es
-}
-
-function {:inline} $GetEventHandleGuid(handle: Vec $Value): Vec $Value {
-    $Unbox_vec(ReadVec(handle, $EventHandle_$guid))
-}
-
-var $es: $EventStore;
 
 // ============================================================================================
 // Abort Handling
@@ -554,158 +451,12 @@ procedure {:inline 1} $InitVerification() {
 // ============================================================================================
 // Instructions
 
-procedure {:inline 1} $MoveTo(m: $Memory, ta: Vec $TypeValue, a: int, v: Vec $Value) returns (m': $Memory)
-{
-    if ($ResourceExists(m, ta, a)) {
-        call $ExecFailureAbort();
-        return;
-    }
-    m' := $Memory(domain#$Memory(m)[ta, a := true], contents#$Memory(m)[ta, a := v]);
-}
-
-procedure {:inline 1} $MoveFrom(m: $Memory, a: int, ta: Vec $TypeValue) returns (m': $Memory, dst: Vec $Value)
-{
-    if (!$ResourceExists(m, ta, a)) {
-        call $ExecFailureAbort();
-        return;
-    }
-    dst := contents#$Memory(m)[ta, a];
-    m' := $Memory(domain#$Memory(m)[ta, a := false], contents#$Memory(m)[ta, a := EmptyVec()]);
-}
-
-procedure {:inline 1} $BorrowGlobal(m: $Memory, a: int, ta: Vec $TypeValue) returns (dst: $Mutation)
-{
-    if (!$ResourceExists(m, ta, a)) {
-        call $ExecFailureAbort();
-        return;
-    }
-    dst := $Mutation($Global(ta, a), $EmptyPath, $Box_vec(contents#$Memory(m)[ta, a]));
-}
-
 procedure {:inline 1} $BorrowLoc(l: int, v: $Value) returns (dst: $Mutation)
 {
     dst := $Mutation($Local(l), $EmptyPath, v);
 }
 
-procedure {:inline 1} $BorrowField(src: $Mutation, f: $FieldName) returns (dst: $Mutation)
-{
-    var p: $Path;
-    var size: int;
-
-    p := p#$Mutation(src);
-    size := size#$Path(p);
-    p := $Path(p#$Path(p)[size := f], size+1);
-    dst := $Mutation(l#$Mutation(src), p, ReadVec($Unbox_vec(v#$Mutation(src)), f));
-}
-
-procedure {:inline 1} $GetGlobal(m: $Memory, a: int, ta: Vec $TypeValue) returns (dst: Vec $Value)
-{
-    if (!$ResourceExists(m, ta, a)) {
-        call $ExecFailureAbort();
-        return;
-    }
-    dst := $ResourceValue(m, ta, a);
-}
-
-procedure {:inline 1} $WritebackToGlobalWeak(m: $Memory, src: $Mutation) returns (m': $Memory)
-{
-    var l: $Location;
-    var ta: Vec $TypeValue;
-    var a: int;
-    var v: $Value;
-
-    l := l#$Mutation(src);
-    if (is#$Global(l)) {
-        ta := ts#$Global(l);
-        a := a#$Global(l);
-        v := $UpdateValue(p#$Mutation(src), 0, $Box_vec(contents#$Memory(m)[ta, a]), v#$Mutation(src));
-        m' := $Memory(domain#$Memory(m), contents#$Memory(m)[ta, a := $Unbox_vec(v)]);
-    } else {
-        m' := m;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueWeak(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
-{
-    if (l#$Mutation(src) == $Local(idx)) {
-        vdst' := $UpdateValue(p#$Mutation(src), 0, vdst, v#$Mutation(src));
-    } else {
-        vdst' := vdst;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueWeak_int(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
-{
-    if (l#$Mutation(src) == $Local(idx)) {
-        vdst' := $Unbox_int(v#$Mutation(src));
-    } else {
-        vdst' := vdst;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueWeak_bool(src: $Mutation, idx: int, vdst: bool) returns (vdst': bool)
-{
-    if (l#$Mutation(src) == $Local(idx)) {
-        vdst' := $Unbox_bool(v#$Mutation(src));
-    } else {
-        vdst' := vdst;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueWeak_addr(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
-{
-    if (l#$Mutation(src) == $Local(idx)) {
-        vdst' := $Unbox_addr(v#$Mutation(src));
-    } else {
-        vdst' := vdst;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueWeak_vec(src: $Mutation, idx: int, vdst: Vec $Value) returns (vdst': Vec $Value)
-{
-    if (l#$Mutation(src) == $Local(idx)) {
-        vdst' := $Unbox_vec($UpdateValue(p#$Mutation(src), 0, $Box_vec(vdst), v#$Mutation(src)));
-    } else {
-        vdst' := vdst;
-    }
-}
-
-
-procedure {:inline 1} $WritebackToReferenceWeak(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
-{
-    var srcPath, dstPath: $Path;
-
-    srcPath := p#$Mutation(src);
-    dstPath := p#$Mutation(dst);
-    if (l#$Mutation(dst) == l#$Mutation(src) && size#$Path(dstPath) <= size#$Path(srcPath) && $IsPathPrefix(dstPath, srcPath)) {
-        dst' := $Mutation(
-                    l#$Mutation(dst),
-                    dstPath,
-                    $UpdateValue(srcPath, size#$Path(dstPath), v#$Mutation(dst), v#$Mutation(src)));
-    } else {
-        dst' := dst;
-    }
-}
-
-procedure {:inline 1} $WritebackToGlobalStrong(m: $Memory, src: $Mutation) returns (m': $Memory)
-{
-    var l: $Location;
-    var ta: Vec $TypeValue;
-    var a: int;
-    var v: $Value;
-
-    l := l#$Mutation(src);
-    if (is#$Global(l)) {
-        ta := ts#$Global(l);
-        a := a#$Global(l);
-        v := v#$Mutation(src);
-        m' := $Memory(domain#$Memory(m), contents#$Memory(m)[ta, a := $Unbox_vec(v)]);
-    } else {
-        m' := m;
-    }
-}
-
-procedure {:inline 1} $WritebackToValueStrong(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
+procedure {:inline 1} $WritebackToValue(src: $Mutation, idx: int, vdst: $Value) returns (vdst': $Value)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := v#$Mutation(src);
@@ -714,7 +465,7 @@ procedure {:inline 1} $WritebackToValueStrong(src: $Mutation, idx: int, vdst: $V
     }
 }
 
-procedure {:inline 1} $WritebackToValueStrong_int(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
+procedure {:inline 1} $WritebackToValue_int(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_int(v#$Mutation(src));
@@ -723,7 +474,7 @@ procedure {:inline 1} $WritebackToValueStrong_int(src: $Mutation, idx: int, vdst
     }
 }
 
-procedure {:inline 1} $WritebackToValueStrong_bool(src: $Mutation, idx: int, vdst: bool) returns (vdst': bool)
+procedure {:inline 1} $WritebackToValue_bool(src: $Mutation, idx: int, vdst: bool) returns (vdst': bool)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_bool(v#$Mutation(src));
@@ -732,7 +483,7 @@ procedure {:inline 1} $WritebackToValueStrong_bool(src: $Mutation, idx: int, vds
     }
 }
 
-procedure {:inline 1} $WritebackToValueStrong_addr(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
+procedure {:inline 1} $WritebackToValue_addr(src: $Mutation, idx: int, vdst: int) returns (vdst': int)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_addr(v#$Mutation(src));
@@ -741,7 +492,7 @@ procedure {:inline 1} $WritebackToValueStrong_addr(src: $Mutation, idx: int, vds
     }
 }
 
-procedure {:inline 1} $WritebackToValueStrong_vec(src: $Mutation, idx: int, vdst: Vec $Value) returns (vdst': Vec $Value)
+procedure {:inline 1} $WritebackToValue_vec(src: $Mutation, idx: int, vdst: Vec $Value) returns (vdst': Vec $Value)
 {
     if (l#$Mutation(src) == $Local(idx)) {
         vdst' := $Unbox_vec(v#$Mutation(src));
@@ -750,7 +501,7 @@ procedure {:inline 1} $WritebackToValueStrong_vec(src: $Mutation, idx: int, vdst
     }
 }
 
-procedure {:inline 1} $WritebackToReferenceStrongDirect(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
+procedure {:inline 1} $WritebackToReference(src: $Mutation, dst: $Mutation) returns (dst': $Mutation)
 {
     var srcPath, dstPath: $Path;
 
@@ -765,25 +516,6 @@ procedure {:inline 1} $WritebackToReferenceStrongDirect(src: $Mutation, dst: $Mu
         dst' := dst;
     }
 }
-
-procedure {:inline 1} $WritebackToReferenceStrongField(src: $Mutation, dst: $Mutation, edge: $FieldName)
-returns (dst': $Mutation)
-{
-    var srcPath, dstPath: $Path;
-
-    srcPath := p#$Mutation(src);
-    dstPath := p#$Mutation(dst);
-    if (l#$Mutation(dst) == l#$Mutation(src)) {
-        dst' := $Mutation(
-                    l#$Mutation(dst),
-                    dstPath,
-                    $Box_vec(UpdateVec($Unbox_vec(v#$Mutation(dst)), edge, v#$Mutation(src)))
-                    );
-    } else {
-        dst' := dst;
-    }
-}
-
 
 procedure {:inline 1} $WritebackToVec(src: $Mutation, dst: $Mutation)
 returns (dst': $Mutation)
@@ -1248,6 +980,12 @@ procedure {:inline 1} $DiemAccount_create_signer(
     signer := addr;
 }
 
+procedure {:inline 1} $DiemAccount_destroy_signer(
+  signer: int
+) {
+  return;
+}
+
 // ==================================================================================
 // Native Signer
 
@@ -1340,26 +1078,136 @@ function {:inline} $Signer_$borrow_address(signer: int): int
 // ==================================================================================
 // Mocked out Event module
 
-procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: int) returns (res: Vec $Value) {
+// Abstract type of event handles.
+type $Event_EventHandle;
+
+// Global state to implement uniqueness of event handles.
+var $Event_EventHandles: [$Event_EventHandle]bool;
+
+// Embedding of event handle type into $Value
+function {:constructor} $Box_$Event_EventHandle(s: $Event_EventHandle): $Value;
+function {:inline} $Unbox_$Event_EventHandle(x: $Value): $Event_EventHandle {
+    s#$Box_$Event_EventHandle(x)
+}
+function {:inline} $IsValidBox_$Event_EventHandle(x: $Value): bool {
+    is#$Box_$Event_EventHandle(x)
 }
 
+// Type value for event handles and equality.
+const unique $Event_EventHandle_name: $TypeName;
+function {:inline} $Event_EventHandle_type_value($tv0: $TypeValue): $TypeValue {
+    $StructType($Event_EventHandle_name, MakeVec1($tv0))
+}
+
+function {:inline} $IsEqual_$Event_EventHandle(a: $Event_EventHandle, b: $Event_EventHandle): bool {
+    a == b
+}
+
+// Publishing a generator does nothing. Currently we just ignore this function and do not represent generators
+// at all because they are not publicly exposed by the Event module.
+// TODO: we should check (and abort with the right code) if a generator already exists for
+// the signer.
 procedure {:inline 1} $Event_publish_generator(account: int) {
+}
+
+// We need to implement the $Modifies for EventHandleGenerator. It does nothing because they are mocked out.
+procedure {:inline} $Modifies_$Event_EventHandleGenerator(ta: Vec $TypeValue, a: int) { }
+
+// Creates a new event handle. This ensures each time it is called that a unique new abstract event handler is
+// returned.
+// TODO: we should check (and abort with the right code) if not generator exists for the signer.
+procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: int) returns (res: $Event_EventHandle) {
+    assume $Event_EventHandles[res] == false;
+    $Event_EventHandles := $Event_EventHandles[res := true];
 }
 
 // This boogie procedure is the model of `emit_event`. This model abstracts away the `counter` behavior, thus not
 // mutating (or increasing) `counter`.
-
-procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Mutation, msg: $Value) returns (res: $Mutation) {
-    var guid: Vec $Value;
-    guid := $GetEventHandleGuid($Unbox_vec($Dereference(handler)));
-    $es := $ExtendEventStore($es, guid, msg);
-    res := handler;
+procedure {:inline 1} $Event_emit_event(t: $TypeValue, handle_mut: $Mutation, msg: $Value) returns (res: $Mutation) {
+    var handle: $Event_EventHandle;
+    handle := $Unbox_$Event_EventHandle($Dereference(handle_mut));
+    $es := $ExtendEventStore($es, handle, msg);
+    res := handle_mut;
 }
 
-procedure {:inline 1} $Event_write_to_event_store(t: $TypeValue, guid: Vec $Value, count: int, msg: $Value) {
-    // This function should never be called as it is private to Event but the caller, emit_event, is mocked out.
-    assert false;
+procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: $Event_EventHandle) {
 }
 
-procedure {:inline 1} $Event_destroy_handle(t: $TypeValue, handle: Vec $Value) {
+// EventStore
+// ==========
+
+{{#if options.native_equality}}
+
+// TODO: like to have this as aliases, but currently blocked by boogie issue #364
+type {:datatype} $EventRep;
+function {:constructor} $ToEventRep(event: $Value): $EventRep;
+
+{{else}}
+
+// Because we do not have extensional equality we need to encode events and guids
+// in abstract types which have equality, so they can be used as indices for Boogie arrays.
+
+type $EventRep;
+
+function $ToEventRep(event: $Value): $EventRep;
+
+axiom (forall v1, v2: $Value :: {$ToEventRep(v1), $ToEventRep(v2)}
+    $IsEqual(v1, v2) <==> $ToEventRep(v1) == $ToEventRep(v2));
+
+{{/if}}
+
+// Representation of EventStore that consists of event streams.
+type {:datatype} $EventStore;
+function {:constructor} $EventStore(counter: int, streams: [$Event_EventHandle]Multiset $EventRep): $EventStore;
+
+function {:inline} $EventStore__is_well_formed(es: $EventStore): bool {
+    true
 }
+
+function {:inline} $EventStore__is_empty(es: $EventStore): bool {
+    (counter#$EventStore(es) == 0) &&
+    (forall handle: $Event_EventHandle ::
+        (var stream := streams#$EventStore(es)[handle];
+        IsEmptyMultiset(stream)))
+}
+
+// This function returns (es1 - es2). This function assumes that es2 is a subset of es1.
+function {:inline} $EventStore__subtract(es1: $EventStore, es2: $EventStore): $EventStore {
+    $EventStore(counter#$EventStore(es1)-counter#$EventStore(es2),
+        (lambda handle: $Event_EventHandle ::
+        SubtractMultiset(
+            streams#$EventStore(es1)[handle],
+            streams#$EventStore(es2)[handle])))
+}
+
+function {:inline} $EventStore__is_subset(es1: $EventStore, es2: $EventStore): bool {
+    (counter#$EventStore(es1) <= counter#$EventStore(es2)) &&
+    (forall handle: $Event_EventHandle ::
+        IsSubsetMultiset(
+            streams#$EventStore(es1)[handle],
+            streams#$EventStore(es2)[handle]
+        )
+    )
+}
+
+procedure {:inline 1} $EventStore__diverge(es: $EventStore) returns (es': $EventStore) {
+    assume $EventStore__is_subset(es, es');
+}
+
+const $EmptyEventStore: $EventStore;
+axiom $EventStore__is_empty($EmptyEventStore);
+
+function {:inline} $ExtendEventStore(es: $EventStore, handle: $Event_EventHandle, msg: $Value): $EventStore {
+    (var stream := streams#$EventStore(es)[handle];
+    (var stream_new := ExtendMultiset(stream, $ToEventRep(msg));
+    $EventStore(counter#$EventStore(es)+1, streams#$EventStore(es)[handle := stream_new])))
+}
+
+function {:inline} $CondExtendEventStore(es: $EventStore, handle: $Event_EventHandle, msg: $Value, cond: bool): $EventStore {
+    if cond then
+        $ExtendEventStore(es, handle, msg)
+    else
+        es
+}
+
+var $es: $EventStore;

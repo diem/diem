@@ -3,7 +3,7 @@
 
 //! Helpers for emitting Boogie code.
 
-use crate::options::BoogieOptions;
+use boogie_backend::options::BoogieOptions;
 use bytecode::function_target::FunctionTarget;
 use itertools::Itertools;
 use move_model::{
@@ -38,12 +38,12 @@ pub fn boogie_struct_name(env: &StructEnv<'_>) -> String {
     )
 }
 
-/// Return boogie name of given field.
-pub fn boogie_field_name(env: &FieldEnv<'_>) -> String {
+/// Return field selector for given field.
+pub fn boogie_field_sel(env: &FieldEnv<'_>) -> String {
     format!(
-        "{}_{}",
-        boogie_struct_name(&env.struct_env),
-        env.get_name().display(env.struct_env.symbol_pool())
+        "{}#{}",
+        env.get_name().display(env.struct_env.symbol_pool()),
+        boogie_struct_name(&env.struct_env)
     )
 }
 
@@ -210,7 +210,7 @@ pub fn boogie_make_vec_from_strings(args: &[String]) -> String {
 }
 
 /// Return boogie type for a local with given signature token.
-pub fn boogie_local_type(ty: &Type) -> String {
+pub fn boogie_local_type(env: &GlobalEnv, ty: &Type) -> String {
     use PrimitiveType::*;
     use Type::*;
     match ty {
@@ -220,7 +220,8 @@ pub fn boogie_local_type(ty: &Type) -> String {
             TypeValue => "$TypeValue".to_string(),
             _ => panic!("unexpected type"),
         },
-        Vector(..) | Struct(..) => "Vec $Value".to_string(),
+        Vector(..) => "Vec $Value".to_string(),
+        Struct(mid, sid, _) => boogie_struct_name(&env.get_module(*mid).into_struct(*sid)),
         Reference(..) => "$Mutation".to_string(),
         TypeParameter(..) => "$Value".to_string(),
         Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
@@ -228,44 +229,44 @@ pub fn boogie_local_type(ty: &Type) -> String {
     }
 }
 
-pub fn boogie_declare_temps() -> String {
-    "var $$t_bool: bool;\n\
-    var $$t_int: int;\n\
-    var $$t_addr: int;\n\
-    var $$t_type: $TypeValue;\n\
-    var $$t, $$t1, $$t2, $$t3: $Value;\n\
-    var $$t_vec: Vec $Value;"
-        .to_string()
+pub fn boogie_temp(_env: &GlobalEnv, mut boogie_ty: &str, instance: usize) -> String {
+    if boogie_ty.starts_with("Vec") {
+        boogie_ty = "vec";
+    }
+    format!("$temp_{}_{}", instance, boogie_ty)
 }
 
-pub fn boogie_temp(ty: &Type) -> String {
-    format!("$$t{}", boogie_type_suffix(ty))
-}
-
-pub fn boogie_type_suffix(ty: &Type) -> &'static str {
+pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
     use PrimitiveType::*;
     use Type::*;
     match ty {
         Primitive(p) => match p {
-            U8 | U64 | U128 | Num | Signer => "_int",
-            Address => "_addr",
-            Bool => "_bool",
-            TypeValue => "_type",
-            EventStore => "",
-            _ => "<<unsupported>>",
+            U8 | U64 | U128 | Num | Signer => "_int".to_string(),
+            Address => "_addr".to_string(),
+            Bool => "_bool".to_string(),
+            TypeValue => "_type".to_string(),
+            EventStore => "".to_string(),
+            _ => "<<unsupported>>".to_string(),
         },
-        Vector(..) | Struct(..) => "_vec",
-        TypeParameter(..) => "",
+        Vector(..) => "_vec".to_string(),
+        Struct(mid, sid, _) => {
+            boogie_type_suffix_for_struct(&env.get_module(*mid).into_struct(*sid))
+        }
+        TypeParameter(..) => "".to_string(),
         Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
-        | Var(..) | Reference(..) => "<<unsupported>>",
+        | Var(..) | Reference(..) => "<<unsupported>>".to_string(),
     }
 }
 
-pub fn boogie_equality_for_type(eq: bool, ty: &Type) -> String {
+pub fn boogie_type_suffix_for_struct(struct_env: &StructEnv<'_>) -> String {
+    format!("_{}", boogie_struct_name(struct_env))
+}
+
+pub fn boogie_equality_for_type(env: &GlobalEnv, eq: bool, ty: &Type) -> String {
     format!(
         "{}{}",
         if eq { "$IsEqual" } else { "!$IsEqual" },
-        boogie_type_suffix(ty)
+        boogie_type_suffix(env, ty)
     )
 }
 
@@ -301,7 +302,7 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
                 elem_ty_value, name
             ));
             if !matches!(**elem_ty, Type::TypeParameter(..)) {
-                let suffix = boogie_type_suffix(elem_ty);
+                let suffix = boogie_type_suffix(env, elem_ty);
                 let nest_value = &format!("ReadVec({},$${})", name, nest);
                 let mut check = format!("$IsValidBox{}({})", suffix, nest_value);
                 let nest_value_unboxed = &format!("$Unbox{}({})", suffix, nest_value);
@@ -322,39 +323,19 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
         }
         Type::Struct(module_idx, struct_idx, targs) => {
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
-            add_type_check(format!(
-                "$Tag{}({}) && $IsValidU64(LenVec({}))",
-                boogie_struct_name(&struct_env),
-                name,
-                name
-            ));
-            add_type_check(format!(
-                "LenVec({}) == {}",
-                name,
-                struct_env.get_field_count()
-            ));
-            let field_var = format!("$$f{}", nest);
-            for field_env in struct_env.get_fields() {
-                let ty = field_env.get_type().instantiate(targs);
-                let suffix = boogie_type_suffix(&ty);
-                let field_value = format!("ReadVec({}, {})", name, boogie_field_name(&field_env));
-                add_type_check(format!("$IsValidBox{}({})", suffix, field_value));
-                let nest_check = boogie_well_formed_expr_impl(
-                    env,
-                    &field_var,
-                    &ty,
-                    usize::saturating_add(nest, 1),
-                );
-                if !nest_check.is_empty() {
-                    add_type_check(format!(
-                        "(var {} := $Unbox{}({});\n{}   {})",
-                        field_var, suffix, field_value, indent, nest_check
+            if !struct_env.is_native_or_intrinsic() {
+                for field in struct_env.get_fields() {
+                    add_type_check(boogie_well_formed_expr_impl(
+                        env,
+                        &format!("{}({})", boogie_field_sel(&field), name),
+                        &field.get_type().instantiate(targs),
+                        nest.saturating_add(1),
                     ));
                 }
             }
         }
         Type::Reference(true, rtype) => {
-            let suffix = boogie_type_suffix(rtype);
+            let suffix = boogie_type_suffix(env, rtype);
             add_type_check(format!("$IsValidBox{}($Dereference({}))", suffix, name));
             add_type_check(boogie_well_formed_expr_impl(
                 env,
@@ -423,7 +404,7 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty
 }
 
 pub fn boogie_global_declarator(
-    _env: &GlobalEnv,
+    env: &GlobalEnv,
     name: &str,
     param_count: usize,
     ty: &Type,
@@ -434,10 +415,10 @@ pub fn boogie_global_declarator(
             "{} : [{}]{}",
             name,
             (0..param_count).map(|_| "$TypeValue").join(", "),
-            boogie_local_type(ty)
+            boogie_local_type(env, ty)
         )
     } else {
-        format!("{} : {}", name, boogie_local_type(ty))
+        format!("{} : {}", name, boogie_local_type(env, ty))
     }
 }
 
@@ -446,7 +427,11 @@ pub fn boogie_byte_blob(_options: &BoogieOptions, val: &[u8]) -> String {
         .iter()
         .map(|v| format!("$Box_int({})", *v))
         .collect_vec();
-    boogie_make_vec_from_strings(&args)
+    if args.is_empty() {
+        "$EmptyValueVec()".to_string()
+    } else {
+        boogie_make_vec_from_strings(&args)
+    }
 }
 
 /// Construct a statement to debug track a local based on the Boogie attribute approach.
@@ -468,8 +453,12 @@ fn boogie_debug_track(
     let ty = fun_target.get_local_type(idx);
     let value = format!("$t{}", idx);
     if ty.is_reference() {
-        let temp_name = boogie_temp(ty.skip_reference());
-        let suffix = boogie_type_suffix(ty.skip_reference());
+        let temp_name = boogie_temp(
+            fun_target.global_env(),
+            &boogie_local_type(fun_target.global_env(), ty.skip_reference()),
+            0,
+        );
+        let suffix = boogie_type_suffix(fun_target.global_env(), ty.skip_reference());
         format!(
             "{} := $Unbox{}($Dereference({}));\n\
              assume {{:print \"{}({},{},{}):\", {}}} {} == {};",
