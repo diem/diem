@@ -296,7 +296,7 @@ where
     }
 }
 
-/// Create a Diem Framework release in the specified directroy.
+/// Create a Diem Framework release in the specified directory.
 ///
 /// Unless being specifically disabled, the release will contain
 ///   - Compiled Modules
@@ -373,4 +373,24 @@ pub fn create_release(output_path: impl AsRef<Path>, options: &ReleaseOptions) {
             build_error_code_map(&err_exp_path)
         });
     }
+}
+
+/// Sync generated documentation from the current release to the previous locations of script and
+/// module docs.
+pub fn sync_doc_files(output_path: &str) {
+    let sync = |from: &Path, to: &Path| {
+        for path in move_stdlib::utils::iterate_directory(from) {
+            std::fs::copy(&path, to.join(path.strip_prefix(from).unwrap())).unwrap();
+        }
+    };
+
+    sync(
+        &Path::new(output_path).join("docs").join("modules"),
+        &Path::new("modules").join("doc"),
+    );
+
+    sync(
+        &Path::new(output_path).join("docs").join("scripts"),
+        &Path::new("script_documentation"),
+    );
 }
