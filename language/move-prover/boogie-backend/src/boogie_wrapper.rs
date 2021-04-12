@@ -357,6 +357,15 @@ impl<'env> BoogieWrapper<'env> {
         let mut at = 0;
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
             let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
+            at = usize::saturating_add(at, cap.get(0).unwrap().end());
+
+            let msg = cap.name("msg").unwrap().as_str();
+            if msg == "expected to fail" {
+                // Masks the failure from the negative test for the inconsistency checking
+                // which is expected to fail, and skips the error report of this instance.
+                continue;
+            }
+
             if !inbetween.is_empty() && !OTHER_DIAG_START.iter().any(|s| inbetween.starts_with(s)) {
                 // This is unexpected text and we report it as an internal error
                 errors.push(BoogieError {
@@ -370,13 +379,7 @@ impl<'env> BoogieWrapper<'env> {
                     model: None,
                 })
             }
-            at = usize::saturating_add(at, cap.get(0).unwrap().end());
-            let msg = cap.name("msg").unwrap().as_str();
-            if msg == "expected to fail" {
-                // Masks the failure from the negative test for the inconsistency checking
-                // which is expected to fail, and skips the error report of this instance.
-                continue;
-            }
+
             let args = cap.name("args").unwrap().as_str();
             let loc = self.report_error(self.extract_loc(args), self.env.unknown_loc());
             let execution_trace = self.extract_augmented_trace(out, &mut at);
