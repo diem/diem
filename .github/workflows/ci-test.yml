@@ -57,23 +57,26 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         run: |
           res=true
-          ks="${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }}"
-          if ! [[ -z "${ks}" ]] && [[ "${ks}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]]; then
-            echo "killswitch activated! Will skip land-blocking-test";
+          branches="${{ secrets.BRANCHES_TO_ENABLE_LBT }}"
+          if ! [[ -z "${branches}" ]] && [[ "${branches}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]]; then
+            echo "LBT is enabled for target branch. Will trigger it."
+          else
+            echo "LBT is NOT enabled for target branch. Will skip it."
             res=false
           fi
           echo "::set-output name=need-lbt::$(echo $res)";
       - id: need-base-images
         name: build extra images if it is needed by LBT
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && steps.need-land-blocking-test.outputs.need-lbt == 'true' }}
         run: |
           res=true
-          ks="${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}"
-          if ! [[ -z "${ks}" ]] && [[ "${ks}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]] || ${{ steps.need-land-blocking-test.outputs.need-lbt != 'true' }}; then
-            echo "Compat killswitch activated! Will run land_blocking suite";
-            res=false
+          branches="${{ secrets.BRANCHES_TO_ENABLE_LBT_COMPAT_SUITE }}"
+          if ! [[ -z "${branches}" ]] && [[ "${branches}" =~ .*"${{ steps.changes.outputs.changes-target-branch }}".* ]];  then
+            echo "LBT compatibility suite is enabled. Will use land_blocking_compat suite."
+            echo "Will trigger base images build if they not found."
           else
-            echo "Will run land_blocking_compat suite"
+            echo "LBT compatibility sutie is NOT enabled. Will use land_blocking suite."
+            res=false
           fi
           echo "::set-output name=need-extra::$(echo $res)";
       - id: environment
