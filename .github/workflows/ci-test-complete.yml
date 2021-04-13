@@ -1,0 +1,45 @@
+# This workflow is run after CI tests are completed. This has to be done as a separate workflow because forks
+# don't have the right permissions.
+#
+# For this and other workflow_run scripts, the main branch's copy of the action is *always* used, even on release
+# branches. Changes to this action cannot be tested until it is updated on main.
+
+name: ci-test-complete
+
+on:
+  workflow_run:
+    workflows: ["ci-test"]
+    types:
+      - completed
+
+jobs:
+  unit-test-results:
+    name: Unit test results
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: diem/actions/download-artifacts@a5fa31ff2b54a544cd88ac912cda469742592e6c
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: '^.*-test-results$'
+          extract: true
+      - name: Publish unit test results
+        uses: diem/publish-unit-test-result-action@07dbf21c1095745d5149a54007f28231936c9da4
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+          check_name: Test results
+          files: "artifacts/*/**/*.xml"
+          # Don't comment on PRs at the moment: might be too noisy and the test deltas are incorrect:
+          # https://github.com/EnricoMi/publish-unit-test-result-action/issues/115
+          comment_on_pr: false
+          # Disable comparisons because determinator means not all tests are run on all commits yet.
+          compare_to_earlier_commit: false
+          # The individual artifacts are for different sets of tests, so report them separately.
+          report_individual_runs: true
+          # These annotations are used for comparisons, but that model won't work for Diem because
+          # of the determinator -- so disable them
+          check_run_annotations: "none"
+          pull_request_build: "commit"
