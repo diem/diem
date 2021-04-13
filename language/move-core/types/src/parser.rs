@@ -7,7 +7,7 @@ use crate::{
     language_storage::{StructTag, TypeTag},
     transaction_argument::TransactionArgument,
 };
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use std::iter::Peekable;
 
 #[derive(Eq, PartialEq, Debug)]
@@ -134,7 +134,10 @@ fn next_token(s: &str) -> Result<Option<(Token, usize)>> {
                         _ => bail!("unrecognized token"),
                     }
                 }
-                let len = r.len() + 3;
+                let len = r
+                    .len()
+                    .checked_add(3)
+                    .ok_or_else(|| anyhow!("Addition resulted in overflow"))?;
                 (Token::Bytes(hex::encode(r)), len)
             }
             'x' if it.peek() == Some(&'"') => {
