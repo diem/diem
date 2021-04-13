@@ -1,6 +1,0 @@
-publish src/modules/
-run src/scripts/emit.move --signers 0xA --args 5
-doctor
-publish Events.move
-publish --ignore-breaking-changes Events.move
-doctor
