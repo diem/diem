@@ -1,6 +1,0 @@
-publish src/modules/
-publish M.move
-run src/scripts/publish.move --signers 0xA
-doctor
-publish --ignore-breaking-changes M.move
-doctor

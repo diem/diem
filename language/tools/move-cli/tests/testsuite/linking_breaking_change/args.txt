@@ -1,5 +1,0 @@
-publish src/modules/
-publish M.move
-doctor
-publish --ignore-breaking-changes M.move
-doctor
