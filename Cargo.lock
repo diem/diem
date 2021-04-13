@@ -2537,6 +2537,7 @@ dependencies = [
  "anyhow",
  "byteorder",
  "diem-config",
+ "diem-crypto",
  "diem-jellyfish-merkle",
  "diem-types",
  "diem-workspace-hack",
@@ -6358,6 +6359,29 @@ dependencies = [
  "proptest",
  "rand 0.8.3",
  "storage-interface",
+]
+
+[[package]]
+name = "scratchpad-benchmark"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-config",
+ "diem-crypto",
+ "diem-genesis-tool",
+ "diem-infallible",
+ "diem-logger",
+ "diem-types",
+ "diem-workspace-hack",
+ "diemdb",
+ "diemdb-benchmark",
+ "executor-types",
+ "itertools 0.10.0",
+ "rand 0.8.3",
+ "rayon",
+ "scratchpad",
+ "storage-interface",
+ "structopt 0.3.21",
 ]
 
 [[package]]

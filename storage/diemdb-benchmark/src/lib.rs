@@ -3,6 +3,7 @@
 
 use byteorder::{BigEndian, WriteBytesExt};
 use diem_config::config::RocksdbConfig;
+use diem_crypto::hash::HashValue;
 use diem_jellyfish_merkle::metrics::{
     DIEM_JELLYFISH_INTERNAL_ENCODED_BYTES, DIEM_JELLYFISH_LEAF_ENCODED_BYTES,
     DIEM_JELLYFISH_STORAGE_READS,
@@ -10,6 +11,8 @@ use diem_jellyfish_merkle::metrics::{
 use diem_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    block_info::BlockInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{ChangeSet, Transaction, TransactionToCommit, WriteSetPayload},
     vm_status::KeptVMStatus,
     write_set::WriteSetMut,
@@ -20,10 +23,14 @@ use diemdb::{
 use indicatif::{ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use rand::Rng;
-use std::{collections::HashMap, fs, path::PathBuf};
-use storage_interface::DbWriter;
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    path::PathBuf,
+};
+use storage_interface::{DbReader, DbWriter};
 
-fn gen_account_from_index(account_index: u64) -> AccountAddress {
+pub fn gen_account_from_index(account_index: u64) -> AccountAddress {
     let mut array = [0u8; AccountAddress::LENGTH];
     array
         .as_mut()
@@ -32,7 +39,7 @@ fn gen_account_from_index(account_index: u64) -> AccountAddress {
     AccountAddress::new(array)
 }
 
-fn gen_random_blob<R: Rng>(size: usize, rng: &mut R) -> AccountStateBlob {
+pub fn gen_random_blob<R: Rng>(size: usize, rng: &mut R) -> AccountStateBlob {
     let mut v = vec![0u8; size];
     rng.fill(v.as_mut_slice());
     AccountStateBlob::from(v)
@@ -110,6 +117,23 @@ pub fn run_benchmark(
         version = version.checked_add(version_bump).expect("Cannot overflow");
         bar.inc(version_bump);
     }
+    let accu_root_hash = db.get_accumulator_root_hash(total_version - 1).unwrap();
+    // Last txn
+    let li = LedgerInfo::new(
+        BlockInfo::new(
+            /* current_epoch = */ 0,
+            /* round = */ 0,
+            /* block_id */ HashValue::random_with_rng(&mut rng),
+            accu_root_hash,
+            total_version - 1,
+            /* timestamp = */ 0,
+            None,
+        ),
+        HashValue::random_with_rng(&mut rng),
+    );
+    let li_with_sigs = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+    db.save_transactions(&[], total_version, Some(&li_with_sigs))
+        .unwrap();
     bar.finish();
 
     db.update_rocksdb_properties().unwrap();

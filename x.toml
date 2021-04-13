@@ -190,6 +190,7 @@ members = [
     "move-prover-test-utils",
     "move-vm-integration-tests",
     "offchain",
+    "scratchpad-benchmark",
     "sdk-compatibility",
     "serializer-tests",
     "smoke-test",
