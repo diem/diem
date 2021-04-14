@@ -10,16 +10,16 @@ use crate::{
     },
     instance,
     instance::Instance,
-    tx_emitter::{execute_and_wait_transactions, AccountData, EmitJobRequest},
+    tx_emitter::{execute_and_wait_transactions, EmitJobRequest},
 };
 use anyhow::format_err;
 use async_trait::async_trait;
 use diem_logger::prelude::*;
+use diem_sdk::{transaction_builder::TransactionFactory, types::LocalAccount};
 use diem_transaction_builder::stdlib::encode_update_diem_version_script;
 use diem_types::{
-    account_config::XUS_NAME,
     chain_id::ChainId,
-    transaction::{helpers::create_user_txn, ScriptFunction, TransactionPayload},
+    transaction::{ScriptFunction, TransactionPayload},
 };
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use std::{collections::HashSet, fmt, time::Duration};
@@ -107,25 +107,22 @@ impl Experiment for ValidatorVersioning {
         // TODO: In the future we may want to pass this functor as an argument to the experiment
         // to make versioning test extensible.
         let txn_payload = TransactionPayload::ScriptFunction(ScriptFunction::new(
-            ModuleId::new(account.address, Identifier::new("PHANTOM_MODULE").unwrap()),
+            ModuleId::new(
+                account.address(),
+                Identifier::new("PHANTOM_MODULE").unwrap(),
+            ),
             Identifier::new("PHANTOM_FUNCTION").unwrap(),
             vec![],
             vec![],
         ));
 
-        let txn_gen = |account: &AccountData| {
-            create_user_txn(
-                &account.key_pair,
-                txn_payload.clone(),
-                account.address,
-                account.sequence_number,
-                123456,
-                0,
-                XUS_NAME.to_owned(),
-                10,
-                ChainId::test(),
+        let tx_factory = TransactionFactory::new(ChainId::test());
+        let txn_gen = |account: &mut LocalAccount| {
+            account.sign_with_transaction_builder(
+                tx_factory
+                    .payload(txn_payload.clone())
+                    .expiration_timestamp_secs(10),
             )
-            .map_err(|e| format_err!("Failed to create signed transaction: {}", e))
         };
 
         // grab a validator node
@@ -133,7 +130,7 @@ impl Experiment for ValidatorVersioning {
         let mut old_client = old_validator_node.json_rpc_client();
 
         info!("1. Send a transaction using the new feature to a validator node");
-        let txn1 = txn_gen(&account)?;
+        let txn1 = txn_gen(&mut account);
         if execute_and_wait_transactions(&mut old_client, &mut account, vec![txn1])
             .await
             .is_ok()
@@ -162,7 +159,7 @@ impl Experiment for ValidatorVersioning {
         let mut new_client = new_validator_node.json_rpc_client();
 
         info!("3. Send the transaction using the new feature to an updated validator node");
-        let txn3 = txn_gen(&account)?;
+        let txn3 = txn_gen(&mut account);
         if execute_and_wait_transactions(&mut new_client, &mut account, vec![txn3])
             .await
             .is_ok()
@@ -183,7 +180,7 @@ impl Experiment for ValidatorVersioning {
         .await?;
 
         info!("5. Send the transaction using the new feature to an updated validator node again");
-        let txn4 = txn_gen(&account)?;
+        let txn4 = txn_gen(&mut account);
         if execute_and_wait_transactions(&mut new_client, &mut account, vec![txn4])
             .await
             .is_ok()
@@ -200,25 +197,18 @@ impl Experiment for ValidatorVersioning {
             .load_diem_root_account(&new_client)
             .await?;
         let allowed_nonce = 0;
-        let update_txn = create_user_txn(
-            &diem_root_account.key_pair,
-            TransactionPayload::Script(encode_update_diem_version_script(allowed_nonce, 11)),
-            diem_root_account.address,
-            diem_root_account.sequence_number,
-            123456,
-            0,
-            XUS_NAME.to_owned(),
-            10,
-            ChainId::test(),
-        )
-        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
-        diem_root_account.sequence_number += 1;
+        let update_txn = diem_root_account.sign_with_transaction_builder(
+            tx_factory
+                .payload(TransactionPayload::Script(
+                    encode_update_diem_version_script(allowed_nonce, 11),
+                ))
+                .expiration_timestamp_secs(10),
+        );
         execute_and_wait_transactions(&mut new_client, &mut diem_root_account, vec![update_txn])
             .await?;
 
         info!("7. Send the transaction using the new feature after Diem version update");
-        let txn5 = txn_gen(&account)?;
-        account.sequence_number += 1;
+        let txn5 = txn_gen(&mut account);
         execute_and_wait_transactions(&mut new_client, &mut account, vec![txn5]).await?;
         info!("-- [Expected] The transaction goes through");
 

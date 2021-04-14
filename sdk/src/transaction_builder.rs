@@ -391,6 +391,43 @@ impl TransactionFactory {
         }
     }
 
+    pub fn update_diem_version(&self, sliding_nonce: u64, major: u64) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_update_diem_version_script_function(
+                sliding_nonce,
+                major,
+            ))
+        } else {
+            self.script(stdlib::encode_update_diem_version_script(
+                sliding_nonce,
+                major,
+            ))
+        }
+    }
+
+    pub fn remove_validator_and_reconfigure(
+        &self,
+        sliding_nonce: u64,
+        validator_name: Vec<u8>,
+        validator_address: AccountAddress,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(
+                stdlib::encode_remove_validator_and_reconfigure_script_function(
+                    sliding_nonce,
+                    validator_name,
+                    validator_address,
+                ),
+            )
+        } else {
+            self.script(stdlib::encode_remove_validator_and_reconfigure_script(
+                sliding_nonce,
+                validator_name,
+                validator_address,
+            ))
+        }
+    }
+
     //
     // Internal Helpers
     //

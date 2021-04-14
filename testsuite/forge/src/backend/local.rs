@@ -69,18 +69,21 @@ impl Factory for LocalFactory {
         let root_account = LocalAccount::new(
             diem_sdk::types::account_config::diem_root_address(),
             account_key,
+            0,
         );
         let key = generate_key::load_key(&validator_swarm.config.diem_root_key_path);
         let account_key = AccountKey::from_private_key(key);
         let treasury_compliance_account = LocalAccount::new(
             diem_sdk::types::account_config::treasury_compliance_account_address(),
             account_key,
+            0,
         );
         let key = generate_key::load_key(&validator_swarm.config.diem_root_key_path);
         let account_key = AccountKey::from_private_key(key);
         let designated_dealer_account = LocalAccount::new(
             diem_sdk::types::account_config::testnet_dd_account_address(),
             account_key,
+            0,
         );
 
         validator_swarm.launch();

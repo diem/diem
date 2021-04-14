@@ -13,6 +13,7 @@ use async_trait::async_trait;
 use diem_config::{config::NodeConfig, network_id::NetworkId};
 use diem_logger::*;
 use diem_mempool::network::{MempoolNetworkEvents, MempoolNetworkSender};
+use diem_sdk::transaction_builder::TransactionFactory;
 use diem_time_service::TimeService;
 use diem_types::{account_config::diem_root_address, chain_id::ChainId};
 use futures::{sink::SinkExt, StreamExt};
@@ -161,7 +162,8 @@ impl Experiment for LoadTest {
                 .load_diem_root_account(&full_node_client)
                 .await?;
             let receiver = diem_root_address();
-            let dummy_tx = gen_transfer_txn_request(&mut sender, &receiver, 0, ChainId::test(), 0);
+            let tx_factory = TransactionFactory::new(ChainId::test());
+            let dummy_tx = gen_transfer_txn_request(&mut sender, &receiver, 0, tx_factory);
             let total_byte = dummy_tx.raw_txn_bytes_len() as u64 * stats.submitted;
             info!("Total tx emitter stats: {}, bytes: {}", stats, total_byte);
             info!(

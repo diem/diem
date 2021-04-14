@@ -24,11 +24,11 @@ pub struct LocalAccount {
 }
 
 impl LocalAccount {
-    pub fn new<T: Into<AccountKey>>(address: AccountAddress, key: T) -> Self {
+    pub fn new<T: Into<AccountKey>>(address: AccountAddress, key: T, sequence_number: u64) -> Self {
         Self {
             address,
             key: key.into(),
-            sequence_number: 0,
+            sequence_number,
         }
     }
 
@@ -39,7 +39,7 @@ impl LocalAccount {
         let key = AccountKey::generate(rng);
         let address = key.authentication_key().derived_address();
 
-        Self::new(address, key)
+        Self::new(address, key, 0)
     }
 
     pub fn sign_transaction(&self, txn: RawTransaction) -> SignedTransaction {
