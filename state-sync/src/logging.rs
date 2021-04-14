@@ -89,9 +89,7 @@ impl<'a> LogSchema<'a> {
 pub enum LogEntry {
     Reconfig,
     NewPeer,
-    NewPeerAlreadyExists,
     LostPeer,
-    LostPeerNotKnown,
     Waypoint,
     RuntimeStart,
     ConsensusCommit,

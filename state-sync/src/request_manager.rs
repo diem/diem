@@ -22,10 +22,7 @@ use rand::{
 };
 use std::{
     cmp::Ordering,
-    collections::{
-        hash_map::Entry::{Occupied, Vacant},
-        BTreeMap, HashMap,
-    },
+    collections::{BTreeMap, HashMap},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -34,6 +31,18 @@ const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
 const STARTING_SCORE: f64 = 50.0;
 const STARTING_SCORE_PREFERRED: f64 = 100.0;
+
+#[derive(Clone, Debug)]
+struct PeerInfo {
+    is_alive: bool,
+    score: f64,
+}
+
+impl PeerInfo {
+    pub fn new(is_alive: bool, score: f64) -> Self {
+        Self { is_alive, score }
+    }
+}
 
 /// Basic metadata about the chunk request.
 #[derive(Clone, Debug)]
@@ -73,8 +82,10 @@ enum PeerScoreUpdateType {
 }
 
 pub struct RequestManager {
-    // Maps each peer to their peer score
-    peer_scores: HashMap<PeerNetworkId, f64>,
+    // The list of peers that are eligible for this node to send sync requests
+    // to (grouped by network).
+    eligible_peers: BTreeMap<NetworkId, (Vec<PeerNetworkId>, Option<WeightedIndex<f64>>)>,
+    peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
     // duration with the same version before the next attempt to get the next chunk
     request_timeout: Duration,
@@ -97,7 +108,8 @@ impl RequestManager {
         update_multicast_network_counter(multicast_network_level.clone());
 
         Self {
-            peer_scores: HashMap::new(),
+            eligible_peers: BTreeMap::new(),
+            peers: HashMap::new(),
             requests: BTreeMap::new(),
             request_timeout,
             multicast_timeout,
@@ -125,91 +137,95 @@ impl RequestManager {
             .with_label_values(&[&peer.raw_network_id().to_string()])
             .inc();
 
-        match self.peer_scores.entry(peer) {
-            Occupied(occupied_entry) => {
-                warn!(LogSchema::new(LogEntry::NewPeerAlreadyExists).peer(occupied_entry.key()));
-            }
-            Vacant(vacant_entry) => {
-                let peer_score = if metadata.role == PeerRole::PreferredUpstream {
-                    STARTING_SCORE_PREFERRED
-                } else {
-                    STARTING_SCORE
-                };
-                vacant_entry.insert(peer_score);
-            }
+        if let Some(peer_info) = self.peers.get_mut(&peer) {
+            peer_info.is_alive = true;
+        } else {
+            let peer_score = if metadata.role == PeerRole::PreferredUpstream {
+                STARTING_SCORE_PREFERRED
+            } else {
+                STARTING_SCORE
+            };
+            self.peers.insert(peer, PeerInfo::new(true, peer_score));
         }
+        self.update_peer_selection_data();
 
         Ok(())
     }
 
-    pub fn disable_peer(&mut self, peer: &PeerNetworkId) -> Result<(), Error> {
-        info!(LogSchema::new(LogEntry::LostPeer).peer(&peer));
+    pub fn disable_peer(
+        &mut self,
+        peer: &PeerNetworkId,
+        origin: ConnectionOrigin,
+    ) -> Result<(), Error> {
+        info!(LogSchema::new(LogEntry::LostPeer)
+            .peer(&peer)
+            .is_valid_peer(self.is_valid_state_sync_peer(&peer, origin)));
 
-        if self.peer_scores.contains_key(peer) {
+        if let Some(peer_info) = self.peers.get_mut(peer) {
             counters::ACTIVE_UPSTREAM_PEERS
                 .with_label_values(&[&peer.raw_network_id().to_string()])
                 .dec();
-            self.peer_scores.remove(peer);
-        } else {
-            warn!(LogSchema::new(LogEntry::LostPeerNotKnown).peer(&peer));
+            peer_info.is_alive = false;
         }
+        self.update_peer_selection_data();
 
         Ok(())
     }
 
     pub fn no_available_peers(&self) -> bool {
-        self.peer_scores.is_empty()
+        self.eligible_peers.is_empty()
     }
 
     fn update_score(&mut self, peer: &PeerNetworkId, update_type: PeerScoreUpdateType) {
-        if let Some(score) = self.peer_scores.get_mut(peer) {
-            let old_score = *score;
-            let new_score = match update_type {
+        if let Some(peer_info) = self.peers.get_mut(peer) {
+            let old_score = peer_info.score;
+            match update_type {
                 PeerScoreUpdateType::Success => {
-                    let new_score = old_score + 1.0;
-                    new_score.min(MAX_SCORE)
+                    let new_score = peer_info.score + 1.0;
+                    peer_info.score = new_score.min(MAX_SCORE);
                 }
                 PeerScoreUpdateType::InvalidChunk
                 | PeerScoreUpdateType::ChunkVersionCannotBeApplied => {
-                    let new_score = old_score * 0.8;
-                    new_score.max(MIN_SCORE)
+                    let new_score = peer_info.score * 0.8;
+                    peer_info.score = new_score.max(MIN_SCORE);
                 }
                 PeerScoreUpdateType::TimeOut
                 | PeerScoreUpdateType::EmptyChunk
                 | PeerScoreUpdateType::InvalidChunkRequest => {
-                    let new_score = old_score * 0.95;
-                    new_score.max(MIN_SCORE)
+                    let new_score = peer_info.score * 0.95;
+                    peer_info.score = new_score.max(MIN_SCORE);
                 }
-            };
-            *score = new_score;
+            }
+            if (old_score - peer_info.score).abs() > std::f64::EPSILON {
+                self.update_peer_selection_data();
+            }
         }
     }
 
-    // Calculates a weighted index for each peer per network. This is used to probabilistically
-    // select a peer (per network) to send a chunk request to.
-    fn calculate_weighted_peers_per_network(
-        &mut self,
-    ) -> BTreeMap<NetworkId, (Vec<PeerNetworkId>, Option<WeightedIndex<f64>>)> {
-        // Group peers by network level
-        let peers_by_network_level = self
-            .peer_scores
+    // Updates the information used to select a peer to send a chunk request to.
+    fn update_peer_selection_data(&mut self) {
+        // Group active peers by network level
+        let active_peers = self
+            .peers
             .iter()
-            .map(|(peer, peer_score)| (peer.raw_network_id(), (peer, peer_score)))
+            .filter(|(_peer, peer_info)| peer_info.is_alive)
+            .map(|(peer, peer_info)| (peer.raw_network_id(), (peer, peer_info)))
             .into_group_map();
 
-        // For each network, compute the weighted index
-        peers_by_network_level
+        // For each network, compute the peer selection data (i.e., the weighted index
+        // that holds the probability of the peer being chosen for the next chunk request)
+        self.eligible_peers = active_peers
             .into_iter()
             .map(|(network_level, peers)| {
                 let mut eligible_peers = vec![];
                 let weights: Vec<_> = peers
                     .iter()
-                    .map(|(peer, peer_score)| {
+                    .map(|(peer, peer_info)| {
                         eligible_peers.push((*peer).clone());
-                        *peer_score
+                        peer_info.score
                     })
                     .collect();
-                let weighted_index = WeightedIndex::new(weights)
+                let weighted_index = WeightedIndex::new(&weights)
                     .map_err(|error| {
                         error!(
                             "Failed to compute weighted index for eligible peers: {:?}",
@@ -220,7 +236,7 @@ impl RequestManager {
                     .ok();
                 (network_level, (eligible_peers, weighted_index))
             })
-            .collect()
+            .collect();
     }
 
     /// Picks a set of peers to send chunk requests to. Here, we attempt to pick one peer
@@ -228,14 +244,11 @@ impl RequestManager {
     /// determined by the multicast network level. All networks with preference
     /// level <= multicast level are sampled. If there are no live peers in these networks,
     /// the multicast level is updated to the preference level of the first chosen network.
-    fn pick_peers(&mut self) -> Vec<PeerNetworkId> {
-        // Calculate a weighted peer selection map per network level
-        let weighted_peers_per_network = self.calculate_weighted_peers_per_network();
-
+    pub fn pick_peers(&mut self) -> Vec<PeerNetworkId> {
         let mut chosen_peers = vec![];
         let mut new_multicast_network_level = None;
 
-        for (network_level, (peers, weighted_index)) in &weighted_peers_per_network {
+        for (network_level, (peers, weighted_index)) in &self.eligible_peers {
             if let Some(peer) = pick_peer(peers, weighted_index) {
                 chosen_peers.push(peer)
             }
@@ -258,6 +271,7 @@ impl RequestManager {
     pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<(), Error> {
         let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_request(req.clone());
 
+        // update internal state
         let peers = self.pick_peers();
         if peers.is_empty() {
             warn!(log.event(LogEvent::MissingPeers));
@@ -495,7 +509,7 @@ impl RequestManager {
     }
 
     pub fn is_known_state_sync_peer(&self, peer: &PeerNetworkId) -> bool {
-        self.peer_scores.contains_key(peer)
+        self.peers.contains_key(peer)
     }
 
     fn update_multicast_network_level(
@@ -582,15 +596,16 @@ mod tests {
         assert!(!request_manager.no_available_peers());
 
         // Disable validator 0
-        request_manager.disable_peer(&validator_0).unwrap();
+        request_manager
+            .disable_peer(&validator_0, ConnectionOrigin::Outbound)
+            .unwrap();
 
-        // Verify validator 0 is now unknown
-        assert!(!request_manager.is_known_state_sync_peer(&validator_0));
+        // Verify validator 0 is still known, but no longer available
+        assert!(request_manager.is_known_state_sync_peer(&validator_0));
         assert!(request_manager.no_available_peers());
 
-        // Add validator 0 and verify it's now re-enabled
+        // Add validator 0 and verify it's now enabled
         add_validator_to_request_manager(&mut request_manager, &validator_0, PeerRole::Validator);
-        assert!(request_manager.is_known_state_sync_peer(&validator_0));
         assert!(!request_manager.no_available_peers());
     }
 
