@@ -118,7 +118,7 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
             verification_data = Instrumenter::run(&*options, targets, fun_env, verification_data);
             targets.insert_target_data(
                 &fun_env.get_qualified_id(),
-                verification_data.variant,
+                verification_data.variant.clone(),
                 verification_data,
             );
 
@@ -127,7 +127,11 @@ impl FunctionTargetProcessor for SpecInstrumentationProcessor {
                 let mut new_data =
                     data.fork(FunctionVariant::Verification(INCONSISTENCY_CHECK_VARIANT));
                 new_data = Instrumenter::run(&*options, targets, fun_env, new_data);
-                targets.insert_target_data(&fun_env.get_qualified_id(), new_data.variant, new_data);
+                targets.insert_target_data(
+                    &fun_env.get_qualified_id(),
+                    new_data.variant.clone(),
+                    new_data,
+                );
             }
         }
 
@@ -819,13 +823,13 @@ fn check_caller_callee_modifies_relation(
     if fun_env.is_native() || fun_env.is_intrinsic() {
         return;
     }
-    let caller_func_target = targets.get_target(&fun_env, FunctionVariant::Baseline);
+    let caller_func_target = targets.get_target(&fun_env, &FunctionVariant::Baseline);
     for callee in fun_env.get_called_functions() {
         let callee_fun_env = env.get_function(callee);
         if callee_fun_env.is_native() || callee_fun_env.is_intrinsic() {
             continue;
         }
-        let callee_func_target = targets.get_target(&callee_fun_env, FunctionVariant::Baseline);
+        let callee_func_target = targets.get_target(&callee_fun_env, &FunctionVariant::Baseline);
         let callee_modified_memory = usage_analysis::get_modified_memory(&callee_func_target);
         for target in caller_func_target.get_modify_targets().keys() {
             if callee_modified_memory.contains(target)
@@ -855,7 +859,7 @@ fn check_opaque_modifies_completeness(
     targets: &FunctionTargetsHolder,
     fun_env: &FunctionEnv,
 ) {
-    let target = targets.get_target(fun_env, FunctionVariant::Baseline);
+    let target = targets.get_target(fun_env, &FunctionVariant::Baseline);
     if !target.is_opaque() {
         return;
     }

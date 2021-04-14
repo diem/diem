@@ -37,7 +37,7 @@ pub fn get_packed_types(
         let is_script = module_env.is_script_module();
         if is_script || module_name == "Genesis" {
             for func_env in module_env.get_functions() {
-                let fun_target = targets.get_target(&func_env, FunctionVariant::Baseline);
+                let fun_target = targets.get_target(&func_env, &FunctionVariant::Baseline);
                 let annotation = fun_target
                     .get_annotations()
                     .get::<PackedTypesState>()
@@ -121,7 +121,10 @@ impl<'a> TransferFunctions for PackedTypesAnalysis<'a> {
                     }
                 }
                 Function(mid, fid, types) => {
-                    if let Some(summary) = self.cache.get::<PackedTypesState>(mid.qualified(*fid)) {
+                    if let Some(summary) = self
+                        .cache
+                        .get::<PackedTypesState>(mid.qualified(*fid), &FunctionVariant::Baseline)
+                    {
                         // add closed types
                         for ty in &summary.closed_types.0 {
                             state.closed_types.insert(ty.clone());

@@ -15,6 +15,7 @@ use bytecode::{
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
     global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
+    mono_analysis::MonoAnalysisProcessor,
     read_write_set_analysis::{self, ReadWriteSetProcessor},
     spec_instrumentation::SpecInstrumentationProcessor,
 };
@@ -237,6 +238,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     } else {
         res.add_processor(GlobalInvariantInstrumentationProcessor::new());
     }
+    res.add_processor(MonoAnalysisProcessor::new());
     res
 }
 

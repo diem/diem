@@ -11,10 +11,13 @@ use bytecode::{
     clean_and_optimize::CleanAndOptimizeProcessor,
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
-    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    function_target_pipeline::{
+        FunctionTargetPipeline, FunctionTargetsHolder, ProcessorResultDisplay,
+    },
     global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
     livevar_analysis::LiveVarAnalysisProcessor,
     memory_instrumentation::MemoryInstrumentationProcessor,
+    mono_analysis::MonoAnalysisProcessor,
     mut_ref_instrumentation::MutRefInstrumenter,
     options::ProverOptions,
     print_targets_for_test,
@@ -148,6 +151,14 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(Box::new(ReadWriteSetProcessor {}));
             Ok(Some(pipeline))
         }
+        "mono_analysis" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(UsageProcessor::new());
+            pipeline.add_processor(VerificationAnalysisProcessor::new());
+            pipeline.add_processor(SpecInstrumentationProcessor::new());
+            pipeline.add_processor(MonoAnalysisProcessor::new());
+            Ok(Some(pipeline))
+        }
 
         _ => Err(anyhow!(
             "the sub-directory `{}` has no associated pipeline to test",
@@ -190,8 +201,20 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         // Run pipeline if any
         if let Some(pipeline) = pipeline_opt {
             pipeline.run(&env, &mut targets, None, /* dump_cfg */ false);
-            text +=
-                &print_targets_for_test(&env, &format!("after pipeline `{}`", dir_name), &targets);
+            let processor = pipeline.last_processor();
+            if !processor.is_single_run() {
+                text += &print_targets_for_test(
+                    &env,
+                    &format!("after pipeline `{}`", dir_name),
+                    &targets,
+                );
+            }
+            text += &ProcessorResultDisplay {
+                env: &env,
+                targets: &targets,
+                processor,
+            }
+            .to_string();
         }
 
         text

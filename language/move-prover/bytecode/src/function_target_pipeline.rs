@@ -7,6 +7,7 @@ use crate::{
     stackless_bytecode_generator::StacklessBytecodeGenerator,
     stackless_control_flow_graph::generate_cfg_in_dot_format,
 };
+use core::fmt;
 use itertools::Itertools;
 use log::debug;
 use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
@@ -20,7 +21,7 @@ pub struct FunctionTargetsHolder {
 }
 
 /// Describes a function target variant.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FunctionVariant {
     /// The baseline variant which was created from the original Move bytecode and is then
     /// subject of multiple transformations.
@@ -92,6 +93,40 @@ pub trait FunctionTargetProcessor {
 
     /// A function which is called once after the last `process` call.
     fn finalize(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {}
+
+    /// A function which can be implemented to indicate that instead of a sequence of initialize,
+    /// process, and finalize, this processor has a single `run` function for the analysis of the
+    /// whole set of functions.
+    fn is_single_run(&self) -> bool {
+        false
+    }
+
+    /// To be implemented if `is_single_run()` is true.
+    fn run(&self, _env: &GlobalEnv, _targets: &mut FunctionTargetsHolder) {
+        unimplemented!()
+    }
+
+    /// A function which creates a dump of the processors results, for debugging.
+    fn dump_result(
+        &self,
+        _f: &mut Formatter<'_>,
+        _env: &GlobalEnv,
+        _targets: &FunctionTargetsHolder,
+    ) -> fmt::Result {
+        Ok(())
+    }
+}
+
+pub struct ProcessorResultDisplay<'a> {
+    pub env: &'a GlobalEnv,
+    pub targets: &'a FunctionTargetsHolder,
+    pub processor: &'a dyn FunctionTargetProcessor,
+}
+
+impl<'a> fmt::Display for ProcessorResultDisplay<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.processor.dump_result(f, self.env, self.targets)
+    }
 }
 
 /// A processing pipeline for function targets.
@@ -112,7 +147,7 @@ impl FunctionTargetsHolder {
     ) -> impl Iterator<Item = (QualifiedId<FunId>, FunctionVariant)> + '_ {
         self.targets
             .iter()
-            .map(|(id, vs)| vs.keys().map(move |v| (*id, *v)))
+            .map(|(id, vs)| vs.keys().map(move |v| (*id, v.clone())))
             .flatten()
     }
 
@@ -130,7 +165,7 @@ impl FunctionTargetsHolder {
     pub fn get_target<'env>(
         &'env self,
         func_env: &'env FunctionEnv<'env>,
-        variant: FunctionVariant,
+        variant: &FunctionVariant,
     ) -> FunctionTarget<'env> {
         let data = self
             .get_data(&func_env.get_qualified_id(), variant)
@@ -163,7 +198,7 @@ impl FunctionTargetsHolder {
             .get(&func_env.get_qualified_id())
             .expect("function targets exist")
             .iter()
-            .map(|(v, d)| (*v, FunctionTarget::new(func_env, d)))
+            .map(|(v, d)| (v.clone(), FunctionTarget::new(func_env, d)))
             .collect_vec()
     }
 
@@ -171,7 +206,7 @@ impl FunctionTargetsHolder {
     pub fn get_data(
         &self,
         id: &QualifiedId<FunId>,
-        variant: FunctionVariant,
+        variant: &FunctionVariant,
     ) -> Option<&FunctionData> {
         self.targets.get(id).and_then(|vs| vs.get(&variant))
     }
@@ -180,7 +215,7 @@ impl FunctionTargetsHolder {
     pub fn get_data_mut(
         &mut self,
         id: &QualifiedId<FunId>,
-        variant: FunctionVariant,
+        variant: &FunctionVariant,
     ) -> Option<&mut FunctionData> {
         self.targets.get_mut(id).and_then(|vs| vs.get_mut(&variant))
     }
@@ -189,7 +224,7 @@ impl FunctionTargetsHolder {
     pub fn remove_target_data(
         &mut self,
         id: &QualifiedId<FunId>,
-        variant: FunctionVariant,
+        variant: &FunctionVariant,
     ) -> FunctionData {
         self.targets
             .get_mut(id)
@@ -213,7 +248,7 @@ impl FunctionTargetsHolder {
         let id = func_env.get_qualified_id();
         for variant in self.get_target_variants(func_env) {
             // Remove data so we can own it.
-            let data = self.remove_target_data(&id, variant);
+            let data = self.remove_target_data(&id, &variant);
             if let Some(processed_data) = processor.process_and_maybe_remove(self, func_env, data) {
                 // Put back processed data.
                 self.insert_target_data(&id, variant, processed_data);
@@ -229,6 +264,15 @@ impl FunctionTargetPipeline {
         self.processors.push(processor)
     }
 
+    /// Gets the last processor in the pipeline, for testing.
+    pub fn last_processor(&self) -> &dyn FunctionTargetProcessor {
+        self.processors
+            .iter()
+            .last()
+            .expect("pipeline not empty")
+            .as_ref()
+    }
+
     /// Runs the pipeline on all functions in the targets holder. Functions are analyzed in
     /// topological order, so a caller can guarantee that its callees have already been analyzed
     /// in programs without recursion or mutual recursion. Processors are run on an individual
@@ -238,7 +282,7 @@ impl FunctionTargetPipeline {
         &self,
         env: &GlobalEnv,
         targets: &mut FunctionTargetsHolder,
-        dump_to_file: Option<String>,
+        dump_file_opt: Option<String>,
         dump_cfg: bool,
     ) {
         let mut worklist = vec![];
@@ -292,49 +336,92 @@ impl FunctionTargetPipeline {
             topological_order.push(func_env);
         }
 
-        let dump_to_file = |step_count: usize, name: &str, targets: &FunctionTargetsHolder| {
+        let dump_to_file = |step_count: usize, suffix: &str, content: &dyn Fn() -> String| {
             // Dump result to file if requested
-            if let Some(base_name) = &dump_to_file {
-                let dump =
-                    print_targets_for_test(env, &format!("after processor `{}`", name), targets);
-                let trimmed = format!("{}\n", dump.trim());
-                let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, name);
+            if let Some(base_name) = &dump_file_opt {
+                let dump = format!("{}\n", content().trim());
+                let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, suffix);
                 debug!("dumping bytecode to `{}`", file_name);
-                fs::write(&file_name, &trimmed).expect("dumping bytecode");
-
-                if dump_cfg {
-                    // generate dot files for control-flow graphs
-                    for (fun_id, variants) in &targets.targets {
-                        let func_env = env.get_function(*fun_id);
-                        let func_name = func_env.get_full_name_str();
-                        let func_name = func_name.replace("::", "__");
-                        for (variant, data) in variants {
-                            if !data.code.is_empty() {
-                                let dot_file = format!(
-                                    "{}_{}_{}_{}_{}_cfg.dot",
-                                    base_name, step_count, name, func_name, variant
-                                );
-                                debug!("generating dot graph for cfg in `{}`", dot_file);
-                                let func_target = FunctionTarget::new(&func_env, data);
-                                let dot_graph = generate_cfg_in_dot_format(&func_target);
-                                fs::write(&dot_file, &dot_graph)
-                                    .expect("generating dot file for CFG");
-                            }
-                        }
-                    }
-                }
+                fs::write(&file_name, &dump).expect("dumping bytecode");
             }
         };
-        dump_to_file(0, "stackless", targets);
+        let print_targets = |name: &str, targets: &FunctionTargetsHolder| -> String {
+            print_targets_for_test(env, &format!("after processor `{}`", name), targets)
+        };
+        let dump_processor_result =
+            |step_count: usize,
+             processor: &dyn FunctionTargetProcessor,
+             targets: &FunctionTargetsHolder| {
+                dump_to_file(step_count, &processor.name(), &|| {
+                    let mut dump = format!(
+                        "{}",
+                        ProcessorResultDisplay {
+                            env,
+                            targets,
+                            processor
+                        }
+                    );
+                    if !processor.is_single_run() {
+                        if !dump.is_empty() {
+                            dump = format!("\n\n{}", dump);
+                        }
+                        dump.push_str(&print_targets(&processor.name(), targets));
+                    }
+                    if dump_cfg {
+                        self.dump_cfg(
+                            env,
+                            targets,
+                            step_count,
+                            dump_file_opt.as_ref().unwrap(),
+                            &processor.name(),
+                        );
+                    }
+                    dump
+                });
+            };
+
+        dump_to_file(0, "stackless", &|| print_targets("stackless", targets));
 
         // Now that we determined the topological order, run each processor on it, breadth-first.
         for (step_count, processor) in self.processors.iter().enumerate() {
-            processor.initialize(env, targets);
-            for func_env in &topological_order {
-                targets.process(func_env, processor.as_ref());
+            if processor.is_single_run() {
+                processor.run(env, targets);
+            } else {
+                processor.initialize(env, targets);
+                for func_env in &topological_order {
+                    targets.process(func_env, processor.as_ref());
+                }
+                processor.finalize(env, targets);
             }
-            processor.finalize(env, targets);
-            dump_to_file(step_count + 1, &processor.name(), targets);
+            dump_processor_result(step_count + 1, processor.as_ref(), targets);
+        }
+    }
+
+    /// Generate dot files for control-flow graphs.
+    fn dump_cfg(
+        &self,
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+        step_count: usize,
+        base_name: &str,
+        suffix: &str,
+    ) {
+        for (fun_id, variants) in &targets.targets {
+            let func_env = env.get_function(*fun_id);
+            let func_name = func_env.get_full_name_str();
+            let func_name = func_name.replace("::", "__");
+            for (variant, data) in variants {
+                if !data.code.is_empty() {
+                    let dot_file = format!(
+                        "{}_{}_{}_{}_{}_cfg.dot",
+                        base_name, step_count, suffix, func_name, variant
+                    );
+                    debug!("generating dot graph for cfg in `{}`", dot_file);
+                    let func_target = FunctionTarget::new(&func_env, data);
+                    let dot_graph = generate_cfg_in_dot_format(&func_target);
+                    fs::write(&dot_file, &dot_graph).expect("generating dot file for CFG");
+                }
+            }
         }
     }
 }

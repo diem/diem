@@ -86,8 +86,8 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         // be mutated, as per pipeline processor design. We put it back temporarily to have
         // a unique model of targets.
         let fid = fun_env.get_qualified_id();
-        let variant = data.variant;
-        targets.insert_target_data(&fid, variant, data);
+        let variant = data.variant.clone();
+        targets.insert_target_data(&fid, variant.clone(), data);
 
         // Check the friend relation.
         check_friend_relation(fun_env);
@@ -106,7 +106,7 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
                 let target_memory = get_target_invariant_memory(fun_env.module_env.env);
 
                 // Get all memory modified by this function.
-                let fun_target = targets.get_target(fun_env, variant);
+                let fun_target = targets.get_target(fun_env, &variant);
                 let modified_memory = usage_analysis::get_directly_modified_memory(&fun_target);
 
                 // This function needs to be verified if it is a target or it touches target memory.
@@ -115,10 +115,10 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
         };
         if is_verified {
             debug!("marking `{}` to be verified", fun_env.get_full_name_str());
-            mark_verified(fun_env, variant, targets, &options);
+            mark_verified(fun_env, &variant, targets, &options);
         }
 
-        targets.remove_target_data(&fid, variant)
+        targets.remove_target_data(&fid, &variant)
     }
 
     fn name(&self) -> String {
@@ -177,7 +177,7 @@ fn get_target_invariant_memory(env: &GlobalEnv) -> BTreeSet<QualifiedId<StructId
 /// indirectly called by this function as inlined if they are not opaque.
 fn mark_verified(
     fun_env: &FunctionEnv<'_>,
-    variant: FunctionVariant,
+    variant: &FunctionVariant,
     targets: &mut FunctionTargetsHolder,
     options: &ProverOptions,
 ) {
@@ -205,7 +205,7 @@ fn mark_verified(
 /// directly or indirectly from a verified function.
 fn mark_inlined(
     fun_env: &FunctionEnv<'_>,
-    variant: FunctionVariant,
+    variant: &FunctionVariant,
     targets: &mut FunctionTargetsHolder,
 ) {
     if fun_env.is_native() || fun_env.is_intrinsic() {
@@ -230,7 +230,7 @@ fn mark_inlined(
 /// Continue transitively marking callees as inlined.
 fn mark_callees_inlined(
     fun_env: &FunctionEnv<'_>,
-    variant: FunctionVariant,
+    variant: &FunctionVariant,
     targets: &mut FunctionTargetsHolder,
 ) {
     for callee in fun_env.get_called_functions() {

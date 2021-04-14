@@ -7,7 +7,7 @@ use crate::{
         AbstractDomain, DataflowAnalysis, JoinResult, SetDomain, TransferFunctions,
     },
     function_target::{FunctionData, FunctionTarget},
-    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
 use move_model::model::{FunctionEnv, QualifiedId, StructId};
@@ -123,7 +123,10 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
         if let Call(_, _, oper, _, _) = code {
             match oper {
                 Function(mid, fid, _) => {
-                    if let Some(summary) = self.cache.get::<UsageState>(mid.qualified(*fid)) {
+                    if let Some(summary) = self
+                        .cache
+                        .get::<UsageState>(mid.qualified(*fid), &FunctionVariant::Baseline)
+                    {
                         state.modified_memory.extend(&summary.modified_memory.0);
                         state.used_memory.extend(&summary.used_memory.0);
                     }

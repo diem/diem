@@ -724,18 +724,27 @@ fn ensure_targets_deps_dont_intersect(
     deps: &mut Vec<&'static str>,
     sources_shadow_deps: bool,
 ) -> anyhow::Result<()> {
-    let target_set = targets.iter().collect::<BTreeSet<_>>();
-    let dep_set = deps.iter().collect::<BTreeSet<_>>();
-    let intersection = target_set
-        .intersection(&dep_set)
-        .cloned()
-        .cloned()
-        .collect::<Vec<_>>();
+    /// Canonicalize a file path.
+    fn canonicalize(path: &str) -> String {
+        match std::fs::canonicalize(path) {
+            Ok(s) => s.to_string_lossy().to_string(),
+            Err(_) => path.to_owned(),
+        }
+    }
+    let target_set = targets
+        .iter()
+        .map(|s| canonicalize(s))
+        .collect::<BTreeSet<_>>();
+    let dep_set = deps
+        .iter()
+        .map(|s| canonicalize(s))
+        .collect::<BTreeSet<_>>();
+    let intersection = target_set.intersection(&dep_set).collect::<Vec<_>>();
     if intersection.is_empty() {
         return Ok(());
     }
     if sources_shadow_deps {
-        deps.retain(|fname| !intersection.contains(fname));
+        deps.retain(|fname| !intersection.contains(&&canonicalize(fname)));
         return Ok(());
     }
     let all_files = intersection

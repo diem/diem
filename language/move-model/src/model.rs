@@ -1004,6 +1004,11 @@ impl GlobalEnv {
         self.get_module(fun.module_id).into_function(fun.id)
     }
 
+    /// Return the `StructEnv` for `str`
+    pub fn get_struct(&self, str: QualifiedId<StructId>) -> StructEnv<'_> {
+        self.get_module(str.module_id).into_struct(str.id)
+    }
+
     // Gets the number of modules in this environment.
     pub fn get_module_count(&self) -> usize {
         self.module_data.len()
@@ -2516,6 +2521,10 @@ impl<'env> FunctionEnv<'env> {
     /// Returns true if this function has the pragma intrinsic set to true.
     pub fn is_intrinsic(&self) -> bool {
         self.is_pragma_true(INTRINSIC_PRAGMA, || false)
+    }
+
+    pub fn is_native_or_intrinsic(&self) -> bool {
+        self.is_native() || self.is_intrinsic()
     }
 
     /// Returns true if this function is opaque.

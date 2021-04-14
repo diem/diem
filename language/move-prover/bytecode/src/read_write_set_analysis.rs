@@ -385,7 +385,10 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     let fun_id = mid.qualified(*fid);
                     let global_env = self.cache.global_env();
                     let callee_fun_env = global_env.get_function(fun_id);
-                    if let Some(callee_summary) = self.cache.get::<ReadWriteSetState>(fun_id) {
+                    if let Some(callee_summary) = self
+                        .cache
+                        .get::<ReadWriteSetState>(fun_id, &FunctionVariant::Baseline)
+                    {
                         state.apply_summary(callee_summary, args, types, rets);
                     } else {
                         // native fun. use handwritten model
@@ -582,7 +585,7 @@ pub fn get_read_write_set(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
     for module_env in env.get_modules() {
         let module_name = module_env.get_identifier().to_string();
         for func_env in module_env.get_functions() {
-            let fun_target = targets.get_target(&func_env, FunctionVariant::Baseline);
+            let fun_target = targets.get_target(&func_env, &FunctionVariant::Baseline);
             let annotation = fun_target
                 .get_annotations()
                 .get::<ReadWriteSetState>()

@@ -23,22 +23,17 @@ impl<'a> SummaryCache<'a> {
         }
     }
 
-    /// Return a summary for `fun_id`. Returns None if `fun_id` is a native function
-    pub fn get<Summary: 'static>(&self, fun_id: QualifiedId<FunId>) -> Option<&Summary> {
-        // TODO(wrwg): this currently only works for FunctionVariant::Baseline. If needed
-        //   we may need to extend this. However, we expect to not perform analysis
-        //   once function variants are introduced beyond baseline, as this happens
-        //   at the end of transformation pipeline, as part of instrumentation with
-        //   the specification.
+    /// Return a summary for a variant of `fun_id`. Returns None if `fun_id` is a native function
+    pub fn get<Summary: 'static>(
+        &self,
+        fun_id: QualifiedId<FunId>,
+        variant: &FunctionVariant,
+    ) -> Option<&Summary> {
         let fun_env = self.global_env.get_function(fun_id);
-        assert_eq!(
-            self.targets.get_target_variants(&fun_env),
-            vec![FunctionVariant::Baseline]
-        );
         self.targets
-            .get_data(&fun_id, FunctionVariant::Baseline)
+            .get_data(&fun_id, variant)
             .map(|fun_data| {
-                if self.global_env.get_function(fun_id).is_native() {
+                if fun_env.is_native_or_intrinsic() {
                     None
                 } else {
                     Some(
@@ -57,15 +52,16 @@ impl<'a> SummaryCache<'a> {
 }
 
 /// Trait that lifts an intraprocedural analysis into a bottom-up, compositional interprocedural
-/// analysis.
-pub trait CompositionalAnalysis<Domain: AbstractDomain + 'static>: DataflowAnalysis
+/// analysis. Here, the type `Summary` represents a transformation of the final data flow analysis
+/// state.
+pub trait CompositionalAnalysis<Summary: AbstractDomain + 'static>: DataflowAnalysis
 where
     Self::State: AbstractDomain + 'static,
 {
     /// Specifies mapping from elements of dataflow analysis domain to elements of `Domain`.
-    fn to_summary(&self, state: Self::State, fun_target: &FunctionTarget) -> Domain;
+    fn to_summary(&self, state: Self::State, fun_target: &FunctionTarget) -> Summary;
 
-    /// Computes a postcondition for the procedure `data` and then maps the postcondition to an
+    /// Computes a postcondition for the function `data` and then maps the postcondition to an
     /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
     /// in the summary cache of `data`.
     fn summarize(
