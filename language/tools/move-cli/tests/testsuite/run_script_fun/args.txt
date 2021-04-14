@@ -1,0 +1,10 @@
+check
+publish
+# should work
+run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv script_fun --signers 0xA --args 5
+view storage/0x0000000000000000000000000000000A/resources/0x00000000000000000000000000000002::ScriptFun::Called.bcs
+
+# these three should not work for different reasons (bad visibility for first two, fun not found for last one)
+run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv private_fun --signers 0xA
+run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv public_fun --signers 0xA
+run storage/0x00000000000000000000000000000002/modules/ScriptFun.mv nonexistent_fun --signers 0xA
