@@ -204,7 +204,7 @@ impl Type {
         if let Type::Struct(mid, sid, targs) = self {
             (*mid, *sid, targs.as_slice())
         } else {
-            panic!("expected a Type::Struct")
+            panic!("expected `Type::Struct`, found: `{:?}`", self)
         }
     }
 
@@ -213,7 +213,7 @@ impl Type {
         if params.is_empty() {
             self.clone()
         } else {
-            self.replace(Some(params), None)
+            self.replace(Some(params), None, None)
         }
     }
 
@@ -226,9 +226,35 @@ impl Type {
         }
     }
 
+    /// Instantiate type parameters in the slice of types.
+    pub fn instantiate_slice(slice: &[Type], params: &[Type]) -> Vec<Type> {
+        if params.is_empty() {
+            slice.to_owned()
+        } else {
+            slice.iter().map(|ty| ty.instantiate(params)).collect()
+        }
+    }
+
+    /// Replace the given type local.
+    pub fn replace_type_local(&self, local: Symbol, repl: Type) -> Type {
+        let mut subs = BTreeMap::new();
+        subs.insert(local, repl);
+        self.replace(None, None, Some(&subs))
+    }
+
     /// A helper function to do replacement of type parameters and/or type variables.
-    fn replace(&self, params: Option<&[Type]>, subs: Option<&Substitution>) -> Type {
-        let replace_vec = |types: &[Type]| types.iter().map(|t| t.replace(params, subs)).collect();
+    fn replace(
+        &self,
+        params: Option<&[Type]>,
+        subs: Option<&Substitution>,
+        type_local_subs: Option<&BTreeMap<Symbol, Type>>,
+    ) -> Type {
+        let replace_vec = |types: &[Type]| {
+            types
+                .iter()
+                .map(|t| t.replace(params, subs, type_local_subs))
+                .collect()
+        };
         match self {
             Type::TypeParameter(i) => {
                 if let Some(ps) = params {
@@ -244,7 +270,18 @@ impl Type {
                         // refers to type variables.
                         // TODO: a more efficient approach is to maintain that type assignments
                         // are always fully specialized w.r.t. to the substitution.
-                        t.replace(params, subs)
+                        t.replace(params, subs, type_local_subs)
+                    } else {
+                        self.clone()
+                    }
+                } else {
+                    self.clone()
+                }
+            }
+            Type::TypeLocal(sym) => {
+                if let Some(subs) = type_local_subs {
+                    if let Some(t) = subs.get(sym) {
+                        t.clone()
                     } else {
                         self.clone()
                     }
@@ -253,18 +290,19 @@ impl Type {
                 }
             }
             Type::Reference(is_mut, bt) => {
-                Type::Reference(*is_mut, Box::new(bt.replace(params, subs)))
+                Type::Reference(*is_mut, Box::new(bt.replace(params, subs, type_local_subs)))
             }
             Type::Struct(mid, sid, args) => Type::Struct(*mid, *sid, replace_vec(args)),
-            Type::Fun(args, result) => {
-                Type::Fun(replace_vec(args), Box::new(result.replace(params, subs)))
-            }
+            Type::Fun(args, result) => Type::Fun(
+                replace_vec(args),
+                Box::new(result.replace(params, subs, type_local_subs)),
+            ),
             Type::Tuple(args) => Type::Tuple(replace_vec(args)),
-            Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs))),
-            Type::TypeDomain(et) => Type::TypeDomain(Box::new(et.replace(params, subs))),
-            Type::ResourceDomain(..) | Type::Primitive(..) | Type::TypeLocal(..) | Type::Error => {
-                self.clone()
+            Type::Vector(et) => Type::Vector(Box::new(et.replace(params, subs, type_local_subs))),
+            Type::TypeDomain(et) => {
+                Type::TypeDomain(Box::new(et.replace(params, subs, type_local_subs)))
             }
+            Type::ResourceDomain(..) | Type::Primitive(..) | Type::Error => self.clone(),
         }
     }
 
@@ -470,7 +508,7 @@ impl Substitution {
 
     /// Specializes the type, substituting all variables bound in this substitution.
     pub fn specialize(&self, t: &Type) -> Type {
-        t.replace(None, Some(self))
+        t.replace(None, Some(self), None)
     }
 
     /// Unify two types, returning the unified type.

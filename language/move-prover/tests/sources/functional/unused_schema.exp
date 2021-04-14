@@ -1,4 +1,4 @@
-warning: unused schema TestUnusedSchema::AddsThree
+note: unused schema TestUnusedSchema::AddsThree
 
     ┌── tests/sources/functional/unused_schema.move:22:5 ───
     │

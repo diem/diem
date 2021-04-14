@@ -1,10 +1,10 @@
 // no-boogie-test
+// The mono backend currently does not translate unused spec functions, so skip this test.
+// exclude_for: bexp
 module 0x42::M {
-
     struct S {
         f: u64
     }
-
     spec module {
         // Tuples as result type.
         define f1(): (num, num) { (1, 2) }

@@ -20,7 +20,12 @@ use move_model::{
 
 use crate::function_target_pipeline::FunctionVariant;
 use move_model::{ast::TempIndex, model::QualifiedInstId};
-use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Range};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    ops::Range,
+};
 
 /// A FunctionTarget is a drop-in replacement for a FunctionEnv which allows to rewrite
 /// and analyze bytecode and parameter/local types. It encapsulates a FunctionEnv and information
@@ -319,7 +324,7 @@ impl<'env> FunctionTarget<'env> {
     }
 
     /// Get all modifies targets, as instantiated struct ids.
-    pub fn get_modify_ids(&self) -> Vec<QualifiedInstId<StructId>> {
+    pub fn get_modify_ids(&self) -> BTreeSet<QualifiedInstId<StructId>> {
         self.data
             .modify_targets
             .iter()
@@ -333,6 +338,24 @@ impl<'env> FunctionTarget<'env> {
             })
             .flatten()
             .collect()
+    }
+
+    pub fn get_modify_ids_and_exps(&self) -> BTreeMap<QualifiedInstId<StructId>, Vec<&Exp>> {
+        // TODO: for now we compute this from the legacy representation, but if this
+        //   viewpoint becomes the major use case, we should store it instead directly.
+        let mut res = BTreeMap::new();
+        for (qid, exps) in &self.data.modify_targets {
+            for target in exps {
+                let env = self.global_env();
+                let rty = &env.get_node_instantiation(target.node_id())[0];
+                let (_, _, inst) = rty.require_struct();
+                let qinstid = qid.instantiate(inst.to_owned());
+                res.entry(qinstid)
+                    .or_insert_with(Vec::new)
+                    .push(&target.call_args()[0]);
+            }
+        }
+        res
     }
 
     /// Pretty print a bytecode instruction with offset, comments, annotations, and VC information.

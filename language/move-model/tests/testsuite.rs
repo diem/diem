@@ -5,6 +5,7 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
+use codespan_reporting::diagnostic::Severity;
 use move_binary_format::{
     access::ModuleAccess,
     file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
@@ -15,9 +16,9 @@ use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let targets = vec![path.to_str().unwrap().to_string()];
     let env = run_model_builder(&targets, &[])?;
-    let diags = if env.has_errors() {
+    let diags = if env.diag_count(Severity::Warning) > 0 {
         let mut writer = Buffer::no_color();
-        env.report_errors(&mut writer);
+        env.report_diag(&mut writer, Severity::Warning);
         String::from_utf8_lossy(&writer.into_inner()).to_string()
     } else {
         // check that translating from bytecodes also works + yields similar results

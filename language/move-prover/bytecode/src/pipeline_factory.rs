@@ -15,25 +15,23 @@ use crate::{
     memory_instrumentation::MemoryInstrumentationProcessor,
     mono_analysis::MonoAnalysisProcessor,
     mut_ref_instrumentation::MutRefInstrumenter,
+    options::ProverOptions,
     reaching_def_analysis::ReachingDefProcessor,
     spec_instrumentation::SpecInstrumentationProcessor,
     usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
 };
 
-pub fn default_pipeline_with_options(
-    use_weak_edges: bool,
-    use_inv_v2: bool,
-) -> FunctionTargetPipeline {
+pub fn default_pipeline_with_options(options: &ProverOptions) -> FunctionTargetPipeline {
     // NOTE: the order of these processors is import!
-    let processors: Vec<Box<dyn FunctionTargetProcessor>> = vec![
+    let mut processors: Vec<Box<dyn FunctionTargetProcessor>> = vec![
         DebugInstrumenter::new(),
         // transformation and analysis
         EliminateImmRefsProcessor::new(),
         MutRefInstrumenter::new(),
         ReachingDefProcessor::new(),
         LiveVarAnalysisProcessor::new(),
-        BorrowAnalysisProcessor::new(use_weak_edges),
+        BorrowAnalysisProcessor::new(options.weak_edges),
         MemoryInstrumentationProcessor::new(),
         CleanAndOptimizeProcessor::new(),
         UsageProcessor::new(),
@@ -42,14 +40,15 @@ pub fn default_pipeline_with_options(
         // spec instrumentation
         SpecInstrumentationProcessor::new(),
         DataInvariantInstrumentationProcessor::new(),
-        if use_inv_v2 {
+        if options.inv_v2 {
             GlobalInvariantInstrumentationProcessorV2::new()
         } else {
             GlobalInvariantInstrumentationProcessor::new()
         },
-        // monomorphization
-        MonoAnalysisProcessor::new(),
     ];
+    if options.run_mono {
+        processors.push(MonoAnalysisProcessor::new());
+    }
 
     let mut res = FunctionTargetPipeline::default();
     for p in processors {
@@ -59,7 +58,7 @@ pub fn default_pipeline_with_options(
 }
 
 pub fn default_pipeline() -> FunctionTargetPipeline {
-    default_pipeline_with_options(false, false)
+    default_pipeline_with_options(&ProverOptions::default())
 }
 
 pub fn experimental_pipeline() -> FunctionTargetPipeline {

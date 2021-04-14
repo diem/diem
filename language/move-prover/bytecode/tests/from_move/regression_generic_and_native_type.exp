@@ -1,42 +1,6 @@
 ============ initial translation from Move ================
 
 [variant baseline]
-public fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
-     var $t2: &mut vector<#0>
-     var $t3: &vector<#0>
-     var $t4: bool
-     var $t5: bool
-     var $t6: &mut vector<#0>
-     var $t7: &mut vector<#0>
-     var $t8: #0
-     var $t9: &mut vector<#0>
-     var $t10: vector<#0>
-  0: $t2 := borrow_local($t1)
-  1: Vector::reverse<#0>($t2)
-  2: goto 3
-  3: label L3
-  4: $t3 := borrow_local($t1)
-  5: $t4 := Vector::is_empty<#0>($t3)
-  6: $t5 := !($t4)
-  7: if ($t5) goto 10 else goto 8
-  8: label L1
-  9: goto 16
- 10: label L0
- 11: $t6 := copy($t0)
- 12: $t7 := borrow_local($t1)
- 13: $t8 := Vector::pop_back<#0>($t7)
- 14: Vector::push_back<#0>($t6, $t8)
- 15: goto 3
- 16: label L2
- 17: $t9 := move($t0)
- 18: destroy($t9)
- 19: $t10 := move($t1)
- 20: Vector::destroy_empty<#0>($t10)
- 21: return ()
-}
-
-
-[variant baseline]
 public fun Vector::contains<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): bool {
      var $t2|i: u64
      var $t3|len: u64
@@ -175,6 +139,42 @@ public fun Vector::index_of<$tv0>($t0|v: &vector<#0>, $t1|e: &#0): (bool, u64) {
  41: $t24 := false
  42: $t25 := 0
  43: return ($t24, $t25)
+}
+
+
+[variant baseline]
+public fun Vector::append<$tv0>($t0|lhs: &mut vector<#0>, $t1|other: vector<#0>) {
+     var $t2: &mut vector<#0>
+     var $t3: &vector<#0>
+     var $t4: bool
+     var $t5: bool
+     var $t6: &mut vector<#0>
+     var $t7: &mut vector<#0>
+     var $t8: #0
+     var $t9: &mut vector<#0>
+     var $t10: vector<#0>
+  0: $t2 := borrow_local($t1)
+  1: Vector::reverse<#0>($t2)
+  2: goto 3
+  3: label L3
+  4: $t3 := borrow_local($t1)
+  5: $t4 := Vector::is_empty<#0>($t3)
+  6: $t5 := !($t4)
+  7: if ($t5) goto 10 else goto 8
+  8: label L1
+  9: goto 16
+ 10: label L0
+ 11: $t6 := copy($t0)
+ 12: $t7 := borrow_local($t1)
+ 13: $t8 := Vector::pop_back<#0>($t7)
+ 14: Vector::push_back<#0>($t6, $t8)
+ 15: goto 3
+ 16: label L2
+ 17: $t9 := move($t0)
+ 18: destroy($t9)
+ 19: $t10 := move($t1)
+ 20: Vector::destroy_empty<#0>($t10)
+ 21: return ()
 }
 
 

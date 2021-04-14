@@ -57,6 +57,122 @@ public fun Test::f5(): Test::B<u128> {
   2: return $t1
 }
 
+============ after pipeline `mono_analysis` ================
+
+[variant baseline]
+public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+     var $t1: u64
+     var $t2: Test::A<#0, u64>
+  0: $t1 := 10
+  1: $t2 := pack Test::A<#0, u64>($t0, $t1)
+  2: label L1
+  3: return $t2
+}
+
+
+[variant verification]
+public fun Test::f1<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+     var $t1: u64
+     var $t2: Test::A<#0, u64>
+  0: assume WellFormed($t0)
+  1: $t1 := 10
+  2: $t2 := pack Test::A<#0, u64>($t0, $t1)
+  3: label L1
+  4: return $t2
+}
+
+
+[variant verification]
+public fun Test::f2($t0|x: u8): Test::B<u8> {
+     var $t1: Test::A<u8, u64>
+     var $t2: num
+     var $t3: Test::B<u8>
+  0: assume WellFormed($t0)
+  1: $t1 := Test::f1<u8>($t0) on_abort goto 5 with $t2
+  2: $t3 := pack Test::B<u8>($t1)
+  3: label L1
+  4: return $t3
+  5: label L2
+  6: abort($t2)
+}
+
+
+[variant verification]
+public fun Test::f3<$tv0>($t0|x1: #0): Test::A<#0, u64> {
+     var $t1: u64
+     var $t2: Test::A<#0, u64>
+  0: assume WellFormed($t0)
+  1: $t1 := 1
+  2: $t2 := pack Test::A<#0, u64>($t0, $t1)
+  3: label L1
+  4: return $t2
+}
+
+
+[variant baseline]
+public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
+     var $t1: bool
+     var $t2: num
+     var $t3: Test::A<#0, u64>
+     var $t4: Test::B<#0>
+     # >> opaque call: $t2 := Test::f3<#0>($t1)
+  0: nop
+  1: havoc[val]($t1)
+  2: if ($t1) goto 3 else goto 6
+  3: label L4
+  4: trace_abort($t2)
+  5: goto 12
+  6: label L3
+  7: assume WellFormed($t3)
+     # << opaque call: $t2 := Test::f3<#0>($t1)
+  8: nop
+  9: $t4 := pack Test::B<#0>($t3)
+ 10: label L1
+ 11: return $t4
+ 12: label L2
+ 13: abort($t2)
+}
+
+
+[variant verification]
+public fun Test::f4<$tv0>($t0|x1: #0): Test::B<#0> {
+     var $t1: bool
+     var $t2: num
+     var $t3: Test::A<#0, u64>
+     var $t4: Test::B<#0>
+  0: assume WellFormed($t0)
+     # >> opaque call: $t2 := Test::f3<#0>($t1)
+  1: nop
+  2: havoc[val]($t1)
+  3: if ($t1) goto 4 else goto 7
+  4: label L4
+  5: trace_abort($t2)
+  6: goto 13
+  7: label L3
+  8: assume WellFormed($t3)
+     # << opaque call: $t2 := Test::f3<#0>($t1)
+  9: nop
+ 10: $t4 := pack Test::B<#0>($t3)
+ 11: label L1
+ 12: return $t4
+ 13: label L2
+ 14: abort($t2)
+}
+
+
+[variant verification]
+public fun Test::f5(): Test::B<u128> {
+     var $t0: u128
+     var $t1: Test::B<u128>
+     var $t2: num
+  0: $t0 := 1
+  1: $t1 := Test::f4<u128>($t0) on_abort goto 4 with $t2
+  2: label L1
+  3: return $t1
+  4: label L2
+  5: abort($t2)
+}
+
 
 
 ==== mono-analysis result ====

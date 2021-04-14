@@ -165,6 +165,12 @@ impl<'env> BoogieWrapper<'env> {
                         out
                     ));
                 }
+                if out.contains("Prover error:") {
+                    return Err(anyhow!(
+                        "[internal] boogie exited with prover errors:\n{}",
+                        out
+                    ));
+                }
                 let mut errors = self.extract_verification_errors(&out);
                 errors.extend(self.extract_inconclusive_errors(&out));
                 errors.extend(self.extract_inconsistency_errors(&out));
@@ -772,7 +778,7 @@ impl ModelValue {
             let map_key = &args[0];
             let value_array_map = model
                 .vars
-                .get(&ModelValue::literal("Select_[$int]$Value"))?
+                .get(&ModelValue::literal("Select__T@[Int]$Value_"))?
                 .extract_map()?;
             let mut values = BTreeMap::new();
             let mut default = ModelValue::error();

@@ -22,6 +22,7 @@ use crate::{
     symbol::Symbol,
     ty::Type,
 };
+use codespan_reporting::diagnostic::Severity;
 
 /// A builder is used to enter a sequence of modules in acyclic dependency order into the model. The
 /// builder maintains the incremental state of this process, such that the various tables
@@ -303,7 +304,8 @@ impl<'env> ModelBuilder<'env> {
             // Warn about unused schema only if the module is a target and schema name
             // does not start with 'UNUSED'
             if module_env.is_target() && !schema_name.starts_with("UNUSED") {
-                self.env.warn(
+                self.env.diag(
+                    Severity::Note,
                     &entry.loc,
                     &format!("unused schema {}", name.display(self.env.symbol_pool())),
                 );

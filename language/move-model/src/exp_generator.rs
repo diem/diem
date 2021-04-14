@@ -67,6 +67,18 @@ pub trait ExpGenerator<'env> {
         Exp::Call(node_id, oper, args)
     }
 
+    /// Makes a Call expression with type instantiation.
+    fn mk_call_with_inst(
+        &self,
+        ty: &Type,
+        inst: Vec<Type>,
+        oper: Operation,
+        args: Vec<Exp>,
+    ) -> Exp {
+        let node_id = self.new_node(ty.clone(), Some(inst));
+        Exp::Call(node_id, oper, args)
+    }
+
     /// Makes an if-then-else expression.
     fn mk_ite(&self, cond: Exp, if_true: Exp, if_false: Exp) -> Exp {
         let node_id = self.new_node(self.global_env().get_node_type(if_true.node_id()), None);

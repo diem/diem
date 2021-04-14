@@ -16,9 +16,12 @@ bytecode-verifier = { path = "../../bytecode-verifier" }
 borrow-graph = { path = "../../borrow-graph" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = { path = "../../move-core/types" }
+
+codespan = "0.8.0"
+codespan-reporting = { version = "0.8.0", features = ["serde", "serialization"] }
 num = "0.4.0"
 itertools = "0.10.0"
-move-core-types = { path = "../../move-core/types" }
 log = "0.4.14"
 serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.64"

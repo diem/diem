@@ -1,8 +1,5 @@
-This lab is used to compare representation of structs as vectors vs representation as ADTs
-(dataype). See general info for working with Jupyter in the [lab/README.md](../../README.md).
-
-This lab results cannot reproduced at head. The commit hash it can be reproduced is at
-`222ef5b779c8b10c2575467541c1ff6139609a06`
+This lab is used to compare the monomorphizing backend with the polymorphic one.
+See general info for working with Jupyter in the [lab/README.md](../../README.md).
 
 To view the results of the current benchmark data, use:
 

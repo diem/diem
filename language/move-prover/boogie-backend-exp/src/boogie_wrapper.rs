@@ -67,6 +67,7 @@ pub enum BoogieErrorKind {
     Assertion,
     Inconclusive,
     Inconsistency,
+    Internal,
 }
 
 impl BoogieErrorKind {
@@ -97,77 +98,91 @@ pub enum TraceEntry {
 impl<'env> BoogieWrapper<'env> {
     /// Calls boogie on the given file. On success, returns a struct representing the analyzed
     /// output of boogie.
-    pub fn call_boogie(
-        &self,
-        bench_repeat: usize,
-        boogie_file: &str,
-    ) -> anyhow::Result<BoogieOutput> {
+    pub fn call_boogie(&self, boogie_file: &str) -> anyhow::Result<BoogieOutput> {
         let args = self.options.get_boogie_command(boogie_file);
         info!("running solver");
         debug!("command line: {}", args.iter().join(" "));
-        for count in 0..bench_repeat {
-            let task = RunBoogieWithSeeds {
-                options: self.options.clone(),
-                boogie_file: boogie_file.to_string(),
-            };
-            // When running on complicated formulas(especially those with quantifiers), SMT solvers
-            // can suffer from the so-called butterfly effect, where minor changes such as using
-            // different random seeds cause significant instabilities in verification times.
-            // Thus by running multiple instances of Boogie with different random seeds, we can
-            // potentially alleviate the instability.
-            let (seed, output_res) = ProverTaskRunner::run_tasks(
-                task,
-                self.options.num_instances,
-                self.options.sequential_task,
-            );
-            let output = match output_res {
-                Err(err) => panic!(
-                    "cannot execute boogie `{}`: {}",
-                    self.options.get_boogie_command("")[0],
-                    err
-                ),
-                Ok(out) => out,
-            };
-            if self.options.num_instances > 1 {
-                debug!("Boogie instance with seed {} finished first", seed);
-            }
-            if !output.status.success() {
-                return Err(anyhow!("boogie exited with: {:?}", output));
-            } else if count == usize::saturating_sub(bench_repeat, 1) {
-                if count > 0 {
-                    info!("run #{} done", usize::saturating_add(count, 1));
-                }
-                debug!("analyzing boogie output");
-                let out = String::from_utf8_lossy(&output.stdout).to_string();
-                // Boogie output contains the string "errors detected in" whenever parsing,
-                // resolution, or type checking errors are discovered.
-                if out.contains("errors detected in") {
-                    return Err(anyhow!(
-                        "[internal] boogie exited with compilation errors:\n{}",
-                        out
-                    ));
-                }
-                let mut errors = self.extract_verification_errors(&out);
-                errors.extend(self.extract_inconclusive_errors(&out));
-                errors.extend(self.extract_inconsistency_errors(&out));
-                return Ok(BoogieOutput {
-                    errors,
-                    all_output: out,
-                });
-            } else {
-                info!("run #{} done", usize::saturating_add(count, 1));
-            }
+        let task = RunBoogieWithSeeds {
+            options: self.options.clone(),
+            boogie_file: boogie_file.to_string(),
+        };
+        // When running on complicated formulas(especially those with quantifiers), SMT solvers
+        // can suffer from the so-called butterfly effect, where minor changes such as using
+        // different random seeds cause significant instabilities in verification times.
+        // Thus by running multiple instances of Boogie with different random seeds, we can
+        // potentially alleviate the instability.
+        let (seed, output_res) = ProverTaskRunner::run_tasks(
+            task,
+            self.options.num_instances,
+            self.options.sequential_task,
+        );
+        let output = match output_res {
+            Err(err) => panic!(
+                "cannot execute boogie `{}`: {}",
+                self.options.get_boogie_command("")[0],
+                err
+            ),
+            Ok(out) => out,
+        };
+        if self.options.num_instances > 1 {
+            debug!("Boogie instance with seed {} finished first", seed);
         }
-        Err(anyhow!("--bench-repeat=0, prover not run!"))
+
+        debug!("analyzing boogie output");
+        let out = String::from_utf8_lossy(&output.stdout).to_string();
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        // Boogie prints a few ad-hoc error messages (with exit code 0!), so we have
+        // no chance to catch an error until we recognize one of those patterns.
+        if out
+            .trim()
+            .starts_with("Fatal Error: ProverException: Cannot find specified prover")
+        {
+            return Err(anyhow!(
+                "The configured prover `{}` could not be found{}",
+                if self.options.use_cvc4 {
+                    &self.options.cvc4_exe
+                } else {
+                    &self.options.z3_exe
+                },
+                if self.options.use_cvc4 {
+                    " (--use-cvc4 is set)"
+                } else {
+                    ""
+                }
+            ));
+        }
+        if !output.status.success() {
+            // Exit here with raw output.
+            return Err(anyhow!(
+                "Boogie error ({}): {}\n\nstderr:\n{}",
+                output.status,
+                out,
+                err
+            ));
+        }
+        if out.trim().starts_with("Unable to monomorphize") {
+            return Err(anyhow!("Boogie error: {}\n\nstderr:\n{}", out, err));
+        }
+        // Boogie output contains the string "errors detected in" whenever parsing,
+        // resolution, or type checking errors are discovered.
+        if out.contains("errors detected in") {
+            return Err(anyhow!(
+                "[internal] boogie exited with compilation errors:\n{}",
+                out
+            ));
+        }
+        let mut errors = self.extract_verification_errors(&out);
+        errors.extend(self.extract_inconclusive_errors(&out));
+        errors.extend(self.extract_inconsistency_errors(&out));
+        Ok(BoogieOutput {
+            errors,
+            all_output: out,
+        })
     }
 
     /// Calls boogie and analyzes output.
-    pub fn call_boogie_and_verify_output(
-        &self,
-        bench_repeat: usize,
-        boogie_file: &str,
-    ) -> anyhow::Result<()> {
-        let BoogieOutput { errors, all_output } = self.call_boogie(bench_repeat, boogie_file)?;
+    pub fn call_boogie_and_verify_output(&self, boogie_file: &str) -> anyhow::Result<()> {
+        let BoogieOutput { errors, all_output } = self.call_boogie(boogie_file)?;
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
         let log_file_existed = std::path::Path::new(&boogie_log_file).exists();
         debug!("writing boogie log to {}", boogie_log_file);
@@ -325,6 +340,15 @@ impl<'env> BoogieWrapper<'env> {
 
     /// Extracts verification errors from Boogie output.
     fn extract_verification_errors(&self, out: &str) -> Vec<BoogieError> {
+        // Need to add any diag which is not processed by this function (like
+        // inconclusive) to this list so its not reported as unexpected boogie
+        // output.
+        const OTHER_DIAG_START: &[&str] = &[
+            "inconclusive",
+            "out of resource",
+            "timed out",
+            "inconsistency_detected",
+        ];
         static VERIFICATION_DIAG_STARTS: Lazy<Regex> = Lazy::new(|| {
             Regex::new(r"(?m)^assert_failed\((?P<args>[^)]*)\): (?P<msg>.*)$").unwrap()
         });
@@ -338,6 +362,30 @@ impl<'env> BoogieWrapper<'env> {
                 // which is expected to fail, and skips the error report of this instance.
                 continue;
             }
+            let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
+            at = usize::saturating_add(at, cap.get(0).unwrap().end());
+
+            let msg = cap.name("msg").unwrap().as_str();
+            if msg == "expected to fail" {
+                // Masks the failure from the negative test for the inconsistency checking
+                // which is expected to fail, and skips the error report of this instance.
+                continue;
+            }
+
+            if !inbetween.is_empty() && !OTHER_DIAG_START.iter().any(|s| inbetween.starts_with(s)) {
+                // This is unexpected text and we report it as an internal error
+                errors.push(BoogieError {
+                    kind: BoogieErrorKind::Internal,
+                    loc: self.env.unknown_loc(),
+                    message: format!(
+                        "unexpected boogie output: `{} ..`",
+                        &inbetween[0..inbetween.len().min(70)]
+                    ),
+                    execution_trace: vec![],
+                    model: None,
+                })
+            }
+
             let args = cap.name("args").unwrap().as_str();
             let loc = self.report_error(self.extract_loc(args), self.env.unknown_loc());
             let execution_trace = self.extract_augmented_trace(out, &mut at);
@@ -689,7 +737,7 @@ impl ModelValue {
     /// or
     /// ```(as seq.empty (Seq T@$Value))```
     /// depending on whether it is an empty or nonempty sequence, respectively.
-    fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
+    fn extract_vector(&self, model: &Model, _elem_ty: &Type) -> Option<ModelValueVector> {
         if matches!(model.vector_theory, VectorTheory::SmtSeq) {
             // Implementation of vectors using sequences
             let mut values = BTreeMap::new();
@@ -721,7 +769,9 @@ impl ModelValue {
             let map_key = &args[0];
             let value_array_map = model
                 .vars
-                .get(&ModelValue::literal("Select_[$int]$Value"))?
+                .get(&ModelValue::literal(
+                    &self.deduct_table_name(map_key.extract_literal()?)?,
+                ))?
                 .extract_map()?;
             let mut values = BTreeMap::new();
             let mut default = ModelValue::error();
@@ -742,6 +792,15 @@ impl ModelValue {
                 default,
             })
         }
+    }
+
+    fn deduct_table_name(&self, map_key: &str) -> Option<String> {
+        // The generic representation of map keys is `|T@[Int]<X>!val!0` where `<X>` is the
+        // vector element type.
+        let i = map_key.find(']')?;
+        let j = map_key.find('!')?;
+        let suffix = &map_key[i + 1..j];
+        Some(format!("Select__T@[Int]{}_", suffix))
     }
 
     fn extract_seq_unit(&self) -> Option<ModelValue> {
@@ -914,7 +973,7 @@ impl ModelValue {
         model: &Model,
         param: &Type,
     ) -> Option<PrettyDoc> {
-        let values = self.extract_vector(model)?;
+        let values = self.extract_vector(model, param)?;
         let mut entries = vec![];
         let mut next = 0;
         let mut sparse = false;
@@ -954,7 +1013,7 @@ impl ModelValue {
         model: &Model,
         module_id: ModuleId,
         struct_id: StructId,
-        params: &[Type],
+        inst: &[Type],
     ) -> Option<PrettyDoc> {
         let module_env = wrapper.env.get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
@@ -967,12 +1026,17 @@ impl ModelValue {
             }
             vec![PrettyDoc::text(rep)]
         } else {
-            let values = self.extract_list(&boogie_struct_name(&struct_env))?;
+            let struct_name = &boogie_struct_name(&struct_env, inst);
+            let values = self
+                .extract_list(struct_name)
+                // It appears sometimes keys are represented witout, sometimes with enclosing
+                // bars?
+                .or_else(|| self.extract_list(&format!("|{}|", struct_name)))?;
             struct_env
                 .get_fields()
                 .enumerate()
                 .map(|(i, f)| {
-                    let ty = f.get_type().instantiate(params);
+                    let ty = f.get_type().instantiate(inst);
                     let default = ModelValue::error();
                     let v = values.get(i).unwrap_or(&default);
                     let vp = v

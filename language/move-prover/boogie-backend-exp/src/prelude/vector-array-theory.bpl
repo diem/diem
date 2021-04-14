@@ -140,7 +140,7 @@ function {:inline} SwapVec<T>(v: Vec T, i: int, j: int): Vec T {
 
 function {:inline} ContainsVec<T>(v: Vec T, e: T): bool {
     (var l := l#Vec(v);
-    (exists i: int :: i >= 0 && i < l && v#Vec(v)[i] == e))
+    (exists i: int :: InRangeVec(v, i) && v#Vec(v)[i] == e))
 }
 
 function IndexOfVec<T>(v: Vec T, e: T): int;
@@ -150,6 +150,9 @@ axiom {:ctor "Vec"} (forall<T> v: Vec T, e: T :: {IndexOfVec(v, e)}
      else InRangeVec(v, i) && ReadVec(v, i) == e &&
         (forall j: int :: j >= 0 && j < i ==> ReadVec(v, j) != e)));
 
-function {:inline} InRangeVec<T>(v: Vec T, i: int): bool {
+// This function should stay non-inlined as it guards many quantifiers
+// over vectors. It appears important to have this uninterpreted for
+// quantifier triggering.
+function InRangeVec<T>(v: Vec T, i: int): bool {
     i >= 0 && i < LenVec(v)
 }

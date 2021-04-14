@@ -1,5 +1,5 @@
+// exclude_for: bexp
 module 0x42::TestTypeValues {
-
     spec module {
         pragma verify = true;
     }

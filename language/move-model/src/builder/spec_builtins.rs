@@ -211,6 +211,26 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 result_type: vector_t.clone(),
             },
         );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("contains"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::Contains,
+                type_params: vec![param_t.clone()],
+                arg_types: vec![vector_t.clone(), param_t.clone()],
+                result_type: bool_t.clone(),
+            },
+        );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("index_of"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::IndexOf,
+                type_params: vec![param_t.clone()],
+                arg_types: vec![vector_t.clone(), param_t.clone()],
+                result_type: num_t.clone(),
+            },
+        );
 
         // Resources.
         trans.define_spec_fun(

@@ -457,7 +457,8 @@ pub struct GlobalEnv {
     /// In difference to an `unknown_loc`, this is a well-known but undisclosed location.
     internal_loc: Loc,
     /// Accumulated diagnosis. In a RefCell so we can add to it without needing a mutable GlobalEnv.
-    diags: RefCell<Vec<Diagnostic>>,
+    /// The boolean indicates whether the diag was reported.
+    diags: RefCell<Vec<(Diagnostic, bool)>>,
     /// Pool of symbols -- internalized strings.
     symbol_pool: SymbolPool,
     /// A counter for allocating node ids.
@@ -547,7 +548,8 @@ impl GlobalEnv {
 
     /// Stores extension data in the environment. This can be arbitrary data which is
     /// indexed by type. Used by tools which want to store their own data in the environment,
-    /// like a set of tool dependent options/flags.
+    /// like a set of tool dependent options/flags. This can also be used to update
+    /// extension data.
     pub fn set_extension<T: Any>(&self, x: T) {
         let id = TypeId::of::<T>();
         self.extensions
@@ -605,24 +607,29 @@ impl GlobalEnv {
 
     /// Adds diagnostic to the environment.
     pub fn add_diag(&self, diag: Diagnostic) {
-        self.diags.borrow_mut().push(diag);
-    }
-
-    /// Adds an error to this environment, with notes.
-    pub fn error_with_notes(&self, loc: &Loc, msg: &str, notes: Vec<String>) {
-        let diag = Diagnostic::new_error(msg, Label::new(loc.file_id, loc.span, ""));
-        let diag = diag.with_notes(notes);
-        self.add_diag(diag);
+        self.diags.borrow_mut().push((diag, false));
     }
 
     /// Adds an error to this environment, without notes.
     pub fn error(&self, loc: &Loc, msg: &str) {
-        self.error_with_notes(loc, msg, vec![]);
+        self.diag(Severity::Error, loc, msg)
     }
 
-    /// Adds a warning to this environment.
-    pub fn warn(&self, loc: &Loc, msg: &str) {
-        let diag = Diagnostic::new_warning(msg, Label::new(loc.file_id, loc.span, ""));
+    /// Adds an error to this environment, with notes.
+    pub fn error_with_notes(&self, loc: &Loc, msg: &str, notes: Vec<String>) {
+        self.diag_with_notes(Severity::Error, loc, msg, notes)
+    }
+
+    /// Adds a diagnostic of given severity to this environment.
+    pub fn diag(&self, severity: Severity, loc: &Loc, msg: &str) {
+        let diag = Diagnostic::new(severity, msg, Label::new(loc.file_id, loc.span, ""));
+        self.add_diag(diag);
+    }
+
+    /// Adds a diagnostic of given severity to this environment, with notes.
+    pub fn diag_with_notes(&self, severity: Severity, loc: &Loc, msg: &str, notes: Vec<String>) {
+        let diag = Diagnostic::new(severity, msg, Label::new(loc.file_id, loc.span, ""));
+        let diag = diag.with_notes(notes);
         self.add_diag(diag);
     }
 
@@ -631,7 +638,7 @@ impl GlobalEnv {
         self.diags
             .borrow()
             .iter()
-            .any(|d| d.message.contains(pattern))
+            .any(|(d, _)| d.message.contains(pattern))
     }
 
     /// Clear all accumulated diagnosis.
@@ -738,24 +745,21 @@ impl GlobalEnv {
 
     /// Returns true if diagnostics have error severity or worse.
     pub fn has_errors(&self) -> bool {
-        self.diags
-            .borrow()
-            .iter()
-            .any(|d| d.severity >= Severity::Error)
+        self.error_count() > 0
     }
 
     /// Returns the number of diagnostics.
-    pub fn diag_count(&self) -> usize {
-        self.diags.borrow().len()
+    pub fn diag_count(&self, min_severity: Severity) -> usize {
+        self.diags
+            .borrow()
+            .iter()
+            .filter(|(d, _)| d.severity >= min_severity)
+            .count()
     }
 
     /// Returns the number of errors.
     pub fn error_count(&self) -> usize {
-        self.diags
-            .borrow()
-            .iter()
-            .filter(|d| d.severity >= Severity::Error)
-            .count()
+        self.diag_count(Severity::Error)
     }
 
     /// Returns true if diagnostics have warning severity or worse.
@@ -763,30 +767,22 @@ impl GlobalEnv {
         self.diags
             .borrow()
             .iter()
-            .any(|d| d.severity >= Severity::Warning)
+            .any(|(d, _)| d.severity >= Severity::Warning)
     }
 
-    /// Writes accumulated errors to writer.
-    pub fn report_errors<W: WriteColor>(&self, writer: &mut W) {
-        for diag in self
+    /// Writes accumulated diagnostics of given or higher severity.
+    pub fn report_diag<W: WriteColor>(&self, writer: &mut W, severity: Severity) {
+        for (diag, reported) in self
             .diags
-            .borrow()
-            .iter()
-            .filter(|d| d.severity >= Severity::Error)
+            .borrow_mut()
+            .iter_mut()
+            .filter(|(d, _)| d.severity >= severity)
         {
-            emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
-        }
-    }
-
-    /// Writes accumulated diagnostics with warning severity or worse to writer.
-    pub fn report_warnings<W: WriteColor>(&self, writer: &mut W) {
-        for diag in self
-            .diags
-            .borrow()
-            .iter()
-            .filter(|d| d.severity >= Severity::Warning)
-        {
-            emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
+            if !*reported {
+                emit(writer, &Config::default(), &self.source_files, diag)
+                    .expect("emit must not fail");
+                *reported = true;
+            }
         }
     }
 

@@ -654,6 +654,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Concat => self.translate_primitive_call("ConcatVec", args),
             Operation::Empty => self.translate_primitive_call("EmptyVec", args),
             Operation::Single => self.translate_primitive_call("MakeVec1", args),
+            Operation::IndexOf => self.translate_primitive_call("$IndexOfVec", args),
+            Operation::Contains => self.translate_primitive_call("$ContainsVec", args),
             Operation::Old => panic!("old(..) expression unexpected"),
             Operation::Trace => self.translate_exp(&args[0]),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),

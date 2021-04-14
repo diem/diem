@@ -1,200 +1,54 @@
-Move prover returns: exiting with boogie verification errors
-error: unexpected boogie output: `Prover error: Unexpected prover response getting model: (() (define-fu ..`
+Move prover returns: [internal] boogie exited with prover errors:
+Prover error: Unexpected value: $Error
 
-   ┌── <unknown>:1:1 ───
-   │
- 1 │ <unknown>
-   │ ^^^^^^^^^
-   │
+Advisory: $TestArithmetic_div_by_zero_u64_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
+arithm.bpl(2342,27): Verification inconclusive ($TestArithmetic_div_by_zero_u64_incorrect$verify)
+arithm.bpl(2469,27): Verification inconclusive ($TestArithmetic_f$verify)
+arithm.bpl(2598,27): Verification inconclusive ($TestArithmetic_g$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: abort not covered by any of the `aborts_if` clauses
+arithm.bpl(2674,27): Verification inconclusive ($TestArithmetic_h$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-     ┌── tests/sources/functional/arithm.move:128:5 ───
-     │
- 128 │ ╭     spec fun div_by_zero_u64_incorrect {
- 129 │ │         aborts_if false;
- 130 │ │     }
-     │ ╰─────^
-     ·
- 126 │         x / y
-     │           - abort happened here
-     │
-     =     at tests/sources/functional/arithm.move:125: div_by_zero_u64_incorrect
-     =     at tests/sources/functional/arithm.move:126: div_by_zero_u64_incorrect
-     =         ABORTED
+arithm.bpl(2951,27): Verification inconclusive ($TestArithmetic_multiple_ops$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3038,27): Verification inconclusive ($TestArithmetic_overflow_u128_add$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-    ┌── tests/sources/functional/arithm.move:69:5 ───
-    │
- 69 │ ╭     fun f(x: u64) : u64 {
- 70 │ │         x+1
- 71 │ │     }
-    │ ╰─────^
-    │
+arithm.bpl(3112,27): Verification inconclusive ($TestArithmetic_overflow_u128_add_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3186,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-    ┌── tests/sources/functional/arithm.move:77:5 ───
-    │
- 77 │ ╭     fun g(x: u64) : u64 {
- 78 │ │         x+2
- 79 │ │     }
-    │ ╰─────^
-    │
+arithm.bpl(3260,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3334,27): Verification inconclusive ($TestArithmetic_overflow_u64_add$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-    ┌── tests/sources/functional/arithm.move:85:5 ───
-    │
- 85 │ ╭     fun h(b: bool): u64 {
- 86 │ │         let x: u64 = 3;
- 87 │ │         let y: u64;
- 88 │ │         if (b) y=f(x) else y=g(x);
- 89 │ │         if (b && y != 4) abort 4;
- 90 │ │         if (!b && y != 5) abort 5;
- 91 │ │         y
- 92 │ │     }
-    │ ╰─────^
-    │
+arithm.bpl(3408,27): Verification inconclusive ($TestArithmetic_overflow_u64_add_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3482,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-    ┌── tests/sources/functional/arithm.move:36:2 ───
-    │
- 36 │ ╭     fun multiple_ops(x: u64, y: u64, z: u64): u64 {
- 37 │ │ 		x + y * z
- 38 │ │     }
-    │ ╰─────^
-    │
+arithm.bpl(3556,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3630,27): Verification inconclusive ($TestArithmetic_overflow_u8_add$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-     ┌── tests/sources/functional/arithm.move:185:5 ───
-     │
- 185 │ ╭     fun overflow_u128_add(x: u128, y: u128): u128 {
- 186 │ │         x + y
- 187 │ │     }
-     │ ╰─────^
-     │
+arithm.bpl(3704,27): Verification inconclusive ($TestArithmetic_overflow_u8_add_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3778,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-     ┌── tests/sources/functional/arithm.move:177:5 ───
-     │
- 177 │ ╭     fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
- 178 │ │         x + y
- 179 │ │     }
-     │ ╰─────^
-     │
+arithm.bpl(3852,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: verification inconclusive
+arithm.bpl(3926,27): Verification inconclusive ($TestArithmetic_underflow$verify)
 
-     ┌── tests/sources/functional/arithm.move:236:5 ───
-     │
- 236 │ ╭     fun overflow_u128_mul(x: u128, y: u128): u128 {
- 237 │ │         x * y
- 238 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:229:5 ───
-     │
- 229 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
- 230 │ │         x * y
- 231 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:169:5 ───
-     │
- 169 │ ╭     fun overflow_u64_add(x: u64, y: u64): u64 {
- 170 │ │         x + y
- 171 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:161:5 ───
-     │
- 161 │ ╭     fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
- 162 │ │         x + y
- 163 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:221:5 ───
-     │
- 221 │ ╭     fun overflow_u64_mul(x: u64, y: u64): u64 {
- 222 │ │         x * y
- 223 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:214:5 ───
-     │
- 214 │ ╭     fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
- 215 │ │         x * y
- 216 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:153:5 ───
-     │
- 153 │ ╭     fun overflow_u8_add(x: u8, y: u8): u8 {
- 154 │ │         x + y
- 155 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:145:5 ───
-     │
- 145 │ ╭     fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
- 146 │ │         x + y
- 147 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:206:5 ───
-     │
- 206 │ ╭     fun overflow_u8_mul(x: u8, y: u8): u8 {
- 207 │ │         x * y
- 208 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:198:5 ───
-     │
- 198 │ ╭     fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
- 199 │ │         x * y
- 200 │ │     }
-     │ ╰─────^
-     │
-
-error: verification inconclusive
-
-     ┌── tests/sources/functional/arithm.move:103:5 ───
-     │
- 103 │ ╭     fun underflow(): u64 {
- 104 │ │         let x = 0;
- 105 │ │         x - 1
- 106 │ │     }
-     │ ╰─────^
-     │
+Boogie program verifier finished with 0 errors, 18 inconclusives

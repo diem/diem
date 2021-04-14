@@ -711,14 +711,7 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             }
             SaveMem(_, label, qid) => {
                 let env = self.func_target.global_env();
-                let struct_env = env.get_module(qid.module_id).into_struct(qid.id);
-                write!(
-                    f,
-                    "@{} := save_mem({}::{})",
-                    label.as_usize(),
-                    struct_env.module_env.get_name().display(env.symbol_pool()),
-                    struct_env.get_name().display(env.symbol_pool())
-                )?;
+                write!(f, "@{} := save_mem({})", label.as_usize(), env.display(qid))?;
             }
             SaveSpecVar(_, label, qid) => {
                 let env = self.func_target.global_env();

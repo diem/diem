@@ -19,6 +19,7 @@ use simplelog::{
 use abigen::AbigenOptions;
 use boogie_backend::options::{BoogieOptions, VectorTheory};
 use bytecode::options::ProverOptions;
+use codespan_reporting::diagnostic::Severity;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
 use move_model::model::VerificationScope;
@@ -57,12 +58,8 @@ pub struct Options {
     pub move_deps: Vec<String>,
     /// Whether to run experimental pipeline
     pub experimental_pipeline: bool,
-    /// Whether to use exclusively weak edges in borrow analysis
-    pub weak_edges: bool,
     /// Whether to use the experimental version of the boogie backend.
     pub boogie_exp: bool,
-    /// Whether to use the v2 invariant scheme.
-    pub inv_v2: bool,
     /// BEGIN OF STRUCTURED OPTIONS
     /// Options for the documentation generator.
     pub docgen: DocgenOptions,
@@ -91,13 +88,11 @@ impl Default for Options {
             move_deps: vec![],
             prover: ProverOptions::default(),
             backend: BoogieOptions::default(),
-            inv_v2: false,
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
             experimental_pipeline: false,
             boogie_exp: false,
-            weak_edges: false,
         }
     }
 }
@@ -187,10 +182,12 @@ impl Options {
                     .help("only generates boogie file but does not call boogie"),
             )
             .arg(
-                Arg::with_name("warn")
-                    .long("warn")
-                    .short("w")
-                    .help("produces warnings")
+                Arg::with_name("severity")
+                    .long("severity")
+                    .short("s")
+                    .takes_value(true)
+                    .possible_values(&["bug", "error", "warn", "note"])
+                    .help("The minimall level on which diagnostics are reported")
             )
             .arg(
                 Arg::with_name("trace")
@@ -221,7 +218,7 @@ impl Options {
             ).arg(
                 Arg::with_name("seed")
                     .long("seed")
-                    .short("s")
+                    .short("S")
                     .takes_value(true)
                     .value_name("NUMBER")
                     .validator(is_number)
@@ -464,6 +461,16 @@ impl Options {
             }
         }
 
+        if matches.is_present("severity") {
+            options.prover.report_severity = match matches.value_of("severity").unwrap() {
+                "bug" => Severity::Bug,
+                "error" => Severity::Error,
+                "warn" => Severity::Warning,
+                "note" => Severity::Note,
+                _ => unreachable!("should not happen"),
+            }
+        }
+
         if matches.is_present("generate-only") {
             options.prover.generate_only = true;
         }
@@ -504,9 +511,6 @@ impl Options {
         if matches.is_present("read-write-set") {
             options.run_read_write_set = true;
         }
-        if matches.is_present("warn") {
-            options.prover.report_warnings = true;
-        }
         if matches.is_present("trace") {
             options.prover.debug_trace = true;
         }
@@ -536,9 +540,10 @@ impl Options {
         }
         if matches.is_present("bexp") {
             options.boogie_exp = true;
+            options.prover.run_mono = true;
         }
         if matches.is_present("inv_v2") {
-            options.inv_v2 = true;
+            options.prover.inv_v2 = true;
         }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
@@ -547,7 +552,7 @@ impl Options {
             options.experimental_pipeline = true;
         }
         if matches.is_present("weak-edges") {
-            options.weak_edges = true;
+            options.prover.weak_edges = true;
         }
         if matches.is_present("timeout") {
             options.backend.vc_timeout = matches.value_of("timeout").unwrap().parse::<usize>()?;

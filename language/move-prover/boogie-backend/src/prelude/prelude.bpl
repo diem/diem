@@ -129,7 +129,7 @@ function {:inline} $IsValidRange(r: $Value): bool {
    $IsValidU64(lb#$Range(r)) &&  $IsValidU64(ub#$Range(r))
 }
 
-function {:inline} $InRange(r: $Value, i: int): bool {
+function $InRange(r: $Value, i: int): bool {
    lb#$Range(r) <= i && i < ub#$Range(r)
 }
 

@@ -630,19 +630,17 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let loc = self.to_loc(&access.loc);
                 let sym = self.parent.module_access_to_qualified(access);
                 let rty = self.parent.parent.lookup_type(&loc, &sym);
-                if !args.is_empty() {
-                    // Replace type instantiation.
-                    if let Type::Struct(mid, sid, params) = &rty {
-                        if params.len() != args.len() {
-                            self.error(&loc, "type argument count mismatch");
-                            Type::Error
-                        } else {
-                            Type::Struct(*mid, *sid, self.translate_types(args))
-                        }
-                    } else {
-                        self.error(&loc, "type cannot have type arguments");
+                // Replace type instantiation.
+                if let Type::Struct(mid, sid, params) = &rty {
+                    if params.len() != args.len() {
+                        self.error(&loc, "type argument count mismatch");
                         Type::Error
+                    } else {
+                        Type::Struct(*mid, *sid, self.translate_types(args))
                     }
+                } else if !args.is_empty() {
+                    self.error(&loc, "type cannot have type arguments");
+                    Type::Error
                 } else {
                     rty
                 }
@@ -1309,6 +1307,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             return self.new_error_exp();
         }
         let struct_exp = self.translate_exp(&args[0], expected_type);
+        let expected_type = &self.subs.specialize(expected_type);
         if let EA::Exp_::Name(
             Spanned {
                 value: EA::ModuleAccess_::Name(name),
@@ -1321,8 +1320,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 self.lookup_field(loc, &expected_type, name)
             {
                 // Translate the new value with the field type as the expected type.
-                let value_exp = self.translate_exp(&args[2], &field_type);
+                let value_exp = self.translate_exp(&args[2], &self.subs.specialize(&field_type));
                 let id = self.new_node_id_with_type_loc(&expected_type, loc);
+                self.set_node_instantiation(id, vec![expected_type.clone()]);
                 Exp::Call(
                     id,
                     Operation::UpdateField(struct_id.module_id, struct_id.id, field_id),
@@ -1722,7 +1722,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     );
                     self.new_error_exp()
                 } else {
-                    let struct_ty = Type::Struct(entry.module_id, entry.struct_id, instantiation);
+                    let struct_ty =
+                        Type::Struct(entry.module_id, entry.struct_id, instantiation.clone());
                     let struct_ty =
                         self.check_type(loc, &struct_ty, expected_type, "in pack expression");
                     let mut args = args
@@ -1741,6 +1742,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         args.push(Exp::Value(id, Value::Bool(false)));
                     }
                     let id = self.new_node_id_with_type_loc(&struct_ty, loc);
+                    self.set_node_instantiation(id, instantiation);
                     Exp::Call(id, Operation::Pack(entry.module_id, entry.struct_id), args)
                 }
             } else {

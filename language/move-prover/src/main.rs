@@ -11,6 +11,11 @@ use std::env;
 fn main() {
     if let Err(e) = run() {
         eprintln!("{}", e);
+        let mut c = e.source();
+        while let Some(s) = c {
+            eprintln!("caused by: {}", s);
+            c = s.source();
+        }
         std::process::exit(1)
     }
 }

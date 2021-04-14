@@ -41,10 +41,13 @@ pub fn run_move_prover<W: WriteColor>(
     // Run the model builder.
     let env = run_model_builder(&options.move_sources, &options.move_deps)?;
     let build_duration = now.elapsed();
-    check_errors(&env, error_writer, "exiting with model building errors")?;
-    if options.prover.report_warnings && env.has_warnings() {
-        env.report_warnings(error_writer);
-    }
+    check_errors(
+        &env,
+        &options,
+        error_writer,
+        "exiting with model building errors",
+    )?;
+    env.report_diag(error_writer, options.prover.report_severity);
 
     // Add the prover options as an extension to the environment, so they can be accessed
     // from there.
@@ -76,6 +79,7 @@ pub fn run_move_prover<W: WriteColor>(
     let trafo_duration = now.elapsed();
     check_errors(
         &env,
+        &options,
         error_writer,
         "exiting with bytecode transformation errors",
     )?;
@@ -84,7 +88,12 @@ pub fn run_move_prover<W: WriteColor>(
     let now = Instant::now();
     let code_writer = generate_boogie(&env, &options, &targets)?;
     let gen_duration = now.elapsed();
-    check_errors(&env, error_writer, "exiting with boogie generation errors")?;
+    check_errors(
+        &env,
+        &options,
+        error_writer,
+        "exiting with boogie generation errors",
+    )?;
 
     // Verify boogie code.
     let now = Instant::now();
@@ -101,6 +110,7 @@ pub fn run_move_prover<W: WriteColor>(
     );
     check_errors(
         &env,
+        &options,
         error_writer,
         "exiting with boogie verification errors",
     )
@@ -108,11 +118,12 @@ pub fn run_move_prover<W: WriteColor>(
 
 pub fn check_errors<W: WriteColor>(
     env: &GlobalEnv,
+    options: &Options,
     error_writer: &mut W,
     msg: &'static str,
 ) -> anyhow::Result<()> {
+    env.report_diag(error_writer, options.prover.report_severity);
     if env.has_errors() {
-        env.report_errors(error_writer);
         Err(anyhow!(msg))
     } else {
         Ok(())
@@ -127,7 +138,7 @@ pub fn generate_boogie(
     let writer = CodeWriter::new(env.internal_loc());
     if options.boogie_exp {
         // Use the experimental boogie backend.
-        boogie_backend_exp::add_prelude(&options.backend, &writer)?;
+        boogie_backend_exp::add_prelude(env, &options.backend, &writer)?;
         let mut translator = boogie_backend_exp::bytecode_translator::BoogieTranslator::new(
             &env,
             &options.backend,
@@ -159,7 +170,7 @@ pub fn verify_boogie(
             writer: &writer,
             options: &options.backend,
         };
-        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
+        boogie.call_boogie_and_verify_output(&options.output_path)?;
     } else {
         let boogie = BoogieWrapper {
             env: &env,
@@ -200,7 +211,7 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
     let pipeline = if options.experimental_pipeline {
         pipeline_factory::experimental_pipeline()
     } else {
-        pipeline_factory::default_pipeline_with_options(options.weak_edges, options.inv_v2)
+        pipeline_factory::default_pipeline_with_options(&options.prover)
     };
     if options.prover.dump_bytecode {
         let dump_file = options
@@ -243,7 +254,7 @@ fn run_docgen<W: WriteColor>(
         (generating_elapsed - checking_elapsed).as_secs_f64()
     );
     if env.has_errors() {
-        env.report_errors(error_writer);
+        env.report_diag(error_writer, options.prover.report_severity);
         Err(anyhow!("exiting with documentation generation errors"))
     } else {
         Ok(())

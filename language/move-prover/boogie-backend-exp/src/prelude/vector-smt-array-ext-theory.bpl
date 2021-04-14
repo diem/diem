@@ -9,7 +9,7 @@
 // TODO: this theory is currently not working well; reproduce
 // by `mvp --vnext --vector-theory=SmtArrayExt simple_vector_client.move`
 
-{{> vector-array-theory }}
+{% include "vector-array-theory" %}
 
 axiom {:ctor "Vec"} (forall<T> v: Vec T :: {l#Vec(v)} l#Vec(v) >= 0);
 

@@ -393,20 +393,22 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             }
             Call(node_id, Global(None), args) if in_old => {
                 let args = self.translate_exp_vec(args, in_old);
+                let node_id = self.instantiate(*node_id);
                 Call(
-                    self.instantiate(*node_id),
+                    node_id,
                     Global(Some(
-                        self.save_memory(self.builder.get_memory_of_node(*node_id)),
+                        self.save_memory(self.builder.get_memory_of_node(node_id)),
                     )),
                     args,
                 )
             }
             Call(node_id, Exists(None), args) if in_old => {
                 let args = self.translate_exp_vec(args, in_old);
+                let node_id = self.instantiate(*node_id);
                 Call(
-                    self.instantiate(*node_id),
+                    node_id,
                     Exists(Some(
-                        self.save_memory(self.builder.get_memory_of_node(*node_id)),
+                        self.save_memory(self.builder.get_memory_of_node(node_id)),
                     )),
                     args,
                 )
@@ -419,11 +421,17 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                     // and at the same time mutate self later.
                     (decl.used_memory.clone(), decl.used_spec_vars.clone())
                 };
+                let inst = Type::instantiate_vec(
+                    self.builder.global_env().get_node_instantiation(*node_id),
+                    self.type_args,
+                );
                 let mut labels = vec![];
                 for mem in used_memory {
+                    let mem = mem.instantiate(&inst);
                     labels.push(self.save_memory(mem));
                 }
                 for var in used_spec_vars {
+                    let var = var.instantiate(&inst);
                     labels.push(self.save_spec_var(var));
                 }
                 Call(
@@ -540,11 +548,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         } else {
             let env = self.builder.global_env();
             let ty = env.get_node_type(node_id).instantiate(self.type_args);
-            let inst = env
-                .get_node_instantiation(node_id)
-                .iter()
-                .map(|t| t.instantiate(self.type_args))
-                .collect_vec();
+            let inst = Type::instantiate_vec(env.get_node_instantiation(node_id), self.type_args);
             let loc = env.get_node_loc(node_id);
             let node_id = env.new_node(loc, ty);
             env.set_node_instantiation(node_id, inst);

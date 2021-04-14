@@ -27,6 +27,7 @@ use bytecode::{
     usage_analysis::UsageProcessor,
     verification_analysis::VerificationAnalysisProcessor,
 };
+use codespan_reporting::diagnostic::Severity;
 use move_model::{model::GlobalEnv, run_model_builder};
 use move_prover_test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 
@@ -178,7 +179,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let env: GlobalEnv = run_model_builder(&sources, &[])?;
     let out = if env.has_errors() {
         let mut error_writer = Buffer::no_color();
-        env.report_errors(&mut error_writer);
+        env.report_diag(&mut error_writer, Severity::Error);
         String::from_utf8_lossy(&error_writer.into_inner()).to_string()
     } else {
         let options = ProverOptions {

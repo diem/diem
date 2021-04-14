@@ -505,71 +505,110 @@ impl Exp {
     where
         F: FnMut(Exp) -> (bool, Exp),
     {
+        self.internal_rewrite(rewriter, &mut |id| id)
+    }
+
+    pub fn rewrite_node_id<F>(self, rewriter: &mut F) -> Exp
+    where
+        F: FnMut(NodeId) -> NodeId,
+    {
+        self.internal_rewrite(&mut |e| (false, e), rewriter)
+    }
+
+    fn internal_rewrite<F, G>(self, rewriter: &mut F, node_rewriter: &mut G) -> Exp
+    where
+        F: FnMut(Exp) -> (bool, Exp),
+        G: FnMut(NodeId) -> NodeId,
+    {
         use Exp::*;
         let (is_rewritten, exp) = rewriter(self);
         if is_rewritten {
             return exp;
         }
 
-        let rewrite_vec = |rewriter: &mut F, exps: Vec<Exp>| -> Vec<Exp> {
-            exps.into_iter().map(|e| e.rewrite(rewriter)).collect()
-        };
-        let rewrite_box =
-            |rewriter: &mut F, exp: Box<Exp>| -> Box<Exp> { Box::new(exp.rewrite(rewriter)) };
-        let rewrite_decl = |rewriter: &mut F, d: LocalVarDecl| LocalVarDecl {
-            id: d.id,
-            name: d.name,
-            binding: d.binding.map(|e| e.rewrite(rewriter)),
-        };
-        let rewrite_decls = |rewriter: &mut F, decls: Vec<LocalVarDecl>| -> Vec<LocalVarDecl> {
-            decls
-                .into_iter()
-                .map(|d| rewrite_decl(rewriter, d))
+        let rewrite_vec = |rewriter: &mut F, node_rewriter: &mut G, exps: Vec<Exp>| -> Vec<Exp> {
+            exps.into_iter()
+                .map(|e| e.internal_rewrite(rewriter, node_rewriter))
                 .collect()
         };
-        let rewrite_quant_decls =
-            |rewriter: &mut F, decls: Vec<(LocalVarDecl, Exp)>| -> Vec<(LocalVarDecl, Exp)> {
-                decls
-                    .into_iter()
-                    .map(|(d, r)| (rewrite_decl(rewriter, d), r.rewrite(rewriter)))
-                    .collect()
+        let rewrite_box = |rewriter: &mut F, node_rewriter: &mut G, exp: Box<Exp>| -> Box<Exp> {
+            Box::new(exp.internal_rewrite(rewriter, node_rewriter))
+        };
+        let rewrite_decl =
+            |rewriter: &mut F, node_rewriter: &mut G, d: LocalVarDecl| LocalVarDecl {
+                id: d.id,
+                name: d.name,
+                binding: d
+                    .binding
+                    .map(|e| e.internal_rewrite(rewriter, node_rewriter)),
             };
+        let rewrite_decls = |rewriter: &mut F,
+                             node_rewriter: &mut G,
+                             decls: Vec<LocalVarDecl>|
+         -> Vec<LocalVarDecl> {
+            decls
+                .into_iter()
+                .map(|d| rewrite_decl(rewriter, node_rewriter, d))
+                .collect()
+        };
+        let rewrite_quant_decls = |rewriter: &mut F,
+                                   node_rewriter: &mut G,
+                                   decls: Vec<(LocalVarDecl, Exp)>|
+         -> Vec<(LocalVarDecl, Exp)> {
+            decls
+                .into_iter()
+                .map(|(d, r)| {
+                    (
+                        rewrite_decl(rewriter, node_rewriter, d),
+                        r.rewrite(rewriter),
+                    )
+                })
+                .collect()
+        };
 
         match exp {
-            Call(id, oper, args) => Call(id, oper, rewrite_vec(rewriter, args)),
+            LocalVar(id, sym) => LocalVar(node_rewriter(id), sym),
+            Temporary(id, idx) => Temporary(node_rewriter(id), idx),
+            Call(id, oper, args) => Call(
+                node_rewriter(id),
+                oper,
+                rewrite_vec(rewriter, node_rewriter, args),
+            ),
             Invoke(id, target, args) => Invoke(
-                id,
-                rewrite_box(rewriter, target),
-                rewrite_vec(rewriter, args),
+                node_rewriter(id),
+                rewrite_box(rewriter, node_rewriter, target),
+                rewrite_vec(rewriter, node_rewriter, args),
             ),
             Lambda(id, decls, body) => Lambda(
-                id,
-                rewrite_decls(rewriter, decls),
-                rewrite_box(rewriter, body),
+                node_rewriter(id),
+                rewrite_decls(rewriter, node_rewriter, decls),
+                rewrite_box(rewriter, node_rewriter, body),
             ),
             Quant(id, kind, decls, triggers, condition, body) => Quant(
-                id,
+                node_rewriter(id),
                 kind,
-                rewrite_quant_decls(rewriter, decls),
+                rewrite_quant_decls(rewriter, node_rewriter, decls),
                 triggers
                     .into_iter()
                     .map(|t| t.into_iter().map(|e| e.rewrite(rewriter)).collect())
                     .collect(),
-                condition.map(|e| rewrite_box(rewriter, e)),
-                rewrite_box(rewriter, body),
+                condition.map(|e| rewrite_box(rewriter, node_rewriter, e)),
+                rewrite_box(rewriter, node_rewriter, body),
             ),
             Block(id, decls, body) => Block(
-                id,
-                rewrite_decls(rewriter, decls),
-                rewrite_box(rewriter, body),
+                node_rewriter(id),
+                rewrite_decls(rewriter, node_rewriter, decls),
+                rewrite_box(rewriter, node_rewriter, body),
             ),
             IfElse(id, c, t, e) => IfElse(
-                id,
-                rewrite_box(rewriter, c),
-                rewrite_box(rewriter, t),
-                rewrite_box(rewriter, e),
+                node_rewriter(id),
+                rewrite_box(rewriter, node_rewriter, c),
+                rewrite_box(rewriter, node_rewriter, t),
+                rewrite_box(rewriter, node_rewriter, e),
             ),
-            _ => exp,
+            Value(id, v) => Value(node_rewriter(id), v),
+            SpecVar(id, mid, vid, label) => SpecVar(node_rewriter(id), mid, vid, label),
+            Invalid(id) => Invalid(node_rewriter(id)),
         }
     }
 
@@ -644,6 +683,8 @@ pub enum Operation {
     Single,
     Update,
     Concat,
+    IndexOf,
+    Contains,
     MaxU8,
     MaxU64,
     MaxU128,

@@ -1,5 +1,5 @@
+// exclude_for: bexp
 address 0x1 {
-
 module GenericBug {
     use 0x1::Signer;
 

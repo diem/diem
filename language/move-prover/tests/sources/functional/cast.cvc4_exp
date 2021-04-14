@@ -1,64 +1,15 @@
-Move prover returns: exiting with boogie verification errors
-error: unexpected boogie output: `Prover error: Unexpected prover response getting model: (() (define-fu ..`
+Move prover returns: [internal] boogie exited with prover errors:
+Prover error: Unexpected value: $Error
 
-   ┌── <unknown>:1:1 ───
-   │
- 1 │ <unknown>
-   │ ^^^^^^^^^
-   │
+Advisory: $TestCast_aborting_u64_cast_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
+cast.bpl(1762,27): Verification inconclusive ($TestCast_aborting_u64_cast_incorrect$verify)
+cast.bpl(1828,27): Verification inconclusive ($TestCast_aborting_u8_cast$verify)
+cast.bpl(1894,27): Verification inconclusive ($TestCast_aborting_u8_cast_incorrect$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-error: abort not covered by any of the `aborts_if` clauses
+cast.bpl(1960,27): Verification inconclusive ($TestCast_u64_cast$verify)
+Prover error: Invalid PING response from the prover: unsat
 
-    ┌── tests/sources/functional/cast.move:47:5 ───
-    │
- 47 │ ╭     spec fun aborting_u64_cast_incorrect {
- 48 │ │         aborts_if false;
- 49 │ │     }
-    │ ╰─────^
-    ·
- 45 │         (x as u64)
-    │         ---------- abort happened here
-    │
-    =     at tests/sources/functional/cast.move:44: aborting_u64_cast_incorrect
-    =     at tests/sources/functional/cast.move:45: aborting_u64_cast_incorrect
-    =         ABORTED
+cast.bpl(2015,27): Verification inconclusive ($TestCast_u8_cast_incorrect$verify)
 
-error: verification inconclusive
-
-    ┌── tests/sources/functional/cast.move:37:5 ───
-    │
- 37 │ ╭     fun aborting_u8_cast(x: u64): u8 {
- 38 │ │         (x as u8)
- 39 │ │     }
-    │ ╰─────^
-    │
-
-error: verification inconclusive
-
-    ┌── tests/sources/functional/cast.move:30:5 ───
-    │
- 30 │ ╭     fun aborting_u8_cast_incorrect(x: u64): u8 {
- 31 │ │         (x as u8)
- 32 │ │     }
-    │ ╰─────^
-    │
-
-error: verification inconclusive
-
-    ┌── tests/sources/functional/cast.move:18:5 ───
-    │
- 18 │ ╭     fun u64_cast(x: u64): u128 {
- 19 │ │         (x as u128)
- 20 │ │     }
-    │ ╰─────^
-    │
-
-error: verification inconclusive
-
-    ┌── tests/sources/functional/cast.move:11:5 ───
-    │
- 11 │ ╭     fun u8_cast_incorrect(x: u8): u64 {
- 12 │ │         (x as u64)
- 13 │ │     }
-    │ ╰─────^
-    │
+Boogie program verifier finished with 0 errors, 5 inconclusives

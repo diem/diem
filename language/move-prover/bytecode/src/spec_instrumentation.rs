@@ -31,6 +31,7 @@ use crate::{
 use move_model::{
     ast::QuantKind,
     exp_generator::ExpGenerator,
+    model::NodeId,
     spec_translator::{SpecTranslator, TranslatedSpec},
 };
 use std::collections::BTreeMap;
@@ -392,6 +393,7 @@ impl<'a> Instrumenter<'a> {
     ) {
         use Bytecode::*;
         use PropKind::*;
+        let targs = &targs; // linter does not allow `ref targs` parameter
 
         let env = self.builder.global_env();
 
@@ -401,7 +403,7 @@ impl<'a> Instrumenter<'a> {
             true,
             &mut self.builder,
             &callee_env,
-            &targs,
+            targs,
             Some(&srcs),
             &dests,
         );
@@ -431,7 +433,9 @@ impl<'a> Instrumenter<'a> {
 
         // Emit all expression debug traces.
         for (node_id, exp) in std::mem::take(&mut callee_spec.debug_traces) {
+            let exp = self.instantiate_exp(exp, targs);
             let temp = self.builder.emit_let(exp).0;
+
             self.builder
                 .emit_with(|id| Call(id, vec![], Operation::TraceExp(node_id), vec![temp], None));
         }
@@ -442,6 +446,7 @@ impl<'a> Instrumenter<'a> {
         // function.
         if self.is_verified() || callee_opaque {
             for (loc, cond) in callee_spec.pre_conditions(&self.builder) {
+                let cond = self.instantiate_exp(cond, targs);
                 // Determine whether we want to emit this as an assertion or an assumption.
                 let prop_kind = match self.builder.data.variant {
                     FunctionVariant::Verification(..) => {
@@ -461,6 +466,7 @@ impl<'a> Instrumenter<'a> {
         if self.is_verified() {
             let loc = self.builder.get_loc(id);
             for (_, cond) in &callee_spec.modifies {
+                let cond = &self.instantiate_exp(cond.clone(), targs);
                 let env = self.builder.global_env();
                 let rty = &env.get_node_instantiation(cond.node_id())[0];
                 let (mid, sid, targs) = rty.require_struct();
@@ -473,7 +479,7 @@ impl<'a> Instrumenter<'a> {
             self.builder.emit(Call(
                 id,
                 dests,
-                Operation::Function(mid, fid, targs),
+                Operation::Function(mid, fid, targs.clone()),
                 srcs,
                 Some(AbortAction(self.abort_label, self.abort_local)),
             ));
@@ -489,7 +495,7 @@ impl<'a> Instrumenter<'a> {
             // Translate the abort condition. If the abort_cond_temp_opt is None, it indicates
             // that the abort condition is known to be false, so we can skip the abort handling.
             let (abort_cond_temp_opt, code_cond) =
-                self.generate_abort_opaque_cond(callee_aborts_if_is_partial, &callee_spec);
+                self.generate_abort_opaque_cond(callee_aborts_if_is_partial, &callee_spec, targs);
             if let Some(abort_cond_temp) = abort_cond_temp_opt {
                 let abort_local = self.abort_local;
                 let abort_label = self.abort_label;
@@ -511,14 +517,17 @@ impl<'a> Instrumenter<'a> {
 
             // Emit memory state saves
             for (mem, label) in std::mem::take(&mut callee_spec.saved_memory) {
+                let mem = mem.instantiate(targs);
                 self.builder.emit_with(|id| SaveMem(id, label, mem));
             }
             for (var, label) in std::mem::take(&mut callee_spec.saved_spec_vars) {
+                let var = var.instantiate(targs);
                 self.builder.emit_with(|id| SaveSpecVar(id, label, var));
             }
 
             // Emit modifies properties which havoc memory at the modified location.
             for (_, modifies) in std::mem::take(&mut callee_spec.modifies) {
+                let modifies = self.instantiate_exp(modifies, targs);
                 self.builder.emit_with(|id| Prop(id, Modifies, modifies));
             }
 
@@ -566,11 +575,15 @@ impl<'a> Instrumenter<'a> {
 
             // Emit post conditions as assumptions.
             for (_, cond) in std::mem::take(&mut callee_spec.post) {
+                let cond = self.instantiate_exp(cond, targs);
                 self.builder.emit_with(|id| Prop(id, Assume, cond));
             }
 
             // Emit the events in the `emits` specs of the callee.
             for (_, msg, handle, cond) in std::mem::take(&mut callee_spec.emits) {
+                let msg = self.instantiate_exp(msg, targs);
+                let handle = self.instantiate_exp(handle, targs);
+                let cond = cond.map(|e| self.instantiate_exp(e, targs));
                 let temp_msg = self.builder.emit_let(msg).0;
                 let temp_handle = self.builder.emit_let(handle).0;
                 let mut temp_list = vec![temp_msg, temp_handle];
@@ -673,6 +686,7 @@ impl<'a> Instrumenter<'a> {
         &mut self,
         is_partial: bool,
         spec: &TranslatedSpec,
+        targs: &[Type],
     ) -> (Option<TempIndex>, Option<Exp>) {
         let aborts_cond = if is_partial {
             None
@@ -684,6 +698,7 @@ impl<'a> Instrumenter<'a> {
                 return (None, None);
             }
             // Introduce a temporary to hold the value of the aborts condition.
+            let cond = self.instantiate_exp(cond, targs);
             self.builder.emit_let(cond).0
         } else {
             // Introduce a havoced temporary to hold an arbitrary value for the aborts
@@ -693,6 +708,7 @@ impl<'a> Instrumenter<'a> {
         let aborts_code_cond = if spec.has_aborts_code_specs() {
             let actual_code = self.builder.mk_temporary(self.abort_local);
             spec.aborts_code_condition(&self.builder, &actual_code)
+                .map(|e| self.instantiate_exp(e, targs))
         } else {
             None
         };
@@ -797,6 +813,20 @@ impl<'a> Instrumenter<'a> {
             self.builder
                 .emit_with(|id| Bytecode::Prop(id, PropKind::Assert, can_modify));
         }
+    }
+
+    fn instantiate_exp(&self, exp: Exp, targs: &[Type]) -> Exp {
+        exp.rewrite_node_id(&mut |id| self.instantiate_node(id, targs))
+    }
+
+    fn instantiate_node(&self, id: NodeId, targs: &[Type]) -> NodeId {
+        let env = self.builder.global_env();
+        let loc = env.get_node_loc(id);
+        let ty = env.get_node_type(id).instantiate(targs);
+        let targs = Type::instantiate_vec(env.get_node_instantiation(id), targs);
+        let new_id = env.new_node(loc, ty);
+        env.set_node_instantiation(new_id, targs);
+        new_id
     }
 }
 

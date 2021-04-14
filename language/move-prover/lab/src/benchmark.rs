@@ -133,7 +133,6 @@ fn run_benchmark(
     println!("building model");
     let env = run_model_builder(modules, dep_dirs)?;
     let mut error_writer = StandardStream::stderr(ColorChoice::Auto);
-    check_errors(&env, &mut error_writer, "unexpected build errors")?;
     let mut options = if let Some(config_file) = config_file_opt {
         Options::create_from_toml_file(config_file)?
     } else {
@@ -143,6 +142,7 @@ fn run_benchmark(
     options.backend.proc_cores = 1;
     options.backend.derive_options();
     options.setup_logging();
+    check_errors(&env, &options, &mut error_writer, "unexpected build errors")?;
 
     let config_descr = if let Some(config) = config_file_opt {
         config.clone()
@@ -239,6 +239,7 @@ impl Runner {
         let targets = create_and_process_bytecode(&self.options, env);
         check_errors(
             env,
+            &self.options,
             &mut self.error_writer,
             "unexpected transformation errors",
         )?;
@@ -247,6 +248,7 @@ impl Runner {
         let code_writer = generate_boogie(&env, &self.options, &targets)?;
         check_errors(
             env,
+            &self.options,
             &mut self.error_writer,
             "unexpected boogie generation errors",
         )?;
@@ -339,6 +341,29 @@ impl Benchmark {
     pub fn take(&mut self, count: usize) {
         self.data.truncate(count)
     }
+}
+
+pub fn stats_benchmarks(benchmarks: &[&Benchmark]) -> String {
+    fn sum(benchmark: &Benchmark) -> f64 {
+        benchmark
+            .data
+            .iter()
+            .filter_map(|d| {
+                if d.status == "ok" {
+                    Some(d.duration as f64)
+                } else {
+                    None
+                }
+            })
+            .sum()
+    }
+    let baseline = sum(&benchmarks[0]);
+    let mut res = String::new();
+    for benchmark in benchmarks {
+        let factor = sum(benchmark) / baseline;
+        res = format!("{} {}={:.3}", res, benchmark.config, factor);
+    }
+    res
 }
 
 /// Plot a set of benchmarks in JupyterLab.
@@ -447,7 +472,7 @@ pub fn plot_benchmarks(benchmarks: &[&Benchmark]) -> SVGWrapper {
                         filled_shape(i),
                     ),
                     Result::Timeout => (max_duration, "timeout".to_string(), stroke_shape(i)),
-                    Result::Error(d) => (*d as u32, "timeout".to_string(), filled_shape(i)),
+                    Result::Error(d) => (*d as u32, "error".to_string(), filled_shape(i)),
                 };
                 root.draw(&bar(ycoord, weight, style))?;
                 root.draw(&label(
