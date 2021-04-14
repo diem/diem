@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/unit_test/test_filter_struct.move:9:23 ───
+   │
+ 9 │     public fun foo(): Foo {
+   │                       ^^^ Unbound type 'Foo' in current scope
+   │
+
+error: 
+
+    ┌── tests/move_check/unit_test/test_filter_struct.move:10:9 ───
+    │
+ 10 │         Foo {}
+    │         ^^^ Unbound type 'Foo' in current scope
+    │
+

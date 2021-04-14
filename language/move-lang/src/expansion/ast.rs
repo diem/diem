@@ -30,7 +30,8 @@ pub struct Program {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeValue_ {
-    Value(Value),
+    // First is set to true if the value's type was inferred, otherwise set to false.
+    Value(bool, Value),
     ModuleAccess(ModuleAccess),
 }
 pub type AttributeValue = Spanned<AttributeValue_>;
@@ -42,6 +43,16 @@ pub enum Attribute_ {
     Parameterized(Name, Vec<Attribute>),
 }
 pub type Attribute = Spanned<Attribute_>;
+
+impl Attribute_ {
+    pub fn attribute_name(&self) -> &Name {
+        match self {
+            Attribute_::Name(nm)
+            | Attribute_::Assigned(nm, _)
+            | Attribute_::Parameterized(nm, _) => nm,
+        }
+    }
+}
 
 //**************************************************************************************************
 // Scripts
@@ -594,7 +605,7 @@ impl AstDebug for Program {
 impl AstDebug for AttributeValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            AttributeValue_::Value(v) => v.ast_debug(w),
+            AttributeValue_::Value(_, v) => v.ast_debug(w),
             AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
         }
     }

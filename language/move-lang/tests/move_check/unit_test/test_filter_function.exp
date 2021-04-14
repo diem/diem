@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/unit_test/test_filter_function.move:6:24 ───
+   │
+ 6 │     public fun foo() { bar() }
+   │                        ^^^ Unbound function 'bar' in current scope
+   │
+

@@ -45,8 +45,8 @@ pub struct Options {
     )]
     pub no_shadow: bool,
 
-    #[structopt(subcommand)]
-    pub flags: Option<Flags>,
+    #[structopt(flatten)]
+    pub flags: Flags,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -58,12 +58,7 @@ pub fn main() -> anyhow::Result<()> {
         flags,
     } = Options::from_args();
 
-    let _files = move_lang::move_check_and_report(
-        &source_files,
-        &dependencies,
-        out_dir,
-        !no_shadow,
-        flags.unwrap_or_else(Flags::empty),
-    )?;
+    let _files =
+        move_lang::move_check_and_report(&source_files, &dependencies, out_dir, !no_shadow, flags)?;
     Ok(())
 }

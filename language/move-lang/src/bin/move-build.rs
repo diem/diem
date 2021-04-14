@@ -50,8 +50,8 @@ pub struct Options {
     )]
     pub emit_source_map: bool,
 
-    #[structopt(subcommand)]
-    pub flags: Option<Flags>,
+    #[structopt(flatten)]
+    pub flags: Flags,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -70,7 +70,7 @@ pub fn main() -> anyhow::Result<()> {
         &dependencies,
         Some(interface_files_dir),
         !no_shadow,
-        flags.unwrap_or_else(Flags::empty),
+        flags,
     )?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/unit_test/invalid_expected_failure_name.move:4:24 ───
+   │
+ 4 │     #[expected_failure=1]
+   │                        ^ Invalid expected failure code assignment
+   ·
+ 4 │     #[expected_failure=1]
+   │       ------------------ Expect an #[expected_failure(abort_code=...)] attribute for abort code assignment
+   │
+

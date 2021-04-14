@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/unit_test/script_with_multiple_top_level.move:3:3 ───
+   │
+ 3 │ #[test, expected_failure]
+   │   ^^^^ Testing attributes are not allowed in scripts.
+   │
+
+error: 
+
+   ┌── tests/move_check/unit_test/script_with_multiple_top_level.move:3:9 ───
+   │
+ 3 │ #[test, expected_failure]
+   │         ^^^^^^^^^^^^^^^^ Testing attributes are not allowed in scripts.
+   │
+
+error: 
+
+   ┌── tests/move_check/unit_test/script_with_multiple_top_level.move:4:3 ───
+   │
+ 4 │ #[test_only]
+   │   ^^^^^^^^^ Testing attributes are not allowed in scripts.
+   │
+

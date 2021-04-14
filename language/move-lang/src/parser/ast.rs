@@ -106,6 +106,16 @@ pub type Attribute = Spanned<Attribute_>;
 
 pub type Attributes = Spanned<Vec<Attribute>>;
 
+impl Attribute_ {
+    pub fn attribute_name(&self) -> &Name {
+        match self {
+            Attribute_::Name(nm)
+            | Attribute_::Assigned(nm, _)
+            | Attribute_::Parameterized(nm, _) => nm,
+        }
+    }
+}
+
 //**************************************************************************************************
 // Modules
 //**************************************************************************************************

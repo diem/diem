@@ -1,0 +1,120 @@
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:19:7 ───
+    │
+ 19 │     #[test(_a=Foo)]
+    │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+    ·
+ 20 │     public fun b(_a: signer) { }
+    │                  -- Corresponding to this parameter
+    ·
+ 20 │     public fun b(_a: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:19:15 ───
+    │
+ 19 │     #[test(_a=Foo)]
+    │               ^^^ Unsupported attribute value
+    ·
+ 19 │     #[test(_a=Foo)]
+    │            ------ Assigned in this attribute
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:27:7 ───
+    │
+ 27 │     #[test(_b=0x2)]
+    │       ^^^^^^^^^^^^ Duplicate '#[test]' attribute. Only one #[test] attribute is allowed
+    ·
+ 26 │     #[test(_a=0x1)]
+    │       ------------ Previously annotated here
+    ·
+ 28 │     public fun d(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:27:7 ───
+    │
+ 27 │     #[test(_b=0x2)]
+    │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+    ·
+ 28 │     public fun d(_a: signer, _b: signer) { }
+    │                  -- Corresponding to this parameter
+    ·
+ 28 │     public fun d(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:31:7 ───
+    │
+ 31 │     #[test(_a=0x1)]
+    │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+    ·
+ 33 │     public fun e(_a: signer, _b: signer) { }
+    │                              -- Corresponding to this parameter
+    ·
+ 33 │     public fun e(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:32:7 ───
+    │
+ 32 │     #[test_only]
+    │       ^^^^^^^^^ Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other
+    ·
+ 31 │     #[test(_a=0x1)]
+    │       ------------ Previously annotated here
+    ·
+ 33 │     public fun e(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:36:7 ───
+    │
+ 36 │     #[test(_a=0x1)]
+    │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+    ·
+ 37 │     public fun f(_a: signer, _b: signer) { }
+    │                              -- Corresponding to this parameter
+    ·
+ 37 │     public fun f(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:40:7 ───
+    │
+ 40 │     #[test(_a=0x1)]
+    │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+    ·
+ 43 │     public fun g(_a: signer, _b: signer) { }
+    │                              -- Corresponding to this parameter
+    ·
+ 43 │     public fun g(_a: signer, _b: signer) { }
+    │                - In this test
+    │
+
+error: 
+
+    ┌── tests/move_check/unit_test/multiple_errors.move:42:7 ───
+    │
+ 42 │     #[expected_failure]
+    │       ^^^^^^^^^^^^^^^^ Duplicate '#[expected_failure]' attribute. Only one #[expected_failure] attribute is allowed
+    ·
+ 41 │     #[expected_failure]
+    │       ---------------- Previously annotated here
+    │
+

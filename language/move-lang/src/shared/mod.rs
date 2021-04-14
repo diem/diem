@@ -203,6 +203,7 @@ pub fn shortest_cycle<'a, T: Ord + Hash>(
 // Compilation Env
 //**************************************************************************************************
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompilationEnv {
     flags: Flags,
     errors: Errors,
@@ -283,7 +284,7 @@ pub fn format_comma<T: fmt::Display, I: IntoIterator<Item = T>>(items: I) -> Str
 // Flags
 //**************************************************************************************************
 
-#[derive(Debug, StructOpt, Clone)]
+#[derive(Clone, Debug, Eq, PartialEq, StructOpt)]
 pub struct Flags {
     /// Compile in test mode
     #[structopt(
@@ -296,5 +297,53 @@ pub struct Flags {
 impl Flags {
     pub fn empty() -> Self {
         Self { test: false }
+    }
+
+    pub fn testing() -> Self {
+        Self { test: true }
+    }
+
+    pub fn is_testing(&self) -> bool {
+        self.test
+    }
+}
+
+//**************************************************************************************************
+// Attributes
+//**************************************************************************************************
+
+pub mod known_attributes {
+    #[derive(Debug, PartialEq, Clone, PartialOrd, Eq, Ord)]
+    pub enum TestingAttributes {
+        // Can be called by other testing code, and included in compilation in test mode
+        TestOnly,
+        // Is a test that will be run
+        Test,
+        // This test is expected to fail
+        ExpectedFailure,
+    }
+
+    impl TestingAttributes {
+        pub const TEST: &'static str = "test";
+        pub const EXPECTED_FAILURE: &'static str = "expected_failure";
+        pub const TEST_ONLY: &'static str = "test_only";
+        pub const CODE_ASSIGNMENT_NAME: &'static str = "abort_code";
+
+        pub fn resolve(attribute_str: &str) -> Option<Self> {
+            Some(match attribute_str {
+                Self::TEST => Self::Test,
+                Self::TEST_ONLY => Self::TestOnly,
+                Self::EXPECTED_FAILURE => Self::ExpectedFailure,
+                _ => return None,
+            })
+        }
+
+        pub fn name(&self) -> &str {
+            match self {
+                Self::Test => Self::TEST,
+                Self::TestOnly => Self::TEST_ONLY,
+                Self::ExpectedFailure => Self::EXPECTED_FAILURE,
+            }
+        }
     }
 }

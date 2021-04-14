@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/unit_test/expected_failure_out_of_range_value.move:16:35 ───
+    │
+ 16 │     #[expected_failure(abort_code=18446744073709551616)]
+    │                                   ^^^^^^^^^^^^^^^^^^^^ Invalid value in expected failure code assignment
+    ·
+ 16 │     #[expected_failure(abort_code=18446744073709551616)]
+    │                        ------------------------------- In this assignment
+    │
+

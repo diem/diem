@@ -451,8 +451,8 @@ fn attribute_value(
     Some(sp(
         loc,
         match avalue_ {
-            PV::Value(v) => EV::Value(value(context, v)?),
-            PV::NumValue(u) => EV::Value(sp(loc, E::Value_::U128(u))),
+            PV::Value(v) => EV::Value(false, value(context, v)?),
+            PV::NumValue(u) => EV::Value(true, sp(loc, E::Value_::U128(u))),
             PV::ModuleAccess(ma) => EV::ModuleAccess(module_access(context, Access::Type, ma)?),
         },
     ))

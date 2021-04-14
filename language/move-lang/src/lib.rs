@@ -19,6 +19,7 @@ pub mod parser;
 pub mod shared;
 mod to_bytecode;
 pub mod typing;
+pub mod unit_test;
 
 use anyhow::anyhow;
 use codespan::{ByteIndex, Span};
@@ -594,6 +595,7 @@ fn run(
 
     match cur {
         PassResult::Parser(prog) => {
+            let prog = unit_test::filter_test_members::program(compilation_env, prog);
             let eprog = expansion::translate::program(compilation_env, pre_compiled_lib, prog);
             run(
                 compilation_env,
