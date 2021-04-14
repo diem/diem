@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use diem_client::{
-    views::{AccountView, MetadataView, TransactionView},
+    views::{
+        AccountView, EventWithProofView, MetadataView, TransactionView, TransactionsWithProofsView,
+    },
     Client, MethodRequest, MethodResponse, Response, Result,
 };
 use diem_types::{account_address::AccountAddress, transaction::SignedTransaction};
@@ -186,7 +188,7 @@ impl BroadcastingClient {
         &self,
         start_version: u64,
         limit: u64,
-    ) -> Result<Response<()>> {
+    ) -> Result<Response<Option<TransactionsWithProofsView>>> {
         let futures = self
             .random_clients()
             .map(|client| client.get_transactions_with_proofs(start_version, limit));
@@ -199,7 +201,7 @@ impl BroadcastingClient {
         key: &str,
         start_seq: u64,
         limit: u64,
-    ) -> Result<Response<()>> {
+    ) -> Result<Response<Vec<EventWithProofView>>> {
         let futures = self
             .random_clients()
             .map(|client| client.get_events_with_proofs(key, start_seq, limit));
