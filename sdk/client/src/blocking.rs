@@ -10,8 +10,8 @@ use super::{
 use crate::{
     error::WaitForTransactionError,
     views::{
-        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, MetadataView,
-        StateProofView, TransactionView,
+        AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
+        MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
     },
     Error, Result, Retry, State,
 };
@@ -217,7 +217,7 @@ impl BlockingClient {
         &self,
         start_version: u64,
         limit: u64,
-    ) -> Result<Response<()>> {
+    ) -> Result<Response<Option<TransactionsWithProofsView>>> {
         self.send(MethodRequest::get_transactions_with_proofs(
             start_version,
             limit,
@@ -229,7 +229,7 @@ impl BlockingClient {
         key: &str,
         start_seq: u64,
         limit: u64,
-    ) -> Result<Response<()>> {
+    ) -> Result<Response<Vec<EventWithProofView>>> {
         self.send(MethodRequest::get_events_with_proofs(key, start_seq, limit))
     }
 
