@@ -80,6 +80,8 @@ const TESTED_FEATURES: &[Feature] = &[
         separate_baseline: true,
         runner: runner_cvc4,
     },
+    // TODO: enable again
+    /*
     Feature {
         name: "bexp",
         flags: &["--bexp"],
@@ -88,6 +90,7 @@ const TESTED_FEATURES: &[Feature] = &[
         separate_baseline: false,
         runner: runner_bexp,
     },
+     */
 ];
 
 fn get_feature_by_name(name: &str) -> &'static Feature {
@@ -105,9 +108,11 @@ fn runner_default(p: &Path) -> datatest_stable::Result<()> {
 fn runner_cvc4(p: &Path) -> datatest_stable::Result<()> {
     test_runner_for_feature(p, get_feature_by_name("cvc4"))
 }
+/* TODO: enable
 fn runner_bexp(p: &Path) -> datatest_stable::Result<()> {
     test_runner_for_feature(p, get_feature_by_name("bexp"))
 }
+ */
 
 /// Test runner for a given feature.
 fn test_runner_for_feature(path: &Path, feature: &Feature) -> datatest_stable::Result<()> {
