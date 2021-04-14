@@ -1293,6 +1293,39 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             Some(response_li.clone()),
         )?;
 
+        // Validate chunk ledger infos
+        self.local_state.verify_ledger_info(&response_li)?;
+        if let Some(new_highest_li) = new_highest_li.clone() {
+            if new_highest_li != response_li {
+                self.local_state.verify_ledger_info(&new_highest_li)?;
+            }
+        }
+
+        // Validate and store the chunk
+        self.log_highest_seen_version(new_highest_li.clone());
+        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
+
+        // Need to sync with local storage to update synced version
+        self.sync_state_with_local_storage()?;
+        let synced_version = self.local_state.synced_version();
+
+        // Check if we've synced beyond our current target ledger info
+        if let Some(target_ledger_info) = &self.target_ledger_info {
+            if synced_version >= target_ledger_info.ledger_info().version() {
+                self.target_ledger_info = None;
+            }
+        }
+
+        // If we don't have a target ledger info, check if the new highest
+        // is appropriate for us.
+        if self.target_ledger_info.is_none() {
+            if let Some(new_highest_li) = new_highest_li {
+                if synced_version < new_highest_li.ledger_info().version() {
+                    self.target_ledger_info = Some(new_highest_li);
+                }
+            }
+        }
+
         // Send the next chunk request based on the sync mode (sync request or highest available).
         if self.sync_request.is_some() {
             match self.create_sync_request_chunk_target(known_version) {
@@ -1327,39 +1360,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             );
         }
 
-        // Validate chunk ledger infos
-        self.local_state.verify_ledger_info(&response_li)?;
-        if let Some(new_highest_li) = new_highest_li.clone() {
-            if new_highest_li != response_li {
-                self.local_state.verify_ledger_info(&new_highest_li)?;
-            }
-        }
-
-        // Validate and store the chunk
-        self.log_highest_seen_version(new_highest_li.clone());
-        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
-
-        // Need to sync with local storage to update synced version
-        self.sync_state_with_local_storage()?;
-        let synced_version = self.local_state.synced_version();
-
-        // Check if we've synced beyond our current target ledger info
-        if let Some(target_ledger_info) = &self.target_ledger_info {
-            if synced_version >= target_ledger_info.ledger_info().version() {
-                self.target_ledger_info = None;
-            }
-        }
-
-        // If we don't have a target ledger info, check if the new highest
-        // is appropriate for us.
-        if self.target_ledger_info.is_none() {
-            if let Some(new_highest_li) = new_highest_li {
-                if synced_version < new_highest_li.ledger_info().version() {
-                    self.target_ledger_info = Some(new_highest_li);
-                }
-            }
-        }
-
         Ok(())
     }
 
@@ -1376,16 +1376,6 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
             txn_list_with_proof.clone(),
             end_of_epoch_li.clone(),
         )?;
-        if known_version < self.waypoint.version() {
-            // Send the chunk request and log any errors. If errors are logged
-            // continue processing the chunk.
-            let _ = self.send_chunk_request_and_log_error(
-                known_version,
-                known_epoch,
-                self.create_waypoint_chunk_target(),
-                LogEntry::ProcessChunkResponse,
-            );
-        }
 
         // Verify the end_of_epoch_li against local state and ensure the version
         // corresponds to the version at the end of the chunk.
@@ -1421,6 +1411,17 @@ impl<T: ExecutorProxyTrait> StateSyncCoordinator<T> {
 
         self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li_to_commit)?;
         self.log_highest_seen_version(None);
+
+        if known_version < self.waypoint.version() {
+            // Send the chunk request and log any errors. If errors are logged
+            // continue processing the chunk.
+            let _ = self.send_chunk_request_and_log_error(
+                known_version,
+                known_epoch,
+                self.create_waypoint_chunk_target(),
+                LogEntry::ProcessChunkResponse,
+            );
+        }
 
         Ok(())
     }
