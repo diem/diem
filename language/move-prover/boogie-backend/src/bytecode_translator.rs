@@ -693,7 +693,7 @@ impl<'env> ModuleTranslator<'env> {
                                     BorrowEdge::Strong(StrongEdge::Direct) => {
                                         ("WritebackToReferenceStrongDirect", "".to_string())
                                     }
-                                    BorrowEdge::Strong(StrongEdge::Field(_, field)) => {
+                                    BorrowEdge::Strong(StrongEdge::Field(field)) => {
                                         ("WritebackToReferenceStrongField", format!(", {}", field))
                                     }
                                     BorrowEdge::Strong(StrongEdge::FieldUnknown) => {

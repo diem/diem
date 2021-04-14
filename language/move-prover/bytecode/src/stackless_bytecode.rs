@@ -254,7 +254,7 @@ impl BorrowNode {
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum StrongEdge {
     Direct,
-    Field(QualifiedId<StructId>, usize),
+    Field(usize),
     FieldUnknown,
 }
 
@@ -631,7 +631,7 @@ impl std::fmt::Display for BorrowEdge {
 impl std::fmt::Display for StrongEdge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StrongEdge::Field(_, field) => write!(f, "{}", field),
+            StrongEdge::Field(field) => write!(f, "{}", field),
             StrongEdge::FieldUnknown => write!(f, "U"),
             StrongEdge::Direct => write!(f, "D"),
         }

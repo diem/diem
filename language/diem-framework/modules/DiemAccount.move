@@ -345,10 +345,10 @@ module DiemAccount {
             == old(global<DiemAccount>(payee).withdraw_capability);
         ensures global<DiemAccount>(payee).authentication_key
             == old(global<DiemAccount>(payee).authentication_key);
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).sent_events,
-                                    old(global<DiemAccount>(payee).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).received_events,
-                                    old(global<DiemAccount>(payee).received_events));
+        ensures global<DiemAccount>(payee).sent_events.guid
+            == old(global<DiemAccount>(payee).sent_events.guid);
+        ensures global<DiemAccount>(payee).received_events.guid
+            == old(global<DiemAccount>(payee).received_events.guid);
         let amount = to_deposit.value;
         include DepositAbortsIf<Token>{amount: amount};
         include DepositOverflowAbortsIf<Token>{amount: amount};
@@ -609,10 +609,10 @@ module DiemAccount {
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                     == old(global<DiemAccount>(payer).withdraw_capability);
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).sent_events,
-                                    old(global<DiemAccount>(payer).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).received_events,
-                                    old(global<DiemAccount>(payer).received_events));
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
         include WithdrawFromAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>{balance: global<Balance<Token>>(payer)};
         include WithdrawOnlyFromCapAddress<Token>;
@@ -671,14 +671,14 @@ module DiemAccount {
         ensures exists<DiemAccount>(payer);
         ensures global<DiemAccount>(payer).withdraw_capability
                 == old(global<DiemAccount>(payer).withdraw_capability);
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).sent_events,
-                                    old(global<DiemAccount>(payer).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).received_events,
-                                    old(global<DiemAccount>(payer).received_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(dd_addr).sent_events,
-                                    old(global<DiemAccount>(dd_addr).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(dd_addr).received_events,
-                                    old(global<DiemAccount>(dd_addr).received_events));
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
+        ensures global<DiemAccount>(dd_addr).sent_events.guid
+            == old(global<DiemAccount>(dd_addr).sent_events.guid);
+        ensures global<DiemAccount>(dd_addr).received_events.guid
+            == old(global<DiemAccount>(dd_addr).received_events.guid);
         include PreburnAbortsIf<Token>;
         include PreburnEnsures<Token>{dd, payer};
         include PreburnEmits<Token>;
@@ -804,14 +804,14 @@ module DiemAccount {
         ensures exists<Balance<Token>>(payee);
         ensures global<DiemAccount>(payer).withdraw_capability
             == old(global<DiemAccount>(payer).withdraw_capability);
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).sent_events,
-                                    old(global<DiemAccount>(payer).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payer).received_events,
-                                    old(global<DiemAccount>(payer).received_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).sent_events,
-                                    old(global<DiemAccount>(payee).sent_events));
-        ensures Event::spec_guid_eq(global<DiemAccount>(payee).received_events,
-                                    old(global<DiemAccount>(payee).received_events));
+        ensures global<DiemAccount>(payer).sent_events.guid
+            == old(global<DiemAccount>(payer).sent_events.guid);
+        ensures global<DiemAccount>(payer).received_events.guid
+            == old(global<DiemAccount>(payer).received_events.guid);
+        ensures global<DiemAccount>(payee).sent_events.guid
+            == old(global<DiemAccount>(payee).sent_events.guid);
+        ensures global<DiemAccount>(payee).received_events.guid
+            == old(global<DiemAccount>(payee).received_events.guid);
         include PayFromAbortsIf<Token>;
         include PayFromEnsures<Token>{payer};
         include PayFromEmits<Token>;

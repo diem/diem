@@ -1018,16 +1018,6 @@ impl GlobalEnv {
         }
     }
 
-    /// Gets a struct by qualified id.
-    pub fn get_struct_qid(&self, qid: QualifiedId<StructId>) -> StructEnv<'_> {
-        self.get_module(qid.module_id).into_struct(qid.id)
-    }
-
-    /// Gets a function by qualified id.
-    pub fn get_function_qid(&self, qid: QualifiedId<FunId>) -> FunctionEnv<'_> {
-        self.get_module(qid.module_id).into_function(qid.id)
-    }
-
     /// Returns an iterator for all modules in the environment.
     pub fn get_modules(&self) -> impl Iterator<Item = ModuleEnv<'_>> {
         self.module_data.iter().map(move |module_data| ModuleEnv {
@@ -2089,25 +2079,6 @@ impl<'env> StructEnv<'env> {
     /// Returns the data invariants associated with this struct.
     pub fn get_spec(&'env self) -> &'env Spec {
         &self.data.spec
-    }
-
-    /// Returns the value of a boolean pragma for this struct. This first looks up a
-    /// pragma in this struct, then the enclosing module, and finally uses the provided default.
-    /// value
-    pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
-        let env = self.module_env.env;
-        if let Some(b) = env.is_property_true(&self.get_spec().properties, name) {
-            return b;
-        }
-        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, name) {
-            return b;
-        }
-        default()
-    }
-
-    /// Returns true if this struct is native or marked as intrinsic.
-    pub fn is_native_or_intrinsic(&self) -> bool {
-        self.is_native() || self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 }
 
