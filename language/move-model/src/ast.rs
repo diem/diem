@@ -20,7 +20,7 @@ use std::{
 use vm::file_format::CodeOffset;
 
 use crate::{
-    model::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter},
+    model::{FunId, GlobalEnv, GlobalId, QualifiedInstId, SchemaId, TypeParameter},
     ty::TypeDisplayContext,
 };
 use itertools::Itertools;
@@ -45,8 +45,8 @@ pub struct SpecFunDecl {
     pub params: Vec<(Symbol, Type)>,
     pub context_params: Option<Vec<(Symbol, bool)>>,
     pub result_type: Type,
-    pub used_spec_vars: BTreeSet<QualifiedId<SpecVarId>>,
-    pub used_memory: BTreeSet<QualifiedId<StructId>>,
+    pub used_spec_vars: BTreeSet<QualifiedInstId<SpecVarId>>,
+    pub used_memory: BTreeSet<QualifiedInstId<StructId>>,
     pub uninterpreted: bool,
     pub is_move_fun: bool,
     pub is_native: bool,
@@ -287,8 +287,8 @@ pub struct GlobalInvariant {
     pub id: GlobalId,
     pub loc: Loc,
     pub kind: ConditionKind,
-    pub mem_usage: BTreeSet<QualifiedId<StructId>>,
-    pub spec_var_usage: BTreeSet<QualifiedId<SpecVarId>>,
+    pub mem_usage: BTreeSet<QualifiedInstId<StructId>>,
+    pub spec_var_usage: BTreeSet<QualifiedInstId<SpecVarId>>,
     pub declaring_module: ModuleId,
     pub properties: PropertyBag,
     pub cond: Exp,

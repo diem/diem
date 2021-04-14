@@ -10,7 +10,7 @@ use crate::{
     usage_analysis,
 };
 use log::debug;
-use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, StructId, VerificationScope};
+use move_model::model::{FunctionEnv, GlobalEnv, QualifiedInstId, StructId, VerificationScope};
 use std::collections::BTreeSet;
 
 /// The annotation for information about verification.
@@ -107,7 +107,8 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
 
                 // Get all memory modified by this function.
                 let fun_target = targets.get_target(fun_env, &variant);
-                let modified_memory = usage_analysis::get_directly_modified_memory(&fun_target);
+                let modified_memory =
+                    usage_analysis::get_directly_modified_memory_inst(&fun_target);
 
                 // This function needs to be verified if it is a target or it touches target memory.
                 is_explicitly_verified || !modified_memory.is_disjoint(&target_memory)
@@ -156,12 +157,12 @@ fn check_friend_relation(fun_env: &FunctionEnv<'_>) {
 
 /// Compute the set of resources which are used in invariants which are target of
 /// verification.
-fn get_target_invariant_memory(env: &GlobalEnv) -> BTreeSet<QualifiedId<StructId>> {
+fn get_target_invariant_memory(env: &GlobalEnv) -> BTreeSet<QualifiedInstId<StructId>> {
     let mut target_resources = BTreeSet::new();
     for module_env in env.get_modules() {
         if module_env.is_target() {
             let module_id = module_env.get_id();
-            let mentioned_resources: BTreeSet<QualifiedId<StructId>> = env
+            let mentioned_resources: BTreeSet<QualifiedInstId<StructId>> = env
                 .get_global_invariants_by_module(module_id)
                 .iter()
                 .flat_map(|id| env.get_global_invariant(*id).unwrap().mem_usage.clone())

@@ -16,7 +16,7 @@ use crate::{
 use itertools::Itertools;
 use move_model::{
     ast::TempIndex,
-    model::{FunctionEnv, GlobalEnv, QualifiedId},
+    model::{FunctionEnv, GlobalEnv, QualifiedInstId},
 };
 use std::{
     borrow::BorrowMut,
@@ -509,12 +509,13 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
                         }
                     }
-                    BorrowGlobal(mid, sid, _)
+                    BorrowGlobal(mid, sid, inst)
                         if livevar_annotation_at.after.contains(&dests[0]) =>
                     {
                         let dest_node = self.borrow_node(dests[0]);
-                        let src_node = BorrowNode::GlobalRoot(QualifiedId {
+                        let src_node = BorrowNode::GlobalRoot(QualifiedInstId {
                             module_id: *mid,
+                            inst: inst.to_owned(),
                             id: *sid,
                         });
                         state.add_node(dest_node.clone());
@@ -528,7 +529,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
                         }
                     }
-                    BorrowField(mid, sid, _, field)
+                    BorrowField(mid, sid, inst, field)
                         if livevar_annotation_at.after.contains(&dests[0]) =>
                     {
                         let dest_node = self.borrow_node(dests[0]);
@@ -538,7 +539,10 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Field(mid.qualified(*sid), *field)),
+                                BorrowEdge::Strong(StrongEdge::Field(
+                                    mid.qualified_inst(*sid, inst.to_owned()),
+                                    *field,
+                                )),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);

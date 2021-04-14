@@ -65,9 +65,12 @@ use crate::{
         INTRINSIC_PRAGMA, OPAQUE_PRAGMA, VERIFY_PRAGMA,
     },
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Type},
+    ty::{PrimitiveType, Type, TypeDisplayContext},
 };
-use std::any::{Any, TypeId};
+use std::{
+    any::{Any, TypeId},
+    fmt::Formatter,
+};
 pub use vm::file_format::Visibility as FunctionVisibility;
 
 // =================================================================================================
@@ -215,6 +218,14 @@ pub struct QualifiedId<Id> {
     pub id: Id,
 }
 
+/// Some identifier qualified by a module and a type instantiation.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct QualifiedInstId<Id> {
+    pub module_id: ModuleId,
+    pub inst: Vec<Type>,
+    pub id: Id,
+}
+
 impl NamedConstantId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
@@ -322,6 +333,54 @@ impl ModuleId {
             id,
         }
     }
+
+    pub fn qualified_inst<Id>(self, id: Id, inst: Vec<Type>) -> QualifiedInstId<Id> {
+        QualifiedInstId {
+            module_id: self,
+            inst,
+            id,
+        }
+    }
+}
+
+impl<Id: Clone> QualifiedId<Id> {
+    pub fn instantiate(self, inst: Vec<Type>) -> QualifiedInstId<Id> {
+        let QualifiedId { module_id, id } = self;
+        QualifiedInstId {
+            module_id,
+            id,
+            inst,
+        }
+    }
+}
+
+impl<Id: Clone> QualifiedInstId<Id> {
+    pub fn instantiate(self, params: &[Type]) -> Self {
+        if params.is_empty() {
+            self
+        } else {
+            let Self {
+                module_id,
+                inst,
+                id,
+            } = self;
+            Self {
+                module_id,
+                inst: Type::instantiate_vec(inst, params),
+                id,
+            }
+        }
+    }
+
+    pub fn instantiate_ref(&self, params: &[Type]) -> Self {
+        let res = self.clone();
+        res.instantiate(params)
+    }
+
+    pub fn to_qualified_id(&self) -> QualifiedId<Id> {
+        let Self { module_id, id, .. } = self;
+        module_id.qualified(id.clone())
+    }
 }
 
 // =================================================================================================
@@ -417,13 +476,21 @@ pub struct GlobalEnv {
     /// A map of global invariants.
     global_invariants: BTreeMap<GlobalId, GlobalInvariant>,
     /// A map from spec vars to global invariants which refer to them.
-    global_invariants_for_spec_var: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<GlobalId>>,
+    global_invariants_for_spec_var: BTreeMap<QualifiedInstId<SpecVarId>, BTreeSet<GlobalId>>,
     /// A map from global memories to global invariants which refer to them.
-    global_invariants_for_memory: BTreeMap<QualifiedId<StructId>, BTreeSet<GlobalId>>,
-    /// A set containing spec functions which are called/used in specs.
+    global_invariants_for_memory: BTreeMap<QualifiedInstId<StructId>, BTreeSet<GlobalId>>,
+    /// A set containing spec functions which are called/used in specs. Note that these
+    /// are represented without type instantiation because we assume the backend can handle
+    /// generics in the expression language.
     pub used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
     /// A type-indexed container for storing extension data in the environment.
     extensions: RefCell<BTreeMap<TypeId, Box<dyn Any>>>,
+}
+
+/// Struct a helper type for implementing fmt::Display depending on GlobalEnv
+pub struct EnvDisplay<'a, T> {
+    env: &'a GlobalEnv,
+    val: &'a T,
 }
 
 impl GlobalEnv {
@@ -471,6 +538,12 @@ impl GlobalEnv {
             used_spec_funs: BTreeSet::new(),
             extensions: Default::default(),
         }
+    }
+
+    /// Creates a display container for the given value. There must be an implementation
+    /// of fmt::Display for an instance to work in formatting.
+    pub fn display<'a, T>(&'a self, val: &'a T) -> EnvDisplay<'a, T> {
+        EnvDisplay { env: self, val }
     }
 
     /// Stores extension data in the environment. This can be arbitrary data which is
@@ -587,9 +660,13 @@ impl GlobalEnv {
     /// TODO: move-lang should use FileId as well so we don't need this here. There is already
     /// a todo in their code to remove the current use of `&'static str` for file names in Loc.
     pub fn to_loc(&self, loc: &MoveIrLoc) -> Loc {
-        Loc {
-            file_id: self.get_file_id(loc.file()).expect("file name undefined"),
-            span: loc.span(),
+        if let Some(file_id) = self.get_file_id(loc.file()) {
+            Loc {
+                file_id,
+                span: loc.span(),
+            }
+        } else {
+            self.unknown_loc.clone()
         }
     }
 
@@ -717,13 +794,13 @@ impl GlobalEnv {
         let id = inv.id;
         for spec_var in &inv.spec_var_usage {
             self.global_invariants_for_spec_var
-                .entry(*spec_var)
+                .entry(spec_var.clone())
                 .or_insert_with(BTreeSet::new)
                 .insert(id);
         }
         for memory in &inv.mem_usage {
             self.global_invariants_for_memory
-                .entry(*memory)
+                .entry(memory.clone())
                 .or_insert_with(BTreeSet::new)
                 .insert(id);
         }
@@ -736,9 +813,12 @@ impl GlobalEnv {
     }
 
     /// Return the global invariants which refer to the given memory.
-    pub fn get_global_invariants_for_memory(&self, memory: QualifiedId<StructId>) -> Vec<GlobalId> {
+    pub fn get_global_invariants_for_memory(
+        &self,
+        memory: &QualifiedInstId<StructId>,
+    ) -> Vec<GlobalId> {
         self.global_invariants_for_memory
-            .get(&memory)
+            .get(memory)
             .map(|ids| ids.iter().cloned().collect_vec())
             .unwrap_or_else(Default::default)
     }
@@ -2970,5 +3050,53 @@ impl<'env> fmt::Display for LocDisplay<'env> {
         } else {
             write!(f, "{:?}", self.loc)
         }
+    }
+}
+
+pub trait GetNameString {
+    fn get_name_for_display(&self, env: &GlobalEnv) -> String;
+}
+
+impl GetNameString for QualifiedId<StructId> {
+    fn get_name_for_display(&self, env: &GlobalEnv) -> String {
+        env.get_struct_qid(*self).get_full_name_str()
+    }
+}
+
+impl GetNameString for QualifiedId<FunId> {
+    fn get_name_for_display(&self, env: &GlobalEnv) -> String {
+        env.get_function_qid(*self).get_full_name_str()
+    }
+}
+
+impl<'a, Id: Clone> fmt::Display for EnvDisplay<'a, QualifiedId<Id>>
+where
+    QualifiedId<Id>: GetNameString,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.val.get_name_for_display(self.env))
+    }
+}
+
+impl<'a, Id: Clone> fmt::Display for EnvDisplay<'a, QualifiedInstId<Id>>
+where
+    QualifiedId<Id>: GetNameString,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.env.display(&self.val.to_qualified_id()))?;
+        if !self.val.inst.is_empty() {
+            let tctx = TypeDisplayContext::WithEnv {
+                env: self.env,
+                type_param_names: None,
+            };
+            write!(f, "<")?;
+            let mut sep = "";
+            for ty in &self.val.inst {
+                write!(f, "{}{}", sep, ty.display(&tctx))?;
+                sep = ", ";
+            }
+            write!(f, ">")?;
+        }
+        Ok(())
     }
 }

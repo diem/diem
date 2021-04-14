@@ -30,7 +30,7 @@ pub enum Type {
     // Types only appearing in specifications
     Fun(Vec<Type>, Box<Type>),
     TypeDomain(Box<Type>),
-    ResourceDomain(ModuleId, StructId),
+    ResourceDomain(ModuleId, StructId, Option<Vec<Type>>),
     TypeLocal(Symbol),
 
     // Temporary types used during type checking
@@ -214,6 +214,15 @@ impl Type {
             self.clone()
         } else {
             self.replace(Some(params), None)
+        }
+    }
+
+    /// Instantiate type parameters in the vector of types.
+    pub fn instantiate_vec(vec: Vec<Type>, params: &[Type]) -> Vec<Type> {
+        if params.is_empty() {
+            vec
+        } else {
+            vec.into_iter().map(|ty| ty.instantiate(params)).collect()
         }
     }
 
@@ -725,7 +734,15 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
             }
             Vector(t) => write!(f, "vector<{}>", t.display(self.context)),
             TypeDomain(t) => write!(f, "domain<{}>", t.display(self.context)),
-            ResourceDomain(mid, sid) => write!(f, "resources<{}>", self.struct_str(*mid, *sid)),
+            ResourceDomain(mid, sid, inst_opt) => {
+                write!(f, "resources<{}", self.struct_str(*mid, *sid))?;
+                if let Some(inst) = inst_opt {
+                    f.write_str("<")?;
+                    comma_list(f, inst)?;
+                    f.write_str(">")?;
+                }
+                f.write_str(">")
+            }
             TypeLocal(s) => write!(f, "{}", s.display(self.context.symbol_pool())),
             Fun(ts, t) => {
                 f.write_str("|")?;

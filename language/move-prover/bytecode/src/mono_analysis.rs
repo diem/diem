@@ -212,9 +212,8 @@ impl<'a> Analyzer<'a> {
                 self.add_type(&*res);
             }
             Type::TypeDomain(rd) => self.add_type(&*rd),
-            Type::ResourceDomain(_mid, _sid) => {
-                // TODO: ignored for now, since the constructor will need to be refined to
-                // have type arguments in a future PR.
+            Type::ResourceDomain(mid, sid, Some(targs)) => {
+                self.add_struct(self.env.get_module(*mid).into_struct(*sid), targs)
             }
             _ => {}
         }

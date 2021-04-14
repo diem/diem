@@ -14,7 +14,7 @@ use crate::{
         TempIndex,
     },
     exp_generator::ExpGenerator,
-    model::{FunctionEnv, GlobalId, Loc, NodeId, QualifiedId, SpecVarId, StructId},
+    model::{FunctionEnv, GlobalId, Loc, NodeId, QualifiedInstId, SpecVarId, StructId},
     pragmas::{
         ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
         CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
@@ -48,8 +48,8 @@ pub struct SpecTranslator<'a, 'b, T: ExpGenerator<'a>> {
 /// Represents a translated spec.
 #[derive(Default)]
 pub struct TranslatedSpec {
-    pub saved_memory: BTreeMap<QualifiedId<StructId>, MemoryLabel>,
-    pub saved_spec_vars: BTreeMap<QualifiedId<SpecVarId>, MemoryLabel>,
+    pub saved_memory: BTreeMap<QualifiedInstId<StructId>, MemoryLabel>,
+    pub saved_spec_vars: BTreeMap<QualifiedInstId<SpecVarId>, MemoryLabel>,
     pub saved_params: BTreeMap<TempIndex, TempIndex>,
     pub debug_traces: Vec<(NodeId, Exp)>,
     pub pre: Vec<(Loc, Exp)>,
@@ -242,6 +242,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
 
     fn translate_spec(&mut self, for_call: bool) {
         let fun_env = self.fun_env;
+        let env = fun_env.module_env.env;
         let spec = fun_env.get_spec();
 
         // A function which determines whether a condition is applicable in the context, which
@@ -251,7 +252,6 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
         // which are injected from a schema are only included on call site if they are also
         // exported.
         let is_applicable = |cond: &&Condition| {
-            let env = fun_env.module_env.env;
             let abstract_ = env
                 .is_property_true(&cond.properties, CONDITION_ABSTRACT_PROP)
                 .unwrap_or(false);
@@ -357,6 +357,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
 
     fn translate_exp(&mut self, exp: &Exp, in_old: bool) -> Exp {
         use crate::ast::{Exp::*, Operation::*};
+        let env = self.fun_env.module_env.env;
         match exp {
             Temporary(node_id, idx) => {
                 // Compute the effective index.
@@ -380,12 +381,16 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                 let node_id = self.builder.global_env().new_node(loc, effective_type);
                 Temporary(self.instantiate(node_id), effective_idx)
             }
-            SpecVar(node_id, mid, vid, None) if in_old => SpecVar(
-                self.instantiate(*node_id),
-                *mid,
-                *vid,
-                Some(self.save_spec_var(mid.qualified(*vid))),
-            ),
+            SpecVar(node_id, mid, vid, None) if in_old => {
+                let node_id = self.instantiate(*node_id);
+                let inst = env.get_node_instantiation(node_id);
+                SpecVar(
+                    node_id,
+                    *mid,
+                    *vid,
+                    Some(self.save_spec_var(mid.qualified_inst(*vid, inst))),
+                )
+            }
             Call(node_id, Global(None), args) if in_old => {
                 let args = self.translate_exp_vec(args, in_old);
                 Call(
@@ -584,7 +589,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             .collect_vec()
     }
 
-    fn save_spec_var(&mut self, qid: QualifiedId<SpecVarId>) -> MemoryLabel {
+    fn save_spec_var(&mut self, qid: QualifiedInstId<SpecVarId>) -> MemoryLabel {
         let builder = &mut self.builder;
         *self
             .result
@@ -593,7 +598,7 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
             .or_insert_with(|| builder.global_env().new_global_id())
     }
 
-    fn save_memory(&mut self, qid: QualifiedId<StructId>) -> MemoryLabel {
+    fn save_memory(&mut self, qid: QualifiedInstId<StructId>) -> MemoryLabel {
         let builder = &mut self.builder;
         *self
             .result

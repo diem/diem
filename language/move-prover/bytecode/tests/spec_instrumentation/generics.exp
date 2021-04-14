@@ -45,7 +45,7 @@ fun Generics::remove_u64($t0|a: address): Generics::R<u64> {
      var $t2: num
      var $t3: Generics::R<u64>
   0: assume WellFormed($t0)
-  1: assume forall $rsc: ResourceDomain<Generics::R<#0>>(): WellFormed($rsc)
+  1: assume forall $rsc: ResourceDomain<Generics::R<u64>>(): WellFormed($rsc)
      # >> opaque call: $t1 := Generics::remove<u64>($t0)
   2: nop
      # VC: caller does not have permission to modify `Generics::R<u64>` at given address at tests/spec_instrumentation/generics.move:24:9+14

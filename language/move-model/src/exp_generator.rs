@@ -5,7 +5,9 @@ use itertools::Itertools;
 
 use crate::{
     ast::{Exp, LocalVarDecl, Operation, QuantKind, TempIndex, Value},
-    model::{FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, StructId},
+    model::{
+        FieldEnv, FunctionEnv, GlobalEnv, Loc, NodeId, QualifiedId, QualifiedInstId, StructId,
+    },
     symbol::Symbol,
     ty::{Type, BOOL_TYPE, NUM_TYPE},
 };
@@ -198,7 +200,47 @@ pub trait ExpGenerator<'env> {
         let value = self.mk_local("$rsc", struct_ty.clone());
 
         if let Some(body) = f(value) {
-            let resource_domain_ty = Type::ResourceDomain(mem.module_id, mem.id);
+            let resource_domain_ty = Type::ResourceDomain(mem.module_id, mem.id, None);
+            let resource_domain_node_id =
+                self.new_node(resource_domain_ty, Some(vec![struct_ty.clone()]));
+            let resource_domain =
+                Exp::Call(resource_domain_node_id, Operation::ResourceDomain, vec![]);
+            let resource_decl = self.mk_decl(self.mk_symbol("$rsc"), struct_ty, None);
+            let quant_node_id = self.new_node(BOOL_TYPE.clone(), None);
+            Some(Exp::Quant(
+                quant_node_id,
+                kind,
+                vec![(resource_decl, resource_domain)],
+                vec![],
+                None,
+                Box::new(body),
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Creates a quantifier over the content of instantiated memory. The passed function `f`
+    /// receives an expression representing a value in memory and returns the quantifiers predicate;
+    //  if it returns None, this function will also return None.
+    fn mk_inst_mem_quant_opt<F>(
+        &self,
+        kind: QuantKind,
+        mem: &QualifiedInstId<StructId>,
+        f: &mut F,
+    ) -> Option<Exp>
+    where
+        F: FnMut(Exp) -> Option<Exp>,
+    {
+        // We generate `forall $val in resources<R>: INV[$val]`. The `resources<R>`
+        // quantifier domain is currently only available in the internal expression language,
+        // not on user level.
+        let struct_ty = Type::Struct(mem.module_id, mem.id, mem.inst.clone());
+        let value = self.mk_local("$rsc", struct_ty.clone());
+
+        if let Some(body) = f(value) {
+            let resource_domain_ty =
+                Type::ResourceDomain(mem.module_id, mem.id, Some(mem.inst.clone()));
             let resource_domain_node_id =
                 self.new_node(resource_domain_ty, Some(vec![struct_ty.clone()]));
             let resource_domain =
@@ -271,9 +313,10 @@ pub trait ExpGenerator<'env> {
 
     /// Get's the memory associated with a Call(Global,..) or Call(Exists, ..) node. Crashes
     /// if the the node is not typed as expected.
-    fn get_memory_of_node(&self, node_id: NodeId) -> QualifiedId<StructId> {
+    fn get_memory_of_node(&self, node_id: NodeId) -> QualifiedInstId<StructId> {
+        // We do have a call `f<R<..>>` so extract the type from the function instantiation.
         let rty = &self.global_env().get_node_instantiation(node_id)[0];
-        let (mid, sid, _) = rty.require_struct();
-        mid.qualified(sid)
+        let (mid, sid, inst) = rty.require_struct();
+        mid.qualified_inst(sid, inst.to_owned())
     }
 }

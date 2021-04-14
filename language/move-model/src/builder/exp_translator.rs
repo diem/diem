@@ -1543,7 +1543,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     if !self.translating_fun_as_spec_fun {
                         // Record the usage of spec function in specs, used later
                         // in spec build.
-                        self.parent.parent.add_used_spec_fun(module_id, spec_fun_id);
+                        self.parent
+                            .parent
+                            .add_used_spec_fun(module_id.qualified(spec_fun_id));
                     }
                     let module_name = match module {
                         Some(m) => m,

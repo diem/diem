@@ -18,7 +18,7 @@ use crate::{
 use move_model::{
     ast::{ConditionKind, GlobalInvariant},
     exp_generator::ExpGenerator,
-    model::{FunctionEnv, GlobalEnv, GlobalId, QualifiedId, StructId},
+    model::{FunctionEnv, GlobalEnv, GlobalId, QualifiedInstId, StructId},
     pragmas::CONDITION_ISOLATED_PROP,
     spec_translator::SpecTranslator,
 };
@@ -131,11 +131,11 @@ impl<'a> Instrumenter<'a> {
         let env = self.builder.global_env();
         let mut invariants = BTreeSet::new();
         let mut invariants_for_modified_memory = BTreeSet::new();
-        for mem in usage_analysis::get_used_memory(&self.builder.get_target()) {
-            invariants.extend(env.get_global_invariants_for_memory(*mem));
+        for mem in usage_analysis::get_used_memory_inst(&self.builder.get_target()) {
+            invariants.extend(env.get_global_invariants_for_memory(mem));
         }
-        for mem in usage_analysis::get_modified_memory(&self.builder.get_target()) {
-            invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(*mem));
+        for mem in usage_analysis::get_modified_memory_inst(&self.builder.get_target()) {
+            invariants_for_modified_memory.extend(env.get_global_invariants_for_memory(mem));
         }
 
         let mut assumed_at_update = BTreeSet::new();
@@ -179,25 +179,27 @@ impl<'a> Instrumenter<'a> {
         use Operation::*;
         match &bc {
             Call(_, _, WriteBack(GlobalRoot(mem), _), ..) => {
-                self.emit_invariants_for_update(*mem, assumed_at_update, move |builder| {
+                let mem = mem.clone();
+                self.emit_invariants_for_update(&mem, assumed_at_update, move |builder| {
                     builder.emit(bc);
                 })
             }
-            Call(_, _, MoveTo(mid, sid, _), ..) | Call(_, _, MoveFrom(mid, sid, _), ..) => self
-                .emit_invariants_for_update(
-                    mid.qualified(*sid),
+            Call(_, _, MoveTo(mid, sid, inst), ..) | Call(_, _, MoveFrom(mid, sid, inst), ..) => {
+                self.emit_invariants_for_update(
+                    &mid.qualified_inst(*sid, inst.to_owned()),
                     assumed_at_update,
                     move |builder| {
                         builder.emit(bc);
                     },
-                ),
+                )
+            }
             _ => self.builder.emit(bc),
         }
     }
 
     fn emit_invariants_for_update<F>(
         &mut self,
-        mem: QualifiedId<StructId>,
+        mem: &QualifiedInstId<StructId>,
         assumed_at_update: &BTreeSet<GlobalId>,
         emit_update: F,
     ) where
@@ -261,7 +263,7 @@ impl<'a> Instrumenter<'a> {
     /// target.
     fn get_verified_invariants_for_mem(
         &self,
-        mem: QualifiedId<StructId>,
+        mem: &QualifiedInstId<StructId>,
     ) -> Vec<&'a GlobalInvariant> {
         let env = self.builder.global_env();
         env.get_global_invariants_for_memory(mem)

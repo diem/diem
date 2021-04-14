@@ -159,6 +159,11 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(MonoAnalysisProcessor::new());
             Ok(Some(pipeline))
         }
+        "usage_analysis" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(UsageProcessor::new());
+            Ok(Some(pipeline))
+        }
 
         _ => Err(anyhow!(
             "the sub-directory `{}` has no associated pipeline to test",

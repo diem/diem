@@ -325,10 +325,17 @@ fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: us
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
             if !struct_env.is_native_or_intrinsic() {
                 for field in struct_env.get_fields() {
+                    let mut sel = format!("{}({})", boogie_field_sel(&field), name);
+                    let ty = field.get_type();
+                    let inst_type = ty.instantiate(targs);
+                    if ty.is_type_parameter() {
+                        let suffix = boogie_type_suffix(env, &inst_type);
+                        sel = format!("$Unbox{}({})", suffix, sel);
+                    }
                     add_type_check(boogie_well_formed_expr_impl(
                         env,
-                        &format!("{}({})", boogie_field_sel(&field), name),
-                        &field.get_type().instantiate(targs),
+                        &sel,
+                        &inst_type,
                         nest.saturating_add(1),
                     ));
                 }

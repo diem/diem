@@ -13,9 +13,7 @@ use move_model::{
     ast::{Exp, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
     emit, emitln,
-    model::{
-        FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId,
-    },
+    model::{FieldId, GlobalEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructId},
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
@@ -28,7 +26,10 @@ use crate::boogie_helpers::{
     boogie_type_value_array_from_strings, boogie_well_formed_expr,
 };
 use boogie_backend::options::BoogieOptions;
-use move_model::ast::{MemoryLabel, QuantKind, TempIndex};
+use move_model::{
+    ast::{MemoryLabel, QuantKind, TempIndex},
+    model::QualifiedId,
+};
 use std::cell::RefCell;
 
 pub struct SpecTranslator<'env> {
@@ -145,30 +146,40 @@ impl<'env> SpecTranslator<'env> {
                 continue;
             }
             let result_type = boogie_local_type(self.env, &fun.result_type);
-            let spec_var_params = fun.used_spec_vars.iter().map(
-                |QualifiedId {
-                     module_id: mid,
-                     id: vid,
-                 }| {
-                    let declaring_module = self.env.get_module(*mid);
-                    let decl = declaring_module.get_spec_var(*vid);
-                    let boogie_name = boogie_spec_var_name(&declaring_module, decl.name, &None);
-                    boogie_global_declarator(
-                        declaring_module.env,
-                        &boogie_name,
-                        decl.type_params.len(),
-                        &decl.type_,
+            let spec_var_params = fun
+                .used_spec_vars
+                .iter()
+                .map(|id| id.to_qualified_id())
+                .unique()
+                .map(
+                    |QualifiedId {
+                         module_id: ref mid,
+                         id: ref vid,
+                     }| {
+                        let declaring_module = self.env.get_module(*mid);
+                        let decl = declaring_module.get_spec_var(*vid);
+                        let boogie_name = boogie_spec_var_name(&declaring_module, decl.name, &None);
+                        boogie_global_declarator(
+                            declaring_module.env,
+                            &boogie_name,
+                            decl.type_params.len(),
+                            &decl.type_,
+                        )
+                    },
+                );
+            let mem_params = fun
+                .used_memory
+                .iter()
+                .map(|id| id.to_qualified_id())
+                .unique()
+                .map(|memory| {
+                    let struct_env = self.env.get_struct_qid(memory);
+                    format!(
+                        "{}: $Memory {}",
+                        boogie_resource_memory_name(self.env, memory, &None),
+                        boogie_struct_name(&struct_env)
                     )
-                },
-            );
-            let mem_params = fun.used_memory.iter().map(|memory| {
-                let struct_env = self.env.get_struct_qid(*memory);
-                format!(
-                    "{}: $Memory {}",
-                    boogie_resource_memory_name(self.env, *memory, &None),
-                    boogie_struct_name(&struct_env)
-                )
-            });
+                });
             let type_params = fun
                 .type_params
                 .iter()
@@ -747,16 +758,25 @@ impl<'env> SpecTranslator<'env> {
             }
         };
         let mut i = 0;
-        for memory in &fun_decl.used_memory {
+        for memory in fun_decl
+            .used_memory
+            .iter()
+            .map(|id| id.to_qualified_id())
+            .unique()
+        {
             maybe_comma();
-            let memory = boogie_resource_memory_name(self.env, *memory, &label_at(i));
+            let memory = boogie_resource_memory_name(self.env, memory, &label_at(i));
             emit!(self.writer, &memory);
             i = usize::saturating_add(i, 1);
         }
         for QualifiedId {
-            module_id: mid,
-            id: vid,
-        } in &fun_decl.used_spec_vars
+            module_id: ref mid,
+            id: ref vid,
+        } in fun_decl
+            .used_spec_vars
+            .iter()
+            .map(|id| id.to_qualified_id())
+            .unique()
         {
             maybe_comma();
             let declaring_module = self.env.get_module(*mid);
@@ -909,11 +929,15 @@ impl<'env> SpecTranslator<'env> {
                     let quant_var = quant_vars.get(&var.name).unwrap();
                     emit!(self.writer, "(var {} := {};\n", var_name, quant_var);
                 }
-                Type::ResourceDomain(mid, sid) => {
+                Type::ResourceDomain(mid, sid, inst_opt) => {
                     let (addr_var, type_vars) = resource_vars.get(&var.name).unwrap();
                     let resource_name =
                         boogie_resource_memory_name(self.env, mid.qualified(*sid), &None);
-                    let type_array = boogie_type_value_array_from_strings(type_vars);
+                    let type_array = if let Some(inst) = inst_opt {
+                        boogie_type_value_array(self.env, inst)
+                    } else {
+                        boogie_type_value_array_from_strings(type_vars)
+                    };
                     emit!(
                         self.writer,
                         "(var {} := $ResourceValue({}, {}, {});\n",
@@ -977,12 +1001,16 @@ impl<'env> SpecTranslator<'env> {
                         boogie_local_type(self.env, &ty)
                     );
                 }
-                Type::ResourceDomain(mid, sid) => {
+                Type::ResourceDomain(mid, sid, inst_opt) => {
                     let struct_env = self.env.get_module(*mid).into_struct(*sid);
                     let addr_quant_var = self.fresh_var_name("a");
-                    let type_quant_vars = (0..struct_env.get_type_parameters().len())
-                        .map(|i| self.fresh_var_name(&format!("ty{}", i)))
-                        .collect_vec();
+                    let type_quant_vars = if inst_opt.is_some() {
+                        vec![]
+                    } else {
+                        (0..struct_env.get_type_parameters().len())
+                            .map(|i| self.fresh_var_name(&format!("ty{}", i)))
+                            .collect_vec()
+                    };
                     emit!(self.writer, "{}{}: int", comma, addr_quant_var);
                     comma = ", ";
                     for tvar in &type_quant_vars {
@@ -1023,11 +1051,15 @@ impl<'env> SpecTranslator<'env> {
             // Implicit triggers from ResourceDomain range.
             for (var, range) in ranges {
                 let quant_ty = self.env.get_node_type(range.node_id());
-                if let Type::ResourceDomain(mid, sid) = quant_ty.skip_reference() {
+                if let Type::ResourceDomain(mid, sid, inst_opt) = quant_ty.skip_reference() {
                     let (addr_var, type_vars) = resource_vars.get(&var.name).unwrap();
                     let resource_name =
                         boogie_resource_memory_name(self.env, mid.qualified(*sid), &None);
-                    let type_array = boogie_type_value_array_from_strings(type_vars);
+                    let type_array = if let Some(inst) = inst_opt {
+                        boogie_type_value_array(self.env, inst)
+                    } else {
+                        boogie_type_value_array_from_strings(type_vars)
+                    };
                     let resource_value = format!(
                         "$ResourceValue({}, {}, {})",
                         resource_name, type_array, addr_var
@@ -1053,7 +1085,7 @@ impl<'env> SpecTranslator<'env> {
                     }
                     emit!(self.writer, "{}{}", separator, type_check);
                 }
-                Type::ResourceDomain(_, _) => {
+                Type::ResourceDomain(..) => {
                     // currently does not generate a constraint
                     continue;
                 }

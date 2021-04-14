@@ -37,8 +37,8 @@ use crate::{
     exp_rewriter::{ExpRewriter, RewriteTarget},
     model::{
         AbilityConstraint, FieldId, FunId, FunctionData, Loc, ModuleId, MoveIrLoc,
-        NamedConstantData, NamedConstantId, NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId,
-        StructData, StructId, TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
+        NamedConstantData, NamedConstantId, NodeId, QualifiedInstId, SchemaId, SpecFunId,
+        SpecVarId, StructData, StructId, TypeParameter, SCRIPT_BYTECODE_FUN_NAME,
     },
     pragmas::{
         is_pragma_valid_for_block, is_property_valid_for_condition, CONDITION_DEACTIVATED_PROP,
@@ -733,10 +733,8 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                 }
                 et.called_spec_funs.iter().for_each(|(mid, fid)| {
                     self.parent.add_edge_to_move_fun_call_graph(
-                        self.module_id,
-                        SpecFunId::new(fun_idx),
-                        *mid,
-                        *fid,
+                        self.module_id.qualified(SpecFunId::new(fun_idx)),
+                        mid.qualified(*fid),
                     );
                 });
                 self.spec_funs[self.spec_fun_index].body = Some(translated);
@@ -2511,24 +2509,38 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         mut visited_opt: Option<&mut BTreeSet<usize>>,
         exp: &Exp,
     ) -> (
-        BTreeSet<QualifiedId<SpecVarId>>,
-        BTreeSet<QualifiedId<StructId>>,
+        BTreeSet<QualifiedInstId<SpecVarId>>,
+        BTreeSet<QualifiedInstId<StructId>>,
     ) {
         let mut used_spec_vars = BTreeSet::new();
         let mut used_memory = BTreeSet::new();
         exp.visit(&mut |e: &Exp| {
             match e {
-                Exp::SpecVar(_, mid, vid, _) => {
-                    used_spec_vars.insert(mid.qualified(*vid));
+                Exp::SpecVar(id, mid, vid, _) => {
+                    let inst = self.parent.env.get_node_instantiation(*id);
+                    used_spec_vars.insert(mid.qualified_inst(*vid, inst));
                 }
-                Exp::Call(_, Operation::Function(mid, fid, _), _) => {
+                Exp::Call(id, Operation::Function(mid, fid, _), _) => {
+                    let inst = self.parent.env.get_node_instantiation(*id);
+                    // Extend used memory with that of called functions, after applying type
+                    // instantiation of this call.
                     if mid.to_usize() < self.parent.env.get_module_count() {
                         // This is calling a function from another module we already have
                         // translated.
                         let module_env = self.parent.env.get_module(*mid);
                         let fun_decl = module_env.get_spec_fun(*fid);
-                        used_spec_vars.extend(&fun_decl.used_spec_vars);
-                        used_memory.extend(&fun_decl.used_memory);
+                        used_spec_vars.extend(
+                            fun_decl
+                                .used_spec_vars
+                                .iter()
+                                .map(|id| id.instantiate_ref(&inst)),
+                        );
+                        used_memory.extend(
+                            fun_decl
+                                .used_memory
+                                .iter()
+                                .map(|id| id.instantiate_ref(&inst)),
+                        );
                     } else {
                         // This is calling a function from the module we are currently translating.
                         // Need to recursively ensure we have computed used_spec_vars because of
@@ -2538,19 +2550,28 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
                             self.compute_state_usage_for_fun(visited, fid.as_usize());
                         }
                         let fun_decl = &self.spec_funs[fid.as_usize()];
-                        used_spec_vars.extend(&fun_decl.used_spec_vars);
-                        used_memory.extend(&fun_decl.used_memory);
+                        used_spec_vars.extend(
+                            fun_decl
+                                .used_spec_vars
+                                .iter()
+                                .map(|id| id.instantiate_ref(&inst)),
+                        );
+                        used_memory.extend(
+                            fun_decl
+                                .used_memory
+                                .iter()
+                                .map(|id| id.instantiate_ref(&inst)),
+                        );
                     }
                 }
                 Exp::Call(node_id, Operation::Global(_), _)
                 | Exp::Call(node_id, Operation::Exists(_), _) => {
-                    let env = &self.parent.env;
-                    if !env.has_errors() {
+                    if !self.parent.env.has_errors() {
                         // We would crash if the type is not valid, so only do this if no errors
                         // have been reported so far.
-                        let ty = &env.get_node_instantiation(*node_id)[0];
-                        let (mid, sid, _) = ty.require_struct();
-                        used_memory.insert(mid.qualified(sid));
+                        let ty = &self.parent.env.get_node_instantiation(*node_id)[0];
+                        let (mid, sid, inst) = ty.require_struct();
+                        used_memory.insert(mid.qualified_inst(sid, inst.to_owned()));
                     }
                 }
                 _ => {}

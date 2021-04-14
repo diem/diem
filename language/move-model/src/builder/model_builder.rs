@@ -351,24 +351,22 @@ impl<'env> ModelBuilder<'env> {
     }
 
     /// Adds a spec function to used_spec_funs set.
-    pub fn add_used_spec_fun(&mut self, module_id: ModuleId, spec_fun_id: SpecFunId) {
-        let qid = module_id.qualified(spec_fun_id);
+    pub fn add_used_spec_fun(&mut self, qid: QualifiedId<SpecFunId>) {
         self.env.used_spec_funs.insert(qid);
         self.propagate_move_fun_usage(qid);
     }
 
-    /// Adds an edge from the caller to the callee to the Move fun call graph.
+    /// Adds an edge from the caller to the callee to the Move fun call graph. The callee is
+    /// is instantiated in dependency of the type parameters of the caller.
     pub fn add_edge_to_move_fun_call_graph(
         &mut self,
-        caller_mid: ModuleId,
-        caller_fid: SpecFunId,
-        callee_mid: ModuleId,
-        callee_fid: SpecFunId,
+        caller: QualifiedId<SpecFunId>,
+        callee: QualifiedId<SpecFunId>,
     ) {
         self.move_fun_call_graph
-            .entry(caller_mid.qualified(caller_fid))
-            .or_insert_with(BTreeSet::new)
-            .insert(callee_mid.qualified(callee_fid));
+            .entry(caller)
+            .or_default()
+            .insert(callee);
     }
 
     /// Runs DFS to propagate the usage of Move functions from callers

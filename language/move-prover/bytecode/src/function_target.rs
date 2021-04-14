@@ -18,7 +18,7 @@ use move_model::{
 };
 
 use crate::function_target_pipeline::FunctionVariant;
-use move_model::ast::TempIndex;
+use move_model::{ast::TempIndex, model::QualifiedInstId};
 use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Range};
 use vm::file_format::CodeOffset;
 
@@ -316,6 +316,23 @@ impl<'env> FunctionTarget<'env> {
     /// Gets all modify targets
     pub fn get_modify_targets(&self) -> &BTreeMap<QualifiedId<StructId>, Vec<Exp>> {
         &self.data.modify_targets
+    }
+
+    /// Get all modifies targets, as instantiated struct ids.
+    pub fn get_modify_ids(&self) -> Vec<QualifiedInstId<StructId>> {
+        self.data
+            .modify_targets
+            .iter()
+            .map(|(qid, exps)| {
+                exps.iter().map(move |e| {
+                    let env = self.global_env();
+                    let rty = &env.get_node_instantiation(e.node_id())[0];
+                    let (_, _, inst) = rty.require_struct();
+                    qid.instantiate(inst.to_owned())
+                })
+            })
+            .flatten()
+            .collect()
     }
 
     /// Pretty print a bytecode instruction with offset, comments, annotations, and VC information.

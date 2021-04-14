@@ -10,13 +10,37 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     stackless_bytecode::{Bytecode, Operation},
 };
-use move_model::model::{FunctionEnv, QualifiedId, StructId};
-use std::collections::BTreeSet;
+use itertools::Itertools;
+use move_model::model::{FunctionEnv, GlobalEnv, QualifiedId, QualifiedInstId, StructId};
+use std::{collections::BTreeSet, fmt, fmt::Formatter, prelude::v1::Result::Ok};
 use vm::file_format::CodeOffset;
 
-pub fn get_used_memory<'env>(
+// Legacy API, no representation of type instantiations.
+
+pub fn get_used_memory(target: &FunctionTarget) -> BTreeSet<QualifiedId<StructId>> {
+    get_used_memory_inst(target)
+        .iter()
+        .map(|id| id.to_qualified_id())
+        .collect()
+}
+
+pub fn get_modified_memory(target: &FunctionTarget) -> BTreeSet<QualifiedId<StructId>> {
+    get_modified_memory_inst(target)
+        .iter()
+        .map(|id| id.to_qualified_id())
+        .collect()
+}
+
+pub fn get_directly_modified_memory(target: &FunctionTarget) -> BTreeSet<QualifiedId<StructId>> {
+    get_directly_modified_memory_inst(target)
+        .iter()
+        .map(|id| id.to_qualified_id())
+        .collect()
+}
+
+pub fn get_used_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedId<StructId>> {
+) -> &'env BTreeSet<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -24,9 +48,9 @@ pub fn get_used_memory<'env>(
         .used_memory
 }
 
-pub fn get_modified_memory<'env>(
+pub fn get_modified_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedId<StructId>> {
+) -> &'env BTreeSet<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -34,9 +58,9 @@ pub fn get_modified_memory<'env>(
         .modified_memory
 }
 
-pub fn get_directly_modified_memory<'env>(
+pub fn get_directly_modified_memory_inst<'env>(
     target: &'env FunctionTarget,
-) -> &'env BTreeSet<QualifiedId<StructId>> {
+) -> &'env BTreeSet<QualifiedInstId<StructId>> {
     &target
         .get_annotations()
         .get::<UsageState>()
@@ -48,10 +72,10 @@ pub fn get_directly_modified_memory<'env>(
 #[derive(Debug, Clone, Default, Eq, PartialOrd, PartialEq)]
 struct UsageState {
     // The memory which is directly and transitively accessed by this function.
-    used_memory: SetDomain<QualifiedId<StructId>>,
+    used_memory: SetDomain<QualifiedInstId<StructId>>,
     // The memory which is directly and transitively modified by this function.
-    modified_memory: SetDomain<QualifiedId<StructId>>,
-    directly_modified_memory: SetDomain<QualifiedId<StructId>>,
+    modified_memory: SetDomain<QualifiedInstId<StructId>>,
+    directly_modified_memory: SetDomain<QualifiedInstId<StructId>>,
 }
 
 impl AbstractDomain for UsageState {
@@ -98,8 +122,8 @@ impl FunctionTargetProcessor for UsageProcessor {
     ) -> FunctionData {
         let mut initial_state = UsageState::default();
         let func_target = FunctionTarget::new(func_env, &data);
-        func_target.get_modify_targets().keys().for_each(|target| {
-            initial_state.modified_memory.insert(*target);
+        func_target.get_modify_ids().iter().for_each(|qid| {
+            initial_state.modified_memory.insert(qid.clone());
         });
 
         let cache = SummaryCache::new(targets, func_env.module_env.env);
@@ -109,6 +133,56 @@ impl FunctionTargetProcessor for UsageProcessor {
 
     fn name(&self) -> String {
         "usage_analysis".to_string()
+    }
+
+    fn dump_result(
+        &self,
+        f: &mut Formatter<'_>,
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+    ) -> fmt::Result {
+        writeln!(f, "\n\n********* Result of usage analysis *********\n\n")?;
+        for module in env.get_modules() {
+            if !module.is_target() {
+                continue;
+            }
+            for fun in module.get_functions() {
+                for (_, ref target) in targets.get_targets(&fun) {
+                    writeln!(
+                        f,
+                        "function {} [{}] {{",
+                        target.func_env.get_full_name_str(),
+                        target.data.variant
+                    )?;
+                    writeln!(
+                        f,
+                        "  used = {{{}}}",
+                        get_used_memory_inst(target)
+                            .iter()
+                            .map(|qid| env.display(qid).to_string())
+                            .join(", ")
+                    )?;
+                    writeln!(
+                        f,
+                        "  modified = {{{}}}",
+                        get_modified_memory_inst(target)
+                            .iter()
+                            .map(|qid| env.display(qid).to_string())
+                            .join(", ")
+                    )?;
+                    writeln!(
+                        f,
+                        "  directly modified = {{{}}}",
+                        get_directly_modified_memory_inst(target)
+                            .iter()
+                            .map(|qid| env.display(qid).to_string())
+                            .join(", ")
+                    )?;
+                }
+            }
+        }
+        writeln!(f)?;
+        Ok(())
     }
 }
 
@@ -122,22 +196,44 @@ impl<'a> TransferFunctions for MemoryUsageAnalysis<'a> {
 
         if let Call(_, _, oper, _, _) = code {
             match oper {
-                Function(mid, fid, _) => {
+                Function(mid, fid, inst) => {
                     if let Some(summary) = self
                         .cache
                         .get::<UsageState>(mid.qualified(*fid), &FunctionVariant::Baseline)
                     {
-                        state.modified_memory.extend(&summary.modified_memory.0);
-                        state.used_memory.extend(&summary.used_memory.0);
+                        state.modified_memory.extend(
+                            summary
+                                .modified_memory
+                                .0
+                                .iter()
+                                .map(|qid| qid.instantiate_ref(inst)),
+                        );
+                        state.used_memory.extend(
+                            summary
+                                .used_memory
+                                .0
+                                .iter()
+                                .map(|qid| qid.instantiate_ref(inst)),
+                        );
                     }
                 }
-                MoveTo(mid, sid, _) | MoveFrom(mid, sid, _) | BorrowGlobal(mid, sid, _) => {
-                    state.modified_memory.insert(mid.qualified(*sid));
-                    state.directly_modified_memory.insert(mid.qualified(*sid));
-                    state.used_memory.insert(mid.qualified(*sid));
+                MoveTo(mid, sid, inst)
+                | MoveFrom(mid, sid, inst)
+                | BorrowGlobal(mid, sid, inst) => {
+                    state
+                        .modified_memory
+                        .insert(mid.qualified_inst(*sid, inst.to_owned()));
+                    state
+                        .directly_modified_memory
+                        .insert(mid.qualified_inst(*sid, inst.to_owned()));
+                    state
+                        .used_memory
+                        .insert(mid.qualified_inst(*sid, inst.to_owned()));
                 }
-                Exists(mid, sid, _) | GetGlobal(mid, sid, _) => {
-                    state.used_memory.insert(mid.qualified(*sid));
+                Exists(mid, sid, inst) | GetGlobal(mid, sid, inst) => {
+                    state
+                        .used_memory
+                        .insert(mid.qualified_inst(*sid, inst.to_owned()));
                 }
                 _ => {}
             }

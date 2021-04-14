@@ -837,7 +837,11 @@ impl<'env> ModuleTranslator<'env> {
             })
             .collect::<BTreeMap<_, _>>();
         for (lab, mem) in labels {
-            let name = boogie_resource_memory_name(self.module_env.env, *mem, &Some(*lab));
+            let name = boogie_resource_memory_name(
+                self.module_env.env,
+                mem.to_qualified_id(),
+                &Some(*lab),
+            );
             emitln!(
                 self.writer,
                 "var {}: $Memory {};",
@@ -989,9 +993,13 @@ impl<'env> ModuleTranslator<'env> {
         match bytecode {
             SpecBlock(..) => panic!("deprecated"),
             SaveMem(_, label, mem) => {
-                let snapshot =
-                    boogie_resource_memory_name(self.module_env.env, *mem, &Some(*label));
-                let current = boogie_resource_memory_name(self.module_env.env, *mem, &None);
+                let snapshot = boogie_resource_memory_name(
+                    self.module_env.env,
+                    mem.to_qualified_id(),
+                    &Some(*label),
+                );
+                let current =
+                    boogie_resource_memory_name(self.module_env.env, mem.to_qualified_id(), &None);
                 emitln!(self.writer, "{} := {};", snapshot, current);
             }
             SaveSpecVar(_, _label, _var) => {
@@ -1123,7 +1131,9 @@ impl<'env> ModuleTranslator<'env> {
                                     }
                                 };
                                 let suffix = boogie_type_suffix_for_struct(
-                                    &fun_target.global_env().get_struct_qid(*memory),
+                                    &fun_target
+                                        .global_env()
+                                        .get_struct_qid(memory.to_qualified_id()),
                                 );
                                 emitln!(
                                     self.writer,
@@ -1168,8 +1178,9 @@ impl<'env> ModuleTranslator<'env> {
                                         "WritebackToReference".to_string()
                                     }
                                     BorrowEdge::Strong(StrongEdge::Field(memory, offset)) => {
-                                        let struct_env =
-                                            fun_target.global_env().get_struct_qid(*memory);
+                                        let struct_env = fun_target
+                                            .global_env()
+                                            .get_struct_qid(memory.to_qualified_id());
                                         let field_env = struct_env.get_field_by_offset(*offset);
                                         format!(
                                             "WritebackToField{}_{}",

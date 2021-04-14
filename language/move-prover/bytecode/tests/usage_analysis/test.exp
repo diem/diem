@@ -1,0 +1,147 @@
+============ initial translation from Move ================
+
+[variant baseline]
+public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
+     var $t2: &signer
+     var $t3: Test::A<#0, u8>
+  0: $t2 := move($t0)
+  1: $t3 := move($t1)
+  2: move_to<Test::A<#0, u8>>($t3, $t2)
+  3: return ()
+}
+
+
+[variant baseline]
+public fun Test::test<$tv0>(): bool {
+     var $t0: address
+     var $t1: bool
+  0: $t0 := 0x1
+  1: $t1 := exists<Test::A<u64, #0>>($t0)
+  2: return $t1
+}
+
+
+[variant baseline]
+public fun Test::update<$tv0>($t0|x: #0) {
+     var $t1: #0
+     var $t2: address
+     var $t3: &mut Test::A<#0, #0>
+     var $t4: &mut #0
+  0: $t1 := move($t0)
+  1: $t2 := 0x1
+  2: $t3 := borrow_global<Test::A<#0, #0>>($t2)
+  3: $t4 := borrow_field<Test::A<#0, #0>>.x1($t3)
+  4: write_ref($t4, $t1)
+  5: return ()
+}
+
+
+[variant baseline]
+public fun Test::update_caller() {
+     var $t0: u8
+  0: $t0 := 1
+  1: Test::update<u8>($t0)
+  2: return ()
+}
+
+
+[variant baseline]
+public fun Test::update_ints() {
+     var $t0: u64
+     var $t1: address
+     var $t2: &mut Test::A<u64, u128>
+     var $t3: &mut u64
+  0: $t0 := 22
+  1: $t1 := 0x1
+  2: $t2 := borrow_global<Test::A<u64, u128>>($t1)
+  3: $t3 := borrow_field<Test::A<u64, u128>>.x1($t2)
+  4: write_ref($t3, $t0)
+  5: return ()
+}
+
+============ after pipeline `usage_analysis` ================
+
+[variant baseline]
+public fun Test::publish<$tv0>($t0|signer: &signer, $t1|x: Test::A<#0, u8>) {
+     var $t2: &signer
+     var $t3: Test::A<#0, u8>
+  0: $t2 := move($t0)
+  1: $t3 := move($t1)
+  2: move_to<Test::A<#0, u8>>($t3, $t2)
+  3: return ()
+}
+
+
+[variant baseline]
+public fun Test::test<$tv0>(): bool {
+     var $t0: address
+     var $t1: bool
+  0: $t0 := 0x1
+  1: $t1 := exists<Test::A<u64, #0>>($t0)
+  2: return $t1
+}
+
+
+[variant baseline]
+public fun Test::update<$tv0>($t0|x: #0) {
+     var $t1: #0
+     var $t2: address
+     var $t3: &mut Test::A<#0, #0>
+     var $t4: &mut #0
+  0: $t1 := move($t0)
+  1: $t2 := 0x1
+  2: $t3 := borrow_global<Test::A<#0, #0>>($t2)
+  3: $t4 := borrow_field<Test::A<#0, #0>>.x1($t3)
+  4: write_ref($t4, $t1)
+  5: return ()
+}
+
+
+[variant baseline]
+public fun Test::update_caller() {
+     var $t0: u8
+  0: $t0 := 1
+  1: Test::update<u8>($t0)
+  2: return ()
+}
+
+
+[variant baseline]
+public fun Test::update_ints() {
+     var $t0: u64
+     var $t1: address
+     var $t2: &mut Test::A<u64, u128>
+     var $t3: &mut u64
+  0: $t0 := 22
+  1: $t1 := 0x1
+  2: $t2 := borrow_global<Test::A<u64, u128>>($t1)
+  3: $t3 := borrow_field<Test::A<u64, u128>>.x1($t2)
+  4: write_ref($t3, $t0)
+  5: return ()
+}
+
+
+
+********* Result of usage analysis *********
+
+
+function Test::publish [baseline] {
+  used = {Test::A<#0, u8>}
+  modified = {Test::A<#0, u8>}
+  directly modified = {Test::A<#0, u8>}
+function Test::test [baseline] {
+  used = {Test::A<u64, #0>}
+  modified = {}
+  directly modified = {}
+function Test::update [baseline] {
+  used = {Test::A<#0, #0>}
+  modified = {Test::A<#0, #0>}
+  directly modified = {Test::A<#0, #0>}
+function Test::update_caller [baseline] {
+  used = {Test::A<u8, u8>}
+  modified = {Test::A<u8, u8>}
+  directly modified = {}
+function Test::update_ints [baseline] {
+  used = {Test::A<u64, u128>}
+  modified = {Test::A<u64, u128>}
+  directly modified = {Test::A<u64, u128>}
