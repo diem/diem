@@ -1,0 +1,59 @@
+Running tests
+[ PASS    ] 0x1::M::correct_abort_code
+[ PASS    ] 0x1::M::just_test_failure
+[ FAIL    ] 0x1::M::unexpected_abort
+[ FAIL    ] 0x1::M::unexpected_abort_in_other_function
+[ FAIL    ] 0x1::M::wrong_abort_code
+
+Test failures:
+
+Failures in 0x1::M:
+
+┌── unexpected_abort ──────
+│ error: 
+│ 
+│    ┌── tests/test_sources/unexpected_abort.move:5:9 ───
+│    │
+│  5 │         abort 0
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│    ·
+│  4 │     public fun unexpected_abort() {
+│    │                ---------------- In this function in 0x1::M
+│    │
+│ 
+│ 
+└──────────────────
+
+
+┌── unexpected_abort_in_other_function ──────
+│ error: 
+│ 
+│     ┌── tests/test_sources/unexpected_abort.move:28:9 ───
+│     │
+│  28 │         abort 1
+│     │         ^^^^^^^ Test was not expected to abort but it aborted with 1 here
+│     ·
+│  27 │     fun abort_in_other_function() {
+│     │         ----------------------- In this function in 0x1::M
+│     │
+│ 
+│ 
+└──────────────────
+
+
+┌── wrong_abort_code ──────
+│ error: 
+│ 
+│     ┌── tests/test_sources/unexpected_abort.move:11:9 ───
+│     │
+│  11 │         abort 0
+│     │         ^^^^^^^ Test did not abort with expected code. Expected test to abort with 1 but instead it aborted with 0 here
+│     ·
+│  10 │     public fun wrong_abort_code() {
+│     │                ---------------- In this function in 0x1::M
+│     │
+│ 
+│ 
+└──────────────────
+
+Test result: FAILED. Total tests: 5; passed: 2; failed: 3

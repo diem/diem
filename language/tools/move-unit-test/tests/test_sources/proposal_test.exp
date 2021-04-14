@@ -1,0 +1,28 @@
+Running tests
+[ PASS    ] 0x1::Module::other_module_aborts
+[ PASS    ] 0x1::Module::tests_a
+[ PASS    ] 0x1::Module::tests_aborts
+[ PASS    ] 0x1::Module::tests_b
+[ PASS    ] 0x1::Module::tests_c
+[ FAIL    ] 0x1::Module::tests_d
+
+Test failures:
+
+Failures in 0x1::Module:
+
+┌── tests_d ──────
+│ error: 
+│ 
+│      ┌── tests/test_sources/proposal_test.move:102:9 ───
+│      │
+│  102 │         assert(d<u64>(0x2, 6), 3);
+│      │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 3 here
+│      ·
+│   95 │     fun tests_d(a1: signer, a2: signer)
+│      │         ------- In this function in 0x1::Module
+│      │
+│ 
+│ 
+└──────────────────
+
+Test result: FAILED. Total tests: 6; passed: 5; failed: 1

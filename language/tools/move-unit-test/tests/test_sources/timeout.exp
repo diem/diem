@@ -1,0 +1,37 @@
+Running tests
+[ PASS    ] 0x1::M::no_timeout
+[ FAIL    ] 0x1::M::no_timeout_fail
+[ PASS    ] 0x1::M::no_timeout_while_loop
+[ TIMEOUT ] 0x1::M::timeout_fail
+[ TIMEOUT ] 0x1::M::timeout_fail_with_expected_failure
+
+Test failures:
+
+Failures in 0x1::M:
+
+┌── no_timeout_fail ──────
+│ error: 
+│ 
+│     ┌── tests/test_sources/timeout.move:18:29 ───
+│     │
+│  18 │     fun no_timeout_fail() { abort 0 }
+│     │                             ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│     ·
+│  18 │     fun no_timeout_fail() { abort 0 }
+│     │         --------------- In this function in 0x1::M
+│     │
+│ 
+│ 
+└──────────────────
+
+
+┌── timeout_fail ──────
+│ Test timed out
+└──────────────────
+
+
+┌── timeout_fail_with_expected_failure ──────
+│ Test timed out
+└──────────────────
+
+Test result: FAILED. Total tests: 5; passed: 2; failed: 3

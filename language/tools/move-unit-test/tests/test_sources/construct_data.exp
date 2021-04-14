@@ -1,0 +1,4 @@
+Running tests
+[ PASS    ] 0x1::M::make_sure_not_other_number
+[ PASS    ] 0x1::M::make_sure_number_matches
+Test result: OK. Total tests: 2; passed: 2; failed: 0

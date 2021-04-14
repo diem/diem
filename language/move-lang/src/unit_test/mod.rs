@@ -76,8 +76,8 @@ impl ModuleTestPlan {
 impl TestPlan {
     pub fn new(
         tests: Vec<ModuleTestPlan>,
-        files: &FilesSourceText,
-        units: &[CompiledUnit],
+        files: FilesSourceText,
+        units: Vec<CompiledUnit>,
     ) -> Self {
         let module_tests: BTreeMap<_, _> = tests
             .into_iter()
@@ -85,13 +85,13 @@ impl TestPlan {
             .collect();
 
         let module_info = units
-            .iter()
+            .into_iter()
             .filter_map(|unit| {
                 if let CompiledUnit::Module {
                     module, source_map, ..
                 } = unit
                 {
-                    Some((module.self_id(), (module.clone(), source_map.clone())))
+                    Some((module.self_id(), (module, source_map)))
                 } else {
                     None
                 }
@@ -99,7 +99,7 @@ impl TestPlan {
             .collect();
 
         Self {
-            files: files.clone(),
+            files,
             module_info,
             module_tests,
         }

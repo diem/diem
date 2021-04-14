@@ -1,0 +1,33 @@
+Running tests
+[ FAIL    ] 0x1::M::multi_signer_fail
+[ PASS    ] 0x1::M::multi_signer_pass
+[ PASS    ] 0x1::M::multi_signer_pass_expected_failure
+[ FAIL    ] 0x1::M::single_signer_fail
+[ PASS    ] 0x1::M::single_signer_pass
+[ PASS    ] 0x1::M::test_correct_signer_arg_addrs
+
+Test failures:
+
+Failures in 0x1::M:
+
+┌── multi_signer_fail ──────
+│ Test did not abort as expected
+└──────────────────
+
+
+┌── single_signer_fail ──────
+│ error: 
+│ 
+│    ┌── tests/test_sources/signer_args.move:9:9 ───
+│    │
+│  9 │         abort 0
+│    │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│    ·
+│  8 │     fun single_signer_fail(_a: signer) {
+│    │         ------------------ In this function in 0x1::M
+│    │
+│ 
+│ 
+└──────────────────
+
+Test result: FAILED. Total tests: 6; passed: 4; failed: 2

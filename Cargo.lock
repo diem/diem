@@ -4598,6 +4598,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-unit-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "colored",
+ "datatest-stable",
+ "diem-workspace-hack",
+ "difference",
+ "move-binary-format",
+ "move-core-types",
+ "move-lang",
+ "move-lang-test-utils",
+ "move-stdlib",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+ "once_cell",
+ "rayon",
+ "resource-viewer",
+ "structopt 0.3.21",
+]
+
+[[package]]
 name = "move-vm-integration-tests"
 version = "0.1.0"
 dependencies = [
