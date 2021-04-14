@@ -53,6 +53,7 @@ storage:
 
 json_rpc:
     address: 0.0.0.0:8080
+    content_length_limit: 1048576
 
 # this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
 failpoints:
