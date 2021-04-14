@@ -121,12 +121,9 @@ impl Experiment for StateSyncPerformance {
 
         // Calculate the state sync throughput
         let time_to_state_sync = start_instant.elapsed();
-        let state_sync_throughput =
-            (validator_synced_version * 1000.0) / time_to_state_sync.as_millis() as f64;
-        let state_sync_throughput_message = format!(
-            "State sync throughput : {:?} txn/sec",
-            state_sync_throughput,
-        );
+        let state_sync_throughput = validator_synced_version as u64 / time_to_state_sync.as_secs();
+        let state_sync_throughput_message =
+            format!("State sync throughput : {} txn/sec", state_sync_throughput,);
         info!("Time to state sync {:?}", time_to_state_sync);
 
         // Display the state sync throughput and report the results
