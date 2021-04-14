@@ -2478,7 +2478,7 @@ at <code>preburn_address</code> does not contain a preburn request of the right 
            currency_code,
            preburn_address,
        }
-       <b>to</b> handle <b>if</b> TRACE(!info.is_synthetic);
+       <b>to</b> handle <b>if</b> !info.is_synthetic;
 }
 </code></pre>
 

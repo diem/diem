@@ -1056,7 +1056,7 @@ module Diem {
                currency_code,
                preburn_address,
            }
-           to handle if TRACE(!info.is_synthetic);
+           to handle if !info.is_synthetic;
     }
 
     /// A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is

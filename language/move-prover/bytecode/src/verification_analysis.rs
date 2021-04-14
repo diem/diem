@@ -98,8 +98,6 @@ impl FunctionTargetProcessor for VerificationAnalysisProcessor {
             let is_explicitly_verified =
                 fun_env.module_env.is_target() && fun_env.should_verify(&options.verify_scope);
             if options.verify_scope.is_exclusive() {
-                // If the verification is set exclusive to function or module, don't add friends
-                // for verification.
                 is_explicitly_verified
             } else {
                 // Get all memory mentioned in the invariants in target modules
@@ -188,6 +186,8 @@ fn mark_verified(
         mark_inlined(fun_env, variant, targets);
     }
     // The user can override with `pragma verify = false` to verify the friend, so respect this.
+    // However, if this is not a friend, the caller has already made the decision whether to
+    // verify or not.
     if !actual_env.is_explicitly_not_verified(&options.verify_scope) {
         let mut info = targets
             .get_data_mut(&actual_env.get_qualified_id(), variant)

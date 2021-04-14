@@ -59,8 +59,8 @@ pub struct Options {
     pub experimental_pipeline: bool,
     /// Whether to use exclusively weak edges in borrow analysis
     pub weak_edges: bool,
-    /// Whether to use the experimental version of the boogie backend.
-    pub boogie_exp: bool,
+    /// Whether to use the next major version instead of the current one
+    pub vnext: bool,
     /// Whether to use the v2 invariant scheme.
     pub inv_v2: bool,
     /// BEGIN OF STRUCTURED OPTIONS
@@ -96,7 +96,7 @@ impl Default for Options {
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
             experimental_pipeline: false,
-            boogie_exp: false,
+            vnext: false,
             weak_edges: false,
         }
     }
@@ -205,9 +205,9 @@ impl Options {
                     .help("keeps intermediate artifacts of the backend around")
             )
             .arg(
-                Arg::with_name("bexp")
-                    .long("bexp")
-                    .help("whether to use the experimental version of the Boogie backend")
+                Arg::with_name("vnext")
+                    .long("vnext")
+                    .help("whether to use the next major version (if there is one)")
             )
             .arg(
                 Arg::with_name("inv_v2")
@@ -534,8 +534,8 @@ impl Options {
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
         }
-        if matches.is_present("bexp") {
-            options.boogie_exp = true;
+        if matches.is_present("vnext") {
+            options.vnext = true;
         }
         if matches.is_present("inv_v2") {
             options.inv_v2 = true;
