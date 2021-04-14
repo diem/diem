@@ -17,9 +17,7 @@ termcolor = "1.1.2"
 
 diem-sdk = { path = "../../sdk" }
 diem-swarm = { path = "../diem-swarm"}
+debug-interface = { path = "../../common/debug-interface" }
+diem-config = { path = "../../config" }
 generate-key = { path = "../../config/generate-key" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
-
-[[test]]
-name = "fire"
-harness = false

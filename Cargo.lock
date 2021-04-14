@@ -3030,6 +3030,8 @@ name = "forge"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "debug-interface",
+ "diem-config",
  "diem-sdk",
  "diem-swarm",
  "diem-workspace-hack",
