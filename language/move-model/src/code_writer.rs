@@ -166,6 +166,16 @@ impl CodeWriter {
         data.indent -= 4;
     }
 
+    /// Emit some code with indentation
+    pub fn with_indent<F>(&self, mut f: F)
+    where
+        F: FnMut(),
+    {
+        self.indent();
+        f();
+        self.unindent();
+    }
+
     /// Emit a string. The string will be broken down into lines to apply current indentation.
     pub fn emit(&self, s: &str) {
         let mut first = true;

@@ -246,8 +246,6 @@ existing_deps = [
     ["abigen", "diem-types"],
     ["abigen", "diem-temppath"],
     ["abigen", "datatest-stable"],
-    ["boogie-backend", "diem-temppath"],
-    ["boogie-backend", "datatest-stable"],
     ["bytecode", "diem-temppath"],
     ["bytecode", "datatest-stable"],
     ["bytecode-verifier-tests", "diem-framework-releases"],

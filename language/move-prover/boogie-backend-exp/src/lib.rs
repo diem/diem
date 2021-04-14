@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{
+use boogie_backend::{
     options::{BoogieOptions, VectorTheory},
     prelude_template_helpers::StratificationHelper,
 };
@@ -26,9 +26,6 @@ pub const MULTISET_ARRAY_THEORY: &[u8] = include_bytes!("prelude/multiset-array-
 mod boogie_helpers;
 pub mod boogie_wrapper;
 pub mod bytecode_translator;
-pub mod options;
-pub mod prelude_template_helpers;
-pub mod prover_task_runner;
 mod spec_translator;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

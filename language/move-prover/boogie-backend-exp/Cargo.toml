@@ -1,5 +1,5 @@
 [package]
-name = "boogie-backend"
+name = "boogie-backend-exp"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
 description = "Move prover Boogie backend"
@@ -11,6 +11,7 @@ edition = "2018"
 async-trait = "0.1.42"
 bytecode = { path = "../bytecode" }
 move-model = { path = "../../move-model" }
+boogie-backend = { path = "../boogie-backend" }
 vm = { path = "../../vm" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
 num = "0.4.0"

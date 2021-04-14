@@ -246,6 +246,11 @@ impl<'a> Instrumenter<'a> {
 
             // Inject well-formedness assumption for used memory.
             for mem in self.get_used_memory() {
+                // If this is native or intrinsic memory, skip this.
+                let struct_env = self.builder.global_env().get_struct_qid(mem);
+                if struct_env.is_native_or_intrinsic() {
+                    continue;
+                }
                 let exp = self
                     .builder
                     .mk_mem_quant_opt(QuantKind::Forall, mem, &mut |val| {

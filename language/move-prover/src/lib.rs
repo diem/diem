@@ -6,7 +6,9 @@
 use crate::cli::Options;
 use abigen::Abigen;
 use anyhow::anyhow;
-use boogie_backend::{boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator};
+use boogie_backend::{
+    add_prelude, boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator,
+};
 use bytecode::{
     data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
     debug_instrumentation::DebugInstrumenter,
@@ -128,9 +130,21 @@ pub fn generate_boogie(
     targets: &FunctionTargetsHolder,
 ) -> anyhow::Result<CodeWriter> {
     let writer = CodeWriter::new(env.internal_loc());
-    boogie_backend::add_prelude(&options.backend, &writer)?;
-    let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
-    translator.translate();
+    if options.boogie_exp {
+        // Use the experimental boogie backend.
+        boogie_backend_exp::add_prelude(&options.backend, &writer)?;
+        let mut translator = boogie_backend_exp::bytecode_translator::BoogieTranslator::new(
+            &env,
+            &options.backend,
+            &targets,
+            &writer,
+        );
+        translator.translate();
+    } else {
+        add_prelude(&options.backend, &writer)?;
+        let mut translator = BoogieTranslator::new(&env, &options.backend, &targets, &writer);
+        translator.translate();
+    }
     Ok(writer)
 }
 
@@ -143,13 +157,23 @@ pub fn verify_boogie(
     let output_existed = std::path::Path::new(&options.output_path).exists();
     debug!("writing boogie to `{}`", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
-    let boogie = BoogieWrapper {
-        env: &env,
-        targets: &targets,
-        writer: &writer,
-        options: &options.backend,
-    };
-    boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
+    if options.boogie_exp {
+        let boogie = boogie_backend_exp::boogie_wrapper::BoogieWrapper {
+            env: &env,
+            targets: &targets,
+            writer: &writer,
+            options: &options.backend,
+        };
+        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
+    } else {
+        let boogie = BoogieWrapper {
+            env: &env,
+            targets: &targets,
+            writer: &writer,
+            options: &options.backend,
+        };
+        boogie.call_boogie_and_verify_output(options.backend.bench_repeat, &options.output_path)?;
+    }
     if !output_existed && !options.backend.keep_artifacts {
         std::fs::remove_file(&options.output_path).unwrap_or_default();
     }

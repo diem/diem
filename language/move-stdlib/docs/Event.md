@@ -300,4 +300,19 @@ pragma. They are implemented in the prover's prelude.
 </code></pre>
 
 
+Determines equality between the guids of two event handles. Since fields of intrinsic
+structs cannot be accessed, this function is provided.
+
+
+<a name="0x1_Event_spec_guid_eq"></a>
+
+
+<pre><code><b>define</b> <a href="Event.md#0x1_Event_spec_guid_eq">spec_guid_eq</a>&lt;T&gt;(h1: <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt;, h2: <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T&gt;): bool {
+    // The implementation currently can just <b>use</b> <b>native</b> equality since the mocked prover
+    // representation does not have the `counter` field.
+    h1 == h2
+}
+</code></pre>
+
+
 [//]: # ("File containing references which can be used from documentation")

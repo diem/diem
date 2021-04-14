@@ -528,7 +528,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);
                         }
                     }
-                    BorrowField(_, _, _, field)
+                    BorrowField(mid, sid, _, field)
                         if livevar_annotation_at.after.contains(&dests[0]) =>
                     {
                         let dest_node = self.borrow_node(dests[0]);
@@ -538,7 +538,7 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                             state.add_edge(
                                 src_node,
                                 dest_node,
-                                BorrowEdge::Strong(StrongEdge::Field(*field)),
+                                BorrowEdge::Strong(StrongEdge::Field(mid.qualified(*sid), *field)),
                             );
                         } else {
                             state.add_edge(src_node, dest_node, BorrowEdge::Weak);

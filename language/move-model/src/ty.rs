@@ -423,6 +423,27 @@ impl Type {
             Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) | ResourceDomain(..) => {}
         }
     }
+
+    pub fn visit<F: FnMut(&Type)>(&self, visitor: &mut F) {
+        let visit_slice = |s: &[Type], visitor: &mut F| {
+            for ty in s {
+                ty.visit(visitor);
+            }
+        };
+        match self {
+            Type::Tuple(tys) => visit_slice(tys, visitor),
+            Type::Vector(bt) => bt.visit(visitor),
+            Type::Struct(_, _, tys) => visit_slice(tys, visitor),
+            Type::Reference(_, ty) => ty.visit(visitor),
+            Type::Fun(tys, ty) => {
+                visit_slice(tys, visitor);
+                ty.visit(visitor);
+            }
+            Type::TypeDomain(bt) => bt.visit(visitor),
+            _ => {}
+        }
+        visitor(self)
+    }
 }
 
 impl Substitution {
