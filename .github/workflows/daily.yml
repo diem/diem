@@ -19,7 +19,7 @@ jobs:
         #to test in canary add in canary here.....
         target-branch: [main, release-1.1, release-1.2]
     env:
-      MESSAGE_PAYLOAD_FILE: /tmp/message
+      AUDIT_SUMMARY_FILE: /tmp/summary
     steps:
       - uses: actions/checkout@v2
         with:
@@ -32,12 +32,26 @@ jobs:
         # 1. RUSTSEC-2021-0020 - Not impacted, see #7723
         # 2. RUSTSEC-2020-0146 - Not impacted, see #7826
         run: |
-          cargo audit --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2020-0146 >> $MESSAGE_PAYLOAD_FILE
-      - uses: ./.github/actions/slack-file
-        with:
-          webhook: ${{ secrets.WEBHOOK_AUDIT }}
-          payload-file: ${{ env.MESSAGE_PAYLOAD_FILE }}
+          cargo audit --color never --ignore RUSTSEC-2021-0020 --ignore RUSTSEC-2020-0146 > $AUDIT_SUMMARY_FILE
+      - name: set issue body content
         if: ${{ failure() }}
+        env:
+          JOB_URL: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          echo "ISSUE_BODY<<EOF" >> $GITHUB_ENV
+          echo "Found RUSTSEC in dependencies in job ${JOB_URL}" >> $GITHUB_ENV
+          echo "\`\`\`" >> $GITHUB_ENV
+          cat $AUDIT_SUMMARY_FILE >> $GITHUB_ENV
+          echo "\`\`\`" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+      - uses: diem/actions/create-issue@04f4286ca22e4b9efbc5eb49a20e2e5389c5318b
+        if: ${{ failure() }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: "RUSTSEC in dependencies in branch ${{ matrix.target-branch }}"
+          body: ${{ env.ISSUE_BODY }}
+          assignees: "@diem/diem-core-oncall"
+          labels: "dependecies"
       - uses: ./.github/actions/build-teardown
 
   coverage:
