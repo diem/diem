@@ -87,13 +87,74 @@ pub fn run_model_builder(
         env.add_documentation(file_id, documentation);
     }
 
-    // Step 2: compile all sources in targets and dependencies, as we need bytecode for all of them.
+    // Step 2: parse all sources in targets and dependencies, prepare for selective compilation.
     let all_sources: Vec<_> = files
         .into_iter()
         .map(|(fname, _)| fname.to_owned())
         .collect();
-    // Run the compiler up to expansion and clone a copy of the expansion program ast
+    // Run the compiler up to expansion
     let (_, pprog_and_comments_res) = move_parse(&all_sources, &[], None, false)?;
+    let (_, parsed_prog) = match pprog_and_comments_res {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok(env);
+        }
+        Ok(res) => res,
+    };
+    let mut compilation_env = CompilationEnv::new(Flags::empty());
+    let expansion_ast = match move_continue_up_to(
+        &mut compilation_env,
+        None,
+        MovePassResult::Parser(parsed_prog),
+        MovePass::Expansion,
+    ) {
+        Err(errors) => {
+            add_move_lang_errors(&mut env, errors);
+            return Ok(env);
+        }
+        Ok(MovePassResult::Expansion(eprog)) => eprog,
+        Ok(_) => unreachable!(),
+    };
+    // Extract the module/script closure
+    let mut visited_modules = BTreeSet::new();
+    let mut selective_files = BTreeSet::new();
+    for (mident, mdef) in expansion_ast.modules.key_cloned_iter() {
+        let src_file = mdef.loc.file();
+        if !dep_sources.contains(src_file) {
+            selective_files.insert(src_file.to_owned());
+            collect_related_modules_recursive(mident, &expansion_ast.modules, &mut visited_modules);
+        }
+    }
+    for sdef in expansion_ast.scripts.values() {
+        let src_file = sdef.loc.file();
+        if !dep_sources.contains(src_file) {
+            selective_files.insert(src_file.to_owned());
+            for mident in &sdef.dependency_summary {
+                collect_related_modules_recursive(
+                    mident.clone(),
+                    &expansion_ast.modules,
+                    &mut visited_modules,
+                );
+            }
+        }
+    }
+    for mident in visited_modules {
+        selective_files.insert(
+            expansion_ast
+                .modules
+                .get(&mident)
+                .unwrap()
+                .loc
+                .file()
+                .to_owned(),
+        );
+    }
+
+    // Step 3: selective compilation.
+    let selective_sources: Vec<_> = selective_files.into_iter().collect();
+
+    // Run the compiler up to expansion and clone a copy of the expansion program ast
+    let (_, pprog_and_comments_res) = move_parse(&selective_sources, &[], None, false)?;
     let (_, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
             add_move_lang_errors(&mut env, errors);
@@ -140,6 +201,22 @@ pub fn run_model_builder(
     // plus expanded AST. This will populate the environment including any errors.
     run_spec_checker(&mut env, verified_units, expansion_ast);
     Ok(env)
+}
+
+fn collect_related_modules_recursive(
+    mident: ModuleIdent,
+    modules: &UniqueMap<ModuleIdent, ModuleDefinition>,
+    visited: &mut BTreeSet<ModuleIdent>,
+) {
+    if visited.contains(&mident) {
+        return;
+    }
+    let mdef = modules.get(&mident).unwrap();
+    let deps: BTreeSet<_> = mdef.dependency_summary.iter().cloned().collect();
+    visited.insert(mident);
+    for next_mident in deps {
+        collect_related_modules_recursive(next_mident, modules, visited);
+    }
 }
 
 /// Build a `GlobalEnv` from a collection of `CompiledModule`'s. The `modules` list must be
