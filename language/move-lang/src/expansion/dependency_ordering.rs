@@ -18,17 +18,23 @@ use std::collections::BTreeMap;
 pub fn verify(
     compilation_env: &mut CompilationEnv,
     modules: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
+    scripts: &mut BTreeMap<String, E::Script>,
 ) {
     let imm_modules = &modules;
     let mut context = Context::new(imm_modules);
     module_defs(&mut context, modules);
+    script_defs(&mut context, scripts);
 
-    let Context { neighbors, .. } = context;
-    let graph = dependency_graph(&neighbors);
+    let Context {
+        module_neighbors,
+        script_neighbors,
+        ..
+    } = context;
+    let graph = dependency_graph(&module_neighbors);
     match petgraph_toposort(&graph, None) {
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
-            let error = cycle_error(&neighbors, cycle_ident);
+            let error = cycle_error(&module_neighbors, cycle_ident);
             compilation_env.add_error(error);
         }
         Ok(ordered_ids) => {
@@ -38,6 +44,35 @@ pub fn verify(
             }
         }
     }
+
+    for (node, neighbor_nodes) in module_neighbors {
+        for (neighbor_node, relations) in neighbor_nodes {
+            for dep_type in relations.keys() {
+                match dep_type {
+                    DepType::Use => modules
+                        .get_mut(&node)
+                        .unwrap()
+                        .dependency_summary
+                        .insert(neighbor_node.clone()),
+                    DepType::Friend => modules
+                        .get_mut(&neighbor_node)
+                        .unwrap()
+                        .dependency_summary
+                        .insert(node.clone()),
+                };
+            }
+        }
+    }
+    for (node, neighbor_nodes) in script_neighbors {
+        let deps = neighbor_nodes
+            .into_iter()
+            .map(|(neighbor_node, _)| neighbor_node);
+        scripts
+            .get_mut(&node)
+            .unwrap()
+            .dependency_summary
+            .extend(deps);
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
@@ -46,44 +81,61 @@ enum DepType {
     Friend,
 }
 
+#[derive(Clone)]
+enum ModuleIdentOrScriptName {
+    Module(ModuleIdent),
+    Script(String),
+}
+
 struct Context<'a> {
     modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>,
     // A union of uses and friends:
     // - if A uses B,    add edge A -> B
     // - if A friends B, add edge B -> A
-    neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
-    current_module: Option<ModuleIdent>,
+    module_neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
+    script_neighbors: BTreeMap<String, BTreeMap<ModuleIdent, Loc>>,
+    current: Option<ModuleIdentOrScriptName>,
 }
 
 impl<'a> Context<'a> {
     fn new(modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>) -> Self {
         Context {
             modules,
-            neighbors: BTreeMap::new(),
-            current_module: None,
+            module_neighbors: BTreeMap::new(),
+            script_neighbors: BTreeMap::new(),
+            current: None,
         }
     }
 
     fn add_neighbor(&mut self, mident: ModuleIdent, dep_type: DepType, loc: Loc) {
-        let current_mident = self.current_module.clone().unwrap();
-        if current_mident == mident || !self.modules.contains_key(&mident) {
-            return;
+        match self.current.clone().unwrap() {
+            ModuleIdentOrScriptName::Module(current_mident) => {
+                if current_mident == mident || !self.modules.contains_key(&mident) {
+                    return;
+                }
+                let (node, new_neighbor) = match dep_type {
+                    DepType::Use => (current_mident, mident),
+                    DepType::Friend => (mident, current_mident),
+                };
+                let m = self
+                    .module_neighbors
+                    .entry(node)
+                    .or_insert_with(BTreeMap::new)
+                    .entry(new_neighbor)
+                    .or_insert_with(BTreeMap::new);
+                if m.contains_key(&dep_type) {
+                    return;
+                }
+                m.insert(dep_type, loc);
+            }
+            ModuleIdentOrScriptName::Script(current_sname) => {
+                assert!(matches!(dep_type, DepType::Use));
+                self.script_neighbors
+                    .entry(current_sname)
+                    .or_insert_with(BTreeMap::new)
+                    .insert(mident, loc);
+            }
         }
-        let (node, new_neighbor) = match dep_type {
-            DepType::Use => (current_mident, mident),
-            DepType::Friend => (mident, current_mident),
-        };
-
-        let m = self
-            .neighbors
-            .entry(node)
-            .or_insert_with(BTreeMap::new)
-            .entry(new_neighbor)
-            .or_insert_with(BTreeMap::new);
-        if m.contains_key(&dep_type) {
-            return;
-        }
-        m.insert(dep_type, loc);
     }
 
     fn add_usage(&mut self, mident: ModuleIdent, loc: Loc) {
@@ -176,7 +228,7 @@ fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, E::Module
 }
 
 fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition) {
-    context.current_module = Some(mident);
+    context.current = Some(ModuleIdentOrScriptName::Module(mident));
     mdef.friends
         .key_cloned_iter()
         .for_each(|(mident, friend)| context.add_friend(mident, friend.loc));
@@ -191,11 +243,27 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition
         .for_each(|sblock| spec_block(context, sblock));
 }
 
-fn struct_def(context: &mut Context, sdef: &E::StructDefinition) {
-    if let E::StructFields::Defined(fields) = &sdef.fields {
-        fields.iter().for_each(|(_, _, (_, bt))| type_(context, bt));
-    }
+//**************************************************************************************************
+// Scripts
+//**************************************************************************************************
+
+fn script_defs(context: &mut Context, scripts: &BTreeMap<String, E::Script>) {
+    scripts
+        .iter()
+        .for_each(|(sname, sdef)| script(context, sname.clone(), sdef))
 }
+
+fn script(context: &mut Context, sname: String, sdef: &E::Script) {
+    context.current = Some(ModuleIdentOrScriptName::Script(sname));
+    function(context, &sdef.function);
+    sdef.specs
+        .iter()
+        .for_each(|sblock| spec_block(context, sblock));
+}
+
+//**************************************************************************************************
+// Function
+//**************************************************************************************************
 
 fn function(context: &mut Context, fdef: &E::Function) {
     function_signature(context, &fdef.signature);
@@ -216,6 +284,16 @@ fn function_signature(context: &mut Context, sig: &E::FunctionSignature) {
 fn function_acquires(context: &mut Context, acqs: &[E::ModuleAccess]) {
     for acq in acqs {
         module_access(context, acq);
+    }
+}
+
+//**************************************************************************************************
+// Struct
+//**************************************************************************************************
+
+fn struct_def(context: &mut Context, sdef: &E::StructDefinition) {
+    if let E::StructFields::Defined(fields) = &sdef.fields {
+        fields.iter().for_each(|(_, _, (_, bt))| type_(context, bt));
     }
 }
 
@@ -416,6 +494,36 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
         M::Let { def: e, .. } | M::Include { exp: e, .. } | M::Apply { exp: e, .. } => {
             exp(context, e)
         }
-        M::Variable { .. } | M::Pragma { .. } => {}
+        // A special treatment to the `pragma friend` declarations.
+        //
+        // The `pragma friend = <address::module_name::function_name>` notion exists before the
+        // `friend` feature is implemented as a language feature. And it may still have a use case,
+        // that is, to friend a module that is compiled with other modules but not published.
+
+        // One example in the context of the Diem Framework is the `Genesis` module. As of now, the
+        // `Genesis` module is not published on chain. Therefore, we cannot really declare
+        // `friend Genesis;` in any module, because that will lead to linking error (the loader is
+        // unable to find `Genesis`). But the prover side still needs to know that `Genesis` is a
+        // friend (to verify global invariants). So, the `pragma friend = ...` syntax might need to
+        // stay. And for that, we need to add the module that is declared as a friend in the
+        // `immediate_neighbors`.
+        M::Pragma { properties } => {
+            for prop in properties {
+                let pragma = &prop.value;
+                if pragma.name.value == "friend" {
+                    match &pragma.value {
+                        None => {}
+                        Some(E::PragmaValue::Literal(_)) => {}
+                        Some(E::PragmaValue::Ident(maccess)) => match &maccess.value {
+                            E::ModuleAccess_::Name(_) => {}
+                            E::ModuleAccess_::ModuleAccess(mident, _) => {
+                                context.add_friend(mident.clone(), maccess.loc);
+                            }
+                        },
+                    }
+                }
+            }
+        }
+        M::Variable { .. } => {}
     }
 }

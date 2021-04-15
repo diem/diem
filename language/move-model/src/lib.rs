@@ -235,6 +235,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                     let move_lang::expansion::ast::Script {
                         attributes,
                         loc,
+                        dependency_summary,
                         function_name,
                         constants,
                         function,
@@ -265,6 +266,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                         attributes,
                         loc,
                         dependency_order: usize::MAX,
+                        dependency_summary,
                         is_source_module: true,
                         friends: UniqueMap::new(),
                         structs: UniqueMap::new(),

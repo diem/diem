@@ -172,7 +172,7 @@ pub fn program(
         }
     }
 
-    let scripts = {
+    let mut scripts = {
         let mut collected: BTreeMap<String, Vec<E::Script>> = BTreeMap::new();
         for s in scripts {
             collected
@@ -199,7 +199,7 @@ pub fn program(
         keyed
     };
 
-    super::dependency_ordering::verify(context.env, &mut module_map);
+    super::dependency_ordering::verify(context.env, &mut module_map, &mut scripts);
     E::Program {
         modules: module_map,
         scripts,
@@ -331,6 +331,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         loc,
         is_source_module: context.is_source_module,
         dependency_order: 0,
+        dependency_summary: BTreeSet::new(),
         friends,
         structs,
         constants,
@@ -405,6 +406,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     E::Script {
         attributes,
         loc,
+        dependency_summary: BTreeSet::new(),
         constants,
         function_name,
         function,

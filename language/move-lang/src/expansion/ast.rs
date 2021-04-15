@@ -51,6 +51,7 @@ pub type Attribute = Spanned<Attribute_>;
 pub struct Script {
     pub attributes: Vec<Attribute>,
     pub loc: Loc,
+    pub dependency_summary: BTreeSet<ModuleIdent>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
@@ -69,6 +70,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
+    pub dependency_summary: BTreeSet<ModuleIdent>,
     pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -617,12 +619,19 @@ impl AstDebug for Script {
         let Script {
             attributes,
             loc: _loc,
+            dependency_summary,
             constants,
             function_name,
             function,
             specs,
         } = self;
         attributes.ast_debug(w);
+        w.write("dependency summary: [");
+        w.list(dependency_summary, ", ", |w, dep| {
+            w.write(&format!("{}", dep));
+            false
+        });
+        w.writeln("]");
         for cdef in constants.key_cloned_iter() {
             cdef.ast_debug(w);
             w.new_line();
@@ -642,6 +651,7 @@ impl AstDebug for ModuleDefinition {
             loc: _loc,
             is_source_module,
             dependency_order,
+            dependency_summary,
             friends,
             structs,
             functions,
@@ -655,6 +665,12 @@ impl AstDebug for ModuleDefinition {
             "library module"
         });
         w.writeln(&format!("dependency order #{}", dependency_order));
+        w.write("dependency summary: [");
+        w.list(dependency_summary, ", ", |w, dep| {
+            w.write(&format!("{}", dep));
+            false
+        });
+        w.writeln("]");
         for (mident, _loc) in friends.key_cloned_iter() {
             w.write(&format!("friend {};", mident));
             w.new_line();

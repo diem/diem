@@ -353,6 +353,7 @@ fn module(
         loc: _loc,
         is_source_module,
         dependency_order,
+        dependency_summary: _,
         friends: efriends,
         structs: estructs,
         functions: efunctions,
@@ -399,6 +400,7 @@ fn script(context: &mut Context, escript: E::Script) -> N::Script {
     let E::Script {
         attributes,
         loc,
+        dependency_summary: _,
         constants: econstants,
         function_name,
         function: efunction,
