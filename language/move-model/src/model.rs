@@ -660,13 +660,15 @@ impl GlobalEnv {
     /// TODO: move-lang should use FileId as well so we don't need this here. There is already
     /// a todo in their code to remove the current use of `&'static str` for file names in Loc.
     pub fn to_loc(&self, loc: &MoveIrLoc) -> Loc {
-        if let Some(file_id) = self.get_file_id(loc.file()) {
-            Loc {
-                file_id,
-                span: loc.span(),
-            }
-        } else {
-            self.unknown_loc.clone()
+        let file_id = self.get_file_id(loc.file()).unwrap_or_else(|| {
+            panic!(
+                "Unable to find source file '{}' in the environment",
+                loc.file()
+            )
+        });
+        Loc {
+            file_id,
+            span: loc.span(),
         }
     }
 
