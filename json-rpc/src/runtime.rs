@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use diem_config::config::{NodeConfig, RoleType};
-use diem_json_rpc_types::Method;
+use diem_json_rpc_types::{request::IMethodRequest, Method};
 use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
@@ -26,6 +26,7 @@ use std::{
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
+    filters::BoxedFilter,
     http::header,
     reject::{self, Reject},
     Filter, Reply,
@@ -162,12 +163,7 @@ pub fn bootstrap(
         .and(warp::path::end())
         .and(base_route);
 
-    let health_route = warp::path!("-" / "healthy")
-        .and(warp::path::end())
-        .and(warp::query().map(move |params: HealthCheckParams| params))
-        .and(warp::any().map(move || diem_db.clone()))
-        .and(warp::any().map(SystemTime::now))
-        .and_then(health_check);
+    let health_route = build_health_route(diem_db);
 
     let full_route = health_route.or(route_v1.or(route_root));
 
@@ -191,6 +187,16 @@ pub fn bootstrap(
     };
     runtime.handle().spawn(server);
     runtime
+}
+
+pub fn build_health_route(diem_db: Arc<dyn DbReader>) -> BoxedFilter<(impl Reply,)> {
+    warp::path!("-" / "healthy")
+        .and(warp::path::end())
+        .and(warp::query().map(move |params: HealthCheckParams| params))
+        .and(warp::any().map(move || diem_db.clone()))
+        .and(warp::any().map(SystemTime::now))
+        .and_then(health_check)
+        .boxed()
 }
 
 /// Creates JSON RPC endpoint by given node config

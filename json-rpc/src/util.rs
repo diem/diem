@@ -34,19 +34,6 @@ impl Default for SdkLang {
 }
 
 impl SdkLang {
-    pub fn from_str(user_agent_part: &str) -> SdkLang {
-        match str::trim(user_agent_part) {
-            "diem-client-sdk-rust" => SdkLang::Rust,
-            "diem-client-sdk-java" => SdkLang::Java,
-            "diem-client-sdk-python" => SdkLang::Python,
-            "diem-client-sdk-typescript" => SdkLang::Typescript,
-            "diem-client-sdk-golang" => SdkLang::Go,
-            "diem-client-sdk-csharp" => SdkLang::CSharp,
-            "diem-client-sdk-cpp" => SdkLang::Cpp,
-            _ => SdkLang::Unknown,
-        }
-    }
-
     pub fn as_str(self) -> &'static str {
         match self {
             SdkLang::Rust => "rust",
@@ -61,6 +48,23 @@ impl SdkLang {
     }
 }
 
+impl FromStr for SdkLang {
+    type Err = std::convert::Infallible;
+
+    fn from_str(user_agent_part: &str) -> Result<SdkLang, std::convert::Infallible> {
+        Ok(match str::trim(user_agent_part) {
+            "diem-client-sdk-rust" => SdkLang::Rust,
+            "diem-client-sdk-java" => SdkLang::Java,
+            "diem-client-sdk-python" => SdkLang::Python,
+            "diem-client-sdk-typescript" => SdkLang::Typescript,
+            "diem-client-sdk-golang" => SdkLang::Go,
+            "diem-client-sdk-csharp" => SdkLang::CSharp,
+            "diem-client-sdk-cpp" => SdkLang::Cpp,
+            _ => SdkLang::Unknown,
+        })
+    }
+}
+
 static SDK_VERSION_REGEX: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\b([0-3])\.(\d{1,2})\.(\d{1,2})\b").unwrap());
 
@@ -71,8 +75,10 @@ pub struct SdkVersion {
     pub patch: u16,
 }
 
-impl SdkVersion {
-    pub fn from_str(user_agent_part: &str) -> SdkVersion {
+impl FromStr for SdkVersion {
+    type Err = std::convert::Infallible;
+
+    fn from_str(user_agent_part: &str) -> Result<SdkVersion, std::convert::Infallible> {
         if let Some(captures) = SDK_VERSION_REGEX.captures(user_agent_part) {
             if captures.len() == 4 {
                 if let (Ok(major), Ok(minor), Ok(patch)) = (
@@ -80,15 +86,15 @@ impl SdkVersion {
                     u16::from_str(&captures[2]),
                     u16::from_str(&captures[3]),
                 ) {
-                    return SdkVersion {
+                    return Ok(SdkVersion {
                         major,
                         minor,
                         patch,
-                    };
+                    });
                 }
             }
         }
-        SdkVersion::default()
+        Ok(SdkVersion::default())
     }
 }
 
@@ -110,8 +116,10 @@ impl SdkInfo {
         let lowercase_user_agent = user_agent.to_lowercase();
         let user_agent_parts: Vec<&str> = lowercase_user_agent.split('/').collect();
         if user_agent_parts.len() == 2 {
-            let language = SdkLang::from_str(&user_agent_parts[0]);
-            let version = SdkVersion::from_str(&user_agent_parts[1]);
+            let language =
+                SdkLang::from_str(&user_agent_parts[0]).expect("could not parse sdk language");
+            let version =
+                SdkVersion::from_str(&user_agent_parts[1]).expect("could not parse sdk version");
             if language != SdkLang::Unknown && version != SdkVersion::default() {
                 return SdkInfo { language, version };
             }

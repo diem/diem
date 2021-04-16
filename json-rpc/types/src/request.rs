@@ -7,31 +7,60 @@ use diem_types::{
     account_address::AccountAddress, event::EventKey, transaction::SignedTransaction,
 };
 use serde::{de, Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, fmt::Debug, hash::Hash, marker::PhantomData, str::FromStr};
+
+pub type JsonRpcRequest = GenericJsonRpcRequest<Method, MethodRequest>;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct JsonRpcRequest {
+pub struct GenericJsonRpcRequest<Method, MethodRequest> {
     jsonrpc: JsonRpcVersion,
     #[serde(flatten)]
     pub method_request: MethodRequest,
     pub id: Id,
+    #[serde(skip)]
+    p1: PhantomData<Method>,
 }
 
-impl JsonRpcRequest {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RawJsonRpcRequest {
+    #[serde(default)]
+    pub jsonrpc: serde_json::Value,
+    #[serde(default)]
+    pub method: serde_json::Value,
+    #[serde(default)]
+    pub params: serde_json::Value,
+    pub id: Id,
+}
+
+impl IMethod for Method {
+    fn as_str(&self) -> &'static str {
+        Self::as_str(self)
+    }
+}
+
+pub trait IMethod:
+    Copy + Debug + Eq + PartialEq + Hash + Clone + Serialize + de::DeserializeOwned
+{
+    fn as_str(&self) -> &'static str;
+}
+
+pub trait IMethodRequest<Method>: Clone + Debug + Serialize + de::DeserializeOwned
+where
+    Method: IMethod,
+{
+    fn from_value(method: Method, value: serde_json::Value) -> Result<Self, serde_json::Error>;
+    fn method(&self) -> Method;
+    fn method_name(&self) -> &'static str;
+}
+
+impl<Method, MethodRequest> GenericJsonRpcRequest<Method, MethodRequest>
+where
+    Method: IMethod,
+    MethodRequest: IMethodRequest<Method>,
+{
     pub fn from_value(
         value: serde_json::Value,
     ) -> Result<Self, (JsonRpcError, Option<Method>, Option<Id>)> {
-        #[derive(Debug, Deserialize, Serialize)]
-        struct RawJsonRpcRequest {
-            #[serde(default)]
-            jsonrpc: serde_json::Value,
-            #[serde(default)]
-            method: serde_json::Value,
-            #[serde(default)]
-            params: serde_json::Value,
-            id: Id,
-        }
-
         let RawJsonRpcRequest {
             jsonrpc,
             method,
@@ -39,23 +68,54 @@ impl JsonRpcRequest {
             id,
         } = serde_json::from_value(value)
             .map_err(|_| (JsonRpcError::invalid_format(), None, None))?;
+        Self::finish_parsing(jsonrpc, method, params, id)
+    }
+
+    pub fn finish_parsing(
+        jsonrpc: serde_json::Value,
+        method: serde_json::Value,
+        params: serde_json::Value,
+        id: Id,
+    ) -> Result<Self, (JsonRpcError, Option<Method>, Option<Id>)> {
         let jsonrpc: JsonRpcVersion = serde_json::from_value(jsonrpc)
             .map_err(|_| (JsonRpcError::invalid_request(), None, Some(id.clone())))?;
         let method: Method = serde_json::from_value(method)
             .map_err(|_| (JsonRpcError::method_not_found(), None, Some(id.clone())))?;
         let method_request = MethodRequest::from_value(method, params).map_err(|_| {
             (
-                JsonRpcError::invalid_params_from_method(method),
+                JsonRpcError::invalid_params(method.as_str()),
                 Some(method),
                 Some(id.clone()),
             )
         })?;
 
-        Ok(JsonRpcRequest {
+        Ok(Self {
             jsonrpc,
             method_request,
             id,
+            p1: Default::default(),
         })
+    }
+
+    pub fn method_name(&self) -> &'static str {
+        self.method_request.method_name()
+    }
+}
+
+impl<Method: IMethod, MethodRequest: IMethodRequest<Method>> FromStr
+    for GenericJsonRpcRequest<Method, MethodRequest>
+{
+    type Err = (JsonRpcError, Option<Method>, Option<Id>);
+
+    fn from_str(string: &str) -> Result<Self, (JsonRpcError, Option<Method>, Option<Id>)> {
+        let RawJsonRpcRequest {
+            jsonrpc,
+            method,
+            params,
+            id,
+        } = serde_json::from_str(string)
+            .map_err(|_| (JsonRpcError::invalid_format(), None, None))?;
+        GenericJsonRpcRequest::finish_parsing(jsonrpc, method, params, id)
     }
 }
 
@@ -82,8 +142,8 @@ pub enum MethodRequest {
     GetEventsWithProofs(GetEventsWithProofsParams),
 }
 
-impl MethodRequest {
-    pub fn from_value(method: Method, value: serde_json::Value) -> Result<Self, serde_json::Error> {
+impl IMethodRequest<Method> for MethodRequest {
+    fn from_value(method: Method, value: serde_json::Value) -> Result<Self, serde_json::Error> {
         let method_request = match method {
             Method::Submit => MethodRequest::Submit(serde_json::from_value(value)?),
             Method::GetMetadata => MethodRequest::GetMetadata(serde_json::from_value(value)?),
@@ -117,7 +177,7 @@ impl MethodRequest {
         Ok(method_request)
     }
 
-    pub fn method(&self) -> Method {
+    fn method(&self) -> Method {
         match self {
             MethodRequest::Submit(_) => Method::Submit,
             MethodRequest::GetMetadata(_) => Method::GetMetadata,
@@ -133,6 +193,10 @@ impl MethodRequest {
             MethodRequest::GetTransactionsWithProofs(_) => Method::GetTransactionsWithProofs,
             MethodRequest::GetEventsWithProofs(_) => Method::GetEventsWithProofs,
         }
+    }
+
+    fn method_name(&self) -> &'static str {
+        self.method().as_str()
     }
 }
 

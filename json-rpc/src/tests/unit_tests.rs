@@ -1215,9 +1215,9 @@ fn test_limit_batch_size() {
 
     let ret = client.batch(batch).unwrap_err();
 
-    let error = ret.json_rpc_error().unwrap();
-    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: batch size = 21, exceed limit 20\", data: None }";
-    assert_eq!(format!("{:?}", error), expected)
+    let error = serde_json::to_string(ret.json_rpc_error().unwrap()).unwrap();
+    let expected = serde_json::json!({ "code": -32600, "message": "Invalid Request: batch size = 21, exceed limit 20", "data": null }).to_string();
+    assert_eq!(error, expected)
 }
 
 #[test]
@@ -1228,9 +1228,9 @@ fn test_get_events_page_limit() {
         .get_events("13000000000000000000000000000000000000000a550c18", 0, 1001)
         .unwrap_err();
 
-    let error = ret.json_rpc_error().unwrap();
-    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
-    assert_eq!(format!("{:?}", error), expected)
+    let error = serde_json::to_string(ret.json_rpc_error().unwrap()).unwrap();
+    let expected = serde_json::json!({ "code": -32600, "message": "Invalid Request: page size = 1001, exceed limit 1000", "data": null }).to_string();
+    assert_eq!(error, expected)
 }
 
 #[test]
@@ -1238,9 +1238,9 @@ fn test_get_transactions_page_limit() {
     let (_, client, _runtime) = create_database_client_and_runtime();
 
     let ret = client.get_transactions(0, 1001, false).unwrap_err();
-    let error = ret.json_rpc_error().unwrap();
-    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
-    assert_eq!(format!("{:?}", error), expected)
+    let error = serde_json::to_string(ret.json_rpc_error().unwrap()).unwrap();
+    let expected = serde_json::json!({ "code": -32600, "message": "Invalid Request: page size = 1001, exceed limit 1000", "data": null }).to_string();
+    assert_eq!(error, expected)
 }
 
 #[test]
