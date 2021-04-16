@@ -45,4 +45,3 @@ ARG GIT_UPSTREAM
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.build-date=$BUILD_DATE
 LABEL org.label-schema.vcs-ref=$GIT_REV
-LABEL vcs-upstream=$GIT_UPSTREAM

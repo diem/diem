@@ -74,7 +74,6 @@ fi
 for _ in seq 1 2; do
   if docker build -f $DOCKERFILE $DIR/.. $TAGS \
     --build-arg GIT_REV="$(git rev-parse HEAD)" \
-    --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" \
     --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
     --build-arg ENABLE_FAILPOINTS="$ENABLE_FAILPOINTS" \
     $PROXY \
