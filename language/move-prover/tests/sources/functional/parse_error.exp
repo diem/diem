@@ -1,0 +1,11 @@
+Move prover returns: exiting with model building errors
+error:
+
+   ┌── <unknown>:1:1 ───
+   │
+ 1 │ <unknown>
+   │ ^^^^^^^^^ Unexpected ')'
+   ·
+ 1 │ <unknown>
+   │ --------- Expected ';'
+   │
