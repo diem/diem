@@ -68,7 +68,8 @@
 
 **[Move]**
 
-- Updated to version 1.2 of Move: see the Move changelog for details
+- Updated to version 1.2 of Move: see the Move release notes for details
+- With Diem Framework version 2, transaction scripts take an owned `signer` instead of a `&signer` reference. When the on-chain Diem Framework version is set to 1, the VM still expects a `signer` reference [\#8029](https://github.com/diem/diem/pull/8029)
 
 **[Network]**
 
