@@ -24,6 +24,7 @@ impl Default for SdkLang {
 }
 
 impl SdkLang {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(user_agent_part: &str) -> SdkLang {
         match str::trim(user_agent_part) {
             "diem-client-sdk-rust" => SdkLang::Rust,
@@ -62,6 +63,7 @@ pub struct SdkVersion {
 }
 
 impl SdkVersion {
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(user_agent_part: &str) -> SdkVersion {
         if let Some(captures) = SDK_VERSION_REGEX.captures(user_agent_part) {
             if captures.len() == 4 {

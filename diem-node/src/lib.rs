@@ -133,11 +133,15 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     println!("\tConfig path: {:?}", test_config.config_files[0]);
     println!("\tDiem root key path: {:?}", test_config.diem_root_key_path);
     println!("\tWaypoint: {}", test_config.waypoint);
+    // Configure json rpc to bind on 0.0.0.0
     let mut config = NodeConfig::load(&test_config.config_files[0]).unwrap();
     config.json_rpc.address = format!("0.0.0.0:{}", config.json_rpc.address.port())
         .parse()
         .unwrap();
     println!("\tJSON-RPC endpoint: {}", config.json_rpc.address);
+    config.json_rpc.stream_rpc.enabled = true;
+    println!("\tStream-RPC enabled!");
+
     println!(
         "\tFullNode network: {}",
         config.full_node_networks[0].listen_address

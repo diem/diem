@@ -6,10 +6,11 @@ use crate::{
     errors::is_internal_error,
     methods::{Handler, JsonRpcService},
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
+    stream_rpc::startup::get_stream_routes,
     util::{sdk_info_from_user_agent, SdkInfo},
 };
 use anyhow::{ensure, Result};
-use diem_config::config::{NodeConfig, RoleType};
+use diem_config::config::{NodeConfig, RoleType, StreamConfig};
 use diem_json_rpc_types::Method;
 use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
@@ -26,6 +27,7 @@ use std::{
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::{
+    filters::BoxedFilter,
     http::header,
     reject::{self, Reject},
     Filter, Reply,
@@ -105,6 +107,7 @@ pub fn bootstrap(
     mp_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
+    stream_config: &StreamConfig,
 ) -> Runtime {
     let runtime = Builder::new_multi_thread()
         .thread_name("json-rpc")
@@ -162,14 +165,7 @@ pub fn bootstrap(
         .and(warp::path::end())
         .and(base_route);
 
-    let health_route = warp::path!("-" / "healthy")
-        .and(warp::path::end())
-        .and(warp::query().map(move |params: HealthCheckParams| params))
-        .and(warp::any().map(move || diem_db.clone()))
-        .and(warp::any().map(SystemTime::now))
-        .and_then(health_check);
-
-    let full_route = health_route.or(route_v1.or(route_root));
+    let health_route = build_health_route(diem_db.clone());
 
     // Ensure that we actually bind to the socket first before spawning the
     // server tasks. This helps in tests to prevent races where a client attempts
@@ -178,7 +174,17 @@ pub fn bootstrap(
     //
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
+
     let _guard = runtime.enter();
+
+    let full_route = health_route
+        .or(route_v1.or(route_root))
+        .or(get_stream_routes(
+            &stream_config,
+            content_len_limit as u64,
+            diem_db,
+        ));
+
     let server = match tls_cert_path {
         None => Either::Left(warp::serve(full_route).bind(address)),
         Some(cert_path) => Either::Right(
@@ -191,6 +197,16 @@ pub fn bootstrap(
     };
     runtime.handle().spawn(server);
     runtime
+}
+
+pub fn build_health_route(diem_db: Arc<dyn DbReader>) -> BoxedFilter<(impl Reply,)> {
+    warp::path!("-" / "healthy")
+        .and(warp::path::end())
+        .and(warp::query().map(move |params: HealthCheckParams| params))
+        .and(warp::any().map(move || diem_db.clone()))
+        .and(warp::any().map(SystemTime::now))
+        .and_then(health_check)
+        .boxed()
 }
 
 /// Creates JSON RPC endpoint by given node config
@@ -211,6 +227,7 @@ pub fn bootstrap_from_config(
         mp_sender,
         config.base.role,
         chain_id,
+        &config.json_rpc.stream_rpc,
     )
 }
 

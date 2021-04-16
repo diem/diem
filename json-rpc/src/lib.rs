@@ -14,14 +14,16 @@
 //! ├── tests.rs          # tests
 
 #[macro_use]
-mod util;
+pub mod util;
 
 mod counters;
 pub mod data;
 mod methods;
-mod runtime;
+pub mod runtime;
 
 pub use diem_json_rpc_types::{errors, response, views};
+
+pub mod stream_rpc;
 
 pub use runtime::{bootstrap, bootstrap_from_config};
 

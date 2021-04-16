@@ -22,7 +22,7 @@ jobs:
 
             Breaking changes policy:
 
-            1. Chaning JSON-RPC method signatures or removing/modifying fields
+            1. Changing JSON-RPC method signatures or removing/modifying fields
                in the response in /V1 will not be accepted.
             2. Adding fields is ok.
             3. Adding a new JSON-RPC method is ok.

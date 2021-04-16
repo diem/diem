@@ -17,21 +17,21 @@ pub struct JsonRpcRequest {
     pub id: Id,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RawJsonRpcRequest {
+    #[serde(default)]
+    pub jsonrpc: serde_json::Value,
+    #[serde(default)]
+    pub method: serde_json::Value,
+    #[serde(default)]
+    pub params: serde_json::Value,
+    pub id: Id,
+}
+
 impl JsonRpcRequest {
     pub fn from_value(
         value: serde_json::Value,
     ) -> Result<Self, (JsonRpcError, Option<Method>, Option<Id>)> {
-        #[derive(Debug, Deserialize, Serialize)]
-        struct RawJsonRpcRequest {
-            #[serde(default)]
-            jsonrpc: serde_json::Value,
-            #[serde(default)]
-            method: serde_json::Value,
-            #[serde(default)]
-            params: serde_json::Value,
-            id: Id,
-        }
-
         let RawJsonRpcRequest {
             jsonrpc,
             method,
@@ -45,7 +45,7 @@ impl JsonRpcRequest {
             .map_err(|_| (JsonRpcError::method_not_found(), None, Some(id.clone())))?;
         let method_request = MethodRequest::from_value(method, params).map_err(|_| {
             (
-                JsonRpcError::invalid_params_from_method(method),
+                JsonRpcError::invalid_params(method.as_str()),
                 Some(method),
                 Some(id.clone()),
             )

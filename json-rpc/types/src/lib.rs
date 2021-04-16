@@ -9,7 +9,7 @@ pub mod views;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-enum JsonRpcVersion {
+pub enum JsonRpcVersion {
     #[serde(rename = "2.0")]
     V2,
 }
@@ -22,6 +22,15 @@ pub enum Id {
     Number(u64),
     /// String id
     String(Box<str>),
+}
+
+impl std::fmt::Display for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Id::Number(ref v) => std::fmt::Debug::fmt(v, f),
+            Id::String(ref v) => std::fmt::Debug::fmt(v, f),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
@@ -48,7 +57,7 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Method::Submit => "submit",
             Method::GetMetadata => "get_metadata",
