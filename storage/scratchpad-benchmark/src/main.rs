@@ -20,6 +20,11 @@ struct Opt {
 }
 
 fn main() {
+    rayon::ThreadPoolBuilder::new()
+        .thread_name(|index| format!("rayon-global-{}", index))
+        .build_global()
+        .expect("Failed to build rayon global thread pool.");
+
     let opt = Opt::from_args();
     scratchpad_benchmark::run_benchmark(
         opt.num_updates,

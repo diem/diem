@@ -700,10 +700,7 @@ fn test_update_consistency() {
         }
         let batch = kvs.iter().map(|(k, v)| (*k, v)).collect::<Vec<_>>();
         let start = std::time::Instant::now();
-        smt_serial = smt
-            .serial_update(vec![batch.clone()], &proof_reader)
-            .unwrap()
-            .1;
+        smt_serial = smt.update(batch.clone(), &proof_reader).unwrap();
         println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
 
         let start = std::time::Instant::now();

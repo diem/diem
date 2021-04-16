@@ -612,21 +612,27 @@ where
                                     current_subtree = left;
                                     bits_on_path.push(false);
                                 } else {
-                                    let left_child = Self::batch_update_subtree(
-                                        left,
-                                        &kvs[..idx],
-                                        depth,
-                                        proof_reader,
-                                        is_generated_from_proofs,
-                                    )?;
-                                    let right_child = Self::batch_update_subtree(
-                                        right,
-                                        &kvs[idx..],
-                                        depth,
-                                        proof_reader,
-                                        is_generated_from_proofs,
-                                    )?;
-                                    break SubTree::new_internal(left_child, right_child);
+                                    let (left_child, right_child) = rayon::join(
+                                        || {
+                                            Self::batch_update_subtree(
+                                                left,
+                                                &kvs[..idx],
+                                                depth,
+                                                proof_reader,
+                                                is_generated_from_proofs,
+                                            )
+                                        },
+                                        || {
+                                            Self::batch_update_subtree(
+                                                right,
+                                                &kvs[idx..],
+                                                depth,
+                                                proof_reader,
+                                                is_generated_from_proofs,
+                                            )
+                                        },
+                                    );
+                                    break SubTree::new_internal(left_child?, right_child?);
                                 }
                             }
                             Node::Leaf(leaf_node) => {
