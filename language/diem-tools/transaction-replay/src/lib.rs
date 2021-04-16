@@ -14,7 +14,7 @@ use diem_validator_interface::{
     DBDebuggerInterface, DebuggerStateView, DiemValidatorInterface, JsonRpcDebuggerInterface,
 };
 use diem_vm::{convert_changeset_and_events, data_cache::RemoteStorage, DiemVM, VMExecutor};
-use move_cli::OnDiskStateView;
+use move_cli::on_disk_state_view::OnDiskStateView;
 use move_core_types::effects::ChangeSet as MoveChanges;
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Flags};
 use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM, session::Session};

@@ -22,16 +22,13 @@ diem-framework-releases = { path = "../../diem-framework/releases" }
 disassembler = { path = "../disassembler" }
 errmapgen = { path = "../../move-prover/errmapgen" }
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-diem-state-view = { path = "../../../storage/state-view" }
 diem-types = { path = "../../../types" }
-diem-vm = { path = "../../diem-vm" }
 move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-lang = { path = "../../move-lang" }
 move-vm-types = { path = "../../move-vm/types" }
 move-vm-runtime = { path = "../../move-vm/runtime", features = ["debug_module"] }
 resource-viewer = { path = "../resource-viewer" }
-diem-framework = { path = "../../diem-framework" }
 vm = { path = "../../vm" }
 vm-genesis = { path = "../vm-genesis" }
 walkdir = "2.3.1"

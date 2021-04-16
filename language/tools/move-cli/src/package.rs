@@ -1,22 +1,19 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, bail, Result};
-use include_dir::{include_dir, Dir};
+use anyhow::{anyhow, Result};
+use include_dir::Dir;
+use move_lang::{
+    compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
+    path_to_string, shared::Flags, MOVE_COMPILED_EXTENSION, MOVE_EXTENSION,
+};
 use once_cell::sync::Lazy;
 use std::{
     collections::HashSet,
     fs::{self, File},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
 };
-
-use diem_framework::{COMPILED_EXTENSION, MOVE_EXTENSION};
-use move_lang::{
-    compiled_unit::CompiledUnit, extension_equals, find_filenames, move_compile_and_report,
-    path_to_string, shared::Flags,
-};
-use std::path::PathBuf;
 use vm::file_format::CompiledModule;
 
 /// Directory name for the package source files under package/<name>
@@ -24,48 +21,13 @@ const PKG_SOURCE_DIR: &str = "source_files";
 /// Directory name for the package binary files under package/<name>
 const PKG_BINARY_DIR: &str = "compiled";
 
-/// Content for the move stdlib directory
-const DIR_MOVE_STDLIB: Dir = include_dir!("../../move-stdlib/modules");
-/// Content for the nursery directory
-const DIR_MOVE_STDLIB_NURSERY: Dir = include_dir!("../../move-stdlib/nursery");
-/// Content for diem framework directory
-const DIR_DIEM_FRAMEWORK: Dir = include_dir!("../../diem-framework/modules");
-
-/// Pre-defined stdlib package
-static PACKAGE_MOVE_STDLIB: Lazy<MovePackage> = Lazy::new(|| MovePackage {
-    name: "stdlib",
-    sources: vec![
-        SourceFilter {
-            source_dir: &DIR_MOVE_STDLIB,
-            inclusion: None, // include everything
-            exclusion: HashSet::new(),
-        },
-        SourceFilter {
-            source_dir: &DIR_MOVE_STDLIB_NURSERY,
-            inclusion: None, // include everything
-            exclusion: HashSet::new(),
-        },
-    ],
-    deps: vec![],
-});
-
-static PACKAGE_DIEM_FRAMEWORK: Lazy<MovePackage> = Lazy::new(|| MovePackage {
-    name: "diem",
-    sources: vec![SourceFilter {
-        source_dir: &DIR_DIEM_FRAMEWORK,
-        inclusion: None, // include everything
-        exclusion: HashSet::new(),
-    }],
-    deps: vec![&PACKAGE_MOVE_STDLIB],
-});
-
-struct SourceFilter<'a> {
+pub struct SourceFilter<'a> {
     /// The embedded directory
-    source_dir: &'a Dir<'a>,
+    pub source_dir: &'a Dir<'a>,
     /// Source files to be included, if set to None, include everything
-    inclusion: Option<HashSet<&'a str>>,
+    pub inclusion: Option<HashSet<&'a str>>,
     /// Source files to be excluded, to exclude nothing, set it to empty
-    exclusion: HashSet<&'a str>,
+    pub exclusion: HashSet<&'a str>,
 }
 
 impl<'a> SourceFilter<'a> {
@@ -105,9 +67,9 @@ impl<'a> SourceFilter<'a> {
     }
 }
 
-struct MovePackage {
+pub struct MovePackage {
     /// Name of the package
-    name: &'static str,
+    name: String,
     /// The directory containing all the .move source files
     sources: Vec<SourceFilter<'static>>,
     /// Dependencies
@@ -115,8 +77,20 @@ struct MovePackage {
 }
 
 impl MovePackage {
+    pub fn new(
+        name: String,
+        sources: Vec<SourceFilter<'static>>,
+        deps: Vec<&'static Lazy<MovePackage>>,
+    ) -> Self {
+        MovePackage {
+            name,
+            sources,
+            deps,
+        }
+    }
+
     fn get_package_dir(&self, out_path: &Path) -> PathBuf {
-        out_path.join(self.name)
+        out_path.join(&self.name)
     }
 
     fn get_source_dir(&self, out_path: &Path) -> PathBuf {
@@ -128,7 +102,7 @@ impl MovePackage {
     }
 
     /// Prepare the package, lay down the source files and compile the modules
-    fn prepare(&self, out_path: &Path, source_only: bool) -> Result<Vec<String>> {
+    pub(crate) fn prepare(&self, out_path: &Path, source_only: bool) -> Result<Vec<String>> {
         // bottom-up by preparing the dependencies first
         let mut src_dirs = vec![];
         for dep in self.deps.iter() {
@@ -169,7 +143,7 @@ impl MovePackage {
                         module.serialize(&mut data)?;
                         let file_path = pkg_bin_path
                             .join(ident.value.1)
-                            .with_extension(COMPILED_EXTENSION);
+                            .with_extension(MOVE_COMPILED_EXTENSION);
                         let mut fp = File::create(file_path)?;
                         fp.write_all(&data)?;
                     }
@@ -187,7 +161,7 @@ impl MovePackage {
         Ok(src_dirs)
     }
 
-    fn source_files(&self, out_path: &Path) -> Result<Vec<String>> {
+    pub(crate) fn source_files(&self, out_path: &Path) -> Result<Vec<String>> {
         let mut src_dirs = vec![];
         for dep in self.deps.iter() {
             src_dirs.extend(dep.source_files(out_path)?);
@@ -196,13 +170,13 @@ impl MovePackage {
         Ok(src_dirs)
     }
 
-    fn compiled_modules(&self, out_path: &Path) -> Result<Vec<CompiledModule>> {
+    pub(crate) fn compiled_modules(&self, out_path: &Path) -> Result<Vec<CompiledModule>> {
         let mut modules = vec![];
         for dep in self.deps.iter() {
             modules.extend(dep.compiled_modules(out_path)?);
         }
         for entry in find_filenames(&[path_to_string(&self.get_binary_dir(out_path))?], |path| {
-            extension_equals(path, COMPILED_EXTENSION)
+            extension_equals(path, MOVE_COMPILED_EXTENSION)
         })? {
             modules.push(
                 CompiledModule::deserialize(&fs::read(Path::new(&entry)).unwrap())
@@ -210,44 +184,5 @@ impl MovePackage {
             );
         }
         Ok(modules)
-    }
-}
-
-/// The dependency interface exposed to CLI main
-pub struct Mode(Vec<&'static MovePackage>);
-
-impl Mode {
-    pub fn prepare(&self, out_path: &Path, source_only: bool) -> Result<()> {
-        for pkg in &self.0 {
-            pkg.prepare(out_path, source_only)?;
-        }
-        Ok(())
-    }
-
-    pub fn source_files(&self, out_path: &Path) -> Result<Vec<String>> {
-        let pkg_sources: Result<Vec<_>, _> = self
-            .0
-            .iter()
-            .map(|pkg| pkg.source_files(out_path))
-            .collect();
-        Ok(pkg_sources?.into_iter().flatten().collect())
-    }
-
-    pub fn compiled_modules(&self, out_path: &Path) -> Result<Vec<CompiledModule>> {
-        let pkg_modules: Result<Vec<_>, _> = self
-            .0
-            .iter()
-            .map(|pkg| pkg.compiled_modules(out_path))
-            .collect();
-        Ok(pkg_modules?.into_iter().flatten().collect())
-    }
-}
-
-pub fn parse_mode_from_string(mode: &str) -> Result<Mode> {
-    match mode {
-        "bare" => Ok(Mode(vec![])),
-        "stdlib" => Ok(Mode(vec![&*PACKAGE_MOVE_STDLIB])),
-        "diem" => Ok(Mode(vec![&*PACKAGE_DIEM_FRAMEWORK])),
-        _ => bail!("Invalid mode for dependency: {}", mode),
     }
 }
