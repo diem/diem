@@ -61,6 +61,11 @@ pub fn run_model_builder(
     )?;
     let (comment_map, parsed_prog) = match pprog_and_comments_res {
         Err(errors) => {
+            // Add source files so that the env knows how to translate locations of parse errors
+            for fname in files.keys().sorted() {
+                let fsrc = &files[fname];
+                env.add_source(fname, fsrc, /* is_dep */ false);
+            }
             add_move_lang_errors(&mut env, errors);
             return Ok(env);
         }

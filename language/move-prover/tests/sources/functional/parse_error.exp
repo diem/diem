@@ -1,11 +1,11 @@
 Move prover returns: exiting with model building errors
 error:
 
-   ┌── <unknown>:1:1 ───
+   ┌── tests/sources/functional/parse_error.move:3:25 ───
    │
- 1 │ <unknown>
-   │ ^^^^^^^^^ Unexpected ')'
+ 3 │     fun foo(x: u64) { 1 )
+   │                         ^ Unexpected ')'
    ·
- 1 │ <unknown>
-   │ --------- Expected ';'
+ 3 │     fun foo(x: u64) { 1 )
+   │                         - Expected ';'
    │
