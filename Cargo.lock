@@ -5564,7 +5564,7 @@ checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 [[package]]
 name = "quick-junit"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?branch=main#2e349d96e88b662fab9dfe45222e1486513615e1"
+source = "git+https://github.com/diem/diem-devtools?branch=main#bb4bc9d7d9ce6308c2571bf7e0ffaf662d5d2992"
 dependencies = [
  "chrono",
  "indexmap",
@@ -6759,9 +6759,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aa894ef3fade0ee7243422f4fbbd6c2b48e6de767e621d37ef65f2310f53cea"
+checksum = "ef33d6d0cd06e0840fba9985aab098c147e67e05cee14d412d3345ed14ff30ac"
 dependencies = [
  "libc",
  "signal-hook-registry",
@@ -7336,7 +7336,7 @@ dependencies = [
 [[package]]
 name = "testrunner"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?branch=main#2e349d96e88b662fab9dfe45222e1486513615e1"
+source = "git+https://github.com/diem/diem-devtools?branch=main#bb4bc9d7d9ce6308c2571bf7e0ffaf662d5d2992"
 dependencies = [
  "aho-corasick",
  "anyhow",

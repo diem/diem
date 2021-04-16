@@ -97,18 +97,17 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
                         ),
                     );
 
-                    // Construct the friendly name from the package and build target.
-                    let mut friendly_name = package.name().to_owned();
+                    // Construct the binary ID from the package and build target.
+                    let mut binary_id = package.name().to_owned();
                     if artifact.target.name != package.name() {
-                        friendly_name.push_str("::");
-                        friendly_name.push_str(&artifact.target.name);
+                        binary_id.push_str("::");
+                        binary_id.push_str(&artifact.target.name);
                     }
-                    let friendly_name = Some(friendly_name);
 
                     executables.push(TestBinary {
                         binary,
+                        binary_id,
                         cwd,
-                        friendly_name,
                     });
                 }
             }
