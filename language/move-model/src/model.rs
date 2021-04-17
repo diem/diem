@@ -3093,6 +3093,19 @@ impl<'env> FunctionEnv<'env> {
                 .function_def_at(self.data.def_idx),
         )
     }
+
+    /// Produce a TypeDisplayContext to print types within the scope of this env
+    pub fn get_type_display_ctxt(&self) -> TypeDisplayContext {
+        let type_param_names = self
+            .get_type_parameters()
+            .iter()
+            .map(|param| param.0)
+            .collect();
+        TypeDisplayContext::WithEnv {
+            env: self.module_env.env,
+            type_param_names: Some(type_param_names),
+        }
+    }
 }
 
 // =================================================================================================

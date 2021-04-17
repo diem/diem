@@ -277,7 +277,7 @@ impl FunctionTargetPipeline {
     /// In programs without recursion or mutual recursion, processing functions in topological order
     /// means that when a processor sees a caller function, it is guaranteed that all the callees
     /// have already been analyzed.
-    fn sort_targets_in_topological_order<'env>(
+    pub fn sort_targets_in_topological_order<'env>(
         env: &'env GlobalEnv,
         targets: &FunctionTargetsHolder,
     ) -> Vec<FunctionEnv<'env>> {

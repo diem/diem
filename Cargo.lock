@@ -590,6 +590,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytecode-interpreter"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode",
+ "datatest-stable",
+ "diem-workspace-hack",
+ "move-binary-format",
+ "move-core-types",
+ "move-model",
+ "move-prover-test-utils",
+ "num 0.4.0",
+ "serde",
+ "structopt 0.3.21",
+]
+
+[[package]]
 name = "bytecode-source-map"
 version = "0.1.0"
 dependencies = [
@@ -4510,6 +4527,7 @@ dependencies = [
  "atty",
  "boogie-backend",
  "bytecode",
+ "bytecode-interpreter",
  "clap",
  "codespan",
  "codespan-reporting",
