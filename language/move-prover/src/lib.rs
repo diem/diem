@@ -14,6 +14,7 @@ use bytecode::{
     pipeline_factory,
     read_write_set_analysis::{self, ReadWriteSetProcessor},
 };
+use bytecode_interpreter::interpret;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
 use errmapgen::ErrmapGen;
@@ -68,6 +69,16 @@ pub fn run_move_prover<W: WriteColor>(
     // Same for read/write set analysis
     if options.run_read_write_set {
         return Ok(run_read_write_set(&env, &options, now));
+    }
+    // Same for stackless bytecode interpretation
+    if options.run_interpreter {
+        run_interpreter(&env, &options, now)?;
+        return check_errors(
+            &env,
+            &options,
+            error_writer,
+            "exiting with interpretation errors",
+        );
     }
 
     // Check correct backend versions.
@@ -292,4 +303,15 @@ fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
 
     let end = now.elapsed();
     info!("{:.3}s analyzing", (end - start).as_secs_f64());
+}
+
+fn run_interpreter(env: &GlobalEnv, options: &Options, _now: Instant) -> anyhow::Result<()> {
+    let mut targets = FunctionTargetsHolder::default();
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            targets.add_target(&func_env)
+        }
+    }
+    let pipeline = pipeline_factory::default_pipeline_with_options(&options.prover);
+    interpret(&options.interpreter, env, pipeline)
 }

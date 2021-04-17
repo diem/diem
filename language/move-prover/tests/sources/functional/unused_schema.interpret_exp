@@ -1,0 +1,11 @@
+note: unused schema TestUnusedSchema::AddsThree
+
+    ┌── tests/sources/functional/unused_schema.move:22:5 ───
+    │
+ 22 │ ╭     spec schema AddsThree {
+ 23 │ │         i: num;
+ 24 │ │         result: num;
+ 25 │ │         ensures result == i + 3;
+ 26 │ │     }
+    │ ╰─────^
+    │

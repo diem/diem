@@ -84,6 +84,15 @@ const TESTED_FEATURES: &[Feature] = &[
         separate_baseline: true,
         runner: runner_cvc4,
     },
+    Feature {
+        name: "interpret",
+        flags: &["--interpret", "--interpret-stepwise"],
+        inclusion_mode: InclusionMode::Implicit,
+        enable_in_ci: true,
+        only_if_requested: false,
+        separate_baseline: true,
+        runner: runner_interpret,
+    },
 ];
 
 fn get_feature_by_name(name: &str) -> &'static Feature {
@@ -100,6 +109,9 @@ fn runner_default(p: &Path) -> datatest_stable::Result<()> {
 }
 fn runner_cvc4(p: &Path) -> datatest_stable::Result<()> {
     test_runner_for_feature(p, get_feature_by_name("cvc4"))
+}
+fn runner_interpret(p: &Path) -> datatest_stable::Result<()> {
+    test_runner_for_feature(p, get_feature_by_name("interpret"))
 }
 
 /// Test runner for a given feature.

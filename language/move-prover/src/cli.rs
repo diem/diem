@@ -19,6 +19,7 @@ use simplelog::{
 use abigen::AbigenOptions;
 use boogie_backend::options::{BoogieOptions, VectorTheory};
 use bytecode::options::ProverOptions;
+use bytecode_interpreter::InterpreterOptions;
 use codespan_reporting::diagnostic::Severity;
 use docgen::DocgenOptions;
 use errmapgen::ErrmapOptions;
@@ -51,6 +52,8 @@ pub struct Options {
     pub run_errmapgen: bool,
     /// Whether to run the read write set analysis instead of the prover
     pub run_read_write_set: bool,
+    /// Whether to run the interpreter instead of the prover
+    pub run_interpreter: bool,
     /// The paths to the Move sources.
     pub move_sources: Vec<String>,
     /// The paths to any dependencies for the Move sources. Those will not be verified but
@@ -69,6 +72,8 @@ pub struct Options {
     pub backend: BoogieOptions,
     /// Options for the ABI generator.
     pub abigen: AbigenOptions,
+    /// Options for the interpreter.
+    pub interpreter: InterpreterOptions,
     /// Options for the error map generator.
     /// TODO: this currently create errors during deserialization, so skip them for this.
     #[serde(skip_serializing)]
@@ -83,6 +88,7 @@ impl Default for Options {
             run_abigen: false,
             run_errmapgen: false,
             run_read_write_set: false,
+            run_interpreter: false,
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
             move_deps: vec![],
@@ -91,6 +97,7 @@ impl Default for Options {
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
+            interpreter: InterpreterOptions::default(),
             experimental_pipeline: false,
             boogie_poly: false,
         }
@@ -278,6 +285,21 @@ impl Options {
                 Arg::with_name("read-write-set")
                     .long("read-write-set")
                     .help("runs the read/write set analysis instead of the prover.")
+            )
+            .arg(
+                Arg::with_name("interpret")
+                    .long("interpret")
+                    .help("runs the stackless bytecode interpreter instead of the prover.")
+            )
+            .arg(
+                Arg::with_name("interpret-stepwise")
+                    .long("interpret-stepwise")
+                    .help("runs the interpreter after every step in the transformation pipeline.")
+            )
+            .arg(
+                Arg::with_name("interpret-dump")
+                    .long("interpret-dump")
+                    .help("dump the debug information collected by the interpreter.")
             )
             .arg(
                 Arg::with_name("verify")
@@ -520,6 +542,15 @@ impl Options {
         }
         if matches.is_present("read-write-set") {
             options.run_read_write_set = true;
+        }
+        if matches.is_present("interpret") {
+            options.run_interpreter = true;
+        }
+        if matches.is_present("interpret-stepwise") {
+            options.interpreter.stepwise = true;
+        }
+        if matches.is_present("interpret-dump") {
+            options.interpreter.dump_workdir = Some(options.output_path.clone());
         }
         if matches.is_present("trace") {
             options.prover.debug_trace = true;
