@@ -34,7 +34,7 @@ currencies. The inner vector<u8>'s are string representations of
 currency names.
 
 
-<pre><code><b>struct</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>
+<pre><code><b>struct</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a> has <b>copy</b>, drop, store
 </code></pre>
 
 

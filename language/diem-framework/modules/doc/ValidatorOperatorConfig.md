@@ -30,7 +30,7 @@ Stores the string name of a ValidatorOperator account.
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>
+<pre><code><b>struct</b> <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a> has key
 </code></pre>
 
 

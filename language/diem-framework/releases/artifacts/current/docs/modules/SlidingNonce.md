@@ -35,7 +35,7 @@ When nonce X is recorded, all transactions with nonces lower then X-128 will abo
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>
+<pre><code><b>struct</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a> has key
 </code></pre>
 
 

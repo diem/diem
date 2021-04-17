@@ -63,7 +63,7 @@ The roleId contains the role id for the account. This is only moved
 to an account as a top-level resource, and is otherwise immovable.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a>
+<pre><code><b>struct</b> <a href="Roles.md#0x1_Roles_RoleId">RoleId</a> has key
 </code></pre>
 
 

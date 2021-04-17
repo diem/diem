@@ -42,7 +42,7 @@ The authentication key for A can be "buried in the mountain" and dug up only if 
 recover one of accounts in <code>rotation_caps</code> arises.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>
+<pre><code><b>struct</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a> has key
 </code></pre>
 
 

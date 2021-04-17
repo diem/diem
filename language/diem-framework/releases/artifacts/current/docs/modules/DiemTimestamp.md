@@ -44,7 +44,7 @@ which reflect that the system has been successfully initialized.
 A singleton resource holding the current Unix time in microseconds
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>
+<pre><code><b>struct</b> <a href="DiemTimestamp.md#0x1_DiemTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> has key
 </code></pre>
 
 

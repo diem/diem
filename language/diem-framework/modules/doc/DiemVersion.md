@@ -31,7 +31,7 @@ DiemConfig, and may be updated by Diem root.
 
 
 
-<pre><code><b>struct</b> <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a>
+<pre><code><b>struct</b> <a href="DiemVersion.md#0x1_DiemVersion">DiemVersion</a> has <b>copy</b>, drop, store
 </code></pre>
 
 

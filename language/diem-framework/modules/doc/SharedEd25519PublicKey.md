@@ -36,7 +36,7 @@ A resource that forces the account associated with <code>rotation_cap</code> to 
 authentication key derived from <code>key</code>
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>
+<pre><code><b>struct</b> <a href="SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a> has key
 </code></pre>
 
 

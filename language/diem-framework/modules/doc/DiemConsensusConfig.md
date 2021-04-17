@@ -28,7 +28,7 @@ DiemConfig, and may be updated by Diem root.
 
 
 
-<pre><code><b>struct</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a>
+<pre><code><b>struct</b> <a href="DiemConsensusConfig.md#0x1_DiemConsensusConfig">DiemConsensusConfig</a> has <b>copy</b>, drop, store
 </code></pre>
 
 

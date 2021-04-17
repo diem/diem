@@ -31,7 +31,7 @@ This code provides a container for storing a chain id and functions to initializ
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="ChainId.md#0x1_ChainId">ChainId</a>
+<pre><code><b>struct</b> <a href="ChainId.md#0x1_ChainId">ChainId</a> has key
 </code></pre>
 
 

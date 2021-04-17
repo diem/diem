@@ -98,7 +98,7 @@ minting and burning of coins.
 
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_RegisterNewCurrency">RegisterNewCurrency</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_RegisterNewCurrency">RegisterNewCurrency</a> has store
 </code></pre>
 
 
@@ -131,7 +131,7 @@ and specified in the <code><a href="DiemTest.md#0x1_DiemTest_CurrencyInfo">Curre
 published under the <code><a href="_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> account address).
 
 
-<pre><code><b>struct</b> <a href="">Diem</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="">Diem</a>&lt;CoinType&gt; has store
 </code></pre>
 
 
@@ -162,7 +162,7 @@ This capability is held only either by the <code><a href="_TREASURY_COMPLIANCE_A
 account or the <code><a href="">0x1::XDX</a></code> module (and <code><a href="_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()</code> in testnet).
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTest.md#0x1_DiemTest_MintCapability">MintCapability</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_MintCapability">MintCapability</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -192,7 +192,7 @@ of <code>CoinType</code> currency to be burned by the holder of the
 and the <code><a href="">0x1::XDX</a></code> module (and <code><a href="_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()</code> in testnet).
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTest.md#0x1_DiemTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -228,7 +228,7 @@ minted, and that is defined in the <code>currency_code</code> field of the
 <code><a href="DiemTest.md#0x1_DiemTest_CurrencyInfo">CurrencyInfo</a></code> resource for the currency.
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_MintEvent">MintEvent</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_MintEvent">MintEvent</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -269,7 +269,7 @@ extracted for burning.
 for that currency.
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_BurnEvent">BurnEvent</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_BurnEvent">BurnEvent</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -311,7 +311,7 @@ a coin type <code>currency_code</code> are moved to a <code><a href="DiemTest.md
 the account at the address <code>preburn_address</code>.
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_PreburnEvent">PreburnEvent</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_PreburnEvent">PreburnEvent</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -354,7 +354,7 @@ preburn, but not burned). The currency of the funds is given by the
 <code>currency_code</code> as defined in the <code><a href="DiemTest.md#0x1_DiemTest_CurrencyInfo">CurrencyInfo</a></code> for that currency.
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_CancelBurnEvent">CancelBurnEvent</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_CancelBurnEvent">CancelBurnEvent</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -395,7 +395,7 @@ An <code><a href="DiemTest.md#0x1_DiemTest_ToXDXExchangeRateUpdateEvent">ToXDXEx
 rate for the currency given by <code>currency_code</code> is updated.
 
 
-<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRateUpdateEvent</a>
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRateUpdateEvent</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -438,7 +438,7 @@ the time of registration the <code><a href="DiemTest.md#0x1_DiemTest_MintCapabil
 Unless they are specified otherwise the fields in this resource are immutable.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTest.md#0x1_DiemTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -558,7 +558,7 @@ returning the funds to the account that initiated the burn request.
 Concurrent preburn requests are not allowed, only one request (in to_burn) can be handled at any time.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTest.md#0x1_DiemTest_Preburn">Preburn</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="DiemTest.md#0x1_DiemTest_Preburn">Preburn</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -2137,7 +2137,7 @@ all coins of a currency type.
 ### Struct `Diem`
 
 
-<pre><code><b>struct</b> <a href="">Diem</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="">Diem</a>&lt;CoinType&gt; has store
 </code></pre>
 
 

@@ -56,7 +56,7 @@ This resource holds an entity's globally unique name and all of the metadata it 
 participate in off-chain protocols.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>
+<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a> has key
 </code></pre>
 
 
@@ -123,7 +123,7 @@ participate in off-chain protocols.
 Struct to store the limit on-chain
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a>
+<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_Limit">Limit</a> has key
 </code></pre>
 
 
@@ -151,7 +151,7 @@ Struct to store the limit on-chain
 The message sent whenever the compliance public key for a <code><a href="DualAttestation.md#0x1_DualAttestation">DualAttestation</a></code> resource is rotated.
 
 
-<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">ComplianceKeyRotationEvent</a>
+<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">ComplianceKeyRotationEvent</a> has drop, store
 </code></pre>
 
 
@@ -185,7 +185,7 @@ The message sent whenever the compliance public key for a <code><a href="DualAtt
 The message sent whenever the base url for a <code><a href="DualAttestation.md#0x1_DualAttestation">DualAttestation</a></code> resource is rotated.
 
 
-<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_BaseUrlRotationEvent">BaseUrlRotationEvent</a>
+<pre><code><b>struct</b> <a href="DualAttestation.md#0x1_DualAttestation_BaseUrlRotationEvent">BaseUrlRotationEvent</a> has drop, store
 </code></pre>
 
 

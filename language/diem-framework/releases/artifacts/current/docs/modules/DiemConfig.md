@@ -48,7 +48,7 @@ to synchronize configuration changes for the validators.
 A generic singleton resource that holds a value of a specific type.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config: <b>copy</b>, drop, store&gt;
+<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig">DiemConfig</a>&lt;Config: <b>copy</b>, drop, store&gt; has store, key
 </code></pre>
 
 
@@ -78,7 +78,7 @@ with new configuration information. This is also called a
 "reconfiguration event"
 
 
-<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a>
+<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_NewEpochEvent">NewEpochEvent</a> has drop, store
 </code></pre>
 
 
@@ -106,7 +106,7 @@ with new configuration information. This is also called a
 Holds information about state of reconfiguration
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a>
+<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_Configuration">Configuration</a> has key
 </code></pre>
 
 
@@ -146,7 +146,7 @@ Holds information about state of reconfiguration
 Accounts with this privilege can modify DiemConfig<TypeName> under Diem root address.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;TypeName&gt;
+<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;TypeName&gt; has store, key
 </code></pre>
 
 
@@ -174,7 +174,7 @@ Accounts with this privilege can modify DiemConfig<TypeName> under Diem root add
 Reconfiguration disabled if this resource occurs under LibraRoot.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a>
+<pre><code><b>struct</b> <a href="DiemConfig.md#0x1_DiemConfig_DisableReconfiguration">DisableReconfiguration</a> has key
 </code></pre>
 
 

@@ -15,10 +15,11 @@
 //! - A `FuncEnv` which is a reference to the data of some function in a module.
 
 use std::{
+    any::{Any, TypeId},
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     ffi::OsStr,
-    fmt,
+    fmt::{self, Formatter},
     rc::Rc,
 };
 
@@ -44,7 +45,7 @@ use move_core_types::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AbilitySet, AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
+        AddressIdentifierIndex, Bytecode, Constant as VMConstant, ConstantPoolIndex,
         FunctionDefinitionIndex, FunctionHandleIndex, SignatureIndex, SignatureToken,
         StructDefinitionIndex, StructFieldInformation, StructHandleIndex, Visibility,
     },
@@ -67,11 +68,9 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type, TypeDisplayContext},
 };
-use std::{
-    any::{Any, TypeId},
-    fmt::Formatter,
-};
-pub use vm::file_format::Visibility as FunctionVisibility;
+
+// import and re-expose symbols
+pub use vm::file_format::{AbilitySet, Visibility as FunctionVisibility};
 
 // =================================================================================================
 /// # Constants
@@ -2063,15 +2062,22 @@ impl<'env> StructEnv<'env> {
     }
 
     // TODO(tmn) migrate to abilities
+    // NOTE(mengxu) there is still a use case of `is_resource` in the boogie translator, which
+    // makes it seemingly fine to keep it here as an abstraction to the boogie translator.
     /// Determines whether this struct is a resource type.
     pub fn is_resource(&self) -> bool {
+        self.get_abilities().has_key()
+    }
+
+    /// Get the abilities of this struct.
+    pub fn get_abilities(&self) -> AbilitySet {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
         let handle = self
             .module_env
             .data
             .module
             .struct_handle_at(def.struct_handle);
-        handle.abilities.has_key()
+        handle.abilities
     }
 
     /// Get an iterator for the fields, ordered by offset.

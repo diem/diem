@@ -37,7 +37,7 @@ Once the component makeup of the XDX has been chosen the
 The type tag representing the <code><a href="XDX.md#0x1_XDX">XDX</a></code> currency on-chain.
 
 
-<pre><code><b>struct</b> <a href="XDX.md#0x1_XDX">XDX</a>
+<pre><code><b>struct</b> <a href="XDX.md#0x1_XDX">XDX</a> has store
 </code></pre>
 
 
@@ -71,7 +71,7 @@ coins, and also each reserve component that holds the backing for these coins on
 Currently this holds no coins since XDX is not able to be minted/created.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="XDX.md#0x1_XDX_Reserve">Reserve</a>
+<pre><code><b>struct</b> <a href="XDX.md#0x1_XDX_Reserve">Reserve</a> has key
 </code></pre>
 
 

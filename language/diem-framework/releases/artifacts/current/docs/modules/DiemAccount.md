@@ -116,7 +116,7 @@ before and after every transaction.
 An <code>address</code> is a Diem Account iff it has a published DiemAccount resource.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount">DiemAccount</a> has key
 </code></pre>
 
 
@@ -188,7 +188,7 @@ A resource that holds the total value of currency of type <code>Token</code>
 currently held by the account.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt;
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_Balance">Balance</a>&lt;Token&gt; has key
 </code></pre>
 
 
@@ -220,7 +220,7 @@ account_address/DiemAccount/balance.
 There is at most one WithdrawCapability in existence for a given address.
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_WithdrawCapability">WithdrawCapability</a> has store
 </code></pre>
 
 
@@ -251,7 +251,7 @@ account_address (i.e., write to account_address/DiemAccount/authentication_key).
 There is at most one KeyRotationCapability in existence for a given address.
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">KeyRotationCapability</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_KeyRotationCapability">KeyRotationCapability</a> has store
 </code></pre>
 
 
@@ -281,7 +281,7 @@ A wrapper around an <code>AccountLimitMutationCapability</code> which is used to
 and to record freeze/unfreeze events.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_AccountOperationsCapability">AccountOperationsCapability</a> has key
 </code></pre>
 
 
@@ -315,7 +315,7 @@ and to record freeze/unfreeze events.
 A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_DiemWriteSetManager">DiemWriteSetManager</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_DiemWriteSetManager">DiemWriteSetManager</a> has key
 </code></pre>
 
 
@@ -343,7 +343,7 @@ A resource that holds the event handle for all the past WriteSet transactions th
 Message for sent events
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">SentPaymentEvent</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_SentPaymentEvent">SentPaymentEvent</a> has drop, store
 </code></pre>
 
 
@@ -389,7 +389,7 @@ Message for sent events
 Message for received events
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a> has drop, store
 </code></pre>
 
 
@@ -435,7 +435,7 @@ Message for received events
 Message for committed WriteSet transaction.
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_AdminTransactionEvent">AdminTransactionEvent</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_AdminTransactionEvent">AdminTransactionEvent</a> has drop, store
 </code></pre>
 
 
@@ -463,7 +463,7 @@ Message for committed WriteSet transaction.
 Message for creation of a new account
 
 
-<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">CreateAccountEvent</a>
+<pre><code><b>struct</b> <a href="DiemAccount.md#0x1_DiemAccount_CreateAccountEvent">CreateAccountEvent</a> has drop, store
 </code></pre>
 
 

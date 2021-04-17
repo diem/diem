@@ -37,7 +37,7 @@ A resource representing the counter used to generate uniqueness under each accou
 this resource to guarantee the uniqueness of the generated handle.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a>
+<pre><code><b>struct</b> <a href="Event.md#0x1_Event_EventHandleGenerator">EventHandleGenerator</a> has key
 </code></pre>
 
 
@@ -73,7 +73,7 @@ A handle for an event such that:
 2. Storage can use this handle to prove the total number of events that happened in the past.
 
 
-<pre><code><b>struct</b> <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T: drop, store&gt;
+<pre><code><b>struct</b> <a href="Event.md#0x1_Event_EventHandle">EventHandle</a>&lt;T: drop, store&gt; has store
 </code></pre>
 
 

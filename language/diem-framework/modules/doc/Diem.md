@@ -100,7 +100,7 @@ and specified in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo<
 published under the <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> account address).
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem">Diem</a>&lt;CoinType&gt; has store
 </code></pre>
 
 
@@ -131,7 +131,7 @@ This capability is held only either by the <code><a href="CoreAddresses.md#0x1_C
 account or the <code><a href="XDX.md#0x1_XDX">0x1::XDX</a></code> module (and <code><a href="CoreAddresses.md#0x1_CoreAddresses_DIEM_ROOT_ADDRESS">CoreAddresses::DIEM_ROOT_ADDRESS</a>()</code> in testnet).
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_MintCapability">MintCapability</a>&lt;CoinType&gt; has store, key
 </code></pre>
 
 
@@ -160,7 +160,7 @@ The <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a></code> re
 of <code>CoinType</code> currency to be burned by the holder of it.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a>&lt;CoinType&gt; has store, key
 </code></pre>
 
 
@@ -192,7 +192,7 @@ minted, and that is defined in the <code>currency_code</code> field of the
 <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code> resource for the currency.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_MintEvent">MintEvent</a>
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_MintEvent">MintEvent</a> has drop, store
 </code></pre>
 
 
@@ -232,7 +232,7 @@ It also contains the <code>preburn_address</code> from which the coin is
 extracted for burning.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_BurnEvent">BurnEvent</a>
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_BurnEvent">BurnEvent</a> has drop, store
 </code></pre>
 
 
@@ -274,7 +274,7 @@ a coin type <code>currency_code</code> is enqueued in the <code><a href="Diem.md
 the account at the address <code>preburn_address</code>.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnEvent">PreburnEvent</a>
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnEvent">PreburnEvent</a> has drop, store
 </code></pre>
 
 
@@ -317,7 +317,7 @@ preburn queue, but not burned). The currency of the funds is given by the
 <code>currency_code</code> as defined in the <code><a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a></code> for that currency.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_CancelBurnEvent">CancelBurnEvent</a>
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_CancelBurnEvent">CancelBurnEvent</a> has drop, store
 </code></pre>
 
 
@@ -358,7 +358,7 @@ An <code><a href="Diem.md#0x1_Diem_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRa
 rate for the currency given by <code>currency_code</code> is updated.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRateUpdateEvent</a>
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_ToXDXExchangeRateUpdateEvent">ToXDXExchangeRateUpdateEvent</a> has drop, store
 </code></pre>
 
 
@@ -401,7 +401,7 @@ the time of registration, the <code><a href="Diem.md#0x1_Diem_MintCapability">Mi
 Unless they are specified otherwise the fields in this resource are immutable.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -535,7 +535,7 @@ of a <code><a href="Diem.md#0x1_Diem_BurnCapability">BurnCapability</a></code> b
 the funds to the account that initiated the burn request.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_Preburn">Preburn</a>&lt;CoinType&gt; has store, key
 </code></pre>
 
 
@@ -565,7 +565,7 @@ A preburn request, along with (an opaque to Move) metadata that is
 associated with the preburn request.
 
 
-<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnWithMetadata">PreburnWithMetadata</a>&lt;CoinType&gt; has store
 </code></pre>
 
 
@@ -609,7 +609,7 @@ account, or during the upgrade process, by a designated dealer with an
 existing <code><a href="Diem.md#0x1_Diem_Preburn">Preburn</a></code> resource in <code>CoinType</code>
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="Diem.md#0x1_Diem_PreburnQueue">PreburnQueue</a>&lt;CoinType&gt; has key
 </code></pre>
 
 

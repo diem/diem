@@ -36,7 +36,7 @@ currencies it can hold. All <code><a href="DesignatedDealer.md#0x1_DesignatedDea
 currencies will be emitted on <code>mint_event_handle</code>.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a>
+<pre><code><b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_Dealer">Dealer</a> has key
 </code></pre>
 
 
@@ -66,7 +66,7 @@ tier a mint to a DD needs to be in.
 DEPRECATED: This resource is no longer used and will be removed from the system
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -106,7 +106,7 @@ DEPRECATED: This resource is no longer used and will be removed from the system
 Message for mint events
 
 
-<pre><code><b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
+<pre><code><b>struct</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a> has drop, store
 </code></pre>
 
 

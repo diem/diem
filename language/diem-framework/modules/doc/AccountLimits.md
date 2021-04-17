@@ -46,7 +46,7 @@ An operations capability that restricts callers of this module since
 the operations can mutate account states.
 
 
-<pre><code><b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>
+<pre><code><b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a> has store
 </code></pre>
 
 
@@ -78,7 +78,7 @@ different account limit definitons. In such cases, they will have a
 <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> published under their (root) account.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; has key
 </code></pre>
 
 
@@ -141,7 +141,7 @@ starting at <code>window_start</code> and lasting for the <code>time_period</cod
 in the limits definition at <code>limit_address</code>.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; has key
 </code></pre>
 
 

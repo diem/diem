@@ -45,7 +45,7 @@ the VASP's globally unique name and all of the metadata that other VASPs need to
 off-chain protocols with this one.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a>
+<pre><code><b>struct</b> <a href="VASP.md#0x1_VASP_ParentVASP">ParentVASP</a> has key
 </code></pre>
 
 
@@ -73,7 +73,7 @@ off-chain protocols with this one.
 A resource that represents a child account of the parent VASP account at <code>parent_vasp_addr</code>
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a>
+<pre><code><b>struct</b> <a href="VASP.md#0x1_VASP_ChildVASP">ChildVASP</a> has key
 </code></pre>
 
 

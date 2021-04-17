@@ -31,7 +31,7 @@ and MultiEd25519 (K-of-N multisig).
 A multi-ed25519 public key
 
 
-<pre><code><b>struct</b> <a href="Authenticator.md#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a>
+<pre><code><b>struct</b> <a href="Authenticator.md#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> has <b>copy</b>, drop, store
 </code></pre>
 
 

@@ -41,7 +41,7 @@ Abstraction of a value that may or may not be present. Implemented with a vector
 zero or one because Move bytecode does not have ADTs.
 
 
-<pre><code><b>struct</b> <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt;
+<pre><code><b>struct</b> <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; has <b>copy</b>, drop, store
 </code></pre>
 
 

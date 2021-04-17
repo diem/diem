@@ -40,7 +40,7 @@ The <code><a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a></cod
 fiat <code>CoinType</code> that can be collected as a transaction fee.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;
+<pre><code><b>struct</b> <a href="TransactionFee.md#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt; has key
 </code></pre>
 
 

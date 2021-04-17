@@ -45,7 +45,7 @@ Defines and holds the publishing policies for the VM. There are three possible c
 We represent these as the following resource.
 
 
-<pre><code><b>struct</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a>
+<pre><code><b>struct</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption">DiemTransactionPublishingOption</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -80,7 +80,7 @@ We represent these as the following resource.
 If published, halts transactions from all accounts except DiemRoot
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a>
+<pre><code><b>struct</b> <a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_HaltAllTransactions">HaltAllTransactions</a> has key
 </code></pre>
 
 

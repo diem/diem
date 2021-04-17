@@ -32,7 +32,7 @@ This module defines a struct storing the metadata of the block and new block eve
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemBlock.md#0x1_DiemBlock_BlockMetadata">BlockMetadata</a>
+<pre><code><b>struct</b> <a href="DiemBlock.md#0x1_DiemBlock_BlockMetadata">BlockMetadata</a> has key
 </code></pre>
 
 
@@ -65,7 +65,7 @@ This module defines a struct storing the metadata of the block and new block eve
 
 
 
-<pre><code><b>struct</b> <a href="DiemBlock.md#0x1_DiemBlock_NewBlockEvent">NewBlockEvent</a>
+<pre><code><b>struct</b> <a href="DiemBlock.md#0x1_DiemBlock_NewBlockEvent">NewBlockEvent</a> has drop, store
 </code></pre>
 
 

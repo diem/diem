@@ -54,7 +54,7 @@ and "configuration" are used for several distinct concepts.
 Information about a Validator Owner.
 
 
-<pre><code><b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem_ValidatorInfo">ValidatorInfo</a>
+<pre><code><b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem_ValidatorInfo">ValidatorInfo</a> has <b>copy</b>, drop, store
 </code></pre>
 
 
@@ -109,7 +109,7 @@ Only Diem root can add or remove a validator from the validator set, so the
 capability is not needed for access control in those functions.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem_CapabilityHolder">CapabilityHolder</a>
+<pre><code><b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem_CapabilityHolder">CapabilityHolder</a> has key
 </code></pre>
 
 
@@ -140,7 +140,7 @@ DiemConfig. The DiemSystem struct is stored by DiemConfig, which publishes a
 DiemConfig<DiemSystem> resource.
 
 
-<pre><code><b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a>
+<pre><code><b>struct</b> <a href="DiemSystem.md#0x1_DiemSystem">DiemSystem</a> has <b>copy</b>, drop, store
 </code></pre>
 
 

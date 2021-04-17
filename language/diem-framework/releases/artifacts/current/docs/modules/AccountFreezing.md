@@ -39,7 +39,7 @@ Module which manages freezing of accounts.
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a>
+<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezingBit">FreezingBit</a> has key
 </code></pre>
 
 
@@ -66,7 +66,7 @@ Module which manages freezing of accounts.
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>
+<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a> has key
 </code></pre>
 
 
@@ -100,7 +100,7 @@ Module which manages freezing of accounts.
 Message for freeze account events
 
 
-<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">FreezeAccountEvent</a>
+<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">FreezeAccountEvent</a> has drop, store
 </code></pre>
 
 
@@ -134,7 +134,7 @@ Message for freeze account events
 Message for unfreeze account events
 
 
-<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEvent">UnfreezeAccountEvent</a>
+<pre><code><b>struct</b> <a href="AccountFreezing.md#0x1_AccountFreezing_UnfreezeAccountEvent">UnfreezeAccountEvent</a> has drop, store
 </code></pre>
 
 
