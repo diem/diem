@@ -7,5 +7,6 @@ publish = false
 license = "Apache-2.0"
 
 [dependencies]
-datatest-stable = { path = "../../../common/datatest-stable" }
+datatest-stable = "0.1.1"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
+walkdir = "2.3.1"

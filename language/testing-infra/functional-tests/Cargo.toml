@@ -26,7 +26,7 @@ regex = { version = "1.4.3", default-features = false, features = ["std", "perf"
 thiserror = "1.0.24"
 aho-corasick = "0.7.14"
 termcolor = "1.1.2"
-datatest-stable = { path = "../../../common/datatest-stable" }
+datatest-stable = "0.1.1"
 mirai-annotations = "1.10.1"
 move-core-types = { path = "../../move-core/types" }
 diem-framework = { path = "../../diem-framework" }

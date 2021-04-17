@@ -1337,9 +1337,10 @@ dependencies = [
 
 [[package]]
 name = "datatest-stable"
-version = "0.1.0"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0ff02642cff6f40d39f61c8d51cb394fd313e1aa2057833b91ad788c4e9331f"
 dependencies = [
- "diem-workspace-hack",
  "regex",
  "structopt 0.3.21",
  "termcolor",
@@ -4402,6 +4403,7 @@ version = "0.1.0"
 dependencies = [
  "datatest-stable",
  "diem-workspace-hack",
+ "walkdir",
 ]
 
 [[package]]

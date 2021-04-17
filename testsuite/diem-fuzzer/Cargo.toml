@@ -54,7 +54,7 @@ vm = { path = "../../language/vm", features = ["fuzzing"] }
 rusty-fork = "0.3.0"
 stats_alloc = "0.1.8"
 
-datatest-stable = { path = "../../common/datatest-stable" }
+datatest-stable = "0.1.1"
 
 [[test]]
 harness = false

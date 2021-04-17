@@ -12,7 +12,7 @@ edition = "2018"
 [dev-dependencies]
 anyhow = "1.0.38"
 bytecode-verifier = { path = "../bytecode-verifier" }
-datatest-stable = { path = "../../common/datatest-stable" }
+datatest-stable = "0.1.1"
 functional-tests = { path = "../testing-infra/functional-tests" }
 ir-to-bytecode = { path = "../compiler/ir-to-bytecode" }
 diem-types = { path = "../../types" }

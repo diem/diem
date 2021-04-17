@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct StringError(String);
 
@@ -65,7 +65,7 @@ pub fn ir_tests() -> impl Iterator<Item = (String, String)> {
         .components()
         .map(|_| 1)
         .sum();
-    datatest_stable::utils::iterate_directory(Path::new(PATH_TO_IR_TESTS)).flat_map(move |path| {
+    iterate_directory(Path::new(PATH_TO_IR_TESTS)).flat_map(move |path| {
         if path.extension()?.to_str()? != IR_EXTENSION {
             return None;
         }
@@ -122,4 +122,18 @@ pub fn translated_ir_test_name(has_main: bool, subdir: &str, name: &str) -> Opti
     } else {
         Some(mc)
     }
+}
+
+fn iterate_directory(path: &Path) -> impl Iterator<Item = PathBuf> {
+    walkdir::WalkDir::new(path)
+        .into_iter()
+        .map(::std::result::Result::unwrap)
+        .filter(|entry| {
+            entry.file_type().is_file()
+                && entry
+                    .file_name()
+                    .to_str()
+                    .map_or(false, |s| !s.starts_with('.')) // Skip hidden files
+        })
+        .map(|entry| entry.path().to_path_buf())
 }

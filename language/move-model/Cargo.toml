@@ -29,7 +29,7 @@ anyhow = "1.0.38"
 serde = { version = "1.0.124", features = ["derive"] }
 
 [dev-dependencies]
-datatest-stable = { path = "../../common/datatest-stable" }
+datatest-stable = "0.1.1"
 move-prover-test-utils = { path = "../move-prover/test-utils" }
 
 [[test]]
