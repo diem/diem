@@ -42,6 +42,10 @@ pub enum TrustedStateChange<'a> {
 }
 
 impl TrustedState {
+    pub fn version(&self) -> Version {
+        self.verified_state.version()
+    }
+
     /// Verify and ratchet forward our trusted state using a `EpochChangeProof`
     /// (that moves us into the latest epoch) and a `LedgerInfoWithSignatures`
     /// inside that epoch.
@@ -74,7 +78,7 @@ impl TrustedState {
     ) -> Result<TrustedStateChange<'a>> {
         let res_version = latest_li.ledger_info().version();
         ensure!(
-            res_version >= self.latest_version(),
+            res_version >= self.version(),
             "The target latest ledger info is stale and behind our current trusted version",
         );
 
@@ -142,10 +146,6 @@ impl TrustedState {
                 Ok(TrustedStateChange::Version { new_state })
             }
         }
-    }
-
-    pub fn latest_version(&self) -> Version {
-        self.verified_state.version()
     }
 }
 

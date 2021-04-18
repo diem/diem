@@ -252,7 +252,7 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         _ => panic!("unexpected state change"),
     }
     let current_version = li.ledger_info().version();
-    assert_eq!(trusted_state.latest_version(), 9);
+    assert_eq!(trusted_state.version(), 9);
 
     let t1 = db
         .reader
@@ -420,10 +420,8 @@ pub fn test_execution_with_storage_impl() -> Arc<DiemDB> {
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
-    let (li, epoch_change_proof, _accumulator_consistency_proof) = db
-        .reader
-        .get_state_proof(trusted_state.latest_version())
-        .unwrap();
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(trusted_state.version()).unwrap();
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();

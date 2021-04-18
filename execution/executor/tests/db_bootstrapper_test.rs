@@ -376,10 +376,8 @@ fn test_new_genesis() {
 
     // Client bootable from waypoint.
     let trusted_state = TrustedState::from(waypoint);
-    let (li, epoch_change_proof, accumulator_consistency_proof) = db
-        .reader
-        .get_state_proof(trusted_state.latest_version())
-        .unwrap();
+    let (li, epoch_change_proof, accumulator_consistency_proof) =
+        db.reader.get_state_proof(trusted_state.version()).unwrap();
     assert_eq!(li.ledger_info().version(), 5);
     assert!(accumulator_consistency_proof.subtrees().is_empty());
     trusted_state

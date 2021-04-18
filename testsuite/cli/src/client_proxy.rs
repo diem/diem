@@ -1024,7 +1024,7 @@ impl ClientProxy {
     /// Get the latest version
     pub fn get_latest_version(&mut self) -> Version {
         self.client.update_and_verify_state_proof().unwrap();
-        self.client.trusted_state().latest_version()
+        self.client.trusted_state().version()
     }
 
     /// Get the latest annotated account resources from validator.

@@ -245,7 +245,7 @@ proptest! {
                 new_state,
                 latest_epoch_change_li,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
+                assert_eq!(new_state.version(), expected_latest_version);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
                 assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
             }
@@ -280,9 +280,9 @@ proptest! {
             TrustedStateChange::Version {
                 new_state,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
+                assert_eq!(new_state.version(), expected_latest_version);
             }
-            TrustedStateChange::NoChange => assert_eq!(trusted_state.latest_version(), expected_latest_version),
+            TrustedStateChange::NoChange => assert_eq!(trusted_state.version(), expected_latest_version),
         };
     }
 
@@ -320,14 +320,14 @@ proptest! {
                 new_state,
                 latest_epoch_change_li,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
+                assert_eq!(new_state.version(), expected_latest_version);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
                 assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
             }
             TrustedStateChange::Version {
                 new_state,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
+                assert_eq!(new_state.version(), expected_latest_version);
             }
             _ => (),
         };
@@ -400,7 +400,7 @@ proptest! {
                 new_state,
                 latest_epoch_change_li,
             } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
+                assert_eq!(new_state.version(), expected_latest_version);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
                 assert_eq!(latest_epoch_change_li.ledger_info().next_epoch_state(), expected_validator_set);
             }
@@ -453,7 +453,7 @@ proptest! {
         let good_li = latest_li.ledger_info();
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
 
-        if good_li.version() == trusted_state.latest_version() {
+        if good_li.version() == trusted_state.version() {
             // Verifying a latest ledger info (inside the last epoch) with
             // invalid data should fail.
             let bad_li = LedgerInfoWithSignatures::new(

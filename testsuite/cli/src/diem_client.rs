@@ -130,7 +130,7 @@ impl DiemClient {
     pub fn update_and_verify_state_proof(&mut self) -> Result<()> {
         let state_proof = self
             .client
-            .get_state_proof(self.trusted_state().latest_version())
+            .get_state_proof(self.trusted_state().version())
             .map(Response::into_inner)?;
 
         self.verify_state_proof(state_proof)
@@ -146,10 +146,10 @@ impl DiemClient {
 
         // check ledger info version
         ensure!(
-            li.ledger_info().version() >= state.latest_version(),
+            li.ledger_info().version() >= state.version(),
             "Got stale ledger_info with version {}, known version: {}",
             li.ledger_info().version(),
-            state.latest_version(),
+            state.version(),
         );
 
         // trusted_state_change
@@ -170,8 +170,8 @@ impl DiemClient {
                 self.update_latest_epoch_change_li(latest_epoch_change_li.clone());
             }
             TrustedStateChange::Version { new_state } => {
-                if state.latest_version() < new_state.latest_version() {
-                    info!("Verified version change to: {}", new_state.latest_version());
+                if state.version() < new_state.version() {
+                    info!("Verified version change to: {}", new_state.version());
                 }
                 self.update_trusted_state(new_state);
             }
