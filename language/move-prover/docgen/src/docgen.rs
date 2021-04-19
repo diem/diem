@@ -985,7 +985,7 @@ impl<'env> Docgen<'env> {
         // with the `key` ability.
         format!(
             "{} `{}`",
-            if struct_env.is_resource() {
+            if struct_env.has_memory() {
                 "Resource"
             } else {
                 "Struct"

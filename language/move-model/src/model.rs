@@ -2061,14 +2061,6 @@ impl<'env> StructEnv<'env> {
         name.as_ref() == "Vector" && addr == &BigUint::from(0_u64)
     }
 
-    // TODO(tmn) migrate to abilities
-    // NOTE(mengxu) there is still a use case of `is_resource` in the boogie translator, which
-    // makes it seemingly fine to keep it here as an abstraction to the boogie translator.
-    /// Determines whether this struct is a resource type.
-    pub fn is_resource(&self) -> bool {
-        self.get_abilities().has_key()
-    }
-
     /// Get the abilities of this struct.
     pub fn get_abilities(&self) -> AbilitySet {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
@@ -2078,6 +2070,11 @@ impl<'env> StructEnv<'env> {
             .module
             .struct_handle_at(def.struct_handle);
         handle.abilities
+    }
+
+    /// Determines whether memory-related operations needs to be declared for this struct.
+    pub fn has_memory(&self) -> bool {
+        self.get_abilities().has_key()
     }
 
     /// Get an iterator for the fields, ordered by offset.

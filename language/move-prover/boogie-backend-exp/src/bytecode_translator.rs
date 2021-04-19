@@ -484,7 +484,7 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
 
-        if struct_env.is_resource() {
+        if struct_env.has_memory() {
             // Emit memory variable.
             let memory_name =
                 boogie_resource_memory_name(env, struct_env.get_qualified_id(), &None);
