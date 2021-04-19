@@ -11,12 +11,17 @@ use diem_types::{
         NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent,
         ToXDXExchangeRateUpdateEvent,
     },
-    account_state_blob::AccountStateWithProof,
+    account_state::AccountState,
+    account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{AccountStateProof, AccumulatorConsistencyProof},
+    proof::{
+        AccountStateProof, AccumulatorConsistencyProof, SparseMerkleProof,
+        TransactionAccumulatorProof, TransactionInfoWithProof,
+    },
+    transaction::TransactionInfo,
 };
 use hex::FromHex;
 use move_core_types::{
@@ -182,6 +187,33 @@ impl AccountView {
             role: AccountRoleView::from(account_role),
             version: Some(version),
         }
+    }
+
+    pub fn try_from_account_state(
+        address: AccountAddress,
+        account_state: AccountState,
+        currency_codes: &[Identifier],
+        version: u64,
+    ) -> Result<Self> {
+        let account_resource = account_state
+            .get_account_resource()?
+            .ok_or_else(|| format_err!("invalid account state: no account resource"))?;
+        let freezing_bit = account_state
+            .get_freezing_bit()?
+            .ok_or_else(|| format_err!("invalid account state: no freezing bit"))?;
+        let account_role = account_state
+            .get_account_role(currency_codes)?
+            .ok_or_else(|| format_err!("invalid account state: no account role"))?;
+        let balances = account_state.get_balance_resources(currency_codes)?;
+
+        Ok(AccountView::new(
+            address,
+            &account_resource,
+            balances,
+            account_role,
+            freezing_bit,
+            version,
+        ))
     }
 }
 
@@ -814,6 +846,24 @@ impl
     }
 }
 
+impl TryFrom<&StateProofView>
+    for (
+        LedgerInfoWithSignatures,
+        EpochChangeProof,
+        AccumulatorConsistencyProof,
+    )
+{
+    type Error = Error;
+
+    fn try_from(state_proof_view: &StateProofView) -> Result<Self, Self::Error> {
+        Ok((
+            bcs::from_bytes(state_proof_view.ledger_info_with_signatures.inner())?,
+            bcs::from_bytes(state_proof_view.epoch_change_proof.inner())?,
+            bcs::from_bytes(state_proof_view.ledger_consistency_proof.inner())?,
+        ))
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AccountStateWithProofView {
     pub version: u64,
@@ -837,6 +887,23 @@ impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
             blob,
             proof: AccountStateProofView::try_from(account_state_with_proof.proof)?,
         })
+    }
+}
+
+impl TryFrom<&AccountStateWithProofView> for AccountStateWithProof {
+    type Error = Error;
+
+    fn try_from(
+        account_state_with_proof_view: &AccountStateWithProofView,
+    ) -> Result<AccountStateWithProof, Self::Error> {
+        let blob = if let Some(blob_view) = &account_state_with_proof_view.blob {
+            Some(bcs::from_bytes(blob_view.as_ref())?)
+        } else {
+            None
+        };
+        let version = account_state_with_proof_view.version;
+        let proof = AccountStateProof::try_from(&account_state_with_proof_view.proof)?;
+        Ok(AccountStateWithProof::new(version, blob, proof))
     }
 }
 
@@ -866,6 +933,34 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
                 account_state_proof.transaction_info_to_account_proof(),
             )?),
         })
+    }
+}
+
+impl TryFrom<&AccountStateProofView> for AccountStateProof {
+    type Error = Error;
+
+    fn try_from(
+        account_state_proof_view: &AccountStateProofView,
+    ) -> Result<AccountStateProof, Self::Error> {
+        let ledger_info_to_transaction_info_proof: TransactionAccumulatorProof = bcs::from_bytes(
+            &account_state_proof_view
+                .ledger_info_to_transaction_info_proof
+                .as_ref(),
+        )?;
+        let transaction_info: TransactionInfo =
+            bcs::from_bytes(&account_state_proof_view.transaction_info.as_ref())?;
+        let transaction_info_with_proof =
+            TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, transaction_info);
+        let transaction_info_to_account_proof: SparseMerkleProof<AccountStateBlob> =
+            bcs::from_bytes(
+                &account_state_proof_view
+                    .transaction_info_to_account_proof
+                    .as_ref(),
+            )?;
+        Ok(AccountStateProof::new(
+            transaction_info_with_proof,
+            transaction_info_to_account_proof,
+        ))
     }
 }
 

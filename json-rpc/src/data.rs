@@ -96,33 +96,19 @@ pub fn get_account(
         Some(val) => val,
         None => return Ok(None),
     };
-    let account_resource = account_state
-        .get_account_resource()?
-        .ok_or_else(|| format_err!("invalid account data: no account resource"))?;
-    let freezing_bit = account_state
-        .get_freezing_bit()?
-        .ok_or_else(|| format_err!("invalid account data: no freezing bit"))?;
 
-    let currency_info = get_currencies(db, ledger_version)?;
-    let currencies: Vec<_> = currency_info
+    let currencies = get_currencies(db, ledger_version)?;
+    let currency_codes: Vec<_> = currencies
         .into_iter()
         .map(|info| from_currency_code_string(&info.code))
         .collect::<Result<_, _>>()?;
 
-    let account_role = account_state
-        .get_account_role(&currencies)?
-        .ok_or_else(|| format_err!("invalid account data: no account role"))?;
-
-    let balances = account_state.get_balance_resources(&currencies)?;
-
-    Ok(Some(AccountView::new(
+    Ok(Some(AccountView::try_from_account_state(
         account_address,
-        &account_resource,
-        balances,
-        account_role,
-        freezing_bit,
+        account_state,
+        &currency_codes,
         version,
-    )))
+    )?))
 }
 
 /// Returns transactions by range
