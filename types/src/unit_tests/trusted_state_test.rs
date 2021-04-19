@@ -13,6 +13,7 @@ use crate::{
     validator_verifier::{random_validator_verifier, ValidatorConsensusInfo, ValidatorVerifier},
     waypoint::Waypoint,
 };
+use bcs::test_helpers::assert_canonical_encode_decode;
 use diem_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use proptest::{
     collection::{size_range, vec, SizeRange},
@@ -213,6 +214,11 @@ fn arb_update_proof(
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]
+
+    #[test]
+    fn test_trusted_state_roundtrip_canonical_serialization(trusted_state in any::<TrustedState>()) {
+        assert_canonical_encode_decode(trusted_state);
+    }
 
     #[test]
     fn test_ratchet_from(
