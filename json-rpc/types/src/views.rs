@@ -444,7 +444,7 @@ pub struct MetadataView {
     pub dual_attestation_limit: Option<u64>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct BytesView(Box<[u8]>);
 
 impl BytesView {
@@ -480,8 +480,13 @@ impl std::fmt::Display for BytesView {
         for byte in self.inner() {
             write!(f, "{:02x}", byte)?;
         }
-
         Ok(())
+    }
+}
+
+impl std::fmt::Debug for BytesView {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "BytesView(\"{}\")", self)
     }
 }
 
