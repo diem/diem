@@ -28,6 +28,11 @@ pub use request::{JsonRpcRequest, MethodRequest};
 mod response;
 pub use response::{MethodResponse, Response};
 
+cfg_async_or_blocking! {
+    mod move_deserialize;
+    pub use move_deserialize::Event;
+}
+
 mod state;
 pub use state::State;
 

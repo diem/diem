@@ -9,6 +9,7 @@ use super::{
 };
 use crate::{
     error::WaitForTransactionError,
+    move_deserialize::{self, Event},
     views::{
         AccountStateWithProofView, AccountView, CurrencyInfoView, EventView, EventWithProofView,
         MetadataView, StateProofView, TransactionView, TransactionsWithProofsView,
@@ -18,8 +19,10 @@ use crate::{
 use diem_crypto::{hash::CryptoHash, HashValue};
 use diem_types::{
     account_address::AccountAddress,
+    event::EventKey,
     transaction::{SignedTransaction, Transaction},
 };
+use move_core_types::move_resource::MoveResource;
 use reqwest::Client as ReqwestClient;
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
@@ -251,6 +254,42 @@ impl Client {
     ) -> Result<Response<Vec<EventWithProofView>>> {
         self.send(MethodRequest::get_events_with_proofs(key, start_seq, limit))
             .await
+    }
+
+    /// Return the events of type `T` that have been emitted to `event_key` since `start_seq`, with a max of `limit`
+    /// results
+    /// Returns an empty vector if there are no such events
+    /// The type `T` must match the event types associated with `event_key`
+    pub async fn get_deserialized_events<T: MoveResource + DeserializeOwned>(
+        &self,
+        event_key: &EventKey,
+        start_seq: u64,
+        limit: u64,
+    ) -> Result<Response<Vec<Event<T>>>> {
+        let (events, state) = self
+            .get_events_with_proofs(&hex::encode(event_key.as_bytes()), start_seq, limit)
+            .await?
+            .into_parts();
+        Ok(Response::new(
+            move_deserialize::get_events::<T>(events)?,
+            state,
+        ))
+    }
+
+    /// Deserialize and return the resource value of type `T` stored under `address`
+    /// Returns None if there is no such value
+    pub async fn get_deserialized_resource<T: MoveResource + DeserializeOwned>(
+        &self,
+        address: AccountAddress,
+    ) -> Result<Response<Option<T>>> {
+        let (account, state) = self
+            .get_account_state_with_proof(address, None, None)
+            .await?
+            .into_parts();
+        Ok(Response::new(
+            move_deserialize::get_resource(account)?,
+            state,
+        ))
     }
 
     //

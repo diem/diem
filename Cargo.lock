@@ -1437,6 +1437,7 @@ dependencies = [
  "diem-workspace-hack",
  "hex",
  "ipnet",
+ "move-core-types",
  "reqwest",
  "serde",
  "serde_json",

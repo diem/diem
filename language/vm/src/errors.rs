@@ -402,3 +402,9 @@ pub fn bounds_error(
 pub fn verification_error(status: StatusCode, kind: IndexKind, idx: TableIndex) -> PartialVMError {
     PartialVMError::new(status).at_index(kind, idx)
 }
+
+impl std::error::Error for PartialVMError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
