@@ -12,7 +12,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: labels
-        uses: diem/actions/hyperjump-labels@26629aba5897746c40697c786d71635767f87cda
+        uses: diem/actions/hyperjump-labels@a5fa31ff2b54a544cd88ac912cda469742592e6c
         with:
           github-token: ${{ secrets.HYPERJUMP_TOKEN }}
           number: ${{ github.event.client_payload.number }}
