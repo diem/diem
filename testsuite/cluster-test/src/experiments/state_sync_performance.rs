@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use diem_logger::info;
 use std::time::Instant;
 
-const EXPERIMENT_DURATION_TIMEOUT_SECS: u64 = 600;
+const EXPERIMENT_DURATION_TIMEOUT_SECS: u64 = 1000;
 const STATE_SYNC_COMMITTED_COUNTER_NAME: &str = "diem_state_sync_version.synced";
 
 #[derive(StructOpt, Debug)]
