@@ -125,13 +125,13 @@ pub fn run_model_builder(
             collect_related_modules_recursive(mident, &expansion_ast.modules, &mut visited_modules);
         }
     }
-    for sdef in expansion_ast.scripts.values() {
+    for (_, sdef) in expansion_ast.scripts {
         let src_file = sdef.loc.file();
         if !dep_sources.contains(src_file) {
             selective_files.insert(src_file.to_owned());
-            for mident in &sdef.dependency_summary {
+            for neighbor in sdef.immediate_neighbors {
                 collect_related_modules_recursive(
-                    mident.clone(),
+                    neighbor.into_module_ident(),
                     &expansion_ast.modules,
                     &mut visited_modules,
                 );
@@ -212,7 +212,11 @@ fn collect_related_modules_recursive(
         return;
     }
     let mdef = modules.get(&mident).unwrap();
-    let deps: BTreeSet<_> = mdef.dependency_summary.iter().cloned().collect();
+    let deps: BTreeSet<_> = mdef
+        .immediate_neighbors
+        .iter()
+        .map(|neighbor| neighbor.clone().into_module_ident())
+        .collect();
     visited.insert(mident);
     for next_mident in deps {
         collect_related_modules_recursive(next_mident, modules, visited);
@@ -312,7 +316,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                     let move_lang::expansion::ast::Script {
                         attributes,
                         loc,
-                        dependency_summary,
+                        immediate_neighbors,
                         function_name,
                         constants,
                         function,
@@ -343,7 +347,7 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
                         attributes,
                         loc,
                         dependency_order: usize::MAX,
-                        dependency_summary,
+                        immediate_neighbors,
                         is_source_module: true,
                         friends: UniqueMap::new(),
                         structs: UniqueMap::new(),

@@ -51,7 +51,7 @@ pub type Attribute = Spanned<Attribute_>;
 pub struct Script {
     pub attributes: Vec<Attribute>,
     pub loc: Loc,
-    pub dependency_summary: BTreeSet<ModuleIdent>,
+    pub immediate_neighbors: BTreeSet<Neighbor>,
     pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
@@ -70,7 +70,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     /// `dependency_order` is initialized at `0` and set in the uses pass
     pub dependency_order: usize,
-    pub dependency_summary: BTreeSet<ModuleIdent>,
+    pub immediate_neighbors: BTreeSet<Neighbor>,
     pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
@@ -78,10 +78,20 @@ pub struct ModuleDefinition {
     pub specs: Vec<SpecBlock>,
 }
 
+//**************************************************************************************************
+// Friend
+//**************************************************************************************************
+
 #[derive(Debug, Clone)]
 pub struct Friend {
     pub attributes: Vec<Attribute>,
     pub loc: Loc,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Neighbor {
+    Dependency(ModuleIdent),
+    Friend(ModuleIdent),
 }
 
 //**************************************************************************************************
@@ -362,6 +372,15 @@ impl SpecId {
     }
 }
 
+impl Neighbor {
+    pub fn into_module_ident(self) -> ModuleIdent {
+        match self {
+            Neighbor::Dependency(mident) => mident,
+            Neighbor::Friend(mident) => mident,
+        }
+    }
+}
+
 impl AbilitySet {
     /// All abilities
     pub const ALL: [Ability_; 4] = [
@@ -619,16 +638,16 @@ impl AstDebug for Script {
         let Script {
             attributes,
             loc: _loc,
-            dependency_summary,
+            immediate_neighbors,
             constants,
             function_name,
             function,
             specs,
         } = self;
         attributes.ast_debug(w);
-        w.write("dependency summary: [");
-        w.list(dependency_summary, ", ", |w, dep| {
-            w.write(&format!("{}", dep));
+        w.write("immediate neighbors: [");
+        w.list(immediate_neighbors, ", ", |w, neighbor| {
+            neighbor.ast_debug(w);
             false
         });
         w.writeln("]");
@@ -651,7 +670,7 @@ impl AstDebug for ModuleDefinition {
             loc: _loc,
             is_source_module,
             dependency_order,
-            dependency_summary,
+            immediate_neighbors,
             friends,
             structs,
             functions,
@@ -665,9 +684,9 @@ impl AstDebug for ModuleDefinition {
             "library module"
         });
         w.writeln(&format!("dependency order #{}", dependency_order));
-        w.write("dependency summary: [");
-        w.list(dependency_summary, ", ", |w, dep| {
-            w.write(&format!("{}", dep));
+        w.write("immediate neighbors: [");
+        w.list(immediate_neighbors, ", ", |w, neighbor| {
+            neighbor.ast_debug(w);
             false
         });
         w.writeln("]");
@@ -690,6 +709,15 @@ impl AstDebug for ModuleDefinition {
         for spec in specs {
             spec.ast_debug(w);
             w.new_line();
+        }
+    }
+}
+
+impl AstDebug for Neighbor {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            Neighbor::Dependency(mident) => w.write(&format!("{} (dependency)", mident)),
+            Neighbor::Friend(mident) => w.write(&format!("{} (friend)", mident)),
         }
     }
 }

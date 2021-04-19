@@ -331,7 +331,7 @@ fn module_(context: &mut Context, mdef: P::ModuleDefinition) -> (ModuleIdent, E:
         loc,
         is_source_module: context.is_source_module,
         dependency_order: 0,
-        dependency_summary: BTreeSet::new(),
+        immediate_neighbors: BTreeSet::new(),
         friends,
         structs,
         constants,
@@ -406,7 +406,7 @@ fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
     E::Script {
         attributes,
         loc,
-        dependency_summary: BTreeSet::new(),
+        immediate_neighbors: BTreeSet::new(),
         constants,
         function_name,
         function,

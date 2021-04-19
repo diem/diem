@@ -9,7 +9,7 @@ use crate::{
 };
 use move_ir_types::location::*;
 use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
 // Entry
@@ -27,7 +27,7 @@ pub fn verify(
 
     let Context {
         module_neighbors,
-        script_neighbors,
+        neighbors_by_node,
         ..
     } = context;
     let graph = dependency_graph(&module_neighbors);
@@ -44,34 +44,15 @@ pub fn verify(
             }
         }
     }
-
-    for (node, neighbor_nodes) in module_neighbors {
-        for (neighbor_node, relations) in neighbor_nodes {
-            for dep_type in relations.keys() {
-                match dep_type {
-                    DepType::Use => modules
-                        .get_mut(&node)
-                        .unwrap()
-                        .dependency_summary
-                        .insert(neighbor_node.clone()),
-                    DepType::Friend => modules
-                        .get_mut(&neighbor_node)
-                        .unwrap()
-                        .dependency_summary
-                        .insert(node.clone()),
-                };
+    for (node, neighbors) in neighbors_by_node {
+        match node {
+            NodeIdent::Module(mident) => {
+                modules.get_mut(&mident).unwrap().immediate_neighbors = neighbors;
+            }
+            NodeIdent::Script(sname) => {
+                scripts.get_mut(&sname).unwrap().immediate_neighbors = neighbors;
             }
         }
-    }
-    for (node, neighbor_nodes) in script_neighbors {
-        let deps = neighbor_nodes
-            .into_iter()
-            .map(|(neighbor_node, _)| neighbor_node);
-        scripts
-            .get_mut(&node)
-            .unwrap()
-            .dependency_summary
-            .extend(deps);
     }
 }
 
@@ -81,20 +62,24 @@ enum DepType {
     Friend,
 }
 
-#[derive(Clone)]
-enum ModuleIdentOrScriptName {
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
+enum NodeIdent {
     Module(ModuleIdent),
     Script(String),
 }
 
 struct Context<'a> {
     modules: &'a UniqueMap<ModuleIdent, E::ModuleDefinition>,
-    // A union of uses and friends:
+    // A union of uses and friends for modules (used for cyclyc dependency checking)
     // - if A uses B,    add edge A -> B
     // - if A friends B, add edge B -> A
+    // NOTE: neighbors of scripts are not tracked by this field, as nothing can depend on a script
+    // and a script cannot declare friends. Hence, is no way to form a cyclic dependency via scripts
     module_neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
-    script_neighbors: BTreeMap<String, BTreeMap<ModuleIdent, Loc>>,
-    current: Option<ModuleIdentOrScriptName>,
+    // A summary of neighbors keyed by module or script
+    neighbors_by_node: BTreeMap<NodeIdent, BTreeSet<E::Neighbor>>,
+    // The module or script we are currently exploring
+    current_node: Option<NodeIdent>,
 }
 
 impl<'a> Context<'a> {
@@ -102,17 +87,36 @@ impl<'a> Context<'a> {
         Context {
             modules,
             module_neighbors: BTreeMap::new(),
-            script_neighbors: BTreeMap::new(),
-            current: None,
+            neighbors_by_node: BTreeMap::new(),
+            current_node: None,
         }
     }
 
     fn add_neighbor(&mut self, mident: ModuleIdent, dep_type: DepType, loc: Loc) {
-        match self.current.clone().unwrap() {
-            ModuleIdentOrScriptName::Module(current_mident) => {
-                if current_mident == mident || !self.modules.contains_key(&mident) {
-                    return;
-                }
+        if !self.modules.contains_key(&mident) {
+            // as the dependency checking happens before the naming phase, it is possible to refer
+            // to a module with a ModuleIdent outside of the compilation context. Do not add such
+            // modules as neighbors.
+            return;
+        }
+
+        let current = self.current_node.clone().unwrap();
+        if matches!(&current, NodeIdent::Module(current_mident) if &mident == current_mident) {
+            // do not add the module itself as a neighbor
+            return;
+        }
+
+        let neighbor = match dep_type {
+            DepType::Use => E::Neighbor::Dependency(mident.clone()),
+            DepType::Friend => E::Neighbor::Friend(mident.clone()),
+        };
+        self.neighbors_by_node
+            .entry(current.clone())
+            .or_insert_with(BTreeSet::new)
+            .insert(neighbor);
+
+        match current {
+            NodeIdent::Module(current_mident) => {
                 let (node, new_neighbor) = match dep_type {
                     DepType::Use => (current_mident, mident),
                     DepType::Friend => (mident, current_mident),
@@ -128,13 +132,7 @@ impl<'a> Context<'a> {
                 }
                 m.insert(dep_type, loc);
             }
-            ModuleIdentOrScriptName::Script(current_sname) => {
-                assert!(matches!(dep_type, DepType::Use));
-                self.script_neighbors
-                    .entry(current_sname)
-                    .or_insert_with(BTreeMap::new)
-                    .insert(mident, loc);
-            }
+            NodeIdent::Script(_) => (),
         }
     }
 
@@ -228,7 +226,7 @@ fn module_defs(context: &mut Context, modules: &UniqueMap<ModuleIdent, E::Module
 }
 
 fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition) {
-    context.current = Some(ModuleIdentOrScriptName::Module(mident));
+    context.current_node = Some(NodeIdent::Module(mident));
     mdef.friends
         .key_cloned_iter()
         .for_each(|(mident, friend)| context.add_friend(mident, friend.loc));
@@ -247,6 +245,9 @@ fn module(context: &mut Context, mident: ModuleIdent, mdef: &E::ModuleDefinition
 // Scripts
 //**************************************************************************************************
 
+// Scripts cannot affect the dependency graph because 1) a script cannot friend anything and 2)
+// nothing can depends on a script. Therefore, we iterate over the scripts just to collect their
+// immediate dependencies.
 fn script_defs(context: &mut Context, scripts: &BTreeMap<String, E::Script>) {
     scripts
         .iter()
@@ -254,7 +255,7 @@ fn script_defs(context: &mut Context, scripts: &BTreeMap<String, E::Script>) {
 }
 
 fn script(context: &mut Context, sname: String, sdef: &E::Script) {
-    context.current = Some(ModuleIdentOrScriptName::Script(sname));
+    context.current_node = Some(NodeIdent::Script(sname));
     function(context, &sdef.function);
     sdef.specs
         .iter()
@@ -499,23 +500,23 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
         // The `pragma friend = <address::module_name::function_name>` notion exists before the
         // `friend` feature is implemented as a language feature. And it may still have a use case,
         // that is, to friend a module that is compiled with other modules but not published.
-
-        // One example in the context of the Diem Framework is the `Genesis` module. As of now, the
-        // `Genesis` module is not published on chain. Therefore, we cannot really declare
-        // `friend Genesis;` in any module, because that will lead to linking error (the loader is
-        // unable to find `Genesis`). But the prover side still needs to know that `Genesis` is a
-        // friend (to verify global invariants). So, the `pragma friend = ...` syntax might need to
-        // stay. And for that, we need to add the module that is declared as a friend in the
-        // `immediate_neighbors`.
+        //
+        // To illustrate, suppose we have module `A` and `B` compiled and proved together locally,
+        // but for some reason, module `A` is not published on-chain. In this case, we cannot
+        // declare `friend A;` in module `B` because that will lead to a linking error (the loader
+        // is unable to find module `A`). But the prover side still needs to know that `A` is a
+        // friend of `B` (e.g., to verify global invariants). So, the `pragma friend = ...` syntax
+        // might need to stay for this purpose. And for that, we need to add the module that is
+        // declared as a friend in the `immediate_neighbors`.
         M::Pragma { properties } => {
             for prop in properties {
                 let pragma = &prop.value;
                 if pragma.name.value == "friend" {
                     match &pragma.value {
-                        None => {}
-                        Some(E::PragmaValue::Literal(_)) => {}
+                        None => (),
+                        Some(E::PragmaValue::Literal(_)) => (),
                         Some(E::PragmaValue::Ident(maccess)) => match &maccess.value {
-                            E::ModuleAccess_::Name(_) => {}
+                            E::ModuleAccess_::Name(_) => (),
                             E::ModuleAccess_::ModuleAccess(mident, _) => {
                                 context.add_friend(mident.clone(), maccess.loc);
                             }
@@ -524,6 +525,6 @@ fn spec_block_member(context: &mut Context, sp!(_, sbm_): &E::SpecBlockMember) {
                 }
             }
         }
-        M::Variable { .. } => {}
+        M::Variable { .. } => (),
     }
 }
