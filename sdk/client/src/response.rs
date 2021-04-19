@@ -38,6 +38,17 @@ impl<T> Response<T> {
     pub fn into_parts(self) -> (T, State) {
         (self.inner, self.state)
     }
+
+    pub fn and_then<U, E, F>(self, f: F) -> Result<Response<U>, E>
+    where
+        F: FnOnce(T) -> Result<U, E>,
+    {
+        let (inner, state) = self.into_parts();
+        match f(inner) {
+            Ok(new_inner) => Ok(Response::new(new_inner, state)),
+            Err(err) => Err(err),
+        }
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -116,6 +127,20 @@ impl MethodResponse {
                 "expected MethodResponse::GetAccount found MethodResponse::{:?}",
                 self.method()
             );
+        }
+    }
+
+    pub fn try_into_get_state_proof(self) -> Result<StateProofView, Error> {
+        match self {
+            MethodResponse::GetStateProof(state_proof) => Ok(state_proof),
+            _ => Err(Error::rpc_response("unexpected response")),
+        }
+    }
+
+    pub fn try_into_get_account(self) -> Result<Option<AccountView>, Error> {
+        match self {
+            MethodResponse::GetAccount(account_view) => Ok(account_view),
+            _ => Err(Error::rpc_response("unexpected response")),
         }
     }
 }

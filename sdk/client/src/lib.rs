@@ -15,6 +15,9 @@ cfg_blocking! {
 cfg_async! {
     mod client;
     pub use client::Client;
+
+    mod verifying_client;
+    pub use verifying_client::{Storage, InMemoryStorage, VerifyingClient};
 }
 
 cfg_faucet! {
