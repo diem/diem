@@ -1,0 +1,124 @@
+============ initial translation from Move ================
+
+[variant baseline]
+public fun BoolFootprint::call_get($t0|a: address) {
+     var $t1|tmp#$1: bool
+     var $t2|tmp#$2: u64
+     var $t3: address
+     var $t4: bool
+     var $t5: bool
+     var $t6: u64
+  0: $t3 := copy($t0)
+  1: $t4 := BoolFootprint::global_get($t3)
+  2: $t1 := $t4
+  3: $t5 := move($t1)
+  4: if ($t5) goto 8 else goto 5
+  5: label L1
+  6: $t6 := 22
+  7: abort($t6)
+  8: label L0
+  9: return ()
+}
+
+
+[variant baseline]
+public fun BoolFootprint::global_get($t0|a: address): bool {
+     var $t1|tmp#$1: bool
+     var $t2: address
+     var $t3: bool
+     var $t4: address
+     var $t5: &BoolFootprint::B
+     var $t6: &bool
+     var $t7: bool
+     var $t8: bool
+     var $t9: bool
+  0: $t2 := copy($t0)
+  1: $t3 := exists<BoolFootprint::B>($t2)
+  2: if ($t3) goto 5 else goto 3
+  3: label L1
+  4: goto 12
+  5: label L0
+  6: $t4 := copy($t0)
+  7: $t5 := borrow_global<BoolFootprint::B>($t4)
+  8: $t6 := borrow_field<BoolFootprint::B>.b($t5)
+  9: $t7 := read_ref($t6)
+ 10: $t1 := $t7
+ 11: goto 16
+ 12: label L2
+ 13: $t8 := false
+ 14: $t1 := $t8
+ 15: goto 16
+ 16: label L3
+ 17: $t9 := move($t1)
+ 18: return $t9
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+public fun BoolFootprint::call_get($t0|a: address) {
+     var $t1|tmp#$1: bool
+     var $t2|tmp#$2: u64
+     var $t3: address
+     var $t4: bool
+     var $t5: bool
+     var $t6: u64
+     # Accesses:
+     # Formal(0)/0x1::BoolFootprint::B: Read
+     # Formal(0)/0x1::BoolFootprint::B/b: Read
+     #
+     # Locals:
+     #
+  0: $t3 := copy($t0)
+  1: $t4 := BoolFootprint::global_get($t3)
+  2: $t1 := $t4
+  3: $t5 := move($t1)
+  4: if ($t5) goto 8 else goto 5
+  5: label L1
+  6: $t6 := 22
+  7: abort($t6)
+  8: label L0
+  9: return ()
+}
+
+
+[variant baseline]
+public fun BoolFootprint::global_get($t0|a: address): bool {
+     var $t1|tmp#$1: bool
+     var $t2: address
+     var $t3: bool
+     var $t4: address
+     var $t5: &BoolFootprint::B
+     var $t6: &bool
+     var $t7: bool
+     var $t8: bool
+     var $t9: bool
+     # Accesses:
+     # Formal(0)/0x1::BoolFootprint::B: Read
+     # Formal(0)/0x1::BoolFootprint::B/b: Read
+     #
+     # Locals:
+     # Formal(0): Formal(0)
+     # Formal(0)/0x1::BoolFootprint::B/b: Formal(0)/0x1::BoolFootprint::B/b
+     # Ret(0): Formal(0)/0x1::BoolFootprint::B/b
+     #
+  0: $t2 := copy($t0)
+  1: $t3 := exists<BoolFootprint::B>($t2)
+  2: if ($t3) goto 5 else goto 3
+  3: label L1
+  4: goto 12
+  5: label L0
+  6: $t4 := copy($t0)
+  7: $t5 := borrow_global<BoolFootprint::B>($t4)
+  8: $t6 := borrow_field<BoolFootprint::B>.b($t5)
+  9: $t7 := read_ref($t6)
+ 10: $t1 := $t7
+ 11: goto 16
+ 12: label L2
+ 13: $t8 := false
+ 14: $t1 := $t8
+ 15: goto 16
+ 16: label L3
+ 17: $t9 := move($t1)
+ 18: return $t9
+}

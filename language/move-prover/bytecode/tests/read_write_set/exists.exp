@@ -80,7 +80,7 @@ public fun Exists::call_with_type_param1($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
-     # Loc(0)/0x2::Exists::V<0x2::Exists::T>: Read
+     # Formal(0)/0x2::Exists::V<0x2::Exists::T>: Read
      #
      # Locals:
      #
@@ -95,7 +95,7 @@ public fun Exists::call_with_type_param2<$tv0, $tv1>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
-     # Loc(0)/Exists::V<#1>: Read
+     # Formal(0)/Exists::V<#1>: Read
      #
      # Locals:
      #
@@ -127,12 +127,12 @@ public fun Exists::exists_field($t0|s: &Exists::S): bool {
      var $t3: address
      var $t4: bool
      # Accesses:
-     # Loc(0)/f: Read
-     # Loc(0)/f/0x2::Exists::T: Read
+     # Formal(0)/f: Read
+     # Formal(0)/f/0x2::Exists::T: Read
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: Loc(0)/f
+     # Formal(0): Formal(0)
+     # Formal(0)/f: Formal(0)/f
      #
   0: $t1 := move($t0)
   1: $t2 := borrow_field<Exists::S>.f($t1)
@@ -147,7 +147,7 @@ public fun Exists::exists_formal($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
-     # Loc(0)/0x2::Exists::T: Read
+     # Formal(0)/0x2::Exists::T: Read
      #
      # Locals:
      #
@@ -162,7 +162,7 @@ public fun Exists::exists_generic<$tv0>($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
-     # Loc(0)/Exists::V<#0>: Read
+     # Formal(0)/Exists::V<#0>: Read
      #
      # Locals:
      #
@@ -177,7 +177,7 @@ public fun Exists::exists_generic_instantiated($t0|a: address): bool {
      var $t1: address
      var $t2: bool
      # Accesses:
-     # Loc(0)/0x2::Exists::V<0x2::Exists::T>: Read
+     # Formal(0)/0x2::Exists::V<0x2::Exists::T>: Read
      #
      # Locals:
      #

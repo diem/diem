@@ -2,19 +2,19 @@ Command `publish --mode bare`:
 Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/RWSet.mv read_f --mode bare -v`:
 Inferring read/write set for 1 module(s)
 Accesses:
-Loc(0)/f: Read
+Formal(0)/f: Read
 
 Locals:
-Loc(0): Loc(0)
-Loc(0)/f: Loc(0)/f
-Ret(0): Loc(0)/f
+Formal(0): Formal(0)
+Formal(0)/f: Formal(0)/f
+Ret(0): Formal(0)/f
 
 Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/RWSet.mv write_f --mode bare -v`:
 Inferring read/write set for 1 module(s)
 Accesses:
-Loc(0)/f: Write
+Formal(0)/f: Write
 
 Locals:
-Loc(0): Loc(0)
-Loc(0)/f: Loc(0)/f
+Formal(0): Formal(0)
+Formal(0)/f: Formal(0)/f
 

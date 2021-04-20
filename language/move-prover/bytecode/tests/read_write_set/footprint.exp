@@ -93,7 +93,7 @@ public fun Footprint::reassign_cond($t0|a: address, $t1|b: bool): address {
      # Accesses:
      #
      # Locals:
-     # Ret(0): {0x2, Loc(0), }
+     # Ret(0): {0x2, Formal(0), }
      #
   0: $t2 := copy($t1)
   1: if ($t2) goto 4 else goto 2
@@ -133,11 +133,11 @@ public fun Footprint::reassign_field($t0|s: &mut Footprint::S) {
      var $t2: &mut Footprint::S
      var $t3: &mut address
      # Accesses:
-     # Loc(0)/f: Write
+     # Formal(0)/f: Write
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: 0x2
+     # Formal(0): Formal(0)
+     # Formal(0)/f: 0x2
      #
   0: $t1 := 0x2
   1: $t2 := move($t0)
@@ -155,11 +155,11 @@ public fun Footprint::reassign_field_cond($t0|s: &mut Footprint::S, $t1|b: bool)
      var $t5: &mut address
      var $t6: &mut Footprint::S
      # Accesses:
-     # Loc(0)/f: Write
+     # Formal(0)/f: Write
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: {0x2, Loc(0)/f, }
+     # Formal(0): Formal(0)
+     # Formal(0)/f: {0x2, Formal(0)/f, }
      #
   0: $t2 := copy($t1)
   1: if ($t2) goto 4 else goto 2
@@ -187,7 +187,7 @@ public fun Footprint::reassign_other_param($t0|a1: address, $t1|a2: address): ad
      # Accesses:
      #
      # Locals:
-     # Ret(0): Loc(1)
+     # Ret(0): Formal(1)
      #
   0: $t2 := copy($t1)
   1: $t0 := $t2

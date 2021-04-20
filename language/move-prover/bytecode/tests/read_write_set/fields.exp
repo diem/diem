@@ -31,12 +31,12 @@ public fun Fields::borrow_read($t0|s: &Fields::S): u64 {
      var $t2: &u64
      var $t3: u64
      # Accesses:
-     # Loc(0)/f: Read
+     # Formal(0)/f: Read
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: Loc(0)/f
-     # Ret(0): Loc(0)/f
+     # Formal(0): Formal(0)
+     # Formal(0)/f: Formal(0)/f
+     # Ret(0): Formal(0)/f
      #
   0: $t1 := move($t0)
   1: $t2 := borrow_field<Fields::S>.f($t1)
@@ -51,12 +51,12 @@ public fun Fields::borrow_read_generic<$tv0>($t0|t: &Fields::T<#0>): u64 {
      var $t2: &u64
      var $t3: u64
      # Accesses:
-     # Loc(0)/f: Read
+     # Formal(0)/f: Read
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: Loc(0)/f
-     # Ret(0): Loc(0)/f
+     # Formal(0): Formal(0)
+     # Formal(0)/f: Formal(0)/f
+     # Ret(0): Formal(0)/f
      #
   0: $t1 := move($t0)
   1: $t2 := borrow_field<Fields::T<#0>>.f($t1)

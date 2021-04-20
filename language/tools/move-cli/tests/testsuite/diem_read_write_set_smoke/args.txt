@@ -1,0 +1,4 @@
+# put the Diem module binaries in storage/
+publish --mode diem
+# print the read/write set for the payment script
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata

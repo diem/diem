@@ -50,10 +50,10 @@ public fun UpdateReturn::abort_or_write($t0|s: &mut UpdateReturn::S, $t1|b: bool
      var $t7: u64
      var $t8: u64
      # Accesses:
-     # Loc(0)/f: Write
+     # Formal(0)/f: Write
      #
      # Locals:
-     # Ret(0): {Loc(2), Ret(0), }
+     # Ret(0): Formal(2)
      #
   0: $t3 := copy($t1)
   1: if ($t3) goto 4 else goto 2
@@ -79,12 +79,12 @@ public fun UpdateReturn::write_f($t0|s: &mut UpdateReturn::S, $t1|x: u64): u64 {
      var $t4: &mut u64
      var $t5: u64
      # Accesses:
-     # Loc(0)/f: Write
+     # Formal(0)/f: Write
      #
      # Locals:
-     # Loc(0): Loc(0)
-     # Loc(0)/f: Loc(0)/f
-     # Ret(0): Loc(1)
+     # Formal(0): Formal(0)
+     # Formal(0)/f: Formal(0)/f
+     # Ret(0): Formal(1)
      #
   0: $t2 := 7
   1: $t3 := move($t0)
