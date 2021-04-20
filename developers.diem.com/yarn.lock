@@ -2481,13 +2481,12 @@
     xterm-dfuzr "^4.9.1"
     yargs-parser "^19.0.1"
 
-"@libra-opensource/diem-docusaurus-components@0.1.12":
-  version "0.1.12"
-  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.12.tgz#d4e37f187f6e7fb9860835f37bed684bd1e597a0"
-  integrity sha512-uvcQU9dqqFOVn30Xje/huuchUQKcr2b+BLYV3g37B1tErenumpj42NKDTyp2XoaK7wZBKvUqHyynCEKmb16e7w==
+"@libra-opensource/diem-docusaurus-components@0.1.19":
+  version "0.1.19"
+  resolved "https://registry.yarnpkg.com/@libra-opensource/diem-docusaurus-components/-/diem-docusaurus-components-0.1.19.tgz#2059f38ef7f5f2d1979fa883f5bc6392ee720fbd"
+  integrity sha512-RyN4AfsrPEtyhe0GF9128qpOHaop3/xreQNWRvGSj7UC1MszjU2Xh8iX1uDU5PDkuWspMfSYOlYaKD341V5EwQ==
   dependencies:
     docsearch.js "^2.6.3"
-    lodash "^4.17.20"
     prism-react-renderer "^1.1.1"
     prop-types "^15.7.2"
     react "^16.13.1"
@@ -13412,9 +13411,9 @@ sshpk@^1.7.0:
     tweetnacl "~0.14.0"
 
 ssri@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/ssri/-/ssri-6.0.1.tgz#2a3c41b28dd45b62b63676ecb74001265ae9edd8"
-  integrity sha512-3Wge10hNcT1Kur4PDFwEieXSCMCJs/7WvSACcrMYrNp+b8kDL1/0wJch5Ni2WrtwEa2IO8OsVfeKIciKCDx/QA==
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/ssri/-/ssri-6.0.2.tgz#157939134f20464e7301ddba3e90ffa8f7728ac5"
+  integrity sha512-cepbSq/neFK7xB6A50KHN0xHDotYzq58wWCa5LeWqnPrHG8GzfEjO/4O8kpmcGW+oaxkvhEJCWgbgNk4/ZV93Q==
   dependencies:
     figgy-pudding "^3.5.1"
 
