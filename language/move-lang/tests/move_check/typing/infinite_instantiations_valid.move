@@ -8,7 +8,7 @@ module M {
         t0<T>()
     }
 
-    public fun t1<T>() {
+    public fn t1<T>() {
         t0<T>();
         t1<T>()
     }
