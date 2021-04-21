@@ -47,7 +47,7 @@ type StateProof = (
 );
 
 #[derive(Clone, Debug)]
-pub struct VerifyingClient<S: Storage> {
+pub struct VerifyingClient<S> {
     inner: Client,
     trusted_state_store: Arc<RwLock<TrustedStateStore<S>>>,
 }
@@ -475,9 +475,14 @@ fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
     VerifyingRequest::new(request, subrequests, callback)
 }
 
-// TODO(philiphayes): reuse secure/storage?
+mod private {
+    pub trait Sealed {}
 
-pub trait Storage: Debug {
+    impl Sealed for super::InMemoryStorage {}
+}
+
+// TODO(philiphayes): unseal `Storage` trait once verifying client stabilizes.
+pub trait Storage: private::Sealed + Debug {
     fn get(&self, key: &str) -> Result<Vec<u8>>;
     fn set(&mut self, key: &str, value: Vec<u8>) -> Result<()>;
 }
@@ -512,7 +517,7 @@ impl Storage for InMemoryStorage {
 pub const TRUSTED_STATE_KEY: &str = "trusted_state";
 
 #[derive(Debug)]
-struct TrustedStateStore<S: Storage> {
+struct TrustedStateStore<S> {
     trusted_state: TrustedState,
     storage: S,
 }
