@@ -43,12 +43,12 @@ jobs:
         run: ./scripts/git-checks.sh
       - id: changes
         name: determine changes
-        uses: ./.github/actions/changes
+        uses: diem/actions/changes@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           workflow-file: ci-test.yml
       - id: need-build-images
         name: find changes need image build.
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: '^documentation\|^developers.diem.com'
           invert: "true"
@@ -90,34 +90,34 @@ jobs:
           echo "::set-output name=name::$(echo $output)";
       - id: rust-changes
         name: find rust/cargo changes.
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: '^documentation\|^docker\|^scripts\|^developers.diem.com'
           invert: "true"
       - id: non-rust-lint-changes
         name: find shell/dockerfile changes
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: 'Dockerfile$\|.*.sh$|^developers.diem.com'
       - id: helm-changes
         name: find helm changes
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: '^.github\|^helm\|^developers.diem.com'
       - id: dev-setup-sh-changes
         name: find dev-setup.sh/base docker image changes
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: 'docker/ci\|scripts/dev_setup.sh'
       - id: docker-compose-changes
         name: find changes that should trigger docker compose testing.
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: "^documentation"
           invert: "true"
       - id: website-changes
         name: find website changes.
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: "^documentation|^developers.diem.com"
 
@@ -150,7 +150,7 @@ jobs:
           fetch-depth: 0 #get all the history!!!
       - id: changes
         name: determine changes
-        uses: ./.github/actions/changes
+        uses: diem/actions/changes@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           workflow-file: docker-publish.yml
       - name: setup_aws_ecr_login
@@ -458,7 +458,6 @@ jobs:
         run: |
           shellcheck scripts/dev_setup.sh && \
           shellcheck scripts/dockerhub_prune.sh && \
-          shellcheck .github/actions/changes/get_pr_info.sh && \
           shellcheck docker/build_push.sh && \
           shellcheck docker/docker_republish.sh
       - name: docker lints

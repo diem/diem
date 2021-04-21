@@ -28,12 +28,12 @@ jobs:
           fetch-depth: 0 #get all the history!!!
       - id: changes
         name: determine changes
-        uses: ./.github/actions/changes
+        uses: diem/actions/changes@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           workflow-file: ci-update-sccache.yml
       - id: rust-changes
         name: find rust/cargo changes.
-        uses: ./.github/actions/matches
+        uses: diem/actions/matches@0e2c66f81f92149dfdfe791a753d28ce9f808eda
         with:
           pattern: '^documentation\|^docker\|^scripts'
           invert: "true"
