@@ -226,7 +226,9 @@ fn collect_related_modules_recursive(
 /// Build a `GlobalEnv` from a collection of `CompiledModule`'s. The `modules` list must be
 /// topologically sorted by the dependency relation (i.e., a child node in the dependency graph
 /// should appear earlier in the vector than its parents).
-pub fn run_bytecode_model_builder(modules: Vec<CompiledModule>) -> anyhow::Result<GlobalEnv> {
+pub fn run_bytecode_model_builder<'a>(
+    modules: impl IntoIterator<Item = &'a CompiledModule>,
+) -> anyhow::Result<GlobalEnv> {
     let mut env = GlobalEnv::new();
     for (i, m) in modules.into_iter().enumerate() {
         let id = m.self_id();
@@ -236,29 +238,25 @@ pub fn run_bytecode_model_builder(modules: Vec<CompiledModule>) -> anyhow::Resul
         let mut module_data = ModuleData::stub(module_name.clone(), module_id, m.clone());
 
         // add functions
-        for (def_idx, def) in m.function_defs().iter().enumerate() {
+        for (i, def) in m.function_defs().iter().enumerate() {
+            let def_idx = FunctionDefinitionIndex(i as u16);
             let name = m.identifier_at(m.function_handle_at(def.function).name);
             let symbol = env.symbol_pool().make(name.as_str());
-            let data = FunctionData::stub(
-                symbol,
-                FunctionDefinitionIndex(def_idx as u16),
-                def.function,
-            );
-            module_data.function_data.insert(FunId::new(symbol), data);
+            let fun_id = FunId::new(symbol);
+            let data = FunctionData::stub(symbol, def_idx, def.function);
+            module_data.function_data.insert(fun_id, data);
+            module_data.function_idx_to_id.insert(def_idx, fun_id);
         }
 
         // add structs
-        for (def_idx, def) in m.struct_defs().iter().enumerate() {
+        for (i, def) in m.struct_defs().iter().enumerate() {
+            let def_idx = StructDefinitionIndex(i as u16);
             let name = m.identifier_at(m.struct_handle_at(def.struct_handle).name);
             let symbol = env.symbol_pool().make(name.as_str());
-            let data = env.create_struct_data(
-                &m,
-                StructDefinitionIndex(def_idx as u16),
-                symbol,
-                Loc::default(),
-                Spec::default(),
-            );
-            module_data.struct_data.insert(StructId::new(symbol), data);
+            let struct_id = StructId::new(symbol);
+            let data = env.create_struct_data(&m, def_idx, symbol, Loc::default(), Spec::default());
+            module_data.struct_data.insert(struct_id, data);
+            module_data.struct_idx_to_id.insert(def_idx, struct_id);
         }
 
         env.module_data.push(module_data);

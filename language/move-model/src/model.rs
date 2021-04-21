@@ -1027,6 +1027,25 @@ impl GlobalEnv {
             .find(|m| m.get_name().name() == simple_name)
     }
 
+    /// Find a module by its bytecode format ID
+    pub fn find_module_by_language_storage_id(
+        &self,
+        id: &language_storage::ModuleId,
+    ) -> Option<ModuleEnv<'_>> {
+        self.find_module(&self.to_module_name(id))
+    }
+
+    /// Find a function by its bytecode format name and ID
+    pub fn find_function_by_language_storage_id_name(
+        &self,
+        id: &language_storage::ModuleId,
+        name: &Identifier,
+    ) -> Option<FunctionEnv<'_>> {
+        self.find_module_by_language_storage_id(id)
+            .map(|menv| menv.find_function(menv.symbol_pool().make(name.as_str())))
+            .flatten()
+    }
+
     /// Gets a StructEnv in this module by its `StructTag`
     pub fn find_struct_by_tag(
         &self,
@@ -1737,7 +1756,7 @@ impl<'env> ModuleEnv<'env> {
             .data
             .struct_idx_to_id
             .get(&idx)
-            .expect("undefined struct definition index")
+            .unwrap_or_else(|| panic!("undefined struct definition index {:?}", idx))
     }
 
     /// Gets a StructEnv by id.
