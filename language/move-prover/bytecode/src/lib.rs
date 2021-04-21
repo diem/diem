@@ -29,6 +29,7 @@ pub mod mono_analysis;
 pub mod mut_ref_instrumentation;
 pub mod options;
 pub mod packed_types_analysis;
+pub mod pipeline_factory;
 pub mod reaching_def_analysis;
 pub mod read_write_set_analysis;
 pub mod spec_instrumentation;

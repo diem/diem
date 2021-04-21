@@ -10,14 +10,9 @@ use boogie_backend::{
     add_prelude, boogie_wrapper::BoogieWrapper, bytecode_translator::BoogieTranslator,
 };
 use bytecode::{
-    data_invariant_instrumentation::DataInvariantInstrumentationProcessor,
-    debug_instrumentation::DebugInstrumenter,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
-    global_invariant_instrumentation::GlobalInvariantInstrumentationProcessor,
-    global_invariant_instrumentation_v2::GlobalInvariantInstrumentationProcessorV2,
-    mono_analysis::MonoAnalysisProcessor,
+    pipeline_factory,
     read_write_set_analysis::{self, ReadWriteSetProcessor},
-    spec_instrumentation::SpecInstrumentationProcessor,
 };
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
@@ -28,7 +23,6 @@ use move_model::{code_writer::CodeWriter, model::GlobalEnv, run_model_builder};
 use std::{fs, path::PathBuf, time::Instant};
 
 pub mod cli;
-mod pipelines;
 
 // =================================================================================================
 // Prover API
@@ -203,7 +197,11 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
     }
 
     // Create processing pipeline and run it.
-    let pipeline = create_bytecode_processing_pipeline(options);
+    let pipeline = if options.experimental_pipeline {
+        pipeline_factory::experimental_pipeline()
+    } else {
+        pipeline_factory::default_pipeline_with_options(options.weak_edges, options.inv_v2)
+    };
     if options.prover.dump_bytecode {
         let dump_file = options
             .move_sources
@@ -216,27 +214,6 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
         pipeline.run(env, &mut targets);
     }
     targets
-}
-
-/// Function to create the transformation pipeline.
-fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
-    let mut res = FunctionTargetPipeline::default();
-    // Add processors in order they are executed.
-
-    res.add_processor(DebugInstrumenter::new());
-    pipelines::pipelines(options)
-        .into_iter()
-        .for_each(|processor| res.add_processor(processor));
-    res.add_processor(SpecInstrumentationProcessor::new());
-    res.add_processor(DataInvariantInstrumentationProcessor::new());
-    if options.inv_v2 {
-        // *** convert to v2 version ***
-        res.add_processor(GlobalInvariantInstrumentationProcessorV2::new());
-    } else {
-        res.add_processor(GlobalInvariantInstrumentationProcessor::new());
-    }
-    res.add_processor(MonoAnalysisProcessor::new());
-    res
 }
 
 // Tools using the Move prover top-level driver
