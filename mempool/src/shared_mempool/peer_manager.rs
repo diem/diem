@@ -118,11 +118,14 @@ impl PeerManager {
         let mut peer_states = self.peer_states.lock();
         let is_new_peer = !peer_states.contains_key(&peer);
         if self.is_upstream_peer(&peer, Some(&metadata)) {
-            counters::active_upstream_peers(&peer.raw_network_id()).inc();
             // If we have a new peer, let's insert new data, otherwise, let's just update the current state
             if is_new_peer {
+                counters::active_upstream_peers(&peer.raw_network_id()).inc();
                 peer_states.insert(peer, PeerSyncState::new(metadata));
             } else if let Some(peer_state) = peer_states.get_mut(&peer) {
+                if !peer_state.is_alive {
+                    counters::active_upstream_peers(&peer.raw_network_id()).inc();
+                }
                 peer_state.is_alive = true;
                 peer_state.metadata = metadata;
             }
@@ -141,12 +144,14 @@ impl PeerManager {
         // TODO: What about garbage collection of validators
         if peer.raw_network_id().is_validator_network() {
             if let Some(state) = self.peer_states.lock().get_mut(&peer) {
+                counters::active_upstream_peers(&peer.raw_network_id()).dec();
                 state.is_alive = false;
             }
         } else {
             // All other nodes have their state immediately restarted anyways, so let's free them
             // TODO: Why is the Validator optimization not applied here
             self.peer_states.lock().remove(&peer);
+            counters::active_upstream_peers(&peer.raw_network_id()).dec();
         }
 
         // Always update prioritized peers to be in line with peer states
