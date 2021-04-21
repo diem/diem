@@ -9,9 +9,8 @@
 use crate::{
     access_path::{AbsAddr, AccessPath, AccessPathMap, FootprintDomain, Offset, Root},
     dataflow_analysis::{AbstractDomain, JoinResult, MapDomain},
-    function_target::FunctionTarget,
 };
-use move_model::{ast::TempIndex, ty::Type};
+use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
 use std::{
     collections::btree_map::Entry,
     fmt,
@@ -373,7 +372,7 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
     }
 
     /// Return a wrapper that of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> AccessPathTrieDisplay<'a, T> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> AccessPathTrieDisplay<'a, T> {
         AccessPathTrieDisplay { t: self, env }
     }
 }
@@ -412,7 +411,7 @@ impl<T: FootprintDomain> DerefMut for AccessPathTrie<T> {
 
 pub struct AccessPathTrieDisplay<'a, T: FootprintDomain> {
     t: &'a AccessPathTrie<T>,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a, T: FootprintDomain> fmt::Display for AccessPathTrieDisplay<'a, T> {

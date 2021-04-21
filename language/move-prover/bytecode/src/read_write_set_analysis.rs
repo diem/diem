@@ -243,7 +243,7 @@ impl ReadWriteSetState {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> ReadWriteSetStateDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> ReadWriteSetStateDisplay<'a> {
         ReadWriteSetStateDisplay { state: self, env }
     }
 }
@@ -593,7 +593,7 @@ pub fn get_read_write_set(env: &GlobalEnv, targets: &FunctionTargetsHolder) {
                 "Invariant violation: read/write set analysis should be run before calling this",
             );
             println!("{}::{}", module_name, func_env.get_identifier());
-            println!("{}", annotation.display(&fun_target))
+            println!("{}", annotation.display(fun_target.func_env))
         }
     }
 }
@@ -614,7 +614,7 @@ pub fn format_read_write_set_annotation(
         return None;
     }
     if let Some(a) = target.get_annotations().get::<ReadWriteSetState>() {
-        Some(format!("{}", a.display(target)))
+        Some(format!("{}", a.display(target.func_env)))
     } else {
         None
     }
@@ -622,7 +622,7 @@ pub fn format_read_write_set_annotation(
 
 struct ReadWriteSetStateDisplay<'a> {
     state: &'a ReadWriteSetState,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for ReadWriteSetStateDisplay<'a> {

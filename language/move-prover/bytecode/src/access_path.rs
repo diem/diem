@@ -21,14 +21,11 @@
 //!```
 //!, the value of `a` will be `{ 0x1, Footprint(x/f) }` at program point 1.
 
-use crate::{
-    dataflow_analysis::{AbstractDomain, SetDomain},
-    function_target::FunctionTarget,
-};
+use crate::dataflow_analysis::{AbstractDomain, SetDomain};
 use move_core_types::language_storage::StructTag;
 use move_model::{
     ast::TempIndex,
-    model::{GlobalEnv, ModuleId, QualifiedId, StructId},
+    model::{FunctionEnv, GlobalEnv, ModuleId, QualifiedId, StructId},
     ty::{PrimitiveType, Type, TypeDisplayContext},
 };
 use num::BigUint;
@@ -145,7 +142,7 @@ impl Addr {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> AddrDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> AddrDisplay<'a> {
         AddrDisplay { addr: self, env }
     }
 }
@@ -253,7 +250,7 @@ impl AbsAddr {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> AbsAddrDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> AbsAddrDisplay<'a> {
         AbsAddrDisplay { addr: self, env }
     }
 }
@@ -299,7 +296,7 @@ impl GlobalKey {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> GlobalKeyDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> GlobalKeyDisplay<'a> {
         GlobalKeyDisplay { g: self, env }
     }
 }
@@ -321,18 +318,18 @@ impl Root {
     }
 
     /// Return the type of `self` in `fun`
-    pub fn get_type(&self, fun: &FunctionTarget) -> Type {
+    pub fn get_type(&self, fun: &FunctionEnv) -> Type {
         match self {
             Self::Global(g) => g.ty.get_type(),
-            Self::Local(i) => fun.get_local_type(*i).clone(),
-            Self::Return(i) => fun.get_return_type(*i).clone(),
+            Self::Local(i) => fun.get_local_type(*i),
+            Self::Return(i) => fun.get_return_type(*i),
         }
     }
 
     /// Return true if this variable is a formal parameter of `fun`
-    pub fn is_formal(&self, fun: &FunctionTarget) -> bool {
+    pub fn is_formal(&self, fun: &FunctionEnv) -> bool {
         match self {
-            Self::Local(i) => fun.func_env.is_parameter(*i),
+            Self::Local(i) => fun.is_parameter(*i),
             Self::Global(_) => false,
             Self::Return(_) => false,
         }
@@ -353,7 +350,7 @@ impl Root {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> RootDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> RootDisplay<'a> {
         RootDisplay { root: self, env }
     }
 }
@@ -470,10 +467,10 @@ impl AccessPath {
     }
 
     /// Return the type of this access path
-    pub fn get_type(&self, fun: &FunctionTarget) -> Type {
+    pub fn get_type(&self, fun: &FunctionEnv) -> Type {
         let mut ty = self.root.get_type(fun);
         for offset in &self.offsets {
-            let offset_ty = offset.get_type(&ty, fun.module_env().env);
+            let offset_ty = offset.get_type(&ty, fun.module_env.env);
             ty = offset_ty;
         }
         ty
@@ -560,7 +557,7 @@ impl AccessPath {
     }
 
     /// Return a wrapper of `self` that implements `Display` using `env`
-    pub fn display<'a>(&'a self, env: &'a FunctionTarget) -> AccessPathDisplay<'a> {
+    pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> AccessPathDisplay<'a> {
         AccessPathDisplay { ap: self, env }
     }
 }
@@ -631,7 +628,7 @@ impl<'a> fmt::Display for AbsStructTypeDisplay<'a> {
 
 pub struct AddrDisplay<'a> {
     addr: &'a Addr,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for AddrDisplay<'a> {
@@ -645,7 +642,7 @@ impl<'a> fmt::Display for AddrDisplay<'a> {
 
 pub struct AbsAddrDisplay<'a> {
     addr: &'a AbsAddr,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for AbsAddrDisplay<'a> {
@@ -666,7 +663,7 @@ impl<'a> fmt::Display for AbsAddrDisplay<'a> {
 
 pub struct GlobalKeyDisplay<'a> {
     g: &'a GlobalKey,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for GlobalKeyDisplay<'a> {
@@ -675,14 +672,14 @@ impl<'a> fmt::Display for GlobalKeyDisplay<'a> {
             f,
             "{}/{}",
             self.g.addr.display(self.env),
-            self.g.ty.display(self.env.module_env().env)
+            self.g.ty.display(self.env.module_env.env)
         )
     }
 }
 
 pub struct RootDisplay<'a> {
     root: &'a Root,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for RootDisplay<'a> {
@@ -727,12 +724,12 @@ impl<'a> fmt::Display for OffsetDisplay<'a> {
 
 pub struct AccessPathDisplay<'a> {
     ap: &'a AccessPath,
-    env: &'a FunctionTarget<'a>,
+    env: &'a FunctionEnv<'a>,
 }
 
 impl<'a> fmt::Display for AccessPathDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let genv = self.env.func_env.module_env.env;
+        let genv = self.env.module_env.env;
         write!(f, "{}", self.ap.root.display(self.env))?;
         let mut root_ty = self.ap.root.get_type(self.env);
         for offset in &self.ap.offsets {
