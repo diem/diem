@@ -13,6 +13,10 @@ Please add the API change in the following format:
 
 ```
 
+## 2021-04-21 Add `bytes` field to `unknown` event
+
+When the event data can't be parsed, we output `unknown` type event data with raw BCS event data bytes, so that client can unwrap event details by parsing the BCS bytes.
+
 ## 2021-03-25 Add `metadata` field to preburns in the `preburn_queues` for designated dealers
 
 This adds an additional `metadata` field coupled with each preburn request held

@@ -286,7 +286,11 @@ pub enum EventDataView {
         role_id: u64,
     },
     #[serde(rename = "unknown")]
-    Unknown {},
+    Unknown { bytes: Option<BytesView> },
+
+    // used by client to deserialize server response
+    #[serde(other)]
+    UnknownToClient,
 }
 
 impl TryFrom<ContractEvent> for EventDataView {
@@ -406,7 +410,9 @@ impl TryFrom<ContractEvent> for EventDataView {
                 committed_timestamp_secs: admin_transaction_event.committed_timestamp_secs(),
             }
         } else {
-            EventDataView::Unknown {}
+            EventDataView::Unknown {
+                bytes: Some(event.event_data().into()),
+            }
         };
 
         Ok(data)
@@ -855,5 +861,29 @@ impl TryFrom<AccountStateProof> for AccountStateProofView {
                 account_state_proof.transaction_info_to_account_proof(),
             )?),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::views::EventDataView;
+    use diem_types::{contract_event::ContractEvent, event::EventKey};
+    use move_core_types::language_storage::TypeTag;
+    use std::{convert::TryInto, str::FromStr};
+
+    #[test]
+    fn test_unknown_event_data() {
+        let data = hex::decode("0000000000000000000000000000000000000000000000dd").unwrap();
+        let ev = ContractEvent::new(
+            EventKey::from_str("0000000000000000000000000000000000000000000000dd").unwrap(),
+            0,
+            TypeTag::Bool,
+            data.clone(),
+        );
+        if let EventDataView::Unknown { bytes } = ev.try_into().unwrap() {
+            assert_eq!(bytes.unwrap(), data.into());
+        } else {
+            panic!("expect unknown event data");
+        }
     }
 }

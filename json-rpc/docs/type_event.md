@@ -158,8 +158,9 @@ Event emitted when a new account is created
 
 Represents events currently unsupported by JSON-RPC API.
 
-| Name    | Type   | Description                 |
-|---------|--------|-----------------------------|
-| type    | string | Constant string "unknown"   |
+| Name  | Type   | Description                             |
+|-------|--------|-----------------------------------------|
+| type  | string | Constant string "unknown"               |
+| bytes | string | Hex-encoded BCS bytes of the event data |
 
 [1]: https://docs.rs/bcs/ "BCS"

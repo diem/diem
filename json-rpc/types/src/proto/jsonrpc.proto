@@ -167,6 +167,12 @@ message EventData {
    * It is created by validators.
    */
   uint64 committed_timestamp_secs = 20 [json_name="committed_timestamp_secs"];
+
+  /**
+   * unknown event field.
+   * Hex-encoded BCS bytes of the event data.
+   */
+  string bytes = 21;
 }
 
 message Metadata {
