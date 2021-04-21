@@ -3,18 +3,24 @@
 
 use crate::{
     client::Client,
+    error::{Error, Result},
     request::MethodRequest,
     response::{MethodResponse, Response},
     state::State,
 };
-use anyhow::{bail, ensure, format_err, Result};
 use diem_json_rpc_types::views::AccountView;
 use diem_types::{
-    account_address::AccountAddress, account_config::diem_root_address,
-    account_state::AccountState, account_state_blob::AccountStateWithProof,
-    epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::RegisteredCurrencies, proof::AccumulatorConsistencyProof,
-    transaction::Version, trusted_state::TrustedState, waypoint::Waypoint,
+    account_address::AccountAddress,
+    account_config::diem_root_address,
+    account_state::AccountState,
+    account_state_blob::AccountStateWithProof,
+    epoch_change::EpochChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::RegisteredCurrencies,
+    proof::AccumulatorConsistencyProof,
+    transaction::Version,
+    trusted_state::TrustedState,
+    waypoint::Waypoint,
 };
 use std::{
     collections::HashMap,
@@ -41,16 +47,16 @@ type StateProof = (
 );
 
 #[derive(Clone, Debug)]
-pub struct VerifyingClient {
+pub struct VerifyingClient<S: Storage> {
     inner: Client,
-    trusted_state_store: Arc<RwLock<TrustedStateStore>>,
+    trusted_state_store: Arc<RwLock<TrustedStateStore<S>>>,
 }
 
-impl VerifyingClient {
+impl<S: Storage> VerifyingClient<S> {
     // TODO(philiphayes): construct the client ourselves? we probably want to
     // control the retries out here. For example, during sync, if we get a stale
     // state proof the retry logic should include that and not just fail immediately.
-    pub fn new(inner: Client, storage: Box<dyn Storage>) -> Result<Self> {
+    pub fn new(inner: Client, storage: S) -> Result<Self> {
         let trusted_state_store = TrustedStateStore::new(storage)?;
         Ok(Self {
             inner,
@@ -58,11 +64,7 @@ impl VerifyingClient {
         })
     }
 
-    pub fn new_with_state(
-        inner: Client,
-        trusted_state: TrustedState,
-        storage: Box<dyn Storage>,
-    ) -> Self {
+    pub fn new_with_state(inner: Client, trusted_state: TrustedState, storage: S) -> Self {
         let trusted_state_store = TrustedStateStore::new_with_state(trusted_state, storage);
         Self {
             inner,
@@ -107,12 +109,12 @@ impl VerifyingClient {
             .get_state_proof(self.version())
             .await?
             .into_parts();
-        let state_proof = StateProof::try_from(&state_proof_view)?;
+        let state_proof = StateProof::try_from(&state_proof_view).map_err(Error::decode)?;
 
-        let latest_li = state_proof.0.ledger_info();
-        ensure!(latest_li.version() == state.version);
-        ensure!(latest_li.timestamp_usecs() == state.timestamp_usecs);
+        // check the response metadata matches the state proof
+        verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
 
+        // try to ratchet our trusted state using the state proof
         self.verify_and_ratchet(&state_proof)?;
 
         Ok(state_proof.1.more)
@@ -122,8 +124,11 @@ impl VerifyingClient {
     pub fn verify_and_ratchet(&self, state_proof: &StateProof) -> Result<()> {
         let (latest_li, epoch_change_proof, _) = state_proof;
 
+        // TODO(philiphayes): stale error case
         let trusted_state = self.trusted_state();
-        let change = trusted_state.verify_and_ratchet(latest_li, epoch_change_proof)?;
+        let change = trusted_state
+            .verify_and_ratchet(latest_li, epoch_change_proof)
+            .map_err(Error::invalid_proof)?;
 
         if let Some(new_state) = change.new_state() {
             self.trusted_state_store
@@ -142,10 +147,9 @@ impl VerifyingClient {
         &self,
         address: AccountAddress,
     ) -> Result<Response<Option<AccountView>>> {
-        Ok(self
-            .send_via_batch(MethodRequest::GetAccount((address,)))
+        self.send_via_batch(MethodRequest::GetAccount((address,)))
             .await?
-            .and_then(MethodResponse::try_into_get_account)?)
+            .and_then(MethodResponse::try_into_get_account)
     }
 
     /// Send a single request via `VerifyingClient::batch`.
@@ -153,9 +157,19 @@ impl VerifyingClient {
         let mut responses = self.batch(vec![request]).await?.into_iter();
         let response = match responses.next() {
             Some(response) => response,
-            None => bail!("response batch is empty"),
+            None => {
+                return Err(Error::rpc_response(
+                    "expected one response, received empty response batch",
+                ))
+            }
         };
-        ensure!(responses.next().is_none(), "too many responses");
+        let rest = responses.as_slice();
+        if !rest.is_empty() {
+            return Err(Error::rpc_response(format!(
+                "expected one response, received unexpected responses: {:?}",
+                rest,
+            )));
+        }
         response
     }
 
@@ -173,24 +187,15 @@ impl VerifyingClient {
         requests.push(MethodRequest::get_state_proof(start_version));
 
         // actually send the batch
-        let responses = self.inner.batch(requests).await?;
-
-        // TODO(philiphayes): REMOVE. for now, just convert the errors until we
-        // use the real error type.
-        let mut responses = responses
-            .into_iter()
-            .map(|result| result.map_err(anyhow::Error::new))
-            .collect::<Vec<_>>();
+        let mut responses = self.inner.batch(requests).await?;
 
         // extract and verify the state proof
         let (state_proof_response, state) = responses.pop().unwrap()?.into_parts();
         let state_proof_view = state_proof_response.try_into_get_state_proof()?;
-        let state_proof = StateProof::try_from(&state_proof_view)?;
+        let state_proof = StateProof::try_from(&state_proof_view).map_err(Error::decode)?;
 
         // check the response metadata matches the state proof
-        let latest_li = state_proof.0.ledger_info();
-        ensure!(state.version == latest_li.version());
-        ensure!(state.timestamp_usecs == latest_li.timestamp_usecs());
+        verify_latest_li_matches_state(state_proof.0.ledger_info(), &state)?;
 
         // try to ratchet our trusted state using the state proof
         self.verify_and_ratchet(&state_proof)?;
@@ -198,12 +203,37 @@ impl VerifyingClient {
         // remote says we're too far behind and need to sync. we have to throw
         // out the batch since we can't verify any proofs
         if state_proof.1.more {
-            bail!("needs sync");
+            // TODO(philiphayes): what is the right behaviour here? it would obv.
+            // be more convenient to just call `self.sync` here and then retry,
+            // but maybe a client would like to control the syncs itself?
+            return Err(Error::unknown(
+                "our client is too far behind, we need to sync",
+            ));
         }
 
         // unflatten subresponses, verify, and collect into one response per request
         batch.validate_responses(start_version, &state, &state_proof, responses)
     }
+}
+
+/// Check that certain metadata (version and timestamp) in a `LedgerInfo` matches
+/// the response `State`.
+fn verify_latest_li_matches_state(latest_li: &LedgerInfo, state: &State) -> Result<()> {
+    if latest_li.version() != state.version {
+        return Err(Error::invalid_proof(format!(
+            "latest LedgerInfo version ({}) doesn't match response version ({})",
+            latest_li.version(),
+            state.version,
+        )));
+    }
+    if latest_li.timestamp_usecs() != state.timestamp_usecs {
+        return Err(Error::invalid_proof(format!(
+            "latest LedgerInfo timestamp ({}) doesn't match response timestamp ({})",
+            latest_li.timestamp_usecs(),
+            state.timestamp_usecs,
+        )));
+    }
+    Ok(())
 }
 
 struct VerifyingBatch {
@@ -238,14 +268,25 @@ impl VerifyingBatch {
         state_proof: &StateProof,
         responses: Vec<Result<Response<MethodResponse>>>,
     ) -> Result<Vec<Result<Response<MethodResponse>>>> {
-        ensure!(
-            self.num_subrequests() == responses.len(),
-            "unexpected number of responses"
-        );
+        let num_subrequests = self.num_subrequests();
+        if num_subrequests != responses.len() {
+            return Err(Error::rpc_response(format!(
+                "expected {} responses, received {} responses in batch",
+                num_subrequests,
+                responses.len()
+            )));
+        }
 
         for response in &responses {
             if let Ok(response) = response {
-                ensure!(response.state() == state);
+                if response.state() != state {
+                    return Err(Error::rpc_response(format!(
+                        "expected all responses in batch to have the same metadata: {:?}, \
+                         received unexpected response metadata: {:?}",
+                        state,
+                        response.state(),
+                    )));
+                }
             }
         }
 
@@ -308,11 +349,14 @@ impl VerifyingRequest {
         state_proof: &StateProof,
         subresponses: Vec<Result<Response<MethodResponse>>>,
     ) -> Result<Response<MethodResponse>> {
-        ensure!(!subresponses.is_empty(), "no responses");
-        ensure!(
-            subresponses.len() == self.subrequests.len(),
-            "unexpected number of responses"
-        );
+        if subresponses.len() != self.subrequests.len() {
+            return Err(Error::rpc_response(format!(
+                "expected {} subresponses for our request {:?}, received {} subresponses in batch",
+                self.subrequests.len(),
+                self.request.method(),
+                subresponses.len(),
+            )));
+        }
 
         let ctxt = RequestContext {
             start_version,
@@ -363,22 +407,29 @@ fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
         MethodRequest::GetAccountStateWithProof(diem_root_address(), None, None),
         MethodRequest::GetAccountStateWithProof(address, None, None),
     ];
-    let callback: RequestCallback = |ctxt, subresponses| match subresponses {
+    let callback: RequestCallback = |ctxt, subresponses| {
+        match subresponses {
         [MethodResponse::GetAccountStateWithProof(ref diem_root), MethodResponse::GetAccountStateWithProof(ref account)] =>
         {
-            let diem_root_with_proof = AccountStateWithProof::try_from(diem_root)?;
-            let account_state_with_proof = AccountStateWithProof::try_from(account)?;
+            let diem_root_with_proof =
+                AccountStateWithProof::try_from(diem_root).map_err(Error::decode)?;
+            let account_state_with_proof =
+                AccountStateWithProof::try_from(account).map_err(Error::decode)?;
 
             let latest_li = ctxt.state_proof.0.ledger_info();
             let state_version = latest_li.version();
 
             let address = match ctxt.request {
                 MethodRequest::GetAccount((address,)) => *address,
-                _ => panic!("should not happen"),
+                request => panic!("programmer error: unexpected request: {:?}", request),
             };
 
-            diem_root_with_proof.verify(latest_li, state_version, diem_root_address())?;
-            account_state_with_proof.verify(latest_li, state_version, address)?;
+            diem_root_with_proof
+                .verify(latest_li, state_version, diem_root_address())
+                .map_err(Error::invalid_proof)?;
+            account_state_with_proof
+                .verify(latest_li, state_version, address)
+                .map_err(Error::invalid_proof)?;
 
             // TODO(philiphayes): it seems wasteful to lookup the whole diem_root
             // account, verify the proofs, etc... just to get a list of supported
@@ -389,30 +440,37 @@ fn verifying_get_account(address: AccountAddress) -> VerifyingRequest {
             // isn't (currently) smart enough to dedup the diem_root lookups.
             let diem_root_blob = diem_root_with_proof
                 .blob
-                .ok_or_else(|| format_err!("missing diem_root accound somehow"))?;
-            let diem_root = AccountState::try_from(&diem_root_blob)?;
-            let currencies: Option<RegisteredCurrencies> = diem_root.get_config()?;
+                .ok_or_else(|| Error::unknown("missing diem_root account"))?;
+            let diem_root = AccountState::try_from(&diem_root_blob)
+                .map_err(Error::decode)?;
+            let currencies: Option<RegisteredCurrencies> = diem_root.get_config()
+                .map_err(Error::decode)?;
             let currency_codes = currencies
                 .as_ref()
                 .map(RegisteredCurrencies::currency_codes)
-                .ok_or_else(|| format_err!("diem_root missing registered currencies"))?;
+                .ok_or_else(|| Error::unknown("diem_root has no registered currencies"))?;
 
             let maybe_account_view = account_state_with_proof
                 .blob
                 .map(|blob| {
-                    let account_state = AccountState::try_from(&blob)?;
+                    let account_state = AccountState::try_from(&blob)
+                        .map_err(Error::decode)?;
                     AccountView::try_from_account_state(
                         address,
                         account_state,
                         &currency_codes,
                         state_version,
-                    )
+                    ).map_err(Error::decode)
                 })
                 .transpose()?;
 
             Ok(MethodResponse::GetAccount(maybe_account_view))
         }
-        _ => bail!("invalid responses"),
+        subresponses => return Err(Error::rpc_response(format!(
+                    "expected [GetAccountStateWithProof, GetAccountStateWithProof] subresponses, received: {:?}",
+                    subresponses,
+                    ))),
+    }
     };
     VerifyingRequest::new(request, subrequests, callback)
 }
@@ -442,7 +500,7 @@ impl Storage for InMemoryStorage {
         self.data
             .get(key)
             .map(Clone::clone)
-            .ok_or_else(|| format_err!("key not set"))
+            .ok_or_else(|| Error::unknown("key not set"))
     }
 
     fn set(&mut self, key: &str, value: Vec<u8>) -> Result<()> {
@@ -454,16 +512,16 @@ impl Storage for InMemoryStorage {
 pub const TRUSTED_STATE_KEY: &str = "trusted_state";
 
 #[derive(Debug)]
-struct TrustedStateStore {
+struct TrustedStateStore<S: Storage> {
     trusted_state: TrustedState,
-    storage: Box<dyn Storage>,
+    storage: S,
 }
 
-impl TrustedStateStore {
-    fn new(storage: Box<dyn Storage>) -> Result<Self> {
+impl<S: Storage> TrustedStateStore<S> {
+    fn new(storage: S) -> Result<Self> {
         let trusted_state = storage
             .get(TRUSTED_STATE_KEY)
-            .and_then(|bytes| bcs::from_bytes(&bytes).map_err(Into::into))?;
+            .and_then(|bytes| bcs::from_bytes(&bytes).map_err(Error::decode))?;
 
         Ok(Self {
             trusted_state,
@@ -471,10 +529,10 @@ impl TrustedStateStore {
         })
     }
 
-    fn new_with_state(trusted_state: TrustedState, storage: Box<dyn Storage>) -> Self {
+    fn new_with_state(trusted_state: TrustedState, storage: S) -> Self {
         let maybe_stored_state: Result<TrustedState> = storage
             .get(TRUSTED_STATE_KEY)
-            .and_then(|bytes| bcs::from_bytes(&bytes).map_err(Into::into));
+            .and_then(|bytes| bcs::from_bytes(&bytes).map_err(Error::decode));
 
         let trusted_state = if let Ok(stored_state) = maybe_stored_state {
             if trusted_state.version() > stored_state.version() {
@@ -507,7 +565,7 @@ impl TrustedStateStore {
     fn ratchet(&mut self, new_state: TrustedState) -> Result<()> {
         if new_state.version() > self.trusted_state.version() {
             self.trusted_state = new_state;
-            let trusted_state_bytes = bcs::to_bytes(&self.trusted_state)?;
+            let trusted_state_bytes = bcs::to_bytes(&self.trusted_state).map_err(Error::decode)?;
             self.storage.set(TRUSTED_STATE_KEY, trusted_state_bytes)?;
         }
 

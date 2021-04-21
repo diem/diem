@@ -133,14 +133,20 @@ impl MethodResponse {
     pub fn try_into_get_state_proof(self) -> Result<StateProofView, Error> {
         match self {
             MethodResponse::GetStateProof(state_proof) => Ok(state_proof),
-            _ => Err(Error::rpc_response("unexpected response")),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetStateProof found MethodResponse::{:?}",
+                self.method()
+            ))),
         }
     }
 
     pub fn try_into_get_account(self) -> Result<Option<AccountView>, Error> {
         match self {
             MethodResponse::GetAccount(account_view) => Ok(account_view),
-            _ => Err(Error::rpc_response("unexpected response")),
+            _ => Err(Error::rpc_response(format!(
+                "expected MethodResponse::GetAccount found MethodResponse::{:?}",
+                self.method()
+            ))),
         }
     }
 }

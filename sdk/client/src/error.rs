@@ -34,6 +34,7 @@ enum Kind {
     StaleResponse,
     Batch,
     Decode,
+    InvalidProof,
     Unknown,
 }
 
@@ -53,6 +54,7 @@ impl Error {
             | Kind::ChainId
             | Kind::Batch
             | Kind::Decode
+            | Kind::InvalidProof
             | Kind::Unknown => false,
         }
     }
@@ -98,6 +100,10 @@ impl Error {
 
     pub(crate) fn decode<E: Into<BoxError>>(e: E) -> Self {
         Self::new(Kind::Decode, Some(e))
+    }
+
+    pub(crate) fn invalid_proof<E: Into<BoxError>>(e: E) -> Self {
+        Self::new(Kind::InvalidProof, Some(e))
     }
 
     pub(crate) fn unknown<E: Into<BoxError>>(e: E) -> Self {
