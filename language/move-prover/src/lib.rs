@@ -204,20 +204,17 @@ pub fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> Functi
 
     // Create processing pipeline and run it.
     let pipeline = create_bytecode_processing_pipeline(options);
-    let dump_file = if options.prover.dump_bytecode {
-        Some(
-            options
-                .move_sources
-                .get(0)
-                .cloned()
-                .unwrap_or_else(|| "bytecode".to_string())
-                .replace(".move", ""),
-        )
+    if options.prover.dump_bytecode {
+        let dump_file = options
+            .move_sources
+            .get(0)
+            .cloned()
+            .unwrap_or_else(|| "bytecode".to_string())
+            .replace(".move", "");
+        pipeline.run_with_dump(env, &mut targets, &dump_file, options.prover.dump_cfg)
     } else {
-        None
-    };
-    pipeline.run(env, &mut targets, dump_file, options.prover.dump_cfg);
-
+        pipeline.run(env, &mut targets);
+    }
     targets
 }
 
@@ -322,7 +319,7 @@ fn run_read_write_set(env: &GlobalEnv, options: &Options, now: Instant) {
 
     let start = now.elapsed();
     info!("generating read/write set");
-    pipeline.run(env, &mut targets, None, /* dump_cfg */ false);
+    pipeline.run(env, &mut targets);
     read_write_set_analysis::get_read_write_set(env, &targets);
     println!("generated for {:?}", options.move_sources);
 

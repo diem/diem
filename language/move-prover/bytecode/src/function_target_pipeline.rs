@@ -273,18 +273,14 @@ impl FunctionTargetPipeline {
             .as_ref()
     }
 
-    /// Runs the pipeline on all functions in the targets holder. Functions are analyzed in
-    /// topological order, so a caller can guarantee that its callees have already been analyzed
-    /// in programs without recursion or mutual recursion. Processors are run on an individual
-    /// function in breadth-first fashion; i.e. a processor can expect that processors preceding it
-    /// in the pipeline have been executed for all functions before it is called.
-    pub fn run(
-        &self,
-        env: &GlobalEnv,
-        targets: &mut FunctionTargetsHolder,
-        dump_file_opt: Option<String>,
-        dump_cfg: bool,
-    ) {
+    /// Sort functions in topological order. This is important for the function target processors.
+    /// In programs without recursion or mutual recursion, processing functions in topological order
+    /// means that when a processor sees a caller function, it is guaranteed that all the callees
+    /// have already been analyzed.
+    fn sort_targets_in_topological_order<'env>(
+        env: &'env GlobalEnv,
+        targets: &FunctionTargetsHolder,
+    ) -> Vec<FunctionEnv<'env>> {
         let mut worklist = vec![];
         for fun in targets.get_funs() {
             let fun_env = env.get_function(fun);
@@ -329,60 +325,31 @@ impl FunctionTargetPipeline {
                 // code
                 unimplemented!(
                     "Recursion or mutual recursion detected in {:?}. \
-                     Make sure that all analyses in  self.processors are prepared to handle recursion",
+                     Make sure that all analyses in processors are prepared to handle recursion",
                     func_env.get_identifier()
                 );
             }
             topological_order.push(func_env);
         }
+        topological_order
+    }
 
-        let dump_to_file = |step_count: usize, suffix: &str, content: &dyn Fn() -> String| {
-            // Dump result to file if requested
-            if let Some(base_name) = &dump_file_opt {
-                let dump = format!("{}\n", content().trim());
-                let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, suffix);
-                debug!("dumping bytecode to `{}`", file_name);
-                fs::write(&file_name, &dump).expect("dumping bytecode");
-            }
-        };
-        let print_targets = |name: &str, targets: &FunctionTargetsHolder| -> String {
-            print_targets_for_test(env, &format!("after processor `{}`", name), targets)
-        };
-        let dump_processor_result =
-            |step_count: usize,
-             processor: &dyn FunctionTargetProcessor,
-             targets: &FunctionTargetsHolder| {
-                dump_to_file(step_count, &processor.name(), &|| {
-                    let mut dump = format!(
-                        "{}",
-                        ProcessorResultDisplay {
-                            env,
-                            targets,
-                            processor
-                        }
-                    );
-                    if !processor.is_single_run() {
-                        if !dump.is_empty() {
-                            dump = format!("\n\n{}", dump);
-                        }
-                        dump.push_str(&print_targets(&processor.name(), targets));
-                    }
-                    if dump_cfg {
-                        self.dump_cfg(
-                            env,
-                            targets,
-                            step_count,
-                            dump_file_opt.as_ref().unwrap(),
-                            &processor.name(),
-                        );
-                    }
-                    dump
-                });
-            };
+    /// Runs the pipeline on all functions in the targets holder. Processors are run on each
+    /// individual function in breadth-first fashion; i.e. a processor can expect that processors
+    /// preceding it in the pipeline have been executed for all functions before it is called.
+    pub fn run_with_hook<H1, H2>(
+        &self,
+        env: &GlobalEnv,
+        targets: &mut FunctionTargetsHolder,
+        hook_before_pipeline: H1,
+        hook_after_each_processor: H2,
+    ) where
+        H1: Fn(&FunctionTargetsHolder),
+        H2: Fn(usize, &dyn FunctionTargetProcessor, &FunctionTargetsHolder),
+    {
+        let topological_order = Self::sort_targets_in_topological_order(env, targets);
 
-        dump_to_file(0, "stackless", &|| print_targets("stackless", targets));
-
-        // Now that we determined the topological order, run each processor on it, breadth-first.
+        hook_before_pipeline(targets);
         for (step_count, processor) in self.processors.iter().enumerate() {
             if processor.is_single_run() {
                 processor.run(env, targets);
@@ -393,17 +360,94 @@ impl FunctionTargetPipeline {
                 }
                 processor.finalize(env, targets);
             }
-            dump_processor_result(step_count + 1, processor.as_ref(), targets);
+            hook_after_each_processor(step_count + 1, processor.as_ref(), targets);
         }
+    }
+
+    /// Run the pipeline on all functions in the targets holder, with no hooks in effect
+    pub fn run(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
+        self.run_with_hook(env, targets, |_| {}, |_, _, _| {})
+    }
+
+    /// Runs the pipeline on all functions in the targets holder, dump the bytecode before the
+    /// pipeline as well as after each processor pass. If `dump_cfg` is set, dump the per-function
+    /// control-flow graph (in dot format) too.
+    pub fn run_with_dump(
+        &self,
+        env: &GlobalEnv,
+        targets: &mut FunctionTargetsHolder,
+        dump_base_name: &str,
+        dump_cfg: bool,
+    ) {
+        self.run_with_hook(
+            env,
+            targets,
+            |holders| {
+                Self::dump_to_file(
+                    dump_base_name,
+                    0,
+                    "stackless",
+                    &Self::get_pre_pipeline_dump(env, holders),
+                )
+            },
+            |step_count, processor, holders| {
+                let suffix = processor.name();
+                Self::dump_to_file(
+                    dump_base_name,
+                    step_count,
+                    &suffix,
+                    &Self::get_per_processor_dump(env, holders, processor),
+                );
+                if dump_cfg {
+                    Self::dump_cfg(env, holders, dump_base_name, step_count, &suffix);
+                }
+            },
+        );
+    }
+
+    fn print_targets(env: &GlobalEnv, name: &str, targets: &FunctionTargetsHolder) -> String {
+        print_targets_for_test(env, &format!("after processor `{}`", name), targets)
+    }
+
+    fn get_pre_pipeline_dump(env: &GlobalEnv, targets: &FunctionTargetsHolder) -> String {
+        Self::print_targets(env, "stackless", targets)
+    }
+
+    fn get_per_processor_dump(
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+        processor: &dyn FunctionTargetProcessor,
+    ) -> String {
+        let mut dump = format!(
+            "{}",
+            ProcessorResultDisplay {
+                env,
+                targets,
+                processor
+            }
+        );
+        if !processor.is_single_run() {
+            if !dump.is_empty() {
+                dump = format!("\n\n{}", dump);
+            }
+            dump.push_str(&Self::print_targets(env, &processor.name(), targets));
+        }
+        dump
+    }
+
+    fn dump_to_file(base_name: &str, step_count: usize, suffix: &str, content: &str) {
+        let dump = format!("{}\n", content.trim());
+        let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, suffix);
+        debug!("dumping bytecode to `{}`", file_name);
+        fs::write(&file_name, &dump).expect("dumping bytecode");
     }
 
     /// Generate dot files for control-flow graphs.
     fn dump_cfg(
-        &self,
         env: &GlobalEnv,
         targets: &FunctionTargetsHolder,
-        step_count: usize,
         base_name: &str,
+        step_count: usize,
         suffix: &str,
     ) {
         for (fun_id, variants) in &targets.targets {
