@@ -1,0 +1,18 @@
+[package]
+name = "read-write-set"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Read/write set inference for Move bytecode programs"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.38"
+diem-workspace-hack = { path = "../../../common/workspace-hack" }
+move-core-types = { path = "../../move-core/types" }
+move-model = { path = "../../move-model" }
+prover_bytecode = { path = "../../move-prover/bytecode", package="bytecode" }
+move-binary-format = { path = "../../move-binary-format" }

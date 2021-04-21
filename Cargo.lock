@@ -4285,6 +4285,8 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-types",
  "once_cell",
+ "petgraph",
+ "read-write-set",
  "resource-viewer",
  "structopt 0.3.21",
  "vm-genesis",
@@ -5858,6 +5860,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
 dependencies = [
  "rand_core 0.3.1",
+]
+
+[[package]]
+name = "read-write-set"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytecode",
+ "diem-workspace-hack",
+ "move-binary-format",
+ "move-core-types",
+ "move-model",
 ]
 
 [[package]]

@@ -19,6 +19,7 @@ use move_core_types::{
 };
 use move_lang::{MOVE_COMPILED_EXTENSION, MOVE_COMPILED_INTERFACES_DIR};
 use move_vm_runtime::data_cache::RemoteCache;
+use petgraph::graphmap::DiGraphMap;
 use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 
 use anyhow::{anyhow, bail, Result};
@@ -438,9 +439,56 @@ impl Default for OnDiskStateView {
 /// dependencies of a module).
 pub struct CodeCache(BTreeMap<ModuleId, CompiledModule>);
 
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
+struct ModuleIndex(usize);
+
+/// Directed graph capturing dependencies between modules
+pub struct DependencyGraph<'a> {
+    modules: Vec<&'a CompiledModule>,
+    graph: DiGraphMap<ModuleIndex, ()>,
+}
+
+impl<'a> DependencyGraph<'a> {
+    /// Return an iterator over the modules in `self` in topological order--modules with least deps first
+    pub fn get_topologically_sorted_modules(
+        &self,
+    ) -> Result<impl Iterator<Item = &CompiledModule>> {
+        match petgraph::algo::toposort(&self.graph, None) {
+            Err(_) => bail!("Circular dependency detected"),
+            Ok(ordered_idxs) => Ok(ordered_idxs.into_iter().map(move |idx| self.modules[idx.0])),
+        }
+    }
+
+    pub fn modules(&self) -> &Vec<&CompiledModule> {
+        &self.modules
+    }
+}
+
 impl CodeCache {
     pub fn all_modules(&self) -> Vec<&CompiledModule> {
         self.0.values().collect()
+    }
+
+    pub fn get_dependency_graph(&self) -> DependencyGraph {
+        let modules = self.all_modules();
+        let mut reverse_modules = BTreeMap::new();
+        for (i, m) in modules.iter().enumerate() {
+            reverse_modules.insert(m.self_id(), ModuleIndex(i));
+        }
+        let mut graph = DiGraphMap::new();
+        for module in &modules {
+            let module_idx: ModuleIndex = *reverse_modules.get(&module.self_id()).unwrap();
+            let deps = module.immediate_dependencies();
+            if deps.is_empty() {
+                graph.add_node(module_idx);
+            } else {
+                for dep in deps {
+                    let dep_idx = *reverse_modules.get(&dep).unwrap();
+                    graph.add_edge(dep_idx, module_idx, ());
+                }
+            }
+        }
+        DependencyGraph { modules, graph }
     }
 
     pub fn get_module(&self, module_id: &ModuleId) -> Result<&CompiledModule> {

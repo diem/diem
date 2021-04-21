@@ -31,7 +31,7 @@ use std::{cmp::Ordering, fmt, fmt::Formatter};
 
 /// An access to local or global state
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum Access {
+pub enum Access {
     /// Not read or written; only accessed via a field borrow &, Vector::borrow, or borrow_global
     /// E.g., in *&x.f.g = 7, f is Borrow, g is Write
     Borrow,
@@ -46,7 +46,7 @@ enum Access {
 /// A record of the glocals and locals accessed by the current procedure + the address values stored
 /// by locals or globals
 #[derive(Debug, Clone, Eq, PartialOrd, PartialEq)]
-struct ReadWriteSetState {
+pub struct ReadWriteSetState {
     /// memory accessed so far
     accesses: AccessPathTrie<Access>,
     /// mapping from locals to formal or global roots
@@ -622,7 +622,7 @@ pub fn format_read_write_set_annotation(
     }
 }
 
-struct ReadWriteSetStateDisplay<'a> {
+pub struct ReadWriteSetStateDisplay<'a> {
     state: &'a ReadWriteSetState,
     env: &'a FunctionEnv<'a>,
 }
@@ -630,10 +630,10 @@ struct ReadWriteSetStateDisplay<'a> {
 impl<'a> fmt::Display for ReadWriteSetStateDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_str("Accesses:\n")?;
-        writeln!(f, "{}", self.state.accesses.display(self.env))?;
+        writeln!(f, "{}", self.state.accesses.display(&self.env))?;
         f.write_str("Locals:\n")?;
         self.state.locals.iter_paths(|path, v| {
-            writeln!(f, "{}: {}", path.display(self.env), v.display(self.env)).unwrap();
+            writeln!(f, "{}: {}", path.display(&self.env), v.display(&self.env)).unwrap();
         });
         Ok(())
     }

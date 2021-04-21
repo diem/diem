@@ -1,0 +1,3 @@
+publish --mode bare
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/RWSet.mv read_f --mode bare -v
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/RWSet.mv write_f --mode bare -v

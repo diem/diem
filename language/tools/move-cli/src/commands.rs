@@ -15,7 +15,7 @@ use move_core_types::{
     account_address::AccountAddress,
     effects::{ChangeSet, Event},
     gas_schedule::{GasAlgebra, GasUnits},
-    identifier::IdentStr,
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, TypeTag},
     transaction_argument::{convert_txn_args, TransactionArgument},
     vm_status::{AbortLocation, StatusCode, VMStatus},
@@ -792,5 +792,35 @@ pub fn doctor(state: &OnDiskStateView) -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+pub fn analyze_read_write_set(
+    state: &OnDiskStateView,
+    module_file: &str,
+    function: &str,
+    verbose: bool,
+) -> Result<()> {
+    let module_id = CompiledModule::deserialize(&fs::read(module_file)?)
+        .map_err(|e| anyhow!("Error deserializing module: {:?}", e))?
+        .self_id();
+    let fun_id = Identifier::new(function.to_string())?;
+    let code_cache = state.get_code_cache()?;
+    let dep_graph = code_cache.get_dependency_graph();
+    if verbose {
+        println!(
+            "Inferring read/write set for {:?} module(s)",
+            dep_graph.modules().len()
+        )
+    }
+    let modules = dep_graph.get_topologically_sorted_modules()?;
+    let rw = read_write_set::analyze(modules)?;
+    match (
+        rw.get(&module_id, &fun_id),
+        rw.get_function_env(&module_id, &fun_id),
+    ) {
+        (Some(results), Some(fenv)) => println!("{}", results.display(&fenv)),
+        _ => println!("Function {} not found in {}", function, module_file),
+    }
     Ok(())
 }

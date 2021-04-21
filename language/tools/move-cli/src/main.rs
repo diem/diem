@@ -115,7 +115,6 @@ pub enum Command {
         #[structopt(long = "dry-run", short = "n")]
         dry_run: bool,
     },
-
     /// Run expected value tests using the given batch file
     #[structopt(name = "test")]
     Test {
@@ -137,12 +136,33 @@ pub enum Command {
         #[structopt(name = "file")]
         file: String,
     },
+    /// (Experimental) Run static analyses on Move source or bytecode
+    #[structopt(name = "analyze")]
+    Analyze {
+        #[structopt(subcommand)]
+        cmd: AnalysisCommand,
+    },
     /// Delete all resources, events, and modules stored on disk under `storage`.
     /// Does *not* delete anything in `src`.
     Clean {},
     /// Run well-formedness checks on the `storage` and `build` directories.
     #[structopt(name = "doctor")]
     Doctor {},
+}
+
+#[derive(StructOpt)]
+pub enum AnalysisCommand {
+    /// Perform a read/write set analysis and print the results for
+    /// `module_file`::`script_name`
+    #[structopt(name = "read-write-set")]
+    ReadWriteSet {
+        /// Path to .mv file containing module bytecode.
+        #[structopt(name = "module")]
+        module_file: String,
+        /// A function inside `module_file`.
+        #[structopt(name = "function")]
+        fun_name: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -210,6 +230,16 @@ fn main() -> Result<()> {
         Command::View { file } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
             commands::view(&state, file)
+        }
+        Command::Analyze {
+            cmd:
+                AnalysisCommand::ReadWriteSet {
+                    module_file,
+                    fun_name,
+                },
+        } => {
+            let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
+            commands::analyze_read_write_set(&state, module_file, fun_name, move_args.verbose)
         }
         Command::Clean {} => {
             // delete storage

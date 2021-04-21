@@ -107,6 +107,7 @@ members = [
     "language/tools/move-cli",
     "language/tools/move-coverage",
     "language/tools/move-explain",
+    "language/tools/read-write-set",
     "language/tools/resource-viewer",
     "language/tools/vm-genesis",
     "language/transaction-builder/generator",
