@@ -17,6 +17,10 @@ cfg_async! {
     pub use client::Client;
 
     mod verifying_client;
+    // WARNING: the VerifyingClient is currently experimental; it's not recommended
+    // to use it until it stabilizes further
+    // TODO(philiphayes): make this pub once verifying_client is stable.
+    #[doc(hidden)]
     pub use verifying_client::{Storage, InMemoryStorage, VerifyingClient};
 }
 
