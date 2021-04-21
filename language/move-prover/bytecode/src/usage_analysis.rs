@@ -118,7 +118,7 @@ impl FunctionTargetProcessor for UsageProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionData,
+        mut data: FunctionData,
     ) -> FunctionData {
         let mut initial_state = UsageState::default();
         let func_target = FunctionTarget::new(func_env, &data);
@@ -128,7 +128,9 @@ impl FunctionTargetProcessor for UsageProcessor {
 
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = MemoryUsageAnalysis { cache };
-        analysis.summarize(func_env, initial_state, data)
+        let summary = analysis.summarize(&func_target, initial_state);
+        data.annotations.set(summary);
+        data
     }
 
     fn name(&self) -> String {

@@ -173,12 +173,15 @@ impl FunctionTargetProcessor for PackedTypesProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionData,
+        mut data: FunctionData,
     ) -> FunctionData {
         let initial_state = PackedTypesState::default();
+        let fun_target = FunctionTarget::new(func_env, &data);
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = PackedTypesAnalysis { cache };
-        analysis.summarize(func_env, initial_state, data)
+        let summary = analysis.summarize(&fun_target, initial_state);
+        data.annotations.set(summary);
+        data
     }
 
     fn name(&self) -> String {

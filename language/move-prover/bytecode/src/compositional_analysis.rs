@@ -3,11 +3,11 @@
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis},
-    function_target::{FunctionData, FunctionTarget},
+    function_target::FunctionTarget,
     function_target_pipeline::{FunctionTargetsHolder, FunctionVariant},
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use move_model::model::{FunId, FunctionEnv, GlobalEnv, QualifiedId};
+use move_model::model::{FunId, GlobalEnv, QualifiedId};
 
 /// Provides access to procedure summaries that have already been computed
 pub struct SummaryCache<'a> {
@@ -64,35 +64,24 @@ where
     /// Computes a postcondition for the function `data` and then maps the postcondition to an
     /// element of abstract domain `Domain` by applying `to_summary` function. The result is stored
     /// in the summary cache of `data`.
-    fn summarize(
-        &self,
-        func_env: &FunctionEnv<'_>,
-        initial_state: Self::State,
-        mut data: FunctionData,
-    ) -> FunctionData {
-        if !func_env.is_native() {
+    fn summarize(&self, fun_target: &FunctionTarget<'_>, initial_state: Self::State) -> Summary {
+        if !fun_target.func_env.is_native() {
+            let instrs = &fun_target.data.code;
             let cfg = if Self::BACKWARD {
                 unimplemented!("backward compositional analysis")
             } else {
-                StacklessControlFlowGraph::new_forward(&data.code)
+                StacklessControlFlowGraph::new_forward(instrs)
             };
-            let instrs = &data.code;
             let state_map = self.analyze_function(initial_state.clone(), instrs, &cfg);
             if let Some(exit_state) = state_map.get(&cfg.exit_block()) {
-                data.annotations.set(self.to_summary(
-                    exit_state.post.clone(),
-                    &FunctionTarget::new(func_env, &data),
-                ))
+                self.to_summary(exit_state.post.clone(), fun_target)
             } else {
-                data.annotations
-                    .set(self.to_summary(initial_state, &FunctionTarget::new(func_env, &data)))
+                self.to_summary(initial_state, fun_target)
             }
         } else {
             // TODO: not clear that this is desired, but some clients rely on
             // every function having a summary, even natives
-            data.annotations
-                .set(self.to_summary(initial_state, &FunctionTarget::new(func_env, &data)))
+            self.to_summary(initial_state, fun_target)
         }
-        data
     }
 }

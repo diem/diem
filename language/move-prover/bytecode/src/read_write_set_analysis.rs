@@ -558,7 +558,7 @@ impl FunctionTargetProcessor for ReadWriteSetProcessor {
         &self,
         targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
-        data: FunctionData,
+        mut data: FunctionData,
     ) -> FunctionData {
         let fun_target = FunctionTarget::new(func_env, &data);
         let mut initial_state = ReadWriteSetState::default();
@@ -570,7 +570,9 @@ impl FunctionTargetProcessor for ReadWriteSetProcessor {
         }
         let cache = SummaryCache::new(targets, func_env.module_env.env);
         let analysis = ReadWriteSetAnalysis { cache };
-        analysis.summarize(func_env, initial_state, data)
+        let summary = analysis.summarize(&fun_target, initial_state);
+        data.annotations.set(summary);
+        data
     }
 
     fn name(&self) -> String {
