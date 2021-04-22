@@ -1,3 +1,0 @@
-# redirect for aliases
-http://developer.diem.com/*  https://developers.diem.com/:splat 301!
-https://developer.diem.com/* https://developers.diem.com/:splat 301!
