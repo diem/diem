@@ -235,22 +235,17 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
         mut weak_update: bool,
     ) {
         let (root, offsets) = ap.into();
-        let key = match root {
-            Root::Local(i) =>
+        let needs_weak_update = match &root {
             // local base. strong update possible because of Move aliasing semantics
-            {
-                Root::local(i)
-            }
-            Root::Global(g) =>
+            Root::Local(_) | Root::Return(_) => false,
             // global base. must do weak update unless g is statically known
-            {
-                weak_update = weak_update || !g.is_statically_known();
-                Root::global(g)
-            }
-            Root::Return(_) => panic!("Invalid: updating return"),
+            Root::Global(g) => !g.is_statically_known(),
+        };
+        if needs_weak_update {
+            weak_update = true
         };
 
-        let mut node = self.0.entry(key).or_insert_with(TrieNode::default);
+        let mut node = self.0.entry(root).or_insert_with(TrieNode::default);
         for offset in offsets.into_iter() {
             // if one of the offsets is not statically known, we must do a weak update
             weak_update = weak_update || !offset.is_statically_known();
