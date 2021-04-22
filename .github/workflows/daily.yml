@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: "14 14 * * *"
   # Uncomment below to test.
-  #push:
-  #  branches: [gha-test-*, canary, auto]
+  # push:
+  #   branches: [gha-test-*, canary, auto]
 
 jobs:
   audit:
@@ -98,7 +98,7 @@ jobs:
       - name: install azcopy
         run: |
           # Download AzCopy
-          curl -sL -o downloadazcopy-v10-linux "https://aka.ms/downloadazcopy-v10-linux"
+          curl -sL -o downloadazcopy-v10-linux "https://azcopyvnext.azureedge.net/release20210226/azcopy_linux_amd64_10.9.0.tar.gz"
           # Expand Archive
           tar -xvf downloadazcopy-v10-linux
           # Move AzCopy to the destination you want to store it
