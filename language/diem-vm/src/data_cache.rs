@@ -98,10 +98,6 @@ impl<'block> StateView for StateViewCache<'block> {
         }
     }
 
-    fn multi_get(&self, _access_paths: &[AccessPath]) -> anyhow::Result<Vec<Option<Vec<u8>>>> {
-        unimplemented!()
-    }
-
     fn is_genesis(&self) -> bool {
         self.data_view.is_genesis()
     }

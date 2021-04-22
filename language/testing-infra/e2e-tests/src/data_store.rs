@@ -102,10 +102,6 @@ impl StateView for FakeDataStore {
         Ok(self.data.get(access_path).cloned())
     }
 
-    fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
-        unimplemented!();
-    }
-
     fn is_genesis(&self) -> bool {
         self.data.is_empty()
     }

@@ -61,7 +61,6 @@ pub trait VMValidator {
 pub trait StateView {
     fn id(&self) -> StateViewId;
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>>;
-    fn multi_get(&self, access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>>;
     fn is_genesis(&self) -> bool;
 }
 

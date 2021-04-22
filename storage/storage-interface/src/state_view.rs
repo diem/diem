@@ -190,10 +190,6 @@ impl<'a> StateView for VerifiedStateView<'a> {
         }
     }
 
-    fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
-        unimplemented!();
-    }
-
     fn is_genesis(&self) -> bool {
         self.latest_persistent_version.is_none()
     }

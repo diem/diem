@@ -7,7 +7,7 @@ mod storage_interface;
 pub use crate::storage_interface::DBDebuggerInterface;
 pub use json_rpc_interface::JsonRpcDebuggerInterface;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use diem_state_view::StateView;
 use diem_types::{
     access_path::AccessPath,
@@ -121,10 +121,6 @@ impl<'a> StateView for DebuggerStateView<'a> {
                 None => None,
             },
         )
-    }
-
-    fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {
-        bail!("unimplemeneted")
     }
 
     fn is_genesis(&self) -> bool {
