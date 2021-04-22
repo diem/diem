@@ -33,7 +33,7 @@ RUN apt-get update && \
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 COPY docker/tools/boto.cfg /etc
 
-RUN cd /usr/local/bin && wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
+RUN cd /usr/local/bin && wget https://azcopyvnext.azureedge.net/release20210226/azcopy_linux_amd64_10.9.0.tar.gz -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
 RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
 
 COPY --from=builder /diem/target/release/diem-genesis-tool /usr/local/bin
