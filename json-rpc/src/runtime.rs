@@ -3,19 +3,20 @@
 
 use crate::{
     counters,
-    errors::{is_internal_error, JsonRpcError},
-    methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
+    errors::is_internal_error,
+    methods::{Handler, JsonRpcService},
     response::{JsonRpcResponse, X_DIEM_CHAIN_ID, X_DIEM_TIMESTAMP_USEC_ID, X_DIEM_VERSION_ID},
     util::{sdk_info_from_user_agent, SdkInfo},
 };
 use anyhow::{ensure, Result};
 use diem_config::config::{NodeConfig, RoleType};
+use diem_json_rpc_types::Method;
 use diem_logger::{debug, Schema};
 use diem_mempool::MempoolClientSender;
 use diem_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use futures::future::{join_all, Either};
 use rand::{rngs::OsRng, RngCore};
-use serde_json::{map::Map, Value};
+use serde_json::Value;
 use std::{
     net::SocketAddr,
     ops::Sub,
@@ -51,14 +52,14 @@ struct HttpRequestLog<'a> {
 }
 
 #[derive(Schema)]
-struct RpcRequestLog {
-    trace_id: String,
-    request: Value,
+struct RpcRequestLog<'a> {
+    trace_id: &'a str,
+    request: &'a Value,
 }
 
 #[derive(Schema)]
 struct RpcResponseLog<'a> {
-    trace_id: String,
+    trace_id: &'a str,
     is_batch: bool,
     response_error: bool,
     response: &'a JsonRpcResponse,
@@ -111,7 +112,6 @@ pub fn bootstrap(
         .build()
         .expect("[json-rpc] failed to create runtime");
 
-    let registry = Arc::new(build_registry());
     let service = JsonRpcService::new(
         diem_db.clone(),
         mp_sender,
@@ -127,7 +127,6 @@ pub fn bootstrap(
         .and(warp::body::content_length_limit(content_len_limit as u64))
         .and(warp::body::json())
         .and(warp::any().map(move || service.clone()))
-        .and(warp::any().map(move || Arc::clone(&registry)))
         .and(warp::filters::header::optional::<String>("user-agent"))
         .and_then(rpc_endpoint)
         .with(warp::log::custom(|info| {
@@ -247,11 +246,9 @@ pub fn check_latest_ledger_info_timestamp(
 
 /// JSON RPC entry point
 /// Handles all incoming rpc requests
-/// Performs routing based on methods defined in `registry`
 pub(crate) async fn rpc_endpoint(
     data: Value,
     service: JsonRpcService,
-    registry: Arc<RpcRegistry>,
     user_agent: Option<String>,
 ) -> Result<warp::reply::Response, warp::Rejection> {
     let label = match data {
@@ -262,7 +259,7 @@ pub(crate) async fn rpc_endpoint(
     let timer = counters::RPC_REQUEST_LATENCY
         .with_label_values(&[label])
         .start_timer();
-    let ret = rpc_endpoint_without_metrics(data, service, registry, user_agent.as_deref()).await;
+    let ret = rpc_endpoint_without_metrics(data, service, user_agent.as_deref()).await;
     timer.stop_and_record();
     ret
 }
@@ -270,7 +267,6 @@ pub(crate) async fn rpc_endpoint(
 async fn rpc_endpoint_without_metrics(
     data: Value,
     service: JsonRpcService,
-    registry: Arc<RpcRegistry>,
     user_agent: Option<&str>,
 ) -> Result<warp::reply::Response, warp::Rejection> {
     // take snapshot of latest version of DB to be used across all requests, especially for batched requests
@@ -281,63 +277,47 @@ async fn rpc_endpoint_without_metrics(
     let mut rng = OsRng;
     let trace_id = format!("{:x}", rng.next_u64());
     debug!(RpcRequestLog {
-        trace_id: trace_id.clone(),
-        request: data.clone(),
+        trace_id: &trace_id,
+        request: &data,
     });
     let chain_id = service.chain_id();
     let latest_ledger_version = ledger_info.ledger_info().version();
     let latest_ledger_timestamp_usecs = ledger_info.ledger_info().timestamp_usecs();
     let sdk_info = sdk_info_from_user_agent(user_agent);
 
-    let resp = Ok(if let Value::Array(requests) = data {
+    let resp = if let Value::Array(requests) = data {
         match service.validate_batch_size_limit(requests.len()) {
             Ok(_) => {
                 // batch API call
                 let futures = requests.into_iter().map(|req| {
-                    rpc_request_handler(
-                        req,
-                        service.clone(),
-                        Arc::clone(&registry),
-                        ledger_info.clone(),
-                        LABEL_BATCH,
-                        trace_id.clone(),
-                        sdk_info,
-                    )
+                    rpc_request_handler(req, &service, &ledger_info, LABEL_BATCH, sdk_info)
                 });
                 let responses = join_all(futures).await;
                 for resp in &responses {
-                    log_response!(trace_id.clone(), &resp, true);
+                    log_response!(&trace_id, &resp, true);
                 }
                 warp::reply::json(&responses)
             }
             Err(err) => {
-                let mut resp = JsonRpcResponse::new(
+                let mut response = JsonRpcResponse::new(
                     chain_id,
                     latest_ledger_version,
                     latest_ledger_timestamp_usecs,
                 );
-                set_response_error(&mut resp, err, LABEL_BATCH, "unknown", sdk_info);
-                log_response!(trace_id.clone(), &resp, true);
+                response.error = Some(err);
+                bump_counters(&response, LABEL_BATCH, None, sdk_info);
+                log_response!(&trace_id, &response, true);
 
-                warp::reply::json(&resp)
+                warp::reply::json(&response)
             }
         }
     } else {
         // single API call
-        let resp = rpc_request_handler(
-            data,
-            service,
-            registry,
-            ledger_info,
-            LABEL_SINGLE,
-            trace_id.clone(),
-            sdk_info,
-        )
-        .await;
-        log_response!(trace_id, &resp, false);
+        let resp = rpc_request_handler(data, &service, &ledger_info, LABEL_SINGLE, sdk_info).await;
+        log_response!(&trace_id, &resp, false);
 
         warp::reply::json(&resp)
-    });
+    };
 
     let mut http_response = resp.into_response();
     let headers = http_response.headers_mut();
@@ -358,196 +338,99 @@ async fn rpc_endpoint_without_metrics(
     Ok(http_response)
 }
 
-/// Handler of single RPC request
-/// Performs validation and executes corresponding rpc handler
 async fn rpc_request_handler(
-    req: Value,
-    service: JsonRpcService,
-    registry: Arc<RpcRegistry>,
-    ledger_info: LedgerInfoWithSignatures,
+    request: Value,
+    service: &JsonRpcService,
+    ledger_info: &LedgerInfoWithSignatures,
     request_type_label: &str,
-    trace_id: String,
     sdk_info: SdkInfo,
 ) -> JsonRpcResponse {
-    let request: Map<String, Value>;
+    let handler = Handler::new(&service, &ledger_info);
+
     let mut response = JsonRpcResponse::new(
         service.chain_id(),
         ledger_info.ledger_info().version(),
         ledger_info.ledger_info().timestamp_usecs(),
     );
+    let method: Option<Method>;
 
-    match req {
-        Value::Object(data) => {
-            request = data;
-        }
-        _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_format(),
-                request_type_label,
-                "unknown",
-                sdk_info,
-            );
-            return response;
-        }
-    }
-
-    // parse request id
-    match parse_request_id(&request) {
-        Ok(request_id) => {
-            response.id = Some(request_id);
-        }
-        Err(err) => {
-            set_response_error(&mut response, err, request_type_label, "unknown", sdk_info);
-            return response;
-        }
-    };
-
-    // verify protocol version
-    if let Err(err) = verify_protocol(&request) {
-        set_response_error(&mut response, err, request_type_label, "unknown", sdk_info);
-        return response;
-    }
-
-    // parse parameters
-    let params = match request.get("params") {
-        Some(Value::Array(parameters)) => parameters.to_vec(),
-        _ => {
-            vec![]
-        }
-    };
-
-    let request_params = JsonRpcRequest {
-        trace_id,
-        ledger_info,
-        params,
-    };
-    // get rpc handler
-    match request.get("method") {
-        Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => {
-                let timer = counters::METHOD_LATENCY
-                    .with_label_values(&[request_type_label, name])
-                    .start_timer();
-                match handler(service, request_params).await {
-                    Ok(result) => {
-                        response.result = Some(result);
-                        counters::REQUESTS
-                            .with_label_values(&[
-                                request_type_label,
-                                name,
-                                LABEL_SUCCESS,
-                                sdk_info.language.as_str(),
-                                &sdk_info.version.to_string(),
-                            ])
-                            .inc();
-                    }
-                    Err(err) => {
-                        // check for custom error
-                        set_response_error(
-                            &mut response,
-                            err.downcast_ref::<JsonRpcError>()
-                                .cloned()
-                                .unwrap_or_else(|| JsonRpcError::internal_error(err.to_string())),
-                            request_type_label,
-                            &name,
-                            sdk_info,
-                        );
-                        counters::REQUESTS
-                            .with_label_values(&[
-                                request_type_label,
-                                name,
-                                LABEL_FAIL,
-                                sdk_info.language.as_str(),
-                                &sdk_info.version.to_string(),
-                            ])
-                            .inc();
-                    }
-                }
-                timer.stop_and_record();
+    match diem_json_rpc_types::request::JsonRpcRequest::from_value(request) {
+        Ok(request) => {
+            method = Some(request.method_request.method());
+            let timer = counters::METHOD_LATENCY
+                .with_label_values(&[request_type_label, request.method_request.method().as_str()])
+                .start_timer();
+            response.id = Some(serde_json::to_value(&request.id).unwrap());
+            match handler.handle(request.method_request).await {
+                Ok(ret) => response.result = Some(ret),
+                Err(e) => response.error = Some(e),
             }
-            None => set_response_error(
-                &mut response,
-                JsonRpcError::method_not_found(),
-                request_type_label,
-                "not_found",
-                sdk_info,
-            ),
-        },
-        _ => set_response_error(
-            &mut response,
-            JsonRpcError::method_not_found(),
-            request_type_label,
-            "not_found",
-            sdk_info,
-        ),
+            timer.stop_and_record();
+        }
+        Err((e, m, id)) => {
+            method = m;
+            response.id = id.map(|id| serde_json::to_value(&id).unwrap());
+            response.error = Some(e);
+        }
     }
+
+    bump_counters(&response, request_type_label, method, sdk_info);
 
     response
 }
 
-// Sets the JSON RPC error value for a given response.
-// If a counter label is supplied, also increments the invalid request counter using the label,
-fn set_response_error(
-    response: &mut JsonRpcResponse,
-    error: JsonRpcError,
+fn bump_counters(
+    response: &JsonRpcResponse,
     request_type: &str,
-    method: &str,
+    method: Option<Method>,
     sdk_info: SdkInfo,
 ) {
-    let err_code = error.code;
-    if is_internal_error(&error.code) {
-        counters::INTERNAL_ERRORS
-            .with_label_values(&[
-                request_type,
-                method,
-                &err_code.to_string(),
-                sdk_info.language.as_str(),
-                &sdk_info.version.to_string(),
-            ])
-            .inc();
+    let method_str = method.as_ref().map(|m| m.as_str()).unwrap_or("not_found");
+    let result_label = if let Some(error) = &response.error {
+        if is_internal_error(&error.code) {
+            counters::INTERNAL_ERRORS
+                .with_label_values(&[
+                    request_type,
+                    method_str,
+                    &error.code.to_string(),
+                    sdk_info.language.as_str(),
+                    &sdk_info.version.to_string(),
+                ])
+                .inc();
+        } else {
+            let label = match error.code {
+                -32600 => "invalid_request",
+                -32601 => "method_not_found",
+                -32602 => "invalid_params",
+                -32604 => "invalid_format",
+                _ => "unexpected_code",
+            };
+            counters::INVALID_REQUESTS
+                .with_label_values(&[
+                    request_type,
+                    method_str,
+                    label,
+                    sdk_info.language.as_str(),
+                    &sdk_info.version.to_string(),
+                ])
+                .inc();
+        }
+        LABEL_FAIL
     } else {
-        let label = match err_code {
-            -32600 => "invalid_request",
-            -32601 => "method_not_found",
-            -32602 => "invalid_params",
-            -32604 => "invalid_format",
-            _ => "unexpected_code",
-        };
-        counters::INVALID_REQUESTS
+        LABEL_SUCCESS
+    };
+
+    if method.is_some() {
+        counters::REQUESTS
             .with_label_values(&[
                 request_type,
-                method,
-                label,
+                method_str,
+                result_label,
                 sdk_info.language.as_str(),
                 &sdk_info.version.to_string(),
             ])
             .inc();
     }
-
-    response.error = Some(error);
-}
-
-fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError> {
-    match request.get("id") {
-        Some(req_id) => {
-            if req_id.is_string() || req_id.is_number() || req_id.is_null() {
-                Ok(req_id.clone())
-            } else {
-                Err(JsonRpcError::invalid_format())
-            }
-        }
-        None => Ok(Value::Null),
-    }
-}
-
-fn verify_protocol(request: &Map<String, Value>) -> Result<(), JsonRpcError> {
-    if let Some(Value::String(protocol)) = request.get("jsonrpc") {
-        if protocol == "2.0" {
-            return Ok(());
-        }
-    }
-    Err(JsonRpcError::invalid_request())
 }
 
 /// Warp rejection types

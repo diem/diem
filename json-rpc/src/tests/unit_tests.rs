@@ -295,7 +295,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params: wrong number of arguments (given 2, expected 0)",
+                    "message": "Invalid params for method 'get_currencies'",
                     "data": null
                 },
                 "id": 1,
@@ -311,7 +311,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params: wrong number of arguments (given 0, expected 3)",
+                    "message": "Invalid params for method 'get_events'",
                     "data": null
                 },
                 "id": 1,
@@ -327,7 +327,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params: wrong number of arguments (given 2, expected 0..1)",
+                    "message": "Invalid params for method 'get_metadata'",
                     "data": null
                 },
                 "id": 1,
@@ -343,7 +343,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": format!("Invalid param version(params[0]): should be <= known latest version {}", version),
+                    "message": format!("Invalid param version should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -359,7 +359,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_account'",
                     "data": null
                 },
                 "id": 1,
@@ -375,7 +375,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_account'",
                     "data": null
                 },
                 "id": 1,
@@ -391,7 +391,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param version(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account'",
                     "data": null
                 },
                 "id": 1,
@@ -407,7 +407,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param data(params[0]): should be hex-encoded string of BCS serialized Diem SignedTransaction type",
+                    "message": "Invalid params for method 'submit'",
                     "data": null
                 },
                 "id": 1,
@@ -423,7 +423,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param start_version(params[0]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -451,7 +451,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param limit(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -467,7 +467,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param include_events(params[2]): should be boolean",
+                    "message": "Invalid params for method 'get_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -483,7 +483,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param start_version(params[0]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_transactions_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -511,7 +511,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param limit(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_transactions_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -543,7 +543,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_events'",
                     "data": null
                 },
                 "id": 1,
@@ -559,7 +559,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_events'",
                     "data": null
                 },
                 "id": 1,
@@ -575,7 +575,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_events'",
                     "data": null
                 },
                 "id": 1,
@@ -603,7 +603,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_events'",
                     "data": null
                 },
                 "id": 1,
@@ -619,7 +619,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_events_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -635,7 +635,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_events_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -651,7 +651,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_events_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -667,7 +667,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_events_with_proofs'",
                     "data": null
                 },
                 "id": 1,
@@ -683,7 +683,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_account_transaction'",
                     "data": null
                 },
                 "id": 1,
@@ -699,7 +699,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account sequence number(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account_transaction'",
                     "data": null
                 },
                 "id": 1,
@@ -715,7 +715,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param include_events(params[2]): should be boolean",
+                    "message": "Invalid params for method 'get_account_transaction'",
                     "data": null
                 },
                 "id": 1,
@@ -743,7 +743,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_account_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -775,7 +775,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -803,7 +803,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -819,7 +819,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param include_events(params[3]): should be boolean",
+                    "message": "Invalid params for method 'get_account_transactions'",
                     "data": null
                 },
                 "id": 1,
@@ -835,7 +835,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param version(params[0]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_state_proof'",
                     "data": null
                 },
                 "id": 1,
@@ -851,7 +851,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": format!("Invalid param version(params[0]): should be <= known latest version {}", version),
+                    "message": format!("Invalid param version should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -867,7 +867,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "message": "Invalid params for method 'get_account_state_with_proof'",
                     "data": null
                 },
                 "id": 1,
@@ -883,7 +883,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param version(params[1]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account_state_with_proof'",
                     "data": null
                 },
                 "id": 1,
@@ -915,7 +915,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": format!("Invalid param ledger version for proof(params[2]): should be <= known latest version {}", version),
+                    "message": format!("Invalid param ledger_version should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -931,7 +931,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid param ledger version for proof(params[2]): should be unsigned int64",
+                    "message": "Invalid params for method 'get_account_state_with_proof'",
                     "data": null
                 },
                 "id": 1,
@@ -947,7 +947,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": format!("Invalid param version(params[1]): should be <= known latest version {}", version),
+                    "message": format!("Invalid param version should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -963,7 +963,7 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": format!("Invalid param ledger version for proof(params[2]): should be <= known latest version {}", version),
+                    "message": format!("Invalid param ledger_version should be <= known latest version {}", version),
                     "data": null
                 },
                 "id": 1,
@@ -971,27 +971,6 @@ fn test_json_rpc_protocol_invalid_requests() {
                 "diem_chain_id": ChainId::test().id(),
                 "diem_ledger_timestampusec": timestamp,
                 "diem_ledger_version": version
-            }),
-        ),
-        (
-            "id not given",
-            json!({"jsonrpc": "2.0", "method": "get_metadata"}),
-            json!({
-                "id": null,
-                "jsonrpc": "2.0",
-                "diem_chain_id": ChainId::test().id(),
-                "diem_ledger_timestampusec": timestamp,
-                "diem_ledger_version": version,
-                "result": {
-                    "chain_id": ChainId::test().id(),
-                    "timestamp": timestamp,
-                    "version": version,
-                    "script_hash_allow_list": [],
-                    "module_publishing_allowed": true,
-                    "diem_version": 2,
-                    "accumulator_root_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-                    "dual_attestation_limit": 1000000000,
-                }
             }),
         ),
     ];

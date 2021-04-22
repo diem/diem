@@ -113,7 +113,6 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
         account_state_with_proof: vec![account_state_with_proof],
         timestamps: vec![1598223353000000],
     };
-    let registry = Arc::new(methods::build_registry());
     let service = methods::JsonRpcService::new(
         Arc::new(db),
         mp_sender,
@@ -139,7 +138,7 @@ pub fn request_fuzzer(json_request: serde_json::Value) {
         }
     });
     let body = rt.block_on(async {
-        let reply = runtime::rpc_endpoint(json_request, service, registry, None)
+        let reply = runtime::rpc_endpoint(json_request, service, None)
             .await
             .unwrap();
 
