@@ -38,8 +38,7 @@ pub fn verify(
             compilation_env.add_error(error);
         }
         Ok(ordered_ids) => {
-            let ordered_ids = ordered_ids.into_iter().cloned().collect::<Vec<_>>();
-            for (order, mident) in ordered_ids.into_iter().rev().enumerate() {
+            for (order, mident) in ordered_ids.iter().rev().enumerate() {
                 modules.get_mut(&mident).unwrap().dependency_order = order;
             }
         }
@@ -148,10 +147,17 @@ impl<'a> Context<'a> {
 fn dependency_graph(
     deps: &BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, BTreeMap<DepType, Loc>>>,
 ) -> DiGraphMap<&ModuleIdent, ()> {
-    let edges = deps
-        .iter()
-        .flat_map(|(parent, children)| children.iter().map(move |(child, _)| (parent, child)));
-    DiGraphMap::from_edges(edges)
+    let mut graph = DiGraphMap::new();
+    for (parent, children) in deps {
+        if children.is_empty() {
+            graph.add_node(parent);
+        } else {
+            for child in children.keys() {
+                graph.add_edge(parent, child, ());
+            }
+        }
+    }
+    graph
 }
 
 fn cycle_error(
