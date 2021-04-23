@@ -1211,9 +1211,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-channel"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dca26ee1f8d361640700bde38b2c37d8c22b3ce2d360e1fc1c74ea4b0aa7d775"
+checksum = "06ed27e177f16d65f0f0c22a213e17c696ace5dd64b14258b52f9417ccb52db4"
 dependencies = [
  "cfg-if 1.0.0",
  "crossbeam-utils",
@@ -4758,6 +4758,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "nextest-runner"
+version = "0.1.0"
+source = "git+https://github.com/diem/diem-devtools?rev=1b61853016059b2dca577cefafff2825b49494a0#1b61853016059b2dca577cefafff2825b49494a0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "atty",
+ "camino",
+ "chrono",
+ "crossbeam-channel",
+ "duct",
+ "num_cpus",
+ "once_cell",
+ "quick-junit",
+ "rayon",
+ "serde",
+ "serde_json",
+ "signal-hook",
+ "structopt 0.3.21",
+ "termcolor",
+]
+
+[[package]]
 name = "nibble_vec"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5582,7 +5605,7 @@ checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 [[package]]
 name = "quick-junit"
 version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?branch=main#bb4bc9d7d9ce6308c2571bf7e0ffaf662d5d2992"
+source = "git+https://github.com/diem/diem-devtools?rev=1b61853016059b2dca577cefafff2825b49494a0#1b61853016059b2dca577cefafff2825b49494a0"
 dependencies = [
  "chrono",
  "indexmap",
@@ -7364,28 +7387,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "testrunner"
-version = "0.1.0"
-source = "git+https://github.com/diem/diem-devtools?branch=main#bb4bc9d7d9ce6308c2571bf7e0ffaf662d5d2992"
-dependencies = [
- "aho-corasick",
- "anyhow",
- "atty",
- "camino",
- "crossbeam-channel",
- "duct",
- "num_cpus",
- "once_cell",
- "quick-junit",
- "rayon",
- "serde",
- "serde_json",
- "signal-hook",
- "structopt 0.3.21",
- "termcolor",
-]
-
-[[package]]
 name = "textwrap"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8271,12 +8272,12 @@ dependencies = [
  "indexmap",
  "indoc",
  "log",
+ "nextest-runner",
  "rayon",
  "regex",
  "serde",
  "serde_json",
  "structopt 0.3.21",
- "testrunner",
  "toml",
  "x-core",
  "x-lint",

@@ -13,14 +13,14 @@ use crate::{
 use anyhow::bail;
 use cargo_metadata::Message;
 use guppy::PackageId;
-use std::ffi::OsString;
-use structopt::StructOpt;
-use testrunner::{
+use nextest_runner::{
     reporter::{Color, ReporterOpts, TestReporter},
     runner::TestRunnerOpts,
     test_filter::{RunIgnored, TestFilter},
     test_list::{TestBinary, TestList},
 };
+use std::ffi::OsString;
+use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct Args {
@@ -31,6 +31,8 @@ pub struct Args {
     unit: bool,
     #[structopt(flatten)]
     pub(crate) build_args: BuildArgs,
+    #[structopt(flatten)]
+    pub(crate) runner_opts: TestRunnerOpts,
     #[structopt(long)]
     /// Do not run tests, only compile the test executables
     no_run: bool,
@@ -120,10 +122,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
     let test_filter = TestFilter::new(args.run_ignored, &args.filters);
     let test_list = TestList::new(executables, &test_filter)?;
 
-    let runner_opts = TestRunnerOpts {
-        jobs: args.build_args.jobs.map(|jobs| jobs as usize),
-    };
-    let runner = runner_opts.build(&test_list);
+    let runner = args.runner_opts.build(&test_list);
 
     let color = match args.build_args.color {
         Coloring::Auto => Color::Auto,

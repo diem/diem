@@ -20,7 +20,7 @@ pub struct BuildArgs {
     /// No output printed to stdout
     pub(crate) quiet: bool,
     #[structopt(long, short)]
-    /// Number of parallel jobs, defaults to # of CPUs
+    /// Number of parallel build jobs, defaults to # of CPUs
     pub(crate) jobs: Option<u16>,
     #[structopt(long)]
     /// Only this package's library
