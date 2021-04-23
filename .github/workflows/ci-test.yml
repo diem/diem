@@ -12,6 +12,7 @@ defaults:
 
 env:
   max_threads: 16
+  nextest_tries: 3
   pre_command: cd /opt/git/diem/
 
 jobs:
@@ -514,7 +515,7 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       - name: run unit tests
         run: |
-          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
+          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
@@ -556,7 +557,7 @@ jobs:
           restore-keys: "crates-${{ runner.os }}"
       - name: run unit tests
         run: |
-          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
+          $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --unit --failure-output=immediate-final --changed-since "origin/$TARGET_BRANCH" --junit target/junit-reports/unit-test.xml
           sccache -s
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
@@ -599,7 +600,7 @@ jobs:
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
       - name: run codegen unit tests
-        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
+        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
       - name: upload codegen test results
@@ -632,7 +633,7 @@ jobs:
           key: crates-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: "crates-${{ runner.os }}"
       - name: run codegen unit tests
-        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
+        run: $pre_command && mkdir -p target/junit-reports && cargo nextest --jobs ${max_threads} --tries ${nextest_tries} --failure-output=immediate-final -p transaction-builder-generator --unit --changed-since "origin/$TARGET_BRANCH" --run-ignored=ignored-only --junit target/junit-reports/codegen-unit-test.xml
         env:
           TARGET_BRANCH: ${{ needs.prepare.outputs.changes-target-branch }}
           SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.ENV_DIEM_S3_AWS_ACCESS_KEY_ID }}
