@@ -44,6 +44,8 @@ impl VectorTheory {
 pub struct BoogieOptions {
     /// Path to the boogie executable.
     pub boogie_exe: String,
+    /// Use experimental boogie exe found via env var EXP_BOOGIE_EXE.
+    pub use_exp_boogie: bool,
     /// Path to the z3 executable.
     pub z3_exe: String,
     /// Whether to use cvc4.
@@ -106,6 +108,7 @@ impl Default for BoogieOptions {
         Self {
             bench_repeat: 1,
             boogie_exe: get_env("BOOGIE_EXE"),
+            use_exp_boogie: false,
             z3_exe: get_env("Z3_EXE"),
             use_cvc4: false,
             cvc4_exe: get_env("CVC4_EXE"),
@@ -147,7 +150,12 @@ impl BoogieOptions {
 
     /// Returns command line to call boogie.
     pub fn get_boogie_command(&self, boogie_file: &str) -> Vec<String> {
-        let mut result = vec![self.boogie_exe.clone()];
+        let mut result = if self.use_exp_boogie {
+            // This should have a better ux...
+            vec![std::env::var("EXP_BOOGIE_EXE").unwrap_or_else(|_| String::new())]
+        } else {
+            vec![self.boogie_exe.clone()]
+        };
         let mut add = |sl: &[&str]| result.extend(sl.iter().map(|s| (*s).to_string()));
         add(DEFAULT_BOOGIE_FLAGS);
         if self.use_cvc4 {

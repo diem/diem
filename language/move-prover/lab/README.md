@@ -11,17 +11,9 @@ pip install jupyterlab
 pip install notebook
 ```
 
-For the Rust kernel, we currently need to use a
-[not-yet-released version](https://github.com/google/evcxr/issues/161#issuecomment-815660992). Install
-with:
+For the Rust kernel, follow the installation instructions at [google/evcxr](https://github.
+com/google/evcxr/blob/master/evcxr_jupyter/README.md). You need version 0.9.0 or later.
 
-```
-cargo install --force --git https://github.com/google/evcxr.git evcxr_jupyter
-```
-
-
-*NOTE*: If you have EVCXR already installed, you may need to use the above command anyway to upgrade.
-Otherwise the `:dep` cells in the notebooks will not work.
 
 # Caveats
 

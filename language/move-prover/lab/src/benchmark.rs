@@ -27,6 +27,7 @@ use plotters::{
 };
 use std::{
     collections::BTreeMap,
+    fmt::{Debug, Formatter},
     fs::File,
     io::{LineWriter, Write},
     path::PathBuf,
@@ -341,29 +342,52 @@ impl Benchmark {
     pub fn take(&mut self, count: usize) {
         self.data.truncate(count)
     }
-}
 
-pub fn stats_benchmarks(benchmarks: &[&Benchmark]) -> String {
-    fn sum(benchmark: &Benchmark) -> f64 {
-        benchmark
-            .data
+    /// Sum the durations of the samples in the benchmark.
+    pub fn sum(&self) -> u32 {
+        self.data
             .iter()
             .filter_map(|d| {
-                if d.status == "ok" {
-                    Some(d.duration as f64)
+                if d.status == "ok" || d.status == "error" {
+                    Some(d.duration as u32)
                 } else {
                     None
                 }
             })
             .sum()
     }
-    let baseline = sum(&benchmarks[0]);
-    let mut res = String::new();
-    for benchmark in benchmarks {
-        let factor = sum(benchmark) / baseline;
-        res = format!("{} {}={:.3}", res, benchmark.config, factor);
+}
+
+/// A wrapper around a string for text display.
+pub struct Display(String);
+
+/// Implement Debug (evcxr's way to print outputs) _without_ quotes as is the default for
+/// String. That's the whole purpose of this wrapper.
+impl Debug for Display {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.0)
     }
-    res
+}
+
+/// Print statistics for the given set of benchmarks.
+/// TODO: would be nice to have a histogram instead of textual output.
+pub fn stats_benchmarks(benchmarks: &[&Benchmark]) -> Display {
+    let baseline = benchmarks[0].sum() as f32 / 1000.0;
+    let mut res = String::new();
+    let config_width = benchmarks.iter().map(|b| b.config.len()).max().unwrap();
+    for benchmark in benchmarks {
+        let sum = benchmark.sum() as f32 / 1000.0;
+        let factor = sum / baseline;
+        res = format!(
+            "{}\n{:width$}: {:.3}s tot, {:.3} rel",
+            res,
+            benchmark.config,
+            sum,
+            factor,
+            width = config_width,
+        );
+    }
+    Display(res)
 }
 
 /// Plot a set of benchmarks in JupyterLab.

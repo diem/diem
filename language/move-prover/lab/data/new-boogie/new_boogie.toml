@@ -1,0 +1,4 @@
+# Use experimental boogie. Path is expected  in env var EXP_BOOGIE_EXE.
+backend.use_exp_boogie = true
+boogie_exp = true
+prover.run_mono = true

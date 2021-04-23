@@ -369,6 +369,16 @@ impl Options {
                     .help("uses cvc4 solver instead of z3")
             )
             .arg(
+                Arg::with_name("use-exp-boogie")
+                    .long("use-exp-boogie")
+                    .help("uses experimental boogie expected in EXP_BOOGIE_EXE")
+            )
+            .arg(
+                Arg::with_name("generate-smt")
+                    .long("generate-smt")
+                    .help("instructs boogie to log smtlib files for verified functions")
+            )
+            .arg(
                 Arg::with_name("experimental_pipeline")
                     .long("experimental_pipeline")
                     .short("e")
@@ -574,6 +584,12 @@ impl Options {
         }
         if matches.is_present("use-cvc4") {
             options.backend.use_cvc4 = true;
+        }
+        if matches.is_present("use-exp-boogie") {
+            options.backend.use_exp_boogie = true;
+        }
+        if matches.is_present("generate-smt") {
+            options.backend.generate_smt = true;
         }
         if matches.is_present("check-inconsistency") {
             options.prover.check_inconsistency = true;
