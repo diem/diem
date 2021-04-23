@@ -4287,8 +4287,6 @@ name = "move-binary-format"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "diem-crypto",
- "diem-proptest-helpers",
  "diem-workspace-hack",
  "mirai-annotations",
  "move-core-types",
@@ -4635,7 +4633,6 @@ name = "move-vm-types"
 version = "0.1.0"
 dependencies = [
  "bcs",
- "diem-crypto",
  "diem-workspace-hack",
  "mirai-annotations",
  "move-binary-format",

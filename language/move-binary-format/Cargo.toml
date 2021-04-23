@@ -16,8 +16,6 @@ mirai-annotations = "1.10.1"
 proptest = { version = "1.0.0", optional = true }
 proptest-derive = { version = "0.3.0", optional = true }
 ref-cast = "1.0.6"
-diem-crypto = { path = "../../crypto/crypto" }
-diem-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-core-types = { path = "../move-core/types" }
 num-variants = { path = "../../common/num-variants" }
@@ -25,10 +23,9 @@ num-variants = { path = "../../common/num-variants" }
 [dev-dependencies]
 proptest = "1.0.0"
 proptest-derive = "0.3.0"
-diem-proptest-helpers = { path = "../../common/proptest-helpers" }
 move-core-types = { path = "../move-core/types", features = ["fuzzing"] }
 serde_json = "1.0.64"
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "diem-proptest-helpers", "move-core-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "move-core-types/fuzzing"]

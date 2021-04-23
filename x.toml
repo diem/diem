@@ -227,46 +227,45 @@ exclude = [
 # This is a list of existing move to diem dependencies that we plan to eliminate over time.
 # You should refrain from adding new entries to this list in general.
 existing_deps = [
+    # Tier 0 - essential components that must be included in the first batch of crates getting
+    #          moved to the new repo
+    ["move-lang", "fallible"],                                # copy_slice_to_vec
+    ["move-lang", "diem-framework"],                          # sanity check to ensure that the diem-framework compiles
+    ["invalid-mutations", "diem-proptest-helpers"],           # pick_slice_idxs
+    ["bytecode-verifier-tests", "diem-framework-releases"],
+    ["compiler", "diem-framework-releases"],
+    ["move-prover", "diem-temppath"],
+    ["bytecode", "diem-temppath"],
+    ["docgen", "diem-temppath"],
+    ["move-vm-natives", "diem-crypto"],
+    ["move-vm-runtime", "diem-logger"],
+    ["move-vm-runtime", "diem-infallible"],                   # `Mutex`
+    ["move-vm-runtime", "diem-crypto"],                       # using `HashValue` as keys in the script cache
+    ["abigen", "diem-types"],                                 # ABI types
+    ["abigen", "diem-temppath"],
+    ["move-cli", "vm-genesis"],
+    ["move-cli", "diem-vm"],
+    ["move-cli", "diem-types"],                               # `ContractEvent`
+    ["move-cli", "diem-framework"],
+    ["move-cli", "diem-framework-releases"],
+    ["move-binary-format", "num-variants"],                   # counting the number of bytecodes
+
+    # Tier 1 - crates that can wait a little bit longer?
     ["language-benchmarks", "language-e2e-tests"],
     ["language-benchmarks", "diem-vm"],
     ["language-benchmarks", "diem-types"],
     ["language-benchmarks", "diem-state-view"],
     ["language-benchmarks", "diem-proptest-helpers"],
-    ["invalid-mutations", "diem-proptest-helpers"],
-    ["compiler", "diem-framework-releases"],
-    ["move-explain", "diem-framework-releases"],
-    ["move-lang", "fallible"],
-    ["move-lang", "diem-framework"],
-    ["move-prover", "diem-temppath"],
-    ["abigen", "diem-types"],
-    ["abigen", "diem-temppath"],
-    ["bytecode", "diem-temppath"],
-    ["bytecode-verifier-tests", "diem-framework-releases"],
-    ["docgen", "diem-temppath"],
-    ["move-vm-natives", "diem-crypto"],
-    ["move-vm-runtime", "diem-state-view"],
-    ["move-vm-runtime", "diem-logger"],
-    ["move-vm-runtime", "diem-infallible"],
-    ["move-vm-runtime", "diem-crypto"],
-    ["move-vm-types", "diem-crypto"],
     ["test-generation", "language-e2e-tests"],
     ["test-generation", "diem-vm"],
     ["test-generation", "diem-types"],
     ["test-generation", "diem-state-view"],
     ["test-generation", "diem-logger"],
     ["test-generation", "diem-config"],
-    ["move-cli", "vm-genesis"],
-    ["move-cli", "diem-vm"],
-    ["move-cli", "diem-types"],
-    ["move-cli", "diem-state-view"],
-    ["move-cli", "diem-framework"],
-    ["move-cli", "diem-framework-releases"],
     ["resource-viewer", "diem-framework-releases"],
     ["resource-viewer", "diem-types"],
     ["resource-viewer", "diem-state-view"],
-    ["move-binary-format", "num-variants"],
-    ["move-binary-format", "diem-proptest-helpers"],
-    ["move-binary-format", "diem-crypto"],
+    ["move-explain", "diem-framework-releases"],
 ]
 
 # Interesting subsets of the workspace, These are used for generating and
