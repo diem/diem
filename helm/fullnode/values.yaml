@@ -125,3 +125,4 @@ restore:
       container:
       sas:
     trusted_waypoints: []
+    concurrent_downloads: 2

@@ -120,7 +120,7 @@ jobs:
           rm -rf downloadazcopy-v10-linux azcopy_linux_amd64_*
       - name: replay transactions
         run: |
-          cargo run --release --bin db-restore -- --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
+          cargo run --release --bin db-restore -- --concurrent-downloads 2 --target-db-dir /var/tmp/dbrestore/ auto --replay-all command-adapter --config "$CONFIG"
       - uses: ./.github/actions/build-teardown
 
   json-rpc-backward-compat-test:
