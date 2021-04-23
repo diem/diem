@@ -1,0 +1,31 @@
+[package]
+name = "move-oncall-trainer"
+version = "0.1.0"
+authors = ["Diem Association <opensource@diem.com>"]
+description = "Create a playground for oncall to use existing toolchains to debug the network"
+repository = "https://github.com/diem/diem"
+homepage = "https://diem.com"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.38"
+structopt = "0.3.21"
+tempfile = "3.2.0"
+nix = "0.20.0"
+rustyline = "8.0.0"
+gag = "0.1.10"
+bcs = "0.1.2"
+
+cli = { path = "../../../testsuite/cli" }
+diem-client = { path = "../../../sdk/client/"}
+diem-config = { path = "../../../config" }
+diem-genesis-tool = { path = "../../../config/management/genesis" }
+diem-json-rpc-types = { path = "../../../json-rpc/types" }
+diem-types = { path = "../../../types" }
+diem-node = { path = "../../../diem-node"}
+diem-temppath = { path = "../../../common/temppath" }
+diem-workspace-hack = { path = "../../../common/workspace-hack" }

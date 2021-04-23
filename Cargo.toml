@@ -68,6 +68,7 @@ members = [
     "language/diem-framework/releases",
     "language/diem-tools/diem-events-fetcher",
     "language/diem-tools/diem-validator-interface",
+    "language/diem-tools/oncall-trainer",
     "language/diem-tools/transaction-replay",
     "language/diem-tools/writeset-transaction-generator",
     "language/diem-vm",
