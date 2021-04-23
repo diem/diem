@@ -122,7 +122,8 @@ impl BlockingClient {
     }
 
     pub fn submit(&self, txn: &SignedTransaction) -> Result<Response<()>> {
-        self.send(MethodRequest::submit(txn).map_err(Error::request)?)
+        let request = JsonRpcRequest::new(MethodRequest::submit(txn).map_err(Error::request)?);
+        self.send_without_retry(&request, true)
     }
 
     pub fn get_metadata_by_version(&self, version: u64) -> Result<Response<MetadataView>> {
@@ -276,18 +277,25 @@ impl BlockingClient {
 
     fn send<T: DeserializeOwned>(&self, request: MethodRequest) -> Result<Response<T>> {
         let request = JsonRpcRequest::new(request);
-        self.retry.retry(|| {
-            let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request)?;
+        self.retry
+            .retry(|| self.send_without_retry(&request, false))
+    }
 
-            let (id, state, result) = validate(&self.state, &resp)?;
+    fn send_without_retry<T: DeserializeOwned>(
+        &self,
+        request: &JsonRpcRequest,
+        ignore_stale: bool,
+    ) -> Result<Response<T>> {
+        let resp: diem_json_rpc_types::response::JsonRpcResponse = self.send_impl(&request)?;
 
-            if request.id() != id {
-                return Err(Error::rpc_response("invalid response id"));
-            }
+        let (id, state, result) = validate(&self.state, &resp, ignore_stale)?;
 
-            let inner = serde_json::from_value(result).map_err(Error::decode)?;
-            Ok(Response::new(inner, state))
-        })
+        if request.id() != id {
+            return Err(Error::rpc_response("invalid response id"));
+        }
+
+        let inner = serde_json::from_value(result).map_err(Error::decode)?;
+        Ok(Response::new(inner, state))
     }
 
     fn send_batch(
