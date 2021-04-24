@@ -37,23 +37,39 @@ use std::{borrow::Borrow, fmt, ops::Deref};
 ///
 /// Note: there are stricter restrictions on whether a character can begin a Move
 /// identifier--only alphabetic characters are allowed here.
-pub fn is_valid_identifier_char(c: char) -> bool {
+#[inline]
+pub const fn is_valid_identifier_char(c: char) -> bool {
     matches!(c, '_' | 'a'..='z' | 'A'..='Z' | '0'..='9')
+}
+
+/// Returns `true` if all bytes in `b` after the offset `start_offset` are valid
+/// ASCII identifier characters.
+const fn all_bytes_valid(b: &[u8], start_offset: usize) -> bool {
+    let mut i = start_offset;
+    // TODO(philiphayes): use for loop instead of while loop when it's stable in const fn's.
+    while i < b.len() {
+        if !is_valid_identifier_char(b[i] as char) {
+            return false;
+        }
+        i += 1;
+    }
+    true
 }
 
 /// Describes what identifiers are allowed.
 ///
 /// For now this is deliberately restrictive -- we would like to evolve this in the future.
 // TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
-fn is_valid(s: &str) -> bool {
-    if s == "<SELF>" {
-        return true;
-    }
-    let len = s.len();
-    let mut chars = s.chars();
-    match chars.next() {
-        Some('a'..='z') | Some('A'..='Z') => chars.all(is_valid_identifier_char),
-        Some('_') if len > 1 => chars.all(is_valid_identifier_char),
+// Note: needs to be pub as it's used in the `ident_str!` macro.
+pub const fn is_valid(s: &str) -> bool {
+    // Rust const fn's don't currently support slicing or indexing &str's, so we
+    // have to operate on the underlying byte slice. This is not a problem as
+    // valid identifiers are (currently) ASCII-only.
+    let b = s.as_bytes();
+    match b {
+        b"<SELF>" => true,
+        [b'a'..=b'z', ..] | [b'A'..=b'Z', ..] => all_bytes_valid(b, 1),
+        [b'_', ..] if b.len() > 1 => all_bytes_valid(b, 1),
         _ => false,
     }
 }
@@ -122,8 +138,8 @@ impl Identifier {
     }
 }
 
-impl<'a> From<&'a IdentStr> for Identifier {
-    fn from(ident_str: &'a IdentStr) -> Self {
+impl From<&IdentStr> for Identifier {
+    fn from(ident_str: &IdentStr) -> Self {
         ident_str.to_owned()
     }
 }
@@ -228,4 +244,65 @@ impl Arbitrary for Identifier {
             })
             .boxed()
     }
+}
+
+// const assert that IdentStr impls RefCast<From = str>
+// This assertion is what guarantees the unsafe transmute is safe.
+const _: fn() = || {
+    fn assert_impl_all<T: ?Sized + ::ref_cast::RefCast<From = str>>() {}
+    assert_impl_all::<IdentStr>();
+};
+
+/// `ident_str!` is a compile-time validated macro that constructs a
+/// `&'static IdentStr` from a const `&'static str`.
+///
+/// ### Example
+///
+/// Creating a valid static or const [`IdentStr`]:
+///
+/// ```rust
+/// use move_core_types::{ident_str, identifier::IdentStr};
+/// const VALID_IDENT: &'static IdentStr = ident_str!("MyCoolIdentifier");
+///
+/// const THING_NAME: &'static str = "thing_name";
+/// const THING_IDENT: &'static IdentStr = ident_str!(THING_NAME);
+/// ```
+///
+/// In contrast, creating an invalid [`IdentStr`] will fail at compile time:
+///
+/// ```rust,compile_fail
+/// use move_core_types::{ident_str, identifier::IdentStr};
+/// const INVALID_IDENT: &'static IdentStr = ident_str!("123Foo"); // Fails to compile!
+/// ```
+// TODO(philiphayes): this should really be an associated const fn like `IdentStr::new`;
+// unfortunately, both unsafe-reborrow and unsafe-transmute don't currently work
+// inside const fn's. Only unsafe-transmute works inside static const-blocks
+// (but not const-fn's).
+#[macro_export]
+macro_rules! ident_str {
+    ($ident:expr) => {{
+        // Only static strings allowed.
+        let s: &'static str = $ident;
+
+        // Only valid identifier strings are allowed.
+        // Note: Work-around hack to print an error message in a const block.
+        let is_valid = $crate::identifier::is_valid(s);
+        ["String is not a valid Move identifier"][!is_valid as usize];
+
+        // SAFETY: the following transmute is safe because
+        // (1) it's equivalent to the unsafe-reborrow inside IdentStr::ref_cast()
+        //     (which we can't use b/c it's not const).
+        // (2) we've just asserted that IdentStr impls RefCast<From = str>, which
+        //     already guarantees the transmute is safe (RefCast checks that
+        //     IdentStr(str) is #[repr(transparent)]).
+        // (3) both in and out lifetimes are 'static, so we're not widening the lifetime.
+        // (4) we've just asserted that the IdentStr passes the is_valid check.
+        //
+        // Note: this lint is unjustified and no longer checked. See issue:
+        // https://github.com/rust-lang/rust-clippy/issues/6372
+        #[allow(clippy::transmute_ptr_to_ptr)]
+        unsafe {
+            ::std::mem::transmute::<&'static str, &'static $crate::identifier::IdentStr>(s)
+        }
+    }};
 }

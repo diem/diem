@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS};
+use crate::identifier::{IdentStr, Identifier, ALLOWED_IDENTIFIERS, ALLOWED_NO_SELF_IDENTIFIERS};
 use bcs::test_helpers::assert_canonical_encode_decode;
 use once_cell::sync::Lazy;
 use proptest::prelude::*;
@@ -66,6 +66,11 @@ proptest! {
         // will be rejected by the is_valid validator. Note that the converse is checked by the
         // Arbitrary impl for Identifier.
         prop_assert!(!Identifier::is_valid(&identifier));
+    }
+
+    #[test]
+    fn valid_identifiers_proptest(identifier in ALLOWED_NO_SELF_IDENTIFIERS) {
+        prop_assert!(Identifier::is_valid(&identifier));
     }
 
     #[test]
