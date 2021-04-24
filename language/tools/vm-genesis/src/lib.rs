@@ -114,7 +114,7 @@ pub fn encode_genesis_change_set(
     let xdx_ty = TypeTag::Struct(StructTag {
         address: *account_config::XDX_MODULE.address(),
         module: account_config::XDX_MODULE.name().to_owned(),
-        name: account_config::XDX_STRUCT_NAME.to_owned(),
+        name: account_config::XDX_IDENTIFIER.to_owned(),
         type_params: vec![],
     });
 

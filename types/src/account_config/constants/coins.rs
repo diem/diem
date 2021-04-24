@@ -3,13 +3,16 @@
 
 use crate::account_config::constants::{from_currency_code_string, CORE_CODE_ADDRESS};
 use move_core_types::{
-    identifier::Identifier,
+    ident_str,
+    identifier::IdentStr,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
 use once_cell::sync::Lazy;
 
 pub const XDX_NAME: &str = "XDX";
+pub const XDX_IDENTIFIER: &IdentStr = ident_str!(XDX_NAME);
 pub const XUS_NAME: &str = "XUS";
+pub const XUS_IDENTIFIER: &IdentStr = ident_str!(XUS_NAME);
 
 pub fn xus_tag() -> TypeTag {
     TypeTag::Struct(StructTag {
@@ -21,8 +24,7 @@ pub fn xus_tag() -> TypeTag {
 }
 
 pub static XDX_MODULE: Lazy<ModuleId> =
-    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, Identifier::new(XDX_NAME).unwrap()));
-pub static XDX_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new(XDX_NAME).unwrap());
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, XDX_IDENTIFIER.to_owned()));
 
 pub fn xdx_type_tag() -> TypeTag {
     TypeTag::Struct(StructTag {
@@ -58,9 +60,9 @@ pub fn coin_name(t: &TypeTag) -> Option<String> {
 fn coin_names() {
     assert!(coin_name(&xus_tag()).unwrap() == XUS_NAME);
     assert!(coin_name(&xdx_type_tag()).unwrap() == XDX_NAME);
-
     assert!(coin_name(&TypeTag::U64) == None);
-    let bad_name = Identifier::new("NotACoin").unwrap();
+
+    let bad_name = ident_str!("NotACoin").to_owned();
     let bad_coin = TypeTag::Struct(StructTag {
         address: CORE_CODE_ADDRESS,
         module: bad_name.clone(),

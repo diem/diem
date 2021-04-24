@@ -3,7 +3,7 @@
 //! Names of modules, functions, and types used by Diem System.
 
 use diem_types::account_config;
-use move_core_types::{identifier::Identifier, language_storage::ModuleId};
+use move_core_types::{ident_str, identifier::IdentStr, language_storage::ModuleId};
 use once_cell::sync::Lazy;
 
 // Data to resolve basic account and transaction flow functions and structs
@@ -12,20 +12,14 @@ use once_cell::sync::Lazy;
 pub static DIEM_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
-        Identifier::new("DiemBlock").unwrap(),
+        ident_str!("DiemBlock").to_owned(),
     )
 });
 
 // Names for special functions and structs
-pub static SCRIPT_PROLOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("script_prologue").unwrap());
-pub static MODULE_PROLOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("module_prologue").unwrap());
-pub static WRITESET_PROLOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("writeset_prologue").unwrap());
-pub static WRITESET_EPILOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("writeset_epilogue").unwrap());
-pub static USER_EPILOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("epilogue").unwrap());
-pub static BLOCK_PROLOGUE: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("block_prologue").unwrap());
+pub const SCRIPT_PROLOGUE_NAME: &IdentStr = ident_str!("script_prologue");
+pub const MODULE_PROLOGUE_NAME: &IdentStr = ident_str!("module_prologue");
+pub const WRITESET_PROLOGUE_NAME: &IdentStr = ident_str!("writeset_prologue");
+pub const WRITESET_EPILOGUE_NAME: &IdentStr = ident_str!("writeset_epilogue");
+pub const USER_EPILOGUE_NAME: &IdentStr = ident_str!("epilogue");
+pub const BLOCK_PROLOGUE: &IdentStr = ident_str!("block_prologue");
