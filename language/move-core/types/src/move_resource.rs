@@ -8,19 +8,15 @@ use crate::{
 use serde::de::DeserializeOwned;
 
 pub trait MoveStructType {
-    const MODULE_NAME: &'static str;
-    const STRUCT_NAME: &'static str;
+    const MODULE_NAME: &'static IdentStr;
+    const STRUCT_NAME: &'static IdentStr;
 
     fn module_identifier() -> Identifier {
-        IdentStr::new(Self::MODULE_NAME)
-            .expect("failed to get IdentStr for Move module")
-            .to_owned()
+        Self::MODULE_NAME.to_owned()
     }
 
     fn struct_identifier() -> Identifier {
-        IdentStr::new(Self::STRUCT_NAME)
-            .expect("failed to get IdentStr for Move struct")
-            .to_owned()
+        Self::STRUCT_NAME.to_owned()
     }
 
     fn type_params() -> Vec<TypeTag> {

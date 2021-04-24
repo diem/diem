@@ -3,11 +3,15 @@
 
 use crate::{
     account_config::{
-        constants::ACCOUNT_MODULE_NAME, KeyRotationCapabilityResource, WithdrawCapabilityResource,
+        constants::ACCOUNT_MODULE_IDENTIFIER, KeyRotationCapabilityResource,
+        WithdrawCapabilityResource,
     },
     event::EventHandle,
 };
-use move_core_types::move_resource::{MoveResource, MoveStructType};
+use move_core_types::{
+    identifier::IdentStr,
+    move_resource::{MoveResource, MoveStructType},
+};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -77,8 +81,8 @@ impl AccountResource {
 }
 
 impl MoveStructType for AccountResource {
-    const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
-    const STRUCT_NAME: &'static str = ACCOUNT_MODULE_NAME;
+    const MODULE_NAME: &'static IdentStr = ACCOUNT_MODULE_IDENTIFIER;
+    const STRUCT_NAME: &'static IdentStr = ACCOUNT_MODULE_IDENTIFIER;
 }
 
 impl MoveResource for AccountResource {}

@@ -4,15 +4,16 @@
 use crate::account_config::constants::CORE_CODE_ADDRESS;
 use anyhow::{bail, Result};
 use move_core_types::{
-    identifier::Identifier,
+    identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
 use once_cell::sync::Lazy;
 
-pub const DIEM_MODULE_NAME: &str = "Diem";
-static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Diem").unwrap());
+pub use move_core_types::vm_status::known_locations::{DIEM_MODULE, DIEM_MODULE_IDENTIFIER};
+
+const COIN_MODULE_IDENTIFIER: &IdentStr = DIEM_MODULE_IDENTIFIER;
 pub static COIN_MODULE: Lazy<ModuleId> =
-    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_IDENTIFIER.to_owned()));
 
 // TODO: This imposes a few implied restrictions:
 //   1) The currency module must be published under the core code address.

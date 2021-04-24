@@ -1,10 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
-
+use crate::{account_address::AccountAddress, account_config::DESIGNATED_DEALER_MODULE_IDENTIFIER};
 use anyhow::Result;
 use move_core_types::{
+    ident_str,
     identifier::{IdentStr, Identifier},
     move_resource::MoveStructType,
 };
@@ -40,6 +40,6 @@ impl ReceivedMintEvent {
 }
 
 impl MoveStructType for ReceivedMintEvent {
-    const MODULE_NAME: &'static str = "DesignatedDealer";
-    const STRUCT_NAME: &'static str = "ReceivedMintEvent";
+    const MODULE_NAME: &'static IdentStr = DESIGNATED_DEALER_MODULE_IDENTIFIER;
+    const STRUCT_NAME: &'static IdentStr = ident_str!("ReceivedMintEvent");
 }

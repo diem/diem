@@ -3,11 +3,14 @@
 
 use crate::{
     access_path::AccessPath,
-    account_config::constants::{diem_root_address, type_tag_for_currency_code, CORE_CODE_ADDRESS},
+    account_config::constants::{
+        diem_root_address, type_tag_for_currency_code, CORE_CODE_ADDRESS, DIEM_MODULE_IDENTIFIER,
+    },
     event::EventHandle,
 };
 use anyhow::Result;
 use move_core_types::{
+    ident_str,
     identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag},
     move_resource::{MoveResource, MoveStructType},
@@ -33,8 +36,8 @@ pub struct CurrencyInfoResource {
 }
 
 impl MoveStructType for CurrencyInfoResource {
-    const MODULE_NAME: &'static str = "Diem";
-    const STRUCT_NAME: &'static str = "CurrencyInfo";
+    const MODULE_NAME: &'static IdentStr = DIEM_MODULE_IDENTIFIER;
+    const STRUCT_NAME: &'static IdentStr = ident_str!("CurrencyInfo");
 }
 
 impl MoveResource for CurrencyInfoResource {}

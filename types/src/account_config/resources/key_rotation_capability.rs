@@ -1,8 +1,14 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account_address::AccountAddress, account_config::constants::ACCOUNT_MODULE_NAME};
-use move_core_types::move_resource::{MoveResource, MoveStructType};
+use crate::{
+    account_address::AccountAddress, account_config::constants::ACCOUNT_MODULE_IDENTIFIER,
+};
+use move_core_types::{
+    ident_str,
+    identifier::IdentStr,
+    move_resource::{MoveResource, MoveStructType},
+};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -14,8 +20,8 @@ pub struct KeyRotationCapabilityResource {
 }
 
 impl MoveStructType for KeyRotationCapabilityResource {
-    const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
-    const STRUCT_NAME: &'static str = "KeyRotationCapability";
+    const MODULE_NAME: &'static IdentStr = ACCOUNT_MODULE_IDENTIFIER;
+    const STRUCT_NAME: &'static IdentStr = ident_str!("KeyRotationCapability");
 }
 
 impl MoveResource for KeyRotationCapabilityResource {}

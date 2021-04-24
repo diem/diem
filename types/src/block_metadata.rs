@@ -7,7 +7,11 @@ use crate::{
     event::{EventHandle, EventKey},
 };
 use diem_crypto::HashValue;
-use move_core_types::move_resource::{MoveResource, MoveStructType};
+use move_core_types::{
+    ident_str,
+    identifier::IdentStr,
+    move_resource::{MoveResource, MoveStructType},
+};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -96,8 +100,8 @@ impl DiemBlockResource {
 }
 
 impl MoveStructType for DiemBlockResource {
-    const MODULE_NAME: &'static str = "DiemBlock";
-    const STRUCT_NAME: &'static str = "BlockMetadata";
+    const MODULE_NAME: &'static IdentStr = ident_str!("DiemBlock");
+    const STRUCT_NAME: &'static IdentStr = ident_str!("BlockMetadata");
 }
 
 impl MoveResource for DiemBlockResource {}

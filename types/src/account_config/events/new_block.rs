@@ -3,7 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::Result;
-use move_core_types::move_resource::MoveStructType;
+use move_core_types::{ident_str, identifier::IdentStr, move_resource::MoveStructType};
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a NewBlockEvent.
@@ -49,6 +49,6 @@ impl NewBlockEvent {
 }
 
 impl MoveStructType for NewBlockEvent {
-    const MODULE_NAME: &'static str = "DiemBlock";
-    const STRUCT_NAME: &'static str = "NewBlockEvent";
+    const MODULE_NAME: &'static IdentStr = ident_str!("DiemBlock");
+    const STRUCT_NAME: &'static IdentStr = ident_str!("NewBlockEvent");
 }

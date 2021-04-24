@@ -6,7 +6,11 @@ use crate::{
     network_address::{encrypted::EncNetworkAddress, NetworkAddress},
 };
 use diem_crypto::ed25519::Ed25519PublicKey;
-use move_core_types::move_resource::{MoveResource, MoveStructType};
+use move_core_types::{
+    ident_str,
+    identifier::IdentStr,
+    move_resource::{MoveResource, MoveStructType},
+};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -19,8 +23,8 @@ pub struct ValidatorConfigResource {
 }
 
 impl MoveStructType for ValidatorConfigResource {
-    const MODULE_NAME: &'static str = "ValidatorConfig";
-    const STRUCT_NAME: &'static str = "ValidatorConfig";
+    const MODULE_NAME: &'static IdentStr = ident_str!("ValidatorConfig");
+    const STRUCT_NAME: &'static IdentStr = ident_str!("ValidatorConfig");
 }
 
 impl MoveResource for ValidatorConfigResource {}
@@ -31,8 +35,8 @@ pub struct ValidatorOperatorConfigResource {
 }
 
 impl MoveStructType for ValidatorOperatorConfigResource {
-    const MODULE_NAME: &'static str = "ValidatorOperatorConfig";
-    const STRUCT_NAME: &'static str = "ValidatorOperatorConfig";
+    const MODULE_NAME: &'static IdentStr = ident_str!("ValidatorOperatorConfig");
+    const STRUCT_NAME: &'static IdentStr = ident_str!("ValidatorOperatorConfig");
 }
 
 impl MoveResource for ValidatorOperatorConfigResource {}

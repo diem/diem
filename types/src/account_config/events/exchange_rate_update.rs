@@ -1,9 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_config::DIEM_MODULE_NAME;
+use crate::account_config::DIEM_MODULE_IDENTIFIER;
 use anyhow::Result;
 use move_core_types::{
+    ident_str,
     identifier::{IdentStr, Identifier},
     move_resource::MoveStructType,
 };
@@ -37,6 +38,6 @@ impl ToXDXExchangeRateUpdateEvent {
 }
 
 impl MoveStructType for ToXDXExchangeRateUpdateEvent {
-    const MODULE_NAME: &'static str = DIEM_MODULE_NAME;
-    const STRUCT_NAME: &'static str = "ToXDXExchangeRateUpdateEvent";
+    const MODULE_NAME: &'static IdentStr = DIEM_MODULE_IDENTIFIER;
+    const STRUCT_NAME: &'static IdentStr = ident_str!("ToXDXExchangeRateUpdateEvent");
 }
