@@ -205,7 +205,7 @@ impl ScriptFunctionCall {
                     "move_core_types::language_storage",
                     vec!["TypeTag", "ModuleId"],
                 ),
-                ("move_core_types::identifier", vec!["Identifier"]),
+                ("move_core_types", vec!["ident_str"]),
                 (
                     "diem_types::transaction",
                     vec![
@@ -680,7 +680,7 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
 
     fn quote_identifier(&self, ident: &str) -> String {
         if self.local_types {
-            format!("Identifier::new(\"{}\").unwrap()", ident)
+            format!("ident_str!(\"{}\").to_owned()", ident)
         } else {
             format!("Identifier(\"{}\".to_string())", ident)
         }
