@@ -20,7 +20,7 @@ use move_binary_format::{
 use move_core_types::value::MoveValue;
 use move_model::{
     ast::{ConditionKind, TempIndex},
-    model::{FunctionEnv, Loc, ModuleEnv, StructId},
+    model::{FunctionEnv, Loc, StructId},
     ty::{PrimitiveType, Type},
 };
 use std::{collections::BTreeMap, matches};
@@ -1052,7 +1052,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             (Type::Primitive(PrimitiveType::U64), MoveValue::U64(b)) => Constant::U64(*b),
             (Type::Primitive(PrimitiveType::U128), MoveValue::U128(b)) => Constant::U128(*b),
             (Type::Primitive(PrimitiveType::Address), MoveValue::Address(a)) => {
-                Constant::Address(ModuleEnv::addr_to_big_uint(a))
+                Constant::Address(move_model::addr_to_big_uint(a))
             }
             _ => panic!("Unexpected (and possibly invalid) constant type: {:?}", ty),
         }

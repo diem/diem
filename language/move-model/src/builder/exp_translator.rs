@@ -21,7 +21,7 @@ use crate::{
         model_builder::{ConstEntry, LocalVarEntry, SpecFunEntry},
         module_builder::ModuleBuilder,
     },
-    model::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
+    model::{FieldId, Loc, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, Variance, BOOL_TYPE},
 };
@@ -1863,8 +1863,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             MoveValue::U64(n) => Value::Number(BigInt::from_u64(*n).unwrap()),
             MoveValue::U128(n) => Value::Number(BigInt::from_u128(*n).unwrap()),
             MoveValue::Bool(b) => Value::Bool(*b),
-            MoveValue::Address(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),
-            MoveValue::Signer(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),
+            MoveValue::Address(a) => Value::Address(crate::addr_to_big_uint(a)),
+            MoveValue::Signer(a) => Value::Address(crate::addr_to_big_uint(a)),
             MoveValue::Vector(vs) => {
                 let b = vs
                     .iter()

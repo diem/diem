@@ -34,7 +34,7 @@ use codespan_reporting::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{info, warn};
-use num::{BigUint, Num, One, ToPrimitive};
+use num::{BigUint, One, ToPrimitive};
 use serde::{Deserialize, Serialize};
 
 use bytecode_source_map::{mapping::SourceMapping, source_map::SourceMap};
@@ -1972,12 +1972,7 @@ impl<'env> ModuleEnv<'env> {
     /// Retrieve an address identifier from the pool
     pub fn get_address_identifier(&self, idx: AddressIdentifierIndex) -> BigUint {
         let addr = &self.data.module.address_identifiers()[idx.0 as usize];
-        Self::addr_to_big_uint(addr)
-    }
-
-    /// Converts an address identifier to a number representing the address.
-    pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
-        BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+        crate::addr_to_big_uint(addr)
     }
 
     /// Returns specification variables of this module.
@@ -2852,9 +2847,25 @@ impl<'env> FunctionEnv<'env> {
         view.arg_tokens().count()
     }
 
+    /// Return the number of type parameters for self
+    pub fn get_type_parameter_count(&self) -> usize {
+        let view = self.definition_view();
+        view.type_parameters().len()
+    }
+
     /// Return `true` if idx is a formal parameter index
     pub fn is_parameter(&self, idx: usize) -> bool {
         idx < self.get_parameter_count()
+    }
+
+    /// Returns the parameter types associated with this function
+    pub fn get_parameter_types(&self) -> Vec<Type> {
+        let view = self.definition_view();
+        view.arg_tokens()
+            .map(|tv: SignatureTokenView<CompiledModule>| {
+                self.module_env.globalize_signature(tv.signature_token())
+            })
+            .collect()
     }
 
     /// Returns the regular parameters associated with this function.

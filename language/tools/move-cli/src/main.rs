@@ -162,6 +162,14 @@ pub enum AnalysisCommand {
         /// A function inside `module_file`.
         #[structopt(name = "function")]
         fun_name: String,
+        #[structopt(long = "signers")]
+        signers: Vec<String>,
+        #[structopt(long = "args", parse(try_from_str = parser::parse_transaction_argument))]
+        args: Vec<TransactionArgument>,
+        #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
+        type_args: Vec<TypeTag>,
+        #[structopt(long = "concretize")]
+        concretize: bool,
     },
 }
 
@@ -236,10 +244,23 @@ fn main() -> Result<()> {
                 AnalysisCommand::ReadWriteSet {
                     module_file,
                     fun_name,
+                    signers,
+                    args,
+                    type_args,
+                    concretize,
                 },
         } => {
             let state = mode.prepare_state(&move_args.build_dir, &move_args.storage_dir)?;
-            commands::analyze_read_write_set(&state, module_file, fun_name, move_args.verbose)
+            commands::analyze_read_write_set(
+                &state,
+                module_file,
+                fun_name,
+                signers,
+                args,
+                type_args,
+                *concretize,
+                move_args.verbose,
+            )
         }
         Command::Clean {} => {
             // delete storage

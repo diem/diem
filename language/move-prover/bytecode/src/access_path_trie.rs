@@ -11,7 +11,12 @@ use crate::{
     dataflow_domains::{AbstractDomain, JoinResult, MapDomain},
 };
 use im::ordmap::Entry;
-use move_model::{ast::TempIndex, model::FunctionEnv, ty::Type};
+use move_core_types::{account_address::AccountAddress, language_storage::TypeTag};
+use move_model::{
+    ast::TempIndex,
+    model::{FunctionEnv, GlobalEnv},
+    ty::Type,
+};
 use std::{
     fmt,
     fmt::Formatter,
@@ -53,15 +58,34 @@ impl<T: FootprintDomain> TrieNode<T> {
     }
 
     /// Like join, but gracefully handles `Non` data fields by treating None as Bottom
-    pub fn join_data_opt(&mut self, other: &Option<T>) -> JoinResult {
-        match (&mut self.data, other) {
+    pub fn join_data_opt_(mut data: &mut Option<T>, other: &Option<T>) -> JoinResult {
+        match (&mut data, other) {
             (Some(data1), Some(data2)) => data1.join(data2),
-            (None, Some(data)) => {
-                self.data = Some(data.clone());
+            (None, Some(d)) => {
+                *data = Some(d.clone());
                 JoinResult::Changed
             }
             (_, None) => JoinResult::Unchanged,
         }
+    }
+
+    /// Like join, but gracefully handles `Non` data fields by treating None as Bottom
+    pub fn join_data_opt(&mut self, other: &Option<T>) -> JoinResult {
+        Self::join_data_opt_(&mut self.data, other)
+    }
+
+    pub fn join_child_data(&self, mut acc: Option<T>) -> Option<T> {
+        Self::join_data_opt_(&mut acc, &self.data);
+        for v in self.children.values() {
+            Self::join_data_opt_(&mut acc, &v.data);
+        }
+        acc
+    }
+
+    pub fn get_child_data(&self) -> Option<T> {
+        let mut acc = None;
+        Self::join_data_opt_(&mut acc, &self.data);
+        acc
     }
 
     pub fn data(&self) -> &Option<T> {
@@ -79,6 +103,17 @@ impl<T: FootprintDomain> TrieNode<T> {
     /// Return the node mapped to `o` from self (if any)
     pub fn get_offset(&self, o: &Offset) -> Option<&Self> {
         self.children.get(o)
+    }
+
+    /// Return true if `self`'s keys can be converted into a compact set of concrete access paths
+    /// Note: this says nothing about the `data` part of `self`
+    pub fn keys_statically_known(&self) -> bool {
+        for (offset, child) in self.children.iter() {
+            if !offset.is_statically_known() || !child.keys_statically_known() {
+                return false;
+            }
+        }
+        true
     }
 
     /// Bind caller data in `actuals`, `type_actuals`, and `sub_map` to `self`.
@@ -115,6 +150,18 @@ impl<T: FootprintDomain> TrieNode<T> {
         F: FnMut(&mut TrieNode<T>) + Copy,
     {
         self.children.update_values(f);
+    }
+
+    /// Apply `f` to each offset in `self`
+    pub fn iter_offsets<F>(&self, mut f: F) -> F
+    where
+        F: FnMut(&Offset),
+    {
+        for (k, v) in self.children.iter() {
+            f(k);
+            f = v.iter_offsets(f);
+        }
+        f
     }
 
     /// Apply `f` to all (access path, Option<data>) pairs encoded in `self`
@@ -201,6 +248,14 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
             }
         }
         Some(node)
+    }
+
+    pub fn get_child_data(&self) -> Option<T> {
+        let mut acc = None;
+        for v in self.values() {
+            acc = v.join_child_data(acc)
+        }
+        acc
     }
 
     /// Like `update_access_path`, but always performs a weak update
@@ -307,6 +362,17 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
         self.0.contains_key(&Root::from_index(local_index, fun_env))
     }
 
+    /// Return `true` if the keys of `self` have no dynamic components and thus can be converted into
+    /// a compact set of concrete access paths.
+    pub fn keys_statically_known(&self) -> bool {
+        for (root, node) in self.0.iter() {
+            if !root.is_statically_known() || !node.keys_statically_known() {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Bind caller data in `actuals`, `type_actuals`, and `sub_map` to `self`.
     /// (1) Bind all free type variables in `self` to `type_actuals`
     /// (2) Apply `sub_data` to `self.data` and (recursively) to the `data` fields of `self.children`
@@ -341,6 +407,29 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
         self.substitute_footprint(actuals, type_actuals, sub_map, no_op)
     }
 
+    /// Substitute concrete values `actuals` and `type_actuals` into `self`
+    pub fn substitute_footprint_concrete(
+        self,
+        actuals: &[Option<AccountAddress>],
+        type_actuals: &[TypeTag],
+        sub_map: &dyn AccessPathMap<AbsAddr>,
+        env: &GlobalEnv,
+    ) -> Self {
+        let values = actuals
+            .iter()
+            .map(|addr_opt| {
+                addr_opt
+                    .map(|addr| AbsAddr::from(&addr))
+                    .unwrap_or_default()
+            })
+            .collect::<Vec<AbsAddr>>();
+        let types = type_actuals
+            .iter()
+            .map(|t| Type::from_type_tag(t, env))
+            .collect::<Vec<Type>>();
+        self.substitute_footprint_skip_data(&values, &types, sub_map)
+    }
+
     /// Apply `f` to each node in `self`
     pub fn iter_values<F>(&mut self, mut f: F)
     where
@@ -350,6 +439,16 @@ impl<T: FootprintDomain> AccessPathTrie<T> {
             f(node);
             node.iter_values(f);
         });
+    }
+
+    /// Apply `f` to each offset in `self`
+    pub fn iter_offsets<F>(&self, mut f: F)
+    where
+        F: FnMut(&Offset),
+    {
+        for (_k, node) in self.0.iter() {
+            f = node.iter_offsets(f)
+        }
     }
 
     /// Apply `f` to each (access path, Option(data)) pair encoded in `self`

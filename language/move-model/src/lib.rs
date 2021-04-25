@@ -14,6 +14,7 @@ use move_binary_format::{
     access::ModuleAccess,
     file_format::{CompiledModule, FunctionDefinitionIndex, StructDefinitionIndex},
 };
+use move_core_types::account_address::AccountAddress;
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
@@ -23,11 +24,12 @@ use move_lang::{
     shared::{unique_map::UniqueMap, Address, CompilationEnv, Flags},
     Pass as MovePass, PassResult as MovePassResult,
 };
+use num::{BigUint, Num};
 
 use crate::{
     ast::{ModuleName, Spec},
     builder::model_builder::ModelBuilder,
-    model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleEnv, ModuleId, StructId},
+    model::{FunId, FunctionData, GlobalEnv, Loc, ModuleData, ModuleId, StructId},
 };
 
 pub mod ast;
@@ -240,7 +242,7 @@ pub fn run_bytecode_model_builder<'a>(
     let mut env = GlobalEnv::new();
     for (i, m) in modules.into_iter().enumerate() {
         let id = m.self_id();
-        let addr = ModuleEnv::addr_to_big_uint(id.address());
+        let addr = addr_to_big_uint(id.address());
         let module_name = ModuleName::new(addr, env.symbol_pool().make(id.name().as_str()));
         let module_id = ModuleId::new(i);
         let mut module_data = ModuleData::stub(module_name.clone(), module_id, m.clone());
@@ -387,6 +389,21 @@ fn run_spec_checker(env: &mut GlobalEnv, units: Vec<CompiledUnit>, mut eprog: Pr
     }
     // After all specs have been processed, warn about any unused schemas.
     builder.warn_unused_schemas();
+}
+
+// =================================================================================================
+// Helpers
+
+/// Converts an address identifier to a number representing the address.
+pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
+    BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+}
+
+/// Converts a biguint into an account address
+pub fn big_uint_to_addr(i: &BigUint) -> AccountAddress {
+    // TODO: do this in more efficient way (e.g., i.to_le_bytes() and pad out the resulting Vec<u8>
+    // to ADDRESS_LENGTH
+    AccountAddress::from_hex_literal(&format!("{:#x}", i)).unwrap()
 }
 
 // =================================================================================================

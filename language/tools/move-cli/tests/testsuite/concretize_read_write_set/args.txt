@@ -1,0 +1,27 @@
+publish
+
+## secondary index test
+# print the abstract read/write set state
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect
+# try to concretize, should print nothing. publish first resource needed
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA
+run storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv publish_addr --signers 0xA --args 0xB
+# try to concretize, should print one read. publish second resource needed
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA
+run storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv publish --signers 0xB
+# try to concretize, should now print both resources
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA
+
+# check that concretizing with both signers and address args works
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv multi_arg --concretize --signers 0x1 --args 0xA 2
+
+## vector + secondary index test
+# print the abstract read/write set state
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec
+# try to concretize, should print nothing. publish resources needed
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1
+run storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv publish --signers 0x1 0x2
+# try to concretize, should now print one S resource and two T resources
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1
+# same thing, but with write function
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv write_vec --concretize --args 0x1 2

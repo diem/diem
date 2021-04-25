@@ -1,0 +1,52 @@
+Command `publish`:
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect`:
+Accesses:
+Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
+Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Read
+
+Locals:
+Formal(0): Formal(0)
+Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a: Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a
+Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f: Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f
+Ret(0): Formal(0)/0x1::ConcretizeSecondaryIndexes::Addr/a/0x1::ConcretizeSecondaryIndexes::S/f
+
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA`:
+
+Command `run storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv publish_addr --signers 0xA --args 0xB`:
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA`:
+0xa/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
+
+Command `run storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv publish --signers 0xB`:
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv read_indirect --concretize --args 0xA`:
+0xa/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
+0xb/0x1::ConcretizeSecondaryIndexes::S/f: Read
+
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeSecondaryIndexes.mv multi_arg --concretize --signers 0x1 --args 0xA 2`:
+0xa/0x1::ConcretizeSecondaryIndexes::Addr/a: Read
+0xb/0x1::ConcretizeSecondaryIndexes::S/f: Read
+
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec`:
+Accesses:
+Formal(0)/0x1::ConcretizeVector::S/v/[_]: Read
+Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Read
+
+Locals:
+Formal(0): Formal(0)
+Formal(0)/0x1::ConcretizeVector::S/v: Formal(0)/0x1::ConcretizeVector::S/v
+Formal(0)/0x1::ConcretizeVector::S/v/[_]: Formal(0)/0x1::ConcretizeVector::S/v/[_]
+Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f: Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f
+Ret(0): Formal(0)/0x1::ConcretizeVector::S/v/[_]/0x1::ConcretizeVector::T/f
+
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1`:
+
+Command `run storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv publish --signers 0x1 0x2`:
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv read_vec --concretize --args 0x1`:
+0x1/0x1::ConcretizeVector::S/v/[_]: Read
+0x1/0x1::ConcretizeVector::T/f: Read
+0x2/0x1::ConcretizeVector::T/f: Read
+
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/ConcretizeVector.mv write_vec --concretize --args 0x1 2`:
+0x1/0x1::ConcretizeVector::S/v/[_]: Read
+0x1/0x1::ConcretizeVector::T/f: Write
+0x2/0x1::ConcretizeVector::T/f: Write
+

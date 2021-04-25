@@ -34,7 +34,7 @@ mod resolver;
 #[derive(Debug)]
 pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AnnotatedMoveStruct {
     pub abilities: AbilitySet,
     pub type_: StructTag,
@@ -45,7 +45,7 @@ pub struct AnnotatedMoveStruct {
 /// for debugging/client purpose right now and just for a better visualization of on chain data. In
 /// the long run, we would like to transform this struct to a Json value so that we can have a cross
 /// platform interpretation of the on chain data.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum AnnotatedMoveValue {
     U8(u8),
     U64(u64),
@@ -55,6 +55,22 @@ pub enum AnnotatedMoveValue {
     Vector(TypeTag, Vec<AnnotatedMoveValue>),
     Bytes(Vec<u8>),
     Struct(AnnotatedMoveStruct),
+}
+
+impl AnnotatedMoveValue {
+    pub fn get_type(&self) -> TypeTag {
+        use AnnotatedMoveValue::*;
+        match self {
+            U8(_) => TypeTag::U8,
+            U64(_) => TypeTag::U64,
+            U128(_) => TypeTag::U128,
+            Bool(_) => TypeTag::Bool,
+            Address(_) => TypeTag::Address,
+            Vector(t, _) => t.clone(),
+            Bytes(_) => TypeTag::Vector(Box::new(TypeTag::U8)),
+            Struct(s) => TypeTag::Struct(s.type_.clone()),
+        }
+    }
 }
 
 pub struct MoveValueAnnotator<'a> {
@@ -75,6 +91,14 @@ impl<'a> MoveValueAnnotator<'a> {
             cache: Resolver::new(view, false),
             _data_view: view,
         }
+    }
+
+    pub fn get_resource_bytes(&self, addr: &AccountAddress, tag: &StructTag) -> Option<Vec<u8>> {
+        self.cache
+            .state
+            .get_resource(addr, tag)
+            .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())
+            .ok()?
     }
 
     pub fn view_access_path(

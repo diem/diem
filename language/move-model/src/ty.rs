@@ -169,13 +169,17 @@ impl Type {
         }
         false
     }
-
     /// Returns true if this is an address or signer type.
     pub fn is_signer_or_address(&self) -> bool {
         matches!(
             self,
             Type::Primitive(PrimitiveType::Signer) | Type::Primitive(PrimitiveType::Address)
         )
+    }
+
+    /// Return true if this is an account address
+    pub fn is_address(&self) -> bool {
+        matches!(self, Type::Primitive(PrimitiveType::Address))
     }
 
     /// Skip reference type.
@@ -429,7 +433,7 @@ impl Type {
     }
 
     /// Create a `Type` from `t`
-    pub fn from_type_tag(t: TypeTag, env: &GlobalEnv) -> Self {
+    pub fn from_type_tag(t: &TypeTag, env: &GlobalEnv) -> Self {
         use Type::*;
         match t {
             TypeTag::Bool => Primitive(PrimitiveType::Bool),
@@ -444,12 +448,12 @@ impl Type {
                 });
                 let type_args = s
                     .type_params
-                    .into_iter()
+                    .iter()
                     .map(|arg| Self::from_type_tag(arg, env))
                     .collect();
                 Struct(qid.module_id, qid.id, type_args)
             }
-            TypeTag::Vector(type_param) => Vector(Box::new(Self::from_type_tag(*type_param, env))),
+            TypeTag::Vector(type_param) => Vector(Box::new(Self::from_type_tag(type_param, env))),
         }
     }
 

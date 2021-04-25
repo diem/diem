@@ -1,8 +1,8 @@
 [package]
-name = "read-write-set"
+name = "diem-read-write-set"
 version = "0.1.0"
 authors = ["Diem Association <opensource@diem.com>"]
-description = "Read/write set inference for Move bytecode programs"
+description = "Read/write set inference for Diem transactions"
 repository = "https://github.com/diem/diem"
 homepage = "https://diem.com"
 license = "Apache-2.0"
@@ -12,9 +12,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.38"
 diem-workspace-hack = { path = "../../../common/workspace-hack" }
-move-binary-format = { path = "../../move-binary-format" }
+diem-types = { path = "../../../types" }
+diem-vm = { path = "../../diem-vm" }
 move-core-types = { path = "../../move-core/types" }
 move-vm-runtime = { path = "../../move-vm/runtime" }
-move-model = { path = "../../move-model" }
-prover_bytecode = { path = "../../move-prover/bytecode", package="bytecode" }
-resource-viewer = { path = "../resource-viewer" }
+read-write-set = { path = "../../tools/read-write-set" }

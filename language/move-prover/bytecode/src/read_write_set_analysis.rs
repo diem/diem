@@ -6,11 +6,11 @@
 //! read/written by each procedure and the value(s) returned by the procedure.
 //!
 //! When the analysis encounters a call, it fetches the summary for the callee and applies it to the
-//! current state. This logic (implemented in `apply_summary`) is by far the most complex part of the
+//! current state. This logic (implemented in `apply_summary`) is by far the most complex part of themove
 //! analysis.
 
 use crate::{
-    access_path::{AbsAddr, AccessPath, Addr, FootprintDomain, Offset, Root},
+    access_path::{AbsAddr, AccessPath, AccessPathMap, Addr, FootprintDomain, Offset, Root},
     access_path_trie::AccessPathTrie,
     compositional_analysis::{CompositionalAnalysis, SummaryCache},
     dataflow_analysis::{DataflowAnalysis, TransferFunctions},
@@ -20,6 +20,7 @@ use crate::{
     stackless_bytecode::{Bytecode, Constant, Operation},
 };
 use move_binary_format::file_format::CodeOffset;
+use move_core_types::{account_address::AccountAddress, language_storage::TypeTag};
 use move_model::{
     ast::TempIndex,
     model::{FunctionEnv, GlobalEnv, ModuleId, StructId},
@@ -51,11 +52,82 @@ pub struct ReadWriteSetState {
     locals: AccessPathTrie<AbsAddr>,
 }
 
+/// A abstract `ReadWriteSetState` that has been (fully or partially) concretized by substituting
+/// concrete values. Represented as a separate type to avoid confusion/comparison with an
+/// overapproximate `ReadWriteSet`
+#[derive(Debug, Clone, Eq, PartialOrd, PartialEq)]
+pub struct SpecializedReadWriteSetState(AccessPathTrie<Access>);
+
+impl Access {
+    pub fn is_read(&self) -> bool {
+        match self {
+            Access::Read | Access::ReadWrite => true,
+            Access::Write => false,
+        }
+    }
+
+    pub fn is_write(&self) -> bool {
+        match self {
+            Access::Write | Access::ReadWrite => true,
+            Access::Read => false,
+        }
+    }
+}
+
 // =================================================================================================
 // Abstract Domain Operations
 
 impl ReadWriteSetState {
-    /// Aplly `callee_summary` to the caller state in `self`. There are three steps.
+    // TODO: figure out how to reuse this in apply_footprint
+    pub fn sub_actuals(
+        accesses: AccessPathTrie<Access>,
+        actuals: &[AbsAddr],
+        type_actuals: &[Type],
+        fun_env: &FunctionEnv,
+        sub_map: &dyn AccessPathMap<AbsAddr>,
+    ) -> AccessPathTrie<Access> {
+        // (1) bind all footprint values and types in callee accesses to their caller values
+        let mut new_accesses =
+            accesses.substitute_footprint_skip_data(&actuals, type_actuals, sub_map);
+        // (2) bind footprint paths in callee accesses with their caller values
+        for (i, actual_v) in actuals.iter().enumerate() {
+            let formal_i = Root::from_index(i, fun_env);
+            assert!(
+                formal_i.is_formal(),
+                "Arity mismatch between caller and callee for {}; given {} actuals for {} formals",
+                fun_env.get_full_name_str(),
+                actuals.len(),
+                fun_env.get_parameter_count(),
+            );
+            if let Some(node) = new_accesses.remove(&formal_i) {
+                let formal_ap = AccessPath::new(formal_i, vec![]);
+                for v in formal_ap.prepend_addrs(actual_v).iter() {
+                    match v {
+                        Addr::Footprint(ap) => {
+                            new_accesses.join_access_path(ap.clone(), node.clone());
+                        }
+                        Addr::Constant(c) => {
+                            for (offset, child) in node.children().iter() {
+                                match offset {
+                                    Offset::Global(g) => {
+                                        // create new root out of c/g, add c/g/child to summary
+                                        new_accesses.join_access_path(
+                                            AccessPath::new_global_constant(c.clone(), g.clone()),
+                                            child.clone(),
+                                        )
+                                    }
+                                    o => panic!("Bad offset type {:?} for address base", o),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        new_accesses
+    }
+
+    /// Apply `callee_summary` to the caller state in `self`. There are three steps.
     /// 1. Substitute footprint values in the callee summary with their values in the caller state (including both actuals and values read from globals)
     /// 2. Bind return values in the callee summary to the return variables in the caller state
     /// 3. Join caller accesses and callee accesses
@@ -97,7 +169,7 @@ impl ReadWriteSetState {
             let formal_i = Root::from_index(i, callee_fun_env);
             assert!(
                 formal_i.is_formal(),
-                "Arity mistmatch between caller and callee"
+                "Arity mismatch between caller and callee"
             );
             if let Some(node) = new_callee_accesses.remove(&formal_i) {
                 let formal_ap = AccessPath::new(formal_i, vec![]);
@@ -276,9 +348,39 @@ impl ReadWriteSetState {
         }
     }
 
+    /// Substitute concrete values `actuals` and `type_actuals` into `self`
+    pub fn substitute_footprint_concrete(
+        self,
+        actuals: &[Option<AccountAddress>],
+        type_actuals: &[TypeTag],
+        sub_map: &dyn AccessPathMap<AbsAddr>,
+        env: &GlobalEnv,
+    ) -> SpecializedReadWriteSetState {
+        let accesses =
+            self.accesses
+                .substitute_footprint_concrete(actuals, type_actuals, sub_map, env);
+        SpecializedReadWriteSetState(accesses)
+    }
+
+    pub fn accesses(&self) -> &AccessPathTrie<Access> {
+        &self.accesses
+    }
+
+    pub fn locals(&self) -> &AccessPathTrie<AbsAddr> {
+        &self.locals
+    }
+
     /// Return a wrapper of `self` that implements `Display` using `env`
     pub fn display<'a>(&'a self, env: &'a FunctionEnv) -> ReadWriteSetStateDisplay<'a> {
         ReadWriteSetStateDisplay { state: self, env }
+    }
+}
+
+impl SpecializedReadWriteSetState {
+    /// Return true if `self` has no dynamic components and can be converted into a compact
+    /// set of concrete access paths
+    pub fn is_statically_known(&self) -> bool {
+        self.0.keys_statically_known()
     }
 }
 

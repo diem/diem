@@ -1,0 +1,22 @@
+# Smoke test that runs a mock of Diem genesis and tries a few basic transactions
+
+# Run a realistic mock of the genesis process
+run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED
+
+# Create DD account at 0xDD with a balance in each currency
+run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_designated_dealer --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true
+
+# create parent VASP account at 0xA with a balance in each currency
+run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true
+
+# create parent VASP account at 0xB with a balance in each currency
+run  storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true
+
+# mint 1000 XUS to 0xDD
+run storage/0x00000000000000000000000000000001/modules/TreasuryComplianceScripts.mv tiered_mint --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0
+
+# transfer 700 XUS from 0xDD to 0xA
+run storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x""
+
+# transfer 500 XUS from 0xA to 0xB
+analyze read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --concretize --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v

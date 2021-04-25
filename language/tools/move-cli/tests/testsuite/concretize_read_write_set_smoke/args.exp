@@ -1,0 +1,39 @@
+Command `run genesis.move --mode diem --signers 0xA550C18 0xB1E55ED`:
+Command `run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_designated_dealer --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true`:
+Command `run storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true`:
+Command `run  storage/0x00000000000000000000000000000001/modules/AccountCreationScripts.mv create_parent_vasp_account --mode diem --type-args 0x1::XDX::XDX --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true`:
+Command `run storage/0x00000000000000000000000000000001/modules/TreasuryComplianceScripts.mv tiered_mint --mode diem --type-args 0x1::XUS::XUS --signers 0xB1E55ED --args 0 0xDD 1000 0`:
+Command `run storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --type-args 0x1::XUS::XUS --signers 0xDD --args 0xA 700 x"" x""`:
+Command `analyze read-write-set storage/0x00000000000000000000000000000001/modules/PaymentScripts.mv peer_to_peer_with_metadata --mode diem --concretize --type-args 0x1::XUS::XUS --signers 0xA --args 0xB 500 x"" x"" -v`:
+Inferring read/write set for 49 module(s)
+0xa/0x1::AccountFreezing::FreezingBit: Read
+0xa/0x1::AccountFreezing::FreezingBit/is_frozen: Read
+0xa/0x1::VASP::ParentVASP: Read
+0xa/0x1::DiemAccount::DiemAccount: Read
+0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec: Read
+0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]: ReadWrite
+0xa/0x1::DiemAccount::DiemAccount/withdraw_capability/vec/[_]/account_address: Read
+0xa/0x1::DiemAccount::DiemAccount/sent_events/counter: ReadWrite
+0xa/0x1::DiemAccount::DiemAccount/sent_events/guid: Read
+0xa/0x1::DiemAccount::Balance<0x1::XUS::XUS>: Read
+0xa/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin/value: ReadWrite
+0xb/0x1::AccountFreezing::FreezingBit: Read
+0xb/0x1::AccountFreezing::FreezingBit/is_frozen: Read
+0xb/0x1::VASP::ParentVASP: Read
+0xb/0x1::DualAttestation::Credential: Read
+0xb/0x1::DualAttestation::Credential/base_url: Read
+0xb/0x1::DualAttestation::Credential/compliance_public_key: Read
+0xb/0x1::DiemAccount::DiemAccount: Read
+0xb/0x1::DiemAccount::DiemAccount/received_events/counter: ReadWrite
+0xb/0x1::DiemAccount::DiemAccount/received_events/guid: Read
+0xb/0x1::DiemAccount::Balance<0x1::XUS::XUS>: Read
+0xb/0x1::DiemAccount::Balance<0x1::XUS::XUS>/coin/value: ReadWrite
+0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds: Read
+0xa550c18/0x1::DiemTimestamp::CurrentTimeMicroseconds/microseconds: Read
+0xa550c18/0x1::Diem::CurrencyInfo<0x1::XUS::XUS>: Read
+0xa550c18/0x1::Diem::CurrencyInfo<0x1::XUS::XUS>/to_xdx_exchange_rate: Read
+0xa550c18/0x1::Diem::CurrencyInfo<0x1::XUS::XUS>/to_xdx_exchange_rate/value: Read
+0xa550c18/0x1::Diem::CurrencyInfo<0x1::XUS::XUS>/currency_code: Read
+0xa550c18/0x1::DualAttestation::Limit: Read
+0xa550c18/0x1::DualAttestation::Limit/micro_xdx_limit: Read
+

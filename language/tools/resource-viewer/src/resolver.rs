@@ -23,7 +23,7 @@ use move_vm_runtime::data_cache::MoveStorage;
 use std::rc::Rc;
 
 pub(crate) struct Resolver<'a> {
-    state: &'a dyn MoveStorage,
+    pub state: &'a dyn MoveStorage,
     cache: ModuleCache,
 }
 

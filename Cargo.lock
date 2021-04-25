@@ -2166,6 +2166,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "diem-read-write-set"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "diem-types",
+ "diem-vm",
+ "diem-workspace-hack",
+ "move-core-types",
+ "move-vm-runtime",
+ "read-write-set",
+]
+
+[[package]]
 name = "diem-retrier"
 version = "0.1.0"
 dependencies = [
@@ -5978,6 +5991,8 @@ dependencies = [
  "move-binary-format",
  "move-core-types",
  "move-model",
+ "move-vm-runtime",
+ "resource-viewer",
 ]
 
 [[package]]
