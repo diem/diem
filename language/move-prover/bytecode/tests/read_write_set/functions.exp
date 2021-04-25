@@ -90,7 +90,6 @@ public fun Funtions::call_write_vec($t0|a: address, $t1|v: vector<u8>) {
      var $t3: &mut Funtions::R
      var $t4: vector<u8>
      # Accesses:
-     # Loc(0)/0x1::Funtions::R: Borrow
      # Loc(0)/0x1::Funtions::R/v: Write
      #
      # Locals:

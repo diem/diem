@@ -66,7 +66,7 @@ fun Counter::call_increment1($t0|s: &mut Counter::S) {
      var $t1: &mut Counter::S
      var $t2: &mut u64
      # Accesses:
-     # Loc(0)/f: ReadWriteBorrow
+     # Loc(0)/f: ReadWrite
      #
      # Locals:
      # Loc(0): Loc(0)
@@ -84,8 +84,7 @@ fun Counter::call_increment2($t0|a: address) {
      var $t1: address
      var $t2: &mut Counter::S
      # Accesses:
-     # Loc(0)/0x1::Counter::S: Borrow
-     # Loc(0)/0x1::Counter::S/f: ReadWriteBorrow
+     # Loc(0)/0x1::Counter::S/f: ReadWrite
      #
      # Locals:
      # Loc(0): Loc(0)
@@ -105,7 +104,7 @@ fun Counter::increment1($t0|i: &mut u64) {
      var $t4: u64
      var $t5: &mut u64
      # Accesses:
-     # Loc(0): ReadWriteBorrow
+     # Loc(0): ReadWrite
      #
      # Locals:
      #
@@ -129,7 +128,7 @@ fun Counter::increment2($t0|s: &mut Counter::S) {
      var $t6: &mut Counter::S
      var $t7: &mut u64
      # Accesses:
-     # Loc(0)/f: ReadWriteBorrow
+     # Loc(0)/f: ReadWrite
      #
      # Locals:
      # Loc(0): Loc(0)

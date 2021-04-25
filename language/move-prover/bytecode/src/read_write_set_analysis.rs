@@ -32,15 +32,12 @@ use std::{cmp::Ordering, fmt, fmt::Formatter};
 /// An access to local or global state
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Access {
-    /// Not read or written; only accessed via a field borrow &, Vector::borrow, or borrow_global
-    /// E.g., in *&x.f.g = 7, f is Borrow, g is Write
-    Borrow,
     /// Read via RHS * or exists
     Read,
     /// Written via LHS *, move_to, or move_from
     Write,
-    /// Could be read, written, or borrowed
-    ReadWriteBorrow,
+    /// Could be read or written
+    ReadWrite,
 }
 
 /// A record of the glocals and locals accessed by the current procedure + the address values stored
@@ -215,15 +212,16 @@ impl ReadWriteSetState {
         ret: TempIndex,
         base: TempIndex,
         offset: Offset,
-        access_type: Access,
+        access_type: Option<Access>,
     ) {
         let borrowed = self.locals.get_local(base).expect("Unbound local").clone();
         let extended_aps = borrowed.add_offset(offset);
         for ap in extended_aps.footprint_paths() {
             self.locals
                 .update_access_path(ap.clone(), Some(AbsAddr::footprint(ap.clone())));
-            self.accesses
-                .update_access_path_weak(ap.clone(), Some(access_type))
+            if access_type.is_some() {
+                self.accesses.update_access_path(ap.clone(), access_type)
+            }
         }
         self.locals.bind_local(ret, extended_aps)
     }
@@ -276,10 +274,8 @@ impl PartialOrd for Access {
             return Some(Ordering::Equal);
         }
         match (self, other) {
-            (Access::Borrow, _) => Some(Ordering::Less),
-            (_, Access::Borrow) => Some(Ordering::Greater),
-            (Access::ReadWriteBorrow, _) => Some(Ordering::Greater),
-            (_, Access::ReadWriteBorrow) => Some(Ordering::Less),
+            (Access::ReadWrite, _) => Some(Ordering::Greater),
+            (_, Access::ReadWrite) => Some(Ordering::Less),
             _ => None,
         }
     }
@@ -290,11 +286,8 @@ impl AbstractDomain for Access {
         if self == other {
             return JoinResult::Unchanged;
         }
-        let res = match (*self, *other) {
-            (Access::Borrow, x) | (x, Access::Borrow) => x,
-            _ => Access::ReadWriteBorrow,
-        };
-        *self = res;
+        // unequal; use top value
+        *self = Access::ReadWrite;
         JoinResult::Changed
     }
 }
@@ -318,7 +311,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
             Call(_, rets, oper, args, _abort_action) => match oper {
                 BorrowField(_mid, _sid, _types, fld) => {
                     if state.locals.local_exists(args[0]) {
-                        state.assign_offset(rets[0], args[0], Offset::field(*fld), Access::Borrow);
+                        state.assign_offset(rets[0], args[0], Offset::field(*fld), None);
                     }
                 }
                 ReadRef => {
@@ -339,7 +332,6 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                     }
                 }
                 BorrowGlobal(mid, sid, types) => {
-                    state.add_global_access(args[0], mid, *sid, types, Access::Borrow);
                     // borrow_global<T>(a). bind ret to a/T
                     let addrs = state
                         .locals
@@ -355,9 +347,6 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                                 extended_ap.add_offset(offset.clone());
                                 extended_aps.insert(Addr::Footprint(extended_ap.clone()));
                                 state.locals.update_access_path(extended_ap.clone(), None);
-                                state
-                                    .accesses
-                                    .update_access_path_weak(extended_ap, Some(Access::Borrow))
                             }
                             Addr::Constant(c) => {
                                 let extended_ap = AccessPath::new_address_constant(
@@ -473,7 +462,6 @@ fn call_native_function(
         ("Signer", "borrow_address") => {
             if state.locals.local_exists(args[0]) {
                 // treat as identity function
-                state.record_access(args[0], Access::Borrow);
                 state.copy_local(rets[0], args[0])
             }
         }
@@ -481,7 +469,7 @@ fn call_native_function(
             if state.locals.local_exists(args[0]) {
                 // this will look at vector length. record as read of an index
                 state.access_offset(args[0], Offset::VectorIndex, Access::Read);
-                state.assign_offset(rets[0], args[0], Offset::VectorIndex, Access::Borrow)
+                state.assign_offset(rets[0], args[0], Offset::VectorIndex, None)
             }
         }
         ("Vector", "length") | ("Vector", "is_empty") => {
@@ -494,7 +482,7 @@ fn call_native_function(
                 // this will look at vector length. record as read of an index
                 state.access_offset(args[0], Offset::VectorIndex, Access::Read);
                 state.access_offset(args[0], Offset::VectorIndex, Access::Write);
-                state.assign_offset(rets[0], args[0], Offset::VectorIndex, Access::Read)
+                state.assign_offset(rets[0], args[0], Offset::VectorIndex, Some(Access::Read))
             }
         }
         ("Vector", "push_back") | ("Vector", "append") | ("Vector", "swap") => {

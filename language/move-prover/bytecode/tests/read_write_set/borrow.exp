@@ -1,0 +1,55 @@
+============ initial translation from Move ================
+
+[variant baseline]
+fun Borrow::borrow_s($t0|a: address) {
+     var $t1: address
+     var $t2: &Borrow::S
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Borrow::S>($t1)
+  2: destroy($t2)
+  3: return ()
+}
+
+
+[variant baseline]
+fun Borrow::borrow_s_mut($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Borrow::S
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Borrow::S>($t1)
+  2: destroy($t2)
+  3: return ()
+}
+
+============ after pipeline `read_write_set` ================
+
+[variant baseline]
+fun Borrow::borrow_s($t0|a: address) {
+     var $t1: address
+     var $t2: &Borrow::S
+     # Accesses:
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     #
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Borrow::S>($t1)
+  2: destroy($t2)
+  3: return ()
+}
+
+
+[variant baseline]
+fun Borrow::borrow_s_mut($t0|a: address) {
+     var $t1: address
+     var $t2: &mut Borrow::S
+     # Accesses:
+     #
+     # Locals:
+     # Loc(0): Loc(0)
+     #
+  0: $t1 := copy($t0)
+  1: $t2 := borrow_global<Borrow::S>($t1)
+  2: destroy($t2)
+  3: return ()
+}
