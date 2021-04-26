@@ -193,7 +193,8 @@ impl ReadWriteSetState {
             .iter()
         {
             if let Addr::Footprint(ap) = p {
-                self.accesses.update_access_path(ap.clone(), Some(access))
+                self.accesses
+                    .update_access_path_weak(ap.clone(), Some(access))
             }
         }
     }
@@ -204,7 +205,7 @@ impl ReadWriteSetState {
         let extended_aps = borrowed.add_offset(offset);
         for ap in extended_aps.footprint_paths() {
             self.accesses
-                .update_access_path(ap.clone(), Some(access_type))
+                .update_access_path_weak(ap.clone(), Some(access_type))
         }
     }
 
@@ -222,7 +223,7 @@ impl ReadWriteSetState {
             self.locals
                 .update_access_path(ap.clone(), Some(AbsAddr::footprint(ap.clone())));
             self.accesses
-                .update_access_path(ap.clone(), Some(access_type))
+                .update_access_path_weak(ap.clone(), Some(access_type))
         }
         self.locals.bind_local(ret, extended_aps)
     }
@@ -356,7 +357,7 @@ impl<'a> TransferFunctions for ReadWriteSetAnalysis<'a> {
                                 state.locals.update_access_path(extended_ap.clone(), None);
                                 state
                                     .accesses
-                                    .update_access_path(extended_ap, Some(Access::Borrow))
+                                    .update_access_path_weak(extended_ap, Some(Access::Borrow))
                             }
                             Addr::Constant(c) => {
                                 let extended_ap = AccessPath::new_address_constant(
