@@ -17,6 +17,7 @@
 mod util;
 
 mod counters;
+pub mod data;
 mod methods;
 mod runtime;
 
