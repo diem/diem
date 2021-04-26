@@ -2272,6 +2272,7 @@ dependencies = [
  "diem-workspace-hack",
  "diemdb",
  "difference",
+ "hex",
  "move-binary-format",
  "move-cli",
  "move-core-types",

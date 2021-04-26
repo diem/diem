@@ -8,6 +8,8 @@ use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
+    contract_event::EventWithProof,
+    event::EventKey,
     transaction::{Transaction, Version},
 };
 use std::convert::TryFrom;
@@ -42,6 +44,23 @@ impl DiemValidatorInterface for JsonRpcDebuggerInterface {
             }
             None => None,
         })
+    }
+
+    fn get_events(
+        &self,
+        key: &EventKey,
+        start_seq: u64,
+        limit: u64,
+    ) -> Result<Vec<EventWithProof>> {
+        let events = self
+            .client
+            .get_events_with_proofs(key.to_string().as_str(), start_seq, limit)?
+            .into_inner();
+        let mut result = vec![];
+        for event in events {
+            result.push(bcs::from_bytes(event.event_with_proof.inner())?);
+        }
+        Ok(result)
     }
 
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {

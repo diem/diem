@@ -7,11 +7,13 @@ use diem_config::config::RocksdbConfig;
 use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
+    contract_event::EventWithProof,
+    event::EventKey,
     transaction::{Transaction, Version},
 };
 use diemdb::DiemDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, Order};
 
 pub struct DBDebuggerInterface(Arc<dyn DbReader>);
 
@@ -39,6 +41,15 @@ impl DiemValidatorInterface for DBDebuggerInterface {
             .transpose()
     }
 
+    fn get_events(
+        &self,
+        key: &EventKey,
+        start_seq: u64,
+        limit: u64,
+    ) -> Result<Vec<EventWithProof>> {
+        self.0
+            .get_events_with_proofs(key, start_seq, Order::Ascending, limit, None)
+    }
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>> {
         Ok(self
             .0

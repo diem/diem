@@ -9,6 +9,8 @@ use diem_types::{
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
+    contract_event::EventWithProof,
+    event::EventKey,
     transaction::{Transaction, Version, WriteSetPayload},
     write_set::WriteOp,
 };
@@ -93,6 +95,15 @@ impl DiemValidatorInterface for TestInterface {
 
     fn get_latest_version(&self) -> Result<Version> {
         Ok(self.latest_version)
+    }
+
+    fn get_events(
+        &self,
+        _key: &EventKey,
+        _start_seq: u64,
+        _limit: u64,
+    ) -> Result<Vec<EventWithProof>> {
+        unimplemented!()
     }
 
     fn get_version_by_account_sequence(

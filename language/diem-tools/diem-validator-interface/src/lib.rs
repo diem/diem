@@ -14,6 +14,8 @@ use diem_types::{
     account_address::AccountAddress,
     account_config,
     account_state::AccountState,
+    contract_event::EventWithProof,
+    event::EventKey,
     on_chain_config::ValidatorSet,
     transaction::{Transaction, Version},
 };
@@ -25,6 +27,8 @@ pub trait DiemValidatorInterface: Sync {
         account: AccountAddress,
         version: Version,
     ) -> Result<Option<AccountState>>;
+    fn get_events(&self, key: &EventKey, start_seq: u64, limit: u64)
+        -> Result<Vec<EventWithProof>>;
     fn get_committed_transactions(&self, start: Version, limit: u64) -> Result<Vec<Transaction>>;
     fn get_latest_version(&self) -> Result<Version>;
     fn get_version_by_account_sequence(

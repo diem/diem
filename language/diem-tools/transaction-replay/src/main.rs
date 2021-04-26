@@ -5,6 +5,7 @@ use anyhow::{bail, Result};
 use diem_transaction_replay::DiemDebugger;
 use diem_types::{
     account_address::AccountAddress,
+    event::EventKey,
     transaction::{TransactionPayload, Version},
 };
 use difference::Changeset;
@@ -29,10 +30,13 @@ struct Opt {
 
 #[derive(Debug, StructOpt)]
 enum Command {
+    /// Replay transactions starting from version `start` to `start + limit`.
     #[structopt(name = "replay-transactions")]
     ReplayTransactions { start: Version, limit: u64 },
+    /// Replay the last `txns` committed transactions.
     #[structopt(name = "replay-recent-transactions")]
     ReplayRecentTransactions { txns: u64 },
+    /// Replay the `seq`th transaction committed by `account`
     #[structopt(name = "replay-transaction-by-sequence-number")]
     ReplayTransactionBySequence {
         #[structopt(parse(try_from_str))]
@@ -47,14 +51,20 @@ enum Command {
         write_set_blob_path: PathBuf,
         version: u64,
     },
+    /// Annotate the resources stored under `account` at `version`.
     #[structopt(name = "annotate-account")]
     AnnotateAccount {
         #[structopt(parse(try_from_str))]
         account: AccountAddress,
-        version: Version,
+        version: Option<Version>,
     },
+    /// Annotate the resources stored under `diem_root`, `treasury_compliance` and all validator addresses.
     #[structopt(name = "annotate-key-accounts")]
     AnnotateKeyAccounts { version: Version },
+    /// Annotate the events stored under `key` with range `start` to `start+limit`.
+    #[structopt(name = "annotate-events")]
+    AnnotateEvents { key: String, start: u64, limit: u64 },
+    /// Diff between the resources stored under two versions of the same `account`
     #[structopt(name = "diff-account")]
     DiffAccount {
         #[structopt(parse(try_from_str))]
@@ -140,12 +150,28 @@ fn main() -> Result<()> {
                 )?
             );
         }
-        Command::AnnotateAccount { account, version } => println!(
-            "{}",
-            debugger
-                .annotate_account_state_at_version(account, version, opt.save_write_sets)?
-                .expect("Account not found")
-        ),
+        Command::AnnotateAccount {
+            account,
+            version: version_opt,
+        } => {
+            let version = match version_opt {
+                Some(v) => v,
+                None => debugger.get_latest_version()?,
+            };
+            println!(
+                "{}",
+                debugger
+                    .annotate_account_state_at_version(account, version, opt.save_write_sets)?
+                    .expect("Account not found")
+            )
+        }
+        Command::AnnotateEvents { key, start, limit } => {
+            debugger.pretty_print_events(
+                &EventKey::from_bytes(hex::decode(key.as_str())?)?,
+                start,
+                limit,
+            )?;
+        }
         Command::AnnotateKeyAccounts { version } => {
             for (addr, state) in
                 debugger.annotate_key_accounts_at_version(version, opt.save_write_sets)?
