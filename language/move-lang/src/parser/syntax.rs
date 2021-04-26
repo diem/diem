@@ -2124,7 +2124,8 @@ fn parse_spec_block(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<S
 
 // Parse a spec block member:
 //    SpecBlockMember = <DocComments> ( <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
-//                                   | <SpecInclude> | <SpecApply> | <SpecPragma> | <SpecLet> )
+//                                   | <SpecInclude> | <SpecApply> | <SpecPragma> | <SpecLet>
+//                                   | <SpecAxiom> )
 fn parse_spec_block_member(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
     tokens.match_doc_comments();
     match tokens.peek() {
@@ -2133,7 +2134,7 @@ fn parse_spec_block_member(tokens: &mut Lexer) -> Result<SpecBlockMember, Error>
         Tok::Define | Tok::Native => parse_spec_function(tokens),
         Tok::IdentifierValue => match tokens.content() {
             "assert" | "assume" | "decreases" | "aborts_if" | "aborts_with" | "succeeds_if"
-            | "modifies" | "emits" | "ensures" | "requires" => parse_condition(tokens),
+            | "modifies" | "emits" | "ensures" | "requires" | "axiom" => parse_condition(tokens),
             "include" => parse_spec_include(tokens),
             "apply" => parse_spec_apply(tokens),
             "pragma" => parse_spec_pragma(tokens),
@@ -2165,6 +2166,7 @@ fn parse_condition(tokens: &mut Lexer) -> Result<SpecBlockMember, Error> {
     let kind = match tokens.content() {
         "assert" => SpecConditionKind::Assert,
         "assume" => SpecConditionKind::Assume,
+        "axiom" => SpecConditionKind::Axiom,
         "decreases" => SpecConditionKind::Decreases,
         "aborts_if" => SpecConditionKind::AbortsIf,
         "aborts_with" => SpecConditionKind::AbortsWith,

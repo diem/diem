@@ -86,7 +86,7 @@ pub fn add_prelude(
     let implicit_vec_inst = vec![TypeInfo::new(
         env,
         options,
-        &Type::Primitive(PrimitiveType::U64),
+        &Type::Primitive(PrimitiveType::U8),
     )];
     let vec_instances = mono_info
         .vec_inst

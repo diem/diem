@@ -60,6 +60,7 @@ pub struct SpecFunDecl {
 pub enum ConditionKind {
     Assert,
     Assume,
+    Axiom,
     Decreases,
     AbortsIf,
     AbortsWith,
@@ -141,7 +142,7 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a module.
     pub fn allowed_on_module(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant | InvariantUpdate)
+        matches!(self, Invariant | InvariantUpdate | Axiom)
     }
 }
 
@@ -151,6 +152,7 @@ impl std::fmt::Display for ConditionKind {
         match self {
             Assert => write!(f, "assert"),
             Assume => write!(f, "assume"),
+            Axiom => write!(f, "axiom"),
             Decreases => write!(f, "decreases"),
             AbortsIf => write!(f, "aborts_if"),
             AbortsWith => write!(f, "aborts_with"),
@@ -536,7 +538,7 @@ impl Exp {
         };
         let rewrite_decl =
             |rewriter: &mut F, node_rewriter: &mut G, d: LocalVarDecl| LocalVarDecl {
-                id: d.id,
+                id: node_rewriter(d.id),
                 name: d.name,
                 binding: d
                     .binding
@@ -560,7 +562,7 @@ impl Exp {
                 .map(|(d, r)| {
                     (
                         rewrite_decl(rewriter, node_rewriter, d),
-                        r.rewrite(rewriter),
+                        r.internal_rewrite(rewriter, node_rewriter),
                     )
                 })
                 .collect()
@@ -590,7 +592,11 @@ impl Exp {
                 rewrite_quant_decls(rewriter, node_rewriter, decls),
                 triggers
                     .into_iter()
-                    .map(|t| t.into_iter().map(|e| e.rewrite(rewriter)).collect())
+                    .map(|t| {
+                        t.into_iter()
+                            .map(|e| e.internal_rewrite(rewriter, node_rewriter))
+                            .collect()
+                    })
                     .collect(),
                 condition.map(|e| rewrite_box(rewriter, node_rewriter, e)),
                 rewrite_box(rewriter, node_rewriter, body),
@@ -685,6 +691,7 @@ pub enum Operation {
     Concat,
     IndexOf,
     Contains,
+    InRange,
     MaxU8,
     MaxU64,
     MaxU128,

@@ -98,6 +98,21 @@ impl<'env> SpecTranslator<'env> {
     }
 }
 
+// Axioms
+// ======
+
+impl<'env> SpecTranslator<'env> {
+    pub fn translate_axioms(&self, env: &GlobalEnv, mono_info: &MonoInfo) {
+        for axiom in &mono_info.axioms {
+            self.writer.set_location(&axiom.loc);
+            emitln!(self.writer, "// axiom {}", axiom.loc.display(env));
+            emit!(self.writer, "axiom ");
+            self.translate_exp(&axiom.exp);
+            emitln!(self.writer, ";\n");
+        }
+    }
+}
+
 // Specification Variables
 // =======================
 
@@ -255,21 +270,23 @@ impl<'env> SpecTranslator<'env> {
             );
             let type_check =
                 boogie_well_formed_expr(self.env, "$$res", &self.inst(&fun.result_type));
-            if !param_list.is_empty() {
-                emitln!(
-                    self.writer,
-                    "axiom (forall {} ::\n(var $$res := {};\n{}));",
-                    param_list,
-                    call,
-                    type_check
-                );
-            } else {
-                emitln!(
-                    self.writer,
-                    "axiom (var $$res := {};\n{});",
-                    call,
-                    type_check
-                );
+            if !type_check.is_empty() {
+                if !param_list.is_empty() {
+                    emitln!(
+                        self.writer,
+                        "axiom (forall {} ::\n(var $$res := {};\n{}));",
+                        param_list,
+                        call,
+                        type_check
+                    );
+                } else {
+                    emitln!(
+                        self.writer,
+                        "axiom (var $$res := {};\n{});",
+                        call,
+                        type_check
+                    );
+                }
             }
             emitln!(self.writer);
         } else {
@@ -497,6 +514,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Single => self.translate_primitive_call("MakeVec1", args),
             Operation::IndexOf => self.translate_primitive_inst_call(node_id, "$IndexOfVec", args),
             Operation::Contains => self.translate_primitive_inst_call(node_id, "$Contains", args),
+            Operation::InRange => self.translate_in_range(args),
             Operation::Old => panic!("old(..) expression unexpected"),
             Operation::Trace => self.translate_exp(&args[0]),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
@@ -1015,6 +1033,15 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ")");
     }
 
+    fn translate_in_range(&self, args: &[Exp]) {
+        // Only difference to primitive call is swapped argument order.
+        emit!(self.writer, "InRangeVec(");
+        self.translate_exp(&args[1]);
+        emit!(self.writer, ", ");
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ")");
+    }
+
     fn translate_primitive_inst_call(&self, node_id: NodeId, fun: &str, args: &[Exp]) {
         let suffix = boogie_inst_suffix(self.env, &self.get_node_instantiation(node_id));
         emit!(self.writer, "{}{}(", fun, suffix);
@@ -1037,15 +1064,20 @@ impl<'env> SpecTranslator<'env> {
                     emit!(self.writer, "true");
                 }
             }
+            Exp::LocalVar(_, sym) => {
+                // For specification locals (which never can be references) directly emit them.
+                let check = boogie_well_formed_expr(
+                    self.env,
+                    self.env.symbol_pool().string(*sym).as_str(),
+                    &ty,
+                );
+                emit!(self.writer, &check);
+            }
             _ => {
                 let check = boogie_well_formed_expr(self.env, "$val", ty.skip_reference());
-                if !check.is_empty() {
-                    emit!(self.writer, "(var $val := ");
-                    self.translate_exp(exp);
-                    emit!(self.writer, "; {})", check);
-                } else {
-                    emit!(self.writer, "true");
-                }
+                emit!(self.writer, "(var $val := ");
+                self.translate_exp(exp);
+                emit!(self.writer, "; {})", check);
             }
         }
     }

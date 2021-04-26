@@ -34,49 +34,33 @@ axiom $MAX_U128 == 340282366920938463463374607431768211455;
 type {:datatype} $Range;
 function {:constructor} $Range(lb: int, ub: int): $Range;
 
-function {:inline} $IsValidBool(v: bool): bool {
+function {:inline} $IsValid'bool'(v: bool): bool {
   true
 }
 
-function {:inline} $IsValidU8(v: int): bool {
-  $TagU8(v) && v >= 0 && v <= $MAX_U8
+function $IsValid'u8'(v: int): bool {
+  v >= 0 && v <= $MAX_U8
 }
 
-function {:inline} $IsValidU8Vector(v: Vec int): bool {
-  $Vector_$is_well_formed(v) &&
-  (forall i: int :: {ReadVec(v, i)} 0 <= i && i < LenVec(v) ==> $IsValidU8(ReadVec(v, i)))
+function $IsValid'u64'(v: int): bool {
+  v >= 0 && v <= $MAX_U64
 }
 
-function {:inline} $IsValidU64(v: int): bool {
-  $TagU64(v) && v >= 0 && v <= $MAX_U64
+function $IsValid'u128'(v: int): bool {
+  v >= 0 && v <= $MAX_U128
 }
 
-function {:inline} $IsValidU128(v: int): bool {
-  $TagU128(v) && v >= 0 && v <= $MAX_U128
+function $IsValid'num'(v: int): bool {
+  true
 }
 
-function {:inline} $IsValidNum(v: int): bool {
-  $TagNum(v) && true
-}
-
-function {:inline} $IsValidAddress(v: int): bool {
+function $IsValid'address'(v: int): bool {
   // TODO: restrict max to representable addresses?
-  $TagAddr(v) && v >= 0
+  v >= 0
 }
-
-// Non-inlined type tagging functions. Those are added to type assumptions to provide
-// a trigger for quantifier instantiation based on type information.
-function $TagBool(x: bool): bool { true }
-function $TagU8(x: int): bool { true }
-function $TagU64(x: int): bool { true }
-function $TagU128(x: int): bool { true }
-function $TagNum(x: int): bool { true }
-function $TagAddr(x: int): bool { true }
-function $TagVec<T>(x: Vec T): bool { true }
-
 
 function {:inline} $IsValidRange(r: $Range): bool {
-   $IsValidU64(lb#$Range(r)) &&  $IsValidU64(ub#$Range(r))
+   $IsValid'u64'(lb#$Range(r)) &&  $IsValid'u64'(ub#$Range(r))
 }
 
 // Intentionally not inlined so it serves as a trigger in quantifiers.
@@ -85,11 +69,23 @@ function $InRange(r: $Range, i: int): bool {
 }
 
 
-function {:inline} $IsEqual'int'(x: int, y: int): bool {
+function {:inline} $IsEqual'u8'(x: int, y: int): bool {
     x == y
 }
 
-function {:inline} $IsEqual'addr'(x: int, y: int): bool {
+function {:inline} $IsEqual'u64'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'u128'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'num'(x: int, y: int): bool {
+    x == y
+}
+
+function {:inline} $IsEqual'address'(x: int, y: int): bool {
     x == y
 }
 
@@ -444,10 +440,6 @@ procedure {:inline 1} $Not(src: bool) returns (dst: bool)
 // ==================================================================================
 // Native Vector
 
-function {:inline} $Vector_$is_well_formed<T>(v: Vec T): bool {
-    LenVec(v) >= 0 && $IsValidU64(LenVec(v))
-}
-
 function {:inline} $SliceVecByRange<T>(v: Vec T, r: $Range): Vec T {
     SliceVec(v, lb#$Range(r), ub#$Range(r))
 }
@@ -478,11 +470,11 @@ function $Hash_sha2(val: Vec int): Vec int;
 
 // This says that Hash_sha2 is bijective.
 axiom (forall v1,v2: Vec int :: {$Hash_sha2(v1), $Hash_sha2(v2)}
-       $IsEqual'vec'int''(v1, v2) <==> $IsEqual'vec'int''($Hash_sha2(v1), $Hash_sha2(v2)));
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($Hash_sha2(v1), $Hash_sha2(v2)));
 
 procedure $Hash_sha2_256(val: Vec int) returns (res: Vec int);
 ensures res == $Hash_sha2(val);     // returns Hash_sha2 Value
-ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
@@ -494,11 +486,11 @@ function {:inline} $Hash_$sha2_256(val: Vec int): Vec int {
 function $Hash_sha3(val: Vec int): Vec int;
 
 axiom (forall v1,v2: Vec int :: {$Hash_sha3(v1), $Hash_sha3(v2)}
-       $IsEqual'vec'int''(v1, v2) <==> $IsEqual'vec'int''($Hash_sha3(v1), $Hash_sha3(v2)));
+       $IsEqual'vec'u8''(v1, v2) <==> $IsEqual'vec'u8''($Hash_sha3(v1), $Hash_sha3(v2)));
 
 procedure $Hash_sha3_256(val: Vec int) returns (res: Vec int);
 ensures res == $Hash_sha3(val);     // returns Hash_sha3 Value
-ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+ensures $IsValid'vec'u8''(res);    // result is a legal vector of U8s.
 ensures LenVec(res) == 32;               // result is 32 bytes.
 
 // Spec version of Move native function.
@@ -542,10 +534,10 @@ function $Signature_$ed25519_verify(signature: Vec int, public_key: Vec int, mes
 // Needed because we do not have extensional equality:
 axiom (forall k1, k2: Vec int ::
     {$Signature_$ed25519_validate_pubkey(k1), $Signature_$ed25519_validate_pubkey(k2)}
-    $IsEqual'vec'int''(k1, k2) ==> $Signature_$ed25519_validate_pubkey(k1) == $Signature_$ed25519_validate_pubkey(k2));
+    $IsEqual'vec'u8''(k1, k2) ==> $Signature_$ed25519_validate_pubkey(k1) == $Signature_$ed25519_validate_pubkey(k2));
 axiom (forall s1, s2, k1, k2, m1, m2: Vec int ::
     {$Signature_$ed25519_verify(s1, k1, m1), $Signature_$ed25519_verify(s2, k2, m2)}
-    $IsEqual'vec'int''(s1, s2) && $IsEqual'vec'int''(k1, k2) && $IsEqual'vec'int''(m1, m2)
+    $IsEqual'vec'u8''(s1, s2) && $IsEqual'vec'u8''(k1, k2) && $IsEqual'vec'u8''(m1, m2)
     ==> $Signature_$ed25519_verify(s1, k1, m1) == $Signature_$ed25519_verify(s2, k2, m2));
 
 

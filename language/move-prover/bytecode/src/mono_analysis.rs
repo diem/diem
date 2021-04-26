@@ -10,14 +10,14 @@ use crate::{
     function_target::{FunctionData, FunctionTarget},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder, FunctionVariant},
     mono_analysis,
-    mut_ref_instrumentation::FunctionEnv,
+    mut_ref_instrumentation::{FunctionEnv, Loc},
     stackless_bytecode::{Bytecode, Bytecode::SaveMem, Operation},
     verification_analysis,
 };
 use itertools::Itertools;
 use move_model::{
     ast,
-    ast::{Exp, LocalVarDecl, MemoryLabel, QuantKind},
+    ast::{Condition, ConditionKind, Exp, LocalVarDecl, MemoryLabel, QuantKind},
     exp_generator::ExpGenerator,
     model::{
         FunId, GlobalEnv, ModuleId, NodeId, QualifiedId, QualifiedInstId, SpecFunId, SpecVarId,
@@ -29,6 +29,7 @@ use move_model::{
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
+    marker::PhantomData,
     rc::Rc,
 };
 
@@ -42,6 +43,7 @@ pub struct MonoInfo {
     pub type_params: BTreeSet<u16>,
     pub vec_inst: BTreeSet<Type>,
     pub native_inst: BTreeMap<ModuleId, BTreeSet<Vec<Type>>>,
+    pub axioms: Vec<Condition>,
 }
 
 /// Get the information computed by this analysis.
@@ -77,36 +79,38 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
         mut data: FunctionData,
     ) -> FunctionData {
         // Eliminate a quantification over type variable `name` by collecting all instantiations
-        // of constructors using `name` inside of the quantors `body`, and then expanding
+        // of constructors using `name` inside of the quantifiers `body`, and then expanding
         // the body into a conjunction or disjunction. For example, given the expression
         // `forall t: type :: P[TypeCtor<u64, t>]`, and the program context containing
         // instantiations `TypeCtor<u64, A>` and `TypeCtor<address, B>`, we will generate
         // `P[TypeCtor<u64, A>] && P[TypeCtor<address, B>]`.
         let code = std::mem::take(&mut data.code);
+        let builder = FunctionDataBuilder::new(fun_env, data);
         let mut rewriter = TypeQuantRewriter {
-            builder: FunctionDataBuilder::new(fun_env, data),
+            generator: builder,
             instantiated_memory: Default::default(),
             quants_eliminated: false,
+            marker: PhantomData::default(),
         };
         for bc in code {
             if let Bytecode::Prop(id, kind, exp) = bc {
                 let exp = rewriter.rewrite_type_quant(exp);
-                rewriter.builder.emit(Bytecode::Prop(id, kind, exp));
+                rewriter.generator.emit(Bytecode::Prop(id, kind, exp));
             } else {
-                rewriter.builder.emit(bc);
+                rewriter.generator.emit(bc);
             }
         }
         if rewriter.quants_eliminated {
             // We need to go a second time over the code to expand `SaveMem` instructions.
             // Where we previous had `SaveMem<R<type_var>>` we need to create one SaveMem
             // for every instance.
-            let code = std::mem::take(&mut rewriter.builder.data.code);
+            let code = std::mem::take(&mut rewriter.generator.data.code);
             for bc in code {
                 match bc {
                     Bytecode::SaveMem(id, label, mem) => {
                         if rewriter.instantiated_memory.contains_key(&label) {
                             for inst in rewriter.instantiated_memory.get(&label).unwrap() {
-                                rewriter.builder.emit(Bytecode::SaveMem(
+                                rewriter.generator.emit(Bytecode::SaveMem(
                                     id,
                                     label,
                                     inst.to_owned(),
@@ -120,18 +124,18 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
                             // Only retain the SaveMem if it does not contain type locals.
                             // Such SaveMem's can result from zero expansions during quantifier
                             // elimination, and they are dead.
-                            rewriter.builder.emit(SaveMem(id, label, mem));
+                            rewriter.generator.emit(SaveMem(id, label, mem));
                         }
                     }
-                    _ => rewriter.builder.emit(bc),
+                    _ => rewriter.generator.emit(bc),
                 }
             }
             rewriter
-                .builder
+                .generator
                 .global_env()
                 .set_extension(RunAnalysisAgain());
         }
-        rewriter.builder.data
+        rewriter.generator.data
     }
 
     fn name(&self) -> String {
@@ -139,12 +143,42 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
     }
 
     fn initialize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
-        self.analyze(env, targets);
+        self.analyze(env, None, targets);
     }
 
     fn finalize(&self, env: &GlobalEnv, targets: &mut FunctionTargetsHolder) {
-        if env.has_extension::<RunAnalysisAgain>() {
-            self.analyze(env, targets);
+        // Run type quantifier elimination on axioms
+        let mut new_axioms = vec![];
+        let mut axioms_rewritten = false;
+        for module_env in env.get_modules() {
+            for axiom in module_env.get_spec().filter_kind(ConditionKind::Axiom) {
+                let mut rewriter = TypeQuantRewriter {
+                    generator: EnvGenerator {
+                        env,
+                        current_loc: env.unknown_loc(),
+                    },
+                    quants_eliminated: false,
+                    instantiated_memory: Default::default(),
+                    marker: Default::default(),
+                };
+                let new_axiom = Condition {
+                    kind: axiom.kind.clone(),
+                    loc: axiom.loc.clone(),
+                    properties: axiom.properties.clone(),
+                    exp: rewriter.rewrite_type_quant(axiom.exp.clone()),
+                    additional_exps: vec![],
+                };
+                new_axioms.push(new_axiom);
+                axioms_rewritten = axioms_rewritten || rewriter.quants_eliminated;
+            }
+        }
+        if axioms_rewritten || env.has_extension::<RunAnalysisAgain>() {
+            self.analyze(env, Some(&new_axioms), targets);
+        }
+        if !new_axioms.is_empty() {
+            env.update_extension(move |info: &mut MonoInfo| {
+                info.axioms = new_axioms;
+            });
         }
     }
 
@@ -183,6 +217,17 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
             }
             writeln!(f, "}}")?;
         }
+        for (fid, insts) in &info.spec_funs {
+            let module_env = env.get_module(fid.module_id);
+            let decl = module_env.get_spec_fun(fid.id);
+            let mname = module_env.get_full_name_str();
+            let fname = decl.name.display(env.symbol_pool());
+            writeln!(f, "spec fun {}::{} = {{", mname, fname)?;
+            for inst in insts {
+                writeln!(f, "  <{}>", display_inst(inst))?;
+            }
+            writeln!(f, "}}")?;
+        }
 
         Ok(())
     }
@@ -192,7 +237,12 @@ impl FunctionTargetProcessor for MonoAnalysisProcessor {
 // ======================
 
 impl MonoAnalysisProcessor {
-    fn analyze(&self, env: &GlobalEnv, targets: &FunctionTargetsHolder) {
+    fn analyze<'a>(
+        &self,
+        env: &'a GlobalEnv,
+        rewritten_axioms: Option<&[Condition]>,
+        targets: &'a FunctionTargetsHolder,
+    ) {
         let mut analyzer = Analyzer {
             env,
             targets,
@@ -204,7 +254,20 @@ impl MonoAnalysisProcessor {
             done_types: BTreeSet::new(),
             inst_opt: None,
         };
-        analyzer.analyze();
+        if let Some(axioms) = rewritten_axioms {
+            // Analyze newly rewritten axioms.
+            for axiom in axioms {
+                analyzer.analyze_exp(&axiom.exp)
+            }
+        } else {
+            // Analyze axioms found in modules.
+            for module_env in env.get_modules() {
+                for axiom in module_env.get_spec().filter_kind(ConditionKind::Axiom) {
+                    analyzer.analyze_exp(&axiom.exp)
+                }
+            }
+        }
+        analyzer.analyze_funs();
         let Analyzer { info, .. } = analyzer;
         env.set_extension(info);
     }
@@ -223,9 +286,9 @@ struct Analyzer<'a> {
 }
 
 impl<'a> Analyzer<'a> {
-    fn analyze(&mut self) {
-        // Analyze top-level, verified functions. Any functions they call will be queued in
-        // self.todo_targets for later analysis. During this phase, self.inst_opt is None.
+    fn analyze_funs(&mut self) {
+        // Analyze top-level, verified functions. Any functions they call will be queued
+        // in self.todo_targets for later analysis. During this phase, self.inst_opt is None.
         for module in self.env.get_modules() {
             for fun in module.get_functions() {
                 for (_, target) in self.targets.get_targets(&fun) {
@@ -246,7 +309,7 @@ impl<'a> Analyzer<'a> {
         }
         // Now incrementally work todo lists until they are done, while self.inst_opt
         // contains the specific instantiation. We can first do regular functions,
-        // the spec functions; the later can never add new regular functions.
+        // then the spec functions; the later can never add new regular functions.
         while !self.todo_funs.is_empty() {
             let (fun, inst) = self.todo_funs.pop().unwrap();
             self.inst_opt = Some(inst);
@@ -319,6 +382,11 @@ impl<'a> Analyzer<'a> {
                 }
             }
             Prop(_, _, exp) => self.analyze_exp(exp),
+            SaveMem(_, _, mem) => {
+                let mem = self.instantiate_mem(mem.to_owned());
+                let struct_env = self.env.get_struct_qid(mem.to_qualified_id());
+                self.add_struct(struct_env, &mem.inst);
+            }
             _ => {}
         }
     }
@@ -328,6 +396,14 @@ impl<'a> Analyzer<'a> {
             Type::instantiate_slice(targs, inst)
         } else {
             targs.to_owned()
+        }
+    }
+
+    fn instantiate_mem(&self, mem: QualifiedInstId<StructId>) -> QualifiedInstId<StructId> {
+        if let Some(inst) = &self.inst_opt {
+            mem.instantiate(inst)
+        } else {
+            mem
         }
     }
 
@@ -444,17 +520,21 @@ impl<'a> Analyzer<'a> {
 // Type Quantifier Elimination
 // ===========================
 
-struct TypeQuantRewriter<'e> {
-    builder: FunctionDataBuilder<'e>,
+struct TypeQuantRewriter<'e, G>
+where
+    G: ExpGenerator<'e>,
+{
+    generator: G,
     quants_eliminated: bool,
     // A map from memory label accessed from within the body of the quantifier
     // which needs to be specialized to the given instances in SaveMem instructions.
     instantiated_memory: BTreeMap<MemoryLabel, BTreeSet<QualifiedInstId<StructId>>>,
+    marker: PhantomData<&'e G>,
 }
 
-impl<'e> TypeQuantRewriter<'e> {
+impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
     fn rewrite_type_quant(&mut self, exp: Exp) -> Exp {
-        let env = self.builder.global_env();
+        let env = self.generator.global_env();
         exp.rewrite(&mut |e| {
             if let Exp::Quant(node_id, kind, ranges, triggers, condition, body) = &e {
                 for (i, (var, range)) in ranges.iter().enumerate() {
@@ -498,7 +578,7 @@ impl<'e> TypeQuantRewriter<'e> {
         condition: Option<Box<Exp>>,
         body: Box<Exp>,
     ) -> Exp {
-        let env = self.builder.global_env();
+        let env = self.generator.global_env();
 
         // Create the effective condition of the eliminated quantifier.
         let body = if !ranges.is_empty() {
@@ -523,33 +603,50 @@ impl<'e> TypeQuantRewriter<'e> {
 
         // Collect all instantiations in which the type name appears.
         let mono_info = mono_analysis::get_info(env);
-        let mut insts = BTreeSet::new();
+        let mut collected = BTreeSet::new();
+        let empty = &BTreeSet::new();
         body.visit(&mut |e| {
             let node_id = e.node_id();
             self.collect_type_local_insts(
                 mono_info.as_ref(),
-                &mut insts,
+                &mut collected,
                 name,
                 &env.get_node_type(node_id),
             );
-            for ref ty in env.get_node_instantiation(node_id) {
-                self.collect_type_local_insts(mono_info.as_ref(), &mut insts, name, ty);
+            let type_inst = env.get_node_instantiation(node_id);
+            for ty in &type_inst {
+                self.collect_type_local_insts(mono_info.as_ref(), &mut collected, name, ty);
             }
-            if let Exp::LocalVar(_, n) = e {
-                if *n == name {
-                    env.error(
-                        &env.get_node_loc(node_id),
-                        &format!(
-                            "type value `{}` can only be used in type constructor",
-                            name.display(env.symbol_pool())
-                        ),
-                    )
+            match e {
+                Exp::LocalVar(_, n) => {
+                    if *n == name {
+                        env.error(
+                            &env.get_node_loc(node_id),
+                            &format!(
+                                "type value `{}` can only be used in type constructor",
+                                name.display(env.symbol_pool())
+                            ),
+                        )
+                    }
                 }
+                Exp::Call(_, ast::Operation::Function(mid, fid, _), ..) => {
+                    // Collect instantiations of this function for `name`.
+                    self.collect_instances(
+                        &mut collected,
+                        name,
+                        &type_inst,
+                        mono_info
+                            .spec_funs
+                            .get(&mid.qualified(*fid))
+                            .unwrap_or(empty),
+                    );
+                }
+                _ => {}
             }
         });
 
         // For each of the instantiations, expand the body, with the instantiation substituted.
-        let expanded = insts
+        let expanded = collected
             .into_iter()
             .map(|ty| {
                 let mut node_rewriter = |id: NodeId| {
@@ -600,16 +697,16 @@ impl<'e> TypeQuantRewriter<'e> {
             .collect_vec();
 
         // Compose the resulting list of expansions into a conjunction or disjunction.
-        self.builder.set_loc(env.get_node_loc(node_id));
+        self.generator.set_loc(env.get_node_loc(node_id));
         match kind {
             QuantKind::Forall => self
-                .builder
+                .generator
                 .mk_join_bool(ast::Operation::And, expanded.into_iter())
-                .unwrap_or_else(|| self.builder.mk_bool_const(true)),
+                .unwrap_or_else(|| self.generator.mk_bool_const(true)),
             QuantKind::Exists => self
-                .builder
+                .generator
                 .mk_join_bool(ast::Operation::Or, expanded.into_iter())
-                .unwrap_or_else(|| self.builder.mk_bool_const(false)),
+                .unwrap_or_else(|| self.generator.mk_bool_const(false)),
         }
     }
 
@@ -618,7 +715,7 @@ impl<'e> TypeQuantRewriter<'e> {
     fn collect_type_local_insts(
         &self,
         mono_info: &MonoInfo,
-        insts: &mut BTreeSet<Type>,
+        collected: &mut BTreeSet<Type>,
         name: Symbol,
         ty: &Type,
     ) {
@@ -628,26 +725,76 @@ impl<'e> TypeQuantRewriter<'e> {
             use Type::*;
             match ty {
                 Struct(mid, sid, inst) => {
-                    for (i, ity) in inst.iter().enumerate() {
-                        if ity == type_local {
-                            insts.extend(
-                                mono_info
-                                    .structs
-                                    .get(&mid.qualified(*sid))
-                                    .unwrap_or(empty)
-                                    .iter()
-                                    .map(|tys| tys[i].clone()),
-                            );
-                        }
-                    }
+                    self.collect_instances(
+                        collected,
+                        name,
+                        inst,
+                        mono_info.structs.get(&mid.qualified(*sid)).unwrap_or(empty),
+                    );
                 }
                 Vector(et) => {
                     if et.as_ref() == type_local {
-                        insts.extend(mono_info.vec_inst.iter().cloned())
+                        collected.extend(mono_info.vec_inst.iter().cloned())
                     }
                 }
                 _ => {}
             }
         })
+    }
+
+    fn collect_instances(
+        &self,
+        collected: &mut BTreeSet<Type>,
+        name: Symbol,
+        inst: &[Type],
+        insts_in_prog: &BTreeSet<Vec<Type>>,
+    ) {
+        let type_local = &Type::TypeLocal(name);
+        for (i, ity) in inst.iter().enumerate() {
+            if ity == type_local {
+                collected.extend(insts_in_prog.iter().filter_map(|tys| {
+                    let ty = &tys[i];
+                    if matches!(ty, Type::TypeLocal(..)) {
+                        None
+                    } else {
+                        Some(ty.clone())
+                    }
+                }));
+            }
+        }
+    }
+}
+
+struct EnvGenerator<'e> {
+    env: &'e GlobalEnv,
+    current_loc: Loc,
+}
+
+impl<'e> ExpGenerator<'e> for EnvGenerator<'e> {
+    fn function_env(&self) -> &FunctionEnv<'e> {
+        // TODO: remove this from ExpGenerator. We should be able to generate exps without.
+        unimplemented!()
+    }
+
+    fn global_env(&self) -> &'e GlobalEnv {
+        self.env
+    }
+
+    fn get_current_loc(&self) -> Loc {
+        self.current_loc.clone()
+    }
+
+    fn set_loc(&mut self, loc: Loc) {
+        self.current_loc = loc;
+    }
+
+    fn add_local(&mut self, _ty: Type) -> usize {
+        // TODO: remove this from ExpGenerator. We should be able to generate exps without.
+        unimplemented!()
+    }
+
+    fn get_local_type(&self, _temp: usize) -> Type {
+        // TODO: remove this from ExpGenerator. We should be able to generate exps without.
+        unimplemented!()
     }
 }

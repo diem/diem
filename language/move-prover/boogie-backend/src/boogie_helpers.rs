@@ -222,9 +222,10 @@ pub fn boogie_local_type(ty: &Type) -> String {
         },
         Vector(..) | Struct(..) => "Vec $Value".to_string(),
         Reference(..) => "$Mutation".to_string(),
-        TypeParameter(..) => "$Value".to_string(),
-        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
-        | Var(..) => format!("<<unsupported: {:?}>>", ty),
+        TypeParameter(..) | TypeLocal(..) => "$Value".to_string(),
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..) => {
+            format!("<<unsupported: {:?}>>", ty)
+        }
     }
 }
 
@@ -255,9 +256,9 @@ pub fn boogie_type_suffix(ty: &Type) -> &'static str {
             _ => "<<unsupported>>",
         },
         Vector(..) | Struct(..) => "_vec",
-        TypeParameter(..) => "",
-        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | TypeLocal(..) | Error
-        | Var(..) | Reference(..) => "<<unsupported>>",
+        TypeParameter(..) | TypeLocal(..) => "",
+        Fun(..) | Tuple(..) | TypeDomain(..) | ResourceDomain(..) | Error | Var(..)
+        | Reference(..) => "<<unsupported>>",
     }
 }
 

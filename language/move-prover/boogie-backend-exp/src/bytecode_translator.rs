@@ -31,7 +31,7 @@ use crate::{
         boogie_debug_track_return, boogie_equality_for_type, boogie_field_sel,
         boogie_function_name, boogie_modifies_memory_name, boogie_resource_memory_name,
         boogie_struct_name, boogie_temp, boogie_type, boogie_type_param, boogie_type_suffix,
-        boogie_type_suffix_for_struct, boogie_well_formed_check,
+        boogie_type_suffix_for_struct, boogie_well_formed_check, boogie_well_formed_expr,
     },
     spec_translator::SpecTranslator,
 };
@@ -44,6 +44,7 @@ use codespan::LineIndex;
 use move_model::{
     ast::TempIndex,
     model::{Loc, NodeId},
+    ty::BOOL_TYPE,
 };
 
 pub struct BoogieTranslator<'env> {
@@ -107,8 +108,17 @@ impl<'env> BoogieTranslator<'env> {
                 param_type,
                 param_type
             );
+            emitln!(
+                writer,
+                "function {{:inline}} $IsValid'{}'(x: {}): bool {{ true }}",
+                suffix,
+                param_type,
+            );
         }
         emitln!(writer);
+
+        self.spec_translator
+            .translate_axioms(env, mono_info.as_ref());
 
         let mut translated_types = BTreeSet::new();
         let mut translated_funs = BTreeSet::new();
@@ -269,6 +279,25 @@ impl<'env> StructTranslator<'env> {
                 },
             );
         }
+
+        // Emit $IsValid function.
+        self.emit_function_with_attr(
+            "", // not inlined!
+            &format!("$IsValid'{}'(s: {}): bool", suffix, struct_name),
+            || {
+                if struct_env.is_native_or_intrinsic() {
+                    emitln!(writer, "true")
+                } else {
+                    let mut sep = "";
+                    for field in struct_env.get_fields() {
+                        let sel = format!("{}({})", boogie_field_sel(&field, self.type_inst), "s");
+                        let ty = &field.get_type().instantiate(self.type_inst);
+                        emitln!(writer, "{}{}", sep, boogie_well_formed_expr(env, &sel, ty));
+                        sep = "  && ";
+                    }
+                }
+            },
+        );
 
         // Emit equality
         self.emit_function(
@@ -533,7 +562,7 @@ impl<'env> FunctionTranslator<'env> {
                     _ => None,
                 }
             })
-            .collect::<BTreeMap<_, _>>();
+            .collect::<BTreeSet<_>>();
         for (lab, mem) in labels {
             let mem = &mem.to_owned().instantiate(self.type_inst);
             let name = boogie_resource_memory_name(env, mem, &Some(*lab));
@@ -727,11 +756,23 @@ impl<'env> FunctionTranslator<'env> {
                         &mid.qualified_inst(sid, inst.to_owned()),
                         &None,
                     );
-                    let temp_str = boogie_temp(env, ty, 0);
-                    emitln!(writer, "havoc {};", temp_str);
-                    emit!(writer, "{} := $ResourceUpdate({}, ", memory, memory);
-                    spec_translator.translate(&exp.call_args()[0], self.type_inst);
-                    emitln!(writer, ", {});", temp_str);
+                    let exists_str = boogie_temp(env, &BOOL_TYPE, 0);
+                    emitln!(writer, "havoc {};", exists_str);
+                    emitln!(writer, "if ({}) {{", exists_str);
+                    writer.with_indent(|| {
+                        let val_str = boogie_temp(env, ty, 0);
+                        emitln!(writer, "havoc {};", val_str);
+                        emit!(writer, "{} := $ResourceUpdate({}, ", memory, memory);
+                        spec_translator.translate(&exp.call_args()[0], self.type_inst);
+                        emitln!(writer, ", {});", val_str);
+                    });
+                    emitln!(writer, "} else {");
+                    writer.with_indent(|| {
+                        emit!(writer, "{} := $ResourceRemove({}, ", memory, memory);
+                        spec_translator.translate(&exp.call_args()[0], self.type_inst);
+                        emitln!(writer, ");");
+                    });
+                    emitln!(writer, "}");
                 }
             },
             Label(_, label) => {
@@ -1569,6 +1610,7 @@ impl<'env> FunctionTranslator<'env> {
                     _ => {}
                 },
                 Prop(_, PropKind::Modifies, exp) => {
+                    need(&BOOL_TYPE, 1);
                     need(&self.inst(&env.get_node_type(exp.node_id())), 1)
                 }
                 _ => {}

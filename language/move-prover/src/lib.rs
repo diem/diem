@@ -136,8 +136,8 @@ pub fn generate_boogie(
     targets: &FunctionTargetsHolder,
 ) -> anyhow::Result<CodeWriter> {
     let writer = CodeWriter::new(env.internal_loc());
-    if options.boogie_exp {
-        // Use the experimental boogie backend.
+    if !options.boogie_poly {
+        // Use the monomorphizing boogie backend.
         boogie_backend_exp::add_prelude(env, &options.backend, &writer)?;
         let mut translator = boogie_backend_exp::bytecode_translator::BoogieTranslator::new(
             &env,
@@ -163,7 +163,7 @@ pub fn verify_boogie(
     let output_existed = std::path::Path::new(&options.output_path).exists();
     debug!("writing boogie to `{}`", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
-    if options.boogie_exp {
+    if !options.boogie_poly {
         let boogie = boogie_backend_exp::boogie_wrapper::BoogieWrapper {
             env: &env,
             targets: &targets,

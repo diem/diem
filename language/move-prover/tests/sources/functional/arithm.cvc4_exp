@@ -1,54 +1,54 @@
 Move prover returns: [internal] boogie exited with prover errors:
-Prover error: Unexpected value: $Error
+Prover error: Unexpected value: ($Path (as @uc_T@[Int]Int_0 T@[Int]Int) 0)
 
 Advisory: $TestArithmetic_div_by_zero_u64_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
-arithm.bpl(2342,27): Verification inconclusive ($TestArithmetic_div_by_zero_u64_incorrect$verify)
-arithm.bpl(2469,27): Verification inconclusive ($TestArithmetic_f$verify)
-arithm.bpl(2598,27): Verification inconclusive ($TestArithmetic_g$verify)
+arithm.bpl(1590,27): Verification inconclusive ($TestArithmetic_div_by_zero_u64_incorrect$verify)
+arithm.bpl(1710,27): Verification inconclusive ($TestArithmetic_f$verify)
+arithm.bpl(1833,27): Verification inconclusive ($TestArithmetic_g$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(2674,27): Verification inconclusive ($TestArithmetic_h$verify)
+arithm.bpl(1906,27): Verification inconclusive ($TestArithmetic_h$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(2951,27): Verification inconclusive ($TestArithmetic_multiple_ops$verify)
+arithm.bpl(2187,27): Verification inconclusive ($TestArithmetic_multiple_ops$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3038,27): Verification inconclusive ($TestArithmetic_overflow_u128_add$verify)
+arithm.bpl(2270,27): Verification inconclusive ($TestArithmetic_overflow_u128_add$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3112,27): Verification inconclusive ($TestArithmetic_overflow_u128_add_incorrect$verify)
+arithm.bpl(2340,27): Verification inconclusive ($TestArithmetic_overflow_u128_add_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3186,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul$verify)
+arithm.bpl(2410,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3260,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul_incorrect$verify)
+arithm.bpl(2480,27): Verification inconclusive ($TestArithmetic_overflow_u128_mul_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3334,27): Verification inconclusive ($TestArithmetic_overflow_u64_add$verify)
+arithm.bpl(2550,27): Verification inconclusive ($TestArithmetic_overflow_u64_add$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3408,27): Verification inconclusive ($TestArithmetic_overflow_u64_add_incorrect$verify)
+arithm.bpl(2620,27): Verification inconclusive ($TestArithmetic_overflow_u64_add_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3482,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul$verify)
+arithm.bpl(2690,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3556,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul_incorrect$verify)
+arithm.bpl(2760,27): Verification inconclusive ($TestArithmetic_overflow_u64_mul_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3630,27): Verification inconclusive ($TestArithmetic_overflow_u8_add$verify)
+arithm.bpl(2830,27): Verification inconclusive ($TestArithmetic_overflow_u8_add$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3704,27): Verification inconclusive ($TestArithmetic_overflow_u8_add_incorrect$verify)
+arithm.bpl(2900,27): Verification inconclusive ($TestArithmetic_overflow_u8_add_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3778,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul$verify)
+arithm.bpl(2970,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3852,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul_incorrect$verify)
+arithm.bpl(3040,27): Verification inconclusive ($TestArithmetic_overflow_u8_mul_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-arithm.bpl(3926,27): Verification inconclusive ($TestArithmetic_underflow$verify)
+arithm.bpl(3110,27): Verification inconclusive ($TestArithmetic_underflow$verify)
 
 Boogie program verifier finished with 0 errors, 18 inconclusives

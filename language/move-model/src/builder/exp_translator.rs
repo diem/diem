@@ -23,7 +23,7 @@ use crate::{
     },
     model::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, QualifiedId, SpecFunId, StructId},
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, Variance, BOOL_TYPE},
 };
 
 #[derive(Debug)]
@@ -95,15 +95,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         }
     }
 
-    pub fn set_in_let(mut self) -> Self {
-        self.in_let = true;
-        self
-    }
-
-    pub fn translate_fun_as_spec_fun(&mut self) {
-        self.translating_fun_as_spec_fun = true;
-    }
-
     pub fn new_with_old(
         parent: &'module_translator mut ModuleBuilder<'env, 'translator>,
         allow_old: bool,
@@ -115,6 +106,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             et.old_status = OldExpStatus::NotSupported;
         };
         et
+    }
+
+    pub fn set_in_let(mut self) -> Self {
+        self.in_let = true;
+        self
+    }
+
+    pub fn translate_fun_as_spec_fun(&mut self) {
+        self.translating_fun_as_spec_fun = true;
     }
 
     /// Extract a map from names to types from the scopes of this build.
@@ -1482,7 +1482,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let mut success = true;
             for (i, arg_ty) in arg_types.iter().enumerate() {
                 let instantiated = cand.arg_types[i].instantiate(&instantiation);
-                if let Err(err) = subs.unify(&self.type_display_context(), arg_ty, &instantiated) {
+                if let Err(err) = subs.unify(
+                    &self.type_display_context(),
+                    Variance::Allow,
+                    arg_ty,
+                    &instantiated,
+                ) {
                     outruled.push((cand, format!("{} for argument {}", err.message, i + 1)));
                     success = false;
                     break;
@@ -1926,7 +1931,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         // the build. This is because we also need to inherently borrow self via the
         // type_display_context which is passed into unification.
         let mut subs = std::mem::replace(&mut self.subs, Substitution::new());
-        let result = match subs.unify(&self.type_display_context(), ty, expected) {
+        let result = match subs.unify(&self.type_display_context(), Variance::Allow, ty, expected) {
             Ok(t) => t,
             Err(err) => {
                 self.error(&loc, &format!("{} {}", err.message, context_msg));

@@ -15,7 +15,7 @@ module 0x42::TestMonomorphization {
     spec fun pack_R {
         ensures result == spec_pack_R();
     }
-    spec define spec_pack_R(): R<u64> { R{x: 1, y: 2}}
+    spec define spec_pack_R(): R<u64> { R{x: 1u64, y: 2}}
 
     public fun create_R(account: &signer) {
         move_to<R<u64>>(account, R{x:1, y:2} );
@@ -71,7 +71,7 @@ module 0x42::TestMonomorphization {
     spec fun vec_addr { ensures result[0] != 0x1; }
     public fun vec_bool(x: vector<bool>): vector<bool> { Vector::push_back(&mut x, true); x }
     spec fun vec_bool { ensures result[0] != true; }
-    public fun vec_struct_int(x: vector<R<u64>>): vector<R<u64>> { Vector::push_back(&mut x, R{x: 1, y: 1}); x }
+    public fun vec_struct_int(x: vector<R<u64>>): vector<R<u64>> { Vector::push_back(&mut x, R{x: 1u64, y: 1}); x }
     spec fun vec_struct_int { ensures result[0].x != 1; }
     public fun vec_struct_addr(x: vector<R<address>>): vector<R<address>> { Vector::push_back(&mut x, R{x: 0x1, y: 0x2}); x }
     spec fun vec_struct_addr { ensures result[0].x != 0x1; }

@@ -231,6 +231,16 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
                 result_type: num_t.clone(),
             },
         );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("in_range"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::InRange,
+                type_params: vec![param_t.clone()],
+                arg_types: vec![num_t.clone(), vector_t.clone()],
+                result_type: bool_t.clone(),
+            },
+        );
 
         // Resources.
         trans.define_spec_fun(

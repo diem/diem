@@ -114,6 +114,7 @@ impl<'env> ModuleTranslator<'env> {
             .set_location(&self.module_env.env.internal_loc());
         self.spec_translator.translate_spec_vars(&self.module_env);
         self.spec_translator.translate_spec_funs(&self.module_env);
+        self.spec_translator.translate_axioms(&self.module_env);
         self.translate_structs();
         self.translate_functions();
     }

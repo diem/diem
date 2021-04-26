@@ -20,9 +20,16 @@ function $IsEqual'vec{{S}}'(v1: Vec ({{T}}), v2: Vec ({{T}})): bool {
     LenVec(v1) == LenVec(v2) &&
     (forall i: int:: InRangeVec(v1, i) ==> $IsEqual{{S}}(ReadVec(v1, i), ReadVec(v2, i)))
 }
-{%- endif -%}
+{%- endif %}
+
+// Not inlined.
+function $IsValid'vec{{S}}'(v: Vec ({{T}})): bool {
+    $IsValid'u64'(LenVec(v)) &&
+    (forall i: int:: InRangeVec(v, i) ==> $IsValid{{S}}(ReadVec(v, i)))
+}
+
 {# TODO: there is an issue with existential quantifier instantiation if we use the native
-   functions here without the $IsValidU64 tag.
+   functions here without the $IsValid'u64' tag.
 #}
 {%- if false and instance.has_native_equality -%}
 {# Vector elements have native equality #}
@@ -35,16 +42,17 @@ function {:inline} $IndexOfVec{{S}}(v: Vec ({{T}}), e: {{T}}): int {
 }
 {% else %}
 function {:inline} $ContainsVec{{S}}(v: Vec ({{T}}), e: {{T}}): bool {
-    (exists i: int :: $IsValidU64(i) && InRangeVec(v, i) && $IsEqual{{S}}(ReadVec(v, i), e))
+    (exists i: int :: $IsValid'u64'(i) && InRangeVec(v, i) && $IsEqual{{S}}(ReadVec(v, i), e))
 }
 
 function $IndexOfVec{{S}}(v: Vec ({{T}}), e: {{T}}): int;
 axiom (forall v: Vec ({{T}}), e: {{T}}:: {$IndexOfVec{{S}}(v, e)}
     (var i := $IndexOfVec{{S}}(v, e);
      if (!$ContainsVec{{S}}(v, e)) then i == -1
-     else $IsValidU64(i) && InRangeVec(v, i) && $IsEqual{{S}}(ReadVec(v, i), e) &&
-        (forall j: int :: $IsValidU64(j) && j >= 0 && j < i ==> !$IsEqual{{S}}(ReadVec(v, j), e))));
+     else $IsValid'u64'(i) && InRangeVec(v, i) && $IsEqual{{S}}(ReadVec(v, i), e) &&
+        (forall j: int :: $IsValid'u64'(j) && j >= 0 && j < i ==> !$IsEqual{{S}}(ReadVec(v, j), e))));
 {% endif %}
+
 
 function {:inline} $EmptyVec{{S}}(): Vec ({{T}}) {
     EmptyVec()
@@ -214,15 +222,15 @@ $Vector_index_of{{S}}(v: Vec ({{T}}), e: {{T}}) returns (res1: bool, res2: int) 
 function {:inline} $BCS_serialize{{S}}(v: {{T}}): Vec int;
 
 axiom (forall v1, v2: {{T}} :: {$BCS_serialize{{S}}(v1), $BCS_serialize{{S}}(v2)}
-   $IsEqual{{S}}(v1, v2) <==> $IsEqual'vec'int''($BCS_serialize{{S}}(v1), $BCS_serialize{{S}}(v2)));
+   $IsEqual{{S}}(v1, v2) <==> $IsEqual'vec'u8''($BCS_serialize{{S}}(v1), $BCS_serialize{{S}}(v2)));
 
 // This says that serialize returns a non-empty vec<u8>
 {% if options.serialize_bound == 0 %}
 axiom (forall v: {{T}} :: {$BCS_serialize{{S}}(v)}
-     ( var r := $BCS_serialize{{S}}(v); $IsValidU8Vector(r) && LenVec(r) > 0 ));
+     ( var r := $BCS_serialize{{S}}(v); $IsValid'vec'u8''(r) && LenVec(r) > 0 ));
 {% else %}
 axiom (forall v: {{T}} :: {$BCS_serialize{{S}}(v)}
-     ( var r := $BCS_serialize{{S}}(v); $IsValidU8Vector(r) && LenVec(r) > 0 &&
+     ( var r := $BCS_serialize{{S}}(v); $IsValid'vec'u8''(r) && LenVec(r) > 0 &&
                             LenVec(r) <= {{options.serialize_bound}} ));
 {% endif %}
 
@@ -233,12 +241,12 @@ function {:inline} $BCS_$to_bytes{{S}}(v: {{T}}): Vec int {
     $BCS_serialize{{S}}(v)
 }
 
-{% if S == "'addr'" -%}
+{% if S == "'address'" -%}
 // Serialized addresses should have the same length.
 const $serialized_address_len: int;
 // Serialized addresses should have the same length
-axiom (forall v: int :: {$BCS_serialize'addr'(v)}
-     ( var r := $BCS_serialize'addr'(v); LenVec(r) == $serialized_address_len));
+axiom (forall v: int :: {$BCS_serialize'address'(v)}
+     ( var r := $BCS_serialize'address'(v); LenVec(r) == $serialized_address_len));
 {% endif %}
 {% endmacro hash_module %}
 
@@ -256,6 +264,10 @@ type $Event_EventHandle{{S}} = $Event_EventHandle;
 
 function {:inline} $IsEqual'$Event_EventHandle{{S}}'(a: $Event_EventHandle{{S}}, b: $Event_EventHandle{{S}}): bool {
     a == b
+}
+
+function $IsValid'$Event_EventHandle{{S}}'(h: $Event_EventHandle{{S}}): bool {
+    true
 }
 
 // Embed event `{{T}}` into universal $EventRep

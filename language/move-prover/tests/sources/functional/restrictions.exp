@@ -1,32 +1,48 @@
 Move prover returns: exiting with boogie generation errors
 error: [boogie translator] function or tuple result type not yet supported
 
-    ┌── tests/sources/functional/restrictions.move:10:9 ───
-    │
- 10 │         define f1(): (num, num) { (1, 2) }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
+   ┌── tests/sources/functional/restrictions.move:8:9 ───
+   │
+ 8 │         define f1(): (u64, u64) { (1u64, 2u64) }
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   │
 
 error: [boogie translator] function or tuple result type not yet supported
 
-    ┌── tests/sources/functional/restrictions.move:13:9 ───
+    ┌── tests/sources/functional/restrictions.move:11:9 ───
     │
- 13 │         define f2(): | |num { | | 1 }
+ 11 │         define f2(): | |num { | | 1 }
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: [boogie translator] Invoke not yet supported
 
-    ┌── tests/sources/functional/restrictions.move:17:13 ───
+    ┌── tests/sources/functional/restrictions.move:15:13 ───
     │
- 17 │             f(1)
-    │             ^^^^
+ 15 │             f(1u64)
+    │             ^^^^^^^
     │
 
 error: [boogie translator] `|x|e` (lambda) currently only supported as argument for `all` or `any`
 
-    ┌── tests/sources/functional/restrictions.move:22:21 ───
+    ┌── tests/sources/functional/restrictions.move:20:21 ───
     │
- 22 │             let f = |x| x + 1;
+ 20 │             let f = |x| x + 1;
     │                     ^^^^^^^^^
+    │
+
+error: [boogie translator] `|x|e` (lambda) currently only supported as argument for `all` or `any`
+
+    ┌── tests/sources/functional/restrictions.move:49:20 ───
+    │
+ 49 │         ensures f3(|x|x) == f3(|x|x);
+    │                    ^^^^
+    │
+
+error: [boogie translator] `|x|e` (lambda) currently only supported as argument for `all` or `any`
+
+    ┌── tests/sources/functional/restrictions.move:49:32 ───
+    │
+ 49 │         ensures f3(|x|x) == f3(|x|x);
+    │                                ^^^^
     │

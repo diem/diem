@@ -1,24 +1,22 @@
 // no-boogie-test
-// The mono backend currently does not translate unused spec functions, so skip this test.
-// exclude_for: bexp
 module 0x42::M {
     struct S {
         f: u64
     }
     spec module {
         // Tuples as result type.
-        define f1(): (num, num) { (1, 2) }
+        define f1(): (u64, u64) { (1u64, 2u64) }
 
         // Functions as result type.
         define f2(): | |num { | | 1 }
 
         // Invoke
-        define f3(f: |num|num): num {
-            f(1)
+        define f3(f: |u64|u64): u64 {
+            f(1u64)
         }
 
         // Lambda outside of all/any
-        define f4(): num {
+        define f4(): u64 {
             let f = |x| x + 1;
             1
         }
@@ -41,5 +39,15 @@ module 0x42::M {
         //    let S{f:x} = s;
         //    x
         //}
+    }
+
+    /// Need to use the spec functions, otherwise the monomorphizer will eliminate them.
+    fun use_them(): bool { true }
+    spec fun use_them {
+        ensures f1() == f1();
+        ensures f2() == f2();
+        ensures f3(|x|x) == f3(|x|x);
+        ensures f4() == f4();
+        ensures f5() == f5();
     }
 }

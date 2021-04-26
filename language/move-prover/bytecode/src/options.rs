@@ -77,7 +77,7 @@ impl Default for ProverOptions {
             check_inconsistency: false,
             weak_edges: false,
             inv_v2: false,
-            run_mono: false,
+            run_mono: true,
         }
     }
 }

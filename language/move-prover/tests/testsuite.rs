@@ -76,17 +76,9 @@ const TESTED_FEATURES: &[Feature] = &[
         name: "cvc4",
         flags: &["--use-cvc4"],
         inclusion_mode: InclusionMode::Explicit,
-        enable_in_ci: true,
+        enable_in_ci: false, // Do not enable in CI until boogie <-> cvc4 issues are fixed
         separate_baseline: true,
         runner: runner_cvc4,
-    },
-    Feature {
-        name: "bexp",
-        flags: &["--bexp"],
-        inclusion_mode: InclusionMode::Implicit,
-        enable_in_ci: true,
-        separate_baseline: false,
-        runner: runner_bexp,
     },
 ];
 
@@ -104,9 +96,6 @@ fn runner_default(p: &Path) -> datatest_stable::Result<()> {
 }
 fn runner_cvc4(p: &Path) -> datatest_stable::Result<()> {
     test_runner_for_feature(p, get_feature_by_name("cvc4"))
-}
-fn runner_bexp(p: &Path) -> datatest_stable::Result<()> {
-    test_runner_for_feature(p, get_feature_by_name("bexp"))
 }
 
 /// Test runner for a given feature.

@@ -1526,6 +1526,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         match kind {
             PK::Assert => Some((Assert, exp)),
             PK::Assume => Some((Assume, exp)),
+            PK::Axiom => Some((Axiom, exp)),
             PK::Decreases => Some((Decreases, exp)),
             PK::Modifies => Some((Modifies, exp)),
             PK::Emits => Some((Emits, exp)),
@@ -2228,7 +2229,7 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
         context_type_params: &[(Symbol, Type)],
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
     ) -> ExpTranslator<'env, 'translator, 'module_translator> {
-        let mut et = ExpTranslator::new(self);
+        let mut et = ExpTranslator::new_with_old(self, true);
         for (n, ty) in context_type_params {
             et.define_type_param(loc, *n, ty.clone())
         }
@@ -2587,6 +2588,9 @@ impl<'env, 'translator> ModuleBuilder<'env, 'translator> {
     /// Reduce module invariants by making them requires/ensures on each function.
     fn reduce_module_invariants(&mut self) {
         for mut cond in self.module_spec.conditions.iter().cloned().collect_vec() {
+            if cond.kind == ConditionKind::Axiom {
+                continue;
+            }
             if self
                 .parent
                 .env

@@ -173,15 +173,18 @@ pub fn boogie_temp_from_suffix(_env: &GlobalEnv, suffix: &str, instance: usize) 
     format!("$temp_{}{}", instance, suffix)
 }
 
+/// Returns the suffix to specialize a name for the given type instance.
 pub fn boogie_type_suffix(env: &GlobalEnv, ty: &Type) -> String {
     use PrimitiveType::*;
     use Type::*;
     match ty {
         Primitive(p) => match p {
-            U8 | U64 | U128 | Num => "int".to_string(),
-            Address | Signer => "addr".to_string(),
+            U8 => "u8".to_string(),
+            U64 => "u64".to_string(),
+            U128 => "u128".to_string(),
+            Num => "num".to_string(),
+            Address | Signer => "address".to_string(),
             Bool => "bool".to_string(),
-            EventStore => "".to_string(),
             _ => format!("<<unsupported {:?}>>", ty),
         },
         Vector(et) => format!("vec{}", boogie_inst_suffix(env, &[et.as_ref().to_owned()])),
@@ -219,89 +222,13 @@ pub fn boogie_equality_for_type(env: &GlobalEnv, eq: bool, ty: &Type) -> String 
 
 /// Create boogie well-formed boolean expression.
 pub fn boogie_well_formed_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String {
-    boogie_well_formed_expr_impl(env, name, ty, 0)
-}
-
-fn boogie_well_formed_expr_impl(env: &GlobalEnv, name: &str, ty: &Type, nest: usize) -> String {
-    let mut conds = vec![];
-    let indent = " ".repeat(usize::saturating_mul(nest, 2));
-    let mut add_type_check = |s: String| {
-        conds.push(format!("{}{}", indent, s));
+    let target = if ty.is_reference() {
+        format!("$Dereference({})", name)
+    } else {
+        name.to_owned()
     };
-    match ty {
-        Type::Primitive(p) => match p {
-            PrimitiveType::U8 => add_type_check(format!("$IsValidU8({})", name)),
-            PrimitiveType::U64 => add_type_check(format!("$IsValidU64({})", name)),
-            PrimitiveType::U128 => add_type_check(format!("$IsValidU128({})", name)),
-            PrimitiveType::Num => add_type_check(format!("$IsValidNum({})", name)),
-            PrimitiveType::Bool => add_type_check(format!("$IsValidBool({})", name)),
-            PrimitiveType::Address | PrimitiveType::Signer => {
-                add_type_check(format!("$IsValidAddress({})", name))
-            }
-            PrimitiveType::Range => add_type_check(format!("$IsValidRange({})", name)),
-            PrimitiveType::TypeValue => {}
-            PrimitiveType::EventStore => unimplemented!("EventStore"),
-        },
-        Type::Vector(elem_ty) => {
-            add_type_check(format!("$Vector_$is_well_formed({})", name));
-            if !matches!(**elem_ty, Type::TypeParameter(..)) {
-                let nest_value = &format!("ReadVec({},$${})", name, nest);
-                let nest_check = boogie_well_formed_expr_impl(
-                    env,
-                    nest_value,
-                    &elem_ty,
-                    usize::saturating_add(nest, 1),
-                );
-                if !nest_check.is_empty() {
-                    add_type_check(format!(
-                        "(forall $${}: int :: {{{}}}\n{}   InRangeVec({}, $${}) ==> {})",
-                        nest, nest_value, indent, name, nest, nest_check,
-                    ));
-                }
-            }
-        }
-        Type::Struct(module_idx, struct_idx, targs) => {
-            let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
-            if !struct_env.is_native_or_intrinsic() {
-                for field in struct_env.get_fields() {
-                    let sel = format!("{}({})", boogie_field_sel(&field, targs), name);
-                    let ty = field.get_type();
-                    let inst_type = ty.instantiate(targs);
-                    add_type_check(boogie_well_formed_expr_impl(
-                        env,
-                        &sel,
-                        &inst_type,
-                        nest.saturating_add(1),
-                    ));
-                }
-            }
-        }
-        Type::Reference(true, rtype) => {
-            add_type_check(boogie_well_formed_expr_impl(
-                env,
-                &format!("$Dereference({})", name),
-                rtype,
-                usize::saturating_add(nest, 1),
-            ));
-        }
-        Type::Reference(false, rtype) => {
-            add_type_check(boogie_well_formed_expr_impl(
-                env,
-                name,
-                rtype.skip_reference(),
-                nest,
-            ));
-        }
-        // TODO: tuple and functions?
-        Type::Fun(_args, _result) => {}
-        Type::Tuple(_elems) => {}
-        // A type parameter or type value is opaque, so no type check here.
-        Type::TypeParameter(..) | Type::TypeLocal(..) => {}
-        Type::Error | Type::Var(..) | Type::TypeDomain(..) | Type::ResourceDomain(..) => {
-            panic!("unexpected transient type")
-        }
-    }
-    conds.iter().filter(|s| !s.is_empty()).join("\n&& ")
+    let suffix = boogie_type_suffix(env, ty.skip_reference());
+    format!("$IsValid'{}'({})", suffix, target)
 }
 
 /// Create boogie well-formed check. The result will be either an empty string or a
@@ -350,7 +277,7 @@ pub fn boogie_global_declarator(
 pub fn boogie_byte_blob(_options: &BoogieOptions, val: &[u8]) -> String {
     let args = val.iter().map(|v| format!("{}", *v)).collect_vec();
     if args.is_empty() {
-        "$EmptyVec'int'()".to_string()
+        "$EmptyVec'u8'()".to_string()
     } else {
         boogie_make_vec_from_strings(&args)
     }

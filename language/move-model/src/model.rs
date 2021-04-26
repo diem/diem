@@ -568,6 +568,23 @@ impl GlobalEnv {
             .and_then(|d| d.downcast_ref::<Rc<T>>().cloned())
     }
 
+    /// Updates extension data. If they are no outstanding references to this extension it
+    /// is updated in place, otherwise it will be cloned before the update.
+    pub fn update_extension<T: Any + Clone>(&self, f: impl FnOnce(&mut T)) {
+        let id = TypeId::of::<T>();
+        let d = self
+            .extensions
+            .borrow_mut()
+            .remove(&id)
+            .expect("extension defined")
+            .downcast_ref::<Rc<T>>()
+            .cloned()
+            .unwrap();
+        let mut curr = Rc::try_unwrap(d).unwrap_or_else(|d| d.as_ref().clone());
+        f(&mut curr);
+        self.set_extension(curr);
+    }
+
     /// Checks whether there is an extension of type `T`.
     pub fn has_extension<T: Any>(&self) -> bool {
         let id = TypeId::of::<T>();

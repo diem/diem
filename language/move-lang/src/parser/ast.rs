@@ -359,6 +359,7 @@ pub enum SpecConditionKind {
     InvariantPack,
     InvariantUnpack,
     InvariantModule,
+    Axiom,
 }
 
 // Specification invariant kind.
@@ -1229,6 +1230,7 @@ impl AstDebug for SpecConditionKind {
             InvariantPack => w.write("invariant pack "),
             InvariantUnpack => w.write("invariant unpack "),
             InvariantModule => w.write("invariant module "),
+            Axiom => w.write("axiom "),
         }
     }
 }

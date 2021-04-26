@@ -171,6 +171,12 @@ impl<'env> BoogieWrapper<'env> {
                 out
             ));
         }
+        if out.contains("Prover error:") {
+            return Err(anyhow!(
+                "[internal] boogie exited with prover errors:\n{}",
+                out
+            ));
+        }
         let mut errors = self.extract_verification_errors(&out);
         errors.extend(self.extract_inconclusive_errors(&out));
         errors.extend(self.extract_inconsistency_errors(&out));

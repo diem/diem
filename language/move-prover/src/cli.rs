@@ -58,8 +58,8 @@ pub struct Options {
     pub move_deps: Vec<String>,
     /// Whether to run experimental pipeline
     pub experimental_pipeline: bool,
-    /// Whether to use the experimental version of the boogie backend.
-    pub boogie_exp: bool,
+    /// Whether to use the old polymorphic boogie backend.
+    pub boogie_poly: bool,
     /// BEGIN OF STRUCTURED OPTIONS
     /// Options for the documentation generator.
     pub docgen: DocgenOptions,
@@ -92,7 +92,7 @@ impl Default for Options {
             abigen: AbigenOptions::default(),
             errmapgen: ErrmapOptions::default(),
             experimental_pipeline: false,
-            boogie_exp: false,
+            boogie_poly: false,
         }
     }
 }
@@ -202,9 +202,9 @@ impl Options {
                     .help("keeps intermediate artifacts of the backend around")
             )
             .arg(
-                Arg::with_name("bexp")
-                    .long("bexp")
-                    .help("whether to use the experimental version of the Boogie backend")
+                Arg::with_name("boogie-poly")
+                    .long("boogie-poly")
+                    .help("whether to use the old polymorphic Boogie backend")
             )
             .arg(
                 Arg::with_name("inv_v2")
@@ -548,9 +548,9 @@ impl Options {
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
         }
-        if matches.is_present("bexp") {
-            options.boogie_exp = true;
-            options.prover.run_mono = true;
+        if matches.is_present("boogie-poly") {
+            options.boogie_poly = true;
+            options.prover.run_mono = false;
         }
         if matches.is_present("inv_v2") {
             options.prover.inv_v2 = true;

@@ -493,6 +493,15 @@ impl Type {
     }
 }
 
+/// A parameter for type unification, indicating whether the outest types are allowed for
+/// co-variance. Types used in instantiations are always unified in `Variance::Disallow`
+/// mode, that is, co-variance is not allowed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Variance {
+    Allow,
+    Disallow,
+}
+
 impl Substitution {
     /// Creates a new substitution.
     pub fn new() -> Self {
@@ -516,7 +525,7 @@ impl Substitution {
     /// This currently implements the following notion of type compatibility:
     ///
     /// - References are dropped (i.e. &T and T are compatible)
-    /// - All integer types are compatible.
+    /// - All integer types are compatible if co-variance is allowed.
     ///
     /// The substitution will be refined by variable assignments as needed to perform
     /// unification. If unification fails, the substitution will be in some intermediate state;
@@ -527,6 +536,7 @@ impl Substitution {
     pub fn unify<'a>(
         &mut self,
         display_context: &'a TypeDisplayContext<'a>,
+        variance: Variance,
         t1: &Type,
         t2: &Type,
     ) -> Result<Type, TypeError> {
@@ -541,21 +551,25 @@ impl Substitution {
             };
             return Ok(Type::Reference(
                 *is_mut,
-                Box::new(self.unify(display_context, bt1.as_ref(), t2)?),
+                Box::new(self.unify(display_context, Variance::Disallow, bt1.as_ref(), t2)?),
             ));
         }
         if let Type::Reference(is_mut, bt2) = t2 {
             return Ok(Type::Reference(
                 *is_mut,
-                Box::new(self.unify(display_context, t1, bt2.as_ref())?),
+                Box::new(self.unify(display_context, Variance::Disallow, t1, bt2.as_ref())?),
             ));
         }
 
         // Substitute or assign variables.
-        if let Some(rt) = self.try_substitute_or_assign(display_context, false, &t1, &t2)? {
+        if let Some(rt) =
+            self.try_substitute_or_assign(display_context, variance, false, &t1, &t2)?
+        {
             return Ok(rt);
         }
-        if let Some(rt) = self.try_substitute_or_assign(display_context, true, &t2, &t1)? {
+        if let Some(rt) =
+            self.try_substitute_or_assign(display_context, variance, true, &t2, &t1)?
+        {
             return Ok(rt);
         }
 
@@ -567,8 +581,8 @@ impl Substitution {
             return Ok(t1.clone());
         }
 
-        // All number types are currently compatible.
-        if t1.is_number() && t2.is_number() {
+        // All number types are compatible if variance is allowed.
+        if variance == Variance::Allow && t1.is_number() && t2.is_number() {
             return Ok(t1.clone());
         }
 
@@ -595,7 +609,7 @@ impl Substitution {
             (Type::Fun(ts1, r1), Type::Fun(ts2, r2)) => {
                 return Ok(Type::Fun(
                     self.unify_vec(display_context, ts1, ts2, "functions")?,
-                    Box::new(self.unify(display_context, &*r1, &*r2)?),
+                    Box::new(self.unify(display_context, Variance::Disallow, &*r1, &*r2)?),
                 ));
             }
             (Type::Struct(m1, s1, ts1), Type::Struct(m2, s2, ts2)) => {
@@ -610,6 +624,7 @@ impl Substitution {
             (Type::Vector(e1), Type::Vector(e2)) => {
                 return Ok(Type::Vector(Box::new(self.unify(
                     display_context,
+                    Variance::Disallow,
                     &*e1,
                     &*e2,
                 )?)));
@@ -617,6 +632,7 @@ impl Substitution {
             (Type::TypeDomain(e1), Type::TypeDomain(e2)) => {
                 return Ok(Type::TypeDomain(Box::new(self.unify(
                     display_context,
+                    Variance::Disallow,
                     &*e1,
                     &*e2,
                 )?)));
@@ -654,7 +670,7 @@ impl Substitution {
         }
         let mut rs = vec![];
         for i in 0..ts1.len() {
-            rs.push(self.unify(display_context, &ts1[i], &ts2[i])?);
+            rs.push(self.unify(display_context, Variance::Disallow, &ts1[i], &ts2[i])?);
         }
         Ok(rs)
     }
@@ -664,6 +680,7 @@ impl Substitution {
     fn try_substitute_or_assign(
         &mut self,
         display_context: &TypeDisplayContext,
+        variance: Variance,
         swapped: bool,
         t1: &Type,
         t2: &Type,
@@ -673,9 +690,9 @@ impl Substitution {
                 return if swapped {
                     // Place the type terms in the right order again, so we
                     // get the 'expected vs actual' direction right.
-                    Ok(Some(self.unify(display_context, t2, &s1)?))
+                    Ok(Some(self.unify(display_context, variance, t2, &s1)?))
                 } else {
-                    Ok(Some(self.unify(display_context, &s1, t2)?))
+                    Ok(Some(self.unify(display_context, variance, &s1, t2)?))
                 };
             }
             let is_t1_var = |t: &Type| {
