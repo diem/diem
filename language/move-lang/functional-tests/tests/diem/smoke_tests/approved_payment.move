@@ -172,12 +172,12 @@ script {
 use {{default}}::ApprovedPayment;
 fun main(account: signer) {
     let account = &account;
-    assert(!ApprovedPayment::exists_at({{alice1}}), 6001);
+    assert(!ApprovedPayment::exists_at(@{{alice1}}), 6001);
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
     ApprovedPayment::publish(account, pubkey);
-    assert(ApprovedPayment::exists_at({{alice1}}), 6002);
+    assert(ApprovedPayment::exists_at(@{{alice1}}), 6002);
     ApprovedPayment::unpublish_from_sender(account);
-    assert(!ApprovedPayment::exists_at({{alice1}}), 6003);
+    assert(!ApprovedPayment::exists_at(@{{alice1}}), 6003);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -216,7 +216,7 @@ fun main(account: signer) {
     let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<XDX>(account, {{alice2}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<XDX>(account, @{{alice2}}, 1000, payment_id, signature);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -274,7 +274,7 @@ fun main(account: signer) {
     let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<XDX>(account, {{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<XDX>(account, @{{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -290,7 +290,7 @@ fun main(account: signer) {
     let account = &account;
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
-    ApprovedPayment::deposit_to_payee<XDX>(account, {{alice}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<XDX>(account, @{{alice}}, 1000, payment_id, signature);
 }
 }
 
@@ -307,7 +307,7 @@ fun main(account: signer) {
     let account = &account;
     let payment_id = x"07";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
-    ApprovedPayment::deposit_to_payee<XDX>(account, {{alice3}}, 1000, payment_id, signature);
+    ApprovedPayment::deposit_to_payee<XDX>(account, @{{alice3}}, 1000, payment_id, signature);
 }
 }
 // check: "Keep(ABORTED { code: 9002,"

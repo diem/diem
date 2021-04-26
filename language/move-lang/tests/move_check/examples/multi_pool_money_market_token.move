@@ -222,17 +222,17 @@ module ToddNickels {
     }
 
     public fun init(account: &signer) {
-        assert(Signer::address_of(account) == 0x70DD, 42);
+        assert(Signer::address_of(account) == @0x70DD, 42);
         move_to(account, Wallet { nickels: Token::create(T{}, 0) })
     }
 
     public fun mint(account: &signer): Token::Coin<T> {
-        assert(Signer::address_of(account) == 0x70DD, 42);
+        assert(Signer::address_of(account) == @0x70DD, 42);
         Token::create(T{}, 5)
     }
 
     public fun destroy(c: Token::Coin<T>) acquires Wallet {
-        Token::deposit(&mut borrow_global_mut<Wallet>(0x70DD).nickels, c)
+        Token::deposit(&mut borrow_global_mut<Wallet>(@0x70DD).nickels, c)
     }
 
 }

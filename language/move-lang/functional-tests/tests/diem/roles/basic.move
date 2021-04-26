@@ -55,7 +55,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_designated_dealer<XUS>(
         account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         b"bob",
         false
@@ -72,7 +72,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_validator_account(
         account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         b"bob",
     );
@@ -99,7 +99,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_validator_operator_account(
         account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         b"bob"
     );
@@ -127,7 +127,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
         account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         b"bob",
         false
@@ -156,7 +156,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_child_vasp_account<XUS>(
         account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         false
     );
@@ -225,7 +225,7 @@ script {
 use 0x1::Roles;
 fun main(_account: signer) {
     let _account = &_account;
-    let _ = Roles::get_role_id(0x7); // does not exist, should abort
+    let _ = Roles::get_role_id(@0x7); // does not exist, should abort
 }
 }
 // check: "Keep(ABORTED"

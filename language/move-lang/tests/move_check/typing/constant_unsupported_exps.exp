@@ -174,16 +174,16 @@ error:
 
     ┌── tests/move_check/typing/constant_unsupported_exps.move:29:9 ───
     │
- 29 │         borrow_global<R>(0x42);
-    │         ^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global' is not supported in constants
+ 29 │         borrow_global<R>(@0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global' is not supported in constants
     │
 
 error: 
 
     ┌── tests/move_check/typing/constant_unsupported_exps.move:30:9 ───
     │
- 30 │         borrow_global_mut<R>(0x42);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global_mut' is not supported in constants
+ 30 │         borrow_global_mut<R>(@0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global_mut' is not supported in constants
     │
 
 error: 
@@ -228,16 +228,16 @@ error:
 
     ┌── tests/move_check/typing/constant_unsupported_exps.move:32:9 ───
     │
- 32 │         R{} = move_from(0x42);
-    │         ^^^^^^^^^^^^^^^^^^^^^ Assignments are not supported in constants
+ 32 │         R{} = move_from(@0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^^ Assignments are not supported in constants
     │
 
 error: 
 
     ┌── tests/move_check/typing/constant_unsupported_exps.move:32:15 ───
     │
- 32 │         R{} = move_from(0x42);
-    │               ^^^^^^^^^^^^^^^ 'move_from' is not supported in constants
+ 32 │         R{} = move_from(@0x42);
+    │               ^^^^^^^^^^^^^^^^ 'move_from' is not supported in constants
     │
 
 error: 

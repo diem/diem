@@ -8,7 +8,7 @@ module 0x8675309::M {
     fun t1<T: drop>(x: T) {
         if (x) () else ();
         if (0) () else ();
-        if (0x0) () else ()
+        if (@0x0) () else ()
     }
 
     fun t2() {

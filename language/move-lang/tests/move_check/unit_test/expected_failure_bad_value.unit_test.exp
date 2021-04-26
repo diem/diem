@@ -46,10 +46,10 @@ error:
 
     ┌── tests/move_check/unit_test/expected_failure_bad_value.move:23:35 ───
     │
- 23 │     #[expected_failure(abort_code=0xC0FFEE)]
-    │                                   ^^^^^^^^ Invalid value in expected failure code assignment
+ 23 │     #[expected_failure(abort_code=@0xC0FFEE)]
+    │                                   ^^^^^^^^^ Invalid value in expected failure code assignment
     ·
- 23 │     #[expected_failure(abort_code=0xC0FFEE)]
-    │                        ------------------- In this assignment
+ 23 │     #[expected_failure(abort_code=@0xC0FFEE)]
+    │                        -------------------- In this assignment
     │
 

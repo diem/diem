@@ -2,11 +2,11 @@ error:
 
    ┌── tests/move_check/unit_test/multiple_test_annotations.move:6:7 ───
    │
- 6 │     #[test(_b=0x2)]
-   │       ^^^^^^^^^^^^ Duplicate '#[test]' attribute. Only one #[test] attribute is allowed
+ 6 │     #[test(_b=@0x2)]
+   │       ^^^^^^^^^^^^^ Duplicate '#[test]' attribute. Only one #[test] attribute is allowed
    ·
- 5 │     #[test(_a=0x1)]
-   │       ------------ Previously annotated here
+ 5 │     #[test(_a=@0x1)]
+   │       ------------- Previously annotated here
    ·
  7 │     public fun a(_a: signer, _b: signer) { }
    │                - In this test
@@ -16,8 +16,8 @@ error:
 
    ┌── tests/move_check/unit_test/multiple_test_annotations.move:6:7 ───
    │
- 6 │     #[test(_b=0x2)]
-   │       ^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
+ 6 │     #[test(_b=@0x2)]
+   │       ^^^^^^^^^^^^^ Missing test parameter assignment in test. Expected a parameter to be assigned in this attribute
    ·
  7 │     public fun a(_a: signer, _b: signer) { }
    │                  -- Corresponding to this parameter
@@ -30,8 +30,8 @@ error:
 
     ┌── tests/move_check/unit_test/multiple_test_annotations.move:10:7 ───
     │
- 10 │     #[test(_a=0x1, _b=0x2)]
-    │       ^^^^^^^^^^^^^^^^^^^^ Duplicate '#[test]' attribute. Only one #[test] attribute is allowed
+ 10 │     #[test(_a=@0x1, _b=@0x2)]
+    │       ^^^^^^^^^^^^^^^^^^^^^^ Duplicate '#[test]' attribute. Only one #[test] attribute is allowed
     ·
   9 │     #[test]
     │       ---- Previously annotated here

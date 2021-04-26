@@ -30,14 +30,14 @@ error:
 
    ┌── tests/move_check/typing/while_body_invalid.move:5:22 ───
    │
- 5 │         while (cond) { 0x0 };
-   │                      ^^^^^^^ Invalid loop body
+ 5 │         while (cond) { @0x0 };
+   │                      ^^^^^^^^ Invalid loop body
    ·
- 5 │         while (cond) { 0x0 };
-   │                        --- The type: 'address'
+ 5 │         while (cond) { @0x0 };
+   │                        ---- The type: 'address'
    ·
- 5 │         while (cond) { 0x0 };
-   │                      ------- Is not compatible with: '()'
+ 5 │         while (cond) { @0x0 };
+   │                      -------- Is not compatible with: '()'
    │
 
 error: 

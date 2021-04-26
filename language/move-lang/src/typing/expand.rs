@@ -148,7 +148,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                 E::Move { from_user, var }
             }
         }
-        E::InferredNum(v) => {
+        E::Value(sp!(vloc, Value_::InferredNum(v))) => {
             use BuiltinTypeName_ as BT;
             let bt = match e.ty.value.builtin_name() {
                 Some(sp!(_, bt)) if bt.is_numeric() => bt,
@@ -193,7 +193,7 @@ pub fn exp(context: &mut Context, e: &mut T::Exp) {
                     BT::U128 => Value_::U128(v),
                     _ => unreachable!(),
                 };
-                E::Value(sp(e.exp.loc, value_))
+                E::Value(sp(*vloc, value_))
             };
             e.exp.value = new_exp;
         }

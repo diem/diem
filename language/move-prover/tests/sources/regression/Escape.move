@@ -11,7 +11,7 @@ module Escape {
 
     public fun initialize(account: &signer) {
         let owner = Signer::address_of(account);
-        assert(owner == 0x123, 0);
+        assert(owner == @0x123, 0);
         move_to<Wrapper<IndoorThing>>(account, Wrapper{ thing: IndoorThing {} });
         move_to<Wrapper<OutdoorThing>>(account, Wrapper { thing: OutdoorThing {}});
     }
@@ -47,7 +47,7 @@ module Escape {
     /// to call `install`.  The prover needs some additional bookkeeping to note whether an instance of a
     /// type can escape in order to avoid this false error.
     spec schema IndoorThingUnique {
-        invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
+        invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
     }
 
     spec module {

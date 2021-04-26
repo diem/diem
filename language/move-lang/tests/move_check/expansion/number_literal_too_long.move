@@ -1,5 +1,6 @@
-module M {
+module 0x42::M {
     fun foo() {
+        0x1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
         340282366920938463463374607431768211456;
     }
 }

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/address_too_long_decimal_exp.move:4:18 ───
+   │
+ 4 │         let x = @340282366920938463463374607431768211456;
+   │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid address literal. The numeric value is too large. The maximum size is 16 bytes
+   │
+

@@ -9,7 +9,7 @@ use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
-        account, 0x0, x"00000000000000000000000000000000", x"", false);
+        account, @0x0, x"00000000000000000000000000000000", x"", false);
 }
 }
 // check: "Keep(ABORTED { code: 2567,"
@@ -22,7 +22,7 @@ use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XUS>(
-        account, 0x0, x"00000000000000000000000000000000", x"", false);
+        account, @0x0, x"00000000000000000000000000000000", x"", false);
 }
 }
 // check: "Keep(ABORTED { code: 258,"
@@ -35,7 +35,7 @@ use 0x1::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(
-        account, 0x1, x"00000000000000000000000000000000", x"", false);
+        account, @0x1, x"00000000000000000000000000000000", x"", false);
 }
 }
 // check: "Keep(ABORTED { code: 6151,"
@@ -48,7 +48,7 @@ use 0x1::XDX::XDX;
 fun main(account: signer) {
     let account = &account;
     DiemAccount::create_parent_vasp_account<XDX>(
-        account, 0x1, x"00000000000000000000000000000000", x"", false);
+        account, @0x1, x"00000000000000000000000000000000", x"", false);
 }
 }
 // check: "Keep(ABORTED { code: 258,"

@@ -143,19 +143,19 @@ error:
 
     ┌── tests/move_check/typing/module_call.move:46:18 ───
     │
- 46 │         let () = X::bing (X::baz (0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. The call expected 3 argument(s) but got 1
+ 46 │         let () = X::bing (X::baz (@0x0, 1));
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. The call expected 3 argument(s) but got 1
     ·
- 46 │         let () = X::bing (X::baz (0x0, 1));
-    │                          ----------------- Found 1 argument(s) here
+ 46 │         let () = X::bing (X::baz (@0x0, 1));
+    │                          ------------------ Found 1 argument(s) here
     │
 
 error: 
 
     ┌── tests/move_check/typing/module_call.move:46:18 ───
     │
- 46 │         let () = X::bing (X::baz (0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
+ 46 │         let () = X::bing (X::baz (@0x0, 1));
+    │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::X::bing'. Invalid argument for parameter 'b'
     ·
   8 │     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
     │                                           -------------- The type: '(bool, address, {integer})'
@@ -309,19 +309,19 @@ error:
 
     ┌── tests/move_check/typing/module_call.move:54:18 ───
     │
- 54 │         let () = bing (baz (0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. The call expected 3 argument(s) but got 1
+ 54 │         let () = bing (baz (@0x0, 1));
+    │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. The call expected 3 argument(s) but got 1
     ·
- 54 │         let () = bing (baz (0x0, 1));
-    │                       -------------- Found 1 argument(s) here
+ 54 │         let () = bing (baz (@0x0, 1));
+    │                       --------------- Found 1 argument(s) here
     │
 
 error: 
 
     ┌── tests/move_check/typing/module_call.move:54:18 ───
     │
- 54 │         let () = bing (baz (0x0, 1));
-    │                  ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
+ 54 │         let () = bing (baz (@0x0, 1));
+    │                  ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::bing'. Invalid argument for parameter 'b'
     ·
  22 │     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
     │                                    -------------- The type: '(bool, address, {integer})'

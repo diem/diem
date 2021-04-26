@@ -828,7 +828,6 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
     let sp!(eloc, e_) = e;
     let ne_ = match e_ {
         EE::Unit { trailing } => NE::Unit { trailing },
-        EE::InferredNum(u) => NE::InferredNum(u),
         EE::Value(val) => NE::Value(val),
         EE::Move(v) => NE::Move(v),
         EE::Copy(v) => NE::Copy(v),

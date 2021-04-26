@@ -9,7 +9,7 @@
 script {
     use 0x1::DiemSystem;
     fun main() {
-        DiemSystem::get_validator_config({{vivian}});
+        DiemSystem::get_validator_config(@{{vivian}});
     }
 }
 // check: "Keep(EXECUTED)"
@@ -37,7 +37,7 @@ script {
 script {
     use 0x1::DiemSystem;
     fun main() {
-        DiemSystem::get_validator_config({{vivian}});
+        DiemSystem::get_validator_config(@{{vivian}});
     }
 }
 // check: "Keep(ABORTED { code: 775,"

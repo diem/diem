@@ -32,16 +32,16 @@ module 0x42::Test {
 	struct R has key { v: u64 }
 
 	fun resource_with_old(val: u64) acquires R {
-	    if (!exists<R>(0x0)) abort 33;
-	    let r = borrow_global_mut<R>(0x0);
+	    if (!exists<R>(@0x0)) abort 33;
+	    let r = borrow_global_mut<R>(@0x0);
 	    r.v = r.v + val;
 	}
 	spec fun resource_with_old {
 	    requires val > 0;
-	    aborts_if !exists<R>(0x0) with 33;
-	    aborts_if global<R>(0x0).v + val >= 18446744073709551615;
-	    ensures global<R>(0x0).v == old(global<R>(0x0)).v + val;
-	    modifies global<R>(0x0);
+	    aborts_if !exists<R>(@0x0) with 33;
+	    aborts_if global<R>(@0x0).v + val >= 18446744073709551615;
+	    ensures global<R>(@0x0).v == old(global<R>(@0x0)).v + val;
+	    modifies global<R>(@0x0);
 	}
 
 	fun ref_param(r: &R): u64 {

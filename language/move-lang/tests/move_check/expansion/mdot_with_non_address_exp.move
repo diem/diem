@@ -6,7 +6,7 @@ module X {
 module M {
 
     fun foo() {
-        01::X::bar()
+        01u8::X::bar()
     }
 
     fun bar() {

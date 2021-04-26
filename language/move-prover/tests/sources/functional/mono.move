@@ -44,11 +44,11 @@ module 0x42::TestMonomorphization {
     }
 
     public fun use_bcs<T>(x: &T): (vector<u8>, vector<u8>) {
-        (BCS::to_bytes(x), BCS::to_bytes(&0x2))
+        (BCS::to_bytes(x), BCS::to_bytes(&@0x2))
     }
     spec fun use_bcs {
         ensures result_1 == BCS::serialize(x);
-        ensures result_2 == BCS::serialize(0x2);
+        ensures result_2 == BCS::serialize(@0x2);
     }
 
     struct E has copy, drop, store {
@@ -67,14 +67,14 @@ module 0x42::TestMonomorphization {
     // inspect printing.
     public fun vec_int(x: vector<u64>): vector<u64> { Vector::push_back(&mut x, 1); x }
     spec fun vec_int { ensures result[0] != 1; }
-    public fun vec_addr(x: vector<address>): vector<address> { Vector::push_back(&mut x, 0x1); x }
-    spec fun vec_addr { ensures result[0] != 0x1; }
+    public fun vec_addr(x: vector<address>): vector<address> { Vector::push_back(&mut x, @0x1); x }
+    spec fun vec_addr { ensures result[0] != @0x1; }
     public fun vec_bool(x: vector<bool>): vector<bool> { Vector::push_back(&mut x, true); x }
     spec fun vec_bool { ensures result[0] != true; }
     public fun vec_struct_int(x: vector<R<u64>>): vector<R<u64>> { Vector::push_back(&mut x, R{x: 1u64, y: 1}); x }
     spec fun vec_struct_int { ensures result[0].x != 1; }
-    public fun vec_struct_addr(x: vector<R<address>>): vector<R<address>> { Vector::push_back(&mut x, R{x: 0x1, y: 0x2}); x }
-    spec fun vec_struct_addr { ensures result[0].x != 0x1; }
+    public fun vec_struct_addr(x: vector<R<address>>): vector<R<address>> { Vector::push_back(&mut x, R{x: @0x1, y: @0x2}); x }
+    spec fun vec_struct_addr { ensures result[0].x != @0x1; }
 
     public fun vec_vec(x: vector<vector<u64>>): vector<vector<u64>> {
         Vector::push_back(&mut x, Vector::empty<u64>()); x

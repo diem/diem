@@ -12,7 +12,7 @@ module M {
         Box<T> {};
         Box<Box<T>> {};
         Pair<S, R> {};
-        (Pair<S, R> {}, 0, 0x1);
+        (Pair<S, R> {}, 0, @0x1);
 
         Box<R> {} == Box<R> {};
         Box<Box<R>> {} == Box<Box<R>> {};

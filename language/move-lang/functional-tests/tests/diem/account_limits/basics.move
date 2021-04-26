@@ -32,7 +32,7 @@ fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;
     AccountLimits::publish_unrestricted_limits<XUS>(bob_account);
-    AccountLimits::publish_window<XUS>(dr, bob_account, {{bob}});
+    AccountLimits::publish_window<XUS>(dr, bob_account, @{{bob}});
 }
 }
 
@@ -45,7 +45,7 @@ use 0x1::XUS::XUS;
 fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;
-    AccountLimits::publish_window<XUS>(dr, bob_account, {{bob}});
+    AccountLimits::publish_window<XUS>(dr, bob_account, @{{bob}});
 }
 }
 
@@ -56,7 +56,7 @@ use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
 fun main(bob_account: signer) {
     let bob_account = &bob_account;
-    AccountLimits::publish_window<XUS>(bob_account, bob_account, {{bob}});
+    AccountLimits::publish_window<XUS>(bob_account, bob_account, @{{bob}});
 }
 }
 
@@ -80,7 +80,7 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         100, /* new_max_inflow */
         200, /* new_max_outflow */
         150, /* new_max_holding_balance */
@@ -98,7 +98,7 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         100, /* new_max_inflow */
         200, /* new_max_outflow */
         150, /* new_max_holding_balance */
@@ -116,7 +116,7 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         0, /* new_max_inflow */
         0, /* new_max_outflow */
         150, /* new_max_holding_balance */
@@ -134,7 +134,7 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
-        {{default}},
+        @{{default}},
         0, /* new_max_inflow */
         0, /* new_max_outflow */
         150, /* new_max_holding_balance */
@@ -152,7 +152,7 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_limits_definition<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         0, /* new_max_inflow */
         0, /* new_max_outflow */
         150, /* new_max_holding_balance */
@@ -170,9 +170,9 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         120,
-        {{bob}},
+        @{{bob}},
     )
 }
 }
@@ -186,9 +186,9 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         0,
-        {{bob}},
+        @{{bob}},
     )
 }
 }
@@ -202,9 +202,9 @@ fun main(tc: signer) {
     let tc = &tc;
     AccountLimits::update_window_info<XUS>(
         tc,
-        {{bob}},
+        @{{bob}},
         120,
-        {{alice}},
+        @{{alice}},
     )
 }
 }
@@ -218,9 +218,9 @@ fun main(dr: signer) {
     let dr = &dr;
     AccountLimits::update_window_info<XUS>(
         dr,
-        {{bob}},
+        @{{bob}},
         120,
-        {{bob}},
+        @{{bob}},
     )
 }
 }
@@ -231,7 +231,7 @@ script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
 fun main() {
-    assert(AccountLimits::limits_definition_address<XUS>({{bob}}) == {{bob}}, 0);
+    assert(AccountLimits::limits_definition_address<XUS>(@{{bob}}) == @{{bob}}, 0);
 }
 }
 
@@ -241,9 +241,9 @@ script {
 use 0x1::AccountLimits;
 use 0x1::XUS::XUS;
 fun main() {
-    assert(AccountLimits::has_limits_published<XUS>({{bob}}), 1);
+    assert(AccountLimits::has_limits_published<XUS>(@{{bob}}), 1);
 
-    assert(!AccountLimits::has_limits_published<XUS>({{alice}}), 3);
+    assert(!AccountLimits::has_limits_published<XUS>(@{{alice}}), 3);
 }
 }
 
@@ -256,6 +256,6 @@ use 0x1::XUS::XUS;
 fun main(dr: signer, bob_account: signer) {
     let dr = &dr;
     let bob_account = &bob_account;
-    AccountLimits::publish_window<XUS>(dr, bob_account, {{default}});
+    AccountLimits::publish_window<XUS>(dr, bob_account, @{{default}});
 }
 }

@@ -41,8 +41,8 @@ use 0x1::DiemAccount;
 // create a SharedKeyRotation for Alice's account with Bob's account key as the master key
 fun main(account: signer) {
     let account = &account;
-    assert(DiemAccount::sequence_number({{alice}}) == 1, 77);
-    SharedKeyRotation::publish(account, DiemAccount::extract_key_rotation_capability(account), {{bob}});
+    assert(DiemAccount::sequence_number(@{{alice}}) == 1, 77);
+    SharedKeyRotation::publish(account, DiemAccount::extract_key_rotation_capability(account), @{{bob}});
 }
 }
 
@@ -54,10 +54,10 @@ use 0x1::DiemAccount;
 // Alice can rotate her key. Here, she rotates it to its original value
 fun main(account: signer) {
     let account = &account;
-    assert(DiemAccount::sequence_number({{alice}}) == 2, 78);
+    assert(DiemAccount::sequence_number(@{{alice}}) == 2, 78);
     SharedKeyRotation::rotate(
         account,
-        {{alice}},
+        @{{alice}},
         x"08a88082abf9fbb576bdb6969143ee6384066e363c48e041c8da1e08b9fc931f",
     );
 }
@@ -71,10 +71,10 @@ use 0x1::DiemAccount;
 // Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
 fun main(account: signer) {
     let account = &account;
-    assert(DiemAccount::sequence_number({{alice}}) == 3, 78);
+    assert(DiemAccount::sequence_number(@{{alice}}) == 3, 78);
     SharedKeyRotation::rotate(
         account,
-        {{alice}},
+        @{{alice}},
         x"0000000000000000000000000000000000000000000000000000000000000000",
     );
 }
@@ -99,13 +99,13 @@ use 0x1::Vector;
 // Bob now rotates the key back to its old value
 fun main(account: signer) {
     let account = &account;
-    assert(DiemAccount::sequence_number({{alice}}) == 3, 78);
+    assert(DiemAccount::sequence_number(@{{alice}}) == 3, 78);
     // simulates how an auth_key is created
     // details to be found in DiemAccount::make_account
     let newkey = Vector::empty();
     Vector::append(&mut newkey, {{alice::auth_key}});
-    Vector::append(&mut newkey, BCS::to_bytes(&{{alice}}));
-    SharedKeyRotation::rotate(account, {{alice}}, newkey);
+    Vector::append(&mut newkey, BCS::to_bytes(&@{{alice}}));
+    SharedKeyRotation::rotate(account, @{{alice}}, newkey);
 }
 }
 
@@ -115,6 +115,6 @@ fun main(account: signer) {
 script {
 use 0x1::DiemAccount;
 fun main() {
-    assert(DiemAccount::sequence_number({{alice}}) == 3, 79);
+    assert(DiemAccount::sequence_number(@{{alice}}) == 3, 79);
 }
 }

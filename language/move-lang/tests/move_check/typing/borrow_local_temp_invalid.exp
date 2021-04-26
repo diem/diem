@@ -24,11 +24,11 @@ error:
 
    ┌── tests/move_check/typing/borrow_local_temp_invalid.move:5:9 ───
    │
- 5 │         &(0, 1, true, 0x0);
-   │         ^^^^^^^^^^^^^^^^^^ Invalid borrow
+ 5 │         &(0, 1, true, @0x0);
+   │         ^^^^^^^^^^^^^^^^^^^ Invalid borrow
    ·
- 5 │         &(0, 1, true, 0x0);
-   │          ----------------- Expected a single non-reference type, but found: '(u64, u64, bool, address)'
+ 5 │         &(0, 1, true, @0x0);
+   │          ------------------ Expected a single non-reference type, but found: '(u64, u64, bool, address)'
    │
 
 error: 

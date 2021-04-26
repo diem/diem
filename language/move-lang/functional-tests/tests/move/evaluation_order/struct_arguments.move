@@ -33,7 +33,7 @@ module {{default}}::M {
     }
 
     public fun t5(account: &signer) acquires R {
-        move_to(account, Cup { b: move_from(0x0), a: fail(0) });
+        move_to(account, Cup { b: move_from(@0x0), a: fail(0) });
     }
 
     public fun t6(account: &signer) {

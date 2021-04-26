@@ -30,14 +30,14 @@ error:
 
    ┌── tests/move_check/typing/if_mismatched_branches.move:8:9 ───
    │
- 8 │         if (cond) 0x0 else 0;
-   │         ^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+ 8 │         if (cond) @0x0 else 0;
+   │         ^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
    ·
- 8 │         if (cond) 0x0 else 0;
-   │                            - The type: integer
+ 8 │         if (cond) @0x0 else 0;
+   │                             - The type: integer
    ·
- 8 │         if (cond) 0x0 else 0;
-   │                   --- Is not compatible with: 'address'
+ 8 │         if (cond) @0x0 else 0;
+   │                   ---- Is not compatible with: 'address'
    │
 
 error: 
@@ -86,13 +86,13 @@ error:
 
     ┌── tests/move_check/typing/if_mismatched_branches.move:15:9 ───
     │
- 15 │         if (cond) (0, false) else (true, 0x0);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+ 15 │         if (cond) (0, false) else (true, @0x0);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     ·
- 15 │         if (cond) (0, false) else (true, 0x0);
+ 15 │         if (cond) (0, false) else (true, @0x0);
     │                    - The type: integer
     ·
- 15 │         if (cond) (0, false) else (true, 0x0);
+ 15 │         if (cond) (0, false) else (true, @0x0);
     │                                    ---- Is not compatible with: 'bool'
     │
 

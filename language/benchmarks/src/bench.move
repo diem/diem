@@ -39,7 +39,7 @@ module 0x1::Bench {
         // 3000 is the number of loops to make the benchmark run for a couple of minutes, which is an eternity.
         // Adjust according to your needs, it's just a reference
         while (i < 3000) {
-            let b = call_1(0x0, 128);
+            let b = call_1(@0x0, 128);
             call_2(b);
             i = i + 1;
         };
@@ -96,7 +96,7 @@ module 0x1::Bench {
         test_vector_ops<u64>(1u64, 2u64);
         test_vector_ops<u128>(1u128, 2u128);
         test_vector_ops<bool>(true, false);
-        test_vector_ops<address>(0x1, 0x2);
+        test_vector_ops<address>(@0x1, @0x2);
         test_vector_ops<vector<u8>>(Vector::empty(), Vector::empty());
     }
 

@@ -5,7 +5,7 @@ use 0x1::BCS;
 
 fun main() {
     // address
-    let addr = 0x89b9f9d1fadc027cf9532d6f99041522;
+    let addr = @0x89b9f9d1fadc027cf9532d6f99041522;
     let expected_output = x"89b9f9d1fadc027cf9532d6f99041522";
     assert(BCS::to_bytes(&addr) == expected_output, 8001);
 

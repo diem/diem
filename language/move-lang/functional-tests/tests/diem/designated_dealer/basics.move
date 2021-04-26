@@ -70,7 +70,7 @@ use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
     Diem::destroy_zero(
-        DesignatedDealer::tiered_mint<XUS>(account, 0, {{bob}}, 0)
+        DesignatedDealer::tiered_mint<XUS>(account, 0, @{{bob}}, 0)
     );
 }
 }
@@ -85,7 +85,7 @@ script {
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
         DiemAccount::tiered_mint<XUS>(
-            tc_account, {{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
+            tc_account, @{{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
         );
     }
 }
@@ -107,7 +107,7 @@ script {
     fun main(tc_account: signer) {
     let tc_account = &tc_account;
         DiemAccount::tiered_mint<XUS>(
-            tc_account, {{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
+            tc_account, @{{bob}},  500000 * Diem::scaling_factor<XUS>() - 1, 0
         );
     }
 }

@@ -876,6 +876,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
             code.push(sp(
                 loc,
                 match v.value {
+                    V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
                     V::Address(a) => B::LdAddr(MoveAddress::new(a.to_u8())),
                     V::Bytearray(bytes) => B::LdByteArray(bytes),
                     V::U8(u) => B::LdU8(u),

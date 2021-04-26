@@ -158,7 +158,7 @@ fun main(dr_account: signer, freddy: signer) {
 script{
 use 0x1::DualAttestation;
 fun main() {
-    DualAttestation::human_name({{freddymac}});
+    DualAttestation::human_name(@{{freddymac}});
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -167,7 +167,7 @@ fun main() {
 script{
 use 0x1::DualAttestation;
 fun main() {
-    DualAttestation::base_url({{freddymac}});
+    DualAttestation::base_url(@{{freddymac}});
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -176,7 +176,7 @@ fun main() {
 script{
 use 0x1::DualAttestation;
 fun main() {
-    DualAttestation::compliance_public_key({{freddymac}});
+    DualAttestation::compliance_public_key(@{{freddymac}});
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -185,7 +185,7 @@ fun main() {
 script{
 use 0x1::DualAttestation;
 fun main() {
-    DualAttestation::expiration_date({{freddymac}});
+    DualAttestation::expiration_date(@{{freddymac}});
 }
 }
 // check: "Keep(ABORTED { code: 5,"

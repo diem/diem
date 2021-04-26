@@ -7,7 +7,7 @@ module Exists {
     struct V<A> has key { }
 
     public fun exists_const(): bool {
-        exists<T>(0x1)
+        exists<T>(@0x1)
     }
 
     public fun exists_formal(a: address): bool {

@@ -30,11 +30,11 @@ error:
 
     ┌── tests/move_check/typing/module_call_wrong_single_argument.move:26:9 ───
     │
- 26 │         bar(0x0);
-    │         ^^^^^^^^ Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
+ 26 │         bar(@0x0);
+    │         ^^^^^^^^^ Invalid call of '0x2::M::bar'. Invalid argument for parameter 'x'
     ·
- 26 │         bar(0x0);
-    │             --- The type: 'address'
+ 26 │         bar(@0x0);
+    │             ---- The type: 'address'
     ·
  20 │     public fun bar(x: u64) {
     │                       --- Is not compatible with: 'u64'

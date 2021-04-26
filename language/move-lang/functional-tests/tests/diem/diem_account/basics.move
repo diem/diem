@@ -39,7 +39,7 @@ script {
     fun main(account: signer) {
         let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XDX>(&with_cap, {{bob}}, 10, x"", x"");
+        DiemAccount::pay_from<XDX>(&with_cap, @{{bob}}, 10, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -53,7 +53,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XDX>(&with_cap, {{abby}}, 10, x"", x"");
+        DiemAccount::pay_from<XDX>(&with_cap, @{{abby}}, 10, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -67,7 +67,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{abby}}, 10, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{abby}}, 10, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -81,7 +81,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XDX>(&with_cap, {{doris}}, 10, x"", x"");
+        DiemAccount::pay_from<XDX>(&with_cap, @{{doris}}, 10, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -148,9 +148,9 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XDX>(&with_cap, {{alice}}, 10000, x"", x"");
+        DiemAccount::pay_from<XDX>(&with_cap, @{{alice}}, 10000, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
-        assert(DiemAccount::balance<XDX>({{alice}}) == 10000, 60)
+        assert(DiemAccount::balance<XDX>(@{{alice}}) == 10000, 60)
     }
 }
 // check: "Keep(EXECUTED)"
@@ -173,7 +173,7 @@ stdlib_script::AccountCreationScripts::create_parent_vasp_account
 script {
 use 0x1::DiemAccount;
 fun main() {
-    DiemAccount::sequence_number(0x1);
+    DiemAccount::sequence_number(@0x1);
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -182,7 +182,7 @@ fun main() {
 script {
 use 0x1::DiemAccount;
 fun main() {
-    DiemAccount::authentication_key(0x1);
+    DiemAccount::authentication_key(@0x1);
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -191,7 +191,7 @@ fun main() {
 script {
 use 0x1::DiemAccount;
 fun main() {
-    DiemAccount::delegated_key_rotation_capability(0x1);
+    DiemAccount::delegated_key_rotation_capability(@0x1);
 }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -200,7 +200,7 @@ fun main() {
 script {
 use 0x1::DiemAccount;
 fun main() {
-    DiemAccount::delegated_withdraw_capability(0x1);
+    DiemAccount::delegated_withdraw_capability(@0x1);
 }
 }
 // check: "Keep(ABORTED { code: 5,"

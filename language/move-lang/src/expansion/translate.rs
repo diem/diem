@@ -451,8 +451,7 @@ fn attribute_value(
     Some(sp(
         loc,
         match avalue_ {
-            PV::Value(v) => EV::Value(false, value(context, v)?),
-            PV::NumValue(u) => EV::Value(true, sp(loc, E::Value_::U128(u))),
+            PV::Value(v) => EV::Value(value(context, v)?),
             PV::ModuleAccess(ma) => EV::ModuleAccess(module_access(context, Access::Type, ma)?),
         },
     ))
@@ -1342,7 +1341,6 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                 EE::UnresolvedError
             }
         },
-        PE::InferredNum(u) => EE::InferredNum(u),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
         PE::Name(_, Some(_))
@@ -1542,9 +1540,37 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
     use P::Value_ as PV;
     let value_ = match pvalue_ {
         PV::Address(addr) => EV::Address(addr),
-        PV::U8(u) => EV::U8(u),
-        PV::U64(u) => EV::U64(u),
-        PV::U128(u) => EV::U128(u),
+        PV::Num(s) if s.ends_with("u8") => match parse_u8(&s[..s.len() - 2]) {
+            Ok(u) => EV::U8(u),
+            Err(_) => {
+                context.env.add_error(num_too_big_error(loc, "'u8'"));
+                return None;
+            }
+        },
+        PV::Num(s) if s.ends_with("u64") => match parse_u64(&s[..s.len() - 3]) {
+            Ok(u) => EV::U64(u),
+            Err(_) => {
+                context.env.add_error(num_too_big_error(loc, "'u64'"));
+                return None;
+            }
+        },
+        PV::Num(s) if s.ends_with("u128") => match parse_u128(&s[..s.len() - 4]) {
+            Ok(u) => EV::U128(u),
+            Err(_) => {
+                context.env.add_error(num_too_big_error(loc, "'u128'"));
+                return None;
+            }
+        },
+        PV::Num(s) => match parse_u128(&s) {
+            Ok(u) => EV::InferredNum(u),
+            Err(_) => {
+                context.env.add_error(num_too_big_error(
+                    loc,
+                    "the largest possible integer type, 'u128'",
+                ));
+                return None;
+            }
+        },
         PV::Bool(b) => EV::Bool(b),
         PV::HexString(s) => match hex_string::decode(loc, &s) {
             Ok(v) => EV::Bytearray(v),
@@ -1562,6 +1588,18 @@ fn value(context: &mut Context, sp!(loc, pvalue_): P::Value) -> Option<E::Value>
         },
     };
     Some(sp(loc, value_))
+}
+
+// Create an error for an integer literal that is too big to fit in its type.
+// This assumes that the literal is the current token.
+fn num_too_big_error(loc: Loc, type_description: &'static str) -> Error {
+    vec![(
+        loc,
+        format!(
+            "Invalid number literal. The given literal is too large to fit into {}",
+            type_description
+        ),
+    )]
 }
 
 //**************************************************************************************************
@@ -1792,7 +1830,6 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
     use E::Exp_ as EE;
     match e_ {
         EE::Value(_)
-        | EE::InferredNum(_)
         | EE::Break
         | EE::Continue
         | EE::UnresolvedError

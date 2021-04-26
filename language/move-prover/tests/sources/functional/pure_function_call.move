@@ -8,7 +8,7 @@ module 0x42::TestPureFun {
     }
 
     public fun init(dr_account: &signer): bool {
-        assert(Signer::address_of(dr_account) == 0xA550C18, 0);
+        assert(Signer::address_of(dr_account) == @0xA550C18, 0);
         move_to(dr_account, T { x: 2 });
         false
     }

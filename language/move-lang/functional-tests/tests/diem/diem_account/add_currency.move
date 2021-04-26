@@ -103,8 +103,8 @@ script {
 use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::create_validator_account(account, {{vivian}}, {{vivian::auth_key}}, b"owner_name");
-    DiemAccount::create_validator_operator_account(account, {{otto}}, {{otto::auth_key}}, b"operator_name")
+    DiemAccount::create_validator_account(account, @{{vivian}}, {{vivian::auth_key}}, b"owner_name");
+    DiemAccount::create_validator_operator_account(account, @{{otto}}, {{otto::auth_key}}, b"operator_name")
 
 }
 }

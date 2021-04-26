@@ -9,7 +9,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1000, x"deadbeef", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 1000, x"deadbeef", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -31,7 +31,7 @@ fun main(account: signer) {
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<XUS>(
         &with_cap,
-        {{bob}},
+        @{{bob}},
         100,
         x"deadbeef",
         x""

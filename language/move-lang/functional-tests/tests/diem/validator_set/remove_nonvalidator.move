@@ -9,7 +9,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         // alice cannot remove herself
-        DiemSystem::remove_validator(account, {{alice}});
+        DiemSystem::remove_validator(account, @{{alice}});
     }
 }
 
@@ -22,7 +22,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         // alice cannot remove bob
-        DiemSystem::remove_validator(account, {{bob}});
+        DiemSystem::remove_validator(account, @{{bob}});
     }
 }
 
@@ -35,7 +35,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         // bob cannot remove alice
-        DiemSystem::remove_validator(account, {{alice}});
+        DiemSystem::remove_validator(account, @{{alice}});
     }
 }
 

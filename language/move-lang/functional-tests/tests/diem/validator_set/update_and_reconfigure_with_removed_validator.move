@@ -18,7 +18,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         // register alice as bob's delegate
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, @{{alice}});
     }
 }
 // check: "Keep(EXECUTED)"
@@ -30,7 +30,7 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::remove_validator(account, {{bob}});
+        DiemSystem::remove_validator(account, @{{bob}});
     }
 }
 // check: "Keep(EXECUTED)"
@@ -48,7 +48,7 @@ script {
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::update_config_and_reconfigure(account, {{bob}});
+        DiemSystem::update_config_and_reconfigure(account, @{{bob}});
     }
 }
 // check: "ABORTED { code: 775,"

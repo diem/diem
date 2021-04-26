@@ -4,7 +4,7 @@ address 0x2 {
 module X {
     public fun foo(): u64 { 0 }
     public fun bar(x: u64): (address, u64) {
-        (0x0, x)
+        (@0x0, x)
     }
     public fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)
@@ -17,7 +17,7 @@ module M {
 
     fun foo(): u64 { 0 }
     fun bar(x: u64): (address, u64) {
-        (0x0, x)
+        (@0x0, x)
     }
     fun baz<T1, T2>(a: T1, x: T2): (bool, T1, T2) {
         (false, a, x)

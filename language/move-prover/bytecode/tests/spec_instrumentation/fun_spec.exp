@@ -368,17 +368,17 @@ fun Test::resource_with_old($t0|val: u64) {
  22: write_back[Reference($t8).0]($t11)
  23: write_back[Test::R.D]($t8)
  24: label L3
-     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+34
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:41:6+35
  25: assert Not(Not(exists[@0]<Test::R>(0)))
-     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:42:6+57
+     # VC: function does not abort under this condition at tests/spec_instrumentation/fun_spec.move:42:6+58
  26: assert Not(Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
-     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:43:6+56
+     # VC: post-condition does not hold at tests/spec_instrumentation/fun_spec.move:43:6+58
  27: assert Eq<u64>(select Test::R.v(global<Test::R>(0)), Add(select Test::R.v(global[@0]<Test::R>(0)), $t0))
  28: return ()
  29: label L4
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+249
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
  30: assert Or(Not(exists[@0]<Test::R>(0)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+249
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/fun_spec.move:39:2+254
  31: assert Or(And(Not(exists[@0]<Test::R>(0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>(0)), $t0), 18446744073709551615))
  32: abort($t6)
 }

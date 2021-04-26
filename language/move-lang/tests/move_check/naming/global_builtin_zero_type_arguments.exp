@@ -2,33 +2,33 @@ error:
 
    ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:4:9 ───
    │
- 4 │         borrow_global<>(0x1);
+ 4 │         borrow_global<>(@0x1);
    │         ^^^^^^^^^^^^^ Invalid call to builtin function: 'borrow_global'
    ·
- 4 │         borrow_global<>(0x1);
-   │         -------------------- Expected 1 type argument(s) but got 0
+ 4 │         borrow_global<>(@0x1);
+   │         --------------------- Expected 1 type argument(s) but got 0
    │
 
 error: 
 
    ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:5:9 ───
    │
- 5 │         exists<>(0x1);
+ 5 │         exists<>(@0x1);
    │         ^^^^^^ Invalid call to builtin function: 'exists'
    ·
- 5 │         exists<>(0x1);
-   │         ------------- Expected 1 type argument(s) but got 0
+ 5 │         exists<>(@0x1);
+   │         -------------- Expected 1 type argument(s) but got 0
    │
 
 error: 
 
    ┌── tests/move_check/naming/global_builtin_zero_type_arguments.move:6:17 ───
    │
- 6 │         R1 {} = move_from<>(0x1);
+ 6 │         R1 {} = move_from<>(@0x1);
    │                 ^^^^^^^^^ Invalid call to builtin function: 'move_from'
    ·
- 6 │         R1 {} = move_from<>(0x1);
-   │                 ---------------- Expected 1 type argument(s) but got 0
+ 6 │         R1 {} = move_from<>(@0x1);
+   │                 ----------------- Expected 1 type argument(s) but got 0
    │
 
 error: 

@@ -6,7 +6,7 @@ module 0x8675309::M {
     }
 
     public fun is_ok(addr: address): bool acquires R {
-        is_ok_(&addr, &borrow_global<R>(0x1D8).data)
+        is_ok_(&addr, &borrow_global<R>(@0x1D8).data)
     }
 
     // ImmBorrowLoc(0),

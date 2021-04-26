@@ -37,7 +37,7 @@ module Diem {
             &mut preburn_ref.requests,
             coin
         );
-        let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
+        let market_cap = borrow_global_mut<Info<Token>>(@0xA550C18);
         market_cap.preburn_value = market_cap.preburn_value + coin_value
     }
 
@@ -46,11 +46,11 @@ module Diem {
     }
 
     public fun market_cap<Token: store>(): u128 acquires Info {
-        borrow_global<Info<Token>>(0xA550C18).total_value
+        borrow_global<Info<Token>>(@0xA550C18).total_value
     }
 
     public fun preburn_value<Token: store>(): u64 acquires Info {
-        borrow_global<Info<Token>>(0xA550C18).preburn_value
+        borrow_global<Info<Token>>(@0xA550C18).preburn_value
     }
 
     public fun value<Token: store>(coin_ref: &T<Token>): u64 {

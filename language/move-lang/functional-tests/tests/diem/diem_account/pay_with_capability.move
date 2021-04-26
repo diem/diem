@@ -18,7 +18,7 @@ module {{alice}}::AlicePays {
     }
 
     public fun pay(payee: address, amount: u64) acquires T {
-        let t = borrow_global<T>({{alice}});
+        let t = borrow_global<T>(@{{alice}});
         DiemAccount::pay_from<XUS>(
             &t.cap,
             payee,
@@ -51,11 +51,11 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 
 fun main() {
-    let carol_prev_balance = DiemAccount::balance<XUS>({{carol}});
-    let alice_prev_balance = DiemAccount::balance<XUS>({{alice}});
-    AlicePays::pay({{carol}}, 10);
-    assert(carol_prev_balance + 10 == DiemAccount::balance<XUS>({{carol}}), 0);
-    assert(alice_prev_balance - 10 == DiemAccount::balance<XUS>({{alice}}), 1);
+    let carol_prev_balance = DiemAccount::balance<XUS>(@{{carol}});
+    let alice_prev_balance = DiemAccount::balance<XUS>(@{{alice}});
+    AlicePays::pay(@{{carol}}, 10);
+    assert(carol_prev_balance + 10 == DiemAccount::balance<XUS>(@{{carol}}), 0);
+    assert(alice_prev_balance - 10 == DiemAccount::balance<XUS>(@{{alice}}), 1);
 }
 }
 // check: "Keep(EXECUTED)"

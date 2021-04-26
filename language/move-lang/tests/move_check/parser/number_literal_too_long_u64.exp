@@ -1,8 +1,0 @@
-error: 
-
-   ┌── tests/move_check/parser/number_literal_too_long_u64.move:4:9 ───
-   │
- 4 │         18446744073709551616u64;
-   │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into the 'u64' type
-   │
-

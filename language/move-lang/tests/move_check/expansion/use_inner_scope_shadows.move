@@ -19,7 +19,7 @@ module M {
         t(0) + 1;
         S2 { b: false };
         Foo { u: 0 };
-        T { a: 0x0 }
+        T { a: @0x0 }
     }
 
     fun t2<T>(x: T) {
@@ -29,14 +29,14 @@ module M {
             t(0) + 1;
             S2 { b: false };
             Foo { u: 0 };
-            T { a: 0x0 }
+            T { a: @0x0 }
         };
         check() && true;
         num(0) + 1;
         t2<T>(x);
         S1 { b: false };
         S2 { u: 0 };
-        S3 { a: 0x0 };
+        S3 { a: @0x0 };
     }
 }
 }

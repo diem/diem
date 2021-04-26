@@ -72,14 +72,14 @@ error:
 
     ┌── tests/move_check/typing/while_condition_invalid.move:11:16 ───
     │
- 11 │         while (0x0) ()
-    │                ^^^ Invalid while condition
+ 11 │         while (@0x0) ()
+    │                ^^^^ Invalid while condition
     ·
- 11 │         while (0x0) ()
-    │                --- The type: 'address'
+ 11 │         while (@0x0) ()
+    │                ---- The type: 'address'
     ·
- 11 │         while (0x0) ()
-    │                --- Is not compatible with: 'bool'
+ 11 │         while (@0x0) ()
+    │                ---- Is not compatible with: 'bool'
     │
 
 error: 

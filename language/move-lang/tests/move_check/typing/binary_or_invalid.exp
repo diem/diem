@@ -58,28 +58,28 @@ error:
 
     ┌── tests/move_check/typing/binary_or_invalid.move:11:9 ───
     │
- 11 │         0x0 || 0x1;
-    │         ^^^ Incompatible arguments to '||'
+ 11 │         @0x0 || @0x1;
+    │         ^^^^ Incompatible arguments to '||'
     ·
- 11 │         0x0 || 0x1;
-    │         --- The type: 'address'
+ 11 │         @0x0 || @0x1;
+    │         ---- The type: 'address'
     ·
- 11 │         0x0 || 0x1;
-    │         --- Is not compatible with: 'bool'
+ 11 │         @0x0 || @0x1;
+    │         ---- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:11:16 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:11:17 ───
     │
- 11 │         0x0 || 0x1;
-    │                ^^^ Incompatible arguments to '||'
+ 11 │         @0x0 || @0x1;
+    │                 ^^^^ Incompatible arguments to '||'
     ·
- 11 │         0x0 || 0x1;
-    │                --- The type: 'address'
+ 11 │         @0x0 || @0x1;
+    │                 ---- The type: 'address'
     ·
- 11 │         0x0 || 0x1;
-    │         --- Is not compatible with: 'bool'
+ 11 │         @0x0 || @0x1;
+    │         ---- Is not compatible with: 'bool'
     │
 
 error: 

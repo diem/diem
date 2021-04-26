@@ -26,10 +26,10 @@ module M {
         0x42::X::f_script();
         0x42::X::f_friend();
         0x42::X::f_private();
-        borrow_global<R>(0x42);
-        borrow_global_mut<R>(0x42);
+        borrow_global<R>(@0x42);
+        borrow_global_mut<R>(@0x42);
         move_to(s, R{});
-        R{} = move_from(0x42);
+        R{} = move_from(@0x42);
         freeze(&mut x);
         assert(true, 42);
         if (true) 0 else 1;

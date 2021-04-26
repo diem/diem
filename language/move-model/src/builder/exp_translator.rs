@@ -702,14 +702,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     self.new_error_exp()
                 }
             }
-            EA::Exp_::InferredNum(x) => {
-                // We don't really need to infer type, because all ints are exchangeable.
-                make_value(
-                    self,
-                    Value::Number(BigInt::from_u128(*x).unwrap()),
-                    Type::new_prim(PrimitiveType::U128),
-                )
-            }
             EA::Exp_::Name(maccess, type_params) => {
                 self.translate_name(&loc, maccess, type_params.as_deref(), expected_type)
             }
@@ -841,7 +833,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Value::Number(BigInt::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
-            EA::Value_::U128(x) => Some((
+            EA::Value_::InferredNum(x) | EA::Value_::U128(x) => Some((
                 Value::Number(BigInt::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
             )),

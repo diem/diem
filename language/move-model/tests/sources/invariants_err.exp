@@ -18,16 +18,16 @@ error: data invariants cannot depend on global state (directly or indirectly use
 
     ┌── tests/sources/invariants_err.move:13:5 ───
     │
- 13 │     invariant exists<S>(0x0);
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 13 │     invariant exists<S>(@0x0);
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
 
     ┌── tests/sources/invariants_err.move:14:5 ───
     │
- 14 │     invariant global<S>(0x0).x == x;
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 14 │     invariant global<S>(@0x0).x == x;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).

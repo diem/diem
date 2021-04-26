@@ -8,7 +8,7 @@ module 0x8675309::M {
     }
 
     fun t2() {
-        loop { 0x0 }
+        loop { @0x0 }
     }
 
     fun t3() {

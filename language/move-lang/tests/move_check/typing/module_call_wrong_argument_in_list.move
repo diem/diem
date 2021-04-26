@@ -18,18 +18,18 @@ module M {
 
     fun t0() {
         foo(false, 0, S{});
-        foo(0x0, false, S{});
-        foo(0x0, 0, false);
-        foo(0x0, false, false);
+        foo(@0x0, false, S{});
+        foo(@0x0, 0, false);
+        foo(@0x0, false, false);
         foo(false, 0, false);
         foo(false, false, S{});
     }
 
     fun t1() {
         X::foo(false, 0, X::s());
-        X::foo(0x0, false, X::s());
-        X::foo(0x0, 0, S{});
-        X::foo(0x0, false, S{});
+        X::foo(@0x0, false, X::s());
+        X::foo(@0x0, 0, S{});
+        X::foo(@0x0, false, S{});
         X::foo(false, 0, S{});
         X::foo(false, false, X::s());
     }

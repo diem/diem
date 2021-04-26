@@ -3,8 +3,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/functional/mono.move:71:25 ───
     │
- 71 │     spec fun vec_addr { ensures result[0] != 0x1; }
-    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+ 71 │     spec fun vec_addr { ensures result[0] != @0x1; }
+    │                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/mono.move:71
     =     at tests/sources/functional/mono.move:70: vec_addr
@@ -45,8 +45,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/functional/mono.move:77:32 ───
     │
- 77 │     spec fun vec_struct_addr { ensures result[0].x != 0x1; }
-    │                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 77 │     spec fun vec_struct_addr { ensures result[0].x != @0x1; }
+    │                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/mono.move:77
     =     at tests/sources/functional/mono.move:76: vec_struct_addr

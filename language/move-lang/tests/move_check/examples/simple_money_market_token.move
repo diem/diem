@@ -82,7 +82,7 @@ module OneToOneMarket {
         price: u64
     ) {
         let sender = Signer::address_of(account);
-        assert(sender == 0xB055, 42); // assert sender is module writer
+        assert(sender == @0xB055, 42); // assert sender is module writer
         accept<In>(account, initial_in);
         accept<Out>(account, initial_out);
         move_to(account, Price<In, Out> { price })
@@ -95,7 +95,7 @@ module OneToOneMarket {
 
         update_deposit_record<In, Out>(account, amount);
 
-        let pool = borrow_global_mut<Pool<In>>(0xB055);
+        let pool = borrow_global_mut<Pool<In>>(@0xB055);
         Token::deposit(&mut pool.coin, coin)
     }
 
@@ -109,7 +109,7 @@ module OneToOneMarket {
 
         update_borrow_record<In, Out>(account, amount);
 
-        let pool = borrow_global_mut<Pool<Out>>(0xB055);
+        let pool = borrow_global_mut<Pool<Out>>(@0xB055);
         Token::withdraw(&mut pool.coin, amount)
     }
 
@@ -120,12 +120,12 @@ module OneToOneMarket {
         let output_deposited = borrowed_amount<In, Out>(account);
 
         let input_into_output =
-            input_deposited * borrow_global<Price<In, Out>>(0xB055).price;
+            input_deposited * borrow_global<Price<In, Out>>(@0xB055).price;
         let max_output =
             if (input_into_output < output_deposited) 0
             else (input_into_output - output_deposited);
         let available_output = {
-            let pool = borrow_global<Pool<Out>>(0xB055);
+            let pool = borrow_global<Pool<Out>>(@0xB055);
             Token::value(&pool.coin)
         };
         if (max_output < available_output) max_output else available_output
@@ -186,17 +186,17 @@ module ToddNickels {
     }
 
     public fun init(account: &signer) {
-        assert(Signer::address_of(account) == 0x70DD, 42);
+        assert(Signer::address_of(account) == @0x70DD, 42);
         move_to(account, Wallet { nickels: Token::create(T{}, 0) })
     }
 
     public fun mint(account: &signer): Token::Coin<T> {
-        assert(Signer::address_of(account) == 0x70DD, 42);
+        assert(Signer::address_of(account) == @0x70DD, 42);
         Token::create(T{}, 5)
     }
 
     public fun destroy(c: Token::Coin<T>) acquires Wallet {
-        Token::deposit(&mut borrow_global_mut<Wallet>(0x70DD).nickels, c)
+        Token::deposit(&mut borrow_global_mut<Wallet>(@0x70DD).nickels, c)
     }
 
 }

@@ -28,7 +28,7 @@ script {
     use 0x1::DiemSystem;
     fun main(account: signer) {
         let account = &account;
-        DiemSystem::update_config_and_reconfigure(account, {{bob}});
+        DiemSystem::update_config_and_reconfigure(account, @{{bob}});
     }
 }
 // check: "Keep(ABORTED { code: 2051,"
@@ -46,7 +46,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
-        ValidatorConfig::set_operator(account, 0x0);
+        ValidatorConfig::set_operator(account, @0x0);
     }
 }
 // check: "Keep(ABORTED { code: 775,"
@@ -79,7 +79,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main() {
-        ValidatorConfig::get_human_name({{alice}});
+        ValidatorConfig::get_human_name(@{{alice}});
     }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -103,7 +103,7 @@ script {
     // delegate to alice
     fun main(account: signer) {
         let account = &account;
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, @{{alice}});
         ValidatorConfig::remove_operator(account);
     }
 }
@@ -115,7 +115,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
-        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
+        ValidatorConfig::set_config(account, @{{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 263,"
@@ -126,7 +126,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
-        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
+        ValidatorConfig::set_config(account, @{{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 263,"
@@ -147,7 +147,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: signer) {
         let account = &account;
-        ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"");
+        ValidatorConfig::set_config(account, @{{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 7"
@@ -157,7 +157,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main() {
-        let _ = ValidatorConfig::get_config({{alice}});
+        let _ = ValidatorConfig::get_config(@{{alice}});
     }
 }
 // check: "Keep(ABORTED { code: 5,"
@@ -167,7 +167,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main() {
-        let config = ValidatorConfig::get_config({{bob}});
+        let config = ValidatorConfig::get_config(@{{bob}});
         let _ = ValidatorConfig::get_validator_network_addresses(&config);
     }
 }

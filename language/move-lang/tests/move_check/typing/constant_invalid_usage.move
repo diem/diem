@@ -4,7 +4,7 @@ module M {
     const C2: u64 = 0;
     const C3: u128 = 0;
     const C4: bool = false;
-    const C5: address = 0x0;
+    const C5: address = @0x0;
     const C6: vector<u8> = x"0123";
     const C7: vector<u8> = b"abcd";
 

@@ -347,6 +347,7 @@ fn move_value_from_value(sp!(_, v_): Value) -> MoveValue {
     use MoveValue as MV;
     use Value_ as V;
     match v_ {
+        V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
         V::Address(a) => MV::Address(MoveAddress::new(a.to_u8())),
         V::U8(u) => MV::U8(u),
         V::U64(u) => MV::U64(u),

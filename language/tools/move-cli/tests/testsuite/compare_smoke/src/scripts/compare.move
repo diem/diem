@@ -14,7 +14,7 @@ fun main() {
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1u8), &BCS::to_bytes(&1u8)) == equal, 8002);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1), &BCS::to_bytes(&1)) == equal, 8003);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1u128), &BCS::to_bytes(&1u128)) == equal, 8004);
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x1), &BCS::to_bytes(&0x1)) == equal, 8005);
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x1), &BCS::to_bytes(&@0x1)) == equal, 8005);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"01"), &BCS::to_bytes(&x"01")) == equal, 8006);
 
     // inequality of simple types
@@ -22,7 +22,7 @@ fun main() {
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1u8), &BCS::to_bytes(&0u8)) != equal, 8008);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1), &BCS::to_bytes(&0)) != equal, 8009);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1u128), &BCS::to_bytes(&0u128)) != equal, 8010);
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x1), &BCS::to_bytes(&0x0)) != equal, 8011);
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x1), &BCS::to_bytes(&@0x0)) != equal, 8011);
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"01"), &BCS::to_bytes(&x"00")) != equal, 8012);
 
     // less than for types with a natural ordering exposed via bytecode operations
@@ -32,9 +32,9 @@ fun main() {
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0u128), &BCS::to_bytes(&1u128)) == less_than, 8016);
 
     // less then for types without a natural ordering exposed by bytecode operations
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x0), &BCS::to_bytes(&0x1)) == less_than, 8017); // sensible
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x01), &BCS::to_bytes(&0x10)) == less_than, 8018); // sensible
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x100), &BCS::to_bytes(&0x001)) == less_than, 8019); // potentially confusing
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x0), &BCS::to_bytes(&@0x1)) == less_than, 8017); // sensible
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x01), &BCS::to_bytes(&@0x10)) == less_than, 8018); // sensible
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x100), &BCS::to_bytes(&@0x001)) == less_than, 8019); // potentially confusing
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"00"), &BCS::to_bytes(&x"01")) == less_than, 8020); // sensible
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"01"), &BCS::to_bytes(&x"10")) == less_than, 8021); // sensible
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"0000"), &BCS::to_bytes(&x"01")) == less_than, 8022); //
@@ -47,9 +47,9 @@ fun main() {
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&1u128), &BCS::to_bytes(&0u128)) == greater_than, 8027);
 
     // greater than for types without a natural ordering exposed by by bytecode operations
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x1), &BCS::to_bytes(&0x0)) == greater_than, 8028); // sensible
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x10), &BCS::to_bytes(&0x01)) == greater_than, 8029); // sensible
-    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&0x001), &BCS::to_bytes(&0x100)) == greater_than, 8030); // potentially confusing
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x1), &BCS::to_bytes(&@0x0)) == greater_than, 8028); // sensible
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x10), &BCS::to_bytes(&@0x01)) == greater_than, 8029); // sensible
+    assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&@0x001), &BCS::to_bytes(&@0x100)) == greater_than, 8030); // potentially confusing
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"01"), &BCS::to_bytes(&x"00")) == greater_than, 8031); // sensible
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"10"), &BCS::to_bytes(&x"01")) == greater_than, 8032); // sensible
     assert(Compare::cmp_bcs_bytes(&BCS::to_bytes(&x"01"), &BCS::to_bytes(&x"0000")) == greater_than, 8033); // sensible

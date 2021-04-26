@@ -65,10 +65,10 @@ error:
 
    ┌── tests/move_check/typing/constant_non_base_type.move:6:15 ───
    │
- 6 │     const C4: (address, bool) = (0x0, false);
+ 6 │     const C4: (address, bool) = (@0x0, false);
    │               ^^^^^^^^^^^^^^^ Unpermitted constant type
    ·
- 6 │     const C4: (address, bool) = (0x0, false);
+ 6 │     const C4: (address, bool) = (@0x0, false);
    │               --------------- Found: '(_, _)'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
    │
 
@@ -76,7 +76,7 @@ error:
 
    ┌── tests/move_check/typing/constant_non_base_type.move:6:33 ───
    │
- 6 │     const C4: (address, bool) = (0x0, false);
-   │                                 ^^^^^^^^^^^^ Expression lists are not supported in constants
+ 6 │     const C4: (address, bool) = (@0x0, false);
+   │                                 ^^^^^^^^^^^^^ Expression lists are not supported in constants
    │
 

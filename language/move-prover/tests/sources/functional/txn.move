@@ -14,10 +14,10 @@ module TestTransaction {
     }
 
     fun check_sender1(sender: &signer) {
-        assert(Signer::address_of(sender) == 0xdeadbeef, 1);
+        assert(Signer::address_of(sender) == @0xdeadbeef, 1);
     }
     spec fun check_sender1 {
-        aborts_if Signer::spec_address_of(sender) != 0xdeadbeef;
+        aborts_if Signer::spec_address_of(sender) != @0xdeadbeef;
     }
 
     fun check_sender2(sender: &signer) acquires T {

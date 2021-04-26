@@ -15,8 +15,8 @@ script {
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::remove_validator(account, {{alice}});
-        DiemSystem::remove_validator(account, {{bob}});
+        DiemSystem::remove_validator(account, @{{alice}});
+        DiemSystem::remove_validator(account, @{{bob}});
     }
 }
 
@@ -33,7 +33,7 @@ script {
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::remove_validator(account, {{bob}});
+        DiemSystem::remove_validator(account, @{{bob}});
     }
 }
 

@@ -80,7 +80,7 @@ fn exp(
 ) {
     use T::UnannotatedExp_ as E;
     match &e.exp.value {
-        E::InferredNum(_) | E::Use(_) => panic!("ICE should have been expanded"),
+        E::Use(_) => panic!("ICE should have been expanded"),
 
         E::Unit { .. }
         | E::Value(_)

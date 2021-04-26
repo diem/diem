@@ -10,7 +10,7 @@ module 0x8675309::M {
         { let x = false; (x: u64); };
         (x: bool);
 
-        { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
+        { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
         (x: bool);
     }
 
@@ -21,7 +21,7 @@ module 0x8675309::M {
             (x: u64);
             (a && x: bool);
         } else {
-            let x = 0x0;
+            let x = @0x0;
             (x: u64);
         };
         (x: address);

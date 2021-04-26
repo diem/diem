@@ -2,8 +2,8 @@ error:
 
     ┌── tests/move_check/typing/global_builtins_script.move:16:5 ───
     │
- 16 │     borrow_global<M::R>(0x1);
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
+ 16 │     borrow_global<M::R>(@0x1);
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^ Global storage operator cannot be used from a 'script' function
     │
 
 error: 

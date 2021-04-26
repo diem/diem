@@ -74,22 +74,22 @@ error:
 
     ┌── tests/move_check/typing/binary_leq_invalid.move:11:9 ───
     │
- 11 │         0x0 <= 0x1;
-    │         ^^^ Invalid argument to '<='
+ 11 │         @0x0 <= @0x1;
+    │         ^^^^ Invalid argument to '<='
     ·
- 11 │         0x0 <= 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 <= @0x1;
+    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_leq_invalid.move:11:16 ───
+    ┌── tests/move_check/typing/binary_leq_invalid.move:11:17 ───
     │
- 11 │         0x0 <= 0x1;
-    │                ^^^ Invalid argument to '<='
+ 11 │         @0x0 <= @0x1;
+    │                 ^^^^ Invalid argument to '<='
     ·
- 11 │         0x0 <= 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 <= @0x1;
+    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -190,13 +190,13 @@ error:
 
     ┌── tests/move_check/typing/binary_leq_invalid.move:16:15 ───
     │
- 16 │         (1 <= false) && (0x0 <= 0);
+ 16 │         (1 <= false) && (@0x0 <= 0);
     │               ^^^^^ Incompatible arguments to '<='
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
+ 16 │         (1 <= false) && (@0x0 <= 0);
     │          - The type: integer
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
+ 16 │         (1 <= false) && (@0x0 <= 0);
     │               ----- Is not compatible with: 'bool'
     │
 
@@ -204,36 +204,36 @@ error:
 
     ┌── tests/move_check/typing/binary_leq_invalid.move:16:26 ───
     │
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                          ^^^ Invalid argument to '<='
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                          ^^^^ Invalid argument to '<='
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                          --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                          ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_leq_invalid.move:16:33 ───
+    ┌── tests/move_check/typing/binary_leq_invalid.move:16:34 ───
     │
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                                 ^ Incompatible arguments to '<='
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                                  ^ Incompatible arguments to '<='
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                                 - The type: integer
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                                  - The type: integer
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                          --- Is not compatible with: 'address'
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                          ---- Is not compatible with: 'address'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_leq_invalid.move:16:33 ───
+    ┌── tests/move_check/typing/binary_leq_invalid.move:16:34 ───
     │
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                                 ^ Invalid argument to '<='
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                                  ^ Invalid argument to '<='
     ·
- 16 │         (1 <= false) && (0x0 <= 0);
-    │                          --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 16 │         (1 <= false) && (@0x0 <= 0);
+    │                          ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 

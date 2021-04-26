@@ -20,6 +20,6 @@ module 0x1::A {
     fun assign_struct_abort_code() { }
 
     #[test]
-    #[expected_failure(abort_code=0xC0FFEE)]
+    #[expected_failure(abort_code=@0xC0FFEE)]
     fun assign_address_abort_code() { }
 }

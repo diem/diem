@@ -18,10 +18,10 @@ address 0x2 {
             let i = 0;
             while (i < 10) {
                 let b = 0x2::B::new(20, 100);
-                let c = 0x2::C::new(0x42, true);
+                let c = 0x2::C::new(@0x42, true);
                 let another_b = 0x2::B::b_and_c(&b, c);
                 let (_, _) = 0x2::B::destroy(another_b);
-                let another_c = 0x2::C::new(0x42, false);
+                let another_c = 0x2::C::new(@0x42, false);
                 0x2::C::destroy(another_c);
                 i = i + 1;
             }
@@ -76,7 +76,7 @@ address 0x2 {
         public fun just_c() {
             let i = 0;
             while (i < 10) {
-                let c = new(0x0, false);
+                let c = new(@0x0, false);
                 let S { f1: _, f2: _ } = c;
                 i = i + 1;
             }
@@ -99,10 +99,10 @@ address 0x2 {
             let i = 0;
             while (i < 10) {
                 let b = 0x2::B::new(20, 100);
-                let c = 0x2::C::new(0x45, false);
+                let c = 0x2::C::new(@0x45, false);
                 let another_b = 0x2::B::b_and_c(&b, c);
                 let (_, _) = 0x2::B::destroy(another_b);
-                let another_c = 0x2::C::new(0x46, true);
+                let another_c = 0x2::C::new(@0x46, true);
                 0x2::C::destroy(another_c);
                 i = i + 1;
             }
@@ -120,10 +120,10 @@ address 0x2 {
             let i = 0;
             while (i < 10) {
                 let b = 0x2::B::new(20, 100);
-                let c = 0x2::C::new(0x100, false);
+                let c = 0x2::C::new(@0x100, false);
                 let another_b = 0x2::B::b_and_c(&b, c);
                 let (_, _) = 0x2::B::destroy(another_b);
-                let another_c = 0x2::C::new(0x101, true);
+                let another_c = 0x2::C::new(@0x101, true);
                 0x2::C::destroy(another_c);
                 i = i + 1;
             };

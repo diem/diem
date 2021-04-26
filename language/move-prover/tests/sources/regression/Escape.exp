@@ -3,8 +3,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/regression/Escape.move:50:9 ───
     │
- 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/Escape.move:12: initialize
     =         account = <redacted>
@@ -20,8 +20,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/regression/Escape.move:50:9 ───
     │
- 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/Escape.move:24: install
     =         account = <redacted>
@@ -34,8 +34,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/regression/Escape.move:50:9 ───
     │
- 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == @0x123;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/Escape.move:20: new_outdoor_thing
     =         result = <redacted>

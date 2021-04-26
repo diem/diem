@@ -14,7 +14,7 @@ script {
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to invalid key
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, @{{alice}});
     }
 }
 // check: "Keep(EXECUTED)"
@@ -26,7 +26,7 @@ script {
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to invalid key
-        ValidatorConfig::set_config(account, {{bob}},
+        ValidatorConfig::set_config(account, @{{bob}},
                                     x"0000000000000000000000000000000000000000000000000000000000000000",
                                     x"", x"");
     }
@@ -40,7 +40,7 @@ script {
     fun main(account: signer) {
         let account = &account;
         // bob rotates his public key to a valid key
-        ValidatorConfig::set_config(account, {{bob}},
+        ValidatorConfig::set_config(account, @{{bob}},
                                     x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
                                     x"", x"");
     }

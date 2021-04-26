@@ -10,8 +10,8 @@ module 0x42::M {
     // Old expression in data invariant
     invariant old(x) > 0;
     // Direct dependency from global state
-    invariant exists<S>(0x0);
-    invariant global<S>(0x0).x == x;
+    invariant exists<S>(@0x0);
+    invariant global<S>(@0x0).x == x;
     invariant spec_var > 0;
     // Indirect dependency from global state via function call.
     invariant rec_fun(true);

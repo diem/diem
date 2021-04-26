@@ -42,30 +42,30 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:45 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:46 ───
     │
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                             ^^^ Invalid type annotation
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+    │                                              ^^^ Invalid type annotation
     ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                    --- The type: 'address'
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+    │                                    ---- The type: 'address'
     ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                             --- Is not compatible with: 'u64'
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+    │                                              --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:58 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:59 ───
     │
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                                          ^^^^^^^ Invalid type annotation
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+    │                                                           ^^^^^^^ Invalid type annotation
     ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
     │                   ----- The type: 'bool'
     ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                                          ------- Is not compatible with: 'address'
+ 13 │         { let x = false; { let x = @0x0; (x: u64); }; (x: address); };
+    │                                                           ------- Is not compatible with: 'address'
     │
 
 error: 
@@ -103,8 +103,8 @@ error:
  25 │             (x: u64);
     │                 ^^^ Invalid type annotation
     ·
- 24 │             let x = 0x0;
-    │                     --- The type: 'address'
+ 24 │             let x = @0x0;
+    │                     ---- The type: 'address'
     ·
  25 │             (x: u64);
     │                 --- Is not compatible with: 'u64'

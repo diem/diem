@@ -138,11 +138,11 @@ error:
 
     ┌── tests/move_check/typing/global_builtins_invalid.move:22:24 ───
     │
- 22 │         let _ : bool = exists<R>(0x0, 0);
-    │                        ^^^^^^^^^^^^^^^^^ Invalid call of 'exists'. The call expected 1 argument(s) but got 2
+ 22 │         let _ : bool = exists<R>(@0x0, 0);
+    │                        ^^^^^^^^^^^^^^^^^^ Invalid call of 'exists'. The call expected 1 argument(s) but got 2
     ·
- 22 │         let _ : bool = exists<R>(0x0, 0);
-    │                                 -------- Found 2 argument(s) here
+ 22 │         let _ : bool = exists<R>(@0x0, 0);
+    │                                 --------- Found 2 argument(s) here
     │
 
 error: 
@@ -171,32 +171,32 @@ error:
 
     ┌── tests/move_check/typing/global_builtins_invalid.move:25:22 ───
     │
- 25 │         let _ : &R = borrow_global<R>(0x0, false);
-    │                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'. The call expected 1 argument(s) but got 2
+ 25 │         let _ : &R = borrow_global<R>(@0x0, false);
+    │                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global'. The call expected 1 argument(s) but got 2
     ·
- 25 │         let _ : &R = borrow_global<R>(0x0, false);
-    │                                      ------------ Found 2 argument(s) here
+ 25 │         let _ : &R = borrow_global<R>(@0x0, false);
+    │                                      ------------- Found 2 argument(s) here
     │
 
 error: 
 
     ┌── tests/move_check/typing/global_builtins_invalid.move:26:26 ───
     │
- 26 │         let _ : &mut R = borrow_global_mut<R>(0x0, true);
-    │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'. The call expected 1 argument(s) but got 2
+ 26 │         let _ : &mut R = borrow_global_mut<R>(@0x0, true);
+    │                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'borrow_global_mut'. The call expected 1 argument(s) but got 2
     ·
- 26 │         let _ : &mut R = borrow_global_mut<R>(0x0, true);
-    │                                              ----------- Found 2 argument(s) here
+ 26 │         let _ : &mut R = borrow_global_mut<R>(@0x0, true);
+    │                                              ------------ Found 2 argument(s) here
     │
 
 error: 
 
     ┌── tests/move_check/typing/global_builtins_invalid.move:27:20 ───
     │
- 27 │         let R {} = move_from<R>(0x0, 0);
-    │                    ^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'. The call expected 1 argument(s) but got 2
+ 27 │         let R {} = move_from<R>(@0x0, 0);
+    │                    ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_from'. The call expected 1 argument(s) but got 2
     ·
- 27 │         let R {} = move_from<R>(0x0, 0);
-    │                                -------- Found 2 argument(s) here
+ 27 │         let R {} = move_from<R>(@0x0, 0);
+    │                                --------- Found 2 argument(s) here
     │
 

@@ -89,7 +89,7 @@ error:
  17 │     fun t7(): vector<u8> { C5 }
     │                            ^^ Invalid return expression
     ·
-  7 │     const C5: address = 0x0;
+  7 │     const C5: address = @0x0;
     │               ------- The type: 'address'
     ·
  17 │     fun t7(): vector<u8> { C5 }

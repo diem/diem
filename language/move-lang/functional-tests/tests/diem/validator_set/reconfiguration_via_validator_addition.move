@@ -14,9 +14,9 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::remove_validator(account, {{alice}});
-        assert(!DiemSystem::is_validator({{alice}}), 77);
-        assert(DiemSystem::is_validator({{bob}}), 78);
+        DiemSystem::remove_validator(account, @{{alice}});
+        assert(!DiemSystem::is_validator(@{{alice}}), 77);
+        assert(DiemSystem::is_validator(@{{bob}}), 78);
     }
 }
 // check: NewEpochEvent
@@ -35,7 +35,7 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::remove_validator(account, {{bob}});
+        DiemSystem::remove_validator(account, @{{bob}});
     }
 }
 // check: "ABORTED { code: 2"
@@ -51,7 +51,7 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::add_validator(account, {{alice}});
+        DiemSystem::add_validator(account, @{{alice}});
     }
 }
 // check: "ABORTED { code: 2,"
@@ -62,7 +62,7 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::add_validator(account, {{invalidvalidator}});
+        DiemSystem::add_validator(account, @{{invalidvalidator}});
     }
 }
 // check: "ABORTED { code: 263,"
@@ -73,10 +73,10 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::add_validator(account, {{alice}});
+        DiemSystem::add_validator(account, @{{alice}});
 
-        assert(DiemSystem::is_validator({{alice}}), 77);
-        assert(DiemSystem::is_validator({{bob}}), 78);
+        assert(DiemSystem::is_validator(@{{alice}}), 77);
+        assert(DiemSystem::is_validator(@{{bob}}), 78);
     }
 }
 // check: NewEpochEvent
@@ -88,7 +88,7 @@ script{
     use 0x1::DiemSystem;
     fun main(account: signer) {
     let account = &account;
-        DiemSystem::add_validator(account, {{alice}});
+        DiemSystem::add_validator(account, @{{alice}});
     }
 }
 // check: "ABORTED { code: 519,"

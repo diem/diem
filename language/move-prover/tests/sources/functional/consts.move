@@ -9,7 +9,7 @@ module 0x42::TestConst {
     const FORTY_TWO: u64 = 42;
     const INIT_VAL_BOOL: bool = true;
     const ONE: u64 = 1;
-    const ADDR: address = 0x2;
+    const ADDR: address = @0x2;
 
     public fun init(): T {
         T { x: 43, b: !INIT_VAL_BOOL, a: ADDR }
@@ -21,7 +21,7 @@ module 0x42::TestConst {
     }
 
     public fun init_incorrect(): T {
-        T { x: 43, b: INIT_VAL_BOOL, a: 0x1 }
+        T { x: 43, b: INIT_VAL_BOOL, a: @0x1 }
     }
 
     spec fun init_incorrect {

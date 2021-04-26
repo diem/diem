@@ -107,33 +107,33 @@ error:
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:11:9 ───
     │
- 11 │         0x0 | 0x1;
-    │         ^^^ Invalid argument to '|'
+ 11 │         @0x0 | @0x1;
+    │         ^^^^ Invalid argument to '|'
     ·
- 11 │         0x0 | 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 | @0x1;
+    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:11:9 ───
     │
- 11 │         0x0 | 0x1;
-    │         ^^^^^^^^^ Invalid argument to '|'
+ 11 │         @0x0 | @0x1;
+    │         ^^^^^^^^^^^ Invalid argument to '|'
     ·
- 11 │         0x0 | 0x1;
-    │               --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 | @0x1;
+    │                ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_or_invalid.move:11:15 ───
+    ┌── tests/move_check/typing/binary_bit_or_invalid.move:11:16 ───
     │
- 11 │         0x0 | 0x1;
-    │               ^^^ Invalid argument to '|'
+ 11 │         @0x0 | @0x1;
+    │                ^^^^ Invalid argument to '|'
     ·
- 11 │         0x0 | 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 | @0x1;
+    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
@@ -245,10 +245,10 @@ error:
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:9 ───
     │
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │         ^^^^^^^^^ Invalid argument to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
@@ -256,35 +256,35 @@ error:
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:9 ───
     │
- 15 │         1 | false | 0x0 | 0;
-    │         ^^^^^^^^^^^^^^^ Invalid argument to '|'
+ 15 │         1 | false | @0x0 | 0;
+    │         ^^^^^^^^^^^^^^^^ Invalid argument to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
-    │                     --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 15 │         1 | false | @0x0 | 0;
+    │                     ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:9 ───
     │
- 15 │         1 | false | 0x0 | 0;
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid argument to '|'
+ 15 │         1 | false | @0x0 | 0;
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid argument to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
-    │                           - Found: '_'. But expected: 'u8', 'u64', 'u128'
+ 15 │         1 | false | @0x0 | 0;
+    │                            - Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:13 ───
     │
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │             ^^^^^ Incompatible arguments to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │         - The type: integer
     ·
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │             ----- Is not compatible with: 'bool'
     │
 
@@ -292,36 +292,36 @@ error:
 
     ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:21 ───
     │
- 15 │         1 | false | 0x0 | 0;
-    │                     ^^^ Invalid argument to '|'
+ 15 │         1 | false | @0x0 | 0;
+    │                     ^^^^ Invalid argument to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
+ 15 │         1 | false | @0x0 | 0;
     │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:27 ───
+    ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:28 ───
     │
- 15 │         1 | false | 0x0 | 0;
-    │                           ^ Incompatible arguments to '|'
+ 15 │         1 | false | @0x0 | 0;
+    │                            ^ Incompatible arguments to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
-    │                           - The type: integer
+ 15 │         1 | false | @0x0 | 0;
+    │                            - The type: integer
     ·
- 15 │         1 | false | 0x0 | 0;
-    │                     --- Is not compatible with: 'address'
+ 15 │         1 | false | @0x0 | 0;
+    │                     ---- Is not compatible with: 'address'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:27 ───
+    ┌── tests/move_check/typing/binary_bit_or_invalid.move:15:28 ───
     │
- 15 │         1 | false | 0x0 | 0;
-    │                           ^ Invalid argument to '|'
+ 15 │         1 | false | @0x0 | 0;
+    │                            ^ Invalid argument to '|'
     ·
- 15 │         1 | false | 0x0 | 0;
-    │                     --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 15 │         1 | false | @0x0 | 0;
+    │                     ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 

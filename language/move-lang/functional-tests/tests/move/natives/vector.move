@@ -25,7 +25,7 @@ module {{default}}::M {
         test_natives<u64>(1u64, 2u64);
         test_natives<u128>(1u128, 2u128);
         test_natives<bool>(true, false);
-        test_natives<address>(0x1, 0x2);
+        test_natives<address>(@0x1, @0x2);
 
         test_natives<vector<u8>>(Vector::empty(), Vector::empty());
 

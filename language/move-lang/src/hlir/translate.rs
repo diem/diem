@@ -1060,7 +1060,6 @@ fn exp_impl(
             // Currently only private constants exist
             HE::Constant(c)
         }
-        TE::InferredNum(_) => panic!("ICE unexpanded inferred num"),
         TE::Move { from_user, var } => HE::Move {
             from_user,
             var: context.remapped_local(var),
@@ -1544,7 +1543,7 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
 fn bind_for_short_circuit(e: &T::Exp) -> bool {
     use T::UnannotatedExp_ as TE;
     match &e.exp.value {
-        TE::Use(_) | TE::InferredNum(_) => panic!("ICE should have been expanded"),
+        TE::Use(_) => panic!("ICE should have been expanded"),
         TE::Value(_)
         | TE::Constant(_, _)
         | TE::Move { .. }

@@ -30,14 +30,14 @@ error:
 
     ┌── tests/move_check/typing/loop_body_invalid.move:11:14 ───
     │
- 11 │         loop { 0x0 }
-    │              ^^^^^^^ Invalid loop body
+ 11 │         loop { @0x0 }
+    │              ^^^^^^^^ Invalid loop body
     ·
- 11 │         loop { 0x0 }
-    │                --- The type: 'address'
+ 11 │         loop { @0x0 }
+    │                ---- The type: 'address'
     ·
- 11 │         loop { 0x0 }
-    │              ------- Is not compatible with: '()'
+ 11 │         loop { @0x0 }
+    │              -------- Is not compatible with: '()'
     │
 
 error: 

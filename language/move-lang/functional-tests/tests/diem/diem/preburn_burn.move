@@ -12,14 +12,14 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_designated_dealer<XUS>(
         account,
-        {{dd}},
+        @{{dd}},
         {{dd::auth_key}},
         x"",
         false,
     );
     DiemAccount::tiered_mint<XUS>(
         account,
-        {{dd}},
+        @{{dd}},
         600,
         0,
     );
@@ -45,7 +45,7 @@ fun main(account: signer) {
     DiemAccount::preburn<XUS>(account, &with_cap, 45);
     assert(Diem::market_cap<XUS>() == old_market_cap, 8002);
     assert(Diem::preburn_value<XUS>() == 100, 8003);
-    DiemAccount::pay_from<XUS>(&with_cap, {{default}}, 2, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{default}}, 2, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -60,7 +60,7 @@ use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 fun main(account: signer)  {
     let account = &account;
-    DiemAccount::cancel_burn<XUS>(account, {{dd}}, 56);
+    DiemAccount::cancel_burn<XUS>(account, @{{dd}}, 56);
 }
 }
 // check: "Keep(ABORTED { code: 3073,"
@@ -74,7 +74,7 @@ use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since the amount is 0
-    Diem::burn<XUS>(account, {{dd}}, 0);
+    Diem::burn<XUS>(account, @{{dd}}, 0);
     }
 }
 // check: "Keep(ABORTED { code: 3073,"
@@ -87,8 +87,8 @@ use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 fun main(account: signer)  {
     let account = &account;
-    DiemAccount::cancel_burn<XUS>(account, {{dd}}, 55);
-    DiemAccount::cancel_burn<XUS>(account, {{dd}}, 45);
+    DiemAccount::cancel_burn<XUS>(account, @{{dd}}, 55);
+    DiemAccount::cancel_burn<XUS>(account, @{{dd}}, 45);
 }
 }
 // check: CancelBurnEvent
@@ -145,7 +145,7 @@ use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since there isn't a preburn with a value of 300
-    Diem::burn<XUS>(account, {{dd}}, 300);
+    Diem::burn<XUS>(account, @{{dd}}, 300);
     }
 }
 // check: "Keep(ABORTED { code: 3073,"
@@ -159,7 +159,7 @@ use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
     // this should fail since the amount is 0
-    Diem::burn<XUS>(account, {{dd}}, 0);
+    Diem::burn<XUS>(account, @{{dd}}, 0);
     }
 }
 // check: "Keep(ABORTED { code: 3073,"
@@ -174,8 +174,8 @@ fun main(account: signer) {
     let account = &account;
     let old_market_cap = Diem::market_cap<XUS>();
     // do the burn. the market cap should now decrease, and the preburn area should be empty
-    Diem::burn<XUS>(account, {{dd}}, 100);
-    Diem::burn<XUS>(account, {{dd}}, 200);
+    Diem::burn<XUS>(account, @{{dd}}, 100);
+    Diem::burn<XUS>(account, @{{dd}}, 200);
     assert(Diem::market_cap<XUS>() == old_market_cap - 300, 8004);
     assert(Diem::preburn_value<XUS>() == 0, 8005);
     }
@@ -209,7 +209,7 @@ use 0x1::XUS::XUS;
 use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
-    Diem::burn<XUS>(account, {{default}}, 0);
+    Diem::burn<XUS>(account, @{{default}}, 0);
 }
 }
 // check: "Keep(ABORTED { code: 2821,"
@@ -221,7 +221,7 @@ use 0x1::XUS::XUS;
 use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
-    Diem::burn<XUS>(account, {{default}}, 0);
+    Diem::burn<XUS>(account, @{{default}}, 0);
 }
 }
 // check: "Keep(ABORTED { code: 4,"
@@ -233,7 +233,7 @@ use 0x1::XUS::XUS;
 use 0x1::Diem;
 fun main(account: signer) {
     let account = &account;
-    Diem::destroy_zero(Diem::cancel_burn<XUS>(account, {{dd}}, 0));
+    Diem::destroy_zero(Diem::cancel_burn<XUS>(account, @{{dd}}, 0));
 }
 }
 // check: "Keep(ABORTED { code: 4,"
@@ -261,7 +261,7 @@ fun main(account: signer) {
     let account = &account;
     DiemAccount::create_designated_dealer<XDX>(
         account,
-        {{baddd}},
+        @{{baddd}},
         {{baddd::auth_key}},
         x"",
         false,
@@ -314,7 +314,7 @@ use 0x1::XUS::XUS;
 use {{default}}::Holder;
 fun main(account: signer) {
     let account = &account;
-    let (xus, coin2) = Holder::get<Diem<XUS>>({{blessed}});
+    let (xus, coin2) = Holder::get<Diem<XUS>>(@{{blessed}});
     Diem::preburn_to(account, xus);
     Diem::preburn_to(account, coin2);
 }
@@ -343,7 +343,7 @@ use 0x1::Diem;
 use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
-    Diem::burn<XUS>(account, {{dd}}, 1);
+    Diem::burn<XUS>(account, @{{dd}}, 1);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -372,7 +372,7 @@ fun main(account: signer) {
     let account = &account;
     let index = 0;
     let max_outstanding_requests = 256;
-    let (xus1, xus2) = Holder::get<Diem::Diem<XUS>>({{blessed}});
+    let (xus1, xus2) = Holder::get<Diem::Diem<XUS>>(@{{blessed}});
     while (index < max_outstanding_requests) {
         Diem::preburn_to(account, Diem::withdraw(&mut xus1, 1));
         index = index + 1;

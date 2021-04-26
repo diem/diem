@@ -262,16 +262,16 @@ fn parse_failure_attribute(
                     if nm == known_attributes::TestingAttributes::CODE_ASSIGNMENT_NAME =>
                 {
                     match value {
-                        sp!(_, EAV::Value(true, sp!(_, EV::U128(u))))
+                        sp!(_, EAV::Value(sp!(_, EV::InferredNum(u))))
                             if *u <= std::u64::MAX as u128 =>
                         {
                             Some(ExpectedFailure::ExpectedWithCode(*u as u64))
                         }
-                        sp!(_, EAV::Value(false, sp!(_, EV::U64(u)))) => {
+                        sp!(_, EAV::Value(sp!(_, EV::U64(u)))) => {
                             Some(ExpectedFailure::ExpectedWithCode(*u))
                         }
-                        sp!(vloc, EAV::Value(false, sp!(_, EV::U8(_))))
-                        | sp!(vloc, EAV::Value(false, sp!(_, EV::U128(_)))) => {
+                        sp!(vloc, EAV::Value(sp!(_, EV::U8(_))))
+                        | sp!(vloc, EAV::Value(sp!(_, EV::U128(_)))) => {
                             context.env.add_error(vec![
                                 (
                                     *assign_loc,
@@ -317,9 +317,7 @@ fn convert_attribute_value_to_move_value(value: &E::AttributeValue_) -> Option<M
     use E::{AttributeValue_ as EAV, Value_ as EV};
     match value {
         // Only addresses are allowed
-        EAV::Value(_, sp!(_, EV::Address(a))) => {
-            Some(MoveValue::Address(MoveAddress::new(a.to_u8())))
-        }
+        EAV::Value(sp!(_, EV::Address(a))) => Some(MoveValue::Address(MoveAddress::new(a.to_u8()))),
         _ => None,
     }
 }

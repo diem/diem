@@ -9,7 +9,7 @@ module NonFungibleToken {
     use 0x1::Signer;
     use 0x1::Vector;
 
-    const NFT_PUBLISHER: address = 0x2;
+    const NFT_PUBLISHER: address = @0x2;
 
     struct LimitedMeta has key {
         limited: bool,

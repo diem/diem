@@ -128,8 +128,8 @@ error:
   2 │     struct R {f: u64}
     │                  --- The type: 'u64'
     ·
- 25 │         let f = 0x0;
-    │                 --- Is not compatible with: 'address'
+ 25 │         let f = @0x0;
+    │                 ---- Is not compatible with: 'address'
     │
 
 error: 

@@ -16,7 +16,7 @@ module Summary {
     }
 
     public fun write_addr() acquires S1 {
-        write_caller2(0x777);
+        write_caller2(@0x777);
     }
 
 }

@@ -4,7 +4,7 @@ module X {
         0
     }
     public fun a(): address {
-        0x0
+        @0x0
     }
     public fun bar() {}
 }

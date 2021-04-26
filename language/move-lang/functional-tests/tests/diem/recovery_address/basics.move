@@ -21,7 +21,7 @@ fun main(tc_account: signer) {
 
     DiemAccount::create_parent_vasp_account<XUS>(
         tc_account,
-        {{parent1}},
+        @{{parent1}},
         {{parent1::auth_key}},
         x"A1",
         add_all_currencies,
@@ -29,7 +29,7 @@ fun main(tc_account: signer) {
 
     DiemAccount::create_parent_vasp_account<XUS>(
         tc_account,
-        {{parent2}},
+        @{{parent2}},
         {{parent2::auth_key}},
         x"B1",
         add_all_currencies,
@@ -47,8 +47,8 @@ use 0x1::XUS::XUS;
 use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::create_child_vasp_account<XUS>(account, {{child1}}, {{child1::auth_key}}, false);
-    DiemAccount::create_child_vasp_account<XUS>(account, {{child2}}, {{child2::auth_key}}, false)
+    DiemAccount::create_child_vasp_account<XUS>(account, @{{child1}}, {{child1::auth_key}}, false);
+    DiemAccount::create_child_vasp_account<XUS>(account, @{{child2}}, {{child2::auth_key}}, false)
 }
 }
 // check: "Keep(EXECUTED)"
@@ -77,7 +77,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
-        DiemAccount::extract_key_rotation_capability(account), {{child1}}
+        DiemAccount::extract_key_rotation_capability(account), @{{child1}}
     );
 }
 }
@@ -94,7 +94,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
-        DiemAccount::extract_key_rotation_capability(account), {{child1}}
+        DiemAccount::extract_key_rotation_capability(account), @{{child1}}
     )
 }
 }
@@ -109,7 +109,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     RecoveryAddress::add_rotation_capability(
-        DiemAccount::extract_key_rotation_capability(account), 0x3333
+        DiemAccount::extract_key_rotation_capability(account), @0x3333
     )
 }
 }
@@ -124,7 +124,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    RecoveryAddress::rotate_authentication_key(account, {{child1}}, {{child2}}, dummy_auth_key);
+    RecoveryAddress::rotate_authentication_key(account, @{{child1}}, @{{child2}}, dummy_auth_key);
 }
 }
 // check: "ABORTED { code: 1031,"
@@ -137,7 +137,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    RecoveryAddress::rotate_authentication_key(account, {{child2}}, {{child1}}, dummy_auth_key);
+    RecoveryAddress::rotate_authentication_key(account, @{{child2}}, @{{child1}}, dummy_auth_key);
 }
 }
 // check: "ABORTED { code: 1285,"
@@ -151,7 +151,7 @@ use 0x1::RecoveryAddress;
 fun main(account: signer) {
     let account = &account;
     let dummy_auth_key = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    RecoveryAddress::rotate_authentication_key(account, {{child1}}, {{child1}}, dummy_auth_key);
+    RecoveryAddress::rotate_authentication_key(account, @{{child1}}, @{{child1}}, dummy_auth_key);
 }
 }
 // check: "ABORTED { code: 519,"
@@ -218,7 +218,7 @@ use {{default}}::Holder;
 use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
-    let cap = Holder::get<DiemAccount::KeyRotationCapability>({{vasp1}});
+    let cap = Holder::get<DiemAccount::KeyRotationCapability>(@{{vasp1}});
     RecoveryAddress::publish(account, cap);
 }
 }

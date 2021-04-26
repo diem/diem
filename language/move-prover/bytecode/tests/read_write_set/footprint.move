@@ -4,7 +4,7 @@ module Footprint {
 
     // expected: empty summary
     public fun reassign_constant(a: address): address {
-        a = 0x2;
+        a = @0x2;
         a
     }
 
@@ -17,7 +17,7 @@ module Footprint {
     // expected: returns Footprint({a, 0x2})
     public fun reassign_cond(a: address, b: bool): address {
         if (b) {
-            a = 0x2;
+            a = @0x2;
         };
         _ = 2 + 2;
         a
@@ -25,13 +25,13 @@ module Footprint {
 
     // expected: s.f |-> 0x2
     public fun reassign_field(s: &mut S) {
-        s.f = 0x2;
+        s.f = @0x2;
     }
 
     // expected: s.f |-> {0x2, Footprint(s.f)}
     public fun reassign_field_cond(s: &mut S, b: bool) {
         if (b) {
-            s.f = 0x2
+            s.f = @0x2
         }
     }
 }

@@ -23,7 +23,7 @@ module M {
     fun t0() {
         foo(0);
         bar(S{});
-        bar(0x0);
+        bar(@0x0);
     }
 
     fun t1() {

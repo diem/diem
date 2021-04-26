@@ -30,8 +30,7 @@ pub struct Program {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttributeValue_ {
-    // First is set to true if the value's type was inferred, otherwise set to false.
-    Value(bool, Value),
+    Value(Value),
     ModuleAccess(ModuleAccess),
 }
 pub type AttributeValue = Spanned<AttributeValue_>;
@@ -291,6 +290,8 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
+    // <num>
+    InferredNum(u128),
     // <num>u8
     U8(u8),
     // <num>u64
@@ -308,7 +309,6 @@ pub type Value = Spanned<Value_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
-    InferredNum(u128),
     Move(Var),
     Copy(Var),
 
@@ -605,7 +605,7 @@ impl AstDebug for Program {
 impl AstDebug for AttributeValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            AttributeValue_::Value(_, v) => v.ast_debug(w),
+            AttributeValue_::Value(v) => v.ast_debug(w),
             AttributeValue_::ModuleAccess(n) => n.ast_debug(w),
         }
     }
@@ -1071,7 +1071,8 @@ impl AstDebug for Value_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use Value_ as V;
         w.write(&match self {
-            V::Address(addr) => format!("{}", addr),
+            V::Address(addr) => format!("@{}", addr),
+            V::InferredNum(u) => format!("{}", u),
             V::U8(u) => format!("{}u8", u),
             V::U64(u) => format!("{}u64", u),
             V::U128(u) => format!("{}u128", u),
@@ -1089,7 +1090,6 @@ impl AstDebug for Exp_ {
             E::Unit {
                 trailing: _trailing,
             } => w.write("/*()*/"),
-            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Value(v) => v.ast_debug(w),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),

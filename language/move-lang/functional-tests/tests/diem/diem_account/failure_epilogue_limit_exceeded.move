@@ -44,7 +44,7 @@ fun main(account: signer) {
     let account = &account;
     AccountLimits::update_limits_definition<XUS::XUS>(
         account,
-        {{alice}},
+        @{{alice}},
         0,
         100,
         0,

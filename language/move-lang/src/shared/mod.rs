@@ -8,6 +8,7 @@ use std::{
     convert::TryFrom,
     fmt,
     hash::Hash,
+    num::ParseIntError,
     sync::atomic::{AtomicUsize, Ordering as AtomicOrdering},
 };
 use structopt::*;
@@ -16,6 +17,36 @@ pub mod ast_debug;
 pub mod remembering_unique_map;
 pub mod unique_map;
 pub mod unique_set;
+
+//**************************************************************************************************
+// Numbers
+//**************************************************************************************************
+
+// Determines the base of the number literal, depending on the prefix
+fn determine_num_text_and_base(s: &str) -> (&str, u32) {
+    match s.strip_prefix("0x") {
+        Some(s_hex) => (s_hex, 16),
+        None => (s, 10),
+    }
+}
+
+// Parse a u8 from a decimal or hex encoding
+pub fn parse_u8(s: &str) -> Result<u8, ParseIntError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    u8::from_str_radix(txt, base)
+}
+
+// Parse a u64 from a decimal or hex encoding
+pub fn parse_u64(s: &str) -> Result<u64, ParseIntError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    u64::from_str_radix(txt, base)
+}
+
+// Parse a u128 from a decimal or hex encoding
+pub fn parse_u128(s: &str) -> Result<u128, ParseIntError> {
+    let (txt, base) = determine_num_text_and_base(s);
+    u128::from_str_radix(txt, base)
+}
 
 //**************************************************************************************************
 // Address
@@ -40,28 +71,17 @@ impl Address {
     }
 
     pub fn parse_str(s: &str) -> Result<Address, String> {
-        let mut hex_string = String::from(&s[2..]);
-        if hex_string.len() % 2 != 0 {
-            hex_string.insert(0, '0');
-        }
-
-        let mut result = hex::decode(hex_string.as_str())
-            .map_err(|e| format!("hex string {} fails to decode with Error {}", hex_string, e))?;
-        let len = result.len();
-        if len < ADDRESS_LENGTH {
-            result.reverse();
-            result.resize(ADDRESS_LENGTH, 0);
-            result.reverse();
-        }
-
-        assert!(result.len() >= ADDRESS_LENGTH);
-        Self::try_from(&result[..]).map_err(|_| {
-            format!(
-                "Address is {} bytes long. The maximum size is {} bytes",
-                result.len(),
-                ADDRESS_LENGTH
-            )
-        })
+        let decoded = match parse_u128(s) {
+            Ok(n) => n.to_be_bytes(),
+            Err(_) => {
+                // TODO the kind of error is in an unstable nightly API
+                // But currently the only way this should fail is if the number is too long
+                return Err("Invalid address literal. The numeric value is too large. \
+                    The maximum size is 16 bytes"
+                    .to_owned());
+            }
+        };
+        Ok(Address(decoded))
     }
 }
 

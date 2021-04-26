@@ -7,11 +7,11 @@ module Test {
     }
 
     public fun test<T: store>(): bool {
-        exists<A<u64, T>>(0x1)
+        exists<A<u64, T>>(@0x1)
     }
 
     public fun update<T: drop + store>(x: T) acquires A {
-        borrow_global_mut<A<T, T>>(0x1).x1 = x;
+        borrow_global_mut<A<T, T>>(@0x1).x1 = x;
     }
 
     public fun update_caller() acquires A {
@@ -19,7 +19,7 @@ module Test {
     }
 
     public fun update_ints() acquires A {
-        borrow_global_mut<A<u64, u128>>(0x1).x1 = 22;
+        borrow_global_mut<A<u64, u128>>(@0x1).x1 = 22;
     }
 
     public fun publish<T: store>(signer: &signer, x: A<T, u8>) {

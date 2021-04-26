@@ -37,7 +37,7 @@ use 0x1::DiemAccount;
 fun main(sender: signer) {
     let sender = &sender;
     let cap = DiemAccount::extract_withdraw_capability(sender);
-    SillyColdWallet::publish(sender, cap, {{bob}});
+    SillyColdWallet::publish(sender, cap, @{{bob}});
 }
 }
 // check: "Keep(EXECUTED)"
@@ -53,7 +53,7 @@ fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     // should fail with withdrawal capability already extracted
-    DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1000, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1000, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -69,7 +69,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1000, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 1000, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -84,7 +84,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1000, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1000, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }

@@ -82,7 +82,7 @@ use 0x1::COIN::COIN;
 use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
-    DiemAccount::tiered_mint<COIN>(account, {{sally}}, 10, 3);
+    DiemAccount::tiered_mint<COIN>(account, @{{sally}}, 10, 3);
 }
 }
 
@@ -99,7 +99,7 @@ fun main(tc_account: signer) {
 
     DiemAccount::create_parent_vasp_account<XUS>(
         tc_account,
-        {{alice}},
+        @{{alice}},
         {{alice::auth_key}},
         x"A1",
         add_all_currencies,
@@ -107,7 +107,7 @@ fun main(tc_account: signer) {
 
     DiemAccount::create_parent_vasp_account<COIN>(
         tc_account,
-        {{bob}},
+        @{{bob}},
         {{bob::auth_key}},
         x"B1",
         add_all_currencies,
@@ -125,7 +125,7 @@ use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 10, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -140,7 +140,7 @@ use 0x1::COIN::COIN;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<COIN>(&with_cap, {{bob}}, 10, x"", x"");
+    DiemAccount::pay_from<COIN>(&with_cap, @{{bob}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -203,10 +203,10 @@ use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 10, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
-    assert(DiemAccount::balance<XUS>({{alice}}) == 0, 0);
-    assert(DiemAccount::balance<XUS>({{bob}}) == 10, 1);
+    assert(DiemAccount::balance<XUS>(@{{alice}}) == 0, 0);
+    assert(DiemAccount::balance<XUS>(@{{bob}}) == 10, 1);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -220,13 +220,13 @@ use 0x1::XUS::XUS;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<COIN>(&with_cap, {{alice}}, 10, x"", x"");
-    DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 10, x"", x"");
+    DiemAccount::pay_from<COIN>(&with_cap, @{{alice}}, 10, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 10, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
-    assert(DiemAccount::balance<XUS>({{bob}}) == 0, 2);
-    assert(DiemAccount::balance<COIN>({{bob}}) == 0, 3);
-    assert(DiemAccount::balance<XUS>({{alice}}) == 10, 4);
-    assert(DiemAccount::balance<COIN>({{alice}}) == 10, 5);
+    assert(DiemAccount::balance<XUS>(@{{bob}}) == 0, 2);
+    assert(DiemAccount::balance<COIN>(@{{bob}}) == 0, 3);
+    assert(DiemAccount::balance<XUS>(@{{alice}}) == 10, 4);
+    assert(DiemAccount::balance<COIN>(@{{alice}}) == 10, 5);
 }
 }
 // check: "Keep(EXECUTED)"

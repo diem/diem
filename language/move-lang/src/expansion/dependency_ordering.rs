@@ -393,7 +393,6 @@ fn exp(context: &mut Context, sp!(_loc, e_): &E::Exp) {
         | E::Break
         | E::Continue
         | E::Spec(_, _)
-        | E::InferredNum(_)
         | E::Value(_)
         | E::Move(_)
         | E::Copy(_) => (),

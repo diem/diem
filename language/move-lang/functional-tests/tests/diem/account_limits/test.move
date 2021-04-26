@@ -14,7 +14,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -30,7 +30,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{otherblessed}}, 1, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{otherblessed}}, 1, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap)
 }
 }
@@ -64,7 +64,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 3, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 3, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap)
     }
 }
@@ -98,7 +98,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -112,7 +112,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{otherblessed}}, 2, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{otherblessed}}, 2, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -126,7 +126,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -140,7 +140,7 @@ use 0x1::DiemAccount;
 fun main(account: signer) {
     let account = &account;
     let with_cap = DiemAccount::extract_withdraw_capability(account);
-    DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 2, x"", x"");
+    DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 2, x"", x"");
     DiemAccount::restore_withdraw_capability(with_cap);
 }
 }
@@ -154,7 +154,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -168,7 +168,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -188,7 +188,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 100, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 100, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -202,7 +202,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -218,7 +218,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 101, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 101, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -233,7 +233,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{alice}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{alice}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -249,7 +249,7 @@ script {
     fun main(account: signer) {
     let account = &account;
         let with_cap = DiemAccount::extract_withdraw_capability(account);
-        DiemAccount::pay_from<XUS>(&with_cap, {{bob}}, 1, x"", x"");
+        DiemAccount::pay_from<XUS>(&with_cap, @{{bob}}, 1, x"", x"");
         DiemAccount::restore_withdraw_capability(with_cap);
     }
 }

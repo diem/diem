@@ -19,11 +19,11 @@ script {
     fun main(account: signer) {
     let account = &account;
         // register alice as bob's delegate
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, @{{alice}});
 
         // assert bob is a validator
-        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-        assert(DiemSystem::is_validator({{bob}}) == true, 98);
+        assert(ValidatorConfig::is_valid(@{{bob}}) == true, 98);
+        assert(DiemSystem::is_validator(@{{bob}}) == true, 98);
     }
 }
 
@@ -44,19 +44,19 @@ script {
     fun main(account: signer) {
     let account = &account;
         // assert bob is a validator
-        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-        assert(DiemSystem::is_validator({{bob}}) == true, 98);
+        assert(ValidatorConfig::is_valid(@{{bob}}) == true, 98);
+        assert(DiemSystem::is_validator(@{{bob}}) == true, 98);
 
-        assert(ValidatorConfig::get_consensus_pubkey(&DiemSystem::get_validator_config({{bob}})) ==
-               ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})), 99);
+        assert(ValidatorConfig::get_consensus_pubkey(&DiemSystem::get_validator_config(@{{bob}})) ==
+               ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config(@{{bob}})), 99);
 
         // alice rotates bob's public key
-        ValidatorConfig::set_config(account, {{bob}},
+        ValidatorConfig::set_config(account, @{{bob}},
                                     x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
                                     x"", x"");
-        DiemSystem::update_config_and_reconfigure(account, {{bob}});
+        DiemSystem::update_config_and_reconfigure(account, @{{bob}});
         // check bob's public key
-        let validator_config = DiemSystem::get_validator_config({{bob}});
+        let validator_config = DiemSystem::get_validator_config(@{{bob}});
         assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) ==
                x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", 99);
     }

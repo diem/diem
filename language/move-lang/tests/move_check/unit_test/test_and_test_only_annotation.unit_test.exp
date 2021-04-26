@@ -5,8 +5,8 @@ error:
  5 │     #[test_only]
    │       ^^^^^^^^^ Function annotated as both #[test(...)] and #[test_only]. You need to declare it as either one or the other
    ·
- 4 │     #[test(_a=0x1, _b=0x2)]
-   │       -------------------- Previously annotated here
+ 4 │     #[test(_a=@0x1, _b=@0x2)]
+   │       ---------------------- Previously annotated here
    ·
  6 │     public fun boo(_a: signer, _b: signer) { }
    │                --- In this test

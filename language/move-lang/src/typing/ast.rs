@@ -134,7 +134,6 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 pub enum UnannotatedExp_ {
     Unit { trailing: bool },
     Value(Value),
-    InferredNum(u128),
     Move { from_user: bool, var: Var },
     Copy { from_user: bool, var: Var },
     Use(Var),
@@ -405,7 +404,6 @@ impl AstDebug for UnannotatedExp_ {
                 trailing: _trailing,
             } => w.write("/*()*/"),
             E::Value(v) => v.ast_debug(w),
-            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move {
                 from_user: false,
                 var: v,

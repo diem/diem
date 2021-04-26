@@ -118,9 +118,9 @@ fun Test::get_and_incr($t0|addr: address): u64 {
  28: assert Eq<u64>($t8, select Test::R.v(global<Test::R>($t0)))
  29: return $t8
  30: label L4
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:13:2+311
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
  31: assert Or(Not(exists[@0]<Test::R>($t0)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:13:2+311
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:13:2+312
  32: assert Or(And(Not(exists[@0]<Test::R>($t0)), Eq(33, $t6)), Ge(Add(select Test::R.v(global[@0]<Test::R>($t0)), 1), 18446744073709551615))
  33: abort($t6)
 }
@@ -140,7 +140,7 @@ fun Test::incr_twice() {
   2: $t0 := 0x1
      # >> opaque call: $t1 := Test::get_and_incr($t0)
   3: nop
-     # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+21
+     # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+22
   4: assert Neq<address>($t0, 0)
   5: assume Identical($t1, Or(Not(exists<Test::R>($t0)), Ge(Add(select Test::R.v(global<Test::R>($t0)), 1), 18446744073709551615)))
   6: if ($t1) goto 7 else goto 11
@@ -160,7 +160,7 @@ fun Test::incr_twice() {
  19: $t4 := 0x1
      # >> opaque call: $t3 := Test::get_and_incr($t2)
  20: nop
-     # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+21
+     # VC: precondition does not hold at this call at tests/spec_instrumentation/opaque_call.move:15:6+22
  21: assert Neq<address>($t4, 0)
  22: assume Identical($t5, Or(Not(exists<Test::R>($t4)), Ge(Add(select Test::R.v(global<Test::R>($t4)), 1), 18446744073709551615)))
  23: if ($t5) goto 24 else goto 28
@@ -178,15 +178,15 @@ fun Test::incr_twice() {
  34: nop
  35: destroy($t6)
  36: label L1
-     # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:28:6+34
+     # VC: function does not abort under this condition at tests/spec_instrumentation/opaque_call.move:28:6+35
  37: assert Not(Not(exists[@1]<Test::R>(1)))
-     # VC: post-condition does not hold at tests/spec_instrumentation/opaque_call.move:29:6+54
+     # VC: post-condition does not hold at tests/spec_instrumentation/opaque_call.move:29:6+56
  38: assert Eq<u64>(select Test::R.v(global<Test::R>(1)), Add(select Test::R.v(global[@1]<Test::R>(1)), 2))
  39: return ()
  40: label L2
-     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:27:2+124
+     # VC: abort not covered by any of the `aborts_if` clauses at tests/spec_instrumentation/opaque_call.move:27:2+127
  41: assert Not(exists[@1]<Test::R>(1))
-     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+124
+     # VC: abort code not covered by any of the `aborts_if` or `aborts_with` clauses at tests/spec_instrumentation/opaque_call.move:27:2+127
  42: assert And(Not(exists[@1]<Test::R>(1)), Eq(33, $t2))
  43: abort($t2)
 }

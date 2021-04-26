@@ -301,6 +301,7 @@ fn foldable_value(sp!(_, v_): &Value) -> FoldableValue {
     use FoldableValue as FV;
     use Value_ as V;
     match v_ {
+        V::InferredNum(_) => panic!("ICE inferred num should have been expanded"),
         V::U8(u) => FV::U8(*u),
         V::U64(u) => FV::U64(*u),
         V::U128(u) => FV::U128(*u),

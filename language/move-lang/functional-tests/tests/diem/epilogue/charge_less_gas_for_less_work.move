@@ -29,7 +29,7 @@ use 0x1::DiemAccount;
 use 0x1::XUS::XUS;
 fun main() {
     // Alice did less work than bob so she should pay less gas.
-    assert(DiemAccount::balance<XUS>({{bob}}) < DiemAccount::balance<XUS>({{alice}}), 42);
+    assert(DiemAccount::balance<XUS>(@{{bob}}) < DiemAccount::balance<XUS>(@{{alice}}), 42);
 }
 }
 // check: "Keep(EXECUTED)"

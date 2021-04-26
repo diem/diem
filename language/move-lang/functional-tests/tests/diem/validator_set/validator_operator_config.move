@@ -2,7 +2,7 @@
 script {
 use 0x1::ValidatorOperatorConfig;
 fun main() {
-    ValidatorOperatorConfig::get_human_name({{default}});
+    ValidatorOperatorConfig::get_human_name(@{{default}});
 }
 }
 // check: "Keep(ABORTED { code: 5,"

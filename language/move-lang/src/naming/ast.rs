@@ -210,7 +210,6 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
-    InferredNum(u128),
     Move(Var),
     Copy(Var),
     Use(Var),
@@ -498,16 +497,17 @@ impl Type_ {
 }
 
 impl Value_ {
-    pub fn type_(&self, loc: Loc) -> Type {
+    pub fn type_(&self, loc: Loc) -> Option<Type> {
         use Value_::*;
-        match self {
+        Some(match self {
             Address(_) => Type_::address(loc),
+            InferredNum(_) => return None,
             U8(_) => Type_::u8(loc),
             U64(_) => Type_::u64(loc),
             U128(_) => Type_::u128(loc),
             Bool(_) => Type_::bool(loc),
             Bytearray(_) => Type_::vector(loc, Type_::u8(loc)),
-        }
+        })
     }
 }
 
@@ -856,7 +856,6 @@ impl AstDebug for Exp_ {
                 trailing: _trailing,
             } => w.write("/*()*/"),
             E::Value(v) => v.ast_debug(w),
-            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Use(v) => w.write(&format!("{}", v)),

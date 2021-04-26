@@ -3,7 +3,6 @@
 
 use codespan::{ByteIndex, Span};
 use move_ir_types::location::*;
-use std::str::FromStr;
 
 use crate::{
     errors::*,
@@ -20,13 +19,17 @@ use std::collections::BTreeMap;
 // Error Handling
 //**************************************************************************************************
 
-fn unexpected_token_error(tokens: &Lexer, expected: &str) -> Error {
-    let loc = current_token_loc(tokens);
-    let unexpected = if tokens.peek() == Tok::EOF {
+fn current_token_error_string(tokens: &Lexer) -> String {
+    if tokens.peek() == Tok::EOF {
         "end-of-file".to_string()
     } else {
         format!("'{}'", tokens.content())
-    };
+    }
+}
+
+fn unexpected_token_error(tokens: &Lexer, expected: &str) -> Error {
+    let loc = current_token_loc(tokens);
+    let unexpected = current_token_error_string(tokens);
     vec![
         (loc, format!("Unexpected {}", unexpected)),
         (loc, format!("Expected {}", expected)),
@@ -221,9 +224,9 @@ fn parse_identifier(tokens: &mut Lexer) -> Result<Name, Error> {
 }
 
 // Parse an account address:
-//      Address = <AddressValue>
+//      Address = <Number>
 fn parse_address(tokens: &mut Lexer) -> Result<Address, Error> {
-    if tokens.peek() != Tok::AddressValue {
+    if tokens.peek() != Tok::NumValue {
         return Err(unexpected_token_error(tokens, "an account address value"));
     }
     let addr =
@@ -255,6 +258,19 @@ fn parse_module_name(tokens: &mut Lexer) -> Result<ModuleName, Error> {
 fn parse_module_ident(tokens: &mut Lexer) -> Result<ModuleIdent, Error> {
     let start_loc = tokens.start_loc();
     let address = parse_address(tokens)?;
+    if tokens.peek() != Tok::ColonColon {
+        let unexp_loc = current_token_loc(tokens);
+        let unexp_msg = format!("Unexpected {}", current_token_error_string(tokens));
+
+        let end_loc = tokens.previous_end_loc();
+        let addr_loc = make_loc(tokens.file_name(), start_loc, end_loc);
+        let exp_msg = "Expected '::' after an address in a module identifier";
+        return Err(vec![
+            (unexp_loc, unexp_msg),
+            (addr_loc, exp_msg.to_string()),
+        ]);
+    }
+
     consume_token(tokens, Tok::ColonColon)?;
     let name = parse_module_name(tokens)?.0;
     let end_loc = tokens.previous_end_loc();
@@ -287,7 +303,7 @@ fn parse_module_access<F: FnOnce() -> String>(
             }
         }
 
-        Tok::AddressValue => {
+        Tok::NumValue => {
             let m = parse_module_ident(tokens)?;
             consume_token(tokens, Tok::ColonColon)?;
             let n = parse_identifier(tokens)?;
@@ -382,8 +398,8 @@ fn parse_visibility(tokens: &mut Lexer) -> Result<Visibility, Error> {
         Some(Tok::Friend) => Visibility::Friend(loc),
         _ => {
             let msg = format!(
-                "Invalid visibility modifier. Consider removing it or using one of '{}', \
-                     '{}', or '{}'",
+                "Invalid visibility modifier. Consider removing it or using one of '{}', '{}', or \
+                 '{}'",
                 Visibility::PUBLIC,
                 Visibility::SCRIPT,
                 Visibility::FRIEND
@@ -397,11 +413,6 @@ fn parse_visibility(tokens: &mut Lexer) -> Result<Visibility, Error> {
 //          <Value>
 //          | <ModuleAccess>
 fn parse_attribute_value(tokens: &mut Lexer) -> Result<AttributeValue, Error> {
-    if tokens.peek() == Tok::NumValue {
-        let loc = current_token_loc(tokens);
-        return Ok(sp(loc, AttributeValue_::NumValue(parse_num(tokens)?)));
-    }
-
     if let Some(v) = maybe_parse_value(tokens)? {
         return Ok(sp(v.loc, AttributeValue_::Value(v)));
     }
@@ -588,34 +599,19 @@ fn parse_byte_string(tokens: &mut Lexer) -> Result<Value_, Error> {
     Ok(value_)
 }
 
-// Create an error for an integer literal that is too big to fit in its type.
-// This assumes that the literal is the current token.
-fn num_too_big_error(tokens: &mut Lexer, type_description: &str) -> Error {
-    let start_loc = tokens.start_loc();
-    let end_loc = start_loc + tokens.content().len();
-    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
-    vec![(
-        loc,
-        format!(
-            "Invalid number literal. The given literal is too large to fit into the {}",
-            type_description
-        ),
-    )]
-}
-
 // Parse a value:
 //      Value =
-//          <Address>
+//          "@" <Address>
 //          | "true"
 //          | "false"
-//          | <U8Value>
-//          | <U64Value>
-//          | <U128Value>
+//          | <Number>
+//          | <NumberTyped>
 //          | <ByteString>
 fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
-        Tok::AddressValue => {
+        Tok::AtSign => {
+            tokens.advance()?;
             let addr = parse_address(tokens)?;
             Value_::Address(addr)
         }
@@ -627,48 +623,21 @@ fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Error> {
             tokens.advance()?;
             Value_::Bool(false)
         }
-        Tok::U8Value => {
-            let mut s = tokens.content();
-            if s.ends_with("u8") {
-                s = &s[..s.len() - 2]
+        Tok::NumValue => {
+            //  If the number is followed by "::", parse it as the beginning of an address access
+            if let Ok(Tok::ColonColon) = tokens.lookahead() {
+                return Ok(None);
             }
-            let i = match u8::from_str(s) {
-                Ok(i) => i,
-                Err(_) => {
-                    return Err(num_too_big_error(tokens, "'u8' type"));
-                }
-            };
+            let num = tokens.content().to_owned();
             tokens.advance()?;
-            Value_::U8(i)
+            Value_::Num(num)
         }
-        Tok::U64Value => {
-            let mut s = tokens.content();
-            if s.ends_with("u64") {
-                s = &s[..s.len() - 3]
-            }
-            let i = match u64::from_str(s) {
-                Ok(i) => i,
-                Err(_) => {
-                    return Err(num_too_big_error(tokens, "'u64' type"));
-                }
-            };
+        Tok::NumTypedValue => {
+            let num = tokens.content().to_owned();
             tokens.advance()?;
-            Value_::U64(i)
+            Value_::Num(num)
         }
-        Tok::U128Value => {
-            let mut s = tokens.content();
-            if s.ends_with("u128") {
-                s = &s[..s.len() - 4]
-            }
-            let i = match u128::from_str(s) {
-                Ok(i) => i,
-                Err(_) => {
-                    return Err(num_too_big_error(tokens, "'u128' type"));
-                }
-            };
-            tokens.advance()?;
-            Value_::U128(i)
-        }
+
         Tok::ByteStringValue => parse_byte_string(tokens)?,
         _ => return Ok(None),
     };
@@ -678,18 +647,6 @@ fn maybe_parse_value(tokens: &mut Lexer) -> Result<Option<Value>, Error> {
 
 fn parse_value(tokens: &mut Lexer) -> Result<Value, Error> {
     Ok(maybe_parse_value(tokens)?.expect("parse_value called with invalid token"))
-}
-
-// Parse a num value:
-//    Num = <NumValue>
-fn parse_num(tokens: &mut Lexer) -> Result<u128, Error> {
-    assert_eq!(tokens.peek(), Tok::NumValue);
-    let res = match u128::from_str(tokens.content()) {
-        Ok(i) => Ok(i),
-        Err(_) => Err(num_too_big_error(tokens, "largest number type 'u128'")),
-    };
-    tokens.advance()?;
-    res
 }
 
 //**************************************************************************************************
@@ -771,7 +728,6 @@ fn parse_sequence(tokens: &mut Lexer) -> Result<Sequence, Error> {
 //          | "continue"
 //          | <NameExp>
 //          | <Value>
-//          | <Num>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
 //          | "(" <Exp> "as" <Type> ")"
@@ -791,7 +747,7 @@ fn parse_term(tokens: &mut Lexer) -> Result<Exp, Error> {
 
         Tok::IdentifierValue => parse_name_exp(tokens)?,
 
-        Tok::AddressValue => {
+        Tok::NumValue => {
             // Check if this is a ModuleIdent (in a ModuleAccess).
             if tokens.lookahead()? == Tok::ColonColon {
                 parse_name_exp(tokens)?
@@ -800,14 +756,9 @@ fn parse_term(tokens: &mut Lexer) -> Result<Exp, Error> {
             }
         }
 
-        Tok::True
-        | Tok::False
-        | Tok::U8Value
-        | Tok::U64Value
-        | Tok::U128Value
-        | Tok::ByteStringValue => Exp_::Value(parse_value(tokens)?),
-
-        Tok::NumValue => Exp_::InferredNum(parse_num(tokens)?),
+        Tok::AtSign | Tok::True | Tok::False | Tok::NumTypedValue | Tok::ByteStringValue => {
+            Exp_::Value(parse_value(tokens)?)
+        }
 
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"
@@ -1481,9 +1432,9 @@ fn parse_ability(tokens: &mut Lexer) -> Result<Ability, Error> {
         None => Err(vec![(
             loc,
             format!(
-                "Unexpected '{}'. Expected a type ability, one of: 'copy', 'drop', 'store', or \
+                "Unexpected {}. Expected a type ability, one of: 'copy', 'drop', 'store', or \
                  'key'",
-                tokens.content()
+                current_token_error_string(tokens)
             ),
         )]),
     }
@@ -1661,9 +1612,14 @@ fn parse_struct_decl(
 ) -> Result<StructDefinition, Error> {
     let Modifiers { visibility, native } = modifiers;
     if let Some(vis) = visibility {
-        return Err(vec![
-            (vis.loc().unwrap(), format!("Invalid struct declaration. Structs cannot have visibility modifiers as they are always '{}'", Visibility::PUBLIC))
-        ]);
+        return Err(vec![(
+            vis.loc().unwrap(),
+            format!(
+                "Invalid struct declaration. Structs cannot have visibility modifiers as they are \
+                 always '{}'",
+                Visibility::PUBLIC
+            ),
+        )]);
     }
 
     consume_token(tokens, Tok::Struct)?;
@@ -1750,9 +1706,12 @@ fn parse_constant_decl(
 ) -> Result<Constant, Error> {
     let Modifiers { visibility, native } = modifiers;
     if let Some(vis) = visibility {
-        return Err(vec![
-            (vis.loc().unwrap(), "Invalid constant declaration. Constants cannot have visibility modifiers as they are always internal".to_string())
-        ]);
+        return Err(vec![(
+            vis.loc().unwrap(),
+            "Invalid constant declaration. Constants cannot have visibility modifiers as they are \
+             always internal"
+                .to_string(),
+        )]);
     }
     if let Some(loc) = native {
         return Err(vec![(
@@ -1796,7 +1755,11 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
         let loc = make_loc(tokens.file_name(), start, end);
         return Err(vec![(
             loc,
-            format!("{}. Got '{}'", UNEXPECTED_TOKEN, tokens.content()),
+            format!(
+                "{}. Got {}",
+                UNEXPECTED_TOKEN,
+                current_token_error_string(tokens)
+            ),
         )]);
     }
     let addr_name = parse_identifier(tokens)?;
@@ -1832,7 +1795,7 @@ fn parse_address_block(tokens: &mut Lexer) -> Result<(Loc, Address, Vec<ModuleDe
 fn parse_friend_decl(attributes: Vec<Attributes>, tokens: &mut Lexer) -> Result<FriendDecl, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Friend)?;
-    let friend_ = if tokens.peek() == Tok::AddressValue {
+    let friend_ = if tokens.peek() == Tok::NumValue {
         Friend_::QualifiedModule(parse_module_ident(tokens)?)
     } else {
         Friend_::Module(parse_module_name(tokens)?)
@@ -1914,7 +1877,7 @@ fn parse_module(
     let start_loc = tokens.start_loc();
 
     consume_token(tokens, Tok::Module)?;
-    let address = if tokens.peek() == Tok::AddressValue {
+    let address = if tokens.peek() == Tok::NumValue {
         let loc = current_token_loc(tokens);
         let address = parse_address(tokens)?;
         consume_token(tokens, Tok::ColonColon)?;
@@ -2598,28 +2561,16 @@ fn parse_spec_property(tokens: &mut Lexer) -> Result<PragmaProperty, Error> {
     let value = if tokens.peek() == Tok::Equal {
         tokens.advance()?;
         match tokens.peek() {
-            Tok::True
-            | Tok::False
-            | Tok::U8Value
-            | Tok::U64Value
-            | Tok::U128Value
-            | Tok::ByteStringValue
-            | Tok::AddressValue
+            Tok::AtSign | Tok::True | Tok::False | Tok::NumTypedValue | Tok::ByteStringValue => {
+                Some(PragmaValue::Literal(parse_value(tokens)?))
+            }
+            Tok::NumValue
                 if !tokens
                     .lookahead()
                     .map(|tok| tok == Tok::ColonColon)
                     .unwrap_or(false) =>
             {
                 Some(PragmaValue::Literal(parse_value(tokens)?))
-            }
-            Tok::NumValue => {
-                let i = parse_num(tokens)?;
-                Some(PragmaValue::Literal(spanned(
-                    tokens.file_name(),
-                    start_loc,
-                    tokens.previous_end_loc(),
-                    Value_::U128(i),
-                )))
             }
             _ => {
                 // Parse as a module access for a possibly qualified identifier

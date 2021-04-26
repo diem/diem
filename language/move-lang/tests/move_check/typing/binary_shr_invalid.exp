@@ -52,25 +52,25 @@ error:
 
     ┌── tests/move_check/typing/binary_shr_invalid.move:11:9 ───
     │
- 11 │         0x0 >> 0x1;
-    │         ^^^ Invalid argument to '>>'
+ 11 │         @0x0 >> @0x1;
+    │         ^^^^ Invalid argument to '>>'
     ·
- 11 │         0x0 >> 0x1;
-    │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+ 11 │         @0x0 >> @0x1;
+    │         ---- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:11:16 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:11:17 ───
     │
- 11 │         0x0 >> 0x1;
-    │                ^^^ Invalid argument to '>>'
+ 11 │         @0x0 >> @0x1;
+    │                 ^^^^ Invalid argument to '>>'
     ·
- 11 │         0x0 >> 0x1;
-    │                --- The type: 'address'
+ 11 │         @0x0 >> @0x1;
+    │                 ---- The type: 'address'
     ·
- 11 │         0x0 >> 0x1;
-    │                --- Is not compatible with: 'u8'
+ 11 │         @0x0 >> @0x1;
+    │                 ---- Is not compatible with: 'u8'
     │
 
 error: 
@@ -155,13 +155,13 @@ error:
 
     ┌── tests/move_check/typing/binary_shr_invalid.move:15:14 ───
     │
- 15 │         1 >> false >> 0x0 >> 0;
+ 15 │         1 >> false >> @0x0 >> 0;
     │              ^^^^^ Invalid argument to '>>'
     ·
- 15 │         1 >> false >> 0x0 >> 0;
+ 15 │         1 >> false >> @0x0 >> 0;
     │              ----- The type: 'bool'
     ·
- 15 │         1 >> false >> 0x0 >> 0;
+ 15 │         1 >> false >> @0x0 >> 0;
     │              ----- Is not compatible with: 'u8'
     │
 
@@ -169,14 +169,14 @@ error:
 
     ┌── tests/move_check/typing/binary_shr_invalid.move:15:23 ───
     │
- 15 │         1 >> false >> 0x0 >> 0;
-    │                       ^^^ Invalid argument to '>>'
+ 15 │         1 >> false >> @0x0 >> 0;
+    │                       ^^^^ Invalid argument to '>>'
     ·
- 15 │         1 >> false >> 0x0 >> 0;
-    │                       --- The type: 'address'
+ 15 │         1 >> false >> @0x0 >> 0;
+    │                       ---- The type: 'address'
     ·
- 15 │         1 >> false >> 0x0 >> 0;
-    │                       --- Is not compatible with: 'u8'
+ 15 │         1 >> false >> @0x0 >> 0;
+    │                       ---- Is not compatible with: 'u8'
     │
 
 error: 

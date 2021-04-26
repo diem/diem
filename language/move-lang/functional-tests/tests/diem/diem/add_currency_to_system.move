@@ -108,14 +108,14 @@ fun main(account: signer) {
     let prev_mcap3 = Diem::market_cap<COIN>();
     DiemAccount::create_designated_dealer<COIN>(
         account,
-        {{dd}},
+        @{{dd}},
         {{dd::auth_key}},
         x"",
         false,
     );
     DiemAccount::tiered_mint<COIN>(
         account,
-        {{dd}},
+        @{{dd}},
         10000,
         0,
     );
@@ -146,7 +146,7 @@ fun main(account: signer) {
     let with_cap = DiemAccount::extract_withdraw_capability(account);
     DiemAccount::pay_from<COIN>(
         &with_cap,
-        {{bob}},
+        @{{bob}},
         10000,
         x"",
         x""

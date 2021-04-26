@@ -9,8 +9,8 @@ script {
     use 0x1::ValidatorConfig;
     fun main() {
         // test bob is a validator
-        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-        assert(DiemSystem::is_validator({{bob}}) == true, 98);
+        assert(ValidatorConfig::is_valid(@{{bob}}) == true, 98);
+        assert(DiemSystem::is_validator(@{{bob}}) == true, 98);
     }
 }
 // check: "Keep(EXECUTED)"
@@ -24,7 +24,7 @@ fun main(creator: signer) {
 //    DiemAccount::create_validator_account(
 //        creator, &r, 0xAA, x"00000000000000000000000000000000"
     DiemAccount::create_validator_account(
-        creator, 0xAA, x"00000000000000000000000000000000", b"owner_name"
+        creator, @0xAA, x"00000000000000000000000000000000", b"owner_name"
     );
 
 }
@@ -54,7 +54,7 @@ fun main(dr_account: signer, alex_signer: signer) {
 script {
 use 0x1::ValidatorConfig;
 fun main() {
-    let _ = ValidatorConfig::get_config({{alex}});
+    let _ = ValidatorConfig::get_config(@{{alex}});
 }
 }
 // check: "Keep(ABORTED { code: 7,"

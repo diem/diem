@@ -6,7 +6,7 @@ use super::{
     expand, globals, infinite_instantiations, recursive_structs,
 };
 use crate::{
-    expansion::ast::Fields,
+    expansion::ast::{Fields, Value_},
     naming::ast::{self as N, Type, TypeName_, Type_},
     parser::ast::{
         Ability_, BinOp_, ConstantName, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var,
@@ -391,7 +391,7 @@ mod check_valid_constant {
             //*****************************************
             // Error cases handled elsewhere
             //*****************************************
-            E::Use(_) | E::InferredNum(_) | E::Continue | E::Break | E::UnresolvedError => return,
+            E::Use(_) | E::Continue | E::Break | E::UnresolvedError => return,
 
             //*****************************************
             // Valid cases
@@ -967,8 +967,11 @@ fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
     use T::UnannotatedExp_ as TE;
     let (ty, e_) = match ne_ {
         NE::Unit { trailing } => (sp(eloc, Type_::Unit), TE::Unit { trailing }),
-        NE::Value(sp!(vloc, v)) => (v.type_(vloc), TE::Value(sp(vloc, v))),
-        NE::InferredNum(v) => (core::make_num_tvar(context, eloc), TE::InferredNum(v)),
+        NE::Value(sp!(vloc, Value_::InferredNum(v))) => (
+            core::make_num_tvar(context, eloc),
+            TE::Value(sp(vloc, Value_::InferredNum(v))),
+        ),
+        NE::Value(sp!(vloc, v)) => (v.type_(vloc).unwrap(), TE::Value(sp(vloc, v))),
 
         NE::Constant(m, c) => {
             let ty = core::make_constant_type(context, eloc, &m, &c);

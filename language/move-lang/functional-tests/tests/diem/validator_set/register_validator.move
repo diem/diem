@@ -11,13 +11,13 @@ script{
     let account = &account;
         let sender = Signer::address_of(account);
         assert(!DiemSystem::is_validator(sender), 1);
-        assert(!DiemSystem::is_validator({{alice}}), 2);
-        assert(DiemSystem::is_validator({{vivian}}), 3);
-        assert(DiemSystem::is_validator({{viola}}), 4);
+        assert(!DiemSystem::is_validator(@{{alice}}), 2);
+        assert(DiemSystem::is_validator(@{{vivian}}), 3);
+        assert(DiemSystem::is_validator(@{{viola}}), 4);
         // number of validators should equal the number we declared
         assert(DiemSystem::validator_set_size() == 2, 5);
-        assert(DiemSystem::get_ith_validator_address(1) == {{vivian}}, 6);
-        assert(DiemSystem::get_ith_validator_address(0) == {{viola}}, 7);
+        assert(DiemSystem::get_ith_validator_address(1) == @{{vivian}}, 6);
+        assert(DiemSystem::get_ith_validator_address(0) == @{{viola}}, 7);
     }
 }
 
@@ -48,7 +48,7 @@ script{
     fun main(creator: signer) {
     let creator = &creator;
         DiemAccount::create_validator_account(
-            creator, 0xAA, x"00000000000000000000000000000000", b"owner_name"
+            creator, @0xAA, x"00000000000000000000000000000000", b"owner_name"
         );
     }
 }
