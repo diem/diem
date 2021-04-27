@@ -6,12 +6,12 @@ use std::path::{Path, PathBuf};
 use codespan_reporting::term::termcolor::Buffer;
 
 use anyhow::anyhow;
-use diem_temppath::TempPath;
 use itertools::Itertools;
 use move_prover::{cli::Options, run_move_prover};
 use move_prover_test_utils::{
     baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var,
 };
+use tempfile::TempDir;
 
 use datatest_stable::Requirements;
 #[allow(unused_imports)]
@@ -110,7 +110,7 @@ fn test_runner_for_feature(path: &Path, feature: &Feature) -> datatest_stable::R
         feature.flags.iter().map(|s| s.to_string()).join(" ")
     );
 
-    let temp_dir = TempPath::new();
+    let temp_dir = TempDir::new()?;
     std::fs::create_dir_all(temp_dir.path())?;
     let (mut args, baseline_path) = get_flags_and_baseline(temp_dir.path(), path, feature)?;
 

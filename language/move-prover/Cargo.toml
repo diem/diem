@@ -17,7 +17,6 @@ abigen = { path = "abigen" }
 errmapgen = { path = "errmapgen" }
 bytecode = { path = "bytecode" }
 move-binary-format = { path = "../move-binary-format" }
-diem-temppath = { path = "../../common/temppath" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
 move-ir-types = { path = "../move-ir/types" }
 
@@ -46,6 +45,7 @@ datatest-stable = "0.1.1"
 move-prover-test-utils = { path = "test-utils" }
 shell-words = "1.0.0"
 walkdir = "2.3.1"
+tempfile = "3.2.0"
 
 [[test]]
 name = "testsuite"

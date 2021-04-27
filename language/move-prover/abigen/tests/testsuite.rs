@@ -4,10 +4,10 @@
 use std::{ffi::OsStr, path::Path};
 
 use codespan_reporting::term::termcolor::Buffer;
-use diem_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 #[allow(unused_imports)]
 use log::debug;
@@ -49,7 +49,7 @@ fn get_generated_abis(dir: &Path) -> std::io::Result<Vec<String>> {
 }
 
 fn test_abigen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Result<()> {
-    let temp_path = PathBuf::from(TempPath::new().path());
+    let temp_path = PathBuf::from(TempDir::new()?.path());
     options.abigen.output_directory = temp_path.to_string_lossy().to_string();
 
     let mut error_writer = Buffer::no_color();

@@ -25,8 +25,8 @@ serde = { version = "1.0.124", features = ["derive"] }
 codespan-reporting = "0.8.0"
 move-prover = { path = ".." }
 datatest-stable = "0.1.1"
+tempfile = "3.2.0"
 move-prover-test-utils = { path = "../test-utils" }
-diem-temppath = { path = "../../../common/temppath" }
 
 [[test]]
 name = "testsuite"

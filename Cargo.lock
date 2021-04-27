@@ -19,7 +19,6 @@ dependencies = [
  "bytecode-verifier",
  "codespan-reporting",
  "datatest-stable",
- "diem-temppath",
  "diem-types",
  "diem-workspace-hack",
  "heck",
@@ -29,6 +28,7 @@ dependencies = [
  "move-prover",
  "move-prover-test-utils",
  "serde",
+ "tempfile",
 ]
 
 [[package]]
@@ -602,7 +602,6 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
- "diem-temppath",
  "diem-workspace-hack",
  "ir-to-bytecode",
  "itertools 0.10.0",
@@ -2699,7 +2698,6 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
- "diem-temppath",
  "diem-workspace-hack",
  "itertools 0.10.0",
  "log",
@@ -2710,6 +2708,7 @@ dependencies = [
  "once_cell",
  "regex",
  "serde",
+ "tempfile",
 ]
 
 [[package]]
@@ -4549,7 +4548,6 @@ dependencies = [
  "codespan",
  "codespan-reporting",
  "datatest-stable",
- "diem-temppath",
  "diem-workspace-hack",
  "docgen",
  "errmapgen",
@@ -4570,6 +4568,7 @@ dependencies = [
  "serde_json",
  "shell-words",
  "simplelog",
+ "tempfile",
  "tokio",
  "toml",
  "walkdir",

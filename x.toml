@@ -236,15 +236,11 @@ existing_deps = [
     ["invalid-mutations", "diem-proptest-helpers"],           # pick_slice_idxs
     ["bytecode-verifier-tests", "diem-framework-releases"],
     ["compiler", "diem-framework-releases"],
-    ["move-prover", "diem-temppath"],
-    ["bytecode", "diem-temppath"],
-    ["docgen", "diem-temppath"],
     ["move-vm-natives", "diem-crypto"],
     ["move-vm-runtime", "diem-logger"],
     ["move-vm-runtime", "diem-infallible"],                   # `Mutex`
     ["move-vm-runtime", "diem-crypto"],                       # using `HashValue` as keys in the script cache
     ["abigen", "diem-types"],                                 # ABI types
-    ["abigen", "diem-temppath"],
     ["move-cli", "vm-genesis"],
     ["move-cli", "diem-vm"],
     ["move-cli", "diem-types"],                               # `ContractEvent`

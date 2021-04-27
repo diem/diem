@@ -26,8 +26,8 @@ once_cell = "1.7.2"
 [dev-dependencies]
 move-prover = { path = ".." }
 datatest-stable = "0.1.1"
+tempfile = "3.2.0"
 move-prover-test-utils = { path = "../test-utils" }
-diem-temppath = { path = "../../../common/temppath" }
 
 [[test]]
 name = "testsuite"

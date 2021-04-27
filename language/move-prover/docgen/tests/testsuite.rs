@@ -5,10 +5,10 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use diem_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use move_prover_test_utils::baseline_test::verify_or_update_baseline;
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -72,7 +72,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
 }
 
 fn test_docgen(path: &Path, mut options: Options, suffix: &str) -> anyhow::Result<()> {
-    let mut temp_path = PathBuf::from(TempPath::new().path());
+    let mut temp_path = PathBuf::from(TempDir::new()?.path());
     options.docgen.output_directory = temp_path.to_string_lossy().to_string();
     let base_name = format!(
         "{}.md",
