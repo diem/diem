@@ -5,10 +5,7 @@
 //! function
 
 use diem_types::account_config::CORE_CODE_ADDRESS;
-use move_core_types::{
-    identifier::{IdentStr, Identifier},
-    language_storage::ModuleId,
-};
+use move_core_types::{ident_str, identifier::IdentStr, language_storage::ModuleId};
 use once_cell::sync::Lazy;
 
 #[macro_export]
@@ -534,137 +531,128 @@ pub(crate) fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'sta
         // AccountAdministrationScripts
         ADD_CURRENCY_TO_ACCOUNT_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("add_currency_to_account").unwrap(),
+            ident_str!("add_currency_to_account"),
         )),
         ADD_RECOVERY_ROTATION_CAPABILITY_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("add_recovery_rotation_capability").unwrap(),
+            ident_str!("add_recovery_rotation_capability"),
         )),
         CREATE_RECOVERY_ADDRESS_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("create_recovery_address").unwrap(),
+            ident_str!("create_recovery_address"),
         )),
         PUBLISH_SHARED_ED25519_PUBLIC_KEY_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("publish_shared_ed25519_public_key").unwrap(),
+            ident_str!("publish_shared_ed25519_public_key"),
         )),
         ROTATE_AUTHENTICATION_KEY_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key").unwrap(),
+            ident_str!("rotate_authentication_key"),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_nonce").unwrap(),
+            ident_str!("rotate_authentication_key_with_nonce"),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_nonce_admin").unwrap(),
+            ident_str!("rotate_authentication_key_with_nonce_admin"),
         )),
         ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_authentication_key_with_recovery_address").unwrap(),
+            ident_str!("rotate_authentication_key_with_recovery_address"),
         )),
         ROTATE_DUAL_ATTESTATION_INFO_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_dual_attestation_info").unwrap(),
+            ident_str!("rotate_dual_attestation_info"),
         )),
         ROTATE_SHARED_ED25519_PUBLIC_KEY_BYTES!() => Some((
             &*ACCOUNT_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("rotate_shared_ed25519_public_key").unwrap(),
+            ident_str!("rotate_shared_ed25519_public_key"),
         )),
 
         // AccountCreationScripts
         CREATE_CHILD_VASP_ACCOUNT_BYTES!() => Some((
             &*ACCOUNT_CREATION_SCRIPTS,
-            IdentStr::new("create_child_vasp_account").unwrap(),
+            ident_str!("create_child_vasp_account"),
         )),
         CREATE_DESIGNATED_DEALER_BYTES!() => Some((
             &*ACCOUNT_CREATION_SCRIPTS,
-            IdentStr::new("create_designated_dealer").unwrap(),
+            ident_str!("create_designated_dealer"),
         )),
         CREATE_PARENT_VASP_ACCOUNT_BYTES!() => Some((
             &*ACCOUNT_CREATION_SCRIPTS,
-            IdentStr::new("create_parent_vasp_account").unwrap(),
+            ident_str!("create_parent_vasp_account"),
         )),
         CREATE_VALIDATOR_ACCOUNT_BYTES!() => Some((
             &*ACCOUNT_CREATION_SCRIPTS,
-            IdentStr::new("create_validator_account").unwrap(),
+            ident_str!("create_validator_account"),
         )),
         CREATE_VALIDATOR_OPERATOR_ACCOUNT_BYTES!() => Some((
             &*ACCOUNT_CREATION_SCRIPTS,
-            IdentStr::new("create_validator_operator_account").unwrap(),
+            ident_str!("create_validator_operator_account"),
         )),
 
         // PaymentScripts
-        PEER_TO_PEER_WITH_METADATA_BYTES!() => Some((
-            &*PAYMENT_SCRIPTS,
-            IdentStr::new("peer_to_peer_with_metadata").unwrap(),
-        )),
+        PEER_TO_PEER_WITH_METADATA_BYTES!() => {
+            Some((&*PAYMENT_SCRIPTS, ident_str!("peer_to_peer_with_metadata")))
+        }
 
         // SystemAdministrationScripts
         UPDATE_DIEM_VERSION_BYTES!() => Some((
             &*SYSTEM_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("update_diem_version").unwrap(),
+            ident_str!("update_diem_version"),
         )),
 
         // TreasuryComplianceScripts
-        BURN_TXN_FEES_BYTES!() => Some((
-            &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("burn_txn_fees").unwrap(),
-        )),
-        FREEZE_ACCOUNT_BYTES!() => Some((
-            &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("freeze_account").unwrap(),
-        )),
-        PREBURN_BYTES!() => Some((
-            &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("preburn").unwrap(),
-        )),
-        TIERED_MINT_BYTES!() => Some((
-            &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("tiered_mint").unwrap(),
-        )),
+        BURN_TXN_FEES_BYTES!() => {
+            Some((&*TREASURY_COMPLIANCE_SCRIPTS, ident_str!("burn_txn_fees")))
+        }
+        FREEZE_ACCOUNT_BYTES!() => {
+            Some((&*TREASURY_COMPLIANCE_SCRIPTS, ident_str!("freeze_account")))
+        }
+        PREBURN_BYTES!() => Some((&*TREASURY_COMPLIANCE_SCRIPTS, ident_str!("preburn"))),
+        TIERED_MINT_BYTES!() => Some((&*TREASURY_COMPLIANCE_SCRIPTS, ident_str!("tiered_mint"))),
         UNFREEZE_ACCOUNT_BYTES!() => Some((
             &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("unfreeze_account").unwrap(),
+            ident_str!("unfreeze_account"),
         )),
         UPDATE_EXCHANGE_RATE_BYTES!() => Some((
             &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("update_exchange_rate").unwrap(),
+            ident_str!("update_exchange_rate"),
         )),
         UPDATE_MINTING_ABILITY_BYTES!() => Some((
             &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("update_minting_ability").unwrap(),
+            ident_str!("update_minting_ability"),
         )),
         UPDATE_DUAL_ATTESTATION_LIMIT_BYTES!() => Some((
             &*TREASURY_COMPLIANCE_SCRIPTS,
-            IdentStr::new("update_dual_attestation_limit").unwrap(),
+            ident_str!("update_dual_attestation_limit"),
         )),
 
         // ValidatorAdministrationScripts
         ADD_VALIDATOR_AND_RECONFIGURE_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("add_validator_and_reconfigure").unwrap(),
+            ident_str!("add_validator_and_reconfigure"),
         )),
         REGISTER_VALIDATOR_CONFIG_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("register_validator_config").unwrap(),
+            ident_str!("register_validator_config"),
         )),
         REMOVE_VALIDATOR_AND_RECONFIGURE_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("remove_validator_and_reconfigure").unwrap(),
+            ident_str!("remove_validator_and_reconfigure"),
         )),
         SET_VALIDATOR_CONFIG_AND_RECONFIGURE_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("set_validator_config_and_reconfigure").unwrap(),
+            ident_str!("set_validator_config_and_reconfigure"),
         )),
         SET_VALIDATOR_OPERATOR_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("set_validator_operator").unwrap(),
+            ident_str!("set_validator_operator"),
         )),
         SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_BYTES!() => Some((
             &*VALIDATOR_ADMINISTRATION_SCRIPTS,
-            IdentStr::new("set_validator_operator_with_nonce_admin").unwrap(),
+            ident_str!("set_validator_operator_with_nonce_admin"),
         )),
 
         // removed scripts
@@ -680,41 +668,37 @@ pub(crate) fn remapping(script_bytes: &[u8]) -> Option<(&'static ModuleId, &'sta
 static ACCOUNT_ADMINISTRATION_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         CORE_CODE_ADDRESS,
-        Identifier::new("AccountAdministrationScripts").unwrap(),
+        ident_str!("AccountAdministrationScripts").to_owned(),
     )
 });
 
 static ACCOUNT_CREATION_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         CORE_CODE_ADDRESS,
-        Identifier::new("AccountCreationScripts").unwrap(),
+        ident_str!("AccountCreationScripts").to_owned(),
     )
 });
 
-static PAYMENT_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        CORE_CODE_ADDRESS,
-        Identifier::new("PaymentScripts").unwrap(),
-    )
-});
+static PAYMENT_SCRIPTS: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, ident_str!("PaymentScripts").to_owned()));
 
 static SYSTEM_ADMINISTRATION_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         CORE_CODE_ADDRESS,
-        Identifier::new("SystemAdministrationScripts").unwrap(),
+        ident_str!("SystemAdministrationScripts").to_owned(),
     )
 });
 
 static TREASURY_COMPLIANCE_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         CORE_CODE_ADDRESS,
-        Identifier::new("TreasuryComplianceScripts").unwrap(),
+        ident_str!("TreasuryComplianceScripts").to_owned(),
     )
 });
 
 static VALIDATOR_ADMINISTRATION_SCRIPTS: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         CORE_CODE_ADDRESS,
-        Identifier::new("ValidatorAdministrationScripts").unwrap(),
+        ident_str!("ValidatorAdministrationScripts").to_owned(),
     )
 });
