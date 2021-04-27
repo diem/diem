@@ -1081,7 +1081,7 @@ impl<'env> ModuleTranslator<'env> {
                             emitln!(self.writer, &check);
                         }
                     }
-                    Stop => {
+                    Stop(_) => {
                         // the two statements combined terminate any execution trace that reaches it
                         emitln!(self.writer, "assume false;");
                         emitln!(self.writer, "return;");

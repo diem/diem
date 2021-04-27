@@ -130,7 +130,7 @@ pub enum Operation {
     WriteRef,
     FreezeRef,
     Havoc(HavocKind),
-    Stop,
+    Stop(Label), // holds the label of the loop header (i.e., where the back-edge goes into)
 
     // Memory model
     WriteBack(BorrowNode, BorrowEdge),
@@ -199,7 +199,7 @@ impl Operation {
             Operation::WriteRef => false,
             Operation::FreezeRef => false,
             Operation::Havoc(_) => false,
-            Operation::Stop => false,
+            Operation::Stop(_) => false,
             Operation::WriteBack(_, _) => false,
             Operation::Splice(_) => false,
             Operation::UnpackRef => false,
@@ -339,7 +339,9 @@ impl Bytecode {
     pub fn is_exit(&self) -> bool {
         matches!(
             self,
-            Bytecode::Ret(..) | Bytecode::Abort(..) | Bytecode::Call(_, _, Operation::Stop, _, _)
+            Bytecode::Ret(..)
+                | Bytecode::Abort(..)
+                | Bytecode::Call(_, _, Operation::Stop(_), _, _)
         )
     }
 
@@ -353,7 +355,7 @@ impl Bytecode {
             Bytecode::Ret(..)
                 | Bytecode::Jump(..)
                 | Bytecode::Abort(..)
-                | Bytecode::Call(_, _, Operation::Stop, _, _)
+                | Bytecode::Call(_, _, Operation::Stop(_), _, _)
         )
     }
 
@@ -941,8 +943,8 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
                     }
                 )?;
             }
-            Stop => {
-                write!(f, "stop")?;
+            Stop(label) => {
+                write!(f, "stop(L{})", label.as_usize())?;
             }
             // Unary
             CastU8 => write!(f, "(u8)")?,

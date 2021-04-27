@@ -222,7 +222,7 @@ impl LoopAnalysisProcessor {
 
             // stop the checking
             builder.emit_with(|attr_id| {
-                Bytecode::Call(attr_id, vec![], Operation::Stop, vec![], None)
+                Bytecode::Call(attr_id, vec![], Operation::Stop(*label), vec![], None)
             });
         }
 
