@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
+#either release or test
+if [ -z "$IMAGE_TARGETS" ]; then
+  IMAGE_TARGETS="all"
+fi
+
 # This is a common compilation scripts across different docker file
 # It unifies RUSFLAGS, compilation flags (like --release) and set of binary crates to compile in common docker layer
 
@@ -17,31 +22,36 @@ export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO
 # TODO: consider using ${CARGO} once upstream issues are fixed.
 cargo x generate-workspace-hack --mode disable
 
-# Build release binaries (TODO: use x to run this?)
-cargo build --release \
-         -p diem-genesis-tool \
-         -p diem-operational-tool \
-         -p diem-node \
-         -p diem-key-manager \
-         -p safety-rules \
-         -p db-bootstrapper \
-         -p backup-cli \
-         -p diem-transaction-replay \
-         -p diem-writeset-generator \
-         "$@"
+if [ "$IMAGE_TARGETS" = "release" ] || [ "$IMAGE_TARGETS" = "all" ]; then
+  # Build release binaries (TODO: use x to run this?)
+  cargo build --release \
+          -p diem-genesis-tool \
+          -p diem-operational-tool \
+          -p diem-node \
+          -p diem-key-manager \
+          -p safety-rules \
+          -p db-bootstrapper \
+          -p backup-cli \
+          -p diem-transaction-replay \
+          -p diem-writeset-generator \
+          "$@"
 
-# Build and overwrite the diem-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
-if [ "$ENABLE_FAILPOINTS" = "1" ]; then
-  echo "Building diem-node with failpoints feature"
-  (cd diem-node && cargo build --release --features failpoints "$@")
+  # Build and overwrite the diem-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
+  if [ "$ENABLE_FAILPOINTS" = "1" ]; then
+    echo "Building diem-node with failpoints feature"
+    (cd diem-node && cargo build --release --features failpoints "$@")
+  fi
 fi
 
-# These non-release binaries are built separately to avoid feature unification issues
-cargo build --release \
-         -p cluster-test \
-         -p cli \
-         -p diem-faucet \
-         "$@"
+
+if [ "$IMAGE_TARGETS" = "test" ] || [ "$IMAGE_TARGETS" = "all"  ]; then
+  # These non-release binaries are built separately to avoid feature unification issues
+  cargo build --release \
+          -p cluster-test \
+          -p cli \
+          -p diem-faucet \
+          "$@"
+fi
 
 rm -rf target/release/{build,deps,incremental}
 

@@ -17,7 +17,7 @@ FROM toolchain AS builder
 ARG ENABLE_FAILPOINTS
 COPY . /diem
 
-RUN ./docker/build-common.sh
+RUN IMAGE_TARGETS="test" ./docker/build-common.sh
 
 FROM debian:buster-20210408@sha256:ba4a437377a0c450ac9bb634c3754a17b1f814ce6fa3157c0dc9eef431b29d1f
 

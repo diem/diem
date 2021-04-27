@@ -145,6 +145,10 @@ jobs:
       head-tag: ${{ steps.push-to-novi-ecr.outputs.head-tag }}
     environment:
       name: Docker
+    strategy:
+      matrix:
+        target_images:
+          [client faucet cluster-test, init tools validator validator-tcb]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -177,16 +181,14 @@ jobs:
       - name: pre-release docker images
         run: |
           BRANCH="$CHANGES_TARGET_BRANCH"
+          echo Target Images: ${{ matrix.target_images }}
+          IFS=' ' read -ra TARGET_IMAGES <<< "${{ matrix.target_images }}"
           success=0
           tmpfile=$(mktemp)
           echo "Failed to push:" > "${tmpfile}"
-          docker/build_push.sh -u -p -b ${BRANCH} -n client || success=$(echo "client" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n init || success=$(echo "init" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n faucet || success=$(echo "faucet" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n tools || success=$(echo "tools" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n validator || success=$(echo "validator" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb || success=$(echo "validator-tcb" >> "${tmpfile}"; echo 1)
-          docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test || success=$(echo "cluster-test" >> "${tmpfile}"; echo 1)
+          for image in "${TARGET_IMAGES[@]}"; do
+            docker/build_push.sh -u -p -b ${BRANCH} -n "$image" || success=$(echo "$image" >> "${tmpfile}"; echo 1)
+          done
           if [[ "$success" == "1" ]]; then
             cat "${tmpfile}"
           fi
@@ -202,13 +204,14 @@ jobs:
           echo "::set-output name=head-tag::land_$GIT_REV";
           aws ecr get-login-password --region ${{ secrets.ENV_NOVI_ECR_AWS_REGION }} | \
           docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
-          docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d
+          docker/docker_republish.sh -t pre_${BRANCH}_${GIT_REV} -o land_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL} -d -i "${{ matrix.target_images }}"
 
   need-base-images:
     runs-on: self-hosted
     needs: prepare
     if: ${{ github.event_name == 'push' && needs.prepare.outputs.build-images == 'true' && needs.prepare.outputs.need-base-images == 'true' }}
     outputs:
+      # The last matrix build to succeed will set the output.   Hilarious.
       prev-tag: ${{ steps.build-extra-images.outputs.prev-tag }}
     steps:
       - uses: actions/checkout@v2

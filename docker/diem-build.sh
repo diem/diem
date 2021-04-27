@@ -60,7 +60,7 @@ if [ "$1" = "--incremental" ]; then
     echo "${BLUE}Tip:${RESTORE}: If you see unexpected failure, try docker rm -f $CONTAINER"
   fi
   CONTAINER_TARGET=/target
-  docker exec -e "STRIP_DIR=$CONTAINER_TARGET" -e "ENABLE_FAILPOINTS=$ENABLE_FAILPOINTS" -i -t "$CONTAINER" ./docker/build-common.sh --target-dir "$CONTAINER_TARGET"
+  docker exec -e "STRIP_DIR=$CONTAINER_TARGET" -e "ENABLE_FAILPOINTS=$ENABLE_FAILPOINTS" -i -t "$CONTAINER" "./docker/build-common.sh" --target-dir "$CONTAINER_TARGET"
   echo "${BLUE}Build is done, copying over artifacts${RESTORE}"
   docker exec -i -t "$CONTAINER" sh -c 'find /target/release -maxdepth 1 -executable -type f | xargs -I F cp F /out-target'
   TMP_DOCKERFILE="$DOCKERFILE.tmp"
