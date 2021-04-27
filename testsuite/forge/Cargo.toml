@@ -21,3 +21,4 @@ debug-interface = { path = "../../common/debug-interface" }
 diem-config = { path = "../../config" }
 generate-key = { path = "../../config/generate-key" }
 diem-workspace-hack = { path = "../../common/workspace-hack" }
+diem-genesis-tool = {path = "../../config/management/genesis", features = ["testing"] }

@@ -5,6 +5,7 @@ use super::Test;
 use crate::{CoreContext, Result};
 use diem_sdk::{
     client::{BlockingClient, FaucetClient, MethodRequest},
+    move_types::account_address::AccountAddress,
     transaction_builder::{Currency, TransactionFactory},
     types::{chain_id::ChainId, transaction::authenticator::AuthenticationKey, LocalAccount},
 };
@@ -44,6 +45,10 @@ impl<'t> PublicUsageContext<'t> {
         self.public_info.chain_id
     }
 
+    pub fn tx_factory(&self) -> TransactionFactory {
+        TransactionFactory::new(self.chain_id())
+    }
+
     pub fn fund(
         &mut self,
         currency: Currency,
@@ -51,6 +56,22 @@ impl<'t> PublicUsageContext<'t> {
         amount: u64,
     ) -> Result<()> {
         self.public_info.coffer.fund(currency, auth_key, amount)
+    }
+
+    pub fn transfer_coins(
+        &mut self,
+        currency: Currency,
+        sender: &mut LocalAccount,
+        payee: AccountAddress,
+        amount: u64,
+    ) -> Result<()> {
+        let client = self.client();
+        let tx = sender
+            .sign_with_transaction_builder(self.tx_factory().peer_to_peer(currency, payee, amount));
+        client.submit(&tx)?;
+        client.wait_for_signed_transaction(&tx, None, None)?;
+
+        Ok(())
     }
 }
 
@@ -111,7 +132,6 @@ impl Fund for Coffer<'_> {
 pub struct PublicInfo<'t> {
     json_rpc_url: &'t str,
     chain_id: ChainId,
-
     coffer: Coffer<'t>,
 }
 

@@ -5,11 +5,23 @@ use crate::Result;
 use debug_interface::NodeDebugClient;
 use diem_config::config::NodeConfig;
 use diem_sdk::types::PeerId;
+use diem_swarm::swarm::HealthStatus;
 
 /// A NodeId is intended to be a unique identifier of a Node in a Swarm. Due to VFNs sharing the
 /// same PeerId as their Validator, another identifier is needed in order to distinguish between
 /// the two.
 pub struct NodeId(usize);
+
+impl NodeId {
+    pub fn new(id: usize) -> Self {
+        NodeId(id)
+    }
+
+    /// Accessor for the name of the module
+    pub fn as_inner(&self) -> usize {
+        self.0
+    }
+}
 
 /// Trait used to represent a running Validator or FullNode
 pub trait Node {
@@ -20,13 +32,13 @@ pub trait Node {
     fn node_id(&self) -> NodeId;
 
     /// Return the URL for the JSON-RPC endpoint of this Node
-    fn json_rpc_endpoint(&self) -> &str;
+    fn json_rpc_endpoint(&self) -> String;
 
     /// Return a NodeDebugClient for this Node
     fn debug_client(&self) -> &NodeDebugClient;
 
     /// Query a Metric for from this Node
-    fn get_metric(&self);
+    fn get_metric(&mut self, metric_name: &str) -> Option<i64>;
 
     /// Return a reference to the Config this Node is using
     fn config(&self) -> &NodeConfig;
@@ -49,10 +61,7 @@ pub trait Node {
     fn clear_storage(&mut self) -> Result<()>;
 
     /// Performs a Health Check on the Node
-    fn health_check(&self) -> Result<()>;
-
-    /// Performs a connectivity check on this Node
-    fn connectivity_check(&self) -> Result<()>; // Maybe have this as a function as a part of a validator or fullnode
+    fn health_check(&mut self) -> HealthStatus;
 }
 
 /// Trait used to represent a running Validator

@@ -118,7 +118,7 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
         summary.write_starting_msg()?;
 
         let mut rng = ::rand::rngs::StdRng::from_seed([0; 32]);
-        let mut swarm = self.factory.launch_swarm();
+        let mut swarm = self.factory.launch_swarm(1);
 
         // Run PublicUsageTests
         for test in self.tests.public_usage_tests {

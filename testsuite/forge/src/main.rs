@@ -3,12 +3,16 @@
 
 use std::{env, path::PathBuf, process::Command};
 
-use diem_sdk::transaction_builder::Currency;
+use diem_sdk::{
+    client::{BlockingClient, MethodRequest},
+    move_types::account_address::AccountAddress,
+    transaction_builder::Currency,
+};
 use forge::{forge_main, ForgeConfig, Result, *};
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
-        public_usage_tests: &[&FundAccount],
+        public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
     };
 
@@ -42,6 +46,23 @@ impl AdminTest for GetMetadata {
     }
 }
 
+pub fn check_account_balance(
+    client: &BlockingClient,
+    currency: Currency,
+    account_address: AccountAddress,
+    expected: u64,
+) -> Result<()> {
+    let account_view = client.get_account(account_address)?.into_inner().unwrap();
+    let balance = account_view
+        .balances
+        .iter()
+        .find(|b| b.currency == currency)
+        .unwrap();
+    assert_eq!(balance.amount, expected);
+
+    Ok(())
+}
+
 #[derive(Debug)]
 struct FundAccount;
 
@@ -59,14 +80,64 @@ impl PublicUsageTest for FundAccount {
         let amount = 1000;
         let currency = Currency::XUS;
         ctx.fund(currency, account.authentication_key(), amount)?;
+        check_account_balance(&client, currency, account.address(), amount)?;
 
-        let account_view = client.get_account(account.address())?.into_inner().unwrap();
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct TransferCoins;
+
+impl Test for TransferCoins {
+    fn name(&self) -> &'static str {
+        "transfer_coins"
+    }
+}
+
+impl PublicUsageTest for TransferCoins {
+    fn run<'t>(&self, ctx: &mut PublicUsageContext<'t>) -> Result<()> {
+        let mut account = ctx.random_account();
+        let amount = 1000;
+        let currency = Currency::XUS;
+        let client = ctx.client();
+        ctx.fund(currency, account.authentication_key(), amount)?;
+
+        let mut payer = ctx.random_account();
+        let payee = ctx.random_account();
+        let create_payer =
+            account.sign_with_transaction_builder(ctx.tx_factory().create_child_vasp_account(
+                currency,
+                payer.authentication_key(),
+                false,
+                100,
+            ));
+        let create_payee =
+            account.sign_with_transaction_builder(ctx.tx_factory().create_child_vasp_account(
+                currency,
+                payee.authentication_key(),
+                false,
+                0,
+            ));
+        let batch = vec![
+            MethodRequest::submit(&create_payer)?,
+            MethodRequest::submit(&create_payee)?,
+        ];
+        client.batch(batch)?;
+        client.wait_for_signed_transaction(&create_payer, None, None)?;
+        client.wait_for_signed_transaction(&create_payee, None, None)?;
+        check_account_balance(&client, currency, payer.address(), 100)?;
+
+        ctx.transfer_coins(currency, &mut payer, payee.address(), 10)?;
+        check_account_balance(&client, currency, payer.address(), 90)?;
+        check_account_balance(&client, currency, payee.address(), 10)?;
+        let account_view = client.get_account(payee.address())?.into_inner().unwrap();
         let balance = account_view
             .balances
             .iter()
             .find(|b| b.currency == currency)
             .unwrap();
-        assert_eq!(balance.amount, amount);
+        assert_eq!(balance.amount, 10);
 
         Ok(())
     }

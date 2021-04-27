@@ -5,5 +5,5 @@ use super::Swarm;
 
 /// Trait used to represent a interface for constructing a launching new networks
 pub trait Factory {
-    fn launch_swarm(&self) -> Box<dyn Swarm>;
+    fn launch_swarm(&self, node_num: usize) -> Box<dyn Swarm>;
 }

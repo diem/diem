@@ -3053,6 +3053,7 @@ dependencies = [
  "anyhow",
  "debug-interface",
  "diem-config",
+ "diem-genesis-tool",
  "diem-sdk",
  "diem-swarm",
  "diem-workspace-hack",

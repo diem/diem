@@ -22,33 +22,36 @@ use std::{
 };
 use thiserror::Error;
 
+#[derive(Debug)]
+struct Process(Child);
+
+impl Drop for Process {
+    // When the Process struct goes out of scope we need to kill the child process
+    fn drop(&mut self) {
+        // check if the process has already been terminated
+        match self.0.try_wait() {
+            // The child process has already terminated, perhaps due to a crash
+            Ok(Some(_)) => {}
+
+            // The process is still running so we need to attempt to kill it
+            _ => {
+                self.0.kill().expect("Process wasn't running");
+                self.0.wait().unwrap();
+            }
+        }
+    }
+}
+
 pub struct DiemNode {
-    process: Child,
+    process: Option<Process>,
     node_id: String,
     node_type: NodeType,
     peer_id: AccountAddress,
     debug_client: NodeDebugClient,
     log_path: PathBuf,
     config: NodeConfig,
-}
-
-impl Drop for DiemNode {
-    // When the DiemNode struct goes out of scope we need to kill the child process
-    fn drop(&mut self) {
-        // check if the process has already been terminated
-        match self.process.try_wait() {
-            // The child process has already terminated, perhaps due to a crash
-            Ok(Some(_)) => {}
-
-            // The node is still running so we need to attempt to kill it
-            _ => {
-                if let Err(e) = self.process.kill() {
-                    panic!("DiemNode process could not be killed: '{}'", e);
-                }
-                self.process.wait().unwrap();
-            }
-        }
-    }
+    config_path: PathBuf,
+    diem_node_bin_path: PathBuf,
 }
 
 impl DiemNode {
@@ -103,13 +106,15 @@ impl DiemNode {
         );
 
         Ok(Self {
-            process,
+            process: Some(Process(process)),
             node_id,
             peer_id,
             node_type,
             debug_client,
             log_path,
             config,
+            config_path: PathBuf::from(config_path),
+            diem_node_bin_path: PathBuf::from(diem_node_bin_path),
         })
     }
 
@@ -119,6 +124,33 @@ impl DiemNode {
 
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
+    }
+
+    pub fn start(&mut self) -> Result<()> {
+        let log_file = File::open(&self.log_path)?;
+        // Start node process
+        let mut node_command = Command::new(self.diem_node_bin_path.as_path());
+        node_command.arg("-f").arg(self.config_path.as_path());
+        if env::var("RUST_LOG").is_err() {
+            // Only set our RUST_LOG if its not present in environment
+            node_command.env("RUST_LOG", "debug");
+        }
+        node_command
+            .stdout(log_file.try_clone()?)
+            .stderr(log_file.try_clone()?);
+        let process = node_command.spawn().with_context(|| {
+            format!(
+                "Error launching node process with binary: {:?}",
+                self.diem_node_bin_path.as_path()
+            )
+        })?;
+        self.process = Some(Process(process));
+
+        Ok(())
+    }
+
+    pub fn stop(&mut self) {
+        self.process = None;
     }
 
     pub fn port(&self) -> u16 {
@@ -133,6 +165,10 @@ impl DiemNode {
 
     pub fn config(&self) -> &NodeConfig {
         &self.config
+    }
+
+    pub fn debug_client(&self) -> &NodeDebugClient {
+        &self.debug_client
     }
 
     pub fn get_log_contents(&self) -> Result<String> {
@@ -258,21 +294,25 @@ impl DiemNode {
     pub fn health_check(&mut self) -> HealthStatus {
         println!("Health check on node '{}'", self.node_id);
 
-        // check if the process has terminated
-        match self.process.try_wait() {
-            // This would mean the child process has crashed
-            Ok(Some(status)) => {
-                println!("Node '{}' crashed with: {}", self.node_id, status);
-                return HealthStatus::Crashed(status);
-            }
+        if let Some(p) = &mut self.process {
+            match p.0.try_wait() {
+                // This would mean the child process has crashed
+                Ok(Some(status)) => {
+                    println!("Node '{}' crashed with: {}", self.node_id, status);
+                    return HealthStatus::Crashed(status);
+                }
 
-            // This is the case where the node is still running
-            Ok(None) => {}
+                // This is the case where the node is still running
+                Ok(None) => {}
 
-            // Some other unknown error
-            Err(e) => {
-                panic!("error attempting to query Node: {}", e);
+                // Some other unknown error
+                Err(e) => {
+                    panic!("error attempting to query Node: {}", e);
+                }
             }
+        } else {
+            warn!("Node '{}' is stopped", self.node_id);
+            return HealthStatus::Stopped;
         }
 
         match self.debug_client.get_node_metrics() {
@@ -292,6 +332,7 @@ pub enum HealthStatus {
     Healthy,
     Crashed(::std::process::ExitStatus),
     RpcFailure(anyhow::Error),
+    Stopped,
 }
 
 /// A wrapper that unifies PathBuf and TempPath.
@@ -466,15 +507,22 @@ impl DiemSwarm {
         }
         self.wait_for_startup()?;
 
-        // TODO: Maybe wait for mroe than one on full nodes
+        // TODO: Maybe wait for more than one on full nodes
         let expected_peers = match self.node_type {
             NodeType::Validator => self.nodes.len().saturating_sub(1),
-            NodeType::ValidatorFullNode => 1,
+            // for 1 node vfn swarm, it does not have fallback peer
+            NodeType::ValidatorFullNode => {
+                if self.nodes.len() > 1 {
+                    1
+                } else {
+                    0
+                }
+            }
             NodeType::PublicFullNode => 1,
         };
 
         self.wait_for_connectivity(expected_peers)?;
-        info!("Successfully launched Swarm");
+        println!("{:?} Successfully launched Swarm", self.node_type);
         Ok(())
     }
 
@@ -518,6 +566,9 @@ impl DiemSwarm {
                             node.get_log_contents().unwrap()
                         );
                         return Err(SwarmLaunchFailure::NodeCrash);
+                    }
+                    HealthStatus::Stopped => {
+                        panic!("Diem node '{} child process is not created", node.node_id())
                     }
                 }
             }
