@@ -372,22 +372,40 @@ impl DiemVM {
             WriteSetPayload::Direct(change_set) => change_set.clone(),
             WriteSetPayload::Script { script, execute_as } => {
                 let mut tmp_session = self.0.new_session(remote_cache);
-                let args = convert_txn_args(script.args());
+                let diem_version = self.0.get_diem_version().map_err(Err)?;
                 let senders = match txn_sender {
                     None => vec![*execute_as],
                     Some(sender) => vec![sender, *execute_as],
                 };
-                let execution_result = tmp_session
-                    .execute_script(
+                let remapped_script = if diem_version < diem_types::on_chain_config::DIEM_VERSION_2
+                {
+                    None
+                } else {
+                    script_to_script_function::remapping(script.code())
+                };
+                let execution_result = match remapped_script {
+                    // We are in this case before VERSION_2
+                    // or if there is no remapping for the script
+                    None => tmp_session.execute_script(
                         script.code().to_vec(),
                         script.ty_args().to_vec(),
-                        args,
+                        convert_txn_args(script.args()),
                         senders,
                         &mut gas_status,
                         log_context,
-                    )
-                    .and_then(|_| tmp_session.finish())
-                    .map_err(|e| e.into_vm_status());
+                    ),
+                    Some((module, function)) => tmp_session.execute_script_function(
+                        module,
+                        function,
+                        script.ty_args().to_vec(),
+                        convert_txn_args(script.args()),
+                        senders,
+                        &mut gas_status,
+                        log_context,
+                    ),
+                }
+                .and_then(|_| tmp_session.finish())
+                .map_err(|e| e.into_vm_status());
                 match execution_result {
                     Ok((changeset, events)) => {
                         let (cs, events) =
