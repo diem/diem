@@ -711,6 +711,51 @@ fn test_update_consistency() {
     }
 }
 
+#[test]
+fn test_update_consistency_batches() {
+    let seed: &[_] = &[1, 2, 3, 4];
+    let mut actual_seed = [0u8; 32];
+    actual_seed[..seed.len()].copy_from_slice(&seed);
+    let mut rng: StdRng = StdRng::from_seed(actual_seed);
+
+    let mut kvs = vec![];
+    let smt = SparseMerkleTree::new(*SPARSE_MERKLE_PLACEHOLDER_HASH);
+    let proof_reader = ProofReader::default();
+    let mut smt_serial;
+    let mut smt_batches;
+    for i in 1..=5 {
+        for _ in 0..1000 {
+            let key = HashValue::random_with_rng(&mut rng);
+            let value = AccountStateBlob::from(HashValue::random_with_rng(&mut rng).to_vec());
+            kvs.push((key, value));
+        }
+
+        let mut batches = vec![];
+        for j in 0..500 {
+            batches.push(
+                kvs.iter()
+                    .skip(j * 2)
+                    .take(2)
+                    .map(|(k, v)| (*k, v))
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        let start = std::time::Instant::now();
+        smt_serial = smt.serial_update(batches.clone(), &proof_reader).unwrap();
+        println!("serial {}-th run: {}ms", i, start.elapsed().as_millis());
+
+        let start = std::time::Instant::now();
+        smt_batches = smt.batches_update(batches.clone(), &proof_reader).unwrap();
+        println!("batches {}-th run: {}ms", i, start.elapsed().as_millis());
+
+        assert_eq!(smt_serial.0, smt_batches.0);
+        assert_eq!(smt_serial.1.root_hash(), smt_batches.1.root_hash());
+
+        kvs.clear();
+    }
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(50))]
     #[test]
@@ -726,6 +771,7 @@ proptest! {
         prop_assert_eq!(initial_state_root, *SPARSE_MERKLE_PLACEHOLDER_HASH);
         let mut serial_updated_tree = SparseMerkleTree::new(initial_state_root);
         let mut batch_updated_tree = SparseMerkleTree::new(initial_state_root);
+        let mut batches_updated_tree = SparseMerkleTree::new(initial_state_root);
 
         for (txns_to_commit, ledger_info_with_sigs) in input.iter() {
             let updates = txns_to_commit.iter()
@@ -777,12 +823,18 @@ proptest! {
                                                                  &proof_reader)
                 .unwrap();
             serial_updated_tree = serial_updated_tree
-                .serial_update(updates, &proof_reader)
+                .serial_update(updates.clone(), &proof_reader)
                 .unwrap().1;
+            batches_updated_tree = batches_updated_tree
+                .batches_update(updates, &proof_reader)
+                .unwrap().1;
+
+            prop_assert_eq!(batch_updated_tree.root_hash(), batches_updated_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), serial_updated_tree.root_hash());
             prop_assert_eq!(batch_updated_tree.root_hash(), root_in_db);
             batch_updated_tree.prune();
             serial_updated_tree.prune();
+            batches_updated_tree.prune();
         }
     }
 }
