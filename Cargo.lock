@@ -4404,7 +4404,6 @@ dependencies = [
  "diem-framework",
  "diem-workspace-hack",
  "difference",
- "fallible",
  "hex",
  "ir-to-bytecode",
  "move-binary-format",

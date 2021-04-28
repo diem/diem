@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{command_line as cli, errors::Errors};
-use fallible::copy_from_slice::copy_slice_to_vec;
 use move_ir_types::location::*;
 use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
@@ -122,7 +121,7 @@ impl TryFrom<&[u8]> for Address {
             Err(format!("The Address {:?} is of invalid length", bytes))
         } else {
             let mut addr = [0u8; ADDRESS_LENGTH];
-            copy_slice_to_vec(bytes, &mut addr).map_err(|e| format!("{}", e))?;
+            addr.copy_from_slice(bytes);
             Ok(Address(addr))
         }
     }
