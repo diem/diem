@@ -16,6 +16,7 @@ move-model = { path = "../../move-model" }
 
 # external dependencies
 anyhow = "1.0.38"
+num = "0.4.0"
 serde = { version = "1.0.124", features = ["derive"] }
 
 [dev-dependencies]

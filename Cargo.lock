@@ -601,6 +601,7 @@ dependencies = [
  "move-core-types",
  "move-model",
  "move-prover-test-utils",
+ "num 0.4.0",
  "serde",
 ]
 

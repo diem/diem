@@ -3,7 +3,7 @@
 
 pub mod ast;
 pub mod display;
+pub mod expr;
 mod status;
 pub mod translate;
 pub mod ty;
-pub mod value;
