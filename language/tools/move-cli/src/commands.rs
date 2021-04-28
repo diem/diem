@@ -358,25 +358,25 @@ fn explain_execution_effects(
             )
         }
     }
-    if !changeset.accounts.is_empty() {
+    if !changeset.accounts().is_empty() {
         println!(
             "Changed resource(s) under {:?} address(es):",
-            changeset.accounts.len()
+            changeset.accounts().len()
         );
     }
     // total bytes written across all accounts
     let mut total_bytes_written = 0;
-    for (addr, account) in &changeset.accounts {
+    for (addr, account) in changeset.accounts() {
         print!("  ");
-        if account.resources.is_empty() {
+        if account.resources().is_empty() {
             continue;
         }
         println!(
             "Changed {:?} resource(s) under address {:?}:",
-            account.resources.len(),
+            account.resources().len(),
             addr
         );
-        for (struct_tag, write_opt) in &account.resources {
+        for (struct_tag, write_opt) in account.resources() {
             print!("    ");
             let mut bytes_to_write = struct_tag.access_vector().len();
             match write_opt {
@@ -427,8 +427,8 @@ fn maybe_commit_effects(
     // similar to explain effects, all module publishing happens via save_modules(), so effects
     // shouldn't contain modules
     if commit {
-        for (addr, account) in changeset.accounts {
-            for (struct_tag, blob_opt) in account.resources {
+        for (addr, account) in changeset.into_inner() {
+            for (struct_tag, blob_opt) in account.into_resources() {
                 match blob_opt {
                     Some(blob) => state.save_resource(addr, struct_tag, &blob)?,
                     None => state.delete_resource(addr, struct_tag)?,

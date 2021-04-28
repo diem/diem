@@ -12,8 +12,8 @@ use std::collections::btree_map::{self, BTreeMap};
 /// A collection of changes to modules and resources under a Move account.
 #[derive(Debug, Clone)]
 pub struct AccountChangeSet {
-    pub modules: BTreeMap<Identifier, Option<Vec<u8>>>,
-    pub resources: BTreeMap<StructTag, Option<Vec<u8>>>,
+    modules: BTreeMap<Identifier, Option<Vec<u8>>>,
+    resources: BTreeMap<StructTag, Option<Vec<u8>>>,
 }
 
 fn publish_checked<K, V, F>(map: &mut BTreeMap<K, Option<V>>, k: K, v: V, make_err: F) -> Result<()>
@@ -57,11 +57,47 @@ where
 }
 
 impl AccountChangeSet {
+    pub fn from_modules_resources(
+        modules: BTreeMap<Identifier, Option<Vec<u8>>>,
+        resources: BTreeMap<StructTag, Option<Vec<u8>>>,
+    ) -> Self {
+        Self { modules, resources }
+    }
+
     pub fn new() -> Self {
         Self {
             modules: BTreeMap::new(),
             resources: BTreeMap::new(),
         }
+    }
+
+    pub fn into_inner(
+        self,
+    ) -> (
+        BTreeMap<Identifier, Option<Vec<u8>>>,
+        BTreeMap<StructTag, Option<Vec<u8>>>,
+    ) {
+        (self.modules, self.resources)
+    }
+
+    pub fn into_resources(self) -> BTreeMap<StructTag, Option<Vec<u8>>> {
+        self.resources
+    }
+
+    pub fn into_modules(self) -> BTreeMap<Identifier, Option<Vec<u8>>> {
+        self.modules
+    }
+
+    pub fn modules(&self) -> &BTreeMap<Identifier, Option<Vec<u8>>> {
+        &self.modules
+    }
+
+    pub fn resources(&self) -> &BTreeMap<StructTag, Option<Vec<u8>>> {
+        &self.resources
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.modules.is_empty() && self.resources.is_empty()
     }
 
     pub fn squash(&mut self, other: Self) -> Result<()> {
@@ -113,10 +149,11 @@ impl AccountChangeSet {
     }
 }
 
-/// A collection of changes to a Move state.
+/// A collection of changes to a Move state. Each AccountChangeSet in the domain of `accounts`
+/// is guaranteed to be nonempty
 #[derive(Debug, Clone)]
 pub struct ChangeSet {
-    pub accounts: BTreeMap<AccountAddress, AccountChangeSet>,
+    accounts: BTreeMap<AccountAddress, AccountChangeSet>,
 }
 
 impl ChangeSet {
@@ -126,10 +163,28 @@ impl ChangeSet {
         }
     }
 
+    pub fn accounts(&self) -> &BTreeMap<AccountAddress, AccountChangeSet> {
+        &self.accounts
+    }
+
+    pub fn into_inner(self) -> BTreeMap<AccountAddress, AccountChangeSet> {
+        self.accounts
+    }
+
     fn get_or_insert_account_changeset(&mut self, addr: AccountAddress) -> &mut AccountChangeSet {
         match self.accounts.entry(addr) {
             btree_map::Entry::Occupied(entry) => entry.into_mut(),
             btree_map::Entry::Vacant(entry) => entry.insert(AccountChangeSet::new()),
+        }
+    }
+
+    pub fn publish_or_overwrite_account_change_set(
+        &mut self,
+        addr: AccountAddress,
+        account_change_set: AccountChangeSet,
+    ) {
+        if !account_change_set.is_empty() {
+            self.accounts.insert(addr, account_change_set);
         }
     }
 

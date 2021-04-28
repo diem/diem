@@ -98,7 +98,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
     ///
     /// Gives all proper guarantees on lifetime of global data as well.
     pub(crate) fn into_effects(self) -> PartialVMResult<(ChangeSet, Vec<Event>)> {
-        let mut account_changesets = BTreeMap::new();
+        let mut change_set = ChangeSet::new();
         for (addr, account_data_cache) in self.account_map.into_iter() {
             let mut modules = BTreeMap::new();
             for (module_name, module_blob) in account_data_cache.module_map {
@@ -128,8 +128,10 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
                     }
                 }
             }
-
-            account_changesets.insert(addr, AccountChangeSet { modules, resources });
+            change_set.publish_or_overwrite_account_change_set(
+                addr,
+                AccountChangeSet::from_modules_resources(modules, resources),
+            );
         }
 
         let mut events = vec![];
@@ -141,12 +143,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
             events.push((guid, seq_num, ty_tag, blob))
         }
 
-        Ok((
-            ChangeSet {
-                accounts: account_changesets,
-            },
-            events,
-        ))
+        Ok((change_set, events))
     }
 
     pub(crate) fn num_mutated_accounts(&self, sender: &AccountAddress) -> u64 {

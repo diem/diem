@@ -47,8 +47,8 @@ pub struct DeltaStorage<'a, 'b, S> {
 
 impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
-        if let Some(account_storage) = self.delta.accounts.get(module_id.address()) {
-            if let Some(blob_opt) = account_storage.modules.get(module_id.name()) {
+        if let Some(account_storage) = self.delta.accounts().get(module_id.address()) {
+            if let Some(blob_opt) = account_storage.modules().get(module_id.name()) {
                 return Ok(blob_opt.clone());
             }
         }
@@ -61,8 +61,8 @@ impl<'a, 'b, S: RemoteCache> RemoteCache for DeltaStorage<'a, 'b, S> {
         address: &AccountAddress,
         tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        if let Some(account_storage) = self.delta.accounts.get(address) {
-            if let Some(blob_opt) = account_storage.resources.get(tag) {
+        if let Some(account_storage) = self.delta.accounts().get(address) {
+            if let Some(blob_opt) = account_storage.resources().get(tag) {
                 return Ok(blob_opt.clone());
             }
         }
@@ -118,27 +118,20 @@ where
 
 impl InMemoryAccountStorage {
     fn apply(&mut self, account_changeset: AccountChangeSet) -> Result<()> {
-        apply_changes(
-            &mut self.modules,
-            account_changeset.modules,
-            |module_name| {
-                format_err!(
-                    "Failed to delete module {}: module does not exist.",
-                    module_name
-                )
-            },
-        )?;
+        let (modules, resources) = account_changeset.into_inner();
+        apply_changes(&mut self.modules, modules, |module_name| {
+            format_err!(
+                "Failed to delete module {}: module does not exist.",
+                module_name
+            )
+        })?;
 
-        apply_changes(
-            &mut self.resources,
-            account_changeset.resources,
-            |struct_tag| {
-                format_err!(
-                    "Failed to delete resource {}: resource does not exist.",
-                    struct_tag
-                )
-            },
-        )?;
+        apply_changes(&mut self.resources, resources, |struct_tag| {
+            format_err!(
+                "Failed to delete resource {}: resource does not exist.",
+                struct_tag
+            )
+        })?;
 
         Ok(())
     }
@@ -153,7 +146,7 @@ impl InMemoryAccountStorage {
 
 impl InMemoryStorage {
     pub fn apply(&mut self, changeset: ChangeSet) -> Result<()> {
-        for (addr, account_changeset) in changeset.accounts {
+        for (addr, account_changeset) in changeset.into_inner() {
             match self.accounts.entry(addr) {
                 btree_map::Entry::Occupied(entry) => {
                     entry.into_mut().apply(account_changeset)?;

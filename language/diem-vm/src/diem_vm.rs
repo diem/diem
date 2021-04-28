@@ -481,8 +481,9 @@ pub fn convert_changeset_and_events_cached<C: AccessPathCache>(
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
 
-    for (addr, account_changeset) in changeset.accounts {
-        for (struct_tag, blob_opt) in account_changeset.resources {
+    for (addr, account_changeset) in changeset.into_inner() {
+        let (modules, resources) = account_changeset.into_inner();
+        for (struct_tag, blob_opt) in resources {
             let ap = ap_cache.get_resource_path(addr, struct_tag);
             let op = match blob_opt {
                 None => WriteOp::Deletion,
@@ -491,7 +492,7 @@ pub fn convert_changeset_and_events_cached<C: AccessPathCache>(
             ops.push((ap, op))
         }
 
-        for (name, blob_opt) in account_changeset.modules {
+        for (name, blob_opt) in modules {
             let ap = ap_cache.get_module_path(ModuleId::new(addr, name));
             let op = match blob_opt {
                 None => WriteOp::Deletion,
