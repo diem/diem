@@ -13,7 +13,10 @@ use diem_transaction_builder::stdlib::*;
 use diem_types::{
     account_address::AccountAddress,
     account_config,
-    transaction::{authenticator::AuthenticationKey, Script, TransactionOutput, TransactionStatus},
+    transaction::{
+        authenticator::AuthenticationKey, Script, TransactionOutput, TransactionStatus,
+        WriteSetPayload,
+    },
     vm_status::{KeptVMStatus, StatusCode},
 };
 use language_e2e_tests::{
@@ -26,6 +29,42 @@ const XUS_THRESHOLD: u64 = 10_000_000_000 / 5;
 const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 775;
 const MISMATCHED_METADATA_SIGNATURE_ERROR_CODE: u64 = 1031;
 const PAYEE_COMPLIANCE_KEY_NOT_SET_ERROR_CODE: u64 = 1281;
+
+#[test]
+fn test_rotate_authentication_key_with_nonce_admin() {
+    test_with_different_versions! {CURRENT_RELEASE_VERSIONS, |test_env| {
+        let mut executor = test_env.executor;
+        let new_account = executor.create_raw_account_data(100_000, 0);
+        executor.add_account_data(&new_account);
+
+        let privkey = Ed25519PrivateKey::generate_for_testing();
+        let pubkey = privkey.public_key();
+        let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
+
+        let account = test_env.dr_account;
+        let txn = account
+            .transaction()
+            .write_set(WriteSetPayload::Script {
+                script: encode_rotate_authentication_key_with_nonce_admin_script(0, new_key_hash.clone()),
+                execute_as: *new_account.address(),
+            })
+            .sequence_number(test_env.dr_sequence_number)
+            .sign();
+        executor.new_block();
+        let output = executor.execute_and_apply(txn);
+        assert_eq!(
+            output.status(),
+            &TransactionStatus::Keep(KeptVMStatus::Executed),
+        );
+
+        let updated_sender = executor
+            .read_account_resource(new_account.account())
+            .expect("sender must exist");
+
+        assert_eq!(updated_sender.authentication_key(), new_key_hash.as_slice());
+    }
+    }
+}
 
 #[test]
 fn freeze_unfreeze_account() {
