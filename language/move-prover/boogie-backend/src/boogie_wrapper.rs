@@ -3,36 +3,34 @@
 
 //! Wrapper around the boogie program. Allows to call boogie and analyze the output.
 
+use std::{collections::BTreeMap, fs, num::ParseIntError, option::Option::None};
+
 use anyhow::anyhow;
-
-use std::{collections::BTreeMap, fs, option::Option::None};
-
 use codespan::{ByteIndex, ColumnIndex, LineIndex, Location, Span};
 use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
 use itertools::Itertools;
 use log::{debug, info, warn};
 use num::BigInt;
+use once_cell::sync::Lazy;
 use pretty::RcDoc;
 use regex::Regex;
 
-use move_model::{
-    code_writer::CodeWriter,
-    model::{FunId, GlobalEnv, Loc, ModuleId, StructId},
-    ty::{PrimitiveType, Type},
-};
-
-use crate::prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds};
-// DEBUG
-// use backtrace::Backtrace;
-use crate::options::{BoogieOptions, VectorTheory};
 use bytecode::function_target_pipeline::{FunctionTargetsHolder, FunctionVariant};
 use move_binary_format::file_format::FunctionDefinitionIndex;
 use move_model::{
     ast::TempIndex,
-    model::{NodeId, QualifiedId},
+    code_writer::CodeWriter,
+    model::{FunId, GlobalEnv, Loc, ModuleId, NodeId, QualifiedId, StructId},
+    ty::{PrimitiveType, Type},
 };
-use once_cell::sync::Lazy;
-use std::num::ParseIntError;
+
+// DEBUG
+// use backtrace::Backtrace;
+use crate::{
+    boogie_helpers::boogie_struct_name,
+    options::{BoogieOptions, VectorTheory},
+    prover_task_runner::{ProverTaskRunner, RunBoogieWithSeeds},
+};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.
@@ -95,103 +93,97 @@ pub enum TraceEntry {
 impl<'env> BoogieWrapper<'env> {
     /// Calls boogie on the given file. On success, returns a struct representing the analyzed
     /// output of boogie.
-    pub fn call_boogie(
-        &self,
-        bench_repeat: usize,
-        boogie_file: &str,
-    ) -> anyhow::Result<BoogieOutput> {
+    pub fn call_boogie(&self, boogie_file: &str) -> anyhow::Result<BoogieOutput> {
         let args = self.options.get_boogie_command(boogie_file);
         info!("running solver");
         debug!("command line: {}", args.iter().join(" "));
-        for count in 0..bench_repeat {
-            let task = RunBoogieWithSeeds {
-                options: self.options.clone(),
-                boogie_file: boogie_file.to_string(),
-            };
-            // When running on complicated formulas(especially those with quantifiers), SMT solvers
-            // can suffer from the so-called butterfly effect, where minor changes such as using
-            // different random seeds cause significant instabilities in verification times.
-            // Thus by running multiple instances of Boogie with different random seeds, we can
-            // potentially alleviate the instability.
-            let (seed, output_res) = ProverTaskRunner::run_tasks(
-                task,
-                self.options.num_instances,
-                self.options.sequential_task,
-            );
-            let output = match output_res {
-                Err(err) => panic!(
-                    "cannot execute boogie `{}`: {}",
-                    self.options.get_boogie_command("")[0],
-                    err
-                ),
-                Ok(out) => out,
-            };
-            if self.options.num_instances > 1 {
-                debug!("Boogie instance with seed {} finished first", seed);
-            }
-            if !output.status.success() {
-                return Err(anyhow!("boogie exited with: {:?}", output));
-            } else if count == usize::saturating_sub(bench_repeat, 1) {
-                if count > 0 {
-                    info!("run #{} done", usize::saturating_add(count, 1));
-                }
-                debug!("analyzing boogie output");
-                let out = String::from_utf8_lossy(&output.stdout).to_string();
-                // Boogie prints a few ad-hoc error messages (with exit code 0!), so we have
-                // no chance to catch an error until we recognize one of those patterns.
-                if out
-                    .trim()
-                    .starts_with("Fatal Error: ProverException: Cannot find specified prover")
-                {
-                    return Err(anyhow!(
-                        "The configured prover `{}` could not be found{}",
-                        if self.options.use_cvc4 {
-                            &self.options.cvc4_exe
-                        } else {
-                            &self.options.z3_exe
-                        },
-                        if self.options.use_cvc4 {
-                            " (--use-cvc4 is set)"
-                        } else {
-                            ""
-                        }
-                    ));
-                }
-                // Boogie output contains the string "errors detected in" whenever parsing,
-                // resolution, or type checking errors are discovered.
-                if out.contains("errors detected in") {
-                    return Err(anyhow!(
-                        "[internal] boogie exited with compilation errors:\n{}",
-                        out
-                    ));
-                }
-                if out.contains("Prover error:") {
-                    return Err(anyhow!(
-                        "[internal] boogie exited with prover errors:\n{}",
-                        out
-                    ));
-                }
-                let mut errors = self.extract_verification_errors(&out);
-                errors.extend(self.extract_inconclusive_errors(&out));
-                errors.extend(self.extract_inconsistency_errors(&out));
-                return Ok(BoogieOutput {
-                    errors,
-                    all_output: out,
-                });
-            } else {
-                info!("run #{} done", usize::saturating_add(count, 1));
-            }
+        let task = RunBoogieWithSeeds {
+            options: self.options.clone(),
+            boogie_file: boogie_file.to_string(),
+        };
+        // When running on complicated formulas(especially those with quantifiers), SMT solvers
+        // can suffer from the so-called butterfly effect, where minor changes such as using
+        // different random seeds cause significant instabilities in verification times.
+        // Thus by running multiple instances of Boogie with different random seeds, we can
+        // potentially alleviate the instability.
+        let (seed, output_res) = ProverTaskRunner::run_tasks(
+            task,
+            self.options.num_instances,
+            self.options.sequential_task,
+        );
+        let output = match output_res {
+            Err(err) => panic!(
+                "cannot execute boogie `{}`: {}",
+                self.options.get_boogie_command("")[0],
+                err
+            ),
+            Ok(out) => out,
+        };
+        if self.options.num_instances > 1 {
+            debug!("Boogie instance with seed {} finished first", seed);
         }
-        Err(anyhow!("--bench-repeat=0, prover not run!"))
+
+        debug!("analyzing boogie output");
+        let out = String::from_utf8_lossy(&output.stdout).to_string();
+        let err = String::from_utf8_lossy(&output.stderr).to_string();
+        // Boogie prints a few ad-hoc error messages (with exit code 0!), so we have
+        // no chance to catch an error until we recognize one of those patterns.
+        if out
+            .trim()
+            .starts_with("Fatal Error: ProverException: Cannot find specified prover")
+        {
+            return Err(anyhow!(
+                "The configured prover `{}` could not be found{}",
+                if self.options.use_cvc4 {
+                    &self.options.cvc4_exe
+                } else {
+                    &self.options.z3_exe
+                },
+                if self.options.use_cvc4 {
+                    " (--use-cvc4 is set)"
+                } else {
+                    ""
+                }
+            ));
+        }
+        if !output.status.success() {
+            // Exit here with raw output.
+            return Err(anyhow!(
+                "Boogie error ({}): {}\n\nstderr:\n{}",
+                output.status,
+                out,
+                err
+            ));
+        }
+        if out.trim().starts_with("Unable to monomorphize") {
+            return Err(anyhow!("Boogie error: {}\n\nstderr:\n{}", out, err));
+        }
+        // Boogie output contains the string "errors detected in" whenever parsing,
+        // resolution, or type checking errors are discovered.
+        if out.contains("errors detected in") {
+            return Err(anyhow!(
+                "[internal] boogie exited with compilation errors:\n{}",
+                out
+            ));
+        }
+        if out.contains("Prover error:") {
+            return Err(anyhow!(
+                "[internal] boogie exited with prover errors:\n{}",
+                out
+            ));
+        }
+        let mut errors = self.extract_verification_errors(&out);
+        errors.extend(self.extract_inconclusive_errors(&out));
+        errors.extend(self.extract_inconsistency_errors(&out));
+        Ok(BoogieOutput {
+            errors,
+            all_output: out,
+        })
     }
 
     /// Calls boogie and analyzes output.
-    pub fn call_boogie_and_verify_output(
-        &self,
-        bench_repeat: usize,
-        boogie_file: &str,
-    ) -> anyhow::Result<()> {
-        let BoogieOutput { errors, all_output } = self.call_boogie(bench_repeat, boogie_file)?;
+    pub fn call_boogie_and_verify_output(&self, boogie_file: &str) -> anyhow::Result<()> {
+        let BoogieOutput { errors, all_output } = self.call_boogie(boogie_file)?;
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
         let log_file_existed = std::path::Path::new(&boogie_log_file).exists();
         debug!("writing boogie log to {}", boogie_log_file);
@@ -364,6 +356,13 @@ impl<'env> BoogieWrapper<'env> {
         let mut errors = vec![];
         let mut at = 0;
         while let Some(cap) = VERIFICATION_DIAG_STARTS.captures(&out[at..]) {
+            at = usize::saturating_add(at, cap.get(0).unwrap().end());
+            let msg = cap.name("msg").unwrap().as_str();
+            if msg == "expected to fail" {
+                // Masks the failure from the negative test for the inconsistency checking
+                // which is expected to fail, and skips the error report of this instance.
+                continue;
+            }
             let inbetween = out[at..at + cap.get(0).unwrap().start()].trim();
             at = usize::saturating_add(at, cap.get(0).unwrap().end());
 
@@ -652,13 +651,6 @@ fn make_position(line_str: &str, col_str: &str) -> Location {
 // -----------------------------------------------
 // # Boogie Model Analysis
 
-/// Represents whether the Vector type is implemented at the SMT level using integer maps or sequences
-#[derive(Debug, PartialEq, Eq)]
-pub enum ValueArrayRep {
-    ValueArrayIsMap,
-    ValueArrayIsSeq,
-}
-
 /// Represents a boogie model.
 #[derive(Debug)]
 pub struct Model {
@@ -746,7 +738,7 @@ impl ModelValue {
     /// or
     /// ```(as seq.empty (Seq T@$Value))```
     /// depending on whether it is an empty or nonempty sequence, respectively.
-    fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
+    fn extract_vector(&self, model: &Model, _elem_ty: &Type) -> Option<ModelValueVector> {
         if matches!(model.vector_theory, VectorTheory::SmtSeq) {
             // Implementation of vectors using sequences
             let mut values = BTreeMap::new();
@@ -778,7 +770,9 @@ impl ModelValue {
             let map_key = &args[0];
             let value_array_map = model
                 .vars
-                .get(&ModelValue::literal("Select__T@[Int]$Value_"))?
+                .get(&ModelValue::literal(
+                    &self.deduct_table_name(map_key.extract_literal()?)?,
+                ))?
                 .extract_map()?;
             let mut values = BTreeMap::new();
             let mut default = ModelValue::error();
@@ -799,6 +793,15 @@ impl ModelValue {
                 default,
             })
         }
+    }
+
+    fn deduct_table_name(&self, map_key: &str) -> Option<String> {
+        // The generic representation of map keys is `|T@[Int]<X>!val!0` where `<X>` is the
+        // vector element type.
+        let i = map_key.find(']')?;
+        let j = map_key.find('!')?;
+        let suffix = &map_key[i + 1..j];
+        Some(format!("Select__T@[Int]{}_", suffix))
     }
 
     fn extract_seq_unit(&self) -> Option<ModelValue> {
@@ -971,7 +974,7 @@ impl ModelValue {
         model: &Model,
         param: &Type,
     ) -> Option<PrettyDoc> {
-        let values = self.extract_vector(model)?;
+        let values = self.extract_vector(model, param)?;
         let mut entries = vec![];
         let mut next = 0;
         let mut sparse = false;
@@ -1011,32 +1014,44 @@ impl ModelValue {
         model: &Model,
         module_id: ModuleId,
         struct_id: StructId,
-        params: &[Type],
+        inst: &[Type],
     ) -> Option<PrettyDoc> {
         let module_env = wrapper.env.get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
-        let values = self.extract_vector(model)?;
-        let entries = struct_env
-            .get_fields()
-            .enumerate()
-            .map(|(i, f)| {
-                let ty = f.get_type().instantiate(params);
-                let v = values
-                    .values
-                    .get(&i)
-                    .unwrap_or(&values.default)
-                    .extract_box();
-                let vp = v
-                    .pretty(wrapper, model, &ty)
-                    .unwrap_or_else(|| values.default.pretty_or_raw(wrapper, model, &ty));
-                PrettyDoc::text(format!(
-                    "{}",
-                    f.get_name().display(struct_env.symbol_pool())
-                ))
-                .append(PrettyDoc::text(" ="))
-                .append(PrettyDoc::line().append(vp).nest(2).group())
-            })
-            .collect_vec();
+        let entries = if struct_env.is_native_or_intrinsic() {
+            let mut rep = self.extract_literal()?.to_string();
+            if rep.starts_with("T@") {
+                if let Some(i) = rep.rfind('!') {
+                    rep = format!("#{}", &rep[i + 1..])
+                }
+            }
+            vec![PrettyDoc::text(rep)]
+        } else {
+            let struct_name = &boogie_struct_name(&struct_env, inst);
+            let values = self
+                .extract_list(struct_name)
+                // It appears sometimes keys are represented witout, sometimes with enclosing
+                // bars?
+                .or_else(|| self.extract_list(&format!("|{}|", struct_name)))?;
+            struct_env
+                .get_fields()
+                .enumerate()
+                .map(|(i, f)| {
+                    let ty = f.get_type().instantiate(inst);
+                    let default = ModelValue::error();
+                    let v = values.get(i).unwrap_or(&default);
+                    let vp = v
+                        .pretty(wrapper, model, &ty)
+                        .unwrap_or_else(|| default.pretty_or_raw(wrapper, model, &ty));
+                    PrettyDoc::text(format!(
+                        "{}",
+                        f.get_name().display(struct_env.symbol_pool())
+                    ))
+                    .append(PrettyDoc::text(" ="))
+                    .append(PrettyDoc::line().append(vp).nest(2).group())
+                })
+                .collect_vec()
+        };
         Some(
             PrettyDoc::text(format!(
                 "{}.{}",

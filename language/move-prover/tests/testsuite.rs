@@ -44,6 +44,8 @@ struct Feature {
     flags: &'static [&'static str],
     /// Inclusion mode.
     inclusion_mode: InclusionMode,
+    /// True if the tests should only be run if requested by MVP_TEST_FEATURE
+    only_if_requested: bool,
     /// Whether this feature will be tested in CI.
     enable_in_ci: bool,
     /// Whether this feature has as a separate baseline file.
@@ -69,21 +71,19 @@ const TESTED_FEATURES: &[Feature] = &[
         flags: &[],
         inclusion_mode: InclusionMode::Implicit,
         enable_in_ci: true,
+        only_if_requested: false,
         separate_baseline: false,
         runner: runner_default,
     },
-    /* Deactivated ror now as the baseline output is unstable. Calling cvc4 produces errors
-       because of a protocol issue Boogie to CVC4, and the errors reported from this appear
-       to be unstable.
     Feature {
         name: "cvc4",
         flags: &["--use-cvc4"],
         inclusion_mode: InclusionMode::Explicit,
         enable_in_ci: false, // Do not enable in CI until boogie <-> cvc4 issues are fixed
+        only_if_requested: true,
         separate_baseline: true,
         runner: runner_cvc4,
     },
-     */
 ];
 
 fn get_feature_by_name(name: &str) -> &'static Feature {
@@ -272,6 +272,9 @@ fn main() {
         // Evaluate whether the user narrowed which feature to test.
         let feature_narrow = read_env_var(ENV_TEST_FEATURE);
         if !feature_narrow.is_empty() && feature.name != feature_narrow {
+            continue;
+        }
+        if feature_narrow.is_empty() && feature.only_if_requested {
             continue;
         }
         // Check whether we are running extended tests

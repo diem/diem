@@ -150,6 +150,9 @@ axiom {:ctor "Vec"} (forall<T> v: Vec T, e: T :: {IndexOfVec(v, e)}
      else InRangeVec(v, i) && ReadVec(v, i) == e &&
         (forall j: int :: j >= 0 && j < i ==> ReadVec(v, j) != e)));
 
+// This function should stay non-inlined as it guards many quantifiers
+// over vectors. It appears important to have this uninterpreted for
+// quantifier triggering.
 function InRangeVec<T>(v: Vec T, i: int): bool {
     i >= 0 && i < LenVec(v)
 }

@@ -8,4 +8,4 @@
 
 // Currently we just include the basic vector array theory.
 
-{{> vector-array-theory }}
+{% include "vector-array-theory" %}
