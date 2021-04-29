@@ -50,11 +50,17 @@ impl Encryptor {
         }
     }
 
-    /// This generates an Encryptor for use in default / testing scenarios where (proper)
-    /// encryption is not necessary.
-    pub fn for_testing() -> Self {
+    /// This generates an empty encryptor for use in scenarios where encryption is not necessary.
+    /// Any encryption operations (e.g., encrypt / decrypt) will return errors.
+    pub fn empty() -> Self {
         let storage = Storage::InMemoryStorage(diem_secure_storage::InMemoryStorage::new());
-        let mut encryptor = Encryptor::new(storage);
+        Encryptor::new(storage)
+    }
+
+    /// This generates an encryptor for use in testing scenarios. The encryptor is
+    /// initialized with a test network encryption key.
+    pub fn for_testing() -> Self {
+        let mut encryptor = Self::empty();
         encryptor.initialize_for_testing().unwrap();
         encryptor
     }
