@@ -72,6 +72,9 @@ const TESTED_FEATURES: &[Feature] = &[
         separate_baseline: false,
         runner: runner_default,
     },
+    /* Deactivated ror now as the baseline output is unstable. Calling cvc4 produces errors
+       because of a protocol issue Boogie to CVC4, and the errors reported from this appear
+       to be unstable.
     Feature {
         name: "cvc4",
         flags: &["--use-cvc4"],
@@ -80,6 +83,7 @@ const TESTED_FEATURES: &[Feature] = &[
         separate_baseline: true,
         runner: runner_cvc4,
     },
+     */
 ];
 
 fn get_feature_by_name(name: &str) -> &'static Feature {
