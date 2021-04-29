@@ -9,11 +9,13 @@ use diem_sdk::{
     transaction_builder::Currency,
 };
 use forge::{forge_main, ForgeConfig, Result, *};
+use std::time::Duration;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
         public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
+        network_tests: &[&RestartValidator],
     };
 
     forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()))
@@ -138,6 +140,31 @@ impl PublicUsageTest for TransferCoins {
             .find(|b| b.currency == currency)
             .unwrap();
         assert_eq!(balance.amount, 10);
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct RestartValidator;
+
+impl Test for RestartValidator {
+    fn name(&self) -> &'static str {
+        "restart_validator"
+    }
+}
+
+impl NetworkTest for RestartValidator {
+    fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
+        let node_id = NodeId::new(0);
+        let node = ctx.swarm().validator_mut(node_id);
+        node.health_check().expect("node health check failed");
+        node.stop()?;
+        println!("Restarting node {}", node.node_id().as_inner());
+        node.start()?;
+        // wait node to recovery
+        std::thread::sleep(Duration::from_millis(1000));
+        node.health_check().expect("node health check failed");
 
         Ok(())
     }

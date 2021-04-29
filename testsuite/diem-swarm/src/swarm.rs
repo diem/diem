@@ -321,7 +321,7 @@ impl DiemNode {
                 HealthStatus::Healthy
             }
             Err(e) => {
-                println!("Error querying metrics for node '{}'", self.node_id);
+                warn!("Error querying metrics for node '{}'", self.node_id);
                 HealthStatus::RpcFailure(e)
             }
         }

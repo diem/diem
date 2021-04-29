@@ -179,6 +179,21 @@ impl LocalSwarm {
     }
 }
 
+#[derive(Debug)]
+pub enum HealthCheckError {
+    Crashed,
+    NotStarted,
+    RpcFailure(anyhow::Error),
+}
+
+impl std::fmt::Display for HealthCheckError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for HealthCheckError {}
+
 impl Node for DiemNode {
     fn peer_id(&self) -> PeerId {
         self.peer_id()
@@ -217,8 +232,13 @@ impl Node for DiemNode {
         unimplemented!()
     }
 
-    fn health_check(&mut self) -> HealthStatus {
-        self.health_check()
+    fn health_check(&mut self) -> Result<(), HealthCheckError> {
+        match self.health_check() {
+            HealthStatus::Stopped => Err(HealthCheckError::NotStarted),
+            HealthStatus::Crashed(_) => Err(HealthCheckError::Crashed),
+            HealthStatus::RpcFailure(e) => Err(HealthCheckError::RpcFailure(e)),
+            _ => Ok(()),
+        }
     }
 }
 

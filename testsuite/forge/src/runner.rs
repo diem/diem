@@ -70,11 +70,12 @@ pub fn forge_main<F: Factory>(tests: ForgeConfig<'_>, factory: F) -> Result<()> 
 pub struct ForgeConfig<'cfg> {
     pub public_usage_tests: &'cfg [&'cfg dyn PublicUsageTest],
     pub admin_tests: &'cfg [&'cfg dyn AdminTest],
+    pub network_tests: &'cfg [&'cfg dyn NetworkTest],
 }
 
 impl<'cfg> ForgeConfig<'cfg> {
     pub fn number_of_tests(&self) -> usize {
-        self.public_usage_tests.len() + self.admin_tests.len()
+        self.public_usage_tests.len() + self.admin_tests.len() + self.network_tests.len()
     }
 
     pub fn all_tests(&self) -> impl Iterator<Item = &'cfg dyn Test> + 'cfg {
@@ -82,6 +83,7 @@ impl<'cfg> ForgeConfig<'cfg> {
             .iter()
             .map(|t| t as &dyn Test)
             .chain(self.admin_tests.iter().map(|t| t as &dyn Test))
+            .chain(self.network_tests.iter().map(|t| t as &dyn Test))
     }
 }
 
@@ -133,6 +135,12 @@ impl<'cfg, F: Factory> Forge<'cfg, F> {
             let mut admin_ctx =
                 AdminContext::new(CoreContext::from_rng(&mut rng), swarm.admin_info());
             let result = run_test(|| test.run(&mut admin_ctx));
+            summary.handle_result(test.name().to_owned(), result)?;
+        }
+
+        for test in self.tests.network_tests {
+            let mut network_ctx = NetworkContext::new(CoreContext::from_rng(&mut rng), &mut *swarm);
+            let result = run_test(|| test.run(&mut network_ctx));
             summary.handle_result(test.name().to_owned(), result)?;
         }
 

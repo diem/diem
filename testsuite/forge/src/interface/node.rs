@@ -1,11 +1,10 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::Result;
+use crate::{HealthCheckError, Result};
 use debug_interface::NodeDebugClient;
 use diem_config::config::NodeConfig;
 use diem_sdk::types::PeerId;
-use diem_swarm::swarm::HealthStatus;
 
 /// A NodeId is intended to be a unique identifier of a Node in a Swarm. Due to VFNs sharing the
 /// same PeerId as their Validator, another identifier is needed in order to distinguish between
@@ -61,7 +60,7 @@ pub trait Node {
     fn clear_storage(&mut self) -> Result<()>;
 
     /// Performs a Health Check on the Node
-    fn health_check(&mut self) -> HealthStatus;
+    fn health_check(&mut self) -> Result<(), HealthCheckError>;
 }
 
 /// Trait used to represent a running Validator
