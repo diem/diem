@@ -96,6 +96,11 @@ pub fn boogie_spec_fun_name(env: &ModuleEnv<'_>, id: SpecFunId, inst: &[Type]) -
     )
 }
 
+/// Return boogie name for function representing a lifted `some` expression.
+pub fn boogie_choice_fun_name(id: usize) -> String {
+    format!("$choice_{}", id)
+}
+
 /// Creates the name of the resource memory domain for any function for the given struct.
 /// This variable represents a local variable of the Boogie translation of this function.
 pub fn boogie_modifies_memory_name(env: &GlobalEnv, memory: &QualifiedInstId<StructId>) -> String {

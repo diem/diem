@@ -978,6 +978,7 @@ impl<'env> SpecTranslator<'env> {
         condition: &Option<Box<Exp>>,
         body: &Exp,
     ) {
+        assert!(!kind.is_choice());
         // Translate range expressions.
         let mut range_tmps = HashMap::new();
         for (var, range) in ranges {
@@ -1082,6 +1083,7 @@ impl<'env> SpecTranslator<'env> {
         let connective = match kind {
             QuantKind::Forall => " ==> ",
             QuantKind::Exists => " && ",
+            _ => unreachable!(),
         };
         let mut separator = "";
         for (var, range) in ranges {

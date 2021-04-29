@@ -547,6 +547,14 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                                     &env.get_node_loc(*node_id),
                                     "Cannot have triggers with type value ranges",
                                 );
+                                return (false, e);
+                            }
+                            if kind.is_choice() {
+                                env.error(
+                                    &env.get_node_loc(*node_id),
+                                    "Type quantification cannot be used with a choice operator",
+                                );
+                                return (false, e);
                             }
                             let mut remaining_ranges = ranges.clone();
                             remaining_ranges.remove(i);
@@ -596,6 +604,7 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                         ast::Operation::And,
                         vec![c.as_ref().clone(), *body],
                     ),
+                    _ => unreachable!(),
                 },
                 _ => *body,
             }
@@ -707,6 +716,7 @@ impl<'e, G: ExpGenerator<'e>> TypeQuantRewriter<'e, G> {
                 .generator
                 .mk_join_bool(ast::Operation::Or, expanded.into_iter())
                 .unwrap_or_else(|| self.generator.mk_bool_const(false)),
+            _ => unreachable!(),
         }
     }
 

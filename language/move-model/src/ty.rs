@@ -170,6 +170,14 @@ impl Type {
         false
     }
 
+    /// Returns true if this is an address or signer type.
+    pub fn is_signer_or_address(&self) -> bool {
+        matches!(
+            self,
+            Type::Primitive(PrimitiveType::Signer) | Type::Primitive(PrimitiveType::Address)
+        )
+    }
+
     /// Skip reference type.
     pub fn skip_reference(&self) -> &Type {
         if let Type::Reference(_, bt) = self {

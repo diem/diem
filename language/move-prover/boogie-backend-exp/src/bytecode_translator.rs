@@ -195,6 +195,8 @@ impl<'env> BoogieTranslator<'env> {
                 }
             }
         }
+        // Emit any finalization items required by spec translation.
+        self.spec_translator.finalize();
     }
 }
 

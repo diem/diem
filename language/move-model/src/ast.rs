@@ -176,6 +176,15 @@ impl std::fmt::Display for ConditionKind {
 pub enum QuantKind {
     Forall,
     Exists,
+    Choose,
+    ChooseMin,
+}
+
+impl QuantKind {
+    /// Returns true of this is a choice like Some or Min.
+    pub fn is_choice(self) -> bool {
+        matches!(self, QuantKind::Choose | QuantKind::ChooseMin)
+    }
 }
 
 impl std::fmt::Display for QuantKind {
@@ -184,6 +193,8 @@ impl std::fmt::Display for QuantKind {
         match self {
             Forall => write!(f, "forall"),
             Exists => write!(f, "exists"),
+            Choose => write!(f, "some"),
+            ChooseMin => write!(f, "min"),
         }
     }
 }
@@ -384,9 +395,9 @@ impl Exp {
         ids
     }
 
-    /// Returns the locals used in this expression.
-    pub fn locals(&self) -> BTreeSet<Symbol> {
-        let mut locals = BTreeSet::new();
+    /// Returns the free local variables, inclusive their types, used in this expression.
+    pub fn free_vars(&self, env: &GlobalEnv) -> BTreeMap<Symbol, Type> {
+        let mut vars = BTreeMap::new();
         let mut shadowed = vec![]; // Should be multiset but don't have this
         let mut visitor = |up: bool, e: &Exp| {
             use Exp::*;
@@ -407,23 +418,56 @@ impl Exp {
                         shadowed.remove(pos);
                     }
                 }
-                if let LocalVar(_, sym) = e {
+                if let LocalVar(id, sym) = e {
                     if !shadowed.contains(sym) {
-                        locals.insert(*sym);
+                        vars.insert(*sym, env.get_node_type(*id));
                     }
                 }
             }
         };
         self.visit_pre_post(&mut visitor);
-        locals
+        vars
+    }
+
+    /// Returns the used memory of this expression.
+    pub fn used_memory(
+        &self,
+        env: &GlobalEnv,
+    ) -> BTreeSet<(QualifiedInstId<StructId>, Option<MemoryLabel>)> {
+        let mut result = BTreeSet::new();
+        let mut visitor = |e: &Exp| {
+            use Exp::*;
+            use Operation::*;
+            match e {
+                Call(id, Exists(label), _) | Call(id, Global(label), _) => {
+                    let inst = &env.get_node_instantiation(*id);
+                    let (mid, sid, sinst) = inst[0].require_struct();
+                    result.insert((mid.qualified_inst(sid, sinst.to_owned()), label.to_owned()));
+                }
+                Call(id, Function(mid, fid, labels), _) => {
+                    let inst = &env.get_node_instantiation(*id);
+                    let module = env.get_module(*mid);
+                    let fun = module.get_spec_fun(*fid);
+                    for (i, mem) in fun.used_memory.iter().enumerate() {
+                        result.insert((
+                            mem.to_owned().instantiate(inst),
+                            labels.as_ref().map(|l| l[i]),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        };
+        self.visit(&mut visitor);
+        result
     }
 
     /// Returns the temporaries used in this expression.
-    pub fn temporaries(&self) -> BTreeSet<TempIndex> {
-        let mut temps = BTreeSet::new();
+    pub fn temporaries(&self, env: &GlobalEnv) -> BTreeMap<TempIndex, Type> {
+        let mut temps = BTreeMap::new();
         let mut visitor = |e: &Exp| {
-            if let Exp::Temporary(_, idx) = e {
-                temps.insert(*idx);
+            if let Exp::Temporary(id, idx) = e {
+                temps.insert(*idx, env.get_node_type(*id));
             }
         };
         self.visit(&mut visitor);
@@ -440,6 +484,21 @@ impl Exp {
                 visitor(e);
             }
         });
+    }
+
+    pub fn any<P>(&self, predicate: &mut P) -> bool
+    where
+        P: FnMut(&Exp) -> bool,
+    {
+        let mut found = false;
+        self.visit(&mut |e| {
+            if !found {
+                // This still continues to visit after a match is found, may want to
+                // optimize if it becomes an issue.
+                found = predicate(e)
+            }
+        });
+        found
     }
 
     /// Visits expression, calling visitor on each sub-expression. `visitor(false, ..)` will

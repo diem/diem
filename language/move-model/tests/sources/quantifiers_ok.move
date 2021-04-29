@@ -8,5 +8,9 @@ module 0x42::M {
     define exists_in_vector(v: vector<S>): bool {
       exists s in v: s.x > 0
     }
+
+    define some_in_vector(v: vector<S>): S {
+        choose s in v where s.x == 0
+    }
   }
 }

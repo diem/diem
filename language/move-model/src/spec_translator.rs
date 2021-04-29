@@ -446,15 +446,11 @@ impl<'a, 'b, T: ExpGenerator<'a>> SpecTranslator<'a, 'b, T> {
                 self.builder.mk_temporary(self.ret_locals[*n])
             }
             Call(id, Trace, args) => {
-                let mut has_local_var = false;
-                args[0].visit(&mut |e| {
-                    has_local_var = has_local_var || matches!(e, Exp::LocalVar(..))
-                });
-                if has_local_var {
-                    let global_env = self.builder.global_env();
+                let global_env = self.builder.global_env();
+                if !args[0].free_vars(global_env).is_empty() {
                     global_env.error(
                         &global_env.get_node_loc(*id),
-                        "`TRACE(..)` function cannot be used for expressions depending\
+                        "`TRACE(..)` function cannot be used for expressions depending \
                              on quantified variables or spec function parameters",
                     )
                 }

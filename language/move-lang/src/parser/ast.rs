@@ -518,6 +518,8 @@ pub type BinOp = Spanned<BinOp_>;
 pub enum QuantKind_ {
     Forall,
     Exists,
+    Choose,
+    ChooseMin,
 }
 pub type QuantKind = Spanned<QuantKind_>;
 
@@ -1737,6 +1739,8 @@ impl AstDebug for QuantKind_ {
         match self {
             QuantKind_::Forall => w.write("forall"),
             QuantKind_::Exists => w.write("exists"),
+            QuantKind_::Choose => w.write("choose"),
+            QuantKind_::ChooseMin => w.write("min"),
         }
     }
 }

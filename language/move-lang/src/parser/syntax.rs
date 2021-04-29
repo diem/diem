@@ -1211,7 +1211,8 @@ fn parse_dot_or_index_chain(tokens: &mut Lexer) -> Result<Exp, Error> {
 
 // Lookahead to determine whether this is a quantifier. This matches
 //
-//      ( "exists" | "forall" ) <Identifier> ( ":" | <Identifier> ) ...
+//      ( "exists" | "forall" | "choose" | "min" )
+//          <Identifier> ( ":" | <Identifier> ) ...
 //
 // as a sequence to identify a quantifier. While the <Identifier> after
 // the exists/forall would by syntactically sufficient (Move does not
@@ -1219,7 +1220,7 @@ fn parse_dot_or_index_chain(tokens: &mut Lexer) -> Result<Exp, Error> {
 // of lookahead to keep the result more precise in the presence of
 // syntax errors.
 fn is_quant(tokens: &mut Lexer) -> bool {
-    if !matches!(tokens.content(), "exists" | "forall") {
+    if !matches!(tokens.content(), "exists" | "forall" | "choose") {
         return false;
     }
     match tokens.lookahead2() {
@@ -1234,25 +1235,55 @@ fn is_quant(tokens: &mut Lexer) -> bool {
 //
 //   <Quantifier> =
 //       ( "forall" | "exists" ) <QuantifierBindings> ({ (<Exp>)* })* ("where" <Exp>)? ":" Exp
+//     | ( "choose" [ "min" ] ) <QuantifierBind> "where" <Exp>
 //   <QuantifierBindings> = <QuantifierBind> ("," <QuantifierBind>)*
 //   <QuantifierBind> = <Identifier> ":" <Type> | <Identifier> "in" <Exp>
 //
-// Parsing happens recursively and quantifiers are immediately reduced as syntactic sugar
-// for lambdas.
 fn parse_quant(tokens: &mut Lexer) -> Result<Exp_, Error> {
     let start_loc = tokens.start_loc();
-    let kind = if matches!(tokens.content(), "forall") {
-        QuantKind_::Forall
-    } else {
-        QuantKind_::Exists
+    let kind = match tokens.content() {
+        "exists" => {
+            tokens.advance()?;
+            QuantKind_::Exists
+        }
+        "forall" => {
+            tokens.advance()?;
+            QuantKind_::Forall
+        }
+        "choose" => {
+            tokens.advance()?;
+            match tokens.peek() {
+                Tok::IdentifierValue if tokens.content() == "min" => {
+                    tokens.advance()?;
+                    QuantKind_::ChooseMin
+                }
+                _ => QuantKind_::Choose,
+            }
+        }
+        _ => unreachable!(),
     };
-    tokens.advance()?;
-    let kind = spanned(
+    let spanned_kind = spanned(
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
         kind,
     );
+
+    if matches!(kind, QuantKind_::Choose | QuantKind_::ChooseMin) {
+        let binding = parse_quant_binding(tokens)?;
+        consume_identifier(tokens, "where")?;
+        let body = parse_exp(tokens)?;
+        return Ok(Exp_::Quant(
+            spanned_kind,
+            Spanned {
+                loc: binding.loc,
+                value: vec![binding],
+            },
+            vec![],
+            None,
+            Box::new(body),
+        ));
+    }
 
     let bindings_start_loc = tokens.start_loc();
     let binds_with_range_list = parse_list(
@@ -1309,7 +1340,7 @@ fn parse_quant(tokens: &mut Lexer) -> Result<Exp_, Error> {
     let body = parse_exp(tokens)?;
 
     Ok(Exp_::Quant(
-        kind,
+        spanned_kind,
         binds_with_range_list,
         triggers,
         condition,

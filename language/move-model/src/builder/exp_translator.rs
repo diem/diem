@@ -1834,6 +1834,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         body: &EA::Exp,
         expected_type: &Type,
     ) -> Exp {
+        let rkind = match kind.value {
+            PA::QuantKind_::Forall => QuantKind::Forall,
+            PA::QuantKind_::Exists => QuantKind::Exists,
+            PA::QuantKind_::Choose => QuantKind::Choose,
+            PA::QuantKind_::ChooseMin => QuantKind::ChooseMin,
+        };
+
         // Enter the quantifier variables into a new local scope and collect their declarations.
         self.enter_scope();
         let mut rranges = vec![];
@@ -1898,12 +1905,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 ),
             }
         }
-        let rty = self.check_type(
-            loc,
-            &Type::new_prim(PrimitiveType::Bool),
-            expected_type,
-            "in quantified expression",
-        );
         let rtriggers = triggers
             .iter()
             .map(|trigger| {
@@ -1913,16 +1914,18 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     .collect()
             })
             .collect();
-        let rbody = self.translate_exp(body, &rty);
+        let rbody = self.translate_exp(body, &BOOL_TYPE);
         let rcondition = condition
             .as_ref()
-            .map(|cond| Box::new(self.translate_exp(cond, &rty)));
+            .map(|cond| Box::new(self.translate_exp(cond, &BOOL_TYPE)));
         self.exit_scope();
-        let id = self.new_node_id_with_type_loc(&rty, loc);
-        let rkind = match kind.value {
-            PA::QuantKind_::Forall => QuantKind::Forall,
-            PA::QuantKind_::Exists => QuantKind::Exists,
+        let quant_ty = if rkind.is_choice() {
+            self.parent.parent.env.get_node_type(rranges[0].0.id)
+        } else {
+            BOOL_TYPE.clone()
         };
+        self.check_type(loc, &quant_ty, expected_type, "in quantifier expression");
+        let id = self.new_node_id_with_type_loc(&quant_ty, loc);
         Exp::Quant(id, rkind, rranges, rtriggers, rcondition, Box::new(rbody))
     }
 

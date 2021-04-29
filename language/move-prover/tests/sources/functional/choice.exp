@@ -1,0 +1,41 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/choice.move:21:9 ───
+    │
+ 21 │         ensures result == TRACE(choose x: u64 where x >= 4 && x <= 5);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/choice.move:21
+    =     at tests/sources/functional/choice.move:15: simple_incorrect
+    =         b = <redacted>
+    =     at tests/sources/functional/choice.move:16: simple_incorrect
+    =         <redacted> = <redacted>
+    =         result = <redacted>
+    =     at tests/sources/functional/choice.move:17: simple_incorrect
+    =         `choose x: u64 where x >= 4 && x <= 5` = <redacted>
+    =     at tests/sources/functional/choice.move:21
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/choice.move:85:9 ───
+    │
+ 85 │         ensures TRACE(choose i in 0..len(result) where result[i] == 2) == 1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/choice.move:74: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:74: test_not_using_min_incorrect
+    =         v = <redacted>
+    =     at tests/sources/functional/choice.move:75: test_not_using_min_incorrect
+    =         v_ref = <redacted>
+    =     at tests/sources/functional/choice.move:76: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:77: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:78: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:79: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:80: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:80: test_not_using_min_incorrect
+    =     at tests/sources/functional/choice.move:81: test_not_using_min_incorrect
+    =         result = <redacted>
+    =     at tests/sources/functional/choice.move:82: test_not_using_min_incorrect
+    =         `choose i in 0..len(result) where result[i] == 2` = <redacted>
+    =     at tests/sources/functional/choice.move:85

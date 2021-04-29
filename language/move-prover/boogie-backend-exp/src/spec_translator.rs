@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -19,10 +19,10 @@ use move_model::{
 };
 
 use crate::boogie_helpers::{
-    boogie_byte_blob, boogie_declare_global, boogie_field_sel, boogie_global_declarator,
-    boogie_inst_suffix, boogie_modifies_memory_name, boogie_resource_memory_name,
-    boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type,
-    boogie_type_suffix, boogie_well_formed_expr,
+    boogie_byte_blob, boogie_choice_fun_name, boogie_declare_global, boogie_field_sel,
+    boogie_global_declarator, boogie_inst_suffix, boogie_modifies_memory_name,
+    boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
+    boogie_type, boogie_type_suffix, boogie_well_formed_expr,
 };
 use boogie_backend::options::BoogieOptions;
 use bytecode::mono_analysis::MonoInfo;
@@ -45,6 +45,29 @@ pub struct SpecTranslator<'env> {
     type_inst: Vec<Type>,
     /// Counter for creating new variables.
     fresh_var_count: RefCell<usize>,
+    /// Information about lifted choice expressions. Each choice expression in the
+    /// original program is uniquely identified by the node id. This allows us to capture
+    /// duplication of expressions and map them to the same uninterpreted choice
+    /// function. If an expression is duplicated and then later specialized by a type
+    /// instantiation, it will have a different node id, but again the same instantiations
+    /// map to the same node id, which is the desired semantics.
+    lifted_choice_infos: RefCell<BTreeMap<NodeId, LiftedChoiceInfo>>,
+}
+
+/// A struct which contains information about a lifted choice expression (like `some x:int: p(x)`).
+/// Those expressions are replaced by a call to an axiomatized function which is generated from
+/// this info at the end of translation.
+#[derive(Clone)]
+struct LiftedChoiceInfo {
+    id: usize,
+    node_id: NodeId,
+    kind: QuantKind,
+    free_vars: Vec<(Symbol, Type)>,
+    used_temps: Vec<(TempIndex, Type)>,
+    used_memory: Vec<(QualifiedInstId<StructId>, Option<MemoryLabel>)>,
+    var: Symbol,
+    range: Exp,
+    condition: Exp,
 }
 
 impl<'env> SpecTranslator<'env> {
@@ -60,6 +83,7 @@ impl<'env> SpecTranslator<'env> {
             writer,
             type_inst: vec![],
             fresh_var_count: Default::default(),
+            lifted_choice_infos: Default::default(),
         }
     }
 
@@ -301,6 +325,189 @@ impl<'env> SpecTranslator<'env> {
     }
 }
 
+// Emit any finalization items
+// ============================
+
+impl<'env> SpecTranslator<'env> {
+    pub(crate) fn finalize(&self) {
+        self.translate_choice_functions();
+    }
+
+    /// Translate lifted functions for choice expressions.
+    fn translate_choice_functions(&self) {
+        let env = self.env;
+        let infos = self.lifted_choice_infos.borrow();
+        for (_, info) in infos.iter() {
+            let fun_name = boogie_choice_fun_name(info.id);
+            let result_ty = &env.get_node_type(info.node_id);
+            let exp_loc = env.get_node_loc(info.node_id);
+            let var_name = info.var.display(env.symbol_pool()).to_string();
+            self.writer.set_location(&exp_loc);
+            // Pairs of context parameter names and boogie types
+            let param_decls = info
+                .free_vars
+                .iter()
+                .map(|(s, ty)| {
+                    (
+                        s.display(env.symbol_pool()).to_string(),
+                        boogie_type(env, ty),
+                    )
+                })
+                .chain(
+                    info.used_temps
+                        .iter()
+                        .map(|(t, ty)| (format!("$t{}", t), boogie_type(env, ty))),
+                )
+                .chain(info.used_memory.iter().map(|(m, l)| {
+                    let struct_env = &env.get_struct(m.to_qualified_id());
+                    (
+                        boogie_resource_memory_name(env, m, l),
+                        format!("$Memory {}", boogie_struct_name(struct_env, &m.inst)),
+                    )
+                }))
+                .collect_vec();
+            // Pair of choice variable name and type.
+            let var_decl = (var_name, boogie_type(env, result_ty));
+
+            // Helper functions
+            let mk_decl = |(n, t): &(String, String)| format!("{}: {}", n, t);
+            let mk_arg = |(n, _): &(String, String)| n.to_owned();
+            let emit_valid = |n: &str, ty: &Type| {
+                let suffix = boogie_type_suffix(env, ty);
+                emit!(self.writer, "$IsValid'{}'({})", suffix, n);
+            };
+            let mk_temp = |t: TempIndex| format!("$t{}", t);
+
+            emitln!(
+                self.writer,
+                "// choice expression {}",
+                exp_loc.display(self.env)
+            );
+
+            // Emit predicate function characterizing the choice.
+            emitln!(
+                self.writer,
+                "function {{:inline}} {}_pred({}): bool {{",
+                fun_name,
+                vec![&var_decl]
+                    .into_iter()
+                    .chain(param_decls.iter())
+                    .map(mk_decl)
+                    .join(", ")
+            );
+            self.writer.indent();
+            emit_valid(&var_decl.0, result_ty);
+            match env.get_node_type(info.range.node_id()) {
+                Type::Vector(..) => {
+                    emit!(self.writer, " && InRangeVec(");
+                    self.translate_exp(&info.range);
+                    emit!(self.writer, ", {})", &var_decl.0);
+                }
+                Type::Primitive(PrimitiveType::Range) => {
+                    emit!(self.writer, " && $InRange(");
+                    self.translate_exp(&info.range);
+                    emit!(self.writer, ", {})", &var_decl.0);
+                }
+                _ => {}
+            }
+            emitln!(self.writer, " &&");
+            self.translate_exp(&info.condition);
+            self.writer.unindent();
+            emitln!(self.writer, "\n}");
+            // Create call to predicate
+            let predicate = format!(
+                "{}_pred({})",
+                fun_name,
+                vec![&var_decl]
+                    .into_iter()
+                    .chain(param_decls.iter())
+                    .map(mk_arg)
+                    .join(", ")
+            );
+
+            // Emit choice function
+            emitln!(
+                self.writer,
+                "function {}({}): {};",
+                fun_name,
+                param_decls.iter().map(mk_decl).join(", "),
+                boogie_type(env, result_ty)
+            );
+            // Create call to choice function
+            let choice = format!(
+                "{}({})",
+                fun_name,
+                param_decls.iter().map(mk_arg).join(", ")
+            );
+
+            // Emit choice axiom
+            if !param_decls.is_empty() {
+                emit!(
+                    self.writer,
+                    "axiom (forall {}:: ",
+                    param_decls.iter().map(mk_decl).join(", ")
+                );
+                if !info.free_vars.is_empty() || !info.used_temps.is_empty() {
+                    // TODO: IsValid for memory?
+                    let mut sep = "";
+                    for (s, ty) in &info.free_vars {
+                        emit!(self.writer, sep);
+                        emit_valid(env.symbol_pool().string(*s).as_ref(), ty);
+                        sep = " && ";
+                    }
+                    for (t, ty) in &info.used_temps {
+                        emit!(self.writer, sep);
+                        emit_valid(&mk_temp(*t), ty);
+                        sep = " && ";
+                    }
+                    emitln!(self.writer, " ==>");
+                }
+            } else {
+                emitln!(self.writer, "axiom");
+            }
+            self.writer.indent();
+            emitln!(
+                self.writer,
+                "(exists {}:: {}) ==> ",
+                mk_decl(&var_decl),
+                predicate
+            );
+            emitln!(
+                self.writer,
+                "(var {} := {}; {}",
+                &var_decl.0,
+                choice,
+                predicate
+            );
+
+            // Emit min constraint
+            if info.kind == QuantKind::ChooseMin {
+                // Check whether we support min on the range type.
+                if !result_ty.is_number() && !result_ty.is_signer_or_address() {
+                    env.error(
+                        &env.get_node_loc(info.node_id),
+                        "The min choice can only be applied to numbers, addresses, or signers",
+                    )
+                }
+                // Add the condition that there does not exist a smaller satisfying value.
+                emit!(self.writer, " && (var $$c := {}; ", &var_decl.0);
+                emit!(
+                    self.writer,
+                    "(forall {}:: {} < $$c ==> !{}))",
+                    mk_decl(&var_decl),
+                    &var_decl.0,
+                    predicate
+                );
+            }
+            self.writer.unindent();
+            if !param_decls.is_empty() {
+                emit!(self.writer, ")");
+            }
+            emitln!(self.writer, ");\n");
+        }
+    }
+}
+
 // Expressions
 // ===========
 
@@ -368,6 +575,12 @@ impl<'env> SpecTranslator<'env> {
                 &self.env.get_node_loc(*node_id),
                 "`|x|e` (lambda) currently only supported as argument for `all` or `any`",
             ),
+            Exp::Quant(node_id, kind, ranges, _, _, exp) if kind.is_choice() => {
+                // The parser ensures that len(ranges) = 1 and triggers and condition are
+                // not present.
+                self.set_writer_location(*node_id);
+                self.translate_choice(*node_id, *kind, &ranges[0], exp)
+            }
             Exp::Quant(node_id, kind, ranges, triggers, condition, exp) => {
                 self.set_writer_location(*node_id);
                 self.translate_quant(*node_id, *kind, ranges, triggers, condition, exp)
@@ -804,6 +1017,7 @@ impl<'env> SpecTranslator<'env> {
         condition: &Option<Box<Exp>>,
         body: &Exp,
     ) {
+        assert!(!kind.is_choice());
         // Translate range expressions. While doing, check for currently unsupported
         // type quantification
         let mut range_tmps = HashMap::new();
@@ -904,6 +1118,7 @@ impl<'env> SpecTranslator<'env> {
         let connective = match kind {
             QuantKind::Forall => " ==> ",
             QuantKind::Exists => " && ",
+            _ => unreachable!(),
         };
         let mut separator = "";
         for (var, range) in ranges {
@@ -971,6 +1186,54 @@ impl<'env> SpecTranslator<'env> {
                 .take(range_tmps.len().checked_add(1).unwrap())
                 .collect::<String>()
         );
+    }
+
+    /// Translate a `some x: T: P[x]` expression. This saves information about the axiomatized
+    /// function representing this expression, to be generated later, and replaces the expression by
+    /// a call to this function.
+    fn translate_choice(
+        &self,
+        node_id: NodeId,
+        kind: QuantKind,
+        range: &(LocalVarDecl, Exp),
+        body: &Exp,
+    ) {
+        let mut choice_infos = self.lifted_choice_infos.borrow_mut();
+        let choice_count = choice_infos.len();
+        let info = choice_infos.entry(node_id).or_insert_with(|| {
+            let some_var = range.0.name;
+            let free_vars = body
+                .free_vars(self.env)
+                .into_iter()
+                .filter(|(s, _)| *s != some_var)
+                .collect_vec();
+            let used_temps = body.temporaries(self.env).into_iter().collect_vec();
+            let used_memory = body.used_memory(self.env).into_iter().collect_vec();
+            LiftedChoiceInfo {
+                id: choice_count,
+                node_id,
+                kind,
+                free_vars,
+                used_temps,
+                used_memory,
+                var: some_var,
+                range: range.1.clone(),
+                condition: body.clone(),
+            }
+        });
+        let fun_name = boogie_choice_fun_name(info.id);
+        let args = info
+            .free_vars
+            .iter()
+            .map(|(s, _)| s.display(self.env.symbol_pool()).to_string())
+            .chain(info.used_temps.iter().map(|(t, _)| format!("$t{}", t)))
+            .chain(
+                info.used_memory
+                    .iter()
+                    .map(|(m, l)| boogie_resource_memory_name(self.env, m, l)),
+            )
+            .join(", ");
+        emit!(self.writer, "{}({})", fun_name, args);
     }
 
     fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
