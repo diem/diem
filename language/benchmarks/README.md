@@ -35,3 +35,16 @@ Launch the benchmark target in the terminal, and select it in Instrument.
 Here’s an example trace from running the benchmark
 
 ![](https://i.imgur.com/BAoprNq.jpg)
+
+# Getting Reliable Benchmark Numbers
+
+For the benchmark suite we've implemented, we use cpu time for measuring the perf of DiemVM to help the measurement stability in a CI setup. This however introduces lots of noise when running the benchmark suite locally. Thus if you are running the benchmark on your own machine, you should turn off all other resource consuming applications like browsers, IDE, etc, and run a few times to make sure `criterion` reports " No change in performance detected". Usually the numbers should be pretty stable if the machine is mostly on idle. Here's an example output from the `criterion`:
+
+```
+peer_to_peer            time:   [281.61 ms 283.87 ms 286.56 ms]                         
+                        change: [-0.6289% +0.5859% +1.8803%] (p = 0.36 > 0.05)
+                        No change in performance detected.
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) high mild
+  7 (7.00%) high severe
+```
