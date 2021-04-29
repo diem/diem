@@ -408,7 +408,7 @@ impl<'env> SpecTranslator<'env> {
                     vec![self.unbox_value(self.box_unbox(arg1)), self.box_unbox(arg2)],
                 ))
             }
-            Update => {
+            UpdateVec => {
                 let arg3 = args.pop().unwrap();
                 let arg2 = args.pop().unwrap();
                 let arg1 = args.pop().unwrap();
@@ -661,15 +661,13 @@ impl<'env> SpecTranslator<'env> {
                 &loc,
                 "domain functions can only be used as the range of a quantifier",
             ),
-            Operation::Update => self.translate_primitive_call("UpdateVec", args),
-            Operation::Concat => self.translate_primitive_call("ConcatVec", args),
-            Operation::Empty => self.translate_primitive_call("EmptyVec", args),
-            Operation::Single => self.translate_primitive_call("MakeVec1", args),
-            Operation::IndexOf => self.translate_primitive_call("$IndexOfVec", args),
-            Operation::Contains => self.translate_primitive_call("$ContainsVec", args),
-            Operation::InRange => self.translate_in_range(args),
-            Operation::Old => panic!("old(..) expression unexpected"),
-            Operation::Trace => self.translate_exp(&args[0]),
+            Operation::UpdateVec => self.translate_primitive_call("UpdateVec", args),
+            Operation::ConcatVec => self.translate_primitive_call("ConcatVec", args),
+            Operation::EmptyVec => self.translate_primitive_call("EmptyVec", args),
+            Operation::SingleVec => self.translate_primitive_call("MakeVec1", args),
+            Operation::IndexOfVec => self.translate_primitive_call("$IndexOfVec", args),
+            Operation::ContainsVec => self.translate_primitive_call("$ContainsVec", args),
+            Operation::InRangeVec => self.translate_primitive_call("InRangeVec", args),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
             Operation::MaxU64 => emit!(self.writer, "$MAX_U64"),
             Operation::MaxU128 => emit!(self.writer, "$MAX_U128"),
@@ -677,6 +675,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::AbortCode => emit!(self.writer, "$abort_code"),
             Operation::AbortFlag => emit!(self.writer, "$abort_flag"),
             Operation::NoOp => { /* do nothing. */ }
+            _ => panic!("operation unexpected: {:?}", oper),
         }
     }
 
@@ -1208,15 +1207,6 @@ impl<'env> SpecTranslator<'env> {
     fn translate_primitive_call(&self, fun: &str, args: &[Exp]) {
         emit!(self.writer, "{}(", fun);
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
-        emit!(self.writer, ")");
-    }
-
-    fn translate_in_range(&self, args: &[Exp]) {
-        // Only difference to primitive call is swapped argument order.
-        emit!(self.writer, "InRangeVec(");
-        self.translate_exp(&args[1]);
-        emit!(self.writer, ", ");
-        self.translate_exp(&args[0]);
         emit!(self.writer, ")");
     }
 

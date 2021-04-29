@@ -1190,7 +1190,7 @@ It only updates validators at index <code>i</code>, and updates the
 
 <pre><code><b>ensures</b>
     result ==&gt;
-        validators == update_vector(
+        validators == <b>update</b>(
             <b>old</b>(validators),
             i,
             update_field(<b>old</b>(validators[i]), config, new_validator_config)
@@ -1208,7 +1208,7 @@ Does not change validators if result is false
 Updates the ith validator entry (and nothing else), as appropriate.
 
 
-<pre><code><b>ensures</b> validators == update_vector(<b>old</b>(validators), i, validators[i]);
+<pre><code><b>ensures</b> validators == <b>update</b>(<b>old</b>(validators), i, validators[i]);
 </code></pre>
 
 

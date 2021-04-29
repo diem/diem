@@ -539,7 +539,7 @@ DiemTransactionPublishingOption config [[H11]][PERMISSION]
     <a href="Roles.md#0x1_Roles_has_diem_root_role">Roles::has_diem_root_role</a>(account) || (!<a href="DiemTransactionPublishingOption.md#0x1_DiemTransactionPublishingOption_transactions_halted">transactions_halted</a>() && (
         <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(hash) ||
             (<a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
-                || <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash))
+                || contains(publish_option.script_allow_list, hash))
     ))
 }
 <a name="0x1_DiemTransactionPublishingOption_spec_is_module_allowed"></a>

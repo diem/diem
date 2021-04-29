@@ -277,18 +277,7 @@ Return an vector of size one containing element <code>e</code>.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="Vector.md#0x1_Vector_spec_singleton">spec_singleton</a>(e);
-</code></pre>
-
-
-
-
-<a name="0x1_Vector_spec_singleton"></a>
-
-
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_spec_singleton">spec_singleton</a>&lt;Element&gt;(e: Element): vector&lt;Element&gt; {
-    singleton_vector(e)
-}
+<b>ensures</b> result == vec(e);
 </code></pre>
 
 
@@ -599,18 +588,6 @@ Aborts if <code>i</code> is out of bounds.
 <a name="@Helper_Functions_2"></a>
 
 ### Helper Functions
-
-
-Check whether a vector contains an element.
-
-
-<a name="0x1_Vector_spec_contains"></a>
-
-
-<pre><code><b>define</b> <a href="Vector.md#0x1_Vector_spec_contains">spec_contains</a>&lt;Element&gt;(v: vector&lt;Element&gt;, e: Element): bool {
-    <b>exists</b> x in v: x == e
-}
-</code></pre>
 
 
 Check if <code>v1</code> is equal to the result of adding <code>e</code> at the end of <code>v2</code>

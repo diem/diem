@@ -172,40 +172,40 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             },
         );
         trans.define_spec_fun(
-            trans.builtin_qualified_symbol("update_vector"),
+            trans.builtin_qualified_symbol("update"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Update,
+                oper: Operation::UpdateVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![vector_t.clone(), num_t.clone(), param_t.clone()],
                 result_type: vector_t.clone(),
             },
         );
         trans.define_spec_fun(
-            trans.builtin_qualified_symbol("empty_vector"),
+            trans.builtin_qualified_symbol("vec"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Empty,
+                oper: Operation::EmptyVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![],
                 result_type: vector_t.clone(),
             },
         );
         trans.define_spec_fun(
-            trans.builtin_qualified_symbol("singleton_vector"),
+            trans.builtin_qualified_symbol("vec"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Single,
+                oper: Operation::SingleVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![param_t.clone()],
                 result_type: vector_t.clone(),
             },
         );
         trans.define_spec_fun(
-            trans.builtin_qualified_symbol("concat_vector"),
+            trans.builtin_qualified_symbol("concat"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Concat,
+                oper: Operation::ConcatVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![vector_t.clone(), vector_t.clone()],
                 result_type: vector_t.clone(),
@@ -215,7 +215,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("contains"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::Contains,
+                oper: Operation::ContainsVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![vector_t.clone(), param_t.clone()],
                 result_type: bool_t.clone(),
@@ -225,7 +225,7 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("index_of"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::IndexOf,
+                oper: Operation::IndexOfVec,
                 type_params: vec![param_t.clone()],
                 arg_types: vec![vector_t.clone(), param_t.clone()],
                 result_type: num_t.clone(),
@@ -235,10 +235,30 @@ pub(crate) fn declare_spec_builtins(trans: &mut ModelBuilder<'_>) {
             trans.builtin_qualified_symbol("in_range"),
             SpecFunEntry {
                 loc: loc.clone(),
-                oper: Operation::InRange,
+                oper: Operation::InRangeVec,
                 type_params: vec![param_t.clone()],
-                arg_types: vec![num_t.clone(), vector_t.clone()],
+                arg_types: vec![vector_t.clone(), num_t.clone()],
                 result_type: bool_t.clone(),
+            },
+        );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("in_range"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::InRangeRange,
+                type_params: vec![],
+                arg_types: vec![range_t.clone(), num_t.clone()],
+                result_type: bool_t.clone(),
+            },
+        );
+        trans.define_spec_fun(
+            trans.builtin_qualified_symbol("range"),
+            SpecFunEntry {
+                loc: loc.clone(),
+                oper: Operation::RangeVec,
+                type_params: vec![param_t.clone()],
+                arg_types: vec![vector_t.clone()],
+                result_type: range_t.clone(),
             },
         );
 

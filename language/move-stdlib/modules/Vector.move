@@ -54,12 +54,7 @@ module Vector {
         // TODO: when using opaque here, we get verification errors.
         // pragma opaque;
         aborts_if false;
-        ensures result == spec_singleton(e);
-    }
-    spec module {
-        define spec_singleton<Element>(e: Element): vector<Element> {
-            singleton_vector(e)
-        }
+        ensures result == vec(e);
     }
 
     /// Reverses the order of the elements in the vector `v` in place.
@@ -164,11 +159,6 @@ module Vector {
     /// # Helper Functions
 
     spec module {
-        /// Check whether a vector contains an element.
-        define spec_contains<Element>(v: vector<Element>, e: Element): bool {
-            exists x in v: x == e
-        }
-
         /// Check if `v1` is equal to the result of adding `e` at the end of `v2`
         define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
             len(v1) == len(v2) + 1 &&

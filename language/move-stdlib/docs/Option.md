@@ -146,7 +146,7 @@ Return an empty <code><a href="Option.md#0x1_Option">Option</a></code>
 
 
 <pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_none">spec_none</a>&lt;Element&gt;(): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
-   <a href="Option.md#0x1_Option">Option</a>{ vec: empty_vector() }
+   <a href="Option.md#0x1_Option">Option</a>{ vec: vec() }
 }
 </code></pre>
 
@@ -196,7 +196,7 @@ Return an <code><a href="Option.md#0x1_Option">Option</a></code> containing <cod
 
 
 <pre><code><b>define</b> <a href="Option.md#0x1_Option_spec_some">spec_some</a>&lt;Element&gt;(e: Element): <a href="Option.md#0x1_Option">Option</a>&lt;Element&gt; {
-   <a href="Option.md#0x1_Option">Option</a>{ vec: <a href="Vector.md#0x1_Vector_spec_singleton">Vector::spec_singleton</a>(e) }
+   <a href="Option.md#0x1_Option">Option</a>{ vec: vec(e) }
 }
 </code></pre>
 

@@ -203,7 +203,7 @@ The same currency code can be only added once.
 
 
 <pre><code><b>schema</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">AddCurrencyCodeAbortsIf</a> {
-    <b>aborts_if</b> <a href="../../../../../../move-stdlib/docs/Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(
+    <b>aborts_if</b> contains(
         <a href="DiemConfig.md#0x1_DiemConfig_get">DiemConfig::get</a>&lt;<a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes,
         currency_code
     ) <b>with</b> <a href="../../../../../../move-stdlib/docs/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;

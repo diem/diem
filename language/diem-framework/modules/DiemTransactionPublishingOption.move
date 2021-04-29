@@ -186,7 +186,7 @@ module DiemTransactionPublishingOption {
             Roles::has_diem_root_role(account) || (!transactions_halted() && (
                 Vector::is_empty(hash) ||
                     (Vector::is_empty(publish_option.script_allow_list)
-                        || Vector::spec_contains(publish_option.script_allow_list, hash))
+                        || contains(publish_option.script_allow_list, hash))
             ))
         }
 

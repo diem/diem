@@ -33,7 +33,7 @@ module Option {
         ensures result == spec_none<Element>();
     }
     spec define spec_none<Element>(): Option<Element> {
-        Option{ vec: empty_vector() }
+        Option{ vec: vec() }
     }
 
     /// Return an `Option` containing `e`
@@ -46,7 +46,7 @@ module Option {
         ensures result == spec_some(e);
     }
     spec define spec_some<Element>(e: Element): Option<Element> {
-        Option{ vec: Vector::spec_singleton(e) }
+        Option{ vec: vec(e) }
     }
 
     /// Return true if `t` does not hold a value

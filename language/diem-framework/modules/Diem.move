@@ -1048,7 +1048,7 @@ module Diem {
     spec schema CancelBurnWithCapEmits<CoinType> {
         preburn_address: address;
         amount: u64;
-        let info = TRACE(spec_currency_info<CoinType>());
+        let info = spec_currency_info<CoinType>();
         let currency_code = spec_currency_code<CoinType>();
         let handle = info.cancel_burn_events;
         emits CancelBurnEvent {

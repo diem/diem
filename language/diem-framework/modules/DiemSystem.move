@@ -520,7 +520,7 @@ module DiemSystem {
         /// `config` field to `new_validator_config`.
         ensures
             result ==>
-                validators == update_vector(
+                validators == update(
                     old(validators),
                     i,
                     update_field(old(validators[i]), config, new_validator_config)
@@ -528,7 +528,7 @@ module DiemSystem {
         /// Does not change validators if result is false
         ensures !result ==> validators == old(validators);
         /// Updates the ith validator entry (and nothing else), as appropriate.
-        ensures validators == update_vector(old(validators), i, validators[i]);
+        ensures validators == update(old(validators), i, validators[i]);
         /// Needed these assertions to make "consensus voting power is always 1" invariant
         /// prove (not sure why).
         requires forall i1 in 0..len(spec_get_validators()):

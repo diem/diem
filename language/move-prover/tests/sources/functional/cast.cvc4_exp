@@ -2,14 +2,14 @@ Move prover returns: [internal] boogie exited with prover errors:
 Prover error: Unexpected value: ($Path (as @uc_T@[Int]Int_0 T@[Int]Int) 0)
 
 Advisory: $TestCast_aborting_u64_cast_incorrect$verify SKIPPED because of internal error: unexpected prover output: Exception of type 'Microsoft.Boogie.SMTLib.SMTLibProcessTheoremProver+BadExprFromProver' was thrown.
-cast.bpl(1021,27): Verification inconclusive ($TestCast_aborting_u64_cast_incorrect$verify)
-cast.bpl(1084,27): Verification inconclusive ($TestCast_aborting_u8_cast$verify)
-cast.bpl(1147,27): Verification inconclusive ($TestCast_aborting_u8_cast_incorrect$verify)
+cast.bpl(1025,27): Verification inconclusive ($TestCast_aborting_u64_cast_incorrect$verify)
+cast.bpl(1088,27): Verification inconclusive ($TestCast_aborting_u8_cast$verify)
+cast.bpl(1151,27): Verification inconclusive ($TestCast_aborting_u8_cast_incorrect$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-cast.bpl(1210,27): Verification inconclusive ($TestCast_u64_cast$verify)
+cast.bpl(1214,27): Verification inconclusive ($TestCast_u64_cast$verify)
 Prover error: Invalid PING response from the prover: unsat
 
-cast.bpl(1262,27): Verification inconclusive ($TestCast_u8_cast_incorrect$verify)
+cast.bpl(1266,27): Verification inconclusive ($TestCast_u8_cast_incorrect$verify)
 
 Boogie program verifier finished with 0 errors, 5 inconclusives

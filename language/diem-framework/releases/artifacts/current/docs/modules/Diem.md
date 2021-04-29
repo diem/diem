@@ -2468,7 +2468,7 @@ at <code>preburn_address</code> does not contain a preburn request of the right 
     preburn_address: address;
     amount: u64;
     <a name="0x1_Diem_info$90"></a>
-    <b>let</b> info = TRACE(<a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;());
+    <b>let</b> info = <a href="Diem.md#0x1_Diem_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <a name="0x1_Diem_currency_code$91"></a>
     <b>let</b> currency_code = <a href="Diem.md#0x1_Diem_spec_currency_code">spec_currency_code</a>&lt;CoinType&gt;();
     <a name="0x1_Diem_handle$92"></a>

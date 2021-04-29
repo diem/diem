@@ -53,6 +53,10 @@ axiom (forall v: Vec ({{T}}), e: {{T}}:: {$IndexOfVec{{S}}(v, e)}
         (forall j: int :: $IsValid'u64'(j) && j >= 0 && j < i ==> !$IsEqual{{S}}(ReadVec(v, j), e))));
 {% endif %}
 
+function {:inline} $RangeVec{{S}}(v: Vec ({{T}})): $Range {
+    $Range(0, LenVec(v))
+}
+
 
 function {:inline} $EmptyVec{{S}}(): Vec ({{T}}) {
     EmptyVec()

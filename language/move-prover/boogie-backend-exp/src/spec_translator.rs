@@ -721,15 +721,19 @@ impl<'env> SpecTranslator<'env> {
                 &loc,
                 "domain functions can only be used as the range of a quantifier",
             ),
-            Operation::Update => self.translate_primitive_call("UpdateVec", args),
-            Operation::Concat => self.translate_primitive_call("ConcatVec", args),
-            Operation::Empty => self.translate_primitive_inst_call(node_id, "$EmptyVec", args),
-            Operation::Single => self.translate_primitive_call("MakeVec1", args),
-            Operation::IndexOf => self.translate_primitive_inst_call(node_id, "$IndexOfVec", args),
-            Operation::Contains => self.translate_primitive_inst_call(node_id, "$Contains", args),
-            Operation::InRange => self.translate_in_range(args),
-            Operation::Old => panic!("old(..) expression unexpected"),
-            Operation::Trace => self.translate_exp(&args[0]),
+            Operation::UpdateVec => self.translate_primitive_call("UpdateVec", args),
+            Operation::ConcatVec => self.translate_primitive_call("ConcatVec", args),
+            Operation::EmptyVec => self.translate_primitive_inst_call(node_id, "$EmptyVec", args),
+            Operation::SingleVec => self.translate_primitive_call("MakeVec1", args),
+            Operation::IndexOfVec => {
+                self.translate_primitive_inst_call(node_id, "$IndexOfVec", args)
+            }
+            Operation::ContainsVec => {
+                self.translate_primitive_inst_call(node_id, "$ContainsVec", args)
+            }
+            Operation::RangeVec => self.translate_primitive_call("$RangeVec", args),
+            Operation::InRangeVec => self.translate_primitive_call("InRangeVec", args),
+            Operation::InRangeRange => self.translate_primitive_call("$InRange", args),
             Operation::MaxU8 => emit!(self.writer, "$MAX_U8"),
             Operation::MaxU64 => emit!(self.writer, "$MAX_U64"),
             Operation::MaxU128 => emit!(self.writer, "$MAX_U128"),
@@ -737,6 +741,15 @@ impl<'env> SpecTranslator<'env> {
             Operation::AbortCode => emit!(self.writer, "$abort_code"),
             Operation::AbortFlag => emit!(self.writer, "$abort_flag"),
             Operation::NoOp => { /* do nothing. */ }
+            Operation::Trace => {
+                // An unreduced trace means it has been used in a spec fun or let.
+                // Create an error about this.
+                self.env.error(
+                    &loc,
+                    "currently `TRACE(..)` cannot be used in spec functions or in lets",
+                )
+            }
+            Operation::Old => panic!("operation unexpected: {:?}", oper),
         }
     }
 
@@ -1293,15 +1306,6 @@ impl<'env> SpecTranslator<'env> {
     fn translate_primitive_call(&self, fun: &str, args: &[Exp]) {
         emit!(self.writer, "{}(", fun);
         self.translate_seq(args.iter(), ", ", |e| self.translate_exp(e));
-        emit!(self.writer, ")");
-    }
-
-    fn translate_in_range(&self, args: &[Exp]) {
-        // Only difference to primitive call is swapped argument order.
-        emit!(self.writer, "InRangeVec(");
-        self.translate_exp(&args[1]);
-        emit!(self.writer, ", ");
-        self.translate_exp(&args[0]);
         emit!(self.writer, ")");
     }
 

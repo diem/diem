@@ -69,7 +69,7 @@ module RegisteredCurrencies {
         currency_code: vector<u8>;
         include DiemConfig::SetAbortsIf<RegisteredCurrencies>{ account: dr_account };
         /// The same currency code can be only added once.
-        aborts_if Vector::spec_contains(
+        aborts_if contains(
             DiemConfig::get<RegisteredCurrencies>().currency_codes,
             currency_code
         ) with Errors::INVALID_ARGUMENT;
