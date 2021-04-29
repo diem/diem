@@ -7,6 +7,8 @@ use move_core_types::{
     account_address::AccountAddress, gas_schedule::CostTable, language_storage::CORE_CODE_ADDRESS,
     value::MoveTypeLayout, vm_status::StatusType,
 };
+#[cfg(feature = "testing")]
+use move_vm_natives::unit_test;
 use move_vm_natives::{account, bcs, debug, event, hash, signature, signer, vector};
 use move_vm_types::{
     data_store::DataStore,
@@ -43,6 +45,8 @@ pub(crate) enum NativeFunction {
     DebugPrintStackTrace,
     SignerBorrowAddress,
     CreateSigner,
+    #[cfg(feature = "testing")]
+    UnitTestCreateSigners,
     // functions below this line are deprecated and remain only for replaying old transactions
     DestroySigner,
 }
@@ -75,13 +79,15 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
             (&CORE_CODE_ADDRESS, "Signer", "borrow_address") => SignerBorrowAddress,
+            #[cfg(feature = "testing")]
+            (&CORE_CODE_ADDRESS, "UnitTest", "create_signers_for_testing") => UnitTestCreateSigners,
             // functions below this line are deprecated and remain only for replaying old transactions
             (&CORE_CODE_ADDRESS, "DiemAccount", "destroy_signer") => DestroySigner,
             _ => return None,
         })
     }
 
-    /// Given the vector of aguments, it executes the native function.
+    /// Given the vector of arguments, it executes the native function.
     pub(crate) fn dispatch(
         self,
         ctx: &mut impl NativeContext,
@@ -108,6 +114,8 @@ impl NativeFunction {
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),
             Self::SignerBorrowAddress => signer::native_borrow_address(ctx, t, v),
             Self::CreateSigner => account::native_create_signer(ctx, t, v),
+            #[cfg(feature = "testing")]
+            Self::UnitTestCreateSigners => unit_test::native_create_signers_for_testing(ctx, t, v),
             // functions below this line are deprecated and remain only for replaying old transactions
             Self::DestroySigner => account::native_destroy_signer(ctx, t, v),
         };

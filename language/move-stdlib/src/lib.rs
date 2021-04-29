@@ -42,6 +42,13 @@ pub fn filter_move_bytecode_files(
     })
 }
 
+pub fn unit_testing_module_file() -> String {
+    path_in_crate("nursery/UnitTest.move")
+        .into_os_string()
+        .into_string()
+        .unwrap()
+}
+
 pub fn path_in_crate<S>(relative: S) -> PathBuf
 where
     S: Into<String>,

@@ -84,7 +84,8 @@ fn run_test(
     flags: Flags,
 ) -> datatest_stable::Result<()> {
     let targets: Vec<String> = vec![path.to_str().unwrap().to_owned()];
-    let deps = move_stdlib::move_stdlib_files();
+    let mut deps = move_stdlib::move_stdlib_files();
+    deps.push(move_stdlib::unit_testing_module_file());
 
     let compilation_env = CompilationEnv::new(flags);
     let (files, pprog_and_comments_res) = move_parse(&compilation_env, &targets, &deps, None)?;

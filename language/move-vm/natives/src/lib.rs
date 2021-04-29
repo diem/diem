@@ -11,4 +11,6 @@ pub mod event;
 pub mod hash;
 pub mod signature;
 pub mod signer;
+#[cfg(feature = "testing")]
+pub mod unit_test;
 pub mod vector;

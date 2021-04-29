@@ -27,7 +27,7 @@ move-coverage = { path = "../move-coverage" }
 move-core-types = { path = "../../move-core/types" }
 move-lang = { path = "../../move-lang" }
 move-vm-types = { path = "../../move-vm/types" }
-move-vm-runtime = { path = "../../move-vm/runtime", features = ["debug_module"] }
+move-vm-runtime = { path = "../../move-vm/runtime", features = ["testing"] }
 read-write-set = { path = "../read-write-set" }
 resource-viewer = { path = "../resource-viewer" }
 move-binary-format = { path = "../../move-binary-format" }

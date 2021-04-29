@@ -96,9 +96,20 @@ impl UnitTestingConfig {
 
     /// Build a test plan from a unit test config
     pub fn build_test_plan(&self) -> Option<TestPlan> {
+        let mut source_files = self.source_files.clone();
+
+        // We always need to have the unit testing module in otherwise the modules will fail to
+        // compile in test mode
+        if !source_files
+            .iter()
+            .any(|file_path| file_path.contains("UnitTest.move"))
+        {
+            source_files.push(move_stdlib::unit_testing_module_file());
+        }
+
         let mut compilation_env = CompilationEnv::new(Flags::testing());
         let (files, pprog_and_comments_res) =
-            move_lang::move_parse(&compilation_env, &self.source_files, &[], None).ok()?;
+            move_lang::move_parse(&compilation_env, &source_files, &[], None).ok()?;
         let (_, pprog) = move_lang::unwrap_or_report_errors!(files, pprog_and_comments_res);
         let cfgir_result = move_lang::move_continue_up_to(
             &mut compilation_env,

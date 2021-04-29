@@ -24,7 +24,7 @@ pub fn native_print(
     debug_assert!(args.len() == 1);
 
     // No-op if the feature flag is not present.
-    #[cfg(feature = "debug_module")]
+    #[cfg(feature = "testing")]
     {
         let ty = ty_args.pop().unwrap();
         let r = pop_arg!(args, Reference);
@@ -46,7 +46,7 @@ pub fn native_print_stack_trace(
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.is_empty());
 
-    #[cfg(feature = "debug_module")]
+    #[cfg(feature = "testing")]
     {
         let mut s = String::new();
         context.print_stack_trace(&mut s)?;

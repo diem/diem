@@ -110,21 +110,21 @@ enum ReferenceImpl {
 }
 
 // A reference to a signer. Clients can attempt a cast to this struct if they are
-// expecting a Signer on the stavk or as an argument.
+// expecting a Signer on the stack or as an argument.
 #[derive(Debug)]
 pub struct SignerRef(ContainerRef);
 
 // A reference to a vector. This is an alias for a ContainerRef for now but we may change
 // it once Containers are restructured.
 // It's used from vector native functions to get a reference to a vector and operate on that.
-// There is an impl for VecotrRef which implements the API private to this module.
+// There is an impl for VectorRef which implements the API private to this module.
 #[derive(Debug)]
 pub struct VectorRef(ContainerRef);
 
 // A vector. This is an alias for a Container for now but we may change
 // it once Containers are restructured.
 // It's used from vector native functions to get a vector and operate on that.
-// There is an impl for Vecotr which implements the API private to this module.
+// There is an impl for Vector which implements the API private to this module.
 #[derive(Debug)]
 pub struct Vector(Container);
 
@@ -139,7 +139,7 @@ pub struct Vector(Container);
  *
  *   They are opaque to an external caller by design -- no knowledge about the internal
  *   representation is given and they can only be manipulated via the public methods,
- *   which is to ensure no arbitratry invalid states can be created unless some crucial
+ *   which is to ensure no arbitrary invalid states can be created unless some crucial
  *   internal invariants are violated.
  *
  **************************************************************************************/
@@ -148,7 +148,7 @@ pub struct Vector(Container);
 #[derive(Debug)]
 pub struct StructRef(ContainerRef);
 
-/// A generic Move reference that offers two functinalities: read_ref & write_ref.
+/// A generic Move reference that offers two functionalities: read_ref & write_ref.
 #[derive(Debug)]
 pub struct Reference(ReferenceImpl);
 
@@ -1549,6 +1549,7 @@ fn check_elem_layout(
         (Type::Vector(_), Container::Vec(_)) => Ok(()),
 
         (Type::Struct(_), Container::Vec(_))
+        | (Type::Signer, Container::Vec(_))
         | (Type::StructInstantiation(_, _), Container::Vec(_)) => Ok(()),
 
         (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => Err(

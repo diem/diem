@@ -3,9 +3,9 @@
 
 use crate::{
     parser::ast as P,
-    shared::{known_attributes, CompilationEnv},
+    shared::{known_attributes, AddressBytes, CompilationEnv},
 };
-use move_ir_types::location::Loc;
+use move_ir_types::location::{sp, Loc};
 
 struct Context<'env> {
     env: &'env mut CompilationEnv,
@@ -23,11 +23,21 @@ impl<'env> Context<'env> {
 // Filtering of test-annotated module members
 //***************************************************************************
 
+const UNIT_TEST_MODULE_NAME: &str = "UnitTest";
+// TODO: remove once named addresses have landed in the stdlib
+const STDLIB_ADDRESS: AddressBytes = AddressBytes::new([
+    0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 1u8,
+]);
+
 // This filters out all test, and test-only annotated module member from `prog` if the `test` flag
 // in `compilation_env` is not set. If the test flag is set, no filtering is performed, and instead
 // a test plan is created for use by the testing framework.
 pub fn program(compilation_env: &mut CompilationEnv, prog: P::Program) -> P::Program {
     let mut context = Context::new(compilation_env);
+
+    if !check_has_unit_test_module(&mut context, &prog) {
+        return prog;
+    }
 
     let P::Program {
         source_definitions,
@@ -48,6 +58,46 @@ pub fn program(compilation_env: &mut CompilationEnv, prog: P::Program) -> P::Pro
         source_definitions,
         lib_definitions,
     }
+}
+
+fn check_has_unit_test_module(context: &mut Context, prog: &P::Program) -> bool {
+    let has_unit_test_module = prog
+        .lib_definitions
+        .iter()
+        .chain(prog.source_definitions.iter())
+        .any(|def| match def {
+            P::Definition::Module(mdef) => {
+                mdef.name.0.value == UNIT_TEST_MODULE_NAME
+                    && mdef.address.is_some()
+                    && match &mdef.address.as_ref().unwrap().value {
+                        // TODO: remove once named addresses have landed in the stdlib
+                        P::LeadingNameAccess_::AnonymousAddress(bytes) => bytes == &STDLIB_ADDRESS,
+                        P::LeadingNameAccess_::Name(name) => name.value == "Std",
+                    }
+            }
+            _ => false,
+        });
+
+    if !has_unit_test_module && context.env.flags().is_testing() {
+        if let Some(def) = prog
+            .source_definitions
+            .iter()
+            .chain(prog.lib_definitions.iter())
+            .next()
+        {
+            let loc = match def {
+                P::Definition::Module(P::ModuleDefinition { name, .. }) => name.0.loc,
+                P::Definition::Address(P::AddressDefinition { loc, .. })
+                | P::Definition::Script(P::Script { loc, .. }) => *loc,
+            };
+            context.env.add_error(vec![
+                    (loc, "Compilation in test mode requires passing the UnitTest module in the Move stdlib as a dependency")
+                ]);
+            return false;
+        }
+    }
+
+    true
 }
 
 fn filter_tests_from_definition(
@@ -138,10 +188,12 @@ fn filter_tests_from_module(
         members,
     } = module_def;
 
-    let new_members: Vec<_> = members
+    let mut new_members: Vec<_> = members
         .into_iter()
         .filter_map(|member| filter_tests_from_module_member(context, member))
         .collect();
+
+    insert_test_poison(context, loc, &mut new_members);
 
     Some(P::ModuleDefinition {
         attributes,
@@ -151,6 +203,78 @@ fn filter_tests_from_module(
         is_spec_module,
         members: new_members,
     })
+}
+
+/// If a module is being compiled in test mode, this inserts a function that calls a native
+/// function `0x1::UnitTest::create_signers_for_testing` that only exists if the VM is being run with the
+/// "unit_test" feature flag set. This will then cause the module to fail to link if an attempt is
+/// made to publish a module that has been compiled in test mode on a VM that is not running in
+/// test mode.
+fn insert_test_poison(context: &mut Context, mloc: Loc, members: &mut Vec<P::ModuleMember>) {
+    if !context.env.flags().is_testing() {
+        return;
+    }
+
+    let signature = P::FunctionSignature {
+        type_parameters: vec![],
+        parameters: vec![],
+        return_type: sp(mloc, P::Type_::Unit),
+    };
+
+    // TODO: Change this to a named "Std" address once named addresses in the stdlib have landed
+    //let leading_name_access =  sp(mloc, P::LeadingNameAccess_::Name(P::ModuleName(sp(mloc, "Std".to_string())),
+    let leading_name_access = sp(
+        mloc,
+        P::LeadingNameAccess_::AnonymousAddress(STDLIB_ADDRESS),
+    );
+
+    let nop_call = P::Exp_::Call(
+        sp(
+            mloc,
+            P::NameAccessChain_::Three(
+                sp(
+                    mloc,
+                    (
+                        leading_name_access,
+                        sp(mloc, UNIT_TEST_MODULE_NAME.to_string()),
+                    ),
+                ),
+                sp(mloc, "create_signers_for_testing".to_string()),
+            ),
+        ),
+        None,
+        sp(
+            mloc,
+            vec![sp(
+                mloc,
+                P::Exp_::Value(sp(mloc, P::Value_::Num("0".to_string()))),
+            )],
+        ),
+    );
+
+    // fun unit_test_poison() { 0x1::UnitTest::create_signers_for_testing(0); () }
+    let function = P::Function {
+        attributes: vec![],
+        loc: mloc,
+        visibility: P::Visibility::Internal,
+        acquires: vec![],
+        signature,
+        name: P::FunctionName(sp(mloc, "unit_test_poison".to_string())),
+        body: sp(
+            mloc,
+            P::FunctionBody_::Defined((
+                vec![],
+                vec![sp(
+                    mloc,
+                    P::SequenceItem_::Seq(Box::new(sp(mloc, nop_call))),
+                )],
+                None,
+                Box::new(Some(sp(mloc, P::Exp_::Unit))),
+            )),
+        ),
+    };
+
+    members.push(P::ModuleMember::Function(function));
 }
 
 fn filter_tests_from_module_member(

@@ -1,0 +1,67 @@
+Running Move unit tests
+[ PASS    ] 0x1::M::test_determinisim
+[ FAIL    ] 0x1::M::test_doesnt_exist
+[ PASS    ] 0x1::M::test_exists
+
+Test failures:
+
+Failures in 0x1::M:
+
+┌── test_doesnt_exist ──────
+│ error: 
+│ 
+│     ┌── tests/test_sources/native_signer_creation.move:47:9 ───
+│     │
+│  47 │         abort 0
+│     │         ^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│     ·
+│  36 │     fun test_doesnt_exist() {
+│     │         ----------------- In this function in 0x1::M
+│     │
+│ 
+│ 
+│ ────── Storage state at point of failure ──────
+│ 0x0:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x1000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x2000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x3000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x4000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x5000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x6000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x7000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x8000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 0x9000000000000000000000000000000:
+│ 	=> key 0x1::M::A {
+│ 	    dummy_field: false
+│ 	}
+│ 
+└──────────────────
+
+Test result: FAILED. Total tests: 3; passed: 2; failed: 1

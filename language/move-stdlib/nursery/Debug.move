@@ -6,5 +6,4 @@ module Debug {
 
     native public fun print_stack_trace();
 }
-
 }

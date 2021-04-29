@@ -1,0 +1,3 @@
+Running Move unit tests
+[ PASS    ] 0x1::M::poison_call
+Test result: OK. Total tests: 1; passed: 1; failed: 0

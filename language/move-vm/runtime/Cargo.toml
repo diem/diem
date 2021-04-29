@@ -36,6 +36,6 @@ move-lang = { path = "../../move-lang" }
 
 [features]
 default = []
-debug_module = ["move-vm-natives/debug_module"]
+testing = ["move-vm-natives/testing"]
 fuzzing = ["move-vm-types/fuzzing"]
 failpoints = ["fail/failpoints"]
