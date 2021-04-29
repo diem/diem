@@ -3988,7 +3988,6 @@ dependencies = [
  "bytecode-verifier",
  "criterion",
  "criterion-cpu-time",
- "diem-proptest-helpers",
  "diem-state-view",
  "diem-types",
  "diem-vm",

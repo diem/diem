@@ -18,7 +18,6 @@ criterion-cpu-time = "0.1.0"
 
 bytecode-verifier = { path = "../bytecode-verifier" }
 language-e2e-tests = { path = "../testing-infra/e2e-tests" }
-diem-proptest-helpers = { path = "../../common/proptest-helpers" }
 diem-state-view = { path = "../../storage/state-view" }
 diem-types = { path = "../../types", features = ["fuzzing"] }
 diem-workspace-hack = { path = "../../common/workspace-hack" }

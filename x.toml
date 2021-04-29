@@ -252,7 +252,6 @@ existing_deps = [
     ["language-benchmarks", "diem-vm"],
     ["language-benchmarks", "diem-types"],
     ["language-benchmarks", "diem-state-view"],
-    ["language-benchmarks", "diem-proptest-helpers"],
     ["test-generation", "language-e2e-tests"],
     ["test-generation", "diem-vm"],
     ["test-generation", "diem-types"],

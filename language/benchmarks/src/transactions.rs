@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use criterion::{measurement::Measurement, BatchSize, Bencher};
-use diem_proptest_helpers::ValueGenerator;
 use diem_types::transaction::SignedTransaction;
 use language_e2e_tests::{
     account_universe::{log_balance_strategy, AUTransactionGen, AccountUniverseGen},
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
 };
-use proptest::{collection::vec, strategy::Strategy};
+use proptest::{
+    collection::vec,
+    strategy::{Strategy, ValueTree},
+    test_runner::TestRunner,
+};
 
 /// Benchmarking support for transactions.
 #[derive(Clone, Debug)]
@@ -108,15 +111,22 @@ impl TransactionBenchState {
         S: Strategy,
         S::Value: AUTransactionGen,
     {
-        let mut gen = ValueGenerator::new();
-        let universe = gen.generate(universe_strategy);
+        let mut runner = TestRunner::default();
+        let universe = universe_strategy
+            .new_tree(&mut runner)
+            .expect("creating a new value should succeed")
+            .current();
+
         let mut executor = FakeExecutor::from_genesis_file();
         // Run in gas-cost-stability mode for now -- this ensures that new accounts are ignored.
         // XXX We may want to include new accounts in case they have interesting performance
         // characteristics.
         let mut universe = universe.setup_gas_cost_stability(&mut executor);
 
-        let transaction_gens = gen.generate(vec(strategy, num_transactions));
+        let transaction_gens = vec(strategy, num_transactions)
+            .new_tree(&mut runner)
+            .expect("creating a new value should succeed")
+            .current();
         let transactions = transaction_gens
             .into_iter()
             .map(|txn_gen| txn_gen.apply(&mut universe).0)
