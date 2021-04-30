@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{AdminInfo, FullNode, NodeId, PublicInfo, Result, Validator};
+use cluster_test::cluster::Cluster;
 
 /// Trait used to represent a running network comprised of Validators and FullNodes
 pub trait Swarm {
@@ -44,6 +45,8 @@ pub trait Swarm {
 
     /// Removes the FullNode with the provided NodeId
     fn remove_full_node(&mut self, id: NodeId) -> Result<()>;
+
+    fn cluster(&mut self) -> Result<Cluster>;
 
     /// Construct an AdminInfo from this Swarm
     fn admin_info(&mut self) -> AdminInfo<'_>;

@@ -126,7 +126,14 @@ impl ClusterBuilder {
             )
             .await
             .map_err(|e| format_err!("Failed to spawn_validator_and_fullnode_set: {}", e))?;
-        let cluster = Cluster::new(validators, fullnodes, lsrs, vaults, waypoint);
+        let cluster = Cluster::new(
+            validators,
+            fullnodes,
+            lsrs,
+            vaults,
+            waypoint,
+            "/tmp/mint.key",
+        );
 
         info!(
             "Deployed {} validators and {} fns",

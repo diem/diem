@@ -3,6 +3,7 @@
 
 use std::{env, path::PathBuf, process::Command};
 
+use cluster_test::tx_emitter::EmitJobRequest;
 use diem_sdk::{
     client::{BlockingClient, MethodRequest},
     move_types::account_address::AccountAddress,
@@ -10,12 +11,13 @@ use diem_sdk::{
 };
 use forge::{forge_main, ForgeConfig, Result, *};
 use std::time::Duration;
+use tokio::runtime::Runtime;
 
 fn main() -> Result<()> {
     let tests = ForgeConfig {
         public_usage_tests: &[&FundAccount, &TransferCoins],
         admin_tests: &[&GetMetadata],
-        network_tests: &[&RestartValidator],
+        network_tests: &[&RestartValidator, &EmitTransaction(120)],
     };
 
     forge_main(tests, LocalFactory::new(get_diem_node().to_str().unwrap()))
@@ -165,6 +167,34 @@ impl NetworkTest for RestartValidator {
         // wait node to recovery
         std::thread::sleep(Duration::from_millis(1000));
         node.health_check().expect("node health check failed");
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct EmitTransaction(u64);
+
+impl Test for EmitTransaction {
+    fn name(&self) -> &'static str {
+        "emit_transaction"
+    }
+}
+
+impl NetworkTest for EmitTransaction {
+    fn run<'t>(&self, ctx: &mut NetworkContext<'t>) -> Result<()> {
+        let rt = Runtime::new().unwrap();
+        let duration = Duration::from_secs(self.0);
+        let cluster = ctx.swarm().cluster().unwrap();
+        let mut tx_emitter = ctx.tx_emitter(&cluster, false);
+        let mut report = ctx.report();
+        let emit_job_request =
+            EmitJobRequest::for_instances(cluster.validator_instances().to_vec(), &None, 0, 0);
+        let stats = rt
+            .block_on(tx_emitter.emit_txn_for(duration, emit_job_request))
+            .unwrap();
+        report.report_txn_stats("Emit Transaction".to_string(), stats, duration, "");
+        ctx.print_report(&report);
 
         Ok(())
     }

@@ -5,6 +5,7 @@ use crate::{
     AdminInfo, Coffer, Factory, FullNode, Node, NodeId, PublicInfo, Result, Swarm, Validator,
 };
 use anyhow::ensure;
+use cluster_test::{cluster::Cluster, instance::Instance};
 use debug_interface::NodeDebugClient;
 use diem_config::config::NodeConfig;
 use diem_genesis_tool::config_builder::FullnodeType;
@@ -121,6 +122,59 @@ impl Swarm for LocalSwarm {
 
     fn remove_full_node(&mut self, _id: NodeId) -> Result<()> {
         todo!()
+    }
+
+    fn cluster(&mut self) -> Result<Cluster> {
+        let http_client = reqwest::Client::new();
+        let root_key_path = self.validator_swarm.config.diem_root_key_path.clone();
+        let validators: Vec<Instance> = self
+            .validator_swarm
+            .nodes()
+            .values()
+            .map(|n| {
+                Instance::new(
+                    n.json_rpc_endpoint(), /* short_hash */
+                    n.config().json_rpc.address.ip().to_string(),
+                    n.config().json_rpc.address.port() as u32,
+                    Some(n.debug_port() as u32),
+                    http_client.clone(),
+                )
+            })
+            .collect();
+        let fullnodes = self
+            .vfn_swarm
+            .nodes()
+            .values()
+            .map(|n| {
+                Instance::new(
+                    n.json_rpc_endpoint(), /* short_hash */
+                    n.config().json_rpc.address.ip().to_string(),
+                    n.config().json_rpc.address.port() as u32,
+                    Some(n.debug_port() as u32),
+                    http_client.clone(),
+                )
+            })
+            .into_iter()
+            .chain(self.pfn_swarm.nodes().values().map(|n| {
+                Instance::new(
+                    n.json_rpc_endpoint(), /* short_hash */
+                    n.config().json_rpc.address.ip().to_string(),
+                    n.config().json_rpc.address.port() as u32,
+                    Some(n.debug_port() as u32),
+                    http_client.clone(),
+                )
+            }))
+            .collect();
+
+        let cluster = Cluster::new(
+            validators,
+            fullnodes,
+            vec![],
+            vec![],
+            None,
+            root_key_path.to_str().unwrap(),
+        );
+        Ok(cluster)
     }
 
     fn admin_info(&mut self) -> AdminInfo<'_> {

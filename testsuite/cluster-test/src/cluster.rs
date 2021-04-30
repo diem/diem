@@ -79,13 +79,14 @@ impl Cluster {
         lsr_instances: Vec<Instance>,
         vault_instances: Vec<Instance>,
         waypoint: Option<Waypoint>,
+        root_key_path: &str,
     ) -> Self {
         Self {
             validator_instances,
             fullnode_instances,
             lsr_instances,
             vault_instances,
-            mint_key_pair: Self::get_mint_key_pair_from_file("/tmp/mint.key"),
+            mint_key_pair: Self::get_mint_key_pair_from_file(root_key_path),
             waypoint,
             chain_id: ChainId::test(),
         }
