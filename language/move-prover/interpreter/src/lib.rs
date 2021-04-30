@@ -13,6 +13,7 @@ use bytecode::function_target_pipeline::{FunctionTargetPipeline, FunctionTargets
 use move_model::model::GlobalEnv;
 
 mod assembly;
+mod concrete;
 mod shared;
 
 use crate::assembly::{display::AstDebug, translate::translate};
