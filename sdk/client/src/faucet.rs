@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{BlockingClient, Error, Result, WaitForTransactionError};
+use crate::{BlockingClient, Error, Result};
 use diem_types::transaction::{authenticator::AuthenticationKey, SignedTransaction};
 
 pub struct FaucetClient {
@@ -30,38 +30,22 @@ impl FaucetClient {
             self.url, amount, auth_key, currency_code,
         );
 
-        //TODO Fix faucet
-        // The current implementation of Faucet is racy, in that 2 independent requests can come in
-        // and result in faucet sending 2 txns to the network with the same sequence number and
-        // they race to complete. One request will complete while the other will get a HashMismatch
-        // Error.
-        //
         // Faucet returns a list of txns that need to be waited on before returning. 1) a txn for
         // creating the account (if it doesn't already exist) and 2) to issue funds to said
         // account.
-        'faucet: loop {
-            let response = client.post(&url).send().map_err(Error::request)?;
-            let status_code = response.status();
-            let body = response.text().map_err(Error::decode)?;
-            if !status_code.is_success() {
-                return Err(Error::status(status_code.as_u16()));
-            }
-            let bytes = hex::decode(body).map_err(Error::decode)?;
-            let txns: Vec<SignedTransaction> = bcs::from_bytes(&bytes).unwrap();
+        let response = client.post(&url).send().map_err(Error::request)?;
+        let status_code = response.status();
+        let body = response.text().map_err(Error::decode)?;
+        if !status_code.is_success() {
+            return Err(Error::status(status_code.as_u16()));
+        }
+        let bytes = hex::decode(body).map_err(Error::decode)?;
+        let txns: Vec<SignedTransaction> = bcs::from_bytes(&bytes).map_err(Error::decode)?;
 
-            for txn in txns {
-                match self
-                    .json_rpc_client
-                    .wait_for_signed_transaction(&txn, None, None)
-                {
-                    Ok(_) => {}
-                    Err(WaitForTransactionError::TransactionHashMismatchError(_))
-                    | Err(WaitForTransactionError::TransactionExpired) => continue 'faucet,
-                    Err(e) => return Err(Error::unknown(e)),
-                }
-            }
-
-            break;
+        for txn in txns {
+            self.json_rpc_client
+                .wait_for_signed_transaction(&txn, None, None)
+                .map_err(Error::unknown)?;
         }
 
         Ok(())
