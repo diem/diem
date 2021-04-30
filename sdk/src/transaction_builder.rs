@@ -283,6 +283,35 @@ impl TransactionFactory {
         }
     }
 
+    pub fn create_designated_dealer(
+        &self,
+        coin_type: Currency,
+        sliding_nonce: u64,
+        auth_key: AuthenticationKey,
+        human_name: &str,
+        add_all_currencies: bool,
+    ) -> TransactionBuilder {
+        if self.is_script_function_enabled() {
+            self.payload(stdlib::encode_create_designated_dealer_script_function(
+                coin_type.type_tag(),
+                sliding_nonce,
+                auth_key.derived_address(),
+                auth_key.prefix().to_vec(),
+                human_name.as_bytes().into(),
+                add_all_currencies,
+            ))
+        } else {
+            self.script(stdlib::encode_create_designated_dealer_script(
+                coin_type.type_tag(),
+                sliding_nonce,
+                auth_key.derived_address(),
+                auth_key.prefix().to_vec(),
+                human_name.as_bytes().into(),
+                add_all_currencies,
+            ))
+        }
+    }
+
     pub fn create_parent_vasp_account(
         &self,
         coin_type: Currency,
